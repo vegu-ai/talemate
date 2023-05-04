@@ -1,0 +1,20 @@
+<|SECTION:CONTEXT|>
+{{ scene.description }}
+<|CLOSE_SECTION|>
+{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=30) -%}
+{{ scene_context }}
+{% endfor %}
+<|SECTION:TASK|>
+{% if query.endswith("?") -%}
+Question: {{ query }}
+Extra context: {{ query_memory(query, as_question_answer=False) }}
+Instruction: Analyze Context, History and Dialogue. Be factual and truthful. When evaluating both story and memory, story is more important. You can fill in gaps using imagination as long as it is based on the existing context. Respect the scene progression and answer in the context of the end of the dialogue.
+{% else -%}
+Instruction: {{ query }}
+Extra context: {{ query_memory(query, as_question_answer=False) }}
+Answer based on Context, History and Dialogue. Be factual and truthful. When evaluating both story and memory, story is more important. You can fill in gaps using imagination as long as it is based on the existing context. 
+{% endif -%}
+Content Context: This is a specific scene from {{ scene.context }}
+Narration style: point and click adventure game from the 90s
+<|CLOSE_SECTION|>
+Narrator answers: {% if at_the_end %}{{ bot_token }}At the end of the dialogue, {% endif %}

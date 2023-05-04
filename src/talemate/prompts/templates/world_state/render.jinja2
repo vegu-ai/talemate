@@ -1,0 +1,14 @@
+[world state]
+World State - Current state of characters and items in the scene
+
+{% for name, info in characters.items() -%}
+Name: {{ name }}
+Emotion: {{ info.emotion }}
+Snapshot: {{ info.snapshot }}
+{% endfor %}
+
+{% for name, info in items.items() -%}
+Name: {{ name }}
+Snapshot: {{ info.snapshot }}
+{% endfor %}
+[end of world state]

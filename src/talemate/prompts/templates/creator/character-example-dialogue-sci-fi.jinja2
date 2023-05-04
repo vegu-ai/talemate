@@ -1,0 +1,31 @@
+<|SECTION:CHARACTER|>
+{{ character.description }}
+<|CLOSE_SECTION|>
+<|SECTION:EXAMPLES|>
+{% for example in examples -%}
+{{ example }}
+{% endfor -%}
+{{ generated_examples.render_items }}
+<|CLOSE_SECTION|>
+<|SECTION:DIALOGUE RULES|>
+{{ dialogue_rules }}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Using {{ character.name }}'s Dialogue Rules, draft a line of dialogue that embodies how {{ character.name }} communicates in their universe. Reference the example dialogue for style and tone. Though set in a sci-fi context, aim for dialogue that feels authentic, conversational, and immediate.
+
+{{ character.name }} exists within {{ content_context }}. Use the provided character details to guide your dialogue samples.
+{% if generated_examples.q("puzzled") -%}
+Write a line of dialogue for {{ character.name }} when they are encountering something unfamiliar or complex.
+{% endif -%}
+{% if generated_examples.q("excited") -%}
+Write a line of dialogue for {{ character.name }} when they are enthusiastic about a discovery or event.
+{% endif -%}
+{% if generated_examples.q("skeptical") -%}
+Write a line of dialogue for {{ character.name }} when they doubt or question something.
+{% endif -%}
+{% if generated_examples.q("reflective") -%}
+Write a line of dialogue for {{ character.name }} when they are in a contemplative or introspective mood.
+{% endif -%}
+{% block generated_examples %}{% endblock -%}
+<|CLOSE_SECTION|>
+{{ set_prepared_response(character.name+": " )}}

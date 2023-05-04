@@ -1,0 +1,55 @@
+<|SECTION:CONTEXT EXAMPLE|>
+Barbara visited her borther John. 
+<|CLOSE_SECTION|>
+
+<|SECTION:DIALOGUE EXAMPLE|>
+Barbara: *Barbara accidently poured some yoghurt on her shirt*
+John: I love filming myself *Holds up his phone to film himself* I dont mind that the screen is cracked!
+Barbara: I should change this shirt but i dont want to get up from the couch
+<|CLOSE_SECTION|>
+
+<|SECTION:WORLD STATE EXAMPLE|>
+{
+    "items": [
+        {"name": "Barbara's red shirt", "snapshot": "The shirt has a big stain on it"},
+        {"name": "John's fanncy phone", "snapshot": "The screen is cracked"}
+    ],
+    "characters": [
+        {"name": "John", "emotion": "Excited", "snapshot": "John is filming himself on his phone next to his sister"},
+        {"name": "Barbara", "emotion": "Calm", "snapshot": "Barbara is sitting on the couch"}
+    ]
+}
+<|CLOSE_SECTION|>
+<|SECTION:CONTEXT|>
+{% for scene_context in scene.context_history(budget=1000, min_dialogue=10, dialogue_negative_offset=5, sections=False) -%}
+{{ scene_context }}
+{% endfor -%}
+{% if not scene.history -%}
+<|SECTION:DIALOGUE|>
+No dialogue so far
+{% endif -%}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Instruction to the Analyst: 
+
+1. Provide a list of all important concrete and material items present at the very end of the dialogue.
+2. Provide a list of all persons (characters) present at the very end of the dialogue
+3. List them to the player in the context of a text based adventure game.
+4. Write the descriptions in the style of a 90s text adventure game.
+5. Use the Context and Dialogue for context but respect the scene progression. We want to analyze the end of the scene.
+6. Be factual and truthful. Don't make up things that are not in the context or dialogue.
+7. Snapshot text should always be specified. If you don't know what to write, write "You see nothing special."
+
+Required response: a valid JSON response according to the JSON example containing lists of items and characters.
+
+characters should habe the following attributes: `name`, `emotion`, `snapshot`
+items should have the following attributes: `name`, `snapshot`
+
+Don't copy the example, write your own descriptions.
+<|CLOSE_SECTION|>
+{% for scene_context in scene.context_history(budget=300, min_dialogue=5, add_archieved_history=False, max_dialogue=5) -%}
+{{ scene_context }}
+{% endfor -%}
+<|SECTION:WORLD STATE|>
+{{ set_json_response(dict(items=[""])) }}

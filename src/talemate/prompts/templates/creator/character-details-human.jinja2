@@ -1,0 +1,24 @@
+<|SECTION:CHARACTER SHEET|>
+{{ character.sheet }}
+<|CLOSE_SECTION|>
+<|SECTION:EXTRA CONTEXT|>
+{{ character_details.render_items }}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Answer the following question based on the information in the character sheet.
+
+Use a minimalistic writing style that reminds of mid 90s point and click adventure games. 
+
+The context is {{ content_context }}
+{% if character_details.q("what does "+character.name+" want and why can't they get it?") -%}{% endif -%}
+{% if character_details.q("what is "+character.name+"'s biggest secret?") -%}{% endif -%}
+{% if character_details.q("what is "+character.name+"'s greatest fear?") -%}{% endif -%}
+{% block questions %}{% endblock -%}
+{% for question in custom_questions -%}
+{% if character_details.q(question) -%}
+Question: {{ question }}
+{% endif -%}
+{% endfor %}
+<|CLOSE_SECTION|>
+{{ bot_token }}Question: {{ character_details.current_item }}
+Answer: 

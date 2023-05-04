@@ -1,0 +1,9 @@
+<|SECTION:CHARACTER SHEET|>
+{{ character.sheet }}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Summarize {{ character.name }} based on the character sheet above. 
+
+Use a narrative writing style that reminds of mid 90s point and click adventure games about a {{ content_context }}
+<|CLOSE_SECTION|>
+{{ set_prepared_response(character.name+ " is ") }}

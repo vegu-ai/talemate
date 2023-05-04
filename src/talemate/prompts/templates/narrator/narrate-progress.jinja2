@@ -1,0 +1,33 @@
+<|SECTION:CONTEXT|>
+Scenario Premise: {{ scene.description }}
+
+{% for memory_line in memory -%}
+{{ memory_line }}
+{% endfor -%}
+
+NPCs: {{ npc_names }}
+Player Character: {{ player_character.name }}
+Content Context: {{ scene.context }}
+<|CLOSE_SECTION|>
+
+{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=30, sections=False, dialogue_negative_offset=10) -%}
+{{ scene_context }}
+{% endfor %}
+<|SECTION:TASK|>
+Continue the current dialogue by narrating the progression of the scene
+Narration style: point and click adventure game from the 90s
+If the scene is over, narrate the beginning of the next scene.
+<|CLOSE_SECTION|>
+{{ bot_token }}
+{% for row in scene.history[-10:] -%}
+{{ row }}
+{% endfor %}
+{{ 
+set_prepared_response_random(
+    npc_names.split(", ") + [
+        "They",
+        player_character.name,
+    ],
+    prefix="*",
+)
+}}

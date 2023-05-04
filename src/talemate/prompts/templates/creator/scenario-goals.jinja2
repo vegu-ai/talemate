@@ -1,0 +1,24 @@
+<|SECTION:SCENE|>
+{{ scenario_base_prompt }}
+
+{{ scenario_text }}
+<|CLOSE_SECTION|>
+
+<|SECTION:TEMPLATE AND EXAMPLES|>
+Goal: <character name> greets <other character name>. Goal is met when <character name> says hello to <other character name>
+Goal: <character name> wins the gold medal in gymnastics. Goal is met when <character name> has accepted a gold medal
+Goal: <character name> gets a job. Goal is met when <character name> name states how happy they are to have gotten a job
+<|CLOSE_SECTION|>
+
+<|SECTION:CONTEXT|>
+Player character: {{ player_character_name }}
+NPCS: {{ npc_names }}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Instruction: Come up with with a list of 8 story goals for {{ npc_names }} within the scenario as they interact with {{ player_character_name }}. All story goal conditions should be concise, explicitly quantifiable, and require a single specific dialogue or action from one NPC to be completed. Goals should be listed in chronological order, leading to a story climax. Create {{ scenario_contexts }}.
+
+The goals MUST only involve these characters: {{ npc_names }} {{ player_character_name }} and MUST NOT involve any other characters.
+The goals MUST follow the template examples.
+<|CLOSE_SECTION|>
+Narrator answers: {{ set_prepared_response('Goal: ') }}

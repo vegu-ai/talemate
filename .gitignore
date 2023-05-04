@@ -1,0 +1,10 @@
+.lmer
+*.pyc
+problems
+*.swp
+*.swo
+*.egg-info
+tales/
+*-internal*
+*.internal*
+*_internal*

@@ -1,0 +1,28 @@
+<|SECTION:CONTEXT|>
+{{ character.description }}
+
+{{ character.base_attributes.get("scenario_context", "") }}
+<|CLOSE_SECTION|>
+
+{% for scene_context in scene.context_history(budget=200, add_archieved_history=False, min_dialogue=10) -%}
+{{ scene_context }}
+{% endfor %}
+
+<|SECTION:TASK|>
+Instruction: Analyze the scene so far and answer the following question(s)
+Expected response: a JSON response containing questions, answers and reasoning
+
+{% if scene.history -%}
+Last line of dialogue: {{ scene.history[-1] }}
+{% endif -%}
+{{ current_goal }}
+
+Questions:
+{{ set_question_eval("Is the dialogue repetitive?", "yes", "direct") }}
+{{ set_question_eval("Is the actor playing "+character.name+" staying true to the character and their development so far?", "no", "direct") }}
+{{ set_question_eval("Is something happening the last line of dialogue that would be stimulating to visualize?", "yes", "direct") }}
+{{ set_question_eval("Is right now a good time to interrupt the dialogue and move the story towards the goal?", "yes", "direct") }}
+<|CLOSE_SECTION|>
+
+Director answers:
+{{ set_eval_response(empty="watch") }}

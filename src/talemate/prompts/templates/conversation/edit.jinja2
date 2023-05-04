@@ -1,0 +1,12 @@
+{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=30) -%}
+{{ scene_context }}
+{% endfor %}
+<|SECTION:TASK|>
+Your task is to editorialize the next dialogue line, improving or even replacing it.
+The goal is to make the scene continue in a non repetitive way, and to make the characters more interesting.
+
+Next dialogue line:
+
+{{ next_dialogue_line }}
+<|CLOSE_SECTION|>
+Improved dialogue: {{ set_prepared_response(talking_character.name+": ") }}

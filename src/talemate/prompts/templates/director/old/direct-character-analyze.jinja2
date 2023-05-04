@@ -1,0 +1,16 @@
+{{ direction_prompt }}
+
+<|SECTION:DIRECTION|>
+{{ direction }}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Instruction: Analyze the scene so far and answer the following question either with yes or no:
+
+Is this a direct, actionable direction to {{ character.name }} ?
+Is the director's instruction to {{ character.name }} in line with the character's development so far?
+Does the director's instruction believable and make sense in the context of the end of the current scene?
+Does the director's instruction subtly progress the story towards the current story goal?
+<|CLOSE_SECTION|>
+
+Director answers:

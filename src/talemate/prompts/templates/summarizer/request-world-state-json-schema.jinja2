@@ -1,0 +1,63 @@
+<|SECTION:JSON SCHEMA|>
+JSON Schema:
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "snapshot": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "snapshot"]
+      }
+    },
+    "characters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "emotion": {
+            "type": "string"
+          },
+          "snapshot": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "emotion", "snapshot"]
+      }
+    }
+  },
+  "required": ["items", "characters"]
+}
+<|CLOSE_SECTION|>
+
+{% for scene_context in scene.context_history(budget=500, min_dialogue=10, add_archieved_history=False) -%}
+{{ scene_context }}
+{% endfor %}
+
+<|SECTION:TASK|>
+Instruction to the Analyst: 
+
+1. Provide a list of all important concrete and material items present at the very end of the dialogue.
+2. Provide a list of all persons (characters) present at very the end of the dialogue
+3. List them to the player in the context of a text based adventure game.
+4. Write the descriptions in the style of a 90s text adventure game.
+5. Use the Scene and Dialogue for context but respect the scene progression. We want to analyze the end of the scene.
+
+Required response: a valid JSON response according to the JSON schema containing lists of items and characters.
+
+Don't copy the example, write your own descriptions.
+<|CLOSE_SECTION|>
+
+Analyst answers: {{ set_json_response(dict(items=[""])) }}

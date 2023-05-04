@@ -1,0 +1,21 @@
+<|SECTION:CHARACTERS|>
+{% for character in scene.characters -%}
+{{ character.name }}: 
+{{ character.description }}
+{{ query_memory("What does "+character.name+" want?") }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:DESCRIPTION|>
+{{ description }}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Generate a short name or title for {{ content_context }} based on the description above.
+
+{% if prompt -%}
+Premise: {{ prompt }}
+{% endif -%}
+The context is a text based game played from the perspective of {{ scene.get_player_character().name }}.
+
+Use a narrative writing style that reminds of mid 90s point and click adventure games.
+<|CLOSE_SECTION|>
+{{ bot_token }}A good name for this game would be

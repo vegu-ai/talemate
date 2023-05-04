@@ -1,0 +1,80 @@
+<template>
+    <v-dialog v-model="localDialog" persistent max-width="600px">
+        <v-card>
+        <v-card-title>
+            <span class="headline">{{ formTitle }}</span>
+        </v-card-title>
+        <v-card-text>
+            <v-container>
+            <v-row>
+                <v-col cols="6">
+                  <v-select v-model="client.type" :items="['openai', 'textgenwebui']" label="Client Type"></v-select>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field v-model="client.name" label="Client Name"></v-text-field>
+                </v-col> 
+
+            </v-row>
+            <v-row>
+              <v-col cols="12">
+                <v-text-field v-model="client.apiUrl" v-if="client.type === 'textgenwebui'" label="API URL"></v-text-field>
+                <v-select v-model="client.model" v-if="client.type === 'openai'" :items="['gpt-4', 'gpt-3.5-turbo', 'gpt-3.5-turbo-16k']" label="Model"></v-select>
+              </v-col>
+            </v-row>  
+            <v-row>
+              <v-col cols="6">
+                <v-text-field v-model="client.max_token_length" v-if="client.type === 'textgenwebui'" type="number" label="Context Length"></v-text-field> 
+              </v-col>
+            </v-row>
+            </v-container>
+        </v-card-text>
+        <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn color="blue darken-1" text @click="close">Close</v-btn>
+            <v-btn color="blue darken-1" text @click="save">Save</v-btn>
+        </v-card-actions>
+        </v-card>
+    </v-dialog>
+</template>
+  
+<script>
+export default {
+  props: {
+    dialog: Boolean,
+    formTitle: String
+  },
+  inject: ['state'],
+  data() {
+    return {
+      localDialog: this.state.dialog,
+      client: { ...this.state.currentClient } // Define client data property
+    };
+  },
+  watch: {
+    'state.dialog': {
+      immediate: true,
+      handler(newVal) {
+        this.localDialog = newVal;
+      }
+    },
+    'state.currentClient': {
+      immediate: true,
+      handler(newVal) {
+        this.client = { ...newVal }; // Update client data property when currentClient changes
+      }
+    },
+    localDialog(newVal) {
+      this.$emit('update:dialog', newVal);
+    }
+  },
+  methods: {
+    close() {
+      this.$emit('update:dialog', false);
+    },
+    save() {
+      this.$emit('save', this.client); // Emit save event with client object
+      this.close();
+    }
+  }
+}
+</script>

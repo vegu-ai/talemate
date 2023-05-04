@@ -1,0 +1,42 @@
+Scene and Dialogue
+The context is {{ scene_context }}. 
+
+{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=3) -%}
+{{ scene_context }}
+{% endfor %}
+
+Last line of dialogue: {{ marked_characters_response }}
+Characters of interest: 
+{% for character in marked_characters %}
+- {{ character }}
+{% endfor %}
+
+Instructions: We have marked characters of interest, your task is to give additional context to each character. The context is the last line of dialogue, so scene progression MUST be taken into account. Scene and Dialogue should be used for context, but the last line of dialogue is the most important.
+Only characters that are marked in the scene will be considered for the response. If no characters are marked, the response will be considered invalid.
+
+Expected response: valid JSON response with a list of characters of interest and their respective information for the narrator.
+
+Example:
+
+Last line of dialogue: John: I'm going to the park. *Sarah gives him a hug and a kiss*
+Characters of interest:
+- John
+- Sarah
+
+JSON Response example:
+{
+    "characters": [
+        {
+            "character": "John",
+            "emotion": "happy",
+            "visual description": "John is leaving the house. He is wearing a dirty black shirt and jeans and has a backpack on his back."
+        },
+        {
+            "character": "Sarah",
+            "emotion": "sad",
+            "visual description": "Sarah is kissing John as she says goodbye."
+        }
+    ]
+}
+
+Analyst answers: {{ set_json_response(dict(characters=[""])) }}

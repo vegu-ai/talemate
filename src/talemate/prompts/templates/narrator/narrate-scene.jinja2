@@ -1,0 +1,15 @@
+<|SECTION:CONTEXT|>
+Scenario Premise: {{ scene.description }}
+<|CLOSE_SECTION|>
+
+{% for scene_context in scene.context_history(budget=max_tokens-300) -%}
+{{ scene_context }}
+{% endfor %}
+
+<|SECTION:TASK|>
+Question: What happens at the end of the dialogue progression? Summarize into narrative description.
+Content Context: This is a specific scene from {{ scene.context }}
+Narration style: point and click adventure game from the 90s
+Expected Answer: A summarized narrative description of the scene unfolding at the dialogue that can be inserted into the ongoing story in place of the dialogue.
+<|CLOSE_SECTION|>
+Narrator answers: {{ set_prepared_response("You see ") }}

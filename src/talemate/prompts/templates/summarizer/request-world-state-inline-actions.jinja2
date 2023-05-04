@@ -1,0 +1,41 @@
+Scene and Dialogue
+The context is {{ scene_context }}. 
+
+{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=30) -%}
+{{ scene_context }}
+{% endfor %}
+
+Last line of dialogue: {{ marked_items_response }}
+Items of interest: 
+{% for item in marked_items %}
+- {{ item }}
+{% endfor %}
+
+Instructions: We have marked interactive items of interest, your task is to give additional context to each item. The context is the last line of dialogue, so scene progression MUST be taken into account. Scene and Dialogue should be used for context, but the last line of dialogue is the most important.
+Only items that are marked in the scene will be considered for the response. If no items are marked, the response will be considered invalid.
+
+Expected response: valid JSON response with a list of items of interest and their respective information for the narrator.
+
+
+Example:
+
+Last line of dialogue: John: I'm going to the park. *John picks up his [phone] and susan's [ball]*
+Items of interest:
+- ball
+- phone
+
+JSON Response example:
+{
+    "items": [
+        {
+            "item": "ball",
+            "contextual name": "Susan's ball"
+        },
+        {
+            "item": "phone",
+            "contextual name": "John's phone",
+        }
+    ]
+}
+
+Analyst answers: {{ set_json_response(dict(items=[""])) }}

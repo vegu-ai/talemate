@@ -1,0 +1,16 @@
+<|SECTION:CHARACTER AND CONTEXT|>
+{{ character.name }}
+{{ character.description }}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Analyze the character information and context and determine an apropriate content context.
+
+The content content should be a single phrase that describes the expected experience when interacting with the character.
+
+Examples:
+
+{% for content_context in config.get('creator', {}).get('content_context',[]) -%}
+- {{ content_context }}
+{% endfor -%}
+<|CLOSE_SECTION|>
+{{ bot_token }}Content context:

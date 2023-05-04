@@ -1,0 +1,22 @@
+{% for scene_context in scene.context_history(budget=200, add_archieved_history=False, min_dialogue=10) -%}
+{{ scene_context }}
+{% endfor %}
+
+<|SECTION:DIALOGUE ANALYSIS|>
+{{ analysis }}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+{% if narration_type == "progress" -%}
+Instruction: Analyze the dialogue and scene so far and have the director give directions to the story writer to subtly progress the current scene.
+{% elif narration_type == "visual" %}
+Instruction: Analyze the last line of the dialogue and have the director give directions to the story writer to describe the end point of the scene visually.
+{% elif narration_type == "character" %}
+{% endif -%}
+
+{% if scene.history -%}
+Last line of dialogue: {{ scene.history[-1] }}
+{% endif -%}
+{{ current_goal }}
+<|CLOSE_SECTION|>
+{{ bot_token }}Director instructs story writer:

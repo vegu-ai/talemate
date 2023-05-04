@@ -1,0 +1,20 @@
+{{ character.description }}
+
+{{ character.base_attributes.get("scenario_context", "") }}
+
+{% for scene_context in scene.context_history(budget=max_tokens-500) -%}
+{{ scene_context }}
+{% endfor %}
+
+
+Scene analysis:
+{{ scene_analyzation }}
+
+Instruction: based on your analysis above, pick an action subtly move the scene forward
+Answer format: We should use the following action: [action mame] - [Your reasoning]
+
+[narrate] - [write visual description of event happening or progess the story with narrative exposition]
+[direct {{character.name}}] - [direct the actor playing {{character.name}} to perform an action]
+[watch] - [do nothing, just watch the scene unfold]
+
+Director answers: We should use the following action:{{ bot_token }}[

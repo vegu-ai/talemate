@@ -1,0 +1,24 @@
+creator:
+  content_context:
+  - a fun and engaging slice of life story aimed at an adult audience.
+  - a terrifying horror story aimed at an adult audience.
+  - a thrilling action story aimed at an adult audience.
+  - a mysterious adventure aimed at an adult audience.
+  - an epic sci-fi adventure aimed at an adult audience.
+game:
+  default_player_character:
+    color: '#6495ed'
+    description: a young man with a penchant for adventure.
+    gender: male
+    name: Elmer
+
+#chromadb:
+#  embeddings: instructor
+#  instructor_device: cuda
+#  instructor_model: hkunlp/instructor-xl
+  
+#openai:
+#  api_key: <API_KEY>
+
+#runpod:
+#  api_key: <API_KEY>

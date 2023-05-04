@@ -1,0 +1,154 @@
+"""
+Keep track of clients and agents
+"""
+
+import talemate.agents as agents
+import talemate.client as clients
+from talemate.emit import emit
+import talemate.client.bootstrap as bootstrap
+
+import structlog
+log = structlog.get_logger("talemate")
+
+AGENTS = {}
+CLIENTS = {}
+
+
+def get_agent(typ: str, *create_args, **create_kwargs):
+    agent = AGENTS.get(typ)
+
+    if agent:
+        return agent
+
+    if create_args or create_kwargs:
+        cls = agents.get_agent_class(typ)
+        agent = cls(*create_args, **create_kwargs)
+        set_agent(typ, agent)
+        return agent
+
+
+def set_agent(typ, agent):
+    AGENTS[typ] = agent
+
+
+def destroy_client(name: str):
+    client = CLIENTS.get(name)
+    if client:
+        del CLIENTS[name]
+
+
+def get_client(name: str, *create_args, **create_kwargs):
+    client = CLIENTS.get(name)
+
+    if client:
+        client.reconfigure(**create_kwargs)
+        return client
+
+    if "type" in create_kwargs:
+        typ = create_kwargs.get("type")
+        cls = clients.get_client_class(typ)
+        client = cls(name=name, *create_args, **create_kwargs)
+        set_client(name, client)
+        return client
+
+
+def set_client(name, client):
+    CLIENTS[name] = client
+
+
+def agent_types():
+    return agents.AGENT_CLASSES.keys()
+
+
+def client_types():
+    return clients.CLIENT_CLASSES.keys()
+
+
+def client_instances():
+    return CLIENTS.items()
+
+
+def agent_instances():
+    return AGENTS.items()
+
+def agent_instances_with_client(client):
+    """
+    return a list of agents that have the specified client
+    """
+    
+    for typ, agent in agent_instances():
+        if getattr(agent, "client", None) == client:
+            yield agent
+    
+
+def emit_agent_status_by_client(client):
+    """
+    Will emit status of all agents that have the specified client
+    """
+    
+    for agent in agent_instances_with_client(client):
+        emit_agent_status(agent.__class__, agent)
+    
+
+async def emit_clients_status():
+    """
+    Will emit status of all clients
+    """
+
+    for client in CLIENTS.values():
+        if client:
+            await client.status()
+
+
+def emit_client_bootstraps():
+    emit(
+        "client_bootstraps",
+        data=list(bootstrap.list_all())
+    )
+
+
+async def sync_client_bootstraps():
+    """
+    Will loop through all registered client bootstrap lists and spawn / update 
+    client instances from them.
+    """
+    
+    for service_name, func in bootstrap.LISTS.items():
+        for client_bootstrap in func():
+            log.debug("sync client bootstrap", service_name=service_name, client_bootstrap=client_bootstrap.dict())
+            client = get_client(
+                client_bootstrap.name,
+                type=client_bootstrap.client_type.value,
+                api_url=client_bootstrap.api_url,
+                enabled=True,
+            )
+            await client.status()
+
+def emit_agent_status(cls, agent=None):
+    if not agent:
+        emit(
+            "agent_status",
+            message="",
+            id=cls.agent_type,
+            status="uninitialized",
+            data=cls.config_options(),
+        )
+    else:
+        emit(
+            "agent_status",
+            message=agent.verbose_name or "",
+            status=agent.status,
+            id=agent.agent_type,
+            details=agent.agent_details,
+            data=cls.config_options(),
+        )
+
+
+def emit_agents_status():
+    """
+    Will emit status of all agents
+    """
+
+    for typ, cls in agents.AGENT_CLASSES.items():
+        agent = AGENTS.get(typ)
+        emit_agent_status(cls, agent)

@@ -1,0 +1,21 @@
+<|SECTION:CONTEXT|>
+{{ character.name }}: {{ character.description }}
+Content Context: {{ scene.context }}
+<|CLOSE_SECTION|>
+
+<|SECTION:DIALOGUE EXAMPLES|>
+{% for dialogue in character.example_dialogue -%}
+{{ dialogue }}
+{% endfor -%}
+<|CLOSE_SECTION|>
+
+<|SECTION:DIRECTOR INSTRUCTION|>
+{{ director_instructions }}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Instruction: The scene director has given an instruction to the actor playing the role of {{ character.name }}. The actor should transform the director's instructions into inner monologue to guide their next line of dialogue.
+
+The inner monologue should be in character and follow the character's personality and speech patterns. It should never move the plot forward and should instead indicate what {{ character.name }} wants to do next to meet the instructions
+<|CLOSE_SECTION|>
+{{ set_prepared_response(character.name + "'s inner monologue: ") }}

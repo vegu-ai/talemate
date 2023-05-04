@@ -1,0 +1,30 @@
+<|SECTION:CONTEXT|>
+Scenario Premise: {{ scene.description }}
+
+Last time we checked on {{ character.name }}: 
+
+{% for memory_line in memory -%}
+{{ memory_line }}
+{% endfor %}
+<|CLOSE_SECTION|>
+
+{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=30) -%}
+{{ scene_context }}
+{% endfor %}
+
+<|SECTION:INFORMATION|>
+{{ query_memory("How old is {character.name}?") }}
+{{ query_scene("Where is {character.name}?") }}
+{{ query_scene("what is {character.name} doing?") }}
+{{ query_scene("what is {character.name} wearing?") }}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Last line of dialogue: {{ scene.history[-1] }}
+Questions: Where is {{ character.name}} currently and what are they doing? What is {{ character.name }}'s appearance at the end of the dialogue? What is {{ character.pronoun_2 }} wearing? What position is {{ character.pronoun_2 }} in?
+Instruction: Answer the questions to describe {{ character.name }}'s appearance at the end of the dialogue and summarize into narrative description. Use the whole dialogue for context.
+Content Context: This is a specific scene from {{ scene.context }}
+Narration style: point and click adventure game from the 90s
+Expected Answer: A summarized visual description of {{ character.name }}'s appearance at the dialogue.
+<|CLOSE_SECTION|>
+Narrator answers: {{ bot_token }}At the end of the dialogue, 

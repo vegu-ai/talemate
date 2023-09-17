@@ -100,15 +100,16 @@ Note: this is my personal opinion while using talemate. If you find a model that
 
 Will be updated as i test more models and over time.
 
-| Model Name                    | Status           | Type            | Notes                                                                                                             |
-|-------------------------------|------------------|-----------------|-------------------------------------------------------------------------------------------------------------------|
-| [GPT-4](https://platform.openai.com/) | GOOD            | Remote         | Costs money and is heavily censored, while talemate will send a general "decensor" system prompt, depending on the type of content you want to roleplay, there is a chance your key will be banned. **If you do use this make sure to monitor your api usage, talemate tends to send a lot more requests than other roleplaying applications.** |
-| [GPT-3.5-turbo](https://platform.openai.com/) | AVOID | Remote         | Costs money and is heavily censored, while talemate will send a general "decensor" system prompt, depending on the type of content you want to roleplay, there is a chance your key will be banned. Can roleplay, but not great at consistently generating JSON responses needed for various parts of talemate (world-state etc.) |
-| [Nous Hermes LLama2](https://huggingface.co/TheBloke/Nous-Hermes-Llama2-GPTQ) | GOOD | 13B model | My go-to model for 13B parameters. It's good at roleplay and also smart enough to handle the world state and narrative tools. A 13B model loaded via exllama also allows you run chromadb with the xl instructor embeddings off of a single 4090. |
-| [MythoMax](https://huggingface.co/TheBloke/MythoMax-L2-13B-GPTQ) | GOOD | 13B model | Similar quality to Hermes LLama2, but a bit more creative. Rarely fails on JSON responses. |
-| [Synthia v1.2 34B](https://huggingface.co/TheBloke/Synthia-34B-v1.2-GPTQ) | GOOD | 34B model | Cannot be run at full context together with chromadb instructor models on a single 4090. But a great choice if you're running chromadb with the default embeddings (or on cpu). |
-| [Genz](https://huggingface.co/TheBloke/Genz-70b-GPTQ) | GOOD | 70B model | Great choice if you have the hardware to run it (or can rent it).  |
-| [Synthia v1.2 70B](https://huggingface.co/TheBloke/Synthia-70B-v1.2-GPTQ) | GOOD | 70B model | Great choice if you have the hardware to run it (or can rent it). |
+| Model Name                    | Type            | Notes                                                                                                             |
+|-------------------------------|-----------------|-------------------------------------------------------------------------------------------------------------------|
+| [GPT-4](https://platform.openai.com/) | Remote         | Still the best for consistency and reasoning, but is heavily censored, while talemate will send a general "decensor" system prompt, depending on the type of content you want to roleplay, there is a chance your key will be banned. **If you do use this make sure to monitor your api usage, talemate tends to send a lot more requests than other roleplaying applications.** |
+| [Nous Hermes LLama2](https://huggingface.co/TheBloke/Nous-Hermes-Llama2-GPTQ) | 13B model | My go-to model for 13B parameters. It's good at roleplay and also smart enough to handle the world state and narrative tools. A 13B model loaded via exllama also allows you run chromadb with the xl instructor embeddings off of a single 4090. |
+| [MythoMax](https://huggingface.co/TheBloke/MythoMax-L2-13B-GPTQ) | 13B model | Similar quality to Hermes LLama2, but a bit more creative. Rarely fails on JSON responses. |
+| [Synthia v1.2 34B](https://huggingface.co/TheBloke/Synthia-34B-v1.2-GPTQ) | 34B model | Cannot be run at full context together with chromadb instructor models on a single 4090. But a great choice if you're running chromadb with the default embeddings (or on cpu). |
+| [Genz](https://huggingface.co/TheBloke/Genz-70b-GPTQ) | 70B model | Great choice if you have the hardware to run it (or can rent it).  |
+| [Synthia v1.2 70B](https://huggingface.co/TheBloke/Synthia-70B-v1.2-GPTQ) | 70B model | Great choice if you have the hardware to run it (or can rent it). |
+
+I have not included OpenAI's gpt-3.5-turbo in this list, since it is really inconsistent with JSON responses, plus its probably still just as heavily censored as GPT-4.
 
 I have not tested with Llama 1 mnodels in a while, Lazarus was really good at roleplay, but started failing on JSON requirements.
 

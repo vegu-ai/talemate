@@ -154,6 +154,10 @@ Expand the "Load" menu in the top left corner and either click on "Upload a char
 
 ![Load character card location](docs/img/load-card-location.png)
 
+Once a character is uploaded, talemate may actually take a moment because it needs to convert it to a talemate format and will also run additional LLM prompts to generate character attributes and world state.
+
+Make sure you save the scene after the character is loaded as it can then be loaded as normal talemate scenario in the future.
+
 ## Further documentation
 
 - Creative mode (docs WIP)

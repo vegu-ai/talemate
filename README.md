@@ -114,6 +114,30 @@ I have not tested with Llama 1 mnodels in a while, Lazarus was really good at ro
 
 I have not tested with anything below 13B parameters.
 
+## Connecting to an LLM
+
+On the right hand side click the "Add Client" button. If there is no button, you may need to toggle the client options by clicking this button:
+
+### Text-generation-webui
+
+![Client options](docs/img/client-options-toggle.png)
+
+In the modal if you're planning to connect to text-generation-webui, you can likely leave everything as is and just click Save.
+
+![Add client modal](docs/img/add-client-modal.png)
+
+### OpenAI
+
+If you want to add an OpenAI client, just change the client type and select the apropriate model.
+
+![Add client modal](docs/img/add-client-modal-openai.png)
+
+### Ready to go
+
+You will know you are good to go when the client and all the agents have a green dot next to them.
+
+![Ready to go](docs/img/client-setup-complete.png)
+
 ## Load the introductory scenario "Infinity Quest"
 
 Generated using talemate creative tools, mostly used for testing / demoing.

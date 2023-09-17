@@ -119,9 +119,9 @@ I have not tested with anything below 13B parameters.
 
 On the right hand side click the "Add Client" button. If there is no button, you may need to toggle the client options by clicking this button:
 
-### Text-generation-webui
-
 ![Client options](docs/img/client-options-toggle.png)
+
+### Text-generation-webui
 
 In the modal if you're planning to connect to text-generation-webui, you can likely leave everything as is and just click Save.
 

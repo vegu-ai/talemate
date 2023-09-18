@@ -111,7 +111,7 @@ Will be updated as i test more models and over time.
 
 I have not included OpenAI's gpt-3.5-turbo in this list, since it is really inconsistent with JSON responses, plus its probably still just as heavily censored as GPT-4.
 
-I have not tested with Llama 1 mnodels in a while, Lazarus was really good at roleplay, but started failing on JSON requirements.
+I have not tested with Llama 1 models in a while, Lazarus was really good at roleplay, but started failing on JSON requirements.
 
 I have not tested with anything below 13B parameters.
 

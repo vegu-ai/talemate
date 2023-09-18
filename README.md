@@ -1,8 +1,8 @@
 # Talemate
 
-Talemate is an experimental application that allows you to roleplay scenarios with large language models. I've worked on this on and off since early 2023, as a private project, but decided i might as well put in the extra effort and open source it.
+Allows you to play roleplay scenarios with large language models. 
 
-It does not run LLMs itself but relies on existing APIs. Currently supports text-generation-webui and openai.
+It does not run any large language models itself but relies on existing APIs. Currently supports **text-generation-webui** and **openai**.
 
 This means you need to either have an openai api key or know how to setup [oobabooga/text-generation-webui](https://github.com/oobabooga/text-generation-webui) (locally or remotely via gpu renting.)
 
@@ -12,17 +12,17 @@ This means you need to either have an openai api key or know how to setup [oobab
 ## Current features
 
 - responive modern ui
-- multi-client (agents can be connected to separate LLMs)
 - agents
     - conversation
     - narration
     - summarization
     - director
     - creative
-- long term memory
+- multi-client (agents can be connected to separate LLMs)
+- long term memory (very experimental at this point)
 - narrative world state
 - narrative tools
-- creative mode 
+- creative tools 
     - AI backed character creation with template support (jinja2)
     - AI backed scenario creation
 - runpod integration
@@ -34,7 +34,6 @@ Kinda making it up as i go along, but i want to lean more into gameplay through 
 
 In no particular order:
 
-- Automatic1111 client
 - Gameplay loop governed by AI
 - Improved world state
 - Dynamic player choice generation
@@ -43,6 +42,7 @@ In no particular order:
 - Improved long term memory (base is there, but its very rough at the moment)
 - Improved director agent
     - Right now this doesn't really work well on anything but GPT-4 (and even there it's debatable). It tends to steer the story in a way that introduces pacing issues. It needs a model that is creative but also reasons really well i think.
+- Automatic1111 client
 
 # Quickstart
 

@@ -6,7 +6,7 @@ If you want chromaDB to use the more accurate (but much slower) instructor embed
 chromadb:
     embeddings: instructor
     instructor_device: cpu
-    instructor_model: hkunlp/instructor-xl"
+    instructor_model: hkunlp/instructor-xl
 ```
 
 You will need to restart the backend for this change to take effect.
@@ -25,7 +25,7 @@ To do this on windows, run `install-pytorch-cuda.bat` from the project root. The
 chromadb:
     embeddings: instructor
     instructor_device: cuda
-    instructor_model: hkunlp/instructor-xl"
+    instructor_model: hkunlp/instructor-xl
 ```
 
 Instructor embedding models:

@@ -53,6 +53,14 @@
       </v-list>
     </v-navigation-drawer>
 
+    <!-- debug tools navigation drawer -->
+    <v-navigation-drawer v-model="debugDrawer" app location="right">
+      <v-list>
+        <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
+        <DebugTools ref="debugTools"></DebugTools>
+      </v-list>
+    </v-navigation-drawer>
+
     <!-- system bar -->
     <v-system-bar>
       <v-icon icon="mdi-network-outline"></v-icon>
@@ -94,6 +102,7 @@
         Talemate
       </v-toolbar-title>
       <v-spacer></v-spacer>
+      <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="configurationRequired()"
         color="red"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
@@ -145,6 +154,7 @@ import CharacterSheet from './CharacterSheet.vue';
 import SceneHistory from './SceneHistory.vue';
 import CreativeEditor from './CreativeEditor.vue';
 import AppConfig from './AppConfig.vue';
+import DebugTools from './DebugTools.vue';
 
 export default {
   components: {
@@ -160,6 +170,7 @@ export default {
     SceneHistory,
     CreativeEditor,
     AppConfig,
+    DebugTools,
   },
   name: 'TalemateApp',
   data() {
@@ -169,6 +180,7 @@ export default {
       sceneActive: false,
       drawer: false,
       sceneDrawer: true,
+      debugDrawer: false,
       websocket: null,
       inputDisabled: false,
       waitingForInput: false,
@@ -369,6 +381,8 @@ export default {
         this.sceneDrawer = !this.sceneDrawer;
       else if (navigation == "settings")
         this.drawer = !this.drawer;
+      else if (navigation == "debug")
+        this.debugDrawer = !this.debugDrawer;
     },
     getClients() {
       if (!this.$refs.aiClient) {

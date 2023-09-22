@@ -9,7 +9,6 @@ from talemate.client.registry import register
 from talemate.emit import emit
 from talemate.config import load_config
 import talemate.client.system_prompts as system_prompts
-
 import structlog
 
 __all__ = [
@@ -141,6 +140,15 @@ class OpenAIClient:
             response = response.replace("\n", " ").strip()
 
         log.debug("openai response", response=response)
+
+        emit("prompt_sent", data={
+            "kind": kind,
+            "prompt": prompt,
+            "response": response,
+            # TODO use tiktoken
+            "prompt_tokens": 0,
+            "response_tokens": 0,
+        })
 
         self.emit_status(processing=False)
         return response

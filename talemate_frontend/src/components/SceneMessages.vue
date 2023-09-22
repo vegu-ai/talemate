@@ -160,7 +160,7 @@ export default {
 
                 return
             }
-
+            
             if (data.message) {
                 if (data.type === 'character') {
                     const [character, text] = data.message.split(':');

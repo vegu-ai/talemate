@@ -626,7 +626,15 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
 
         response = response.split("#")[0]
         self.emit_status(processing=False)
-        await asyncio.sleep(0.01)
+        
+        emit("prompt_sent", data={
+            "kind": kind,
+            "prompt": message["prompt"],
+            "response": response,
+            "prompt_tokens": token_length,
+            "response_tokens": int(len(response) / 3.6)
+        })
+        
         return response
 
 

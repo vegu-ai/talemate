@@ -1,8 +1,8 @@
 # Talemate
 
-Talemate is an experimental application that allows you to roleplay scenarios with large language models. I've worked on this on and off since early 2023, as a private project, but decided i might as well put in the extra effort and open source it.
+Allows you to play roleplay scenarios with large language models. 
 
-It does not run LLMs itself but relies on existing APIs. Currently supports text-generation-webui and openai.
+It does not run any large language models itself but relies on existing APIs. Currently supports **text-generation-webui** and **openai**.
 
 This means you need to either have an openai api key or know how to setup [oobabooga/text-generation-webui](https://github.com/oobabooga/text-generation-webui) (locally or remotely via gpu renting.)
 
@@ -12,17 +12,17 @@ This means you need to either have an openai api key or know how to setup [oobab
 ## Current features
 
 - responive modern ui
-- multi-client (agents can be connected to separate LLMs)
 - agents
     - conversation
     - narration
     - summarization
     - director
     - creative
-- long term memory
+- multi-client (agents can be connected to separate LLMs)
+- long term memory (very experimental at this point)
 - narrative world state
 - narrative tools
-- creative mode 
+- creative tools 
     - AI backed character creation with template support (jinja2)
     - AI backed scenario creation
 - runpod integration
@@ -34,7 +34,6 @@ Kinda making it up as i go along, but i want to lean more into gameplay through 
 
 In no particular order:
 
-- Automatic1111 client
 - Gameplay loop governed by AI
 - Improved world state
 - Dynamic player choice generation
@@ -43,6 +42,7 @@ In no particular order:
 - Improved long term memory (base is there, but its very rough at the moment)
 - Improved director agent
     - Right now this doesn't really work well on anything but GPT-4 (and even there it's debatable). It tends to steer the story in a way that introduces pacing issues. It needs a model that is creative but also reasons really well i think.
+- Automatic1111 client
 
 # Quickstart
 
@@ -106,12 +106,12 @@ Will be updated as i test more models and over time.
 | [Nous Hermes LLama2](https://huggingface.co/TheBloke/Nous-Hermes-Llama2-GPTQ) | 13B model | My go-to model for 13B parameters. It's good at roleplay and also smart enough to handle the world state and narrative tools. A 13B model loaded via exllama also allows you run chromadb with the xl instructor embeddings off of a single 4090. |
 | [MythoMax](https://huggingface.co/TheBloke/MythoMax-L2-13B-GPTQ) | 13B model | Similar quality to Hermes LLama2, but a bit more creative. Rarely fails on JSON responses. |
 | [Synthia v1.2 34B](https://huggingface.co/TheBloke/Synthia-34B-v1.2-GPTQ) | 34B model | Cannot be run at full context together with chromadb instructor models on a single 4090. But a great choice if you're running chromadb with the default embeddings (or on cpu). |
-| [Genz](https://huggingface.co/TheBloke/Genz-70b-GPTQ) | 70B model | Great choice if you have the hardware to run it (or can rent it).  |
+| [Xwin-LM-70B](https://huggingface.co/Xwin-LM/Xwin-LM-70B-V0.1) | 70B model | Great choice if you have the hardware to run it (or can rent it). |
 | [Synthia v1.2 70B](https://huggingface.co/TheBloke/Synthia-70B-v1.2-GPTQ) | 70B model | Great choice if you have the hardware to run it (or can rent it). |
 
 I have not included OpenAI's gpt-3.5-turbo in this list, since it is really inconsistent with JSON responses, plus its probably still just as heavily censored as GPT-4.
 
-I have not tested with Llama 1 mnodels in a while, Lazarus was really good at roleplay, but started failing on JSON requirements.
+I have not tested with Llama 1 models in a while, Lazarus was really good at roleplay, but started failing on JSON requirements.
 
 I have not tested with anything below 13B parameters.
 

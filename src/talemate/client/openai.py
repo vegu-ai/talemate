@@ -146,8 +146,8 @@ class OpenAIClient:
             "prompt": prompt,
             "response": response,
             # TODO use tiktoken
-            "prompt_tokens": 0,
-            "response_tokens": 0,
+            "prompt_tokens": "?",
+            "response_tokens": "?",
         })
 
         self.emit_status(processing=False)

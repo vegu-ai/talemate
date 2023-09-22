@@ -48,6 +48,13 @@ export default {
 
     methods: {
         handleMessage(data) {
+
+            if(data.type === "system"&& data.id === "scene.loaded") {
+                this.prompts = [];
+                this.total = 0;
+                return;
+            }
+
             if(data.type === "prompt_sent") {
                 // add to prompts array, and truncate if necessary (max 50)
                 this.prompts.unshift({

@@ -106,7 +106,7 @@ Will be updated as i test more models and over time.
 | [Nous Hermes LLama2](https://huggingface.co/TheBloke/Nous-Hermes-Llama2-GPTQ) | 13B model | My go-to model for 13B parameters. It's good at roleplay and also smart enough to handle the world state and narrative tools. A 13B model loaded via exllama also allows you run chromadb with the xl instructor embeddings off of a single 4090. |
 | [MythoMax](https://huggingface.co/TheBloke/MythoMax-L2-13B-GPTQ) | 13B model | Similar quality to Hermes LLama2, but a bit more creative. Rarely fails on JSON responses. |
 | [Synthia v1.2 34B](https://huggingface.co/TheBloke/Synthia-34B-v1.2-GPTQ) | 34B model | Cannot be run at full context together with chromadb instructor models on a single 4090. But a great choice if you're running chromadb with the default embeddings (or on cpu). |
-| [Xwin-LM-70B](https://huggingface.co/TheBloke/Nous-Hermes-Llama2-70B-GPTQ) | 70B model | Great choice if you have the hardware to run it (or can rent it). |
+| [Xwin-LM-70B](https://huggingface.co/Xwin-LM/Xwin-LM-70B-V0.1) | 70B model | Great choice if you have the hardware to run it (or can rent it). |
 | [Synthia v1.2 70B](https://huggingface.co/TheBloke/Synthia-70B-v1.2-GPTQ) | 70B model | Great choice if you have the hardware to run it (or can rent it). |
 
 I have not included OpenAI's gpt-3.5-turbo in this list, since it is really inconsistent with JSON responses, plus its probably still just as heavily censored as GPT-4.

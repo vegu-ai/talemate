@@ -29,6 +29,8 @@ class ConversationAgent(Agent):
 
     agent_type = "conversation"
     verbose_name = "Conversation"
+    
+    min_dialogue_length = 75
 
     def __init__(
         self,
@@ -204,7 +206,7 @@ class ConversationAgent(Agent):
         empty_result_count = 0
 
         # Validate AI response
-        while loop_count < max_loops:
+        while loop_count < max_loops and len(total_result) < self.min_dialogue_length:
             log.debug("conversation agent", result=result)
             result = await self.client.send_prompt(
                 await self.build_prompt(character, char_message=total_result)
@@ -219,7 +221,7 @@ class ConversationAgent(Agent):
 
             loop_count += 1
 
-            if len(total_result) >= 250:
+            if len(total_result) > self.min_dialogue_length:
                 break
 
             # if result is empty, increment empty_result_count

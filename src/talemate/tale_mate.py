@@ -140,6 +140,23 @@ class Character:
             return ""
 
         return random.choice(self.example_dialogue)
+    
+    def filtered_sheet(self, attributes: list[str]):
+        
+        """
+        Same as sheet but only returns the attributes in the given list
+        
+        Attributes that dont exist will be ignored
+        """
+        
+        sheet_list = []
+        
+        for key, value in self.base_attributes.items():
+            if key.lower() not in attributes:
+                continue
+            sheet_list.append(f"{key}: {value}")
+        
+        return "\n".join(sheet_list)
 
     def save(self, file_path: str):
         """

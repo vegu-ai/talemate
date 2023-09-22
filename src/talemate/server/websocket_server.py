@@ -292,6 +292,14 @@ class WebsocketHandler(Receiver):
             }
         )
 
+    def handle_prompt_sent(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "prompt_sent",
+                "data": emission.data,
+            }
+        )
+
     def handle_clear_screen(self, emission: Emission):
         self.queue_put(
             {

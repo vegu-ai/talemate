@@ -148,13 +148,13 @@ class CharacterCreatorServerPlugin:
     async def handle_submit_step3(self, data:dict):
         
         creator = self.scene.get_helper("creator").agent
-        character, _ = self.apply_step_data(data)
+        character, step_data = self.apply_step_data(data)
         
         self.emit_step_start(3)
         
         description = await creator.create_character_description(
             character,
-            content_context=self.character_creation_data.scenario_context,
+            content_context=step_data.scenario_context,
         )
         
         character.description = description

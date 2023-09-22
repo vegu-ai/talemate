@@ -11,11 +11,17 @@ __all__ = [
     'ContextModel',
 ]
 
+
+class ConversationContext(BaseModel):
+    talking_character: str = None
+    other_characters: list[str] = Field(default_factory=list)
+
 class ContextModel(BaseModel):
     """
     Pydantic model for the context data.
     """
     nuke_repetition: float = Field(0.0, ge=0.0, le=3.0)
+    conversation: ConversationContext = Field(default_factory=ConversationContext)
 
 # Define the context variable as an empty dictionary
 context_data = ContextVar('context_data', default=ContextModel().dict())

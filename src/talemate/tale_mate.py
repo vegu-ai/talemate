@@ -23,6 +23,7 @@ from talemate.exceptions import ExitScene, RestartSceneLoop, ResetScene, Talemat
 from talemate.world_state import WorldState
 from talemate.config import SceneConfig
 from talemate.scene_assets import SceneAssets
+from talemate.client.context import ClientContext, ConversationContext
 import talemate.automated_action as automated_action
 
 
@@ -413,8 +414,14 @@ class Actor:
         
         self.agent.character = self.character
         
-        messages = await self.agent.converse(self, editor=editor)
-        await asyncio.sleep(0)
+        conversation_context = ConversationContext(
+            talking_character=self.character.name,
+            other_characters=[actor.character.name for actor in self.scene.actors if actor != self],
+        )
+        
+        with ClientContext(conversation=conversation_context):
+            messages = await self.agent.converse(self, editor=editor)
+            
         return messages
 
 

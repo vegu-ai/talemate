@@ -162,24 +162,17 @@ class ConversationAgent(Agent):
         if "#" in result:
             result = result.split("#")[0]
         
-        result = result.replace("\n", " ").strip()
-
-
-        # Check for occurrence of a character name followed by a colon
-        # that does NOT match the character name of the current character
-        if "." in result and re.search(rf"(?!{self.character.name})\w+:", result):
-            result = re.sub(rf"(?!{character.name})\w+:(.*\n*)*", "", result)
-
+        result = result.replace("\n", "__LINEBREAK__").strip()
 
         # Removes partial sentence at the end
         result = re.sub(r"[^\.\?\!\*]+(\n|$)", "", result)
         
-
         result = result.replace(" :", ":")
-
         result = result.strip().strip('"').strip()
-        
+        result = result.replace("[", "*").replace("]", "*")
         result = result.replace("**", "*")
+        
+        result = result.replace("__LINEBREAK__", "\n")
 
         # if there is an uneven number of '*' add one to the end
 
@@ -239,9 +232,6 @@ class ConversationAgent(Agent):
                     break
 
         result = result.replace(" :", ":")
-
-        # Removes any line starting with another character name followed by a colon
-        total_result = re.sub(rf"(?!{character.name})\w+:(.*\n*)*", "", total_result)
 
         total_result = total_result.split("#")[0]
 

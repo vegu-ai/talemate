@@ -11,7 +11,7 @@ from talemate.emit import emit
 from talemate.scene_message import CharacterMessage, DirectorMessage
 from talemate.prompts import Prompt
 
-from .base import Agent
+from .base import Agent, set_processing
 from .registry import register
 
 if TYPE_CHECKING:
@@ -29,6 +29,8 @@ class ConversationAgent(Agent):
 
     agent_type = "conversation"
     verbose_name = "Conversation"
+    
+    min_dialogue_length = 75
 
     def __init__(
         self,
@@ -162,24 +164,17 @@ class ConversationAgent(Agent):
         if "#" in result:
             result = result.split("#")[0]
         
-        result = result.replace("\n", " ").strip()
-
-
-        # Check for occurrence of a character name followed by a colon
-        # that does NOT match the character name of the current character
-        if "." in result and re.search(rf"(?!{self.character.name})\w+:", result):
-            result = re.sub(rf"(?!{character.name})\w+:(.*\n*)*", "", result)
-
+        result = result.replace("\n", "__LINEBREAK__").strip()
 
         # Removes partial sentence at the end
         result = re.sub(r"[^\.\?\!\*]+(\n|$)", "", result)
         
-
         result = result.replace(" :", ":")
-
         result = result.strip().strip('"').strip()
-        
+        result = result.replace("[", "*").replace("]", "*")
         result = result.replace("**", "*")
+        
+        result = result.replace("__LINEBREAK__", "\n")
 
         # if there is an uneven number of '*' add one to the end
 
@@ -188,12 +183,11 @@ class ConversationAgent(Agent):
 
         return result
 
+    @set_processing
     async def converse(self, actor, editor=None):
         """
         Have a conversation with the AI
         """
-
-        await self.emit_status(processing=True)
 
         history = actor.history
         self.current_memory_context = None
@@ -212,7 +206,7 @@ class ConversationAgent(Agent):
         empty_result_count = 0
 
         # Validate AI response
-        while loop_count < max_loops:
+        while loop_count < max_loops and len(total_result) < self.min_dialogue_length:
             log.debug("conversation agent", result=result)
             result = await self.client.send_prompt(
                 await self.build_prompt(character, char_message=total_result)
@@ -227,7 +221,7 @@ class ConversationAgent(Agent):
 
             loop_count += 1
 
-            if len(total_result) >= 250:
+            if len(total_result) > self.min_dialogue_length:
                 break
 
             # if result is empty, increment empty_result_count
@@ -239,9 +233,6 @@ class ConversationAgent(Agent):
                     break
 
         result = result.replace(" :", ":")
-
-        # Removes any line starting with another character name followed by a colon
-        total_result = re.sub(rf"(?!{character.name})\w+:(.*\n*)*", "", total_result)
 
         total_result = total_result.split("#")[0]
 
@@ -276,7 +267,5 @@ class ConversationAgent(Agent):
 
         # Add message and response to conversation history
         actor.scene.push_history(messages)
-
-        await self.emit_status(processing=False)
 
         return messages

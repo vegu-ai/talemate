@@ -48,12 +48,12 @@ Examples: John, Mary, Jane, Bob, Alice, etc.
 Respond with a number only
 {% endif -%}
 {% if character_sheet.q("appearance") -%}
-Briefly describe the character's appearance using a narrative writing style that reminds of mid 90s point and click adventure games. (2 - 3 sentences). {{ spice("Make it {spice}.", spices) }}
+Briefly describe the character's appearance using a narrative writing style that reminds of mid 90s point and click adventure games. (1 - 2 sentences). {{ spice("Make it {spice}.", spices) }}
 {% endif -%}
 {% block generate_appearance %}
 {% endblock %}
 {% if character_sheet.q("personality") -%}
-Briefly describe the character's personality using a narrative writing style that reminds of mid 90s point and click adventure games. (2 - 3 sentences). {{ spice("Make it {spice}.", spices) }}
+Briefly describe the character's personality using a narrative writing style that reminds of mid 90s point and click adventure games. (1 - 2 sentences). {{ spice("Make it {spice}.", spices) }}
 {% endif -%}
 {% if character_sheet.q("family and fiends") %}
 List close family and friends of {{ character_sheet("name") }}. Respond with a comma separated list of names. (2 - 3 names, include age)
@@ -69,7 +69,7 @@ List some things that {{ character_sheet("name") }} dislikes. Respond with a com
 Examples: cats, dogs, pizza, etc.
 {% endif -%}
 {% if character_sheet.q("clothes and accessories") -%}
-Briefly describe the character's clothes and accessories using a narrative writing style that reminds of mid 90s point and click adventure games. (2 - 3 sentences). {{ spice("Make it {spice}.", spices) }}
+Briefly describe the character's clothes and accessories using a narrative writing style that reminds of mid 90s point and click adventure games. (1 - 2 sentences). {{ spice("Make it {spice}.", spices) }}
 {% endif %}
 {% block generate_misc %}{% endblock -%}
 {% for custom_attribute, instructions in custom_attributes.items() -%}

@@ -14,6 +14,7 @@ ReceiveInput = signal("receive_input")
 ClientStatus = signal("client_status")
 AgentStatus = signal("agent_status")
 ClientBootstraps = signal("client_bootstraps") 
+PromptSent = signal("prompt_sent")
 
 RemoveMessage = signal("remove_message")
 
@@ -42,4 +43,5 @@ handlers = {
     "world_state": WorldState,
     "archived_history": ArchivedHistory,
     "message_edited": MessageEdited,
+    "prompt_sent": PromptSent,
 }

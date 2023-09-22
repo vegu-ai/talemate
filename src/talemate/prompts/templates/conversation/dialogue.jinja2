@@ -5,7 +5,9 @@
 <|CLOSE_SECTION|>
 <|SECTION:CHARACTERS|>
 {% for character in characters -%}
-{{ character.name }}: {{ character.description }}
+{{ character.name }}: 
+{{ character.filtered_sheet(['name', 'description', 'age', 'gender']) }}
+{{ query_memory(character.name+' personality', as_question_answer= False) }}
 
 {% endfor %}
 <|CLOSE_SECTION|>
@@ -28,9 +30,7 @@ Based on {{ talking_character.name}}'s example dialogue style, create a continua
 
 You may chose to have {{ talking_character.name}} respond to {{main_character.name}}'s last message, or you may chose to have {{ talking_character.name}} perform a new action that is in line with {{ talking_character.name}}'s character.
 
-{% if scene.history and scene.history[-1].type == "director" -%}
-Follow the instructions to you for your next message as {{ talking_character.name}}. NEVER directly respond to the instructions, but use the direction we have given you as you perform {{ talking_character.name }}'s response to {{main_character.name}}. You can separate thoughts and actual dialogue by containing thoughts inside curly brackets. Example: "{stuff you want to keep private} stuff you want to say publicly."
-{% endif -%}
+Use an informal and colloquial register with a conversational tone…Overall, their dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
 <|CLOSE_SECTION|>
 
 <|SECTION:SCENE|>

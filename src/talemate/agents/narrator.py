@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 import talemate.util as util
 from talemate.emit import wait_for_input
 from talemate.prompts import Prompt
+from talemate.agents.base import set_processing
 
 from .conversation import ConversationAgent
 from .registry import register
@@ -23,10 +24,6 @@ class NarratorAgent(ConversationAgent):
         if "#" in result:
             result = result.split("#")[0]
         
-
-        # Removes partial sentence at the end
-        # result = re.sub(r"[^\.\?\!]+(\n|$)", "", result)
-        
         cleaned = []
         for line in result.split("\n"):
             if ":" in line.strip():
@@ -35,13 +32,11 @@ class NarratorAgent(ConversationAgent):
 
         return "\n".join(cleaned)
 
+    @set_processing
     async def narrate_scene(self):
         """
         Narrate the scene
         """
-
-        await self.emit_status(processing=True)
-
 
         response = await Prompt.request(
             "narrator.narrate-scene",
@@ -55,17 +50,14 @@ class NarratorAgent(ConversationAgent):
         
         response = f"*{response.strip('*')}*"
 
-        await self.emit_status(processing=False)
-
         return response
 
+    @set_processing
     async def progress_story(self, narrative_direction:str=None):
         """
         Narrate the scene
         """
 
-        await self.emit_status(processing=True)
-        
         scene = self.scene
         director = scene.get_helper("director").agent
         pc = scene.get_player_character()
@@ -113,17 +105,13 @@ class NarratorAgent(ConversationAgent):
             response = response.replace("*", "")
             response = f"*{response}*"
         
-        await self.emit_status(processing=False)
-
         return response
 
+    @set_processing
     async def narrate_query(self, query:str, at_the_end:bool=False, as_narrative:bool=True):
         """
         Narrate a specific query
         """
-
-        await self.emit_status(processing=True)
-
         response = await Prompt.request(
             "narrator.narrate-query",
             self.client,
@@ -141,15 +129,14 @@ class NarratorAgent(ConversationAgent):
         if as_narrative:
             response = f"*{response}*"
         
-        await self.emit_status(processing=False)
         return response
 
+    @set_processing
     async def narrate_character(self, character):
         """
         Narrate a specific character
         """
 
-        await self.emit_status(processing=True)
         budget = self.client.max_token_length - 300
 
         memory_budget = min(int(budget * 0.05), 200)
@@ -176,11 +163,9 @@ class NarratorAgent(ConversationAgent):
         response = self.clean_result(response.strip())
         response = f"*{response}*"
 
-        await self.emit_status(processing=False)
         return response
 
-
-
+    @set_processing
     async def augment_context(self):
         
         """

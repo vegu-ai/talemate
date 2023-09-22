@@ -12,6 +12,32 @@ import talemate.util as util
 from talemate.emit import emit
 
 
+__all__ = [
+    "Agent",
+    "set_processing",
+]
+
+def set_processing(fn):
+    """
+    decorator that emits the agent status as processing while the function
+    is running.
+    
+    Done via a try - final block to ensure the status is reset even if
+    the function fails.
+    """
+    
+    async def wrapper(self, *args, **kwargs):
+        try:
+            await self.emit_status(processing=True)
+            return await fn(self, *args, **kwargs)
+        finally:
+            await self.emit_status(processing=False)
+            
+    wrapper.__name__ = fn.__name__
+            
+    return wrapper
+
+
 class Agent(ABC):
     """
     Base agent class, defines a role
@@ -19,6 +45,8 @@ class Agent(ABC):
 
     agent_type = "agent"
     verbose_name = None
+    
+    set_processing = set_processing
 
     @property
     def agent_details(self):
@@ -51,16 +79,29 @@ class Agent(ABC):
     @property
     def status(self):
         if self.ready:
-            return "idle"
+            return "idle" if getattr(self, "processing", 0) == 0 else "busy"
         else:
             return "uninitialized"
 
     async def emit_status(self, processing: bool = None):
-        if processing is not None:
-            self.processing = processing
-
-        status = "busy" if getattr(self, "processing", False) else self.status
-
+        
+        # should keep a count of processing requests, and when the
+        # number is 0 status is "idle", if the number is greater than 0
+        # status is "busy"
+        #
+        # increase / decrease based on value of `processing`
+        
+        if getattr(self, "processing", None) is None:
+            self.processing = 0
+            
+        if not processing:
+            self.processing -= 1
+            self.processing = max(0, self.processing)
+        else:
+            self.processing += 1
+            
+        status = "busy" if self.processing > 0 else "idle"
+        
         emit(
             "agent_status",
             message=self.verbose_name or "",

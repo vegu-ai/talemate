@@ -14,6 +14,7 @@ from talemate.automated_action import AutomatedAction
 import talemate.automated_action as automated_action
 from .conversation import ConversationAgent
 from .registry import register
+from .base import set_processing
 
 if TYPE_CHECKING:
     from talemate import Actor, Character, Player, Scene
@@ -68,37 +69,34 @@ class DirectorAgent(ConversationAgent):
         log.info("question_direction", response=response)
         return response, evaluation, prompt
         
-    
+    @set_processing
     async def direct(self, character: Character, goal_override:str=None):
         
-        await self.emit_status(processing=True)
         analysis, current_goal, action = await self.decide_action(character, goal_override=goal_override)
         
-        try:
-            if action == "watch":
-                return None
+        if action == "watch":
+            return None
+        
+        if action == "direct":
+            return await self.direct_character_with_self_reflection(character, analysis, goal_override=current_goal)
+        
+        if action.startswith("narrate"):
             
-            if action == "direct":
-                return await self.direct_character_with_self_reflection(character, analysis, goal_override=current_goal)
+            narration_type = action.split(":")[1] 
             
-            if action.startswith("narrate"):
-                
-                narration_type = action.split(":")[1] 
-                
-                direct_narrative = await self.direct_narrative(analysis, narration_type=narration_type, goal=current_goal)
-                if direct_narrative:
-                    narrator = self.scene.get_helper("narrator").agent
-                    narrator_response = await narrator.progress_story(direct_narrative)
-                    if not narrator_response:
-                        return None
-                    narrator_message = NarratorMessage(narrator_response, source="progress_story")
-                    self.scene.push_history(narrator_message)
-                    emit("narrator", narrator_message)
-                    return True
-        finally:
-            await self.emit_status(processing=False)
+            direct_narrative = await self.direct_narrative(analysis, narration_type=narration_type, goal=current_goal)
+            if direct_narrative:
+                narrator = self.scene.get_helper("narrator").agent
+                narrator_response = await narrator.progress_story(direct_narrative)
+                if not narrator_response:
+                    return None
+                narrator_message = NarratorMessage(narrator_response, source="progress_story")
+                self.scene.push_history(narrator_message)
+                emit("narrator", narrator_message)
+                return True
             
             
+    @set_processing
     async def direct_narrative(self, analysis:str, narration_type:str="progress", goal:str=None):
         
         if goal is None:
@@ -120,6 +118,7 @@ class DirectorAgent(ConversationAgent):
             
         return response
     
+    @set_processing
     async def direct_character_with_self_reflection(self, character: Character, analysis:str, goal_override:str=None):
         
         max_retries = 3
@@ -162,6 +161,7 @@ class DirectorAgent(ConversationAgent):
         
         return response
         
+    @set_processing
     async def transform_character_direction_to_inner_monologue(self, character:Character, direction:str):
         
         inner_monologue = await Prompt.request(
@@ -179,6 +179,7 @@ class DirectorAgent(ConversationAgent):
         return inner_monologue
         
         
+    @set_processing
     async def direct_character(
         self, 
         character: Character, 
@@ -229,6 +230,7 @@ class DirectorAgent(ConversationAgent):
     
     
     
+    @set_processing
     async def direct_character_self_reflect(self, direction:str, character: Character, goal:str, direction_prompt:Prompt) -> (bool, str):
         
         change_matches = ["change", "retry", "alter", "reconsider"]
@@ -253,6 +255,7 @@ class DirectorAgent(ConversationAgent):
         return keep, response
     
     
+    @set_processing
     async def direct_character_analyze(self, direction:str, character: Character, goal:str, direction_prompt:Prompt):
         
         prompt = Prompt.get("director.direct-character-analyze", vars={
@@ -317,6 +320,7 @@ class DirectorAgent(ConversationAgent):
             else:
                 return ""
     
+    @set_processing
     async def goal_analyze(self, goal:str):
         
         prompt = Prompt.get("director.goal-analyze", vars={

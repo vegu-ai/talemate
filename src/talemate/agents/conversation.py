@@ -11,7 +11,7 @@ from talemate.emit import emit
 from talemate.scene_message import CharacterMessage, DirectorMessage
 from talemate.prompts import Prompt
 
-from .base import Agent
+from .base import Agent, set_processing
 from .registry import register
 
 if TYPE_CHECKING:
@@ -181,12 +181,11 @@ class ConversationAgent(Agent):
 
         return result
 
+    @set_processing
     async def converse(self, actor, editor=None):
         """
         Have a conversation with the AI
         """
-
-        await self.emit_status(processing=True)
 
         history = actor.history
         self.current_memory_context = None
@@ -266,7 +265,5 @@ class ConversationAgent(Agent):
 
         # Add message and response to conversation history
         actor.scene.push_history(messages)
-
-        await self.emit_status(processing=False)
 
         return messages

@@ -6,7 +6,9 @@ from dotenv import load_dotenv
 import talemate.events as events
 from talemate import Actor, Character, Player
 from talemate.config import load_config
-from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, DirectorMessage, MESSAGES, reset_message_id
+from talemate.scene_message import (
+    SceneMessage, CharacterMessage, DirectorMessage, DirectorMessage, MESSAGES, reset_message_id, reset_message_ts
+)
 from talemate.world_state import WorldState
 import talemate.instance as instance
 
@@ -122,6 +124,7 @@ async def load_scene_from_data(
 ):
     
     reset_message_id()
+    reset_message_ts()
     
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description
@@ -144,12 +147,17 @@ async def load_scene_from_data(
         )
         scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
         scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
-
+        scene.advance_time(
+            scene_data.get("ts", scene.history[-1].ts if scene.history else "PT1S")
+        )
+        log.debug("scene time", ts=scene.ts)
+        
     for ah in scene.archived_history:
         if reset:
             break
+        ts = scene.history_to_timestamp(ah["start"])
         scene.signals["archive_add"].send(
-            events.ArchiveEvent(scene=scene, event_type="archive_add", text=ah["text"])
+            events.ArchiveEvent(scene=scene, event_type="archive_add", text=ah["text"], ts=ts)
         )
 
     for character_name, cs in scene.character_states.items():

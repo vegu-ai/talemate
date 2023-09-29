@@ -5,6 +5,7 @@ import os
 import random
 import traceback
 import re
+import isodate
 from typing import Dict, List, Optional, Union
 
 from blinker import signal
@@ -18,7 +19,7 @@ import talemate.util as util
 import talemate.save as save
 from talemate.emit import Emitter, emit, wait_for_input
 from talemate.util import colored_text, count_tokens, extract_metadata, wrap_text
-from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, NarratorMessage
+from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, NarratorMessage, set_message_ts
 from talemate.exceptions import ExitScene, RestartSceneLoop, ResetScene, TalemateError, TalemateInterrupt, LLMAccuracyError
 from talemate.world_state import WorldState
 from talemate.config import SceneConfig
@@ -522,6 +523,7 @@ class Scene(Emitter):
         self.environment = "scene"
         self.goal = None
         self.world_state = WorldState()
+        self.ts = "PT0S"
         
         self.automated_actions = {}
 
@@ -623,6 +625,8 @@ class Scene(Emitter):
                     if isinstance(self.history[idx], DirectorMessage):
                         self.history.pop(idx)
                         break
+            
+            self.ts = message.ts
         
         self.history.extend(messages)
         self.signals["history_add"].send(
@@ -632,6 +636,16 @@ class Scene(Emitter):
                 messages=messages,
             )
         )
+        
+    def history_to_timestamp(self, index:int):
+        """
+        Returns the timestamp of the message at the given index
+        """
+        
+        if index >= len(self.history):
+            return "PT0S"
+        
+        return self.history[index].ts
 
     def push_archive(self, entry: data_objects.ArchiveEntry):
         self.archived_history.append(entry.__dict__)
@@ -640,12 +654,12 @@ class Scene(Emitter):
                 scene=self,
                 event_type="archive_add",
                 text=entry.text,
+                ts=self.history_to_timestamp(entry.start),
             )
         )
         emit("archived_history", data={
             "history":[archived_history["text"] for archived_history in self.archived_history]
         })
-
 
     def edit_message(self, message_id:int, message:str):
         """
@@ -1059,6 +1073,17 @@ class Scene(Emitter):
         """
         self.environment = environment
         self.emit_status()
+        
+    def advance_time(self, ts: str):
+        """
+        Accepts an iso6801 duration string and advances the scene's world state by that amount
+        """
+        
+        self.ts = isodate.duration_isoformat(
+            isodate.parse_duration(self.ts) + isodate.parse_duration(ts)
+        )
+        
+        set_message_ts(self.ts)
 
     async def start(self):
         """
@@ -1249,6 +1274,7 @@ class Scene(Emitter):
             "context": scene.context,
             "world_state": scene.world_state.dict(),
             "assets": scene.assets.dict(),
+            "ts": scene.ts,
         }
 
         emit("system", "Saving scene data to: " + filepath)

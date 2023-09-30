@@ -4,7 +4,29 @@
   "name": "Infinity Quest",
   "history": [],
   "environment": "scene",
-  "archived_history": [],
+  "ts": "P1Y",
+  "archived_history": [
+    {
+      "text": "Captain Elmer and Kaira first met during their rigorous training for the Infinity Quest mission. Their initial interactions were marked by a sense of mutual respect and curiosity.",
+      "ts": "PT1S"
+    },
+    {
+      "text": "Over the course of several months, as they trained together, Elmer and Kaira developed a strong bond. They often spent their free time discussing their dreams of exploring the cosmos.",
+      "ts": "P3M"
+    },
+    {
+      "text": "During a simulated mission, the Starlight Nomad encountered a sudden system malfunction. Elmer and Kaira worked tirelessly together to resolve the issue and avert a potential disaster. This incident strengthened their trust in each other's abilities.",
+      "ts": "P6M"
+    },
+    {
+      "text": "As they ventured further into uncharted space, the crew faced a perilous encounter with a hostile alien species. Elmer and Kaira's coordinated efforts were instrumental in negotiating a peaceful resolution and avoiding conflict.",
+      "ts": "P8M"
+    },
+    {
+      "text": "One memorable evening, while gazing at the stars through the ship's observation deck, Elmer and Kaira shared personal stories from their past. This intimate conversation deepened their connection and understanding of each other.",
+      "ts": "P11M"
+    }
+  ],
   "character_states": {},
   "characters": [
     {

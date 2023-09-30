@@ -49,7 +49,7 @@ class SummarizeAgent(Agent):
             recent_entry = None
         else:
             recent_entry = scene.archived_history[-1]
-            start = recent_entry["end"] + 1
+            start = recent_entry.get("end", 0) + 1
 
         token_threshold = 1300
         tokens = 0
@@ -89,8 +89,13 @@ class SummarizeAgent(Agent):
         summarized = await self.summarize(
             "\n".join(map(str, dialogue_entries)), extra_context=extra_context
         )
+        
+        try:
+            ts = dialogue_entries[-1].ts
+        except IndexError:
+            ts = None
 
-        scene.push_archive(data_objects.ArchiveEntry(summarized, start, end))
+        scene.push_archive(data_objects.ArchiveEntry(summarized, start, end, ts=ts))
 
         return True
 

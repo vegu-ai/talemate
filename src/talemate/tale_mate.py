@@ -612,6 +612,10 @@ class Scene(Emitter):
 
     def push_history(self, messages: list[SceneMessage]):
         
+        """
+        Adds one or more messages to the scene history
+        """
+        
         if isinstance(messages, SceneMessage):
             messages = [messages]
         
@@ -636,25 +640,22 @@ class Scene(Emitter):
                 messages=messages,
             )
         )
-        
-    def history_to_timestamp(self, index:int):
-        """
-        Returns the timestamp of the message at the given index
-        """
-        
-        if index >= len(self.history):
-            return "PT0S"
-        
-        return self.history[index].ts
 
     def push_archive(self, entry: data_objects.ArchiveEntry):
+        
+        """
+        Adds an entry to the archive history.
+        
+        The archive history is a list of summarized history entries.
+        """
+        
         self.archived_history.append(entry.__dict__)
         self.signals["archive_add"].send(
             events.ArchiveEvent(
                 scene=self,
                 event_type="archive_add",
                 text=entry.text,
-                ts=self.history_to_timestamp(entry.start),
+                ts=entry.ts,
             )
         )
         emit("archived_history", data={
@@ -842,7 +843,7 @@ class Scene(Emitter):
         # we then take the history from the end index to the end of the history
 
         if self.archived_history:
-            end = self.archived_history[-1]["end"]
+            end = self.archived_history[-1].get("end", 0)
         else:
             end = 0
 
@@ -879,8 +880,17 @@ class Scene(Emitter):
         # description at tbe beginning of the context history
 
         archive_insert_idx = 0
+        
+        # iterate backwards through archived history and count how many entries
+        # there are that have an end index
+        num_archived_entries = 0
+        if add_archieved_history:
+            for i in range(len(self.archived_history) - 1, -1, -1):
+                if self.archived_history[i].get("end") is None:
+                    break
+                num_archived_entries += 1
 
-        if len(self.archived_history) <= 2 and add_archieved_history:
+        if num_archived_entries <= 2 and add_archieved_history:
             
 
             for character in self.characters:
@@ -912,6 +922,13 @@ class Scene(Emitter):
             context_history.insert(archive_insert_idx, "<|CLOSE_SECTION|>")
         
         while i >= 0 and limit > 0 and add_archieved_history:
+            
+            # we skip predefined history, that should be joined in through
+            # long term memory queries
+            
+            if self.archived_history[i].get("end") is None:
+                break
+            
             text = self.archived_history[i]["text"]
             if count_tokens(context_history) + count_tokens(text) > budget:
                 break

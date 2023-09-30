@@ -4,6 +4,8 @@ import json
 import re
 import textwrap
 import structlog
+import isodate
+import datetime
 from typing import List
 
 from colorama import Back, Fore, Style, init
@@ -432,3 +434,83 @@ def fix_faulty_json(data: str) -> str:
     data = re.sub(r',\s*]', ']', data)
     
     return data
+
+def duration_to_timedelta(duration):
+    """Convert an isodate.Duration object to a datetime.timedelta object."""
+    days = int(duration.years) * 365 + int(duration.months) * 30 + int(duration.days)
+    return datetime.timedelta(days=days)
+
+def timedelta_to_duration(delta):
+    """Convert a datetime.timedelta object to an isodate.Duration object."""
+    days = delta.days
+    years = days // 365
+    days %= 365
+    months = days // 30
+    days %= 30
+    return isodate.duration.Duration(years=years, months=months, days=days)
+
+def parse_duration_to_isodate_duration(duration_str):
+    """Parse ISO 8601 duration string and ensure the result is an isodate.Duration."""
+    parsed_duration = isodate.parse_duration(duration_str)
+    if isinstance(parsed_duration, datetime.timedelta):
+        days = parsed_duration.days
+        years = days // 365
+        days %= 365
+        months = days // 30
+        days %= 30
+        return isodate.duration.Duration(years=years, months=months, days=days)
+    return parsed_duration
+
+def iso8601_diff(duration_str1, duration_str2):
+    # Parse the ISO 8601 duration strings ensuring they are isodate.Duration objects
+    duration1 = parse_duration_to_isodate_duration(duration_str1)
+    duration2 = parse_duration_to_isodate_duration(duration_str2)
+
+    # Convert to timedelta
+    timedelta1 = duration_to_timedelta(duration1)
+    timedelta2 = duration_to_timedelta(duration2)
+
+    # Calculate the difference
+    difference_timedelta = abs(timedelta1 - timedelta2)
+    
+    # Convert back to Duration for further processing
+    difference = timedelta_to_duration(difference_timedelta)
+
+    return difference
+
+def iso8601_duration_to_human(iso_duration):
+    if not isinstance(iso_duration, isodate.Duration):
+        return "Invalid ISO duration"
+    
+    # Extract the components from the duration
+    years = getattr(iso_duration, 'years', 0)
+    months = getattr(iso_duration, 'months', 0)
+    days = getattr(iso_duration, 'days', 0)
+    # The following components will always be 0 due to our granularity requirements, 
+    # but we're including them for completeness.
+    hours = getattr(iso_duration, 'hours', 0)
+    minutes = getattr(iso_duration, 'minutes', 0)
+    seconds = getattr(iso_duration, 'seconds', 0)
+    
+    # Build the human readable string based on granularity
+    if years:
+        return f"{years} year{'s' if years > 1 else ''} ago"
+    elif months:
+        return f"{months} month{'s' if months > 1 else ''} ago"
+    elif days:
+        return f"{days} day{'s' if days > 1 else ''} ago"
+    elif hours:
+        return f"{hours} hour{'s' if hours > 1 else ''} ago"
+    elif minutes:
+        return f"{minutes} minute{'s' if minutes > 1 else ''} ago"
+    elif seconds:
+        return f"{seconds} second{'s' if seconds > 1 else ''} ago"
+    else:
+        return ""
+
+def iso8601_diff_to_human(start, end):
+    if not start or not end:
+        return ""
+    
+    diff = iso8601_diff(start, end)
+    return iso8601_duration_to_human(diff)

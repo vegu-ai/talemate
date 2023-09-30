@@ -147,15 +147,25 @@ async def load_scene_from_data(
         )
         scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
         scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
+        
+        archive_history_ts = scene.archived_history[-1].get("ts") if scene.archived_history else "PT1S"
+        
         scene.advance_time(
-            scene_data.get("ts", scene.history[-1].ts if scene.history else "PT1S")
+            scene_data.get("ts", scene.history[-1].ts if scene.history else archive_history_ts)
         )
         log.debug("scene time", ts=scene.ts)
         
     for ah in scene.archived_history:
         if reset:
             break
-        ts = scene.history_to_timestamp(ah["start"])
+        try:
+            ts = ah.get("ts", scene.history[ah["end"]].ts)
+        except (IndexError, KeyError):
+            ts = ah.get("ts", "PT1S")
+            
+        if not ah.get("ts"):
+            ah["ts"] = ts
+        
         scene.signals["archive_add"].send(
             events.ArchiveEvent(scene=scene, event_type="archive_add", text=ah["text"], ts=ts)
         )

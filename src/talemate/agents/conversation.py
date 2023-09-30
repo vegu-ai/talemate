@@ -172,6 +172,7 @@ class ConversationAgent(Agent):
         result = result.replace(" :", ":")
         result = result.strip().strip('"').strip()
         result = result.replace("[", "*").replace("]", "*")
+        result = result.replace("(", "*").replace(")", "*")
         result = result.replace("**", "*")
         
         result = result.replace("__LINEBREAK__", "\n")

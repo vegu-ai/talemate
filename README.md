@@ -102,14 +102,14 @@ Will be updated as i test more models and over time.
 
 | Model Name                    | Type            | Notes                                                                                                             |
 |-------------------------------|-----------------|-------------------------------------------------------------------------------------------------------------------|
-| [GPT-4](https://platform.openai.com/) | Remote         | Still the best for consistency and reasoning, but is heavily censored, while talemate will send a general "decensor" system prompt, depending on the type of content you want to roleplay, there is a chance your key will be banned. **If you do use this make sure to monitor your api usage, talemate tends to send a lot more requests than other roleplaying applications.** |
 | [Nous Hermes LLama2](https://huggingface.co/TheBloke/Nous-Hermes-Llama2-GPTQ) | 13B model | My go-to model for 13B parameters. It's good at roleplay and also smart enough to handle the world state and narrative tools. A 13B model loaded via exllama also allows you run chromadb with the xl instructor embeddings off of a single 4090. |
+| [Xwin-LM-13B](https://huggingface.co/TheBloke/Xwin-LM-13B-V0.1-GPTQ) | 13B model | Really strong model, roleplaying capability still needs more testing |
 | [MythoMax](https://huggingface.co/TheBloke/MythoMax-L2-13B-GPTQ) | 13B model | Similar quality to Hermes LLama2, but a bit more creative. Rarely fails on JSON responses. |
 | [Synthia v1.2 34B](https://huggingface.co/TheBloke/Synthia-34B-v1.2-GPTQ) | 34B model | Cannot be run at full context together with chromadb instructor models on a single 4090. But a great choice if you're running chromadb with the default embeddings (or on cpu). |
-| [Xwin-LM-70B](https://huggingface.co/Xwin-LM/Xwin-LM-70B-V0.1) | 70B model | Great choice if you have the hardware to run it (or can rent it). |
+| [Xwin-LM-70B](https://huggingface.co/TheBloke/Xwin-LM-70B-V0.1-GPTQ) | 70B model | Great choice if you have the hardware to run it (or can rent it). |
 | [Synthia v1.2 70B](https://huggingface.co/TheBloke/Synthia-70B-v1.2-GPTQ) | 70B model | Great choice if you have the hardware to run it (or can rent it). |
-
-I have not included OpenAI's gpt-3.5-turbo in this list, since it is really inconsistent with JSON responses, plus its probably still just as heavily censored as GPT-4.
+| [GPT-4](https://platform.openai.com/) | Remote         | Still the best for consistency and reasoning, but is heavily censored. While talemate will send a general "decensor" system prompt, depending on the type of content you want to roleplay, there is a chance your key will be banned. **If you do use this make sure to monitor your api usage, talemate tends to send a lot more requests than other roleplaying applications.** |
+| [GPT-3.5-turbo](https://platform.openai.com/)                 | Remote         | It's really inconsistent with JSON responses, plus its probably still just as heavily censored as GPT-4. If you want to run it i'd suggest running it for the conversation agent, and use GPT-4 for the other agents. **If you do use this make sure to monitor your api usage, talemate tends to send a lot more requests than other roleplaying applications.** |
 
 I have not tested with Llama 1 models in a while, Lazarus was really good at roleplay, but started failing on JSON requirements.
 

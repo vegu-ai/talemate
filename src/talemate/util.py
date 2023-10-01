@@ -301,7 +301,7 @@ def pronouns(gender: str) -> tuple[str, str]:
 
 def strip_partial_sentences(text:str) -> str:
     # Sentence ending characters
-    sentence_endings = ['.', '!', '?', '"', "'", "*"]
+    sentence_endings = ['.', '!', '?', '"', "*"]
     
     # Check if the last character is already a sentence ending
     if text[-1] in sentence_endings:

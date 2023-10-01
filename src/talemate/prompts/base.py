@@ -177,6 +177,9 @@ class Prompt:
     # prompt variables
     vars: dict = dataclasses.field(default_factory=dict)
     
+    # pad prepared response and ai response with a white-space
+    pad_prepended_response: bool = True
+    
     prepared_response: str = ""
     
     eval_response: bool = False
@@ -533,7 +536,8 @@ class Prompt:
         response = await client.send_prompt(str(self), kind=kind)
         
         if not response.lower().startswith(self.prepared_response.lower()):
-            response = self.prepared_response.rstrip() + response.strip()
+            pad = " " if self.pad_prepended_response else ""
+            response = self.prepared_response.rstrip() + pad + response.strip()
 
         
         if self.eval_response:

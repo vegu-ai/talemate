@@ -4,6 +4,8 @@ import json
 import re
 import textwrap
 import structlog
+import isodate
+import datetime
 from typing import List
 
 from colorama import Back, Fore, Style, init
@@ -297,6 +299,26 @@ def pronouns(gender: str) -> tuple[str, str]:
     return (pronoun, possessive_determiner)
 
 
+def strip_partial_sentences(text:str) -> str:
+    # Sentence ending characters
+    sentence_endings = ['.', '!', '?', '"', "*"]
+    
+    # Check if the last character is already a sentence ending
+    if text[-1] in sentence_endings:
+        return text
+    
+    # Split the text into words
+    words = text.split()
+    
+    # Iterate over the words in reverse order until a sentence ending is found
+    for i in range(len(words) - 1, -1, -1):
+        if words[i][-1] in sentence_endings:
+            return ' '.join(words[:i+1])
+    
+    # If no sentence ending is found, return the original text
+    return text
+
+
 def clean_paragraph(paragraph: str) -> str:
     """
     Cleans up a paragraph of text by:
@@ -432,3 +454,144 @@ def fix_faulty_json(data: str) -> str:
     data = re.sub(r',\s*]', ']', data)
     
     return data
+
+def duration_to_timedelta(duration):
+    """Convert an isodate.Duration object to a datetime.timedelta object."""
+    days = int(duration.years) * 365 + int(duration.months) * 30 + int(duration.days)
+    return datetime.timedelta(days=days)
+
+def timedelta_to_duration(delta):
+    """Convert a datetime.timedelta object to an isodate.Duration object."""
+    days = delta.days
+    years = days // 365
+    days %= 365
+    months = days // 30
+    days %= 30
+    return isodate.duration.Duration(years=years, months=months, days=days)
+
+def parse_duration_to_isodate_duration(duration_str):
+    """Parse ISO 8601 duration string and ensure the result is an isodate.Duration."""
+    parsed_duration = isodate.parse_duration(duration_str)
+    if isinstance(parsed_duration, datetime.timedelta):
+        days = parsed_duration.days
+        years = days // 365
+        days %= 365
+        months = days // 30
+        days %= 30
+        return isodate.duration.Duration(years=years, months=months, days=days)
+    return parsed_duration
+
+def iso8601_diff(duration_str1, duration_str2):
+    # Parse the ISO 8601 duration strings ensuring they are isodate.Duration objects
+    duration1 = parse_duration_to_isodate_duration(duration_str1)
+    duration2 = parse_duration_to_isodate_duration(duration_str2)
+
+    # Convert to timedelta
+    timedelta1 = duration_to_timedelta(duration1)
+    timedelta2 = duration_to_timedelta(duration2)
+
+    # Calculate the difference
+    difference_timedelta = abs(timedelta1 - timedelta2)
+    
+    # Convert back to Duration for further processing
+    difference = timedelta_to_duration(difference_timedelta)
+
+    return difference
+
+def iso8601_duration_to_human(iso_duration, suffix:str=" ago"):
+    # Parse the ISO8601 duration string into an isodate duration object
+    
+    if isinstance(iso_duration, isodate.Duration):
+        duration = iso_duration
+    else:
+        duration = isodate.parse_duration(iso_duration)
+
+    if isinstance(duration, isodate.Duration):
+        years = duration.years
+        months = duration.months
+        days = duration.days
+        seconds = duration.tdelta.total_seconds()
+    else:
+        years, months = 0, 0
+        days = duration.days
+        seconds = duration.total_seconds() - days * 86400  # Extract time-only part
+
+    hours, seconds = divmod(seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
+    
+    components = []
+    if years:
+        components.append(f"{years} Year{'s' if years > 1 else ''}")
+    if months:
+        components.append(f"{months} Month{'s' if months > 1 else ''}")
+    if days:
+        components.append(f"{days} Day{'s' if days > 1 else ''}")
+    if hours:
+        components.append(f"{int(hours)} Hour{'s' if hours > 1 else ''}")
+    if minutes:
+        components.append(f"{int(minutes)} Minute{'s' if minutes > 1 else ''}")
+    if seconds:
+        components.append(f"{int(seconds)} Second{'s' if seconds > 1 else ''}")
+
+    # Construct the human-readable string
+    if len(components) > 1:
+        last = components.pop()
+        human_str = ', '.join(components) + ' and ' + last
+    elif components:
+        human_str = components[0]
+    else:
+        human_str = "0 Seconds"
+    
+    return f"{human_str}{suffix}"
+
+def iso8601_diff_to_human(start, end):
+    if not start or not end:
+        return ""
+    
+    diff = iso8601_diff(start, end)
+    return iso8601_duration_to_human(diff)
+
+
+def iso8601_add(date_a:str, date_b:str) -> str:
+    """
+    Adds two ISO 8601 durations together.
+    """
+    # Validate input
+    if not date_a or not date_b:
+        return "PT0S"
+
+    new_ts = isodate.parse_duration(date_a.strip()) + isodate.parse_duration(date_b.strip())
+    return isodate.duration_isoformat(new_ts)
+
+def iso8601_correct_duration(duration: str) -> str:
+    # Split the string into date and time components using 'T' as the delimiter
+    parts = duration.split("T")
+    
+    # Handle the date component
+    date_component = parts[0]
+    time_component = ""
+    
+    # If there's a time component, process it
+    if len(parts) > 1:
+        time_component = parts[1]
+        
+        # Check if the time component has any date values (Y, M, D) and move them to the date component
+        for char in "YD":  # Removed 'M' from this loop
+            if char in time_component:
+                index = time_component.index(char)
+                date_component += time_component[:index+1]
+                time_component = time_component[index+1:]
+    
+    # If the date component contains any time values (H, M, S), move them to the time component
+    for char in "HMS":
+        if char in date_component:
+            index = date_component.index(char)
+            time_component = date_component[index:] + time_component
+            date_component = date_component[:index]
+    
+    # Combine the corrected date and time components
+    corrected_duration = date_component
+    if time_component:
+        corrected_duration += "T" + time_component
+    
+    return corrected_duration

@@ -22,6 +22,7 @@ from .cmd_save import CmdSave
 from .cmd_save_as import CmdSaveAs
 from .cmd_save_characters import CmdSaveCharacters
 from .cmd_setenv import CmdSetEnvironmentToScene, CmdSetEnvironmentToCreative
+from .cmd_time_util import *
 from .cmd_world_state import CmdWorldState
 from .cmd_run_helios_test import CmdHeliosTest
 from .manager import Manager

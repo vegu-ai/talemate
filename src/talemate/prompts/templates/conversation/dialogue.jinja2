@@ -7,14 +7,14 @@
 {% for character in characters -%}
 {{ character.name }}: 
 {{ character.filtered_sheet(['name', 'description', 'age', 'gender']) }}
-{{ query_memory(character.name+' personality', as_question_answer= False) }}
+{{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
 
 {% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:DIALOGUE EXAMPLES|>
-{% for dialogue in talking_character.example_dialogue -%}
-{{ dialogue }}
-{% endfor -%}
+{% for example in talking_character.random_dialogue_examples(num=3) -%}
+{{ example }}
+{% endfor %}
 <|CLOSE_SECTION|>
 
 <|SECTION:TASK|>

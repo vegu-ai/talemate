@@ -20,8 +20,11 @@ class CmdRebuildArchive(TalemateCommand):
         if not summarizer:
             self.system_message("No summarizer found")
             return True
-
-        self.scene.archived_history = []
+        
+        # clear out archived history, but keep pre-established history
+        self.scene.archived_history = [
+            ah for ah in self.scene.archived_history if ah.get("end") is None
+        ]
 
         while True:
             more = await summarizer.agent.build_archive(self.scene)

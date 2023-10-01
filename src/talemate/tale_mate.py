@@ -5,6 +5,7 @@ import os
 import random
 import traceback
 import re
+import isodate
 from typing import Dict, List, Optional, Union
 
 from blinker import signal
@@ -18,7 +19,7 @@ import talemate.util as util
 import talemate.save as save
 from talemate.emit import Emitter, emit, wait_for_input
 from talemate.util import colored_text, count_tokens, extract_metadata, wrap_text
-from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, NarratorMessage
+from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, NarratorMessage, TimePassageMessage
 from talemate.exceptions import ExitScene, RestartSceneLoop, ResetScene, TalemateError, TalemateInterrupt, LLMAccuracyError
 from talemate.world_state import WorldState
 from talemate.config import SceneConfig
@@ -141,6 +142,29 @@ class Character:
 
         return random.choice(self.example_dialogue)
     
+    def random_dialogue_examples(self, num:int=3):
+        """
+        Get multiple random example dialogue lines for this character.
+        
+        Will return up to `num` examples and not have any duplicates.
+        """
+        
+        if not self.example_dialogue:
+            return []
+
+        # create copy of example_dialogue so we dont modify the original
+        
+        examples = self.example_dialogue.copy()
+        
+        # shuffle the examples so we get a random order
+        
+        random.shuffle(examples)
+        
+        # now pop examples until we have `num` examples or we run out of examples
+        
+        return [examples.pop() for _ in range(min(num, len(examples)))]        
+
+    
     def filtered_sheet(self, attributes: list[str]):
         
         """
@@ -260,10 +284,11 @@ class Character:
         if "color" in metadata:
             self.color = metadata["color"]
         if "mes_example" in metadata:
+            new_line_match = "\r\n" if "\r\n" in metadata["mes_example"] else "\n"
             for message in metadata["mes_example"].split("<START>"):
-                if message.strip("\r\n"):
+                if message.strip(new_line_match):
                     self.example_dialogue.extend(
-                        [m for m in message.split("\r\n") if m]
+                        [m for m in message.split(new_line_match) if m]
                     )
 
 
@@ -335,9 +360,9 @@ class Character:
                 }
             })
             
-        for detail in self.details:
+        for key, detail in self.details.items():
             items.append({
-                "text": f"{self.name} details: {detail}",
+                "text": f"{self.name} - {key}: {detail}",
                 "meta": {
                     "character": self.name,
                     "typ": "details",
@@ -522,6 +547,7 @@ class Scene(Emitter):
         self.environment = "scene"
         self.goal = None
         self.world_state = WorldState()
+        self.ts = "PT0S"
         
         self.automated_actions = {}
 
@@ -610,6 +636,10 @@ class Scene(Emitter):
 
     def push_history(self, messages: list[SceneMessage]):
         
+        """
+        Adds one or more messages to the scene history
+        """
+        
         if isinstance(messages, SceneMessage):
             messages = [messages]
         
@@ -623,6 +653,9 @@ class Scene(Emitter):
                     if isinstance(self.history[idx], DirectorMessage):
                         self.history.pop(idx)
                         break
+            
+            elif isinstance(message, TimePassageMessage):
+                self.advance_time(message.ts)
         
         self.history.extend(messages)
         self.signals["history_add"].send(
@@ -634,18 +667,25 @@ class Scene(Emitter):
         )
 
     def push_archive(self, entry: data_objects.ArchiveEntry):
+        
+        """
+        Adds an entry to the archive history.
+        
+        The archive history is a list of summarized history entries.
+        """
+        
         self.archived_history.append(entry.__dict__)
         self.signals["archive_add"].send(
             events.ArchiveEvent(
                 scene=self,
                 event_type="archive_add",
                 text=entry.text,
+                ts=entry.ts,
             )
         )
         emit("archived_history", data={
             "history":[archived_history["text"] for archived_history in self.archived_history]
         })
-
 
     def edit_message(self, message_id:int, message:str):
         """
@@ -828,7 +868,7 @@ class Scene(Emitter):
         # we then take the history from the end index to the end of the history
 
         if self.archived_history:
-            end = self.archived_history[-1]["end"]
+            end = self.archived_history[-1].get("end", 0)
         else:
             end = 0
 
@@ -865,8 +905,17 @@ class Scene(Emitter):
         # description at tbe beginning of the context history
 
         archive_insert_idx = 0
+        
+        # iterate backwards through archived history and count how many entries
+        # there are that have an end index
+        num_archived_entries = 0
+        if add_archieved_history:
+            for i in range(len(self.archived_history) - 1, -1, -1):
+                if self.archived_history[i].get("end") is None:
+                    break
+                num_archived_entries += 1
 
-        if len(self.archived_history) <= 2 and add_archieved_history:
+        if num_archived_entries <= 2 and add_archieved_history:
             
 
             for character in self.characters:
@@ -898,6 +947,13 @@ class Scene(Emitter):
             context_history.insert(archive_insert_idx, "<|CLOSE_SECTION|>")
         
         while i >= 0 and limit > 0 and add_archieved_history:
+            
+            # we skip predefined history, that should be joined in through
+            # long term memory queries
+            
+            if self.archived_history[i].get("end") is None:
+                break
+            
             text = self.archived_history[i]["text"]
             if count_tokens(context_history) + count_tokens(text) > budget:
                 break
@@ -1038,6 +1094,11 @@ class Scene(Emitter):
                 self.history.pop(i)
                 log.info(f"Deleted message {message_id}")
                 emit("remove_message", "", id=message_id)
+                
+                if isinstance(message, TimePassageMessage):
+                    self.sync_time()
+                    self.emit_status()
+                
                 break
 
     def emit_status(self):
@@ -1050,6 +1111,7 @@ class Scene(Emitter):
                 "scene_config": self.scene_config,
                 "assets": self.assets.dict(),
                 "characters": [actor.character.serialize for actor in self.actors],
+                "scene_time": util.iso8601_duration_to_human(self.ts, suffix="") if self.ts else None,
             },
         )    
 
@@ -1059,7 +1121,58 @@ class Scene(Emitter):
         """
         self.environment = environment
         self.emit_status()
-
+        
+    def advance_time(self, ts: str):
+        """
+        Accepts an iso6801 duration string and advances the scene's world state by that amount
+        """
+        
+        self.ts = isodate.duration_isoformat(
+            isodate.parse_duration(self.ts) + isodate.parse_duration(ts)
+        )
+        
+    def sync_time(self):
+        """
+        Loops through self.history looking for TimePassageMessage and will
+        advance the world state by the amount of time passed for each
+        """
+        
+        # reset time
+        
+        self.ts = "PT0S"
+        
+        for message in self.history:
+            if isinstance(message, TimePassageMessage):
+                self.advance_time(message.ts)
+                
+        
+        self.log.info("sync_time", ts=self.ts)
+        
+        # TODO: need to adjust archived_history ts as well
+        # but removal also probably means the history needs to be regenerated
+        # anyway.
+    
+    def calc_time(self, start_idx:int=0, end_idx:int=None):
+        """
+        Loops through self.history looking for TimePassageMessage and will
+        return the sum iso8601 duration string
+        
+        Defines start and end indexes
+        """
+        
+        ts = "PT0S"
+        found = False
+        
+        for message in self.history[start_idx:end_idx]:
+            if isinstance(message, TimePassageMessage):
+                util.iso8601_add(ts, message.ts)
+                found = True
+                
+        if not found:
+            return None
+                
+        return ts        
+    
     async def start(self):
         """
         Start the scene
@@ -1117,7 +1230,7 @@ class Scene(Emitter):
                     actor = self.get_character(char_name).actor
                 except AttributeError:
                     # If the character is not an actor, then it is the narrator
-                    self.narrator_message(item)
+                    emit(item.typ, item)
                     continue
                 emit("character", item, character=actor.character)
                 if not actor.character.is_player:
@@ -1249,6 +1362,7 @@ class Scene(Emitter):
             "context": scene.context,
             "world_state": scene.world_state.dict(),
             "assets": scene.assets.dict(),
+            "ts": scene.ts,
         }
 
         emit("system", "Saving scene data to: " + filepath)

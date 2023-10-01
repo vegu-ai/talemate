@@ -5,6 +5,7 @@ NarratorMessage = signal("narrator")
 CharacterMessage = signal("character")
 PlayerMessage = signal("player")
 DirectorMessage = signal("director")
+TimePassageMessage = signal("time")
 
 ClearScreen = signal("clear_screen")
 
@@ -31,6 +32,7 @@ handlers = {
     "character": CharacterMessage,
     "player": PlayerMessage,
     "director": DirectorMessage,
+    "time": TimePassageMessage,
     "request_input": RequestInput,
     "receive_input": ReceiveInput,
     "client_status": ClientStatus,

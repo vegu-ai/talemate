@@ -40,6 +40,11 @@
                     <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" />
                 </div>
             </div>
+            <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
+                <div class="time-message"  :id="`message-${message.id}`">
+                    <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" />
+                </div>
+            </div>
             <div v-else :class="`message ${message.type}`">
                 {{ message.text }}
             </div>
@@ -51,6 +56,7 @@
 import CharacterMessage from './CharacterMessage.vue';
 import NarratorMessage from './NarratorMessage.vue';
 import DirectorMessage from './DirectorMessage.vue';
+import TimePassageMessage from './TimePassageMessage.vue';
 
 export default {
     name: 'SceneMessages',
@@ -58,6 +64,7 @@ export default {
         CharacterMessage,
         NarratorMessage,
         DirectorMessage,
+        TimePassageMessage,
     },
     data() {
         return {
@@ -87,6 +94,7 @@ export default {
                 multiSelect: data.data.multi_select,
                 color: data.color,
                 sent: false,
+                ts: data.ts,
             };
             this.messages.push(message);
         },
@@ -163,10 +171,12 @@ export default {
             
             if (data.message) {
                 if (data.type === 'character') {
-                    const [character, text] = data.message.split(':');
+                    const parts = data.message.split(':');
+                    const character = parts.shift();
+                    const text = parts.join(':');
                     this.messages.push({ id: data.id, type: data.type, character: character.trim(), text: text.trim(), color: data.color }); // Add color property to the message
                 } else if (data.type != 'request_input' && data.type != 'client_status' && data.type != 'agent_status') {
-                    this.messages.push({ id: data.id, type: data.type, text: data.message, color: data.color, character: data.character, status:data.status }); // Add color property to the message
+                    this.messages.push({ id: data.id, type: data.type, text: data.message, color: data.color, character: data.character, status:data.status, ts:data.ts }); // Add color property to the message
                 }
             }
 

@@ -491,9 +491,14 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
             "chat_prompt_size": self.max_token_length,
         }
         
-        config.update(PRESET_SIMPLE_1)
+        config.update(PRESET_LLAMA_PRECISE)
         return config
 
+
+    def prompt_config_analyze_freeform_short(self, prompt: str) -> dict:
+        config = self.prompt_config_analyze_freeform(prompt)
+        config["max_new_tokens"] = 10
+        return config
 
     def prompt_config_narrate(self, prompt: str) -> dict:
         prompt = self.prompt_template(
@@ -606,7 +611,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         fn_prompt_config = getattr(self, f"prompt_config_{kind}")
         fn_url = self.prompt_url
         message = fn_prompt_config(prompt)
-        
+                
         if client_context_attribute("nuke_repetition") > 0.0:
             log.info("nuke repetition", offset=client_context_attribute("nuke_repetition"), temperature=message["temperature"], repetition_penalty=message["repetition_penalty"])
             message = jiggle_randomness(message, offset=client_context_attribute("nuke_repetition"))
@@ -621,6 +626,8 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         log.debug("send_prompt",  token_length=token_length, max_token_length=self.max_token_length)
         
         message["prompt"] = message["prompt"].strip()
+        
+        #print(f"prompt: |{message['prompt']}|")
 
         response = await self.send_message(message, fn_url())
 

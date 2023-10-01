@@ -6,7 +6,9 @@ from dotenv import load_dotenv
 import talemate.events as events
 from talemate import Actor, Character, Player
 from talemate.config import load_config
-from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, DirectorMessage, MESSAGES, reset_message_id
+from talemate.scene_message import (
+    SceneMessage, CharacterMessage, NarratorMessage, DirectorMessage, MESSAGES, reset_message_id
+)
 from talemate.world_state import WorldState
 import talemate.instance as instance
 
@@ -144,12 +146,20 @@ async def load_scene_from_data(
         )
         scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
         scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
-
+        
+        scene.sync_time()
+        log.debug("scene time", ts=scene.ts)
+        
     for ah in scene.archived_history:
         if reset:
             break
+        ts = ah.get("ts", "PT1S")
+            
+        if not ah.get("ts"):
+            ah["ts"] = ts
+        
         scene.signals["archive_add"].send(
-            events.ArchiveEvent(scene=scene, event_type="archive_add", text=ah["text"])
+            events.ArchiveEvent(scene=scene, event_type="archive_add", text=ah["text"], ts=ts)
         )
 
     for character_name, cs in scene.character_states.items():
@@ -312,7 +322,7 @@ def _prepare_legacy_history(entry):
     """
     
     if entry.startswith("*"):
-        cls = DirectorMessage
+        cls = NarratorMessage
     elif entry.startswith("Director instructs"):
         cls = DirectorMessage
     else:

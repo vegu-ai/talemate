@@ -50,14 +50,13 @@ class MemoryAgent(Agent):
     def close_db(self):
         raise NotImplementedError()
 
-    async def add(self, text, character=None, uid=None):
+    async def add(self, text, character=None, uid=None, ts:str=None, **kwargs):
         if not text:
             return
 
-        log.debug("memory add", text=text, character=character, uid=uid)
-        await self._add(text, character=character, uid=uid)
+        await self._add(text, character=character, uid=uid, ts=ts, **kwargs)
 
-    async def _add(self, text, character=None):
+    async def _add(self, text, character=None, ts:str=None, **kwargs):
         raise NotImplementedError()
 
     async def add_many(self, objects: list[dict]):
@@ -79,7 +78,7 @@ class MemoryAgent(Agent):
         return self.db.get(id)
 
     def on_archive_add(self, event: events.ArchiveEvent):
-        asyncio.ensure_future(self.add(event.text, uid=event.memory_id))
+        asyncio.ensure_future(self.add(event.text, uid=event.memory_id, ts=event.ts, typ="history"))
 
     def on_character_state(self, event: events.CharacterStateEvent):
         asyncio.ensure_future(
@@ -256,7 +255,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         self.db_client = chromadb.Client(Settings(anonymized_telemetry=False))
 
-        openai_key = self.config.get("openai").get("api_key") or os.environ.get("OPENAI_API_KEY"),
+        openai_key = self.config.get("openai").get("api_key") or os.environ.get("OPENAI_API_KEY")
 
         if openai_key and self.USE_OPENAI:
             log.info(
@@ -300,24 +299,34 @@ class ChromaDBMemoryAgent(MemoryAgent):
         except ValueError:
             pass
 
-    async def _add(self, text, character=None, uid=None):
+    async def _add(self, text, character=None, uid=None, ts:str=None, **kwargs):
         metadatas = []
         ids = []
 
         await self.emit_status(processing=True)
 
         if character:
-            metadatas.append({"character": character.name, "source": "talemate"})
+            meta = {"character": character.name, "source": "talemate"}
+            if ts:
+                meta["ts"] = ts
+            meta.update(kwargs)
+            metadatas.append(meta)
             self.memory_tracker.setdefault(character.name, 0)
             self.memory_tracker[character.name] += 1
             id = uid or f"{character.name}-{self.memory_tracker[character.name]}"
             ids = [id]
         else:
-            metadatas.append({"character": "__narrator__", "source": "talemate"})
+            meta = {"character": "__narrator__", "source": "talemate"}
+            if ts:
+                meta["ts"] = ts
+            meta.update(kwargs)
+            metadatas.append(meta)
             self.memory_tracker.setdefault("__narrator__", 0)
             self.memory_tracker["__narrator__"] += 1
             id = uid or f"__narrator__-{self.memory_tracker['__narrator__']}"
             ids = [id]
+
+        log.debug("chromadb agent add", text=text, meta=meta, id=id)
 
         self.db.upsert(documents=[text], metadatas=metadatas, ids=ids)
 
@@ -341,7 +350,6 @@ class ChromaDBMemoryAgent(MemoryAgent):
             metadatas.append(meta)
             uid = obj.get("id", f"{character}-{self.memory_tracker[character]}")
             ids.append(uid)
-
         self.db.upsert(documents=documents, metadatas=metadatas, ids=ids)
 
         await self.emit_status(processing=False)
@@ -371,14 +379,27 @@ class ChromaDBMemoryAgent(MemoryAgent):
         #log.debug("crhomadb agent get", text=text, where=where)
 
         _results = self.db.query(query_texts=[text], where=where)
-
+        
         results = []
 
         for i in range(len(_results["distances"][0])):
-            await asyncio.sleep(0.001)
             distance = _results["distances"][0][i]
+            
+            doc = _results["documents"][0][i]
+            meta = _results["metadatas"][0][i]
+            ts = meta.get("ts")
+            
             if distance < 1:
-                results.append(_results["documents"][0][i])
+                
+                try:
+                    date_prefix = util.iso8601_diff_to_human(ts, self.scene.ts)
+                except Exception:
+                    log.error("chromadb agent", error="failed to get date prefix", ts=ts, scene_ts=self.scene.ts)
+                    date_prefix = None
+                    
+                if date_prefix:
+                    doc = f"{date_prefix}: {doc}"
+                results.append(doc)
             else:
                 break
 

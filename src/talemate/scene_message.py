@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import isodate
 
 _message_id = 0
 
@@ -11,11 +12,23 @@ def reset_message_id():
     global _message_id
     _message_id = 0
 
+
 @dataclass
 class SceneMessage:
+    
+    """
+    Base class for all messages that are sent to the scene.
+    """
+    
+    # the mesage itself
     message: str
+    
+    # the id of the message
     id: int = field(default_factory=get_message_id)
+    
+    # the source of the message (e.g. "ai", "progress_story", "director")
     source: str = ""
+    
     typ = "scene"
     
     
@@ -83,12 +96,25 @@ class DirectorMessage(SceneMessage):
         
         return f"[Story progression instructions for {char_name}: {message}]"
         
-        
+@dataclass
+class TimePassageMessage(SceneMessage):
+    ts: str = "PT0S"
+    source: str = "manual"    
+    typ = "time"
     
-
+    def __dict__(self):
+        return {
+            "message": self.message,
+            "id": self.id,
+            "typ": "time",
+            "source": self.source,
+            "ts": self.ts,
+        }
+    
 MESSAGES = {
     "scene": SceneMessage,
     "character": CharacterMessage,
     "narrator": NarratorMessage,
     "director": DirectorMessage,
+    "time": TimePassageMessage,
 }

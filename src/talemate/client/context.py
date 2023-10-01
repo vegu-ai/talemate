@@ -4,6 +4,9 @@ Context managers for various client-side operations.
 
 from contextvars import ContextVar
 from pydantic import BaseModel, Field
+from copy import deepcopy
+
+import structlog
 
 __all__ = [
     'context_data',
@@ -11,6 +14,14 @@ __all__ = [
     'ContextModel',
 ]
 
+log = structlog.get_logger()
+
+def model_to_dict_without_defaults(model_instance):
+    model_dict = model_instance.dict()
+    for field_name, field in model_instance.__class__.__fields__.items():
+        if field.default == model_dict.get(field_name):
+            del model_dict[field_name]
+    return model_dict
 
 class ConversationContext(BaseModel):
     talking_character: str = None
@@ -47,33 +58,23 @@ class ClientContext:
         Initialize the context manager with the key-value pairs to be set.
         """
         # Validate the data with the Pydantic model
-        self.values = ContextModel(**kwargs).dict()
-        self.tokens = {}
+        self.values = model_to_dict_without_defaults(ContextModel(**kwargs))
 
     def __enter__(self):
         """
         Set the key-value pairs to the context variable `context_data` when entering the context.
         """
         # Get the current context data
-        data = context_data.get()
-        # For each key-value pair, save the current value of the key (if it exists) and set the new value
-        for key, value in self.values.items():
-            self.tokens[key] = data.get(key, None)
-            data[key] = value
+        
+        data = deepcopy(context_data.get()) if context_data.get() else {}
+        data.update(self.values)
+        
         # Update the context data
-        context_data.set(data)
+        self.token = context_data.set(data)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
         Reset the context variable `context_data` to its previous values when exiting the context.
         """
-        # Get the current context data
-        data = context_data.get()
-        # For each key, if a previous value exists, reset it. Otherwise, remove the key
-        for key in self.values.keys():
-            if self.tokens[key] is not None:
-                data[key] = self.tokens[key]
-            else:
-                data.pop(key, None)
-        # Update the context data
-        context_data.set(data)
+        
+        context_data.reset(self.token)

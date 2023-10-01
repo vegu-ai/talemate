@@ -27,6 +27,7 @@ class HistoryEvent(Event):
 class ArchiveEvent(Event):
     text: str
     memory_id: str = None
+    ts: str = None
 
 
 @dataclass

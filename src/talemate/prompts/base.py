@@ -177,6 +177,9 @@ class Prompt:
     # prompt variables
     vars: dict = dataclasses.field(default_factory=dict)
     
+    # pad prepared response and ai response with a white-space
+    pad_prepended_response: bool = True
+    
     prepared_response: str = ""
     
     eval_response: bool = False
@@ -282,6 +285,7 @@ class Prompt:
         env.globals["set_question_eval"] = self.set_question_eval
         env.globals["query_scene"] = self.query_scene
         env.globals["query_memory"] = self.query_memory
+        env.globals["query_text"] = self.query_text
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
         env.globals["config"] = self.config
@@ -336,7 +340,15 @@ class Prompt:
             f"Answer: " + loop.run_until_complete(narrator.narrate_query(query, at_the_end=at_the_end, as_narrative=as_narrative)),
         ])
         
-
+    
+    def query_text(self, query:str, text:str):
+        loop = asyncio.get_event_loop()
+        summarizer = instance.get_agent("summarizer")
+        query = query.format(**self.vars)
+        return "\n".join([
+            f"Question: {query}",
+            f"Answer: " + loop.run_until_complete(summarizer.analyze_text_and_answer_question(text, query)),
+        ])
         
     def query_memory(self, query:str, as_question_answer:bool=True):
         loop = asyncio.get_event_loop()
@@ -524,7 +536,8 @@ class Prompt:
         response = await client.send_prompt(str(self), kind=kind)
         
         if not response.lower().startswith(self.prepared_response.lower()):
-            response = self.prepared_response.rstrip() + " " + response.strip()
+            pad = " " if self.pad_prepended_response else ""
+            response = self.prepared_response.rstrip() + pad + response.strip()
 
         
         if self.eval_response:

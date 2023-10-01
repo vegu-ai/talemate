@@ -292,6 +292,16 @@ class WebsocketHandler(Receiver):
             }
         )
 
+    def handle_time(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "time",
+                "message": emission.message,
+                "id": emission.id,
+                "ts": emission.message_object.ts,
+            }
+        )
+
     def handle_prompt_sent(self, emission: Emission):
         self.queue_put(
             {

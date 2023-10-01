@@ -29,6 +29,7 @@ class AbortCommand(IOError):
 class Emission:
     typ: str
     message: str = None
+    message_object: SceneMessage = None
     character: Character = None
     scene: Scene = None
     status: str = None
@@ -43,12 +44,16 @@ def emit(
     if typ not in handlers:
         raise ValueError(f"Unknown message type: {typ}")
     
+    
     if isinstance(message, SceneMessage):
         kwargs["id"] = message.id
+        message_object = message
         message = message.message
+    else:
+        message_object = None
 
     handlers[typ].send(
-        Emission(typ=typ, message=message, character=character, scene=scene, **kwargs)
+        Emission(typ=typ, message=message, character=character, scene=scene, message_object=message_object, **kwargs)
     )
 
 

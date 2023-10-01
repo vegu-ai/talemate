@@ -478,35 +478,51 @@ def iso8601_diff(duration_str1, duration_str2):
 
     return difference
 
-def iso8601_duration_to_human(iso_duration):
-    if not isinstance(iso_duration, isodate.Duration):
-        return "Invalid ISO duration"
+def iso8601_duration_to_human(iso_duration, suffix:str=" ago"):
+    # Parse the ISO8601 duration string into an isodate duration object
     
-    # Extract the components from the duration
-    years = getattr(iso_duration, 'years', 0)
-    months = getattr(iso_duration, 'months', 0)
-    days = getattr(iso_duration, 'days', 0)
-    # The following components will always be 0 due to our granularity requirements, 
-    # but we're including them for completeness.
-    hours = getattr(iso_duration, 'hours', 0)
-    minutes = getattr(iso_duration, 'minutes', 0)
-    seconds = getattr(iso_duration, 'seconds', 0)
-    
-    # Build the human readable string based on granularity
-    if years:
-        return f"{years} year{'s' if years > 1 else ''} ago"
-    elif months:
-        return f"{months} month{'s' if months > 1 else ''} ago"
-    elif days:
-        return f"{days} day{'s' if days > 1 else ''} ago"
-    elif hours:
-        return f"{hours} hour{'s' if hours > 1 else ''} ago"
-    elif minutes:
-        return f"{minutes} minute{'s' if minutes > 1 else ''} ago"
-    elif seconds:
-        return f"{seconds} second{'s' if seconds > 1 else ''} ago"
+    if isinstance(iso_duration, isodate.Duration):
+        duration = iso_duration
     else:
-        return ""
+        duration = isodate.parse_duration(iso_duration)
+
+    if isinstance(duration, isodate.Duration):
+        years = duration.years
+        months = duration.months
+        days = duration.days
+        seconds = duration.tdelta.total_seconds()
+    else:
+        years, months = 0, 0
+        days = duration.days
+        seconds = duration.total_seconds() - days * 86400  # Extract time-only part
+
+    hours, seconds = divmod(seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
+    
+    components = []
+    if years:
+        components.append(f"{years} Year{'s' if years > 1 else ''}")
+    if months:
+        components.append(f"{months} Month{'s' if months > 1 else ''}")
+    if days:
+        components.append(f"{days} Day{'s' if days > 1 else ''}")
+    if hours:
+        components.append(f"{int(hours)} Hour{'s' if hours > 1 else ''}")
+    if minutes:
+        components.append(f"{int(minutes)} Minute{'s' if minutes > 1 else ''}")
+    if seconds:
+        components.append(f"{int(seconds)} Second{'s' if seconds > 1 else ''}")
+
+    # Construct the human-readable string
+    if len(components) > 1:
+        last = components.pop()
+        human_str = ', '.join(components) + ' and ' + last
+    elif components:
+        human_str = components[0]
+    else:
+        human_str = "0 Seconds"
+    
+    return f"{human_str}{suffix}"
 
 def iso8601_diff_to_human(start, end):
     if not start or not end:
@@ -514,3 +530,48 @@ def iso8601_diff_to_human(start, end):
     
     diff = iso8601_diff(start, end)
     return iso8601_duration_to_human(diff)
+
+
+def iso8601_add(date_a:str, date_b:str) -> str:
+    """
+    Adds two ISO 8601 durations together.
+    """
+    # Validate input
+    if not date_a or not date_b:
+        return "PT0S"
+
+    new_ts = isodate.parse_duration(date_a.strip()) + isodate.parse_duration(date_b.strip())
+    return isodate.duration_isoformat(new_ts)
+
+def iso8601_correct_duration(duration: str) -> str:
+    # Split the string into date and time components using 'T' as the delimiter
+    parts = duration.split("T")
+    
+    # Handle the date component
+    date_component = parts[0]
+    time_component = ""
+    
+    # If there's a time component, process it
+    if len(parts) > 1:
+        time_component = parts[1]
+        
+        # Check if the time component has any date values (Y, M, D) and move them to the date component
+        for char in "YD":  # Removed 'M' from this loop
+            if char in time_component:
+                index = time_component.index(char)
+                date_component += time_component[:index+1]
+                time_component = time_component[index+1:]
+    
+    # If the date component contains any time values (H, M, S), move them to the time component
+    for char in "HMS":
+        if char in date_component:
+            index = date_component.index(char)
+            time_component = date_component[index:] + time_component
+            date_component = date_component[:index]
+    
+    # Combine the corrected date and time components
+    corrected_duration = date_component
+    if time_component:
+        corrected_duration += "T" + time_component
+    
+    return corrected_duration

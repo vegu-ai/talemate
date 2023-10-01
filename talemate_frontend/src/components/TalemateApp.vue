@@ -97,6 +97,11 @@
         <v-btn v-if="scene.environment === 'scene'" class="ml-1" @click="openSceneHistory()"><v-icon size="14"
             class="mr-1">mdi-playlist-star</v-icon>History</v-btn>
 
+        <v-chip size="x-small" v-if="scene.scene_time !== undefined">
+          <v-icon>mdi-clock</v-icon>
+          {{ scene.scene_time }}
+        </v-chip>
+
       </v-toolbar-title>
       <v-toolbar-title v-else>
         Talemate
@@ -294,6 +299,7 @@ export default {
         this.scene = {
           name: data.name,
           environment: data.data.environment,
+          scene_time: data.data.scene_time,
         }
         this.sceneActive = true;
         return;

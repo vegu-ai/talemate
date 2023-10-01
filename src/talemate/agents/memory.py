@@ -390,7 +390,13 @@ class ChromaDBMemoryAgent(MemoryAgent):
             ts = meta.get("ts")
             
             if distance < 1:
-                date_prefix = util.iso8601_diff_to_human(ts, self.scene.ts)
+                
+                try:
+                    date_prefix = util.iso8601_diff_to_human(ts, self.scene.ts)
+                except Exception:
+                    log.error("chromadb agent", error="failed to get date prefix", ts=ts, scene_ts=self.scene.ts)
+                    date_prefix = None
+                    
                 if date_prefix:
                     doc = f"{date_prefix}: {doc}"
                 results.append(doc)

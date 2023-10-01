@@ -19,7 +19,7 @@ import talemate.util as util
 import talemate.save as save
 from talemate.emit import Emitter, emit, wait_for_input
 from talemate.util import colored_text, count_tokens, extract_metadata, wrap_text
-from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, NarratorMessage, set_message_ts
+from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, NarratorMessage, TimePassageMessage
 from talemate.exceptions import ExitScene, RestartSceneLoop, ResetScene, TalemateError, TalemateInterrupt, LLMAccuracyError
 from talemate.world_state import WorldState
 from talemate.config import SceneConfig
@@ -336,9 +336,9 @@ class Character:
                 }
             })
             
-        for detail in self.details:
+        for key, detail in self.details.items():
             items.append({
-                "text": f"{self.name} details: {detail}",
+                "text": f"{self.name} - {key}: {detail}",
                 "meta": {
                     "character": self.name,
                     "typ": "details",
@@ -630,7 +630,8 @@ class Scene(Emitter):
                         self.history.pop(idx)
                         break
             
-            self.ts = message.ts
+            elif isinstance(message, TimePassageMessage):
+                self.advance_time(message.ts)
         
         self.history.extend(messages)
         self.signals["history_add"].send(
@@ -1069,6 +1070,11 @@ class Scene(Emitter):
                 self.history.pop(i)
                 log.info(f"Deleted message {message_id}")
                 emit("remove_message", "", id=message_id)
+                
+                if isinstance(message, TimePassageMessage):
+                    self.sync_time()
+                    self.emit_status()
+                
                 break
 
     def emit_status(self):
@@ -1081,6 +1087,7 @@ class Scene(Emitter):
                 "scene_config": self.scene_config,
                 "assets": self.assets.dict(),
                 "characters": [actor.character.serialize for actor in self.actors],
+                "scene_time": util.iso8601_duration_to_human(self.ts, suffix="") if self.ts else None,
             },
         )    
 
@@ -1100,8 +1107,48 @@ class Scene(Emitter):
             isodate.parse_duration(self.ts) + isodate.parse_duration(ts)
         )
         
-        set_message_ts(self.ts)
-
+    def sync_time(self):
+        """
+        Loops through self.history looking for TimePassageMessage and will
+        advance the world state by the amount of time passed for each
+        """
+        
+        # reset time
+        
+        self.ts = "PT0S"
+        
+        for message in self.history:
+            if isinstance(message, TimePassageMessage):
+                self.advance_time(message.ts)
+                
+        
+        self.log.info("sync_time", ts=self.ts)
+        
+        # TODO: need to adjust archived_history ts as well
+        # but removal also probably means the history needs to be regenerated
+        # anyway.
+    
+    def calc_time(self, start_idx:int=0, end_idx:int=None):
+        """
+        Loops through self.history looking for TimePassageMessage and will
+        return the sum iso8601 duration string
+        
+        Defines start and end indexes
+        """
+        
+        ts = "PT0S"
+        found = False
+        
+        for message in self.history[start_idx:end_idx]:
+            if isinstance(message, TimePassageMessage):
+                util.iso8601_add(ts, message.ts)
+                found = True
+                
+        if not found:
+            return None
+                
+        return ts        
+    
     async def start(self):
         """
         Start the scene
@@ -1159,7 +1206,7 @@ class Scene(Emitter):
                     actor = self.get_character(char_name).actor
                 except AttributeError:
                     # If the character is not an actor, then it is the narrator
-                    self.narrator_message(item)
+                    emit(item.typ, item)
                     continue
                 emit("character", item, character=actor.character)
                 if not actor.character.is_player:

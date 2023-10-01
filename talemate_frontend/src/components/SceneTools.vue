@@ -86,6 +86,20 @@
                         </v-btn>
                     </template>
                 </v-tooltip>
+                <v-menu>
+                    <template v-slot:activator="{ props }">
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
+                            <v-icon>mdi-clock</v-icon>
+                        </v-btn>
+                    </template>
+                    <v-list>
+                        <v-list-subheader>Advance Time</v-list-subheader>
+                        <v-list-item v-for="(option, index) in advanceTimeOptions" :key="index"
+                            @click="sendHotButtonMessage('!advance_time:' + option.value)">
+                            <v-list-item-title>{{ option.title }}</v-list-item-title>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
                 <v-divider vertical></v-divider>
                 <v-tooltip :disabled="isInputDisabled()" location="top" text="Direct a character">
                     <template v-slot:activator="{ props }">
@@ -142,6 +156,7 @@
         </v-card>
 
     </div>
+    
 </template>
 
 
@@ -154,6 +169,23 @@ export default {
         return {
             commandActive: false,
             commandName: null,
+
+            advanceTimeOptions: [
+                {"value" : "P10Y", "title": "10 years"},
+                {"value" : "P5Y", "title": "5 years"},
+                {"value" : "P1Y", "title": "1 year"},
+                {"value" : "P6M", "title": "6 months"},
+                {"value" : "P3M", "title": "3 months"},
+                {"value" : "P1M", "title": "1 month"},
+                {"value" : "P7D:1 Week later", "title": "1 week"},
+                {"value" : "P3D", "title": "3 days"},
+                {"value" : "P1D", "title": "1 day"},
+                {"value" : "PT8H", "title": "8 hours"},
+                {"value" : "PT4H", "title": "4 hours"},
+                {"Value" : "PT1H", "title": "1 hour"},
+                {"value" : "PT30M", "title": "30 minutes"},
+                {"value" : "PT15M", "title": "15 minutes"}
+            ],
         }
     },
     inject: [

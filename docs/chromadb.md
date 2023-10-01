@@ -2,23 +2,7 @@
 
 Talemate uses ChromaDB to maintain long-term memory. The default embeddings used are really fast but also not incredibly accurate. If you want to use more accurate embeddings you can use the instructor embeddings or the openai embeddings. See below for instructions on how to enable these.
 
-## OpenAI embeddings
-
-First make sure your openai key is specified in the `config.yaml` file
-
-```yaml
-openai:
-  api_key: <your-key-here>
-```
-
-Then add the following to `config.yaml` for chromadb:
-
-```yaml
-chromadb:
-    embeddings: openai
-```
-
-**Note**: As with everything openai, using this isn't free. It's way cheaper than their text completion though. ALSO - if you send super explicit content they may flag / ban your key, so keep that in mind (i hear they usually send warnings first though), and always monitor your usage on their dashboard.
+In my testing so far, instructor-xl has proved to be the most accurate (even more-so than openai)
 
 ## Local instructor embeddings
 
@@ -57,3 +41,21 @@ chromadb:
     instructor_device: cuda
     instructor_model: hkunlp/instructor-xl
 ```
+
+## OpenAI embeddings
+
+First make sure your openai key is specified in the `config.yaml` file
+
+```yaml
+openai:
+  api_key: <your-key-here>
+```
+
+Then add the following to `config.yaml` for chromadb:
+
+```yaml
+chromadb:
+    embeddings: openai
+```
+
+**Note**: As with everything openai, using this isn't free. It's way cheaper than their text completion though. ALSO - if you send super explicit content they may flag / ban your key, so keep that in mind (i hear they usually send warnings first though), and always monitor your usage on their dashboard.

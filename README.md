@@ -19,7 +19,9 @@ This means you need to either have an openai api key or know how to setup [oobab
     - director
     - creative
 - multi-client (agents can be connected to separate LLMs)
-- long term memory (very experimental at this point)
+- long term memory (experimental)
+    - chromadb integration
+    - passage of time
 - narrative world state
 - narrative tools
 - creative tools 
@@ -34,14 +36,19 @@ Kinda making it up as i go along, but i want to lean more into gameplay through 
 
 In no particular order:
 
-- Gameplay loop governed by AI
+- Extension support
+    - modular agents and clients
 - Improved world state
 - Dynamic player choice generation
 - Better creative tools
     - node based scenario / character creation
-- Improved long term memory (base is there, but its very rough at the moment)
+- Improved and consistent long term memory
 - Improved director agent
     - Right now this doesn't really work well on anything but GPT-4 (and even there it's debatable). It tends to steer the story in a way that introduces pacing issues. It needs a model that is creative but also reasons really well i think.
+- Gameplay loop governed by AI
+    - objectives
+    - quests
+    - win / lose conditions
 - Automatic1111 client
 
 # Quickstart

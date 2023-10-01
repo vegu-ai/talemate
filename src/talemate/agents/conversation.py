@@ -158,24 +158,16 @@ class ConversationAgent(Agent):
 
     def clean_result(self, result, character):
         
-        
         log.debug("clean result", result=result)
         
         if "#" in result:
             result = result.split("#")[0]
-        
-        result = result.replace("\n", "__LINEBREAK__").strip()
-
-        # Removes partial sentence at the end
-        result = re.sub(r"[^\.\?\!\*]+(\n|$)", "", result)
         
         result = result.replace(" :", ":")
         result = result.strip().strip('"').strip()
         result = result.replace("[", "*").replace("]", "*")
         result = result.replace("(", "*").replace(")", "*")
         result = result.replace("**", "*")
-        
-        result = result.replace("__LINEBREAK__", "\n")
 
         # if there is an uneven number of '*' add one to the end
 
@@ -238,7 +230,10 @@ class ConversationAgent(Agent):
         total_result = total_result.split("#")[0]
 
         # Removes partial sentence at the end
-        total_result = re.sub(r"[^\.\?\!\*]+(\n|$)", "", total_result)
+        total_result = util.strip_partial_sentences(total_result)
+        
+        # Remove "{character.name}:" - all occurences
+        total_result = total_result.replace(f"{character.name}:", "")
 
         if total_result.count("*") % 2 == 1:
             total_result += "*"

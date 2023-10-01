@@ -299,6 +299,26 @@ def pronouns(gender: str) -> tuple[str, str]:
     return (pronoun, possessive_determiner)
 
 
+def strip_partial_sentences(text:str) -> str:
+    # Sentence ending characters
+    sentence_endings = ['.', '!', '?', '"', "'", "*"]
+    
+    # Check if the last character is already a sentence ending
+    if text[-1] in sentence_endings:
+        return text
+    
+    # Split the text into words
+    words = text.split()
+    
+    # Iterate over the words in reverse order until a sentence ending is found
+    for i in range(len(words) - 1, -1, -1):
+        if words[i][-1] in sentence_endings:
+            return ' '.join(words[:i+1])
+    
+    # If no sentence ending is found, return the original text
+    return text
+
+
 def clean_paragraph(paragraph: str) -> str:
     """
     Cleans up a paragraph of text by:

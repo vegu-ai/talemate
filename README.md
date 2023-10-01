@@ -18,7 +18,7 @@ This means you need to either have an openai api key or know how to setup [oobab
     - summarization
     - director
     - creative
-- multi-client (agents can be connected to separate LLMs)
+- multi-client (agents can be connected to separate APIs)
 - long term memory (experimental)
     - chromadb integration
     - passage of time
@@ -28,7 +28,7 @@ This means you need to either have an openai api key or know how to setup [oobab
     - AI backed character creation with template support (jinja2)
     - AI backed scenario creation
 - runpod integration
-- overridable templates foe all LLM prompts. (jinja2)
+- overridable templates for all prompts. (jinja2)
 
 ## Planned features
 

@@ -12,9 +12,9 @@
 {% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:DIALOGUE EXAMPLES|>
-{% for dialogue in talking_character.example_dialogue -%}
-{{ dialogue }}
-{% endfor -%}
+{% for example in talking_character.random_dialogue_examples(num=3) -%}
+{{ example }}
+{% endfor %}
 <|CLOSE_SECTION|>
 
 <|SECTION:TASK|>

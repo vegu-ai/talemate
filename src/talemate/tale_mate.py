@@ -142,6 +142,29 @@ class Character:
 
         return random.choice(self.example_dialogue)
     
+    def random_dialogue_examples(self, num:int=3):
+        """
+        Get multiple random example dialogue lines for this character.
+        
+        Will return up to `num` examples and not have any duplicates.
+        """
+        
+        if not self.example_dialogue:
+            return []
+
+        # create copy of example_dialogue so we dont modify the original
+        
+        examples = self.example_dialogue.copy()
+        
+        # shuffle the examples so we get a random order
+        
+        random.shuffle(examples)
+        
+        # now pop examples until we have `num` examples or we run out of examples
+        
+        return [examples.pop() for _ in range(min(num, len(examples)))]        
+
+    
     def filtered_sheet(self, attributes: list[str]):
         
         """
@@ -261,10 +284,11 @@ class Character:
         if "color" in metadata:
             self.color = metadata["color"]
         if "mes_example" in metadata:
+            new_line_match = "\r\n" if "\r\n" in metadata["mes_example"] else "\n"
             for message in metadata["mes_example"].split("<START>"):
-                if message.strip("\r\n"):
+                if message.strip(new_line_match):
                     self.example_dialogue.extend(
-                        [m for m in message.split("\r\n") if m]
+                        [m for m in message.split(new_line_match) if m]
                     )
 
 

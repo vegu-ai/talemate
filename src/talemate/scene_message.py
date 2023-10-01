@@ -29,6 +29,8 @@ class SceneMessage:
     # the source of the message (e.g. "ai", "progress_story", "director")
     source: str = ""
     
+    typ = "scene"
+    
     
     def __str__(self):
         return self.message

@@ -4,7 +4,7 @@ Allows you to play roleplay scenarios with large language models.
 
 It does not run any large language models itself but relies on existing APIs. Currently supports **text-generation-webui** and **openai**.
 
-This means you need to either have an openai api key or know how to setup [oobabooga/text-generation-webui](https://github.com/oobabooga/text-generation-webui) (locally or remotely via gpu renting.)
+This means you need to either have an openai api key or know how to setup [oobabooga/text-generation-webui](https://github.com/oobabooga/text-generation-webui) (locally or remotely via gpu renting. `--api` flag needs to be set)
 
 ![Screenshot 1](docs/img/Screenshot_8.png)
 ![Screenshot 2](docs/img/Screenshot_2.png)

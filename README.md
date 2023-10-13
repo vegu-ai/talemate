@@ -55,6 +55,8 @@ In no particular order:
 
 ## Installation
 
+Post [here](https://github.com/final-wombat/talemate/issues/17) if you run into problems during installation.
+
 ### Windows
 
 1. Download and install Python 3.10 or higher from the [official Python website](https://www.python.org/downloads/windows/).

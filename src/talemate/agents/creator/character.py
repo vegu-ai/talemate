@@ -19,7 +19,7 @@ def validate(k,v):
     if k and k.lower() == "gender":
         return v.lower().strip()
     if k and k.lower() == "age":
-        return int(v.strip())
+        return int(v.split("\n")[0].strip())
     return v.strip().strip("\n")
 
 DEFAULT_CONTENT_CONTEXT="a fun and engaging adventure aimed at an adult audience."

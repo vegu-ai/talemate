@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Callable
 import talemate.util as util
 from talemate.emit import emit
 from talemate.prompts import Prompt, LoopedPrompt
+from talemate.exceptions import LLMAccuracyError
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -19,7 +20,11 @@ def validate(k,v):
     if k and k.lower() == "gender":
         return v.lower().strip()
     if k and k.lower() == "age":
-        return int(v.split("\n")[0].strip())
+        try:
+            return int(v.split("\n")[0].strip())
+        except (ValueError, TypeError):
+            raise LLMAccuracyError("Was unable to get a valid age from the response", model_name=None)
+            
     return v.strip().strip("\n")
 
 DEFAULT_CONTENT_CONTEXT="a fun and engaging adventure aimed at an adult audience."

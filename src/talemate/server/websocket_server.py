@@ -585,5 +585,12 @@ class WebsocketHandler(Receiver):
         plugin = self.routes[route]
         try:
             await plugin.handle(data)
-        except Exception:
+        except Exception as e:
             log.error("route", error=traceback.format_exc())
+            self.queue_put(
+                {
+                    "plugin": plugin.router,
+                    "type": "error",
+                    "error": str(e),
+                }
+            )

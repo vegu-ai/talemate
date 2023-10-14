@@ -163,6 +163,7 @@
                         </v-card-actions>
                     </v-card>
                 </template>
+                <v-alert v-if="error_message !== null" type="error" variant="tonal" density="compact" class="mb-2">{{ error_message }}</v-alert>
 
             </v-stepper>
         </v-window>
@@ -218,6 +219,8 @@ export default {
             custom_attributes: {},
             new_attribute_name: "",
             new_attribute_instruction: "",
+
+            error_message: null,
         }
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'requestSceneAssets'],
@@ -276,6 +279,7 @@ export default {
             this.dialogue_examples = [];
             this.character = null;
             this.generating = false;
+            this.error_message = null;
         },
 
         addQuestion() {
@@ -380,6 +384,8 @@ export default {
             if(step == 4)
                 this.details = {};
 
+            this.error_message = null;
+
             this.sendRequest({
                 action: 'submit',
                 base_attributes: this.base_attributes,
@@ -422,6 +428,11 @@ export default {
             }
         },
 
+        hanldeError(error_message) {
+            this.generating = false;
+            this.error_message = error_message;
+        },
+
         handleBaseAttribute(data) {
             this.base_attributes[data.name] = data.value;
             if(data.name == "name") {
@@ -461,6 +472,8 @@ export default {
                 } else if(data.action === 'description') {
                     this.description = data.description;
                 } 
+            } else if(data.type === "error" && data.plugin === 'character_creator') {
+                this.hanldeError(data.error);
             }
         },
     },

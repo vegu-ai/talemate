@@ -111,6 +111,7 @@ Will be updated as i test more models and over time.
 
 | Model Name                    | Type            | Notes                                                                                                             |
 |-------------------------------|-----------------|-------------------------------------------------------------------------------------------------------------------|
+| [Dolphin-Mistral](https://huggingface.co/ehartford/dolphin-2.0-mistral-7b) | 7B model | Did some limited testing with this and it seems to work well enough. Haven't tried with a quantized version. |
 | [Nous Hermes LLama2](https://huggingface.co/TheBloke/Nous-Hermes-Llama2-GPTQ) | 13B model | My go-to model for 13B parameters. It's good at roleplay and also smart enough to handle the world state and narrative tools. A 13B model loaded via exllama also allows you run chromadb with the xl instructor embeddings off of a single 4090. |
 | [Xwin-LM-13B](https://huggingface.co/TheBloke/Xwin-LM-13B-V0.1-GPTQ) | 13B model | Really strong model, roleplaying capability still needs more testing |
 | [MythoMax](https://huggingface.co/TheBloke/MythoMax-L2-13B-GPTQ) | 13B model | Similar quality to Hermes LLama2, but a bit more creative. Rarely fails on JSON responses. |
@@ -121,8 +122,6 @@ Will be updated as i test more models and over time.
 | [GPT-3.5-turbo](https://platform.openai.com/)                 | Remote         | It's really inconsistent with JSON responses, plus its probably still just as heavily censored as GPT-4. If you want to run it i'd suggest running it for the conversation agent, and use GPT-4 for the other agents. **If you do use this make sure to monitor your api usage, talemate tends to send a lot more requests than other roleplaying applications.** |
 
 I have not tested with Llama 1 models in a while, Lazarus was really good at roleplay, but started failing on JSON requirements.
-
-I have not tested with anything below 13B parameters.
 
 ## Connecting to an LLM
 

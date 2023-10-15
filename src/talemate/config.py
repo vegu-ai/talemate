@@ -4,7 +4,7 @@ import structlog
 import os
 
 from pydantic import BaseModel
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 log = structlog.get_logger("talemate.config")
 
@@ -45,10 +45,10 @@ class CreatorConfig(BaseModel):
     content_context: list[str] = ["a fun and engaging slice of life story aimed at an adult audience."]
 
 class OpenAIConfig(BaseModel):
-    api_key: str=None
+    api_key: Union[str,None]=None
     
 class RunPodConfig(BaseModel):
-    api_key: str=None
+    api_key: Union[str,None]=None
 
 class ChromaDB(BaseModel):
     instructor_device: str="cpu"

@@ -73,7 +73,7 @@ Post [here](https://github.com/final-wombat/talemate/issues/17) if you run into 
 1. `git clone git@github.com:final-wombat/talemate`
 1. `cd talemate`
 1. `source install.sh`
-1. Start the backend: `python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5001`.
+1. Start the backend: `python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050`.
 1. Open a new terminal, navigate to the `talemate_frontend` directory, and start the frontend server by running `npm run serve`.
 
 ## Configuration

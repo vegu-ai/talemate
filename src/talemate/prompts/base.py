@@ -19,7 +19,7 @@ import random
 from typing import Any
 from talemate.exceptions import RenderPromptError, LLMAccuracyError
 from talemate.emit import emit
-from talemate.util import fix_faulty_json
+from talemate.util import fix_faulty_json, extract_json
 from talemate.config import load_config
 
 import talemate.instance as instance
@@ -437,12 +437,10 @@ class Prompt:
         try:
             response = response.replace("True", "true").replace("False", "false")
             response = "\n".join([line for line in response.split("\n") if validate_line(line)]).strip()
+            
             response = fix_faulty_json(response)
-            
-            if response.strip()[-1] != "}":
-                response += "}"
-            
-            return json.loads(response)
+            response, json_response = extract_json(response)
+            return json_response            
         except Exception as e:
             
             # JSON parsing failed, try to fix it via AI

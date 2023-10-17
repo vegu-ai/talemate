@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from talemate.emit import emit
 import structlog
+from typing import Union
 
 import talemate.instance as instance
 from talemate.prompts import Prompt
@@ -24,7 +25,7 @@ class WorldState(BaseModel):
     items: dict[str, ObjectState] = {}
     
     # location description
-    location: str = None
+    location: Union[str, None] = None
     
     @property
     def agent(self):

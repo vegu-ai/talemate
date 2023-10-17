@@ -595,3 +595,98 @@ def iso8601_correct_duration(duration: str) -> str:
         corrected_duration += "T" + time_component
     
     return corrected_duration
+
+def extract_json_from_end(s):
+    """
+    Extracts a JSON string from the end of the input string `s`.
+    
+    Parameters:
+        s (str): The input string containing a JSON string at the end.
+        
+    Returns:
+        str: The extracted JSON string.
+        dict: The parsed JSON object.
+        
+    Raises:
+        ValueError: If a valid JSON string is not found.
+    """
+    open_brackets = 0
+    close_brackets = 0
+    s = s.rstrip()  # Strip white spaces and line breaks from the end
+    i = len(s) - 1
+    
+    # Iterate backwards through the string.
+    while i >= 0:
+        # Count the closing and opening curly brackets.
+        if s[i] == '}':
+            close_brackets += 1
+        elif s[i] == '{':
+            open_brackets += 1
+            # Check if the brackets match, indicating a complete JSON string.
+            if open_brackets == close_brackets:
+                try:
+                    # Try to parse the JSON string.
+                    return s[i:], json.loads(s[i:])
+                except json.JSONDecodeError:
+                    # If parsing fails, raise an error.
+                    raise ValueError("Invalid JSON string found.")
+        i -= 1
+    # Raise an error if no valid JSON string is found.
+    raise ValueError("No JSON string found in input.")
+
+def extract_json_from_start(s):
+    """
+    Extracts a JSON string from the beginning of the input string `s`.
+    
+    Parameters:
+        s (str): The input string containing a JSON string at the beginning.
+        
+    Returns:
+        str: The extracted JSON string.
+        dict: The parsed JSON object.
+        
+    Raises:
+        ValueError: If a valid JSON string is not found.
+    """
+    open_brackets = 0
+    close_brackets = 0
+    s = s.lstrip()  # Strip white spaces and line breaks from the beginning
+    i = 0
+    
+    # Iterate through the string.
+    while i < len(s):
+        # Count the opening and closing curly brackets.
+        if s[i] == '{':
+            open_brackets += 1
+        elif s[i] == '}':
+            close_brackets += 1
+            # Check if the brackets match, indicating a complete JSON string.
+            if open_brackets == close_brackets:
+                try:
+                    # Try to parse the JSON string.
+                    return s[:i+1], json.loads(s[:i+1])
+                except json.JSONDecodeError:
+                    # If parsing fails, raise an error.
+                    raise ValueError("Invalid JSON string found.")
+        i += 1
+    # Raise an error if no valid JSON string is found.
+    raise ValueError("No JSON string found in input.")
+
+def extract_json(s):
+    """
+    Extracts a JSON string either from the beginning or the end of the input string `s`.
+    
+    Parameters:
+        s (str): The input string containing a JSON string.
+        
+    Returns:
+        str: The extracted JSON string.
+        dict: The parsed JSON object.
+        
+    Raises:
+        ValueError: If a valid JSON string is not found.
+    """
+    try:
+        return extract_json_from_start(s)
+    except ValueError:
+        return extract_json_from_end(s)

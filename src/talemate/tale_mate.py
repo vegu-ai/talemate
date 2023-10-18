@@ -350,6 +350,9 @@ class Character:
             if attr.startswith("_"):
                 continue
             
+            if attr.lower() in ["name"]:
+                continue
+            
             items.append({
                 "text": f"{self.name}'s {attr}: {value}",
                 "id": f"{self.name}.{attr}",

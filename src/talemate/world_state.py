@@ -10,11 +10,11 @@ import talemate.automated_action as automated_action
 log = structlog.get_logger("talemate")
 
 class CharacterState(BaseModel):
-    snapshot: str = None
-    emotion: str = None
+    snapshot: Union[str, None] = None
+    emotion: Union[str, None] = None
     
 class ObjectState(BaseModel):
-    snapshot: str = None
+    snapshot: Union[str, None] = None
 
 class WorldState(BaseModel):
     

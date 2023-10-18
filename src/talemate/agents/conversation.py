@@ -169,11 +169,6 @@ class ConversationAgent(Agent):
         result = result.replace("(", "*").replace(")", "*")
         result = result.replace("**", "*")
 
-        # if there is an uneven number of '*' add one to the end
-
-        if result.count("*") % 2 == 1:
-            result += "*"
-
         return result
 
     @set_processing

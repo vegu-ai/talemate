@@ -14,7 +14,7 @@
 
 1. With the virtual environment activated and dependencies installed, you can start the backend server.
 2. Navigate to the `src/talemate/server` directory.
-3. Run the server with `python run.py runserver --host 0.0.0.0 --port 5001`.
+3. Run the server with `python run.py runserver --host 0.0.0.0 --port 5050`.
 
 ### Running the Frontend
 

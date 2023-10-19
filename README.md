@@ -73,7 +73,7 @@ Post [here](https://github.com/final-wombat/talemate/issues/17) if you run into 
 1. `git clone git@github.com:final-wombat/talemate`
 1. `cd talemate`
 1. `source install.sh`
-1. Start the backend: `python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5001`.
+1. Start the backend: `python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050`.
 1. Open a new terminal, navigate to the `talemate_frontend` directory, and start the frontend server by running `npm run serve`.
 
 ## Configuration
@@ -118,7 +118,7 @@ Will be updated as i test more models and over time.
 | [Synthia v1.2 34B](https://huggingface.co/TheBloke/Synthia-34B-v1.2-GPTQ) | 34B model | Cannot be run at full context together with chromadb instructor models on a single 4090. But a great choice if you're running chromadb with the default embeddings (or on cpu). |
 | [Xwin-LM-70B](https://huggingface.co/TheBloke/Xwin-LM-70B-V0.1-GPTQ) | 70B model | Great choice if you have the hardware to run it (or can rent it). |
 | [Synthia v1.2 70B](https://huggingface.co/TheBloke/Synthia-70B-v1.2-GPTQ) | 70B model | Great choice if you have the hardware to run it (or can rent it). |
-| [GPT-4](https://platform.openai.com/) | Remote         | Still the best for consistency and reasoning, but is heavily censored. While talemate will send a general "decensor" system prompt, depending on the type of content you want to roleplay, there is a chance your key will be banned. **If you do use this make sure to monitor your api usage, talemate tends to send a lot more requests than other roleplaying applications.** |
+| [GPT-4](https://platform.openai.com/) | Remote         | Still the best for consistency and reasoning, but is heavily censored. Talemate will send a general "decensor" system prompt, ymmv. **If you do use this make sure to monitor your api usage, talemate tends to send a lot more requests than other roleplaying applications.** |
 | [GPT-3.5-turbo](https://platform.openai.com/)                 | Remote         | It's really inconsistent with JSON responses, plus its probably still just as heavily censored as GPT-4. If you want to run it i'd suggest running it for the conversation agent, and use GPT-4 for the other agents. **If you do use this make sure to monitor your api usage, talemate tends to send a lot more requests than other roleplaying applications.** |
 
 I have not tested with Llama 1 models in a while, Lazarus was really good at roleplay, but started failing on JSON requirements.

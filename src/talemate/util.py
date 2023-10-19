@@ -693,6 +693,20 @@ def extract_json(s):
 
 
 def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 90, debug: bool = False) -> str:
+    
+    """
+    Removes duplicate lines from a string.
+    
+    Parameters:
+        s (str): The input string.
+        min_length (int): The minimum length of a line to be checked for duplicates.
+        similarity_threshold (int): The similarity threshold to use when comparing lines.
+        debug (bool): Whether to log debug messages.
+        
+    Returns:
+        str: The deduplicated string.
+    """
+    
     lines = s.split("\n")
     deduped = []
     
@@ -713,3 +727,15 @@ def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 90, 
             deduped.append(line)  # Allow shorter strings without dupe check
             
     return "\n".join(deduped)
+
+def remove_extra_linebreaks(s: str) -> str:
+    """
+    Removes extra line breaks from a string.
+    
+    Parameters:
+        s (str): The input string.
+        
+    Returns:
+        str: The string with extra line breaks removed.
+    """
+    return re.sub(r"\n{3,}", "\n\n", s)

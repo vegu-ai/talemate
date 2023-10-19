@@ -19,7 +19,7 @@ import random
 from typing import Any
 from talemate.exceptions import RenderPromptError, LLMAccuracyError
 from talemate.emit import emit
-from talemate.util import fix_faulty_json, extract_json
+from talemate.util import fix_faulty_json, extract_json, dedupe_string
 from talemate.config import load_config
 
 import talemate.instance as instance
@@ -321,7 +321,11 @@ class Prompt:
         prompt_text = prompt_text.replace("{!{", "{{").replace("}!}", "}}")
         
         
-        return self.template_env().from_string(prompt_text).render(self.vars)
+        parsed_text = self.template_env().from_string(prompt_text).render(self.vars)
+        
+        parsed_text = dedupe_string(parsed_text, debug=True)
+        
+        return parsed_text
         
     async def loop(self, client:any, loop_name:str, kind:str="create"):
         

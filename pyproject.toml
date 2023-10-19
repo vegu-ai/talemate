@@ -36,6 +36,7 @@ structlog = "^23.1.0"
 runpod = "==1.2.0"
 nest_asyncio = "^1.5.7"
 isodate = ">=0.6.1"
+thefuzz = ">=0.20.0"
 
 # ChromaDB
 chromadb = ">=0.4,<1"

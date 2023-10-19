@@ -7,7 +7,7 @@ import structlog
 import isodate
 import datetime
 from typing import List
-
+from thefuzz import fuzz
 from colorama import Back, Fore, Style, init
 from PIL import Image
 
@@ -690,3 +690,26 @@ def extract_json(s):
         return extract_json_from_start(s)
     except ValueError:
         return extract_json_from_end(s)
+
+
+def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 90, debug: bool = False) -> str:
+    lines = s.split("\n")
+    deduped = []
+    
+    for line in lines:
+        stripped_line = line.strip()
+        if len(stripped_line) > min_length:
+            similar_found = False
+            for existing_line in deduped:
+                similarity = fuzz.ratio(stripped_line, existing_line.strip())
+                if similarity >= similarity_threshold:
+                    similar_found = True
+                    if debug:
+                        log.debug("DEDUPE", similarity=similarity, line=line, existing_line=existing_line)
+                    break
+            if not similar_found:
+                deduped.append(line)
+        else:
+            deduped.append(line)  # Allow shorter strings without dupe check
+            
+    return "\n".join(deduped)

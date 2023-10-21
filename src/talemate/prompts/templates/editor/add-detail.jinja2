@@ -1,0 +1,26 @@
+<|SECTION:CHARACTERS|>
+{% for character in characters -%}
+{{ character.name }}: 
+{{ character.filtered_sheet(['name', 'age', 'gender']) }}
+{{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
+
+{{ character.description }}
+
+
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:SCENE|>
+Content Context: {{ scene.context }}
+
+{% for scene_context in scene.context_history(budget=1000, min_dialogue=25, sections=False, keep_director=True) -%}
+{{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Take the following line of dialogue and add flesh it out, adding extra details and exposition.
+
+Narrative exposition, thoughts and character actions need to be enclosed in *
+<|CLOSE_SECTION|>
+
+Original line: {{ content }}
+{{ set_prepared_response(character.name+":") }}

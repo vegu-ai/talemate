@@ -191,6 +191,8 @@ class Prompt:
     
     sectioning_hander: str = dataclasses.field(default_factory=lambda: DEFAULT_SECTIONING_HANDLER)
     
+    dedupe_enabled: bool = True
+    
     @classmethod
     def get(cls, uid:str, vars:dict=None):
         
@@ -283,6 +285,7 @@ class Prompt:
         env.globals["set_eval_response"] = self.set_eval_response
         env.globals["set_json_response"] = self.set_json_response
         env.globals["set_question_eval"] = self.set_question_eval
+        env.globals["disable_dedupe"] = self.disable_dedupe
         env.globals["query_scene"] = self.query_scene
         env.globals["query_memory"] = self.query_memory
         env.globals["query_text"] = self.query_text
@@ -296,6 +299,7 @@ class Prompt:
         
         # Render the template with the prompt variables
         self.eval_context = {}
+        self.dedupe_enabled = True
         try:
             self.prompt = template.render(ctx)
             if not sectioning_handler:
@@ -323,7 +327,8 @@ class Prompt:
         
         parsed_text = self.template_env().from_string(prompt_text).render(self.vars)
         
-        parsed_text = dedupe_string(parsed_text, debug=True)
+        if self.dedupe_enabled:
+            parsed_text = dedupe_string(parsed_text, debug=True)
         
         parsed_text = remove_extra_linebreaks(parsed_text)
         
@@ -428,7 +433,6 @@ class Prompt:
         )
         
 
-
     def set_question_eval(self, question:str, trigger:str, counter:str, weight:float=1.0):
         self.eval_context.setdefault("questions", [])
         self.eval_context.setdefault("counters", {})[counter] = 0
@@ -436,6 +440,9 @@ class Prompt:
         
         num_questions = len(self.eval_context["questions"])        
         return f"{num_questions}. {question}"
+    
+    def disable_dedupe(self):
+        self.dedupe_enabled = False
 
     async def parse_json_response(self, response, ai_fix:bool=True):
         

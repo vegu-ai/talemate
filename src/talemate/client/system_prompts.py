@@ -13,3 +13,5 @@ DIRECTOR = str(Prompt.get("director.system"))
 ANALYST = str(Prompt.get("summarizer.system-analyst"))
 
 ANALYST_FREEFORM = str(Prompt.get("summarizer.system-analyst-freeform"))
+
+EDITOR = str(Prompt.get("editor.system"))

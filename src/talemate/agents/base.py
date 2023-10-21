@@ -10,7 +10,7 @@ from blinker import signal
 import talemate.instance as instance
 import talemate.util as util
 from talemate.emit import emit
-
+import dataclasses
 
 __all__ = [
     "Agent",
@@ -159,3 +159,7 @@ class Agent(ABC):
 
                 current_memory_context.append(memory)
         return current_memory_context
+
+@dataclasses.dataclass
+class AgentEmission:
+    agent: Agent

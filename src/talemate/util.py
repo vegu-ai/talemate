@@ -345,7 +345,14 @@ def clean_paragraph(paragraph: str) -> str:
     return cleaned_text
 
 
-def clean_dialogue(dialogue: str, main_name: str = None) -> str:
+def clean_message(message: str) -> str:
+    message = message.strip()
+    message = re.sub(r"\s+", " ", message)
+    message = message.replace("(", "*").replace(")", "*")
+    message = message.replace("[", "*").replace("]", "*")
+    return message
+
+def clean_dialogue_old(dialogue: str, main_name: str = None) -> str:
     """
     Cleans up generated dialogue by removing unnecessary whitespace and newlines.
 
@@ -356,12 +363,7 @@ def clean_dialogue(dialogue: str, main_name: str = None) -> str:
         str: The cleaned dialogue.
     """
 
-    def clean_message(message: str) -> str:
-        message = message.strip().strip('"')
-        message = re.sub(r"\s+", " ", message)
-        message = message.replace("(", "*").replace(")", "*")
-        message = message.replace("[", "*").replace("]", "*")
-        return message
+
 
     cleaned_lines = []
     current_name = None
@@ -373,6 +375,9 @@ def clean_dialogue(dialogue: str, main_name: str = None) -> str:
         if ":" in line:
             name, message = line.split(":", 1)
             name = name.strip()
+            if name != main_name:
+                break
+            
             message = clean_message(message)
 
             if not message:
@@ -391,6 +396,45 @@ def clean_dialogue(dialogue: str, main_name: str = None) -> str:
     cleaned_dialogue = "\n".join(cleaned_lines)
     return cleaned_dialogue
 
+def clean_dialogue(dialogue: str, main_name: str) -> str:
+    
+    # keep spliting the dialogue by : with a max count of 1
+    # until the  left side is no longer the main name
+    
+    cleaned_dialogue = ""
+    
+    # find all occurances of : and then walk backwards
+    # and mark the first one that isnt preceded by the {main_name}
+    cutoff = -1
+    log.debug("clean_dialogue", dialogue=dialogue, main_name=main_name)
+    for match in re.finditer(r":", dialogue, re.MULTILINE):
+        index = match.start()
+        check = dialogue[index-len(main_name):index] 
+        log.debug("clean_dialogue", check=check, main_name=main_name)
+        if check != main_name:
+            cutoff = index
+            break
+        
+    # then split dialogue at the index and return on only
+    # the left side
+    
+    if cutoff > -1:
+        log.debug("clean_dialogue", index=index)
+        cleaned_dialogue = dialogue[:index]
+        cleaned_dialogue = strip_partial_sentences(cleaned_dialogue)
+        
+        # remove all occurances of "{main_name}: " and then prepend it once
+        
+        cleaned_dialogue = cleaned_dialogue.replace(f"{main_name}: ", "")
+        cleaned_dialogue = f"{main_name}: {cleaned_dialogue}"
+        
+        return clean_message(cleaned_dialogue)
+
+    dialogue = dialogue.replace(f"{main_name}: ", "")
+    dialogue = f"{main_name}: {dialogue}"
+
+    return clean_message(strip_partial_sentences(dialogue))
+    
 
 def clean_attribute(attribute: str) -> str:
     """
@@ -692,7 +736,7 @@ def extract_json(s):
         return extract_json_from_end(s)
 
 
-def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 90, debug: bool = False) -> str:
+def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False) -> str:
     
     """
     Removes duplicate lines from a string.
@@ -739,3 +783,50 @@ def remove_extra_linebreaks(s: str) -> str:
         str: The string with extra line breaks removed.
     """
     return re.sub(r"\n{3,}", "\n\n", s)
+
+def replace_exposition_markers(s:str) -> str:
+    s = s.replace("(", "*").replace(")", "*")
+    s = s.replace("[", "*").replace("]", "*")
+    return s 
+
+def mark_exposition(s:str, talking_character:str=None) -> str:
+    """
+    Will loop through the string and make sure chunks outside of "" are marked with *.
+    
+    For example:
+    
+    "No, you're not wrong" sips his wine "This tastes gross." coughs "acquired taste i guess?"
+    
+    becomes
+    
+    "No, you're not wrong" *sips his wine* "This tastes gross." *coughs* "acquired taste i guess?"
+    """
+    
+    in_quotes = True
+    marked = '*'
+    chunk = ''
+    
+    if talking_character:
+        s = s.split(":",1)[1]
+        prefix = f"{talking_character}: "
+    else:
+        prefix = ''
+        
+    s = s.replace("*", "").strip()
+    
+    for char in s:
+        if char == '"':
+            in_quotes = not in_quotes
+            if in_quotes:
+                marked += chunk.strip() + '*' if chunk.strip() else ''
+                chunk = ''
+            marked += char
+        elif in_quotes:
+            marked += char
+        else:
+            chunk += char
+    
+    log.info("mark_exposition", s=s, result=prefix + marked + '*' + chunk.strip() + '*' if chunk.strip() else marked)
+    
+    return prefix + marked + '*' + chunk.strip() + '*' if chunk.strip() else marked
+    

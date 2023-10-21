@@ -7,3 +7,4 @@ from .memory import ChromaDBMemoryAgent, MemoryAgent
 from .narrator import NarratorAgent
 from .registry import AGENT_CLASSES, get_agent_class, register
 from .summarize import SummarizeAgent
+from .editor import EditorAgent

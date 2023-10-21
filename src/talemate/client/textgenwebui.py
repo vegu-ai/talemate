@@ -591,6 +591,40 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         config.update(max_new_tokens=2)
         return config
          
+    def prompt_config_edit_dialogue(self, prompt:str) -> dict:
+        prompt = self.prompt_template(
+            system_prompts.EDITOR,
+            prompt,
+        )
+        
+        conversation_context = client_context_attribute("conversation")
+        
+        stopping_strings = [
+            f"{character}:" for character in conversation_context["other_characters"]
+        ]
+        
+        config = {
+            "prompt": prompt,
+            "max_new_tokens": 100,
+            "chat_prompt_size": self.max_token_length,
+            "stopping_strings": stopping_strings,
+        }
+        config.update(PRESET_DEVINE_INTELLECT)
+        return config
+
+    def prompt_config_edit_add_detail(self, prompt:str) -> dict:
+        
+        config = self.prompt_config_edit_dialogue(prompt)
+        config.update(max_new_tokens=200)
+        return config
+    
+
+    def prompt_config_edit_fix_exposition(self, prompt:str) -> dict:
+        
+        config = self.prompt_config_edit_dialogue(prompt)
+        config.update(max_new_tokens=1024)
+        return config
+
 
     async def send_prompt(
         self, prompt: str, kind: str = "conversation", finalize: Callable = lambda x: x

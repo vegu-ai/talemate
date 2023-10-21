@@ -1,23 +1,34 @@
 from __future__ import annotations
-
+import dataclasses
 import re
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 import talemate.client as client
 import talemate.util as util
 import structlog
 from talemate.emit import emit
+import talemate.emit.async_signals
 from talemate.scene_message import CharacterMessage, DirectorMessage
 from talemate.prompts import Prompt
 
-from .base import Agent, set_processing
+from .base import Agent, AgentEmission, set_processing
 from .registry import register
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Character, Scene
+    from talemate.tale_mate import Character, Scene, Actor
     
 log = structlog.get_logger("talemate.agents.conversation")
+
+@dataclasses.dataclass
+class ConversationAgentEmission(AgentEmission):
+    actor: Actor
+    character: Character
+    generation: list[str]
+    
+talemate.emit.async_signals.register(
+    "agent.conversation.generated"
+)
 
 @register()
 class ConversationAgent(Agent):
@@ -44,7 +55,6 @@ class ConversationAgent(Agent):
         self.logging_enabled = logging_enabled
         self.logging_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         self.current_memory_context = None
-
 
     async def build_prompt_default(
         self,
@@ -225,7 +235,7 @@ class ConversationAgent(Agent):
         total_result = total_result.split("#")[0]
 
         # Removes partial sentence at the end
-        total_result = util.strip_partial_sentences(total_result)
+        total_result = util.clean_dialogue(total_result, main_name=character.name)
         
         # Remove "{character.name}:" - all occurences
         total_result = total_result.replace(f"{character.name}:", "")
@@ -248,13 +258,15 @@ class ConversationAgent(Agent):
         )
 
         response_message = util.parse_messages_from_str(total_result, [character.name])
+        
+        log.info("conversation agent", result=response_message)
+            
+        emission = ConversationAgentEmission(agent=self, generation=response_message, actor=actor, character=character)
+        await talemate.emit.async_signals.get("agent.conversation.generated").send(emission)
 
-        if editor:
-            response_message = [
-                editor.help_edit(character, message) for message in response_message
-            ]
+        log.info("conversation agent", generation=emission.generation)
 
-        messages = [CharacterMessage(message) for message in response_message]
+        messages = [CharacterMessage(message) for message in emission.generation]
 
         # Add message and response to conversation history
         actor.scene.push_history(messages)

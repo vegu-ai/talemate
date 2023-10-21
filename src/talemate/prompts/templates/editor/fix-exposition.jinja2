@@ -1,0 +1,34 @@
+{{ disable_dedupe() }}
+<|SECTION:TASK|>
+Given a line of roleplay dialogue, reformat the text such that all non-dialogue parts are framed by asterisks. The dialogue itself will be enclosed in quotation marks. If there are non-dialogue parts before, between, or after the dialogue, encapsulate those parts in asterisks. Ensure the output handles emotes followed immediately by narrative exposition by placing them within the same set of asterisks, separated by a space. Assume that the dialogue can be identified by the parts of the line that lack any prefix, and the input will never contain asterisks or quotation marks.
+
+For example:
+
+Input: {{ character.name }}: She whispered, Don't tell anyone. with a stern look.
+Output: {{ character.name }}: *She whispered,* "Don't tell anyone." *with a stern look.*
+
+Input: {{ character.name }}: Where are you going? he asked, looking puzzled. I thought we were staying in.
+Output: {{ character.name }}: "Where are you going?" *he asked, looking puzzled.* "I thought we were staying in."
+
+Input: {{ character.name }}: With a heavy sigh, she said, I just can't believe it. and walked away.
+Output: {{ character.name }}: *With a heavy sigh, she said,* "I just can't believe it." *and walked away.*
+
+Input: {{ character.name }}: It's quite simple, he explained. You just have to believe.
+Output: {{ character.name }}: "It's quite simple," *he explained.* "You just have to believe."
+
+Input: {{ character.name }}: She giggled, finding his antics amusing. You're such a clown!
+Output: {{ character.name }}: *She giggled, finding his antics amusing.* "You're such a clown!"
+
+Input: {{ character.name }}: He frowned, noticing the dark clouds gathering overhead. Looks like a storm is coming.
+Output: {{ character.name }}: *He frowned, noticing the dark clouds gathering overhead.* "Looks like a storm is coming."
+
+Input: {{ character.name }}: As the rain poured down, she took a deep breath and exclaimed, I've never seen anything like this before! It's absolutely breathtaking. She then grabbed her umbrella and added, Come on, let's go explore!
+Output: {{ character.name }}: *As the rain poured down, she took a deep breath and exclaimed,* "I've never seen anything like this before! It's absolutely breathtaking." *She then grabbed her umbrella and added,* "Come on, let's go explore!"
+
+Input: {{ character.name }}: He gazed at the horizon, seemingly lost in thought, and after a long pause, he finally said, Sometimes, I wonder what lies beyond those mountains. It's a mystery that I hope to uncover one day. With that, he packed his bags, ready for another adventure.
+Output: {{ character.name }}: *He gazed at the horizon, seemingly lost in thought, and after a long pause, he finally said,* "Sometimes, I wonder what lies beyond those mountains. It's a mystery that I hope to uncover one day." *With that, he packed his bags, ready for another adventure.*
+
+Your task is to reformat any given roleplay dialogue based on the above guidelines.
+
+Input: {{ content.replace("*","").replace('"','')  }}
+Output: {{ set_prepared_response(character.name+":") }}

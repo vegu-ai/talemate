@@ -350,7 +350,7 @@ class Character:
             if attr.startswith("_"):
                 continue
             
-            if attr.lower() in ["name"]:
+            if attr.lower() in ["name", "scenario_context", "_prompt", "_template"]:
                 continue
             
             items.append({

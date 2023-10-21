@@ -1,6 +1,7 @@
 <|SECTION:{{ character.name }}'S WRITING STYLE|>
-{{ character.name }}: Omygosh this is crazy *giggles frantically*
-{{ character.name }}: Oh please please lets do this! *hihihi*
+{% for example in character.random_dialogue_examples(num=3) -%}
+{{ example }}
+{% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
 Based on {{ character.name }}'s typical writing style, please rewrite the following line of dialogue, but keep the meaning and content: {{ content }}[end]

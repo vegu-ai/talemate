@@ -238,11 +238,18 @@ class WebsocketHandler(Receiver):
                 "client": self.llm_clients[agent["client"]]["name"],
                 "name": name,
             }
-            
 
             agent_instance = instance.get_agent(name, **self.agents[name])
             agent_instance.client = self.llm_clients[agent["client"]]["client"]
+            
+            if agent_instance.has_toggle:
+                self.agents[name]["enabled"] = agent["enabled"]
 
+            if getattr(agent_instance, "actions", None):
+                self.agents[name]["actions"] = agent.get("actions", {})
+                
+            agent_instance.apply_config(**self.agents[name])
+            
             log.debug("Configured agent", name=name, client_name=self.llm_clients[agent["client"]]["name"], client=self.llm_clients[agent["client"]]["client"])
 
         self.config["agents"] = self.agents

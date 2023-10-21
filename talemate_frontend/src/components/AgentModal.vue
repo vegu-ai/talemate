@@ -1,28 +1,47 @@
 <template>
-    <v-dialog v-model="localDialog" persistent max-width="600px">
-        <v-card>
-        <v-card-title>
-            <span class="headline">{{ formTitle }}</span>
-        </v-card-title>
-        <v-card-text>
-            <v-container>
-              <v-row>
-                  <v-col cols="6">
-                    <v-text-field v-model="agent.name" readonly label="Agent"></v-text-field>
-                  </v-col> 
-                  <v-col cols="6">
-                    <v-select v-model="agent.client" :items="agent.data.client" label="Client"></v-select>
-                  </v-col>
-              </v-row>
-            </v-container>
-        </v-card-text>
-        <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="blue darken-1" text @click="close">Close</v-btn>
-            <v-btn color="blue darken-1" text @click="save">Save</v-btn>
-        </v-card-actions>
+  <v-dialog v-model="localDialog" max-width="600px">
+    <v-card>
+      <v-card-title>
+
+        <v-row>
+          <v-col cols="9">
+            <v-icon>mdi-transit-connection-variant</v-icon>
+            {{ agent.label }}
+          </v-col>
+          <v-col cols="3" class="text-right">
+            <v-checkbox :label="enabledLabel()" hide-details density="compact" color="green" v-model="agent.enabled"
+              v-if="agent.data.has_toggle"></v-checkbox>
+          </v-col>
+        </v-row>
+
+
+
+      </v-card-title>
+      <v-card-text>
+        <v-select v-model="agent.client" :items="agent.data.client" label="Client"></v-select>
+
+        <v-alert type="warning" variant="tonal" density="compact" v-if="agent.data.experimental">
+          This agent is currently experimental and may significantly decrease performance and / or require
+          strong LLMs to function properly.
+        </v-alert>
+
+        <v-card v-for="(action, key) in agent.actions" :key="key" density="compact">
+          <v-card-subtitle>
+            <v-checkbox :label="agent.data.actions[key].label" hide-details density="compact" color="green" v-model="action.enabled"></v-checkbox>
+          </v-card-subtitle>
+          <v-card-text>
+              {{ agent.data.actions[key].description }}
+          </v-card-text>
         </v-card>
-    </v-dialog>
+
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn color="primary" @click="close">Close</v-btn>
+        <v-btn color="primary" @click="save">Save</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
   
 <script>
@@ -56,6 +75,13 @@ export default {
     }
   },
   methods: {
+    enabledLabel() {
+      if (this.agent.data.enabled) {
+        return 'Enabled';
+      } else {
+        return 'Disabled';
+      }
+    },
     close() {
       this.$emit('update:dialog', false);
     },

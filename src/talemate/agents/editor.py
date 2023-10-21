@@ -10,7 +10,7 @@ import talemate.emit.async_signals
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, TimePassageMessage
 
-from .base import Agent, set_processing
+from .base import Agent, set_processing, AgentAction
 from .registry import register
 
 import structlog
@@ -37,17 +37,32 @@ class EditorAgent(Agent):
     
     def __init__(self, client, **kwargs):
         self.client = client
-        self.is_enabled = True
-        self.toggles = {
-            "edit_dialogue": False,
-            "fix_exposition": True,
-            "add_detail": True
+        self.is_enabled = False
+        self.actions = {
+            "edit_dialogue": AgentAction(enabled=False, label="Edit dialogue", description="Will attempt to improve the quality of dialogue based on the character and scene. Runs automatically after each AI dialogue."),
+            "fix_exposition": AgentAction(enabled=True, label="Fix exposition", description="Will attempt to fix exposition and emotes, making sure they are displayed in italics. Runs automatically after each AI dialogue."),
+            "add_detail": AgentAction(enabled=True, label="Add detail", description="Will attempt to add extra detail and exposition to the dialogue. Runs automatically after each AI dialogue.")
         }
         
     @property
     def enabled(self):
         return self.is_enabled
+    
+    @property
+    def has_toggle(self):
+        return True
         
+    @property
+    def experimental(self):
+        return True
+    
+    def apply_config(self, *args, **kwargs):
+        self.is_enabled = kwargs.get("enabled", False)
+        log.info("agent configure", enabled=self.is_enabled)
+        for action_key, action in self.actions.items():
+            action.enabled = kwargs.get("actions", {}).get(action_key, {}).get("enabled", False)
+            log.info("action configure", action_key=action_key, enabled=action.enabled)
+
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("agent.conversation.generated").connect(self.on_conversation_generated)
@@ -90,7 +105,7 @@ class EditorAgent(Agent):
         Edits a conversation
         """
         
-        if not self.toggles["edit_dialogue"]:
+        if not self.actions["edit_dialogue"].enabled:
             return content
         
         response = await Prompt.request("editor.edit-dialogue", self.client, "edit_dialogue", vars={
@@ -114,7 +129,7 @@ class EditorAgent(Agent):
         Edits a text to make sure all narrative exposition and emotes is encased in *
         """
         
-        if not self.toggles["fix_exposition"]:
+        if not self.actions["fix_exposition"].enabled:
             return content
         
         response = await Prompt.request("editor.fix-exposition", self.client, "edit_fix_exposition", vars={
@@ -136,7 +151,7 @@ class EditorAgent(Agent):
         Edits a text to increase its length and add extra detail and exposition
         """
         
-        if not self.toggles["add_detail"]:
+        if not self.actions["add_detail"].enabled:
             return content
         
         response = await Prompt.request("editor.add-detail", self.client, "edit_add_detail", vars={

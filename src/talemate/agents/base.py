@@ -11,11 +11,17 @@ import talemate.instance as instance
 import talemate.util as util
 from talemate.emit import emit
 import dataclasses
+import pydantic
 
 __all__ = [
     "Agent",
     "set_processing",
 ]
+
+class AgentAction(pydantic.BaseModel):
+    enabled: bool = True
+    label: str
+    description: str = ""
 
 def set_processing(fn):
     """
@@ -45,7 +51,6 @@ class Agent(ABC):
 
     agent_type = "agent"
     verbose_name = None
-    
     set_processing = set_processing
 
     @property
@@ -59,17 +64,12 @@ class Agent(ABC):
     def verbose_name(self):
         return self.agent_type.capitalize()
 
-    @classmethod
-    def config_options(cls):
-        return {
-            "client": [name for name, _ in instance.client_instances()],
-        }
+
 
     @property
     def ready(self):
         if not getattr(self.client, "enabled", True):
             return False
-        
         
         if self.client.current_status in ["error", "warning"]:
             return False
@@ -79,9 +79,56 @@ class Agent(ABC):
     @property
     def status(self):
         if self.ready:
+            if not self.enabled:
+                return "disabled"
             return "idle" if getattr(self, "processing", 0) == 0 else "busy"
         else:
             return "uninitialized"
+
+    @property
+    def enabled(self):
+        # by default, agents are enabled, an agent class that
+        # is disableable should override this property
+        return True
+    
+    @property
+    def disable(self):
+        # by default, agents are enabled, an agent class that
+        # is disableable should override this property to 
+        # disable the agent
+        pass
+    
+    @property
+    def has_toggle(self):
+        # by default, agents do not have toggles to enable / disable
+        # an agent class that is disableable should override this property
+        return False
+    
+    @property
+    def experimental(self):
+        # by default, agents are not experimental, an agent class that
+        # is experimental should override this property
+        return False
+
+    @classmethod
+    def config_options(cls, agent=None):
+        config_options = {
+            "client": [name for name, _ in instance.client_instances()],
+            "enabled": agent.enabled if agent else True,
+            "has_toggle": agent.has_toggle if agent else False,
+            "experimental": agent.experimental if agent else False,
+        }
+        actions = getattr(agent, "actions", None)
+        
+        if actions:
+            config_options["actions"] = {k: v.model_dump() for k, v in actions.items()}
+        else:
+            config_options["actions"] = {}
+            
+        return config_options
+
+    def apply_config(self, *args, **kwargs):
+        pass
 
     async def emit_status(self, processing: bool = None):
         
@@ -101,6 +148,8 @@ class Agent(ABC):
             self.processing += 1
             
         status = "busy" if self.processing > 0 else "idle"
+        if not self.enabled:
+            status = "disabled"
         
         emit(
             "agent_status",
@@ -108,7 +157,7 @@ class Agent(ABC):
             id=self.agent_type,
             status=status,
             details=self.agent_details,
-            data=self.config_options(),
+            data=self.config_options(agent=self),
         )
 
         await asyncio.sleep(0.01)

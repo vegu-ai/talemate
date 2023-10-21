@@ -11,19 +11,30 @@ log = structlog.get_logger("talemate.config")
 class Client(BaseModel):
     type: str
     name: str
-    model: Optional[str]
+    model: Union[str,None] = None
     api_url: Optional[str]
     max_token_length: Optional[int]
     
     class Config:
         extra = "ignore"
+        
+class AgentAction(BaseModel):
+    enabled: bool = True
 
 class Agent(BaseModel):
     name: str
-    client: str = None
+    client: Union[str,None] = None
+    actions: Union[dict[str, AgentAction], None] = None
+    enabled: bool = True
     
     class Config:
         extra = "ignore"
+        
+    # change serialization so actions and enabled are only
+    # serialized if they are not None
+    
+    def model_dump(self, **kwargs):
+        return super().model_dump(exclude_none=True)
 
 class GamePlayerCharacter(BaseModel):
     name: str
@@ -98,7 +109,7 @@ def load_config(file_path: str = "./config.yaml") -> dict:
         log.error("config validation", error=e)
         return None
 
-    return config.dict()
+    return config.model_dump()
 
 
 def save_config(config, file_path: str = "./config.yaml"):
@@ -110,11 +121,11 @@ def save_config(config, file_path: str = "./config.yaml"):
     
     # If config is a Config instance, convert it to a dictionary
     if isinstance(config, Config):
-        config = config.dict()
+        config = config.model_dump(exclude_none=True)
     elif isinstance(config, dict):
         # validate
         try:
-            config = Config(**config).dict()
+            config = Config(**config).model_dump(exclude_none=True)
         except pydantic.ValidationError as e:
             log.error("config validation", error=e)
             return None

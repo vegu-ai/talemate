@@ -17,9 +17,14 @@ class Client(BaseModel):
     
     class Config:
         extra = "ignore"
+ 
+
+class AgentActionConfig(BaseModel):
+    value: Union[int, float, str, bool]
         
 class AgentAction(BaseModel):
     enabled: bool = True
+    config: Union[dict[str, AgentActionConfig], None] = None
 
 class Agent(BaseModel):
     name: str

@@ -18,10 +18,21 @@ __all__ = [
     "set_processing",
 ]
 
+class AgentActionConfig(pydantic.BaseModel):
+    type: str
+    label: str
+    description: str = ""
+    value: Union[int, float, str, bool]
+    max: Union[int, float, None] = None
+    min: Union[int, float, None] = None
+    step: Union[int, float, None] = None
+
 class AgentAction(pydantic.BaseModel):
     enabled: bool = True
     label: str
     description: str = ""
+    config: Union[dict[str, AgentActionConfig], None] = None
+    
 
 def set_processing(fn):
     """

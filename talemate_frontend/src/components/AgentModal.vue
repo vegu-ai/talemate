@@ -31,6 +31,12 @@
           </v-card-subtitle>
           <v-card-text>
               {{ agent.data.actions[key].description }}
+              <div v-for="(action_config, config_key) in agent.data.actions[key].config" :key="config_key">
+                <!-- render config widgets based on action_config.type (int, str, bool, float) -->
+                <v-text-field v-if="action_config.type === 'str'" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" density="compact"></v-text-field>
+                <v-slider v-if="action_config.type === 'number' && action_config.step !== null" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" :min="action_config.min" :max="action_config.max" :step="action_config.step" density="compact" thumb-label></v-slider>
+                <v-checkbox v-if="action_config.type === 'bool'" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" density="compact"></v-checkbox>
+              </div>
           </v-card-text>
         </v-card>
 

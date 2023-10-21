@@ -101,7 +101,9 @@ class WebsocketHandler(Receiver):
             
             log.debug("Linked agent", agent_typ=agent_typ, client=client.name)
             agent = instance.get_agent(agent_typ, client=client)
-            agent.client = client            
+            agent.client = client
+            agent.apply_config(**agent_config)
+            
             
         instance.emit_agents_status()
 

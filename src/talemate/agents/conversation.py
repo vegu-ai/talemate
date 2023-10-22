@@ -11,8 +11,9 @@ from talemate.emit import emit
 import talemate.emit.async_signals
 from talemate.scene_message import CharacterMessage, DirectorMessage
 from talemate.prompts import Prompt
+from talemate.client.context import set_conversation_context_attribute
 
-from .base import Agent, AgentEmission, set_processing
+from .base import Agent, AgentEmission, set_processing, AgentAction, AgentActionConfig
 from .registry import register
 
 if TYPE_CHECKING:
@@ -55,6 +56,31 @@ class ConversationAgent(Agent):
         self.logging_enabled = logging_enabled
         self.logging_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         self.current_memory_context = None
+        
+        # several agents extend this class, but we only want to initialize
+        # these actions for the conversation agent
+        
+        if self.agent_type != "conversation":
+            return
+        
+        self.actions = {
+            "generation_override": AgentAction(
+                enabled = True,
+                label = "Generation Override",
+                description = "Override generation parameters",
+                config = {
+                    "length": AgentActionConfig(
+                        type="number",
+                        label="Generation Length (tokens)",
+                        description="Maximum number of tokens to generate for a conversation response.",
+                        value=96, 
+                        min=32,
+                        max=512,
+                        step=32,
+                    )
+                }
+            )
+        }
 
     async def build_prompt_default(
         self,
@@ -191,6 +217,9 @@ class ConversationAgent(Agent):
         self.current_memory_context = None
 
         character = actor.character
+        
+        if self.actions["generation_override"].enabled:
+            set_conversation_context_attribute("length", self.actions["generation_override"].config["length"].value)
 
         result = await self.client.send_prompt(await self.build_prompt(character))
 

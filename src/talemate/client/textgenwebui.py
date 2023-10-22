@@ -424,11 +424,13 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
             f"{character}:" for character in conversation_context["other_characters"]
         ]
         
-        log.debug("prompt_config_conversation", stopping_strings=stopping_strings, conversation_context=conversation_context)
+
+        max_new_tokens = conversation_context["length"]
+        log.debug("prompt_config_conversation", stopping_strings=stopping_strings, conversation_context=conversation_context, max_new_tokens=max_new_tokens)
 
         config = {
             "prompt": prompt,
-            "max_new_tokens": 75,
+            "max_new_tokens": max_new_tokens,
             "chat_prompt_size": self.max_token_length,
             "stopping_strings": stopping_strings,
         }

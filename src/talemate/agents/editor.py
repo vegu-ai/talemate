@@ -55,13 +55,6 @@ class EditorAgent(Agent):
     @property
     def experimental(self):
         return True
-    
-    def apply_config(self, *args, **kwargs):
-        self.is_enabled = kwargs.get("enabled", False)
-        log.info("agent configure", enabled=self.is_enabled)
-        for action_key, action in self.actions.items():
-            action.enabled = kwargs.get("actions", {}).get(action_key, {}).get("enabled", False)
-            log.info("action configure", action_key=action_key, enabled=action.enabled)
 
     def connect(self, scene):
         super().connect(scene)

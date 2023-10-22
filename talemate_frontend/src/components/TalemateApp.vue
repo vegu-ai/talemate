@@ -14,7 +14,7 @@
         <LoadScene ref="loadScene" />
         <v-divider></v-divider>
         <div :style="(sceneActive && scene.environment === 'scene' ? 'display:block' : 'display:none')">
-          <GameOptions v-if="sceneActive" ref="gameOptions" />
+          <!-- <GameOptions v-if="sceneActive" ref="gameOptions" /> -->
           <v-divider></v-divider>
           <CoverImage v-if="sceneActive" ref="coverImage" />
           <WorldState v-if="sceneActive" ref="worldState" />
@@ -153,7 +153,7 @@ import LoadScene from './LoadScene.vue';
 import SceneTools from './SceneTools.vue';
 import SceneMessages from './SceneMessages.vue';
 import WorldState from './WorldState.vue';
-import GameOptions from './GameOptions.vue';
+//import GameOptions from './GameOptions.vue';
 import CoverImage from './CoverImage.vue';
 import CharacterSheet from './CharacterSheet.vue';
 import SceneHistory from './SceneHistory.vue';
@@ -169,7 +169,7 @@ export default {
     SceneTools,
     SceneMessages,
     WorldState,
-    GameOptions,
+    //GameOptions,
     CoverImage,
     CharacterSheet,
     SceneHistory,

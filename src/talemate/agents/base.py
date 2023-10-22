@@ -139,8 +139,25 @@ class Agent(ABC):
         return config_options
 
     def apply_config(self, *args, **kwargs):
-        pass
-
+        if self.has_toggle and "enabled" in kwargs:
+            self.is_enabled = kwargs.get("enabled", False)
+            
+        if not getattr(self, "actions", None):
+            return
+            
+        for action_key, action in self.actions.items():
+            
+            if not kwargs.get("actions"):
+                continue
+            
+            action.enabled = kwargs.get("actions", {}).get(action_key, {}).get("enabled", False)
+            
+            if not action.config:
+                continue
+            
+            for config_key, config in action.config.items():
+                config.value = kwargs.get("actions", {}).get(action_key, {}).get("config", {}).get(config_key, {}).get("value", config.value)
+                
     async def emit_status(self, processing: bool = None):
         
         # should keep a count of processing requests, and when the

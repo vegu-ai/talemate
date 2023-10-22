@@ -59,20 +59,6 @@ class WorldStateAgent(Agent):
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("agent.conversation.generated").connect(self.on_conversation_generated)
-        
-    def apply_config(self, *args, **kwargs):
-        self.is_enabled = kwargs.get("enabled", False)
-        log.info("agent configure", enabled=self.is_enabled)
-        for action_key, action in self.actions.items():
-            action.enabled = kwargs.get("actions", {}).get(action_key, {}).get("enabled", False)
-            
-            if not action.config:
-                continue
-            
-            for config_key, config in action.config.items():
-                config.value = kwargs.get("actions", {}).get(action_key, {}).get("config", {}).get(config_key, {}).get("value", config.value)
-                
-            log.info("action configure", action_key=action_key, enabled=action.enabled, config=action.config)
 
     async def on_conversation_generated(self, emission:ConversationAgentEmission):
         """

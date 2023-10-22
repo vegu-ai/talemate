@@ -11,7 +11,7 @@ from talemate.emit import emit
 import talemate.emit.async_signals
 from talemate.scene_message import CharacterMessage, DirectorMessage
 from talemate.prompts import Prompt
-from talemate.client.context import set_conversation_context_attribute
+from talemate.client.context import set_conversation_context_attribute, client_context_attribute, set_client_context_attribute
 
 from .base import Agent, AgentEmission, set_processing, AgentAction, AgentActionConfig
 from .registry import register
@@ -77,7 +77,16 @@ class ConversationAgent(Agent):
                         min=32,
                         max=512,
                         step=32,
-                    )
+                    ),
+                    "jiggle": AgentActionConfig(
+                        type="number",
+                        label="Jiggle Amount",
+                        description="If > 0.0 will cause certain generation parameters to have a slight random offset applied to them. The bigger the number, the higher the potential offset.",
+                        value=0.0,
+                        min=0.0,
+                        max=1.0,
+                        step=0.1,
+                    ),
                 }
             )
         }
@@ -207,6 +216,20 @@ class ConversationAgent(Agent):
 
         return result
 
+    def set_generation_overrides(self):
+        if not self.actions["generation_override"].enabled:
+            return
+        
+        set_conversation_context_attribute("length", self.actions["generation_override"].config["length"].value)
+            
+        if self.actions["generation_override"].config["jiggle"].value > 0.0:
+            nuke_repetition = client_context_attribute("nuke_repetition")
+            if nuke_repetition == 0.0:
+                # we only apply the agent override if some other mechanism isn't already
+                # setting the nuke_repetition value
+                nuke_repetition = self.actions["generation_override"].config["jiggle"].value
+                set_client_context_attribute("nuke_repetition", nuke_repetition)
+
     @set_processing
     async def converse(self, actor, editor=None):
         """
@@ -218,8 +241,7 @@ class ConversationAgent(Agent):
 
         character = actor.character
         
-        if self.actions["generation_override"].enabled:
-            set_conversation_context_attribute("length", self.actions["generation_override"].config["length"].value)
+        self.set_generation_overrides()
 
         result = await self.client.send_prompt(await self.build_prompt(character))
 

@@ -663,6 +663,12 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         message["prompt"] = message["prompt"].strip()
         
         #print(f"prompt: |{message['prompt']}|")
+        
+        # add <|im_end|> to stopping strings
+        if "stopping_strings" in message:
+            message["stopping_strings"] += ["<|im_end|>"]
+        else:
+            message["stopping_strings"] = ["<|im_end|>"]
 
         response = await self.send_message(message, fn_url())
 

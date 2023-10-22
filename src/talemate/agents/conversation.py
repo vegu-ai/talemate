@@ -80,7 +80,7 @@ class ConversationAgent(Agent):
                     ),
                     "jiggle": AgentActionConfig(
                         type="number",
-                        label="Jiggle Amount",
+                        label="Jiggle",
                         description="If > 0.0 will cause certain generation parameters to have a slight random offset applied to them. The bigger the number, the higher the potential offset.",
                         value=0.0,
                         min=0.0,

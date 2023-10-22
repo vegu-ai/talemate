@@ -97,15 +97,28 @@ class OpenAIClient:
 
     def get_system_message(self, kind: str) -> str:
        
-       if kind in ["narrate", "story"]:
-           return system_prompts.NARRATOR
-       if kind == "director":
-           return system_prompts.DIRECTOR
-       if kind in ["create", "creator"]:
-           return system_prompts.CREATOR
-       if kind in ["roleplay", "conversation"]:
-           return system_prompts.ROLEPLAY
-       return system_prompts.BASIC
+        if "narrate" in kind:
+            return system_prompts.NARRATOR
+        if "story" in kind:
+            return system_prompts.NARRATOR
+        if "director" in kind:
+            return system_prompts.DIRECTOR
+        if "create" in kind:
+            return system_prompts.CREATOR
+        if "roleplay" in kind:
+            return system_prompts.ROLEPLAY
+        if "conversation" in kind:
+            return system_prompts.ROLEPLAY
+        if "editor" in kind:
+            return system_prompts.EDITOR
+        if "world_state" in kind:
+            return system_prompts.WORLD_STATE
+        if "analyst" in kind:
+            return system_prompts.ANALYST
+        if "analyze" in kind:
+            return system_prompts.ANALYST
+       
+        return system_prompts.BASIC
                   
     async def send_prompt(
         self, prompt: str, kind: str = "conversation", finalize: Callable = lambda x: x

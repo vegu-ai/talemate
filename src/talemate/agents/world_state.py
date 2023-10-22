@@ -97,7 +97,7 @@ class WorldStateAgent(Agent):
         t1 = time.time()
 
         _, world_state = await Prompt.request(
-            "summarizer.request-world-state",
+            "world_state.request-world-state",
             self.client,
             "analyze",
             vars = {
@@ -124,7 +124,7 @@ class WorldStateAgent(Agent):
         # first, we need to get the marked items (objects etc.)
 
         marked_items_response = await Prompt.request(
-            "summarizer.request-world-state-inline-items",
+            "world_state.request-world-state-inline-items",
             self.client,
             "analyze_freeform",
             vars = {
@@ -144,7 +144,7 @@ class WorldStateAgent(Agent):
     ):
         
         response = await Prompt.request(
-            "summarizer.analyze-time-passage",
+            "world_State.analyze-time-passage",
             self.client,
             "analyze_freeform_short",
             vars = {
@@ -169,7 +169,7 @@ class WorldStateAgent(Agent):
     ):
         
         response = await Prompt.request(
-            "summarizer.analyze-text-and-answer-question",
+            "world_State.analyze-text-and-answer-question",
             self.client,
             "analyze_freeform",
             vars = {

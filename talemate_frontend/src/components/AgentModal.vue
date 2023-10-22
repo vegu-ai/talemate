@@ -82,7 +82,7 @@ export default {
   },
   methods: {
     enabledLabel() {
-      if (this.agent.data.enabled) {
+      if (this.agent.enabled) {
         return 'Enabled';
       } else {
         return 'Disabled';

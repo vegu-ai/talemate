@@ -286,6 +286,7 @@ class Prompt:
         env.globals["set_json_response"] = self.set_json_response
         env.globals["set_question_eval"] = self.set_question_eval
         env.globals["disable_dedupe"] = self.disable_dedupe
+        env.globals["random"] = self.random
         env.globals["query_scene"] = self.query_scene
         env.globals["query_memory"] = self.query_memory
         env.globals["query_text"] = self.query_text
@@ -324,8 +325,9 @@ class Prompt:
         
         prompt_text = prompt_text.replace("{!{", "{{").replace("}!}", "}}")
         
-        
-        parsed_text = self.template_env().from_string(prompt_text).render(self.vars)
+        env = self.template_env()
+        env.globals["random"] = self.random
+        parsed_text = env.from_string(prompt_text).render(self.vars)
         
         if self.dedupe_enabled:
             parsed_text = dedupe_string(parsed_text, debug=True)
@@ -444,6 +446,9 @@ class Prompt:
     def disable_dedupe(self):
         self.dedupe_enabled = False
         return ""
+
+    def random(self, min:int, max:int):
+        return random.randint(min, max)
 
     async def parse_json_response(self, response, ai_fix:bool=True):
         

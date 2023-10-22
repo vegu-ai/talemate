@@ -79,9 +79,11 @@ class WorldStateAgent(Agent):
         if not self.actions["update_world_state"].enabled:
             return
         
+        log.debug("update_world_state", next_update=self.next_update, turns=self.actions["update_world_state"].config["turns"].value)
+        
         scene = self.scene
         
-        if self.next_update % self.actions["update_world_state"].config["turns"].value != 0:
+        if self.next_update % self.actions["update_world_state"].config["turns"].value != 0 or self.next_update == 0:
             self.next_update += 1
             return
         

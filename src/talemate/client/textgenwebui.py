@@ -94,17 +94,16 @@ PRESET_KOBOLD_GODLIKE = {
     "repetition_penalty_range": 1024,
 }
 
-PRESET_DEVINE_INTELLECT = {
+PRESET_DIVINE_INTELLECT = {
     'temperature': 1.31,
     'top_p': 0.14,
     "repetition_penalty_range": 1024,
     'repetition_penalty': 1.17,
-    #"repetition_penalty": 1.3,
-    #"encoder_repetition_penalty": 1.2,
-    #"no_repeat_ngram_size": 2,
     'top_k': 49,
-    "mirostat_mode": 2,
-    "mirostat_tau": 8,
+    "mirostat_mode": 0,
+    "mirostat_tau": 5,
+    "mirostat_eta": 0.1,
+    "tfs": 1,
 }
 
 PRESET_SIMPLE_1 = {
@@ -526,7 +525,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
             "seed": random.randint(0, 1000000000),
             "chat_prompt_size": self.max_token_length
         }
-        config.update(PRESET_DEVINE_INTELLECT)
+        config.update(PRESET_DIVINE_INTELLECT)
         config.update({
             "repetition_penalty": 1.3,
             "repetition_penalty_range": 2048,
@@ -609,7 +608,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
             "chat_prompt_size": self.max_token_length,
             "stopping_strings": stopping_strings,
         }
-        config.update(PRESET_DEVINE_INTELLECT)
+        config.update(PRESET_DIVINE_INTELLECT)
         return config
 
     def prompt_config_edit_add_detail(self, prompt:str) -> dict:

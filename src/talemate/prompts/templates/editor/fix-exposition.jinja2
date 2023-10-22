@@ -1,9 +1,4 @@
-{{ disable_dedupe() }}
-<|SECTION:TASK|>
-Given a line of roleplay dialogue, reformat the text such that all non-dialogue parts are framed by asterisks. The dialogue itself will be enclosed in quotation marks. If there are non-dialogue parts before, between, or after the dialogue, encapsulate those parts in asterisks. Ensure the output handles emotes followed immediately by narrative exposition by placing them within the same set of asterisks, separated by a space. Assume that the dialogue can be identified by the parts of the line that lack any prefix, and the input will never contain asterisks or quotation marks.
-
-For example:
-
+<|SECTION:EXAMPLES|>{{ disable_dedupe() }}
 Input: {{ character.name }}: She whispered, Don't tell anyone. with a stern look.
 Output: {{ character.name }}: *She whispered,* "Don't tell anyone." *with a stern look.*
 
@@ -27,8 +22,8 @@ Output: {{ character.name }}: *As the rain poured down, she took a deep breath a
 
 Input: {{ character.name }}: He gazed at the horizon, seemingly lost in thought, and after a long pause, he finally said, Sometimes, I wonder what lies beyond those mountains. It's a mystery that I hope to uncover one day. With that, he packed his bags, ready for another adventure.
 Output: {{ character.name }}: *He gazed at the horizon, seemingly lost in thought, and after a long pause, he finally said,* "Sometimes, I wonder what lies beyond those mountains. It's a mystery that I hope to uncover one day." *With that, he packed his bags, ready for another adventure.*
-
-Your task is to reformat any given roleplay dialogue based on the above guidelines.
+<|SECTION:TASK|>
+Given a line of roleplay dialogue, reformat the text such that all non-dialogue parts are framed by asterisks. The dialogue itself will be enclosed in quotation marks. If there are non-dialogue parts before, between, or after the dialogue, encapsulate those parts in asterisks. Ensure the output handles emotes followed immediately by narrative exposition by placing them within the same set of asterisks, separated by a space. Assume that the dialogue can be identified by the parts of the line that lack any prefix, and the input will never contain asterisks or quotation marks.
 
 Input: {{ content.replace("*","").replace('"','')  }}
-Output: {{ set_prepared_response(character.name+":") }}
+{{ set_prepared_response(character.name+":", prepend="Output: ") }}

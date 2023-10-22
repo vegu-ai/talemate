@@ -41,6 +41,8 @@ class ModelPrompt:
         
     def set_response(self, prompt:str, response_str:str):
         
+        prompt = prompt.strip("\n").strip()
+        
         if "<|BOT|>" in prompt:
             if "\n<|BOT|>" in prompt:
                 prompt = prompt.replace("\n<|BOT|>", response_str)

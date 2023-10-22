@@ -374,7 +374,7 @@ class Prompt:
             f"Answer: " + loop.run_until_complete(memory.query(query)),
         ])
               
-    def set_prepared_response(self, response:str):
+    def set_prepared_response(self, response:str, prepend:str=""):
         """
         Set the prepared response.
         
@@ -382,7 +382,7 @@ class Prompt:
             response (str): The prepared response.
         """
         self.prepared_response = response
-        return f"<|BOT|>{response}"
+        return f"<|BOT|>{prepend}{response}"
 
 
     def set_prepared_response_random(self, responses:list[str], prefix:str=""):
@@ -443,6 +443,7 @@ class Prompt:
     
     def disable_dedupe(self):
         self.dedupe_enabled = False
+        return ""
 
     async def parse_json_response(self, response, ai_fix:bool=True):
         
@@ -699,7 +700,7 @@ def titles_prompt_sectioning(prompt:Prompt) -> str:
     
     return _prompt_sectioning(
         prompt,
-        lambda section_name: f"\n## {section_name.capitalize()}\n\n",
+        lambda section_name: f"\n## {section_name.capitalize()}",
         None,
     )
     

@@ -182,7 +182,7 @@ export default {
                 {"value" : "P1D", "title": "1 day"},
                 {"value" : "PT8H", "title": "8 hours"},
                 {"value" : "PT4H", "title": "4 hours"},
-                {"Value" : "PT1H", "title": "1 hour"},
+                {"value" : "PT1H", "title": "1 hour"},
                 {"value" : "PT30M", "title": "30 minutes"},
                 {"value" : "PT15M", "title": "15 minutes"}
             ],

@@ -113,7 +113,6 @@ PRESET_SIMPLE_1 = {
     "top_k": 20,
 }
 
-
 def jiggle_randomness(prompt_config:dict, offset:float=0.3) -> dict:
     """
     adjusts temperature and repetition_penalty
@@ -404,7 +403,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         config = {
             "prompt": prompt,
             "max_new_tokens": 75,
-            "chat_prompt_size": self.max_token_length,
+            "truncation_length": self.max_token_length,
         }
         config.update(PRESET_TALEMATE_CONVERSATION)
         return config
@@ -424,14 +423,13 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
             f"{character}:" for character in conversation_context["other_characters"]
         ]
         
-
-        max_new_tokens = conversation_context["length"]
+        max_new_tokens = conversation_context.get("length", 96)
         log.debug("prompt_config_conversation", stopping_strings=stopping_strings, conversation_context=conversation_context, max_new_tokens=max_new_tokens)
 
         config = {
             "prompt": prompt,
             "max_new_tokens": max_new_tokens,
-            "chat_prompt_size": self.max_token_length,
+            "truncation_length": self.max_token_length,
             "stopping_strings": stopping_strings,
         }
         config.update(PRESET_TALEMATE_CONVERSATION)
@@ -444,6 +442,13 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         config = self.prompt_config_conversation(prompt)
         config["max_new_tokens"] = 300
         return config
+    
+    def prompt_config_conversation_select_talking_actor(self, prompt: str) -> dict:
+        config = self.prompt_config_conversation(prompt)
+        config["max_new_tokens"] = 30
+        config["stopping_strings"] += [":"]
+        return config
+
 
     def prompt_config_summarize(self, prompt: str) -> dict:
         prompt = self.prompt_template(
@@ -454,7 +459,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         config = {
             "prompt": prompt,
             "max_new_tokens": 500,
-            "chat_prompt_size": self.max_token_length,
+            "truncation_length": self.max_token_length,
         }
         
         config.update(PRESET_LLAMA_PRECISE)
@@ -469,10 +474,27 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         config = {
             "prompt": prompt,
             "max_new_tokens": 500,
-            "chat_prompt_size": self.max_token_length,
+            "truncation_length": self.max_token_length,
         }
         
         config.update(PRESET_SIMPLE_1)
+        return config
+    
+    def prompt_config_analyze_creative(self, prompt: str) -> dict:
+        prompt = self.prompt_template(
+            system_prompts.ANALYST,
+            prompt,
+        )
+
+        config = {}
+        config.update(PRESET_DIVINE_INTELLECT)
+        config.update({
+            "prompt": prompt, 
+            "max_new_tokens": 1024,
+            "repetition_penalty_range": 1024,
+            "truncation_length": self.max_token_length
+        })
+        
         return config
     
     def prompt_config_analyze_long(self, prompt: str) -> dict:
@@ -489,7 +511,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         config = {
             "prompt": prompt,
             "max_new_tokens": 500,
-            "chat_prompt_size": self.max_token_length,
+            "truncation_length": self.max_token_length,
         }
         
         config.update(PRESET_LLAMA_PRECISE)
@@ -510,7 +532,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         config = {
             "prompt": prompt,
             "max_new_tokens": 500,
-            "chat_prompt_size": self.max_token_length,
+            "truncation_length": self.max_token_length,
         }
         config.update(PRESET_LLAMA_PRECISE)
         return config
@@ -525,7 +547,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
             "prompt": prompt,
             "max_new_tokens": 300,
             "seed": random.randint(0, 1000000000),
-            "chat_prompt_size": self.max_token_length
+            "truncation_length": self.max_token_length
         }
         config.update(PRESET_DIVINE_INTELLECT)
         config.update({
@@ -542,7 +564,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         config = {
             "prompt": prompt,
             "max_new_tokens": min(1024, self.max_token_length * 0.35),
-            "chat_prompt_size": self.max_token_length,
+            "truncation_length": self.max_token_length,
         }
         config.update(PRESET_TALEMATE_CREATOR)
         return config
@@ -556,7 +578,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         config = {
             "prompt": prompt,
             "max_new_tokens": min(400, self.max_token_length * 0.25),
-            "chat_prompt_size": self.max_token_length,
+            "truncation_length": self.max_token_length,
             "stopping_strings": ["<|DONE|>", "\n\n"]
         }
         config.update(PRESET_TALEMATE_CREATOR)
@@ -576,7 +598,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         config = {
             "prompt": prompt,
             "max_new_tokens": min(600, self.max_token_length * 0.25),
-            "chat_prompt_size": self.max_token_length,
+            "truncation_length": self.max_token_length,
         }
         config.update(PRESET_SIMPLE_1)
         return config
@@ -607,10 +629,12 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         config = {
             "prompt": prompt,
             "max_new_tokens": 100,
-            "chat_prompt_size": self.max_token_length,
+            "truncation_length": self.max_token_length,
             "stopping_strings": stopping_strings,
         }
+        
         config.update(PRESET_DIVINE_INTELLECT)
+
         return config
 
     def prompt_config_edit_add_detail(self, prompt:str) -> dict:
@@ -669,6 +693,13 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
             message["stopping_strings"] += ["<|im_end|>"]
         else:
             message["stopping_strings"] = ["<|im_end|>"]
+
+        #message["seed"] = -1
+
+        #for k,v in message.items():
+        #    if k == "prompt":
+        #        continue
+        #    print(f"{k}: {v}")
 
         response = await self.send_message(message, fn_url())
 

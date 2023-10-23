@@ -156,7 +156,10 @@ class Agent(ABC):
                 continue
             
             for config_key, config in action.config.items():
-                config.value = kwargs.get("actions", {}).get(action_key, {}).get("config", {}).get(config_key, {}).get("value", config.value)
+                try:
+                    config.value = kwargs.get("actions", {}).get(action_key, {}).get("config", {}).get(config_key, {}).get("value", config.value)
+                except AttributeError:
+                    pass
                 
     async def emit_status(self, processing: bool = None):
         

@@ -184,4 +184,34 @@ class CharacterCreatorMixin:
             "character": character,
         })
         return attributes
-
+    
+    @set_processing
+    async def determine_character_description(
+        self,
+        character: Character,
+        text:str=""
+    ):
+        
+        description = await Prompt.request(f"creator.determine-character-description", self.client, "create", vars={
+            "character": character,
+            "scene": self.scene,
+            "text": text,
+            "max_tokens": self.client.max_token_length,
+        })
+        return description.strip()
+    
+    @set_processing
+    async def generate_character_from_text(
+        self,
+        text: str,
+        template: str,
+        content_context: str = DEFAULT_CONTENT_CONTEXT,
+    ):
+        
+        base_attributes = await self.create_character_attributes(
+            character_prompt=text,
+            template=template,
+            content_context=content_context,
+        )
+        
+        

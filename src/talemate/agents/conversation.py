@@ -1,6 +1,7 @@
 from __future__ import annotations
 import dataclasses
 import re
+import random
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional, Union
 
@@ -11,6 +12,7 @@ from talemate.emit import emit
 import talemate.emit.async_signals
 from talemate.scene_message import CharacterMessage, DirectorMessage
 from talemate.prompts import Prompt
+from talemate.events import GameLoopEvent
 from talemate.client.context import set_conversation_context_attribute, client_context_attribute, set_client_context_attribute
 
 from .base import Agent, AgentEmission, set_processing, AgentAction, AgentActionConfig
@@ -88,8 +90,111 @@ class ConversationAgent(Agent):
                         step=0.1,
                     ),
                 }
-            )
+            ),
+            "natural_flow": AgentAction(
+                enabled = True,
+                label = "Natural Flow",
+                description = "Will attempt to generate a more natural flow of conversation between multiple characters.",
+                config = {
+                    "max_auto_turns": AgentActionConfig(
+                        type="number",
+                        label="Max. Auto Turns",
+                        description="The maximum number of turns the AI is allowed to generate before it stops and waits for the player to respond.",
+                        value=4, 
+                        min=1,
+                        max=100,
+                        step=1,
+                    ),
+                }
+            ),
         }
+
+    def connect(self, scene):
+        super().connect(scene)
+        talemate.emit.async_signals.get("game_loop").connect(self.on_game_loop)
+
+    def last_spoken(self, character:str):
+        
+        """
+        Returns the last time a character spoke
+        """
+        
+        count = 0
+        history = self.scene.history
+        for idx in range(len(history) - 1, -1, -1):
+            if isinstance(history[idx], CharacterMessage):
+                count += 1
+                if history[idx].character_name == character:
+                    return count
+        return -1
+
+    async def on_game_loop(self, event:GameLoopEvent):
+        
+        scene = self.scene
+        
+        if self.actions["natural_flow"].enabled and len(scene.character_names) > 2:
+            
+            player_character = scene.get_player_character()
+            
+            # last time player character spoke (turns ago)
+            
+            player_character = scene.main_character.character
+            player_last_turn = self.last_spoken(player_character.name)
+            
+            log.debug("conversation_agent.natural_flow", player_last_turn=player_last_turn)
+            
+            # determine random character to talk, this will be the fallback in case
+            # the AI can't figure out who should talk next
+            
+            if scene.prev_actor:
+                
+                # we dont want to talk to the same person twice in a row
+                character_names = scene.character_names
+                character_names.remove(scene.prev_actor)
+                random_character_name = random.choice(character_names)
+            else:
+                character_names = scene.character_names                
+                # no one has talked yet, so we just pick a random character
+                
+                random_character_name = random.choice(scene.character_names)
+            
+            if scene.history and player_last_turn < self.actions["natural_flow"].config["max_auto_turns"].value:
+                scene.next_actor = None
+                
+                # AI will attempt to figure out who should talk next
+                next_actor = await self.select_talking_actor(character_names)
+                next_actor = next_actor.strip().strip('"').strip(".")
+                
+                for character_name in scene.character_names:
+                    if next_actor.lower() in character_name.lower() or character_name.lower() in next_actor.lower():
+                        scene.next_actor = character_name
+                        break
+                
+                if not scene.next_actor:
+                    # AI couldn't figure out who should talk next, so we just pick a random character
+                    log.debug("conversation_agent.natural_flow", next_actor="random", random_character_name=random_character_name)
+                    scene.next_actor = random_character_name
+                else:
+                    log.debug("conversation_agent.natural_flow", next_actor="picked", ai_next_actor=scene.next_actor)
+            else:
+                # always start with main character (TODO: configurable?)
+                log.debug("conversation_agent.natural_flow", next_actor="main_character", main_character=player_character, player_last_turn=player_last_turn)
+                scene.next_actor = player_character.name if player_character else random_character_name
+                
+            scene.log.debug("conversation_agent.natural_flow", next_actor=scene.next_actor)
+        else:
+            scene.next_actor = None
+        
+    @set_processing
+    async def select_talking_actor(self, character_names: list[str]=None):
+        result = await Prompt.request("conversation.select-talking-actor", self.client, "conversation_select_talking_actor", vars={
+            "scene": self.scene,
+            "max_tokens": self.client.max_token_length,
+            "character_names": character_names or self.scene.character_names,
+        })
+        
+        return result
+        
 
     async def build_prompt_default(
         self,
@@ -202,8 +307,6 @@ class ConversationAgent(Agent):
         return await fn(character, char_message=char_message)
 
     def clean_result(self, result, character):
-        
-        log.debug("clean result", result=result)
         
         if "#" in result:
             result = result.split("#")[0]

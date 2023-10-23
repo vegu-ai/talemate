@@ -12,9 +12,8 @@ from talemate.prompts import Prompt
 from talemate.scene_message import NarratorMessage, DirectorMessage
 from talemate.automated_action import AutomatedAction
 import talemate.automated_action as automated_action
-from .conversation import ConversationAgent
 from .registry import register
-from .base import set_processing, AgentAction, AgentActionConfig
+from .base import set_processing, AgentAction, AgentActionConfig, Agent
 
 if TYPE_CHECKING:
     from talemate import Actor, Character, Player, Scene
@@ -22,13 +21,13 @@ if TYPE_CHECKING:
 log = structlog.get_logger("talemate")
 
 @register()
-class DirectorAgent(ConversationAgent):
+class DirectorAgent(Agent):
     agent_type = "director"
     verbose_name = "Director"
     
     def __init__(self, client, **kwargs):
-        super().__init__(client, **kwargs)
         self.is_enabled = True
+        self.client = client
         self.actions = {
             "direct": AgentAction(enabled=False, label="Direct", description="Will attempt to direct the scene. Runs automatically after AI dialogue (n turns).", config={
                 "turns": AgentActionConfig(type="number", label="Turns", description="Number of turns to wait before directing the sceen", value=10, min=1, max=100, step=1)

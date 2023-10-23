@@ -17,10 +17,12 @@ Content Context: {{ scene.context }}
 {% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-Take the following line of dialogue and add flesh it out, adding extra details and exposition.
+Take the following line of dialogue and add extra details and exposition to make it more interesting and engaging.
 
-Narrative exposition, thoughts and character actions need to be enclosed in *
+Narrative exposition, thoughts and character actions need to be enclosed in [] square brackets.
+
+Use an informal and colloquial register with a conversational tone…Overall, their dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
 <|CLOSE_SECTION|>
 
-Original line: {{ content }}
-{{ set_prepared_response(character.name+":") }}
+Original dialog: {{ content }}
+{{ set_prepared_response(character.name+":", prepend="Improved dialog: ") }}

@@ -1,0 +1,24 @@
+<|SECTION:TASK|>
+This is a conversation between the following characters:
+{% for character in scene.character_names -%}
+{{ character }}
+{% endfor %}
+
+
+Pick the next character to speak from the list below:
+{% for character in character_names -%}
+{{ character }}
+{% endfor %}
+
+<|CLOSE_SECTION|>
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=500, sections=False, add_archieved_history=False) -%}
+{{ scene_context }}
+{% endfor %}
+{% if scene.history[-1].type == "narrator" %}
+{{ bot_token }}The best character to respond is
+{% elif scene.prev_actor -%}
+{{ bot_token }}The best character to respond to {{ scene.prev_actor }} is
+{% else -%}
+{{ bot_token }}The best character to respond is
+{% endif %}

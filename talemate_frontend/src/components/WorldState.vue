@@ -34,6 +34,12 @@
 
                             </template>
                         </v-tooltip>
+                        <v-tooltip v-else text="Make this character real, adding it to the scene as an actor.">
+                            <template v-slot:activator="{ props }">
+                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(name)" icon="mdi-chat-plus-outline"></v-btn>
+
+                            </template>
+                        </v-tooltip>
                     </div>
                     <v-divider class="mt-1"></v-divider>
                 </v-expansion-panel-text>
@@ -95,6 +101,12 @@ export default {
             this.getWebsocket().send(JSON.stringify({
                 type: 'interact',
                 text: `!narrate_c:${name}`,
+            }));
+        },
+        persistCharacter(name) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'interact',
+                text: `!pc:${name}`,
             }));
         },
         lookAtItem(name) {

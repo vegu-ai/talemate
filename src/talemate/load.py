@@ -100,12 +100,14 @@ async def load_scene_from_character_card(scene, file_path):
         # transfer description to character
         if character.base_attributes.get("description"):
             character.description = character.base_attributes.pop("description")
-            
+                    
         await character.commit_to_memory(scene.get_helper("memory").agent)
             
         log.debug("base_attributes parsed", base_attributes=character.base_attributes)
     except Exception as e:
         log.warning("determine_character_attributes", error=e)
+    
+    scene.description = character.description
     
     if image:
         scene.assets.set_cover_image_from_file_path(file_path)

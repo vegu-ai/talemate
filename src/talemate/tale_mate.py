@@ -18,6 +18,7 @@ import talemate.events as events
 import talemate.util as util
 import talemate.save as save
 from talemate.emit import Emitter, emit, wait_for_input
+import talemate.emit.async_signals as async_signals
 from talemate.util import colored_text, count_tokens, extract_metadata, wrap_text
 from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, NarratorMessage, TimePassageMessage
 from talemate.exceptions import ExitScene, RestartSceneLoop, ResetScene, TalemateError, TalemateInterrupt, LLMAccuracyError
@@ -49,8 +50,8 @@ class Character:
     def __init__(
         self,
         name: str,
-        description: str,
-        greeting_text: str,
+        description: str = "",
+        greeting_text: str = "",
         gender: str = "female",
         color: str = "cyan",
         example_dialogue: List[str] = [],
@@ -518,7 +519,7 @@ class Player(Actor):
             
         return message
     
-    
+async_signals.register("game_loop")
 
 class Scene(Emitter):
     """
@@ -541,6 +542,7 @@ class Scene(Emitter):
         self.main_character = None
         self.static_tokens = 0
         self.max_tokens = 2048
+        self.next_actor = None
         
         self.name = ""
         self.filename = ""
@@ -564,6 +566,7 @@ class Scene(Emitter):
             "history_add": signal("history_add"),
             "archive_add": signal("archive_add"),
             "character_state": signal("character_state"),
+            "game_loop": async_signals.get("game_loop"),
         }
 
         self.setup_emitter(scene=self)
@@ -574,6 +577,10 @@ class Scene(Emitter):
     def characters(self):
         for actor in self.actors:
             yield actor.character
+            
+    @property
+    def character_names(self):
+        return [character.name for character in self.characters]
 
     @property
     def log(self):
@@ -589,6 +596,20 @@ class Scene(Emitter):
     def project_name(self):
         return self.name.replace(" ", "-").replace("'","").lower()
         
+    @property
+    def num_history_entries(self):
+        return len(self.history)
+    
+    @property
+    def prev_actor(self):
+        # will find the first CharacterMessage in history going from the end
+        # and return the character name attached to it to determine the actor
+        # that most recently spoke
+        
+        for idx in range(len(self.history) - 1, -1, -1):
+            if isinstance(self.history[idx], CharacterMessage):
+                return self.history[idx].character_name
+    
     def apply_scene_config(self, scene_config:dict):
         scene_config = SceneConfig(**scene_config)
         
@@ -1241,13 +1262,22 @@ class Scene(Emitter):
                     
         # sort self.actors by actor.character.is_player, making is_player the first element
         self.actors.sort(key=lambda x: x.character.is_player, reverse=True)
+        
         self.active_actor = None
+        self.next_actor = None
+        
         while continue_scene:
             
             try:
+                
+                await self.signals["game_loop"].send(events.GameLoopEvent(scene=self, event_type="game_loop"))
             
                 for actor in self.actors:
                     
+                    if self.next_actor and actor.character.name != self.next_actor:
+                        self.log.debug(f"Skipping actor", actor=actor.character.name, next_actor=self.next_actor)
+                        continue
+                        
                     self.active_actor = actor
                     
                     if not actor.character.is_player:
@@ -1264,7 +1294,7 @@ class Scene(Emitter):
                             break
                         await self.call_automated_actions()
                         continue
-
+                    
                     # Store the most recent AI Actor
                     self.most_recent_ai_actor = actor
 

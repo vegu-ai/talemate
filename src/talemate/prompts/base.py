@@ -323,6 +323,14 @@ class Prompt:
         then render the prompt again.
         """
         
+        # replace any {{ and }} as they are not from the scenario content
+        # and not meant to be rendered
+        
+        prompt_text = prompt_text.replace("{{", "__").replace("}}", "__")
+        
+        # now replace {!{ and }!} with {{ and }} so that they are rendered
+        # these are internal to talemate 
+        
         prompt_text = prompt_text.replace("{!{", "{{").replace("}!}", "}}")
         
         env = self.template_env()

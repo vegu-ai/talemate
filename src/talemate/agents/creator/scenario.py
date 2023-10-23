@@ -3,6 +3,7 @@ import re
 import random
 
 from talemate.prompts import Prompt
+from talemate.agents.base import set_processing
 
 class ScenarioCreatorMixin:
     
@@ -10,8 +11,7 @@ class ScenarioCreatorMixin:
     Adds scenario creation functionality to the creator agent
     """
     
-    ### NEW
-    
+    @set_processing
     async def create_scene_description(
         self,
         prompt:str,
@@ -29,27 +29,23 @@ class ScenarioCreatorMixin:
             
             callback (callable): A callback to call when the scene has been created.
         """
-        try:
-            await self.emit_status(processing=True)
-            scene = self.scene
+        scene = self.scene
+        
+        description = await Prompt.request(
+            "creator.scenario-description",
+            self.client,
+            "create",
+            vars={
+                "prompt": prompt,
+                "content_context": content_context,
+                "max_tokens": self.client.max_token_length,
+                "scene": scene,
+            }
+        )
+        description = description.strip()
+        
+        return description
             
-            description = await Prompt.request(
-                "creator.scenario-description",
-                self.client,
-                "create",
-                vars={
-                    "prompt": prompt,
-                    "content_context": content_context,
-                    "max_tokens": self.client.max_token_length,
-                    "scene": scene,
-                }
-            )
-            description = description.strip()
-            
-            return description
-            
-        finally:
-            await self.emit_status(processing=False)
     
     
     async def create_scene_name(
@@ -70,27 +66,21 @@ class ScenarioCreatorMixin:
                 
                 description (str): The description of the scene.
             """
-            try:
-                await self.emit_status(processing=True)
-                
-                scene = self.scene
-                
-                name = await Prompt.request(
-                    "creator.scenario-name",
-                    self.client,
-                    "create",
-                    vars={
-                        "prompt": prompt,
-                        "content_context": content_context,
-                        "description": description,
-                        "scene": scene,
-                    }
-                )
-                name = name.strip().strip('.!').replace('"','')
-                return name
-                
-            finally:
-                await self.emit_status(processing=False)
+            scene = self.scene
+            
+            name = await Prompt.request(
+                "creator.scenario-name",
+                self.client,
+                "create",
+                vars={
+                    "prompt": prompt,
+                    "content_context": content_context,
+                    "description": description,
+                    "scene": scene,
+                }
+            )
+            name = name.strip().strip('.!').replace('"','')
+            return name
     
     
     async def create_scene_intro(
@@ -114,25 +104,30 @@ class ScenarioCreatorMixin:
             
             name (str): The name of the scene.
         """
-        try:
-            await self.emit_status(processing=True)
-            
-            scene = self.scene
-            
-            intro = await Prompt.request(
-                "creator.scenario-intro",
-                self.client,
-                "create",
-                vars={
-                    "prompt": prompt,
-                    "content_context": content_context,
-                    "description": description,
-                    "name": name,
-                    "scene": scene,
-                }
-            )
-            intro = intro.strip()
-            return intro
-            
-        finally:
-            await self.emit_status(processing=False)
+        
+        scene = self.scene
+        
+        intro = await Prompt.request(
+            "creator.scenario-intro",
+            self.client,
+            "create",
+            vars={
+                "prompt": prompt,
+                "content_context": content_context,
+                "description": description,
+                "name": name,
+                "scene": scene,
+            }
+        )
+        intro = intro.strip()
+        return intro
+    
+    @set_processing
+    async def determine_scenario_description(
+        self,
+        text:str
+    ):
+        description = await Prompt.request(f"creator.determine-scenario-description", self.client, "analyze_long", vars={
+            "text": text,
+        })
+        return description

@@ -34,3 +34,8 @@ class ArchiveEvent(Event):
 class CharacterStateEvent(Event):
     state: str
     character_name: str
+
+
+@dataclass
+class GameLoopEvent(Event):
+    pass

@@ -144,7 +144,7 @@ class WorldStateAgent(Agent):
     ):
         
         response = await Prompt.request(
-            "world_State.analyze-time-passage",
+            "world_state.analyze-time-passage",
             self.client,
             "analyze_freeform_short",
             vars = {
@@ -169,7 +169,7 @@ class WorldStateAgent(Agent):
     ):
         
         response = await Prompt.request(
-            "world_State.analyze-text-and-answer-question",
+            "world_state.analyze-text-and-answer-question",
             self.client,
             "analyze_freeform",
             vars = {
@@ -183,3 +183,67 @@ class WorldStateAgent(Agent):
         log.debug("analyze_text_and_answer_question", query=query, text=text, response=response)
         
         return response
+    
+    @set_processing
+    async def identify_characters(
+        self,
+        text: str = None,
+    ):
+        
+        """
+        Attempts to identify characters in the given text.
+        """
+        
+        _, data = await Prompt.request(
+            "world_state.identify-characters",
+            self.client,
+            "analyze",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "text": text,
+            }
+        )
+        
+        log.debug("identify_characters", text=text, data=data)
+        
+        return data
+    
+    @set_processing
+    async def extract_character_sheet(
+        self,
+        name:str,
+        text:str = None,
+    ):
+        
+        """
+        Attempts to extract a character sheet from the given text.
+        """
+        
+        response = await Prompt.request(
+            "world_state.extract-character-sheet",
+            self.client,
+            "analyze_creative",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "text": text,
+                "name": name,
+            }
+        )
+        
+        # loop through each line in response and if it contains a : then extract
+        # the left side as an attribute name and the right side as the value
+        #
+        # break as soon as a non-empty line is found that doesn't contain a :
+        
+        data = {}
+        for line in response.split("\n"):
+            if not line.strip():
+                continue
+            if not ":" in line:
+                break
+            name, value = line.split(":", 1)
+            data[name.strip()] = value.strip()
+        
+        return data

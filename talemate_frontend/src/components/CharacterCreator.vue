@@ -104,17 +104,17 @@
 
                             <v-list>
                                 <v-list-item v-for="(question, index) in detail_questions" :key="index">
-                                    <v-list-item-title class="text-capitalize">
+                                    <div>
                                         <v-icon color="red" @click="detail_questions.splice(index, 1)">mdi-delete</v-icon>
                                         {{ question }}
-                                    </v-list-item-title>
+                                    </div>
                                 </v-list-item>
                                 <v-text-field label="Custom question" v-model="new_question" @keydown.prevent.enter="addQuestion()"></v-text-field>
                             </v-list>
                             
                             <v-list>
                                 <v-list-item v-for="(value, question) in details" :key="question">
-                                    <v-list-item-title class="text-capitalize">{{ question }}</v-list-item-title>
+                                    <v-list-item-title>{{ question }}</v-list-item-title>
                                     <v-textarea rows="1" auto-grow v-model="details[question]"></v-textarea>
                                 </v-list-item>
                             </v-list>
@@ -135,10 +135,10 @@
 
                             <v-list>
                                     <v-list-item v-for="(example, index) in dialogue_examples" :key="index">
-                                        <v-list-item-title class="text-capitalize">
+                                        <div>
                                             <v-icon color="red" @click="dialogue_examples.splice(index, 1)">mdi-delete</v-icon>
                                             {{ example }}
-                                        </v-list-item-title>
+                                        </div>
                                     </v-list-item>
                                     <v-text-field label="Add dialogue example" v-model="new_dialogue_example" @keydown.prevent.enter="addDialogueExample()"></v-text-field>
                             </v-list>

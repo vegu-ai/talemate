@@ -12,8 +12,8 @@ class Client(BaseModel):
     type: str
     name: str
     model: Union[str,None] = None
-    api_url: Optional[str]
-    max_token_length: Optional[int]
+    api_url: Union[str,None] = None
+    max_token_length: Union[int,None] = None
     
     class Config:
         extra = "ignore"
@@ -27,7 +27,7 @@ class AgentAction(BaseModel):
     config: Union[dict[str, AgentActionConfig], None] = None
 
 class Agent(BaseModel):
-    name: str
+    name: Union[str,None] = None
     client: Union[str,None] = None
     actions: Union[dict[str, AgentAction], None] = None
     enabled: bool = True

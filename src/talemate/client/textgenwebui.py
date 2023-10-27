@@ -690,9 +690,9 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         
         # add <|im_end|> to stopping strings
         if "stopping_strings" in message:
-            message["stopping_strings"] += ["<|im_end|>"]
+            message["stopping_strings"] += ["<|im_end|>", "</s>"]
         else:
-            message["stopping_strings"] = ["<|im_end|>"]
+            message["stopping_strings"] = ["<|im_end|>", "</s>"]
 
         #message["seed"] = -1
 

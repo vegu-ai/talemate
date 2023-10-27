@@ -99,7 +99,7 @@ class WorldStateAgent(Agent):
         _, world_state = await Prompt.request(
             "world_state.request-world-state",
             self.client,
-            "analyze",
+            "analyze_long",
             vars = {
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,

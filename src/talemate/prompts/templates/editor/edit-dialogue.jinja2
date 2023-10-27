@@ -4,8 +4,8 @@
 {% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-Based on {{ character.name }}'s typical writing style, please rewrite the following line of dialogue, but keep the meaning and content: {{ content }}[end]
-Narrative exposition should be encased in asterisks, like so: *{{ content }}*
-Your response must be the rewritten line or the line as it exists verbatim. Keep the [end] token.
+Based on {{ character.name }}'s typical writing style, please adjust the following line to their mannerisms and style of speaking:
+
+{{ content }}
 <|CLOSE_SECTION|>
-Editor responds with the rewritten line: {{ set_prepared_response(character.name+":") }}
+I have adjusted the line: {{ set_prepared_response(character.name+":") }}

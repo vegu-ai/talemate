@@ -17,12 +17,12 @@ Content Context: {{ scene.context }}
 {% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-Take the following line of dialogue and add extra details and exposition to make it more interesting and engaging.
+Take the following line of dialog spoken by {{ character.name }} and flesh it out by adding minor details and flourish to it.
 
-Narrative exposition, thoughts and character actions need to be enclosed in [] square brackets.
+Spoken words should be in quotes.
 
 Use an informal and colloquial register with a conversational tone…Overall, their dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
 <|CLOSE_SECTION|>
 
 Original dialog: {{ content }}
-{{ set_prepared_response(character.name+":", prepend="Improved dialog: ") }}
+{{ set_prepared_response(character.name+":", prepend="Fleshed out dialog: ") }}

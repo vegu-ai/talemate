@@ -1,3 +1,4 @@
+{% block rendered_context -%}
 <|SECTION:CONTEXT|>
 {% for memory_line in memory -%}
 {{ memory_line }}
@@ -39,8 +40,13 @@ Use an informal and colloquial register with a conversational tone…Overall, th
 <|CLOSE_SECTION|>
 
 <|SECTION:SCENE|>
-{% for scene_context in scene.context_history(budget=scene_and_dialogue_budget, min_dialogue=25, sections=False, keep_director=True) -%}
+{% endblock -%}
+{% block scene_history -%}
+{% for scene_context in scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=25, sections=False, keep_director=True) -%}
 {{ scene_context }}
 {% endfor %}
+{% endblock -%}
+Content Token Count {{ count_tokens(self.rendered_context()) }}
+Scene History Token Count {{ count_tokens(self.scene_history()) }}
 <|CLOSE_SECTION|>
 {{ bot_token}}{{ talking_character.name }}:{{ partial_message }}

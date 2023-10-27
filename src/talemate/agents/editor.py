@@ -72,12 +72,14 @@ class EditorAgent(Agent):
         
         edited = []
         for text in emission.generation:
-            edit = await self.edit_conversation(
+
+            
+            edit = await self.add_detail(
                 text,
                 emission.character
             )
             
-            edit = await self.add_detail(
+            edit = await self.edit_conversation(
                 edit,
                 emission.character
             )

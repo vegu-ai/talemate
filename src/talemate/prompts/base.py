@@ -19,7 +19,7 @@ import random
 from typing import Any
 from talemate.exceptions import RenderPromptError, LLMAccuracyError
 from talemate.emit import emit
-from talemate.util import fix_faulty_json, extract_json, dedupe_string, remove_extra_linebreaks
+from talemate.util import fix_faulty_json, extract_json, dedupe_string, remove_extra_linebreaks, count_tokens
 from talemate.config import load_config
 
 import talemate.instance as instance
@@ -293,6 +293,8 @@ class Prompt:
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
         env.globals["config"] = self.config
+        env.globals["len"] = lambda x: len(x)
+        env.globals["count_tokens"] = lambda x: count_tokens(x) 
         
         ctx.update(self.vars)
         
@@ -467,6 +469,7 @@ class Prompt:
             
             response = fix_faulty_json(response)
             response, json_response = extract_json(response)
+            log.debug("parse_json_response ", response=response, json_response=json_response)
             return json_response            
         except Exception as e:
             

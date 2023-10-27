@@ -6,7 +6,6 @@ import textwrap
 import structlog
 import isodate
 import datetime
-import json_repair
 from typing import List
 from thefuzz import fuzz
 from colorama import Back, Fore, Style, init

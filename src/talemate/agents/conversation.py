@@ -392,7 +392,6 @@ class ConversationAgent(Agent):
             result = result.split("#")[0]
         
         result = result.replace(" :", ":")
-        result = result.strip().strip('"').strip()
         result = result.replace("[", "*").replace("]", "*")
         result = result.replace("(", "*").replace(")", "*")
         result = result.replace("**", "*")

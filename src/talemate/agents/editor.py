@@ -127,18 +127,18 @@ class EditorAgent(Agent):
         if not self.actions["fix_exposition"].enabled:
             return content
         
-        response = await Prompt.request("editor.fix-exposition", self.client, "edit_fix_exposition", vars={
-            "content": content,
-            "character": character,
-            "scene": self.scene,
-            "max_length": self.client.max_token_length
-        })
+        #response = await Prompt.request("editor.fix-exposition", self.client, "edit_fix_exposition", vars={
+        #    "content": content,
+        #    "character": character,
+        #    "scene": self.scene,
+        #    "max_length": self.client.max_token_length
+        #})
         
-        response = util.clean_dialogue(response, main_name=character.name)        
-        response = util.strip_partial_sentences(response)
-        #response = util.mark_exposition(response, talking_character=character.name)
+        content = util.clean_dialogue(content, main_name=character.name)        
+        content = util.strip_partial_sentences(content)
+        content = util.ensure_dialog_format(content, talking_character=character.name)
         
-        return response
+        return content
     
     @set_processing
     async def add_detail(self, content:str, character:Character):

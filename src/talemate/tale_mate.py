@@ -510,6 +510,8 @@ class Player(Actor):
 
         if not commands.Manager.is_command(message):
             
+            message = util.ensure_dialog_format(message)
+            
             self.message = message
             
             self.scene.push_history(

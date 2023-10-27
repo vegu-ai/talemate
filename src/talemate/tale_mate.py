@@ -896,6 +896,7 @@ class Scene(Emitter):
         else:
             end = 0
 
+
         history_length = len(self.history)
 
         # we then take the history from the end index to the end of the history
@@ -907,7 +908,7 @@ class Scene(Emitter):
             dialogue = self.history[end:]
         else:
             dialogue = self.history[end:-dialogue_negative_offset]
-
+            
         if not keep_director:
             dialogue = [line for line in dialogue if not isinstance(line, DirectorMessage)]
             
@@ -916,20 +917,7 @@ class Scene(Emitter):
 
         if dialogue and insert_bot_token is not None:
             dialogue.insert(-insert_bot_token, "<|BOT|>")
-
-        if dialogue:
-            context_history = ["<|SECTION:DIALOGUE|>","\n".join(map(str, dialogue)), "<|CLOSE_SECTION|>"]
-        else:
-            context_history = []
             
-        if not sections and context_history:
-            context_history = [context_history[1]]
-
-        # if we dont have lots of archived history, we can also include the scene
-        # description at tbe beginning of the context history
-
-        archive_insert_idx = 0
-        
         # iterate backwards through archived history and count how many entries
         # there are that have an end index
         num_archived_entries = 0
@@ -938,10 +926,37 @@ class Scene(Emitter):
                 if self.archived_history[i].get("end") is None:
                     break
                 num_archived_entries += 1
-
-        if num_archived_entries <= 2 and add_archieved_history:
+        
+        show_intro = num_archived_entries <= 2 and add_archieved_history
+        reserved_min_archived_history_tokens = count_tokens(self.archived_history[-1]["text"]) if self.archived_history else 0
+        reserved_intro_tokens = count_tokens(self.get_intro()) if show_intro else 0
             
+        max_dialogue_budget = min(max(budget - reserved_intro_tokens - reserved_min_archived_history_tokens, 1000), budget)
+        
+        dialogue_popped = False
+        while count_tokens(dialogue) > max_dialogue_budget:
+            dialogue.pop(0)
+            dialogue_popped = True
 
+        if dialogue:
+            context_history = ["<|SECTION:DIALOGUE|>","\n".join(map(str, dialogue)), "<|CLOSE_SECTION|>"]
+        else:
+            context_history = []
+            
+        if not sections and context_history:
+            context_history = [context_history[1]]
+            
+        # we only have room for dialogue, so we return it
+        if dialogue_popped:
+            return context_history
+
+        # if we dont have lots of archived history, we can also include the scene
+        # description at tbe beginning of the context history
+
+        archive_insert_idx = 0
+        
+        if show_intro:
+            
             for character in self.characters:
                 if character.greeting_text and character.greeting_text != self.get_intro():
                     context_history.insert(0, character.greeting_text)

@@ -6,6 +6,8 @@ import random
 import traceback
 import re
 import isodate
+import uuid
+import time
 from typing import Dict, List, Optional, Union
 
 from blinker import signal
@@ -548,6 +550,8 @@ class Scene(Emitter):
         
         self.name = ""
         self.filename = ""
+        self.memory_id = str(uuid.uuid4())[:10]
+        self.saved = False
         
         self.context = ""
         self.commands = commands.Manager(self)
@@ -1412,6 +1416,7 @@ class Scene(Emitter):
             "context": scene.context,
             "world_state": scene.world_state.dict(),
             "assets": scene.assets.dict(),
+            "memory_id": scene.memory_id,
             "ts": scene.ts,
         }
 
@@ -1420,7 +1425,7 @@ class Scene(Emitter):
         with open(filepath, "w") as f:
             json.dump(scene_data, f, indent=2, cls=save.SceneEncoder)
 
-        await asyncio.sleep(0)
+        self.saved = True
 
     def reset(self):
         self.history = []

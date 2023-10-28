@@ -85,3 +85,24 @@ class CmdRunAutomatic(TalemateCommand):
         
         self.emit("system", f"Making player character AI controlled for {turns} turns")
         self.scene.get_player_character().actor.ai_controlled = turns
+        
+        
+
+@register
+class CmdLongTermMemoryStats(TalemateCommand):
+    """
+    Command class for the 'long_term_memory_stats' command
+    """
+    
+    name = "long_term_memory_stats"
+    description = "Show stats for the long term memory"
+    aliases = ["ltm_stats"]
+    
+    async def run(self):
+        
+        memory = self.scene.get_helper("memory").agent
+        
+        count = await memory.count()
+        db_name = memory.db_name
+        
+        self.emit("system", f"Long term memory for {self.scene.name} has {count} entries in the {db_name} database")

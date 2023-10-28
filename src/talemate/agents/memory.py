@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 from chromadb.config import Settings
 import talemate.events as events
 import talemate.util as util
+from talemate.context import scene_is_loading
 from talemate.config import load_config
 import structlog
 
@@ -34,6 +35,18 @@ class MemoryAgent(Agent):
     agent_type = "memory"
     verbose_name = "Long-term memory"
 
+    @property
+    def readonly(self):
+        
+        if scene_is_loading.get() and not getattr(self.scene, "_memory_never_persisted", False):
+            return True
+        
+        return False
+
+    @property
+    def db_name(self):
+        raise NotImplementedError()
+
     @classmethod
     def config_options(cls, agent=None):
         return {}
@@ -50,16 +63,24 @@ class MemoryAgent(Agent):
     def close_db(self):
         raise NotImplementedError()
 
+    async def count(self):
+        raise NotImplementedError()
+
     async def add(self, text, character=None, uid=None, ts:str=None, **kwargs):
         if not text:
             return
-
+        if self.readonly:
+            log.debug("memory agent", status="readonly")
+            return
         await self._add(text, character=character, uid=uid, ts=ts, **kwargs)
 
     async def _add(self, text, character=None, ts:str=None, **kwargs):
         raise NotImplementedError()
 
     async def add_many(self, objects: list[dict]):
+        if self.readonly:
+            log.debug("memory agent", status="readonly")
+            return
         await self._add_many(objects)
     
     async def _add_many(self, objects: list[dict]):
@@ -238,25 +259,31 @@ class ChromaDBMemoryAgent(MemoryAgent):
     @property
     def USE_INSTRUCTOR(self):
         return self.embeddings == "instructor"
+    
+    @property
+    def db_name(self):
+        return getattr(self, "collection_name", "<unnamed>")
+
+    async def count(self):
+        await asyncio.sleep(0)
+        return self.db.count()
 
     async def set_db(self):
         await self.emit_status(processing=True)
 
-        if getattr(self, "db", None):
-            try:
-                self.db.delete(where={"source": "talemate"})
-            except ValueError:
-                pass
-            await self.emit_status(processing=False)
-            
-            return
 
-        log.info("chromadb agent", status="setting up db")
-
-        self.db_client = chromadb.Client(Settings(anonymized_telemetry=False))
+        if not getattr(self, "db_client", None):
+            log.info("chromadb agent", status="setting up db client to persistent db")
+            self.db_client = chromadb.PersistentClient(
+                settings=Settings(anonymized_telemetry=False)
+            )
 
         openai_key = self.config.get("openai").get("api_key") or os.environ.get("OPENAI_API_KEY")
-
+        
+        self.collection_name = collection_name = f"{self.scene.memory_id}-tm"
+        
+        log.info("chromadb agent", status="setting up db", collection_name=collection_name)
+        
         if openai_key and self.USE_OPENAI:
             log.info(
                 "crhomadb", status="using openai", openai_key=openai_key[:5] + "..."
@@ -266,7 +293,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 model_name="text-embedding-ada-002",
             )
             self.db = self.db_client.get_or_create_collection(
-                "talemate-story", embedding_function=openai_ef
+                collection_name, embedding_function=openai_ef
             )
         elif self.USE_INSTRUCTOR:
             
@@ -281,24 +308,29 @@ class ChromaDBMemoryAgent(MemoryAgent):
             )
             
             self.db = self.db_client.get_or_create_collection(
-                "talemate-story", embedding_function=ef
+                collection_name, embedding_function=ef
             )
         else:
             log.info("chromadb", status="using default embeddings")
-            self.db = self.db_client.get_or_create_collection("talemate-story")
+            self.db = self.db_client.get_or_create_collection(collection_name)
+        
+        self.scene._memory_never_persisted = self.db.count() == 0
 
         await self.emit_status(processing=False)
         log.info("chromadb agent", status="db ready")
 
-    def close_db(self):
+    def close_db(self, scene):
         if not self.db:
             return
         
-        try:
-            self.db.delete(where={"source": "talemate"})
-        except ValueError:
-            pass
-
+        if not scene.saved:
+            # scene was never saved so we can discard the memory
+            collection_name = f"{scene.memory_id}-tm"
+            log.info("chromadb agent", status="discarding memory", collection_name=collection_name)
+            self.db_client.delete_collection(collection_name)
+        
+        self.db = None
+        
     async def _add(self, text, character=None, uid=None, ts:str=None, **kwargs):
         metadatas = []
         ids = []
@@ -329,7 +361,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         log.debug("chromadb agent add", text=text, meta=meta, id=id)
 
         self.db.upsert(documents=[text], metadatas=metadatas, ids=ids)
-
+        
         await self.emit_status(processing=False)
 
     async def _add_many(self, objects: list[dict]):

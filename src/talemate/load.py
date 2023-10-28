@@ -10,6 +10,7 @@ from talemate.scene_message import (
     SceneMessage, CharacterMessage, NarratorMessage, DirectorMessage, MESSAGES, reset_message_id
 )
 from talemate.world_state import WorldState
+from talemate.context import SceneIsLoading
 import talemate.instance as instance
 
 import structlog
@@ -31,22 +32,23 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
     Load the scene data from the given file path.
     """
 
-    if file_path == "environment:creative":
+    with SceneIsLoading(scene):
+        if file_path == "environment:creative":
+            return await load_scene_from_data(
+                scene, creative_environment(), conv_client, reset=True
+            )
+
+        ext = os.path.splitext(file_path)[1].lower()
+
+        if ext in [".jpg", ".png", ".jpeg", ".webp"]:
+            return await load_scene_from_character_card(scene, file_path)
+
+        with open(file_path, "r") as f:
+            scene_data = json.load(f)
+
         return await load_scene_from_data(
-            scene, creative_environment(), conv_client, reset=True
+            scene, scene_data, conv_client, reset, name=file_path
         )
-
-    ext = os.path.splitext(file_path)[1].lower()
-
-    if ext in [".jpg", ".png", ".jpeg", ".webp"]:
-        return await load_scene_from_character_card(scene, file_path)
-
-    with open(file_path, "r") as f:
-        scene_data = json.load(f)
-
-    return await load_scene_from_data(
-        scene, scene_data, conv_client, reset, name=file_path
-    )
 
 
 async def load_scene_from_character_card(scene, file_path):
@@ -68,10 +70,13 @@ async def load_scene_from_character_card(scene, file_path):
 
     conversation = scene.get_helper("conversation").agent
     creator = scene.get_helper("creator").agent
+    memory = scene.get_helper("memory").agent
 
     actor = Actor(character, conversation)
 
     scene.name = character.name
+    
+    await memory.set_db()
 
     await scene.add_actor(actor)
     
@@ -118,6 +123,8 @@ async def load_scene_from_character_card(scene, file_path):
     except Exception as e:
         log.error("world_state.request_update", error=e)
 
+    scene.saved = False
+
     return scene
 
 
@@ -126,6 +133,8 @@ async def load_scene_from_data(
 ):
     
     reset_message_id()
+    
+    memory = scene.get_helper("memory").agent
     
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description
@@ -138,6 +147,7 @@ async def load_scene_from_data(
     
     if not reset:
         scene.goal = scene_data.get("goal", 0)
+        scene.memory_id = scene_data.get("memory_id", scene.memory_id)
         scene.history = _load_history(scene_data["history"])
         scene.archived_history = scene_data["archived_history"]
         scene.character_states = scene_data.get("character_states", {})
@@ -151,6 +161,8 @@ async def load_scene_from_data(
         
         scene.sync_time()
         log.debug("scene time", ts=scene.ts)
+        
+    await memory.set_db()
         
     for ah in scene.archived_history:
         if reset:
@@ -179,6 +191,9 @@ async def load_scene_from_data(
     
     if scene.environment != "creative":
         await scene.world_state.request_update(initial_only=True)  
+
+    # the scene has been saved before (since we just loaded it), so we set the saved flag to True
+    scene.saved = True
 
     return scene
 

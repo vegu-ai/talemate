@@ -766,6 +766,9 @@ def replace_exposition_markers(s:str) -> str:
 
 def ensure_dialog_format(line:str, talking_character:str=None) -> str:
     
+    if "*" not in line and '"' not in line:
+        return f"\"{line}\""
+    
     line = mark_exposition(line, talking_character)
     line = mark_spoken_words(line, talking_character)
     return line
@@ -824,7 +827,6 @@ def mark_exposition(line:str, talking_character:str=None) -> str:
     "No, you're not wrong" *sips his wine* "This tastes gross." *coughs* "acquired taste i guess?"
     """
     
-    # no quotes in string, means its impossible to tell dialogue apart from exposition
     if '"' not in line:
         return line
     

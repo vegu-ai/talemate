@@ -10,12 +10,29 @@ from blinker import signal
 import talemate.instance as instance
 import talemate.util as util
 from talemate.emit import emit
-
+import dataclasses
+import pydantic
 
 __all__ = [
     "Agent",
     "set_processing",
 ]
+
+class AgentActionConfig(pydantic.BaseModel):
+    type: str
+    label: str
+    description: str = ""
+    value: Union[int, float, str, bool]
+    max: Union[int, float, None] = None
+    min: Union[int, float, None] = None
+    step: Union[int, float, None] = None
+
+class AgentAction(pydantic.BaseModel):
+    enabled: bool = True
+    label: str
+    description: str = ""
+    config: Union[dict[str, AgentActionConfig], None] = None
+    
 
 def set_processing(fn):
     """
@@ -45,7 +62,6 @@ class Agent(ABC):
 
     agent_type = "agent"
     verbose_name = None
-    
     set_processing = set_processing
 
     @property
@@ -59,17 +75,12 @@ class Agent(ABC):
     def verbose_name(self):
         return self.agent_type.capitalize()
 
-    @classmethod
-    def config_options(cls):
-        return {
-            "client": [name for name, _ in instance.client_instances()],
-        }
+
 
     @property
     def ready(self):
         if not getattr(self.client, "enabled", True):
             return False
-        
         
         if self.client.current_status in ["error", "warning"]:
             return False
@@ -79,10 +90,77 @@ class Agent(ABC):
     @property
     def status(self):
         if self.ready:
+            if not self.enabled:
+                return "disabled"
             return "idle" if getattr(self, "processing", 0) == 0 else "busy"
         else:
             return "uninitialized"
 
+    @property
+    def enabled(self):
+        # by default, agents are enabled, an agent class that
+        # is disableable should override this property
+        return True
+    
+    @property
+    def disable(self):
+        # by default, agents are enabled, an agent class that
+        # is disableable should override this property to 
+        # disable the agent
+        pass
+    
+    @property
+    def has_toggle(self):
+        # by default, agents do not have toggles to enable / disable
+        # an agent class that is disableable should override this property
+        return False
+    
+    @property
+    def experimental(self):
+        # by default, agents are not experimental, an agent class that
+        # is experimental should override this property
+        return False
+
+    @classmethod
+    def config_options(cls, agent=None):
+        config_options = {
+            "client": [name for name, _ in instance.client_instances()],
+            "enabled": agent.enabled if agent else True,
+            "has_toggle": agent.has_toggle if agent else False,
+            "experimental": agent.experimental if agent else False,
+        }
+        actions = getattr(agent, "actions", None)
+        
+        if actions:
+            config_options["actions"] = {k: v.model_dump() for k, v in actions.items()}
+        else:
+            config_options["actions"] = {}
+            
+        return config_options
+
+    def apply_config(self, *args, **kwargs):
+        if self.has_toggle and "enabled" in kwargs:
+            self.is_enabled = kwargs.get("enabled", False)
+            
+        if not getattr(self, "actions", None):
+            return
+            
+        for action_key, action in self.actions.items():
+            
+            if not kwargs.get("actions"):
+                continue
+            
+            action.enabled = kwargs.get("actions", {}).get(action_key, {}).get("enabled", False)
+            
+            if not action.config:
+                continue
+            
+            for config_key, config in action.config.items():
+                try:
+                    config.value = kwargs.get("actions", {}).get(action_key, {}).get("config", {}).get(config_key, {}).get("value", config.value)
+                except AttributeError:
+                    pass
+                
     async def emit_status(self, processing: bool = None):
         
         # should keep a count of processing requests, and when the
@@ -101,6 +179,8 @@ class Agent(ABC):
             self.processing += 1
             
         status = "busy" if self.processing > 0 else "idle"
+        if not self.enabled:
+            status = "disabled"
         
         emit(
             "agent_status",
@@ -108,7 +188,7 @@ class Agent(ABC):
             id=self.agent_type,
             status=status,
             details=self.agent_details,
-            data=self.config_options(),
+            data=self.config_options(agent=self),
         )
 
         await asyncio.sleep(0.01)
@@ -159,3 +239,7 @@ class Agent(ABC):
 
                 current_memory_context.append(memory)
         return current_memory_context
+
+@dataclasses.dataclass
+class AgentEmission:
+    agent: Agent

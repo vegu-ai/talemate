@@ -35,7 +35,7 @@ class MemoryAgent(Agent):
     verbose_name = "Long-term memory"
 
     @classmethod
-    def config_options(cls):
+    def config_options(cls, agent=None):
         return {}
 
     def __init__(self, scene, **kwargs):

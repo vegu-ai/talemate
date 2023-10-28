@@ -1,0 +1,25 @@
+<|SECTION:TASK|>
+This is a conversation between the following characters:
+{% for character in scene.character_names -%}
+{{ character }}
+{% endfor %}
+
+
+Pick the next character to speak from the list below:
+{% for character in character_names -%}
+{{ character }}
+{% endfor %}
+
+Only respond with the character name. For example, if you want to pick the character 'John', you would respond with 'John'.
+<|CLOSE_SECTION|>
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=250, sections=False, add_archieved_history=False) -%}
+{{ scene_context }}
+{% endfor %}
+{% if scene.history[-1].type == "narrator" %}
+{{ bot_token }}The next character to speak is
+{% elif scene.prev_actor -%}
+{{ bot_token }}The next character to respond to '{{ scene.history[-1].message }}' is
+{% else -%}
+{{ bot_token }}The next character to respond is
+{% endif %}

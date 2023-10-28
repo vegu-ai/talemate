@@ -7,7 +7,7 @@ import structlog
 import isodate
 import datetime
 from typing import List
-
+from thefuzz import fuzz
 from colorama import Back, Fore, Style, init
 from PIL import Image
 
@@ -345,7 +345,14 @@ def clean_paragraph(paragraph: str) -> str:
     return cleaned_text
 
 
-def clean_dialogue(dialogue: str, main_name: str = None) -> str:
+def clean_message(message: str) -> str:
+    message = message.strip()
+    message = re.sub(r"\s+", " ", message)
+    message = message.replace("(", "*").replace(")", "*")
+    message = message.replace("[", "*").replace("]", "*")
+    return message
+
+def clean_dialogue_old(dialogue: str, main_name: str = None) -> str:
     """
     Cleans up generated dialogue by removing unnecessary whitespace and newlines.
 
@@ -356,12 +363,7 @@ def clean_dialogue(dialogue: str, main_name: str = None) -> str:
         str: The cleaned dialogue.
     """
 
-    def clean_message(message: str) -> str:
-        message = message.strip().strip('"')
-        message = re.sub(r"\s+", " ", message)
-        message = message.replace("(", "*").replace(")", "*")
-        message = message.replace("[", "*").replace("]", "*")
-        return message
+
 
     cleaned_lines = []
     current_name = None
@@ -373,6 +375,9 @@ def clean_dialogue(dialogue: str, main_name: str = None) -> str:
         if ":" in line:
             name, message = line.split(":", 1)
             name = name.strip()
+            if name != main_name:
+                break
+            
             message = clean_message(message)
 
             if not message:
@@ -391,6 +396,45 @@ def clean_dialogue(dialogue: str, main_name: str = None) -> str:
     cleaned_dialogue = "\n".join(cleaned_lines)
     return cleaned_dialogue
 
+def clean_dialogue(dialogue: str, main_name: str) -> str:
+    
+    # keep spliting the dialogue by : with a max count of 1
+    # until the  left side is no longer the main name
+    
+    cleaned_dialogue = ""
+    
+    # find all occurances of : and then walk backwards
+    # and mark the first one that isnt preceded by the {main_name}
+    cutoff = -1
+    log.debug("clean_dialogue", dialogue=dialogue, main_name=main_name)
+    for match in re.finditer(r":", dialogue, re.MULTILINE):
+        index = match.start()
+        check = dialogue[index-len(main_name):index] 
+        log.debug("clean_dialogue", check=check, main_name=main_name)
+        if check != main_name:
+            cutoff = index
+            break
+        
+    # then split dialogue at the index and return on only
+    # the left side
+    
+    if cutoff > -1:
+        log.debug("clean_dialogue", index=index)
+        cleaned_dialogue = dialogue[:index]
+        cleaned_dialogue = strip_partial_sentences(cleaned_dialogue)
+        
+        # remove all occurances of "{main_name}: " and then prepend it once
+        
+        cleaned_dialogue = cleaned_dialogue.replace(f"{main_name}: ", "")
+        cleaned_dialogue = f"{main_name}: {cleaned_dialogue}"
+        
+        return clean_message(cleaned_dialogue)
+
+    dialogue = dialogue.replace(f"{main_name}: ", "")
+    dialogue = f"{main_name}: {dialogue}"
+
+    return clean_message(strip_partial_sentences(dialogue))
+    
 
 def clean_attribute(attribute: str) -> str:
     """
@@ -442,18 +486,6 @@ def clean_attribute(attribute: str) -> str:
     return attribute.strip()
 
 
-def fix_faulty_json(data: str) -> str:
-    # Fix missing commas
-    data = re.sub(r'}\s*{', '},{', data)
-    data = re.sub(r']\s*{', '],{', data)
-    data = re.sub(r'}\s*\[', '},{', data)
-    data = re.sub(r']\s*\[', '],[', data)
-    
-    # Fix trailing commas
-    data = re.sub(r',\s*}', '}', data)
-    data = re.sub(r',\s*]', ']', data)
-    
-    return data
 
 def duration_to_timedelta(duration):
     """Convert an isodate.Duration object to a datetime.timedelta object."""
@@ -595,3 +627,238 @@ def iso8601_correct_duration(duration: str) -> str:
         corrected_duration += "T" + time_component
     
     return corrected_duration
+
+
+def fix_faulty_json(data: str) -> str:
+    # Fix missing commas
+    data = re.sub(r'}\s*{', '},{', data)
+    data = re.sub(r']\s*{', '],{', data)
+    data = re.sub(r'}\s*\[', '},{', data)
+    data = re.sub(r']\s*\[', '],[', data)
+    
+    # Fix trailing commas
+    data = re.sub(r',\s*}', '}', data)
+    data = re.sub(r',\s*]', ']', data)
+    
+    try:
+        json.loads(data)
+    except json.JSONDecodeError:
+        try:
+            json.loads(data+"}")
+            return data+"}"
+        except json.JSONDecodeError:    
+            try:
+                json.loads(data+"]")
+                return data+"]"
+            except json.JSONDecodeError:
+                return data
+    
+    return data
+
+def extract_json(s):
+    """
+    Extracts a JSON string from the beginning of the input string `s`.
+    
+    Parameters:
+        s (str): The input string containing a JSON string at the beginning.
+        
+    Returns:
+        str: The extracted JSON string.
+        dict: The parsed JSON object.
+        
+    Raises:
+        ValueError: If a valid JSON string is not found.
+    """
+    open_brackets = 0
+    close_brackets = 0
+    bracket_stack = []
+    json_string_start = None
+    s = s.lstrip()  # Strip white spaces and line breaks from the beginning
+    i = 0
+    
+    log.debug("extract_json", s=s)
+    
+    # Iterate through the string.
+    while i < len(s):
+        # Count the opening and closing curly brackets.
+        if s[i] == '{' or s[i] == '[':
+            bracket_stack.append(s[i])
+            open_brackets += 1
+            if json_string_start is None:
+                json_string_start = i
+        elif s[i] == '}' or s[i] == ']':
+            bracket_stack
+            close_brackets += 1
+            # Check if the brackets match, indicating a complete JSON string.
+            if open_brackets == close_brackets:
+                json_string = s[json_string_start:i+1]
+                # Try to parse the JSON string.
+                return json_string, json.loads(json_string)
+        i += 1
+        
+    if json_string_start is None:
+        raise ValueError("No JSON string found.")
+    
+    json_string = s[json_string_start:]
+    while bracket_stack:
+        char = bracket_stack.pop()
+        if char == '{':
+            json_string += '}'
+        elif char == '[':
+            json_string += ']'
+    
+    json_object = json.loads(json_string)
+    return json_string, json_object
+
+def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False) -> str:
+    
+    """
+    Removes duplicate lines from a string.
+    
+    Parameters:
+        s (str): The input string.
+        min_length (int): The minimum length of a line to be checked for duplicates.
+        similarity_threshold (int): The similarity threshold to use when comparing lines.
+        debug (bool): Whether to log debug messages.
+        
+    Returns:
+        str: The deduplicated string.
+    """
+    
+    lines = s.split("\n")
+    deduped = []
+    
+    for line in lines:
+        stripped_line = line.strip()
+        if len(stripped_line) > min_length:
+            similar_found = False
+            for existing_line in deduped:
+                similarity = fuzz.ratio(stripped_line, existing_line.strip())
+                if similarity >= similarity_threshold:
+                    similar_found = True
+                    if debug:
+                        log.debug("DEDUPE", similarity=similarity, line=line, existing_line=existing_line)
+                    break
+            if not similar_found:
+                deduped.append(line)
+        else:
+            deduped.append(line)  # Allow shorter strings without dupe check
+            
+    return "\n".join(deduped)
+
+def remove_extra_linebreaks(s: str) -> str:
+    """
+    Removes extra line breaks from a string.
+    
+    Parameters:
+        s (str): The input string.
+        
+    Returns:
+        str: The string with extra line breaks removed.
+    """
+    return re.sub(r"\n{3,}", "\n\n", s)
+
+def replace_exposition_markers(s:str) -> str:
+    s = s.replace("(", "*").replace(")", "*")
+    s = s.replace("[", "*").replace("]", "*")
+    return s 
+
+
+def ensure_dialog_format(line:str, talking_character:str=None) -> str:
+    
+    line = mark_exposition(line, talking_character)
+    line = mark_spoken_words(line, talking_character)
+    return line
+    
+
+def mark_spoken_words(line:str, talking_character:str=None) -> str:
+    # if there are no asterisks in the line, it means its impossible to tell
+    # dialogue apart from exposition
+    if "*" not in line:
+        return line
+
+    if talking_character and line.startswith(f"{talking_character}:"):
+        line = line[len(talking_character)+1:].lstrip()
+    
+
+    # Splitting the text into segments based on asterisks
+    segments = re.split('(\*[^*]*\*)', line)
+    formatted_line = ""
+
+    for i, segment in enumerate(segments):
+        if segment.startswith("*") and segment.endswith("*"):
+            # If the segment is an action or thought, add it as is
+            formatted_line += segment
+        else:
+            # For non-action/thought parts, trim and add quotes only if not empty and not already quoted
+            trimmed_segment = segment.strip()
+            if trimmed_segment:
+                if not (trimmed_segment.startswith('"') and trimmed_segment.endswith('"')):
+                    formatted_line += f' "{trimmed_segment}"'
+                else:
+                    formatted_line += f' {trimmed_segment}'
+
+
+    # adds spaces betwen *" and "* to make it easier to read
+    formatted_line = formatted_line.replace('*"', '* "')
+    formatted_line = formatted_line.replace('"*', '" *')
+
+    if talking_character:
+        formatted_line = f"{talking_character}: {formatted_line}"
+        
+    log.debug("mark_spoken_words", line=line, formatted_line=formatted_line)
+
+    return formatted_line.strip()  # Trim any leading/trailing whitespace
+
+
+def mark_exposition(line:str, talking_character:str=None) -> str:
+    """
+    Will loop through the string and make sure chunks outside of "" are marked with *.
+    
+    For example:
+    
+    "No, you're not wrong" sips his wine "This tastes gross." coughs "acquired taste i guess?"
+    
+    becomes
+    
+    "No, you're not wrong" *sips his wine* "This tastes gross." *coughs* "acquired taste i guess?"
+    """
+    
+    # no quotes in string, means its impossible to tell dialogue apart from exposition
+    if '"' not in line:
+        return line
+    
+    if talking_character and line.startswith(f"{talking_character}:"):
+        line = line[len(talking_character)+1:].lstrip()
+    
+    # Splitting the text into segments based on quotes
+    segments = re.split('("[^"]*")', line)
+    formatted_line = ""
+
+    for i, segment in enumerate(segments):
+        # If the segment is a spoken part (inside quotes), add it as is
+        if segment.startswith('"') and segment.endswith('"'):
+            formatted_line += segment
+        else:
+            # Split the non-spoken segment into sub-segments based on existing asterisks
+            sub_segments = re.split('(\*[^*]*\*)', segment)
+            for sub_segment in sub_segments:
+                if sub_segment.startswith("*") and sub_segment.endswith("*"):
+                    # If the sub-segment is already formatted, add it as is
+                    formatted_line += sub_segment
+                else:
+                    # Trim and add asterisks only to non-empty sub-segments
+                    trimmed_sub_segment = sub_segment.strip()
+                    if trimmed_sub_segment:
+                        formatted_line += f" *{trimmed_sub_segment}*"
+
+    # adds spaces betwen *" and "* to make it easier to read
+    formatted_line = formatted_line.replace('*"', '* "')
+    formatted_line = formatted_line.replace('"*', '" *')
+
+    if talking_character:
+        formatted_line = f"{talking_character}: {formatted_line}"
+    log.debug("mark_exposition", line=line, formatted_line=formatted_line)
+    
+    
+    return formatted_line.strip()  # Trim any leading/trailing whitespace

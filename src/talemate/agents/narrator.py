@@ -7,20 +7,27 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 import talemate.util as util
 from talemate.emit import wait_for_input
 from talemate.prompts import Prompt
-from talemate.agents.base import set_processing
+from talemate.agents.base import set_processing, Agent
+import talemate.client as client
 
-from .conversation import ConversationAgent
 from .registry import register
 
-
-
-
 @register()
-class NarratorAgent(ConversationAgent):
+class NarratorAgent(Agent):
     agent_type = "narrator"
     verbose_name = "Narrator"
-
+    
+    def __init__(
+        self,
+        client: client.TaleMateClient,
+        **kwargs,
+    ):
+        self.client = client
+        
     def clean_result(self, result):
+        
+        result = result.strip().strip(":").strip()
+        
         if "#" in result:
             result = result.split("#")[0]
         

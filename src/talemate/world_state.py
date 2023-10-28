@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from talemate.emit import emit
 import structlog
+from typing import Union
 
 import talemate.instance as instance
 from talemate.prompts import Prompt
@@ -9,11 +10,11 @@ import talemate.automated_action as automated_action
 log = structlog.get_logger("talemate")
 
 class CharacterState(BaseModel):
-    snapshot: str = None
-    emotion: str = None
+    snapshot: Union[str, None] = None
+    emotion: Union[str, None] = None
     
 class ObjectState(BaseModel):
-    snapshot: str = None
+    snapshot: Union[str, None] = None
 
 class WorldState(BaseModel):
     
@@ -24,15 +25,15 @@ class WorldState(BaseModel):
     items: dict[str, ObjectState] = {}
     
     # location description
-    location: str = None
+    location: Union[str, None] = None
     
     @property
     def agent(self):
-        return instance.get_agent("summarizer")
+        return instance.get_agent("world_state")
     
     @property
     def pretty_json(self):
-        return self.json(indent=2)
+        return self.model_dump_json(indent=2)
     
     @property
     def as_list(self):
@@ -94,10 +95,3 @@ class WorldState(BaseModel):
                 "location": self.location,
             }
         )
-        
-    
-@automated_action.register("world_state", frequency=5, call_initially=False)
-class WorldStateAction(automated_action.AutomatedAction):
-    async def action(self):
-        await self.scene.world_state.request_update()
-        return True

@@ -8,6 +8,8 @@ import structlog
 from talemate.prompts import Prompt
 from talemate.tale_mate import Character, Actor, Player
 
+from typing import Union
+
 log = structlog.get_logger("talemate.server.character_creator")
 
     
@@ -18,7 +20,7 @@ class StepData(pydantic.BaseModel):
     character_prompt: str
     dialogue_guide: str
     dialogue_examples: list[str]
-    base_attributes: dict[str, str] = {}
+    base_attributes: dict[str, Union[str, int]] = {}
     custom_attributes: dict[str, str] = {}
     details: dict[str, str] = {}
     description: str = None

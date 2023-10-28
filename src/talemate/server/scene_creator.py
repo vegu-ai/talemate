@@ -3,6 +3,7 @@ import pydantic
 import asyncio
 import structlog
 import json
+from typing import Union
 
 from talemate.load import load_character_into_scene
 
@@ -12,11 +13,11 @@ class ListScenesData(pydantic.BaseModel):
     scene_path: str
     
 class CreateSceneData(pydantic.BaseModel):
-    name: str = None
-    description: str = None
-    intro: str = None 
-    content_context: str = None
-    prompt: str = None
+    name: Union[str, None] = None
+    description: Union[str, None] = None
+    intro: Union[str, None] = None 
+    content_context: Union[str, None] = None
+    prompt: Union[str, None] = None
 
 class SceneCreatorServerPlugin:
     

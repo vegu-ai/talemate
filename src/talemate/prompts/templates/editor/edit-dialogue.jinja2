@@ -1,0 +1,11 @@
+<|SECTION:{{ character.name }}'S WRITING STYLE|>
+{% for example in character.random_dialogue_examples(num=3) -%}
+{{ example }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Based on {{ character.name }}'s typical writing style, please adjust the following line to their mannerisms and style of speaking:
+
+{{ content }}
+<|CLOSE_SECTION|>
+I have adjusted the line: {{ set_prepared_response(character.name+":") }}

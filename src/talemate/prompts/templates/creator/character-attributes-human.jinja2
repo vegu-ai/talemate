@@ -21,7 +21,7 @@
 <|CLOSE_SECTION|>
 
 <|SECTION:EXAMPLES|>
-Attribute name: attribute description<|DONE|>
+Attribute name: attribute description
 <|SECTION:TASK|>
 {% if character_sheet("gender") and character_sheet("name") and character_sheet("age") -%}
 You are generating a character sheet for {{ character_sheet("name") }} based on the character prompt. 
@@ -46,6 +46,8 @@ Examples: John, Mary, Jane, Bob, Alice, etc.
 {% endif -%}
 {% if character_sheet.q("age") -%}
 Respond with a number only
+
+For example: 21, 25, 33 etc.
 {% endif -%}
 {% if character_sheet.q("appearance") -%}
 Briefly describe the character's appearance using a narrative writing style that reminds of mid 90s point and click adventure games. (1 - 2 sentences). {{ spice("Make it {spice}.", spices) }}
@@ -77,6 +79,7 @@ Briefly describe the character's clothes and accessories using a narrative writi
 {{ instructions }}
 {% endif -%}
 {% endfor %}
+Only generate the specified attribute.
 The context is {{ content_context }}
 <|CLOSE_SECTION|>
 

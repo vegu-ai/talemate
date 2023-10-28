@@ -11,7 +11,11 @@
                     <span class="ml-1" v-if="agent.label"> {{ agent.label }}</span>
                     <span class="ml-1" v-else> {{ agent.name }}</span>
                 </v-list-item-title>
-                <v-list-item-subtitle>{{ agent.client }}</v-list-item-subtitle>
+                <v-list-item-subtitle>
+                    {{ agent.client }}
+                </v-list-item-subtitle>
+                <v-chip class="mr-1" v-if="agent.status === 'disabled'" size="x-small">Disabled</v-chip>
+                <v-chip v-if="agent.data.experimental" color="warning" size="x-small">experimental</v-chip>
             </v-list-item>
         </v-list>
         <AgentModal :dialog="dialog" :formTitle="formTitle" @save="saveAgent" @update:dialog="updateDialog"></AgentModal>
@@ -116,6 +120,7 @@ export default {
         handleMessage(data) {
             // Handle agent_status message type
             if (data.type === 'agent_status') {
+                console.log("agents: got agent_status message", data)
                 // Find the client with the given name
                 const agent = this.state.agents.find(agent => agent.name === data.name);
                 if (agent) {
@@ -124,15 +129,27 @@ export default {
                     agent.data = data.data;
                     agent.status = data.status;
                     agent.label = data.message;
+                    agent.actions = {}
+                    for(let i in data.data.actions) {
+                        agent.actions[i] = {enabled: data.data.actions[i].enabled, config: data.data.actions[i].config};
+                    }
+                    agent.enabled = data.data.enabled;
                 } else {
                     // Add the agent to the list of agents
+                    let actions = {}
+                    for(let i in data.data.actions) {
+                        actions[i] = {enabled: data.data.actions[i].enabled, config: data.data.actions[i].config};
+                    }
                     this.state.agents.push({
                         name: data.name,
                         client: data.client,
                         status: data.status,
                         data: data.data,
                         label: data.message,
+                        actions: actions,
+                        enabled: data.data.enabled,
                     });
+                    console.log("agents: added new agent", this.state.agents[this.state.agents.length - 1], data)
                 }
                 return;
             }

@@ -33,9 +33,10 @@ class ContextModel(BaseModel):
     """
     nuke_repetition: float = Field(0.0, ge=0.0, le=3.0)
     conversation: ConversationContext = Field(default_factory=ConversationContext)
+    length: int = 96
 
 # Define the context variable as an empty dictionary
-context_data = ContextVar('context_data', default=ContextModel().dict())
+context_data = ContextVar('context_data', default=ContextModel().model_dump())
 
 def client_context_attribute(name, default=None):
     """
@@ -46,7 +47,23 @@ def client_context_attribute(name, default=None):
     # Return the value of the key if it exists, otherwise return the default value
     return data.get(name, default)
 
-
+def set_client_context_attribute(name, value):
+    """
+    Set the value of the context variable `context_data` for the given key.
+    """
+    # Get the current context data
+    data = context_data.get()
+    # Set the value of the key
+    data[name] = value
+    
+def set_conversation_context_attribute(name, value):
+    """
+    Set the value of the context variable `context_data.conversation` for the given key.
+    """
+    # Get the current context data
+    data = context_data.get()
+    # Set the value of the key
+    data["conversation"][name] = value
 
 class ClientContext:
     """

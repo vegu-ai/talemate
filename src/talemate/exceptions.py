@@ -43,6 +43,10 @@ class LLMAccuracyError(TalemateError):
     Exception to raise when the LLM response is not processable
     """
     
-    def __init__(self, message:str, model_name:str):
-        super().__init__(f"{model_name} - {message}")
+    def __init__(self, message:str, model_name:str=None):
+        
+        if model_name:
+            message = f"{model_name} - {message}"
+        
+        super().__init__(message)
         self.model_name = model_name

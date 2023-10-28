@@ -7,7 +7,7 @@ REM activate the virtual environment
 call talemate_env\Scripts\activate
 
 REM install poetry
-pip install poetry
+python -m pip install poetry "rapidfuzz>=3" -U
 
 REM use poetry to install dependencies
 poetry install

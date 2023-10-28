@@ -12,9 +12,8 @@ from talemate.prompts import Prompt
 from talemate.scene_message import NarratorMessage, DirectorMessage
 from talemate.automated_action import AutomatedAction
 import talemate.automated_action as automated_action
-from .conversation import ConversationAgent
 from .registry import register
-from .base import set_processing
+from .base import set_processing, AgentAction, AgentActionConfig, Agent
 
 if TYPE_CHECKING:
     from talemate import Actor, Character, Player, Scene
@@ -22,9 +21,30 @@ if TYPE_CHECKING:
 log = structlog.get_logger("talemate")
 
 @register()
-class DirectorAgent(ConversationAgent):
+class DirectorAgent(Agent):
     agent_type = "director"
     verbose_name = "Director"
+    
+    def __init__(self, client, **kwargs):
+        self.is_enabled = True
+        self.client = client
+        self.actions = {
+            "direct": AgentAction(enabled=False, label="Direct", description="Will attempt to direct the scene. Runs automatically after AI dialogue (n turns).", config={
+                "turns": AgentActionConfig(type="number", label="Turns", description="Number of turns to wait before directing the sceen", value=10, min=1, max=100, step=1)
+            }),
+        }
+        
+    @property
+    def enabled(self):
+        return self.is_enabled
+    
+    @property
+    def has_toggle(self):
+        return True
+        
+    @property
+    def experimental(self):
+        return True
     
     def get_base_prompt(self, character: Character, budget:int):
         return [character.description, character.base_attributes.get("scenario_context", "")] + self.scene.context_history(budget=budget, keep_director=False)
@@ -339,33 +359,3 @@ class DirectorAgent(ConversationAgent):
             goal_met = True
         
         return goal_met
-    
-    
-@automated_action.register("director", frequency=4, call_initially=True, enabled=False)
-class AutomatedDirector(automated_action.AutomatedAction):
-    """
-    Runs director.direct actions every n turns
-    """
-
-    async def action(self):
-        scene = self.scene
-        director = scene.get_helper("director")
-        
-        if not scene.active_actor or scene.active_actor.character.is_player:
-            return False
-        
-        if not director:
-            return
-        
-        director_response = await director.agent.direct(scene.active_actor.character)
-    
-        if director_response is True:
-            # director directed different agent, nothing to do
-            return
-    
-        if not director_response:
-            return
-        
-        director_message = DirectorMessage(director_response, source=scene.active_actor.character.name)
-        emit("director", director_message, character=scene.active_actor.character)
-        scene.push_history(director_message)

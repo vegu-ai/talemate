@@ -18,6 +18,7 @@ import talemate.events as events
 import talemate.util as util
 import talemate.save as save
 from talemate.emit import Emitter, emit, wait_for_input
+import talemate.emit.async_signals as async_signals
 from talemate.util import colored_text, count_tokens, extract_metadata, wrap_text
 from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, NarratorMessage, TimePassageMessage
 from talemate.exceptions import ExitScene, RestartSceneLoop, ResetScene, TalemateError, TalemateInterrupt, LLMAccuracyError
@@ -49,8 +50,8 @@ class Character:
     def __init__(
         self,
         name: str,
-        description: str,
-        greeting_text: str,
+        description: str = "",
+        greeting_text: str = "",
         gender: str = "female",
         color: str = "cyan",
         example_dialogue: List[str] = [],
@@ -350,6 +351,9 @@ class Character:
             if attr.startswith("_"):
                 continue
             
+            if attr.lower() in ["name", "scenario_context", "_prompt", "_template"]:
+                continue
+            
             items.append({
                 "text": f"{self.name}'s {attr}: {value}",
                 "id": f"{self.name}.{attr}",
@@ -506,6 +510,8 @@ class Player(Actor):
 
         if not commands.Manager.is_command(message):
             
+            message = util.ensure_dialog_format(message)
+            
             self.message = message
             
             self.scene.push_history(
@@ -515,7 +521,7 @@ class Player(Actor):
             
         return message
     
-    
+async_signals.register("game_loop")
 
 class Scene(Emitter):
     """
@@ -538,6 +544,7 @@ class Scene(Emitter):
         self.main_character = None
         self.static_tokens = 0
         self.max_tokens = 2048
+        self.next_actor = None
         
         self.name = ""
         self.filename = ""
@@ -561,6 +568,7 @@ class Scene(Emitter):
             "history_add": signal("history_add"),
             "archive_add": signal("archive_add"),
             "character_state": signal("character_state"),
+            "game_loop": async_signals.get("game_loop"),
         }
 
         self.setup_emitter(scene=self)
@@ -571,6 +579,10 @@ class Scene(Emitter):
     def characters(self):
         for actor in self.actors:
             yield actor.character
+            
+    @property
+    def character_names(self):
+        return [character.name for character in self.characters]
 
     @property
     def log(self):
@@ -586,6 +598,20 @@ class Scene(Emitter):
     def project_name(self):
         return self.name.replace(" ", "-").replace("'","").lower()
         
+    @property
+    def num_history_entries(self):
+        return len(self.history)
+    
+    @property
+    def prev_actor(self):
+        # will find the first CharacterMessage in history going from the end
+        # and return the character name attached to it to determine the actor
+        # that most recently spoke
+        
+        for idx in range(len(self.history) - 1, -1, -1):
+            if isinstance(self.history[idx], CharacterMessage):
+                return self.history[idx].character_name
+    
     def apply_scene_config(self, scene_config:dict):
         scene_config = SceneConfig(**scene_config)
         
@@ -872,6 +898,7 @@ class Scene(Emitter):
         else:
             end = 0
 
+
         history_length = len(self.history)
 
         # we then take the history from the end index to the end of the history
@@ -883,7 +910,7 @@ class Scene(Emitter):
             dialogue = self.history[end:]
         else:
             dialogue = self.history[end:-dialogue_negative_offset]
-
+            
         if not keep_director:
             dialogue = [line for line in dialogue if not isinstance(line, DirectorMessage)]
             
@@ -892,20 +919,7 @@ class Scene(Emitter):
 
         if dialogue and insert_bot_token is not None:
             dialogue.insert(-insert_bot_token, "<|BOT|>")
-
-        if dialogue:
-            context_history = ["<|SECTION:DIALOGUE|>","\n".join(map(str, dialogue)), "<|CLOSE_SECTION|>"]
-        else:
-            context_history = []
             
-        if not sections and context_history:
-            context_history = [context_history[1]]
-
-        # if we dont have lots of archived history, we can also include the scene
-        # description at tbe beginning of the context history
-
-        archive_insert_idx = 0
-        
         # iterate backwards through archived history and count how many entries
         # there are that have an end index
         num_archived_entries = 0
@@ -914,10 +928,37 @@ class Scene(Emitter):
                 if self.archived_history[i].get("end") is None:
                     break
                 num_archived_entries += 1
-
-        if num_archived_entries <= 2 and add_archieved_history:
+        
+        show_intro = num_archived_entries <= 2 and add_archieved_history
+        reserved_min_archived_history_tokens = count_tokens(self.archived_history[-1]["text"]) if self.archived_history else 0
+        reserved_intro_tokens = count_tokens(self.get_intro()) if show_intro else 0
             
+        max_dialogue_budget = min(max(budget - reserved_intro_tokens - reserved_min_archived_history_tokens, 1000), budget)
+        
+        dialogue_popped = False
+        while count_tokens(dialogue) > max_dialogue_budget:
+            dialogue.pop(0)
+            dialogue_popped = True
 
+        if dialogue:
+            context_history = ["<|SECTION:DIALOGUE|>","\n".join(map(str, dialogue)), "<|CLOSE_SECTION|>"]
+        else:
+            context_history = []
+            
+        if not sections and context_history:
+            context_history = [context_history[1]]
+            
+        # we only have room for dialogue, so we return it
+        if dialogue_popped:
+            return context_history
+
+        # if we dont have lots of archived history, we can also include the scene
+        # description at tbe beginning of the context history
+
+        archive_insert_idx = 0
+        
+        if show_intro:
+            
             for character in self.characters:
                 if character.greeting_text and character.greeting_text != self.get_intro():
                     context_history.insert(0, character.greeting_text)
@@ -1238,13 +1279,22 @@ class Scene(Emitter):
                     
         # sort self.actors by actor.character.is_player, making is_player the first element
         self.actors.sort(key=lambda x: x.character.is_player, reverse=True)
+        
         self.active_actor = None
+        self.next_actor = None
+        
         while continue_scene:
             
             try:
+                
+                await self.signals["game_loop"].send(events.GameLoopEvent(scene=self, event_type="game_loop"))
             
                 for actor in self.actors:
                     
+                    if self.next_actor and actor.character.name != self.next_actor:
+                        self.log.debug(f"Skipping actor", actor=actor.character.name, next_actor=self.next_actor)
+                        continue
+                        
                     self.active_actor = actor
                     
                     if not actor.character.is_player:
@@ -1261,7 +1311,7 @@ class Scene(Emitter):
                             break
                         await self.call_automated_actions()
                         continue
-
+                    
                     # Store the most recent AI Actor
                     self.most_recent_ai_actor = actor
 

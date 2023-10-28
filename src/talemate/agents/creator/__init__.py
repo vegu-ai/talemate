@@ -3,15 +3,16 @@ from __future__ import annotations
 import json
 import os
 
-from talemate.agents.conversation import ConversationAgent
+from talemate.agents.base import Agent
 from talemate.agents.registry import register
 from talemate.emit import emit
+import talemate.client as client
 
 from .character import CharacterCreatorMixin
 from .scenario import ScenarioCreatorMixin
 
 @register()
-class CreatorAgent(CharacterCreatorMixin, ScenarioCreatorMixin, ConversationAgent):
+class CreatorAgent(CharacterCreatorMixin, ScenarioCreatorMixin, Agent):
     
     """
     Creates characters and scenarios and other fun stuff!
@@ -19,6 +20,13 @@ class CreatorAgent(CharacterCreatorMixin, ScenarioCreatorMixin, ConversationAgen
     
     agent_type = "creator"
     verbose_name = "Creator"
+
+    def __init__(
+        self,
+        client: client.TaleMateClient,
+        **kwargs,
+    ):
+        self.client = client
 
     def clean_result(self, result):
         if "#" in result:

@@ -75,6 +75,10 @@ class CharacterMessage(SceneMessage):
     def __str__(self):
         return self.message
     
+    @property
+    def character_name(self):
+        return self.message.split(":", 1)[0]
+    
 @dataclass
 class NarratorMessage(SceneMessage):
     source: str = "progress_story"

@@ -4,26 +4,42 @@ import structlog
 import os
 
 from pydantic import BaseModel
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 log = structlog.get_logger("talemate.config")
 
 class Client(BaseModel):
     type: str
     name: str
-    model: Optional[str]
-    api_url: Optional[str]
-    max_token_length: Optional[int]
+    model: Union[str,None] = None
+    api_url: Union[str,None] = None
+    max_token_length: Union[int,None] = None
     
     class Config:
         extra = "ignore"
+ 
+
+class AgentActionConfig(BaseModel):
+    value: Union[int, float, str, bool]
+        
+class AgentAction(BaseModel):
+    enabled: bool = True
+    config: Union[dict[str, AgentActionConfig], None] = None
 
 class Agent(BaseModel):
-    name: str
-    client: str = None
+    name: Union[str,None] = None
+    client: Union[str,None] = None
+    actions: Union[dict[str, AgentAction], None] = None
+    enabled: bool = True
     
     class Config:
         extra = "ignore"
+        
+    # change serialization so actions and enabled are only
+    # serialized if they are not None
+    
+    def model_dump(self, **kwargs):
+        return super().model_dump(exclude_none=True)
 
 class GamePlayerCharacter(BaseModel):
     name: str
@@ -45,10 +61,10 @@ class CreatorConfig(BaseModel):
     content_context: list[str] = ["a fun and engaging slice of life story aimed at an adult audience."]
 
 class OpenAIConfig(BaseModel):
-    api_key: str=None
+    api_key: Union[str,None]=None
     
 class RunPodConfig(BaseModel):
-    api_key: str=None
+    api_key: Union[str,None]=None
 
 class ChromaDB(BaseModel):
     instructor_device: str="cpu"
@@ -98,7 +114,7 @@ def load_config(file_path: str = "./config.yaml") -> dict:
         log.error("config validation", error=e)
         return None
 
-    return config.dict()
+    return config.model_dump()
 
 
 def save_config(config, file_path: str = "./config.yaml"):
@@ -110,11 +126,11 @@ def save_config(config, file_path: str = "./config.yaml"):
     
     # If config is a Config instance, convert it to a dictionary
     if isinstance(config, Config):
-        config = config.dict()
+        config = config.model_dump(exclude_none=True)
     elif isinstance(config, dict):
         # validate
         try:
-            config = Config(**config).dict()
+            config = Config(**config).model_dump(exclude_none=True)
         except pydantic.ValidationError as e:
             log.error("config validation", error=e)
             return None

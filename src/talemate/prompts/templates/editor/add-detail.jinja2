@@ -1,0 +1,28 @@
+<|SECTION:CHARACTERS|>
+{% for character in characters -%}
+{{ character.name }}: 
+{{ character.filtered_sheet(['name', 'age', 'gender']) }}
+{{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
+
+{{ character.description }}
+
+
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:SCENE|>
+Content Context: {{ scene.context }}
+
+{% for scene_context in scene.context_history(budget=1000, min_dialogue=25, sections=False, keep_director=True) -%}
+{{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Take the following line of dialog spoken by {{ character.name }} and flesh it out by adding minor details and flourish to it.
+
+Spoken words should be in quotes.
+
+Use an informal and colloquial register with a conversational tone…Overall, their dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
+<|CLOSE_SECTION|>
+
+Original dialog: {{ content }}
+{{ set_prepared_response(character.name+":", prepend="Fleshed out dialog: ") }}

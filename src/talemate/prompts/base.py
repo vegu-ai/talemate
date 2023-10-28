@@ -19,7 +19,7 @@ import random
 from typing import Any
 from talemate.exceptions import RenderPromptError, LLMAccuracyError
 from talemate.emit import emit
-from talemate.util import fix_faulty_json
+from talemate.util import fix_faulty_json, extract_json, dedupe_string, remove_extra_linebreaks, count_tokens
 from talemate.config import load_config
 
 import talemate.instance as instance
@@ -191,6 +191,8 @@ class Prompt:
     
     sectioning_hander: str = dataclasses.field(default_factory=lambda: DEFAULT_SECTIONING_HANDLER)
     
+    dedupe_enabled: bool = True
+    
     @classmethod
     def get(cls, uid:str, vars:dict=None):
         
@@ -283,12 +285,16 @@ class Prompt:
         env.globals["set_eval_response"] = self.set_eval_response
         env.globals["set_json_response"] = self.set_json_response
         env.globals["set_question_eval"] = self.set_question_eval
+        env.globals["disable_dedupe"] = self.disable_dedupe
+        env.globals["random"] = self.random
         env.globals["query_scene"] = self.query_scene
         env.globals["query_memory"] = self.query_memory
         env.globals["query_text"] = self.query_text
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
         env.globals["config"] = self.config
+        env.globals["len"] = lambda x: len(x)
+        env.globals["count_tokens"] = lambda x: count_tokens(x) 
         
         ctx.update(self.vars)
         
@@ -296,6 +302,7 @@ class Prompt:
         
         # Render the template with the prompt variables
         self.eval_context = {}
+        self.dedupe_enabled = True
         try:
             self.prompt = template.render(ctx)
             if not sectioning_handler:
@@ -318,10 +325,26 @@ class Prompt:
         then render the prompt again.
         """
         
+        # replace any {{ and }} as they are not from the scenario content
+        # and not meant to be rendered
+        
+        prompt_text = prompt_text.replace("{{", "__").replace("}}", "__")
+        
+        # now replace {!{ and }!} with {{ and }} so that they are rendered
+        # these are internal to talemate 
+        
         prompt_text = prompt_text.replace("{!{", "{{").replace("}!}", "}}")
         
+        env = self.template_env()
+        env.globals["random"] = self.random
+        parsed_text = env.from_string(prompt_text).render(self.vars)
         
-        return self.template_env().from_string(prompt_text).render(self.vars)
+        if self.dedupe_enabled:
+            parsed_text = dedupe_string(parsed_text, debug=True)
+        
+        parsed_text = remove_extra_linebreaks(parsed_text)
+        
+        return parsed_text
         
     async def loop(self, client:any, loop_name:str, kind:str="create"):
         
@@ -363,7 +386,7 @@ class Prompt:
             f"Answer: " + loop.run_until_complete(memory.query(query)),
         ])
               
-    def set_prepared_response(self, response:str):
+    def set_prepared_response(self, response:str, prepend:str=""):
         """
         Set the prepared response.
         
@@ -371,7 +394,7 @@ class Prompt:
             response (str): The prepared response.
         """
         self.prepared_response = response
-        return f"<|BOT|>{response}"
+        return f"<|BOT|>{prepend}{response}"
 
 
     def set_prepared_response_random(self, responses:list[str], prefix:str=""):
@@ -422,7 +445,6 @@ class Prompt:
         )
         
 
-
     def set_question_eval(self, question:str, trigger:str, counter:str, weight:float=1.0):
         self.eval_context.setdefault("questions", [])
         self.eval_context.setdefault("counters", {})[counter] = 0
@@ -430,6 +452,13 @@ class Prompt:
         
         num_questions = len(self.eval_context["questions"])        
         return f"{num_questions}. {question}"
+    
+    def disable_dedupe(self):
+        self.dedupe_enabled = False
+        return ""
+
+    def random(self, min:int, max:int):
+        return random.randint(min, max)
 
     async def parse_json_response(self, response, ai_fix:bool=True):
         
@@ -437,12 +466,11 @@ class Prompt:
         try:
             response = response.replace("True", "true").replace("False", "false")
             response = "\n".join([line for line in response.split("\n") if validate_line(line)]).strip()
+            
             response = fix_faulty_json(response)
-            
-            if response.strip()[-1] != "}":
-                response += "}"
-            
-            return json.loads(response)
+            response, json_response = extract_json(response)
+            log.debug("parse_json_response ", response=response, json_response=json_response)
+            return json_response            
         except Exception as e:
             
             # JSON parsing failed, try to fix it via AI
@@ -688,7 +716,7 @@ def titles_prompt_sectioning(prompt:Prompt) -> str:
     
     return _prompt_sectioning(
         prompt,
-        lambda section_name: f"\n## {section_name.capitalize()}\n\n",
+        lambda section_name: f"\n## {section_name.capitalize()}",
         None,
     )
     

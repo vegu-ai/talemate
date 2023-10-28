@@ -140,7 +140,7 @@ def emit_agent_status(cls, agent=None):
             status=agent.status,
             id=agent.agent_type,
             details=agent.agent_details,
-            data=cls.config_options(),
+            data=cls.config_options(agent=agent),
         )
 
 

@@ -1,6 +1,6 @@
 <template>
     <div v-if="expanded">
-        <v-img @click="toggle()" v-if="asset_id !== null" :src="'data:'+media_type+';base64, '+base64"></v-img>
+        <v-img cover @click="toggle()" v-if="asset_id !== null" :src="'data:'+media_type+';base64, '+base64"></v-img>
     </div>
     <v-list-subheader v-else @click="toggle()"><v-icon>mdi-image-frame</v-icon> Cover image
         <v-icon v-if="expanded" icon="mdi-chevron-down"></v-icon>

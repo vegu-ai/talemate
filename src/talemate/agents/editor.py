@@ -37,11 +37,11 @@ class EditorAgent(Agent):
     
     def __init__(self, client, **kwargs):
         self.client = client
-        self.is_enabled = False
+        self.is_enabled = True
         self.actions = {
             "edit_dialogue": AgentAction(enabled=False, label="Edit dialogue", description="Will attempt to improve the quality of dialogue based on the character and scene. Runs automatically after each AI dialogue."),
             "fix_exposition": AgentAction(enabled=True, label="Fix exposition", description="Will attempt to fix exposition and emotes, making sure they are displayed in italics. Runs automatically after each AI dialogue."),
-            "add_detail": AgentAction(enabled=True, label="Add detail", description="Will attempt to add extra detail and exposition to the dialogue. Runs automatically after each AI dialogue.")
+            "add_detail": AgentAction(enabled=False, label="Add detail", description="Will attempt to add extra detail and exposition to the dialogue. Runs automatically after each AI dialogue.")
         }
         
     @property

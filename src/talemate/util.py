@@ -763,7 +763,55 @@ def replace_exposition_markers(s:str) -> str:
     s = s.replace("[", "*").replace("]", "*")
     return s 
 
-def mark_exposition(s:str, talking_character:str=None) -> str:
+
+def ensure_dialog_format(line:str, talking_character:str=None) -> str:
+    
+    line = mark_exposition(line, talking_character)
+    line = mark_spoken_words(line, talking_character)
+    return line
+    
+
+def mark_spoken_words(line:str, talking_character:str=None) -> str:
+    # if there are no asterisks in the line, it means its impossible to tell
+    # dialogue apart from exposition
+    if "*" not in line:
+        return line
+
+    if talking_character and line.startswith(f"{talking_character}:"):
+        line = line[len(talking_character)+1:].lstrip()
+    
+
+    # Splitting the text into segments based on asterisks
+    segments = re.split('(\*[^*]*\*)', line)
+    formatted_line = ""
+
+    for i, segment in enumerate(segments):
+        if segment.startswith("*") and segment.endswith("*"):
+            # If the segment is an action or thought, add it as is
+            formatted_line += segment
+        else:
+            # For non-action/thought parts, trim and add quotes only if not empty and not already quoted
+            trimmed_segment = segment.strip()
+            if trimmed_segment:
+                if not (trimmed_segment.startswith('"') and trimmed_segment.endswith('"')):
+                    formatted_line += f' "{trimmed_segment}"'
+                else:
+                    formatted_line += f' {trimmed_segment}'
+
+
+    # adds spaces betwen *" and "* to make it easier to read
+    formatted_line = formatted_line.replace('*"', '* "')
+    formatted_line = formatted_line.replace('"*', '" *')
+
+    if talking_character:
+        formatted_line = f"{talking_character}: {formatted_line}"
+        
+    log.debug("mark_spoken_words", line=line, formatted_line=formatted_line)
+
+    return formatted_line.strip()  # Trim any leading/trailing whitespace
+
+
+def mark_exposition(line:str, talking_character:str=None) -> str:
     """
     Will loop through the string and make sure chunks outside of "" are marked with *.
     
@@ -776,31 +824,41 @@ def mark_exposition(s:str, talking_character:str=None) -> str:
     "No, you're not wrong" *sips his wine* "This tastes gross." *coughs* "acquired taste i guess?"
     """
     
-    in_quotes = True
-    marked = '*'
-    chunk = ''
+    # no quotes in string, means its impossible to tell dialogue apart from exposition
+    if '"' not in line:
+        return line
     
-    if talking_character:
-        s = s.split(":",1)[1]
-        prefix = f"{talking_character}: "
-    else:
-        prefix = ''
-        
-    s = s.replace("*", "").strip()
+    if talking_character and line.startswith(f"{talking_character}:"):
+        line = line[len(talking_character)+1:].lstrip()
     
-    for char in s:
-        if char == '"':
-            in_quotes = not in_quotes
-            if in_quotes:
-                marked += chunk.strip() + '*' if chunk.strip() else ''
-                chunk = ''
-            marked += char
-        elif in_quotes:
-            marked += char
+    # Splitting the text into segments based on quotes
+    segments = re.split('("[^"]*")', line)
+    formatted_line = ""
+
+    for i, segment in enumerate(segments):
+        # If the segment is a spoken part (inside quotes), add it as is
+        if segment.startswith('"') and segment.endswith('"'):
+            formatted_line += segment
         else:
-            chunk += char
+            # Split the non-spoken segment into sub-segments based on existing asterisks
+            sub_segments = re.split('(\*[^*]*\*)', segment)
+            for sub_segment in sub_segments:
+                if sub_segment.startswith("*") and sub_segment.endswith("*"):
+                    # If the sub-segment is already formatted, add it as is
+                    formatted_line += sub_segment
+                else:
+                    # Trim and add asterisks only to non-empty sub-segments
+                    trimmed_sub_segment = sub_segment.strip()
+                    if trimmed_sub_segment:
+                        formatted_line += f" *{trimmed_sub_segment}*"
+
+    # adds spaces betwen *" and "* to make it easier to read
+    formatted_line = formatted_line.replace('*"', '* "')
+    formatted_line = formatted_line.replace('"*', '" *')
+
+    if talking_character:
+        formatted_line = f"{talking_character}: {formatted_line}"
+    log.debug("mark_exposition", line=line, formatted_line=formatted_line)
     
-    log.info("mark_exposition", s=s, result=prefix + marked + '*' + chunk.strip() + '*' if chunk.strip() else marked)
     
-    return prefix + marked + '*' + chunk.strip() + '*' if chunk.strip() else marked
-    
+    return formatted_line.strip()  # Trim any leading/trailing whitespace

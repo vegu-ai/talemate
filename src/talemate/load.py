@@ -193,7 +193,8 @@ async def load_scene_from_data(
         await scene.world_state.request_update(initial_only=True)  
 
     # the scene has been saved before (since we just loaded it), so we set the saved flag to True
-    scene.saved = True
+    # as long as the scene has a memory_id.
+    scene.saved = "memory_id" in scene_data
 
     return scene
 

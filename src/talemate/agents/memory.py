@@ -264,6 +264,20 @@ class ChromaDBMemoryAgent(MemoryAgent):
     def db_name(self):
         return getattr(self, "collection_name", "<unnamed>")
 
+    def make_collection_name(self, scene):
+        
+        if self.USE_OPENAI:
+            suffix = "-openai"
+        elif self.USE_INSTRUCTOR:
+            suffix = "-instructor"
+            model = self.config.get("chromadb").get("instructor_model", "hkunlp/instructor-xl")
+            if "xl" in model:
+                suffix += "-xl"
+            elif "large" in model:
+                suffix += "-large"
+        
+        return f"{scene.memory_id}-tm{suffix}"
+
     async def count(self):
         await asyncio.sleep(0)
         return self.db.count()
@@ -280,11 +294,15 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         openai_key = self.config.get("openai").get("api_key") or os.environ.get("OPENAI_API_KEY")
         
-        self.collection_name = collection_name = f"{self.scene.memory_id}-tm"
+        self.collection_name = collection_name = self.make_collection_name(self.scene)
         
         log.info("chromadb agent", status="setting up db", collection_name=collection_name)
         
-        if openai_key and self.USE_OPENAI:
+        if self.USE_OPENAI:
+            
+            if not openai_key:
+                raise ValueError("You must provide an the openai ai key in the config if you want to use it for chromadb embeddings")
+            
             log.info(
                 "crhomadb", status="using openai", openai_key=openai_key[:5] + "..."
             )
@@ -325,7 +343,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         
         if not scene.saved:
             # scene was never saved so we can discard the memory
-            collection_name = f"{scene.memory_id}-tm"
+            collection_name = self.make_collection_name(scene)
             log.info("chromadb agent", status="discarding memory", collection_name=collection_name)
             self.db_client.delete_collection(collection_name)
         

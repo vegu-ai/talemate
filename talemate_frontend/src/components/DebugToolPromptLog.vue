@@ -1,6 +1,7 @@
 <template>
     <v-list-subheader class="text-uppercase"><v-icon>mdi-post-outline</v-icon> Prompts
         <v-chip size="x-small" color="primary">{{ max_prompts }}</v-chip>
+        <v-icon color="primary" class="ml-2" @click="clearPrompts">mdi-close</v-icon>
     </v-list-subheader>
 
     <v-list-item density="compact">
@@ -47,6 +48,10 @@ export default {
     ],
 
     methods: {
+        clearPrompts() {
+            this.prompts = [];
+            this.total = 0;
+        },
         handleMessage(data) {
 
             if(data.type === "system"&& data.id === "scene.loaded") {

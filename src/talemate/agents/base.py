@@ -193,6 +193,7 @@ class Agent(ABC):
                     log.debug("resetting config", config=config, default_value=default_value)
                     config.value = default_value
         
+        await self.emit_status()
               
     async def emit_status(self, processing: bool = None):
         

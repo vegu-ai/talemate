@@ -37,29 +37,15 @@ class CmdDirectorDirect(TalemateCommand):
             self.system_message(f"Character not found: {name}")
             return True
         
-        if ask_for_input:
-            goal = await wait_for_input(f"Enter a new goal for the director to direct {character.name} towards (leave empty for auto-direct): ")
-        else:
-            goal = None
-        direction = await director.agent.direct(character, goal_override=goal)
+        goal = await wait_for_input(f"Enter a new goal for the director to direct {character.name}")
         
-        if direction is None:
-            self.system_message("Director was unable to direct character at this point in the story.")
+        if not goal.strip():
+            self.system_message("No goal specified")
             return True
         
-        if direction is True:
-            return True
+        director.agent.actions["direct"].config["prompt"].value = goal
         
-        message = DirectorMessage(direction, source=character.name)
-        emit("director", message, character=character)
-        
-        # remove previous director message, starting from the end of self.history
-        for i in range(len(self.scene.history) - 1, -1, -1):
-            if isinstance(self.scene.history[i], DirectorMessage):
-                self.scene.history.pop(i)
-                break
-        
-        self.scene.push_history(message)
+        await director.agent.direct_character(character, goal)
         
 @register
 class CmdDirectorDirectWithOverride(CmdDirectorDirect):

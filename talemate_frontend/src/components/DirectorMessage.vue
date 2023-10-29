@@ -1,11 +1,11 @@
 <template>
   <div class="director-container" v-if="show && minimized" >
-    <v-chip closable @click:close="deleteMessage()" color="deep-purple-lighten-3">
+    <v-chip closable color="orange-darken-1" @click:close="deleteMessage()">
       <v-icon class="mr-2">mdi-bullhorn-outline</v-icon>
       <span @click="toggle()">{{ character }}</span>
     </v-chip>
   </div>
-  <v-alert v-else-if="show" class="director-message" variant="text" :closable="message_id !== null" type="info" icon="mdi-bullhorn-outline"
+  <v-alert v-else-if="show" color="orange" class="director-message font-italic" variant="text" :closable="message_id !== null" type="info" icon="mdi-bullhorn-outline"
     elevation="0" density="compact" @click:close="deleteMessage()" >
     <div class="director-text" @click="toggle()">{{ text }}</div>
   </v-alert>
@@ -50,7 +50,6 @@ export default {
 }
 
 .director-text {
-  color: #9FA8DA;
 }
 
 .director-message {

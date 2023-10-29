@@ -28,11 +28,11 @@ class DirectorAgent(Agent):
     verbose_name = "Director"
     
     def __init__(self, client, **kwargs):
-        self.is_enabled = True
+        self.is_enabled = False
         self.client = client
         self.next_direct = 0
         self.actions = {
-            "direct": AgentAction(enabled=False, label="Direct", description="Will attempt to direct the scene. Runs automatically after AI dialogue (n turns).", config={
+            "direct": AgentAction(enabled=True, label="Direct", description="Will attempt to direct the scene. Runs automatically after AI dialogue (n turns).", config={
                 "turns": AgentActionConfig(type="number", label="Turns", description="Number of turns to wait before directing the sceen", value=10, min=0, max=100, step=1),
                 "prompt": AgentActionConfig(type="text", label="Instructions", description="Instructions to the director", value="", scope="scene")
             }),
@@ -61,7 +61,6 @@ class DirectorAgent(Agent):
         
         await self.direct_scene(event.character)
         
-
     async def direct_scene(self, character: Character):
         
         if not self.actions["direct"].enabled:
@@ -81,6 +80,11 @@ class DirectorAgent(Agent):
             return
         
         self.next_direct = 0
+        
+        await self.direct_character(character, prompt)
+        
+    @set_processing
+    async def direct_character(self, character: Character, prompt:str):
         
         response = await Prompt.request("director.direct-scene", self.client, "director", vars={
             "max_tokens": self.client.max_token_length,

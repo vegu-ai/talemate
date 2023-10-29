@@ -477,9 +477,6 @@ class ConversationAgent(Agent):
         # Remove "{character.name}:" - all occurences
         total_result = total_result.replace(f"{character.name}:", "")
 
-        if total_result.count("*") % 2 == 1:
-            total_result += "*"
-
         # Check if total_result starts with character name, if not, prepend it
         if not total_result.startswith(character.name):
             total_result = f"{character.name}: {total_result}"

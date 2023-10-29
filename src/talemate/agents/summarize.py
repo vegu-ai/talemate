@@ -69,6 +69,8 @@ class SummarizeAgent(Agent):
         ts = "PT0S"
         time_passage_termination = False
         
+        log.debug("build_archive", start=start, recent_entry=recent_entry)
+        
         if recent_entry:
             ts = recent_entry.get("ts", ts)
         

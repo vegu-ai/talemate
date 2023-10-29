@@ -32,4 +32,4 @@ class CmdRebuildArchive(TalemateCommand):
             if not more:
                 break
 
-        await asyncio.sleep(0)
+        await self.scene.commit_to_memory()

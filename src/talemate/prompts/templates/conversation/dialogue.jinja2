@@ -6,8 +6,8 @@
 <|CLOSE_SECTION|>
 <|SECTION:CHARACTERS|>
 {% for character in characters -%}
-{{ character.name }}: 
-{{ character.filtered_sheet(['name', 'age', 'gender']) }}
+#### {{ character.name }}
+{{ character.filtered_sheet(['age', 'gender']) }}
 {{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
 
 {{ character.description }}

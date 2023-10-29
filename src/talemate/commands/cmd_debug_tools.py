@@ -106,3 +106,20 @@ class CmdLongTermMemoryStats(TalemateCommand):
         db_name = memory.db_name
         
         self.emit("system", f"Long term memory for {self.scene.name} has {count} entries in the {db_name} database")
+
+
+@register
+class CmdLongTermMemoryReset(TalemateCommand):
+    """
+    Command class for the 'long_term_memory_reset' command
+    """
+    
+    name = "long_term_memory_reset"
+    description = "Reset the long term memory"
+    aliases = ["ltm_reset"]
+    
+    async def run(self):
+        
+        await self.scene.commit_to_memory()
+        
+        self.emit("system", f"Long term memory for {self.scene.name} has been reset")

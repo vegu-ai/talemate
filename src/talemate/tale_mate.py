@@ -522,7 +522,8 @@ class Player(Actor):
             emit("character", self.history[-1], character=self.character)
             
         return message
-    
+
+async_signals.register("game_loop_start")
 async_signals.register("game_loop")
 
 class Scene(Emitter):
@@ -573,6 +574,7 @@ class Scene(Emitter):
             "archive_add": signal("archive_add"),
             "character_state": signal("character_state"),
             "game_loop": async_signals.get("game_loop"),
+            "game_loop_start": async_signals.get("game_loop_start"),
         }
 
         self.setup_emitter(scene=self)
@@ -587,6 +589,10 @@ class Scene(Emitter):
     @property
     def character_names(self):
         return [character.name for character in self.characters]
+
+    @property
+    def npc_character_names(self):
+        return [character.name for character in self.get_npc_characters()]
 
     @property
     def log(self):
@@ -1286,6 +1292,8 @@ class Scene(Emitter):
         
         self.active_actor = None
         self.next_actor = None
+        
+        await self.signals["game_loop_start"].send(events.GameLoopStartEvent(scene=self, event_type="game_loop_start"))
         
         while continue_scene:
             

@@ -39,3 +39,7 @@ class CharacterStateEvent(Event):
 @dataclass
 class GameLoopEvent(Event):
     pass
+
+@dataclass
+class GameLoopStartEvent(GameLoopEvent):
+    pass

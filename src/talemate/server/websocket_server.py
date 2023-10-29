@@ -276,12 +276,20 @@ class WebsocketHandler(Receiver):
         )
         
     def handle_director(self, emission: Emission):
+        
+        if emission.character:
+            character = emission.character.name
+        elif emission.message_object.source:
+            character = emission.message_object.source
+        else:
+            character = ""
+        
         self.queue_put(
             {
                 "type": "director",
                 "message": emission.message,
                 "id": emission.id,
-                "character": emission.character.name if emission.character else "",
+                "character": character,
             }
         )
 

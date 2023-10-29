@@ -30,6 +30,7 @@ class ConversationAgentEmission(AgentEmission):
     generation: list[str]
     
 talemate.emit.async_signals.register(
+    "agent.conversation.before_generate",
     "agent.conversation.generated"
 )
 
@@ -422,6 +423,9 @@ class ConversationAgent(Agent):
         self.current_memory_context = None
 
         character = actor.character
+        
+        emission = ConversationAgentEmission(agent=self, generation="", actor=actor, character=character)
+        await talemate.emit.async_signals.get("agent.conversation.before_generate").send(emission)
         
         self.set_generation_overrides()
 

@@ -766,11 +766,11 @@ def replace_exposition_markers(s:str) -> str:
 
 def ensure_dialog_format(line:str, talking_character:str=None) -> str:
     
-    if "*" not in line and '"' not in line:
-        if talking_character:
-            line = line[len(talking_character)+1:].lstrip()
-            return f"{talking_character}: \"{line}\""
-        return f"\"{line}\""
+    #if "*" not in line and '"' not in line:
+    #    if talking_character:
+    #        line = line[len(talking_character)+1:].lstrip()
+    #        return f"{talking_character}: \"{line}\""
+    #    return f"\"{line}\""
     
     line = mark_exposition(line, talking_character)
     line = mark_spoken_words(line, talking_character)

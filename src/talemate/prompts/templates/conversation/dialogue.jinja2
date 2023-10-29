@@ -48,7 +48,5 @@ Use quotes to indicate dialogue. Use italics to indicate thoughts and actions.
 {{ scene_context }}
 {% endfor %}
 {% endblock -%}
-Content Token Count {{ count_tokens(self.rendered_context()) }}
-Scene History Token Count {{ count_tokens(self.scene_history()) }}
 <|CLOSE_SECTION|>
 {{ bot_token}}{{ talking_character.name }}:{{ partial_message }}

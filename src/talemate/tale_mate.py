@@ -1379,13 +1379,15 @@ class Scene(Emitter):
         
         return saves_dir
             
-    async def save(self):
+    async def save(self, save_as:bool=False):
         """
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
         scene = self
-
-
+        
+        if save_as:
+            self.filename = None
+            
         if not self.name:
             self.name = await wait_for_input("Enter scenario name: ")
             self.filename = "base.json"
@@ -1393,6 +1395,13 @@ class Scene(Emitter):
         elif not self.filename:
             self.filename = await wait_for_input("Enter save name: ")
             self.filename = self.filename.replace(" ", "-").lower()+".json"
+            
+        if save_as:
+            memory_agent = self.get_helper("memory").agent
+            memory_agent.close_db(self)
+            self.memory_id = str(uuid.uuid4())[:10]
+            await memory_agent.set_db()
+            await self.commit_to_memory()
 
         saves_dir = self.save_dir
         
@@ -1424,8 +1433,32 @@ class Scene(Emitter):
 
         with open(filepath, "w") as f:
             json.dump(scene_data, f, indent=2, cls=save.SceneEncoder)
-
+            
         self.saved = True
+
+    async def commit_to_memory(self):
+        
+        # will recommit scene to long term memory
+        
+        memory = self.get_helper("memory").agent
+        memory.clear_db()
+        
+        for ah in self.archived_history:
+            ts = ah.get("ts", "PT1S")
+                
+            if not ah.get("ts"):
+                ah["ts"] = ts
+            
+            self.signals["archive_add"].send(
+                events.ArchiveEvent(scene=self, event_type="archive_add", text=ah["text"], ts=ts)
+            )
+
+        for character_name, cs in self.character_states.items():
+            self.set_character_state(character_name, cs)
+
+        for character in self.characters:
+            await character.commit_to_memory(memory)
+        
 
     def reset(self):
         self.history = []

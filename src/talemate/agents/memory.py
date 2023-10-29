@@ -9,6 +9,7 @@ import talemate.util as util
 from talemate.context import scene_is_loading
 from talemate.config import load_config
 import structlog
+import shutil
 
 try:
     import chromadb
@@ -275,6 +276,8 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 suffix += "-xl"
             elif "large" in model:
                 suffix += "-large"
+        else:
+            suffix = ""
         
         return f"{scene.memory_id}-tm{suffix}"
 
@@ -337,9 +340,19 @@ class ChromaDBMemoryAgent(MemoryAgent):
         await self.emit_status(processing=False)
         log.info("chromadb agent", status="db ready")
 
+    def clear_db(self):
+        if not self.db:
+            return
+        
+        log.info("chromadb agent", status="clearing db", collection_name=self.collection_name)
+        
+        self.db.delete(where={"source": "talemate"})
+
     def close_db(self, scene):
         if not self.db:
             return
+        
+        log.info("chromadb agent", status="closing db", collection_name=self.collection_name)
         
         if not scene.saved:
             # scene was never saved so we can discard the memory

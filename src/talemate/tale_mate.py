@@ -943,11 +943,12 @@ class Scene(Emitter):
         reserved_min_archived_history_tokens = count_tokens(self.archived_history[-1]["text"]) if self.archived_history else 0
         reserved_intro_tokens = count_tokens(self.get_intro()) if show_intro else 0
             
-        max_dialogue_budget = min(max(budget - reserved_intro_tokens - reserved_min_archived_history_tokens, 1000), budget)
+        max_dialogue_budget = min(max(budget - reserved_intro_tokens - reserved_min_archived_history_tokens, 500), budget)
         
         dialogue_popped = False
         while count_tokens(dialogue) > max_dialogue_budget:
             dialogue.pop(0)
+            
             dialogue_popped = True
 
         if dialogue:
@@ -959,7 +960,7 @@ class Scene(Emitter):
             context_history = [context_history[1]]
             
         # we only have room for dialogue, so we return it
-        if dialogue_popped:
+        if dialogue_popped and max_dialogue_budget >= budget:
             return context_history
 
         # if we dont have lots of archived history, we can also include the scene
@@ -993,7 +994,6 @@ class Scene(Emitter):
         i = len(self.archived_history) - 1
         limit = 5
         
-        
         if sections:
             context_history.insert(archive_insert_idx, "<|CLOSE_SECTION|>")
         
@@ -1008,6 +1008,7 @@ class Scene(Emitter):
             text = self.archived_history[i]["text"]
             if count_tokens(context_history) + count_tokens(text) > budget:
                 break
+            
             context_history.insert(archive_insert_idx, text)
             i -= 1
             limit -= 1

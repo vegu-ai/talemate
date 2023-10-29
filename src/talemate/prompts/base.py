@@ -294,7 +294,8 @@ class Prompt:
         env.globals["to_int"] = lambda x: int(x)
         env.globals["config"] = self.config
         env.globals["len"] = lambda x: len(x)
-        env.globals["count_tokens"] = lambda x: count_tokens(x) 
+        env.globals["count_tokens"] = lambda x: count_tokens(dedupe_string(x, debug=False))
+        env.globals["print"] = lambda x: print(x)
         
         ctx.update(self.vars)
         

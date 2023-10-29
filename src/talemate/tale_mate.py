@@ -1187,10 +1187,19 @@ class Scene(Emitter):
         Loops through self.history looking for TimePassageMessage and will
         advance the world state by the amount of time passed for each
         """
-        
         # reset time
-        
         self.ts = "PT0S"
+        
+        # archived history (if "ts" is set) should provide the base line
+        # find the first archived_history entry from the back that has a ts
+        # and set that as the base line
+        
+        if self.archived_history:
+            for i in range(len(self.archived_history) - 1, -1, -1):
+                if self.archived_history[i].get("ts"):
+                    self.ts = self.archived_history[i]["ts"]
+                    break
+        
         
         for message in self.history:
             if isinstance(message, TimePassageMessage):

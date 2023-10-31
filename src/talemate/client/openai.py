@@ -2,8 +2,7 @@ import asyncio
 import os
 from typing import Callable
 
-from langchain.chat_models import ChatOpenAI
-from langchain.schema import AIMessage, HumanMessage, SystemMessage
+import openai
 
 from talemate.client.registry import register
 from talemate.emit import emit
@@ -77,7 +76,7 @@ class OpenAIClient:
             log.error("No OpenAI API key set")
             return
         
-        self.chat = ChatOpenAI(model=model, verbose=True)
+        self.chat = openai.ChatCompletion
         if model == "gpt-3.5-turbo":
             self.max_token_length = min(max_token_length or 4096, 4096)
         elif model == "gpt-4":
@@ -86,7 +85,7 @@ class OpenAIClient:
             self.max_token_length = min(max_token_length or 16384, 16384)
         else:
             self.max_token_length = max_token_length or 2048
-
+            
     def reconfigure(self, **kwargs):
         if "model" in kwargs:
             self.model_name = kwargs["model"]
@@ -136,15 +135,15 @@ class OpenAIClient:
         self.emit_status(processing=True)
         await asyncio.sleep(0.1)
 
-        sys_message = SystemMessage(content=self.get_system_message(kind))
+        sys_message = {'role': 'system', 'content': self.get_system_message(kind)}
         
-        human_message = HumanMessage(content=prompt)
+        human_message = {'role': 'user', 'content': prompt}
 
         log.debug("openai send", kind=kind, sys_message=sys_message)
 
-        response = self.chat([sys_message, human_message])
+        response = await self.chat.acreate(model=self.model_name, messages=[sys_message, human_message])
         
-        response = response.content
+        response = response['choices'][0]['message']['content']
         
         if right and response.startswith(right):
             response = response[len(right):].strip()

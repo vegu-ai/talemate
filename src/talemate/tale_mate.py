@@ -1154,7 +1154,7 @@ class Scene(Emitter):
                 break
 
     def emit_status(self):
-       emit(
+        emit(
             "scene_status",
             self.name,
             status="started",
@@ -1164,8 +1164,11 @@ class Scene(Emitter):
                 "assets": self.assets.dict(),
                 "characters": [actor.character.serialize for actor in self.actors],
                 "scene_time": util.iso8601_duration_to_human(self.ts, suffix="") if self.ts else None,
+                "saved": self.saved,
             },
-        )    
+        )
+    
+        self.log.debug("scene_status", scene=self.name, scene_time=self.ts, saved=self.saved)
 
     def set_environment(self, environment: str):
         """
@@ -1334,6 +1337,8 @@ class Scene(Emitter):
                         await self.call_automated_actions()
                         continue
                     
+                    self.saved = False
+                    
                     # Store the most recent AI Actor
                     self.most_recent_ai_actor = actor
 
@@ -1341,6 +1346,9 @@ class Scene(Emitter):
                         emit(
                             "character", item, character=actor.character
                         )
+                
+                self.emit_status()
+                    
             except TalemateInterrupt:
                 raise
             except LLMAccuracyError as e:
@@ -1371,6 +1379,10 @@ class Scene(Emitter):
                     continue
                 
                 await command.execute(message)
+                
+                self.saved = False
+                self.emit_status()
+                
             except TalemateInterrupt:
                 raise
             except LLMAccuracyError as e:
@@ -1453,6 +1465,7 @@ class Scene(Emitter):
             json.dump(scene_data, f, indent=2, cls=save.SceneEncoder)
             
         self.saved = True
+        self.emit_status()
 
     async def commit_to_memory(self):
         

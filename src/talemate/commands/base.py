@@ -20,6 +20,7 @@ class TalemateCommand(Emitter, ABC):
     scene: Scene = None
     manager: CommandManager = None
     label: str = None
+    sets_scene_unsaved: bool = True
 
     def __init__(
         self,

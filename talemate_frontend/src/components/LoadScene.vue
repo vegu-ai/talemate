@@ -58,6 +58,7 @@ export default {
             scenes: [],
             sceneSearchInput: null,
             sceneSearchLoading: false,
+            sceneSaved: null,
             expanded: true,
         }
     },
@@ -83,6 +84,13 @@ export default {
             this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: "environment:creative" }));
         },
         loadScene() {
+
+            if(this.sceneSaved === false) {
+                if(!confirm("The current scene is not saved. Are you sure you want to load a new scene?")) {
+                    return;
+                }
+            }
+
             this.loading = true;
             if (this.inputMethod === 'file' && this.sceneFile.length > 0) { // Check if the input method is "file" and there is at least one file
                 // Convert the uploaded file to base64
@@ -116,6 +124,12 @@ export default {
             if (data.type === 'scenes_list') {
                 this.scenes = data.data;
                 this.sceneSearchLoading = false;
+                return;
+            }
+
+            // Handle scene status
+            if (data.type == "scene_status") {
+                this.sceneSaved = data.data.saved;
                 return;
             }
 

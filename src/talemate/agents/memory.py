@@ -347,6 +347,18 @@ class ChromaDBMemoryAgent(MemoryAgent):
         log.info("chromadb agent", status="clearing db", collection_name=self.collection_name)
         
         self.db.delete(where={"source": "talemate"})
+        
+    def drop_db(self):
+        if not self.db:
+            return
+        
+        log.info("chromadb agent", status="dropping db", collection_name=self.collection_name)
+        
+        try:
+            self.db_client.delete_collection(self.collection_name)
+        except ValueError as exc:
+            if "Collection not found" not in str(exc):
+                raise
 
     def close_db(self, scene):
         if not self.db:
@@ -358,7 +370,11 @@ class ChromaDBMemoryAgent(MemoryAgent):
             # scene was never saved so we can discard the memory
             collection_name = self.make_collection_name(scene)
             log.info("chromadb agent", status="discarding memory", collection_name=collection_name)
-            self.db_client.delete_collection(collection_name)
+            try:
+                self.db_client.delete_collection(collection_name)
+            except ValueError as exc:
+                if "Collection not found" not in str(exc):
+                    raise
         
         self.db = None
         

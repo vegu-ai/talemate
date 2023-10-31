@@ -1472,7 +1472,8 @@ class Scene(Emitter):
         # will recommit scene to long term memory
         
         memory = self.get_helper("memory").agent
-        memory.clear_db()
+        memory.drop_db()
+        await memory.set_db()
         
         for ah in self.archived_history:
             ts = ah.get("ts", "PT1S")

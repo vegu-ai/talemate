@@ -33,7 +33,7 @@ class DirectorAgent(Agent):
         self.next_direct = 0
         self.actions = {
             "direct": AgentAction(enabled=True, label="Direct", description="Will attempt to direct the scene. Runs automatically after AI dialogue (n turns).", config={
-                "turns": AgentActionConfig(type="number", label="Turns", description="Number of turns to wait before directing the sceen", value=10, min=0, max=100, step=1),
+                "turns": AgentActionConfig(type="number", label="Turns", description="Number of turns to wait before directing the sceen", value=5, min=1, max=100, step=1),
                 "prompt": AgentActionConfig(type="text", label="Instructions", description="Instructions to the director", value="", scope="scene")
             }),
         }

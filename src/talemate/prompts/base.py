@@ -440,10 +440,13 @@ class Prompt:
         prepared_response = ["".join(prepared_response[:-cutoff])]
         if instruction:
             prepared_response.insert(0, f"// {instruction}")
+            
+        cleaned = "\n".join(prepared_response)
         
-        return self.set_prepared_response(
-            "\n".join(prepared_response)
-        )
+        # remove all duplicate whitespace
+        cleaned = re.sub(r"\s+", " ", cleaned)
+        
+        return self.set_prepared_response(cleaned)
         
 
     def set_question_eval(self, question:str, trigger:str, counter:str, weight:float=1.0):
@@ -465,6 +468,12 @@ class Prompt:
         
         # strip comments
         try:
+            
+            try:
+                response = json.loads(response)
+                return response
+            except json.decoder.JSONDecodeError as e:
+                pass
             response = response.replace("True", "true").replace("False", "false")
             response = "\n".join([line for line in response.split("\n") if validate_line(line)]).strip()
             
@@ -478,7 +487,7 @@ class Prompt:
             
             if self.client and ai_fix:
                 
-                
+                log.warning("parse_json_response error on first attempt - sending to AI to fix", response=response, error=e)
                 fixed_response = await self.client.send_prompt(
                     f"fix the json syntax\n\n```json\n{response}\n```<|BOT|>"+"{",
                     kind="analyze_long",

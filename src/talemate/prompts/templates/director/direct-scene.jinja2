@@ -9,5 +9,7 @@
 Current scene goal: {{ prompt }}
 
 Give actionable directions to the actor playing {{ character.name }} by instructing {{ character.name }} to do or say something to progress the scene subtly towards meeting the condition of the current goal.
+
+Take the most recent update to the scene into consideration: {{ scene.history[-1] }}
 <|CLOSE_SECTION|>
 {{ set_prepared_response("Director instructs "+character.name+": \"To progress the scene, i want you to ") }}

@@ -573,9 +573,23 @@ class Prompt:
         
         response = await client.send_prompt(str(self), kind=kind)
         
-        if not response.lower().startswith(self.prepared_response.lower()):
-            pad = " " if self.pad_prepended_response else ""
-            response = self.prepared_response.rstrip() + pad + response.strip()
+        if not self.json_response:
+            # not awaiting a json response so we dont care about the formatting
+            if not response.lower().startswith(self.prepared_response.lower()):
+                pad = " " if self.pad_prepended_response else ""
+                response = self.prepared_response.rstrip() + pad + response.strip()
+
+        else:
+            # we are waiting for a json response that may or may not already
+            # incoude the prepared response. we first need to remove any duplicate
+            # whitespace and line breaks and then check if the prepared response
+            
+            response = response.replace("\n", " ")
+            response = re.sub(r"\s+", " ", response)
+            
+            if not response.lower().startswith(self.prepared_response.lower()):
+                pad = " " if self.pad_prepended_response else ""
+                response = self.prepared_response.rstrip() + pad + response.strip()
 
         
         if self.eval_response:

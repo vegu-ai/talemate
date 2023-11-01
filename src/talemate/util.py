@@ -572,7 +572,7 @@ def iso8601_duration_to_human(iso_duration, suffix:str=" ago"):
     elif components:
         human_str = components[0]
     else:
-        human_str = "0 Seconds"
+        human_str = "Moments"
     
     return f"{human_str}{suffix}"
 

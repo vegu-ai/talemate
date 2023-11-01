@@ -1,9 +1,4 @@
 {% block rendered_context -%}
-<|SECTION:CONTEXT|>
-{% for memory_line in memory -%}
-{{ memory_line }}
-{% endfor %}
-<|CLOSE_SECTION|>
 <|SECTION:CHARACTERS|>
 {% for character in characters -%}
 #### {{ character.name }}
@@ -41,7 +36,11 @@ Use an informal and colloquial register with a conversational tone. Overall, the
 Spoken word should be enclosed in double quotes, e.g. "Hello, how are you?"
 Narration and actions should be enclosed in asterisks, e.g. *She smiles.*
 <|CLOSE_SECTION|>
-
+<|SECTION:CONTEXT|>
+{% for memory_line in memory -%}
+{{ memory_line }}
+{% endfor %}
+<|CLOSE_SECTION|>
 <|SECTION:SCENE|>
 {% endblock -%}
 {% block scene_history -%}

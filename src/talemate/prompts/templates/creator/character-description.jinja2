@@ -2,8 +2,10 @@
 {{ character.sheet }}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-Summarize {{ character.name }} based on the character sheet above. 
+Write an immersive character description for {{ character.name }} based on the character sheet above. 
 
 Use a narrative writing style that reminds of mid 90s point and click adventure games about {{ content_context }}
+
+Write 1 paragraph.
 <|CLOSE_SECTION|>
 {{ set_prepared_response(character.name+ " is ") }}

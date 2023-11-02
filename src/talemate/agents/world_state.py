@@ -1,28 +1,44 @@
 from __future__ import annotations
+import dataclasses
 
-import asyncio
-import traceback
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
-import talemate.data_objects as data_objects
 import talemate.emit.async_signals
 import talemate.util as util
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, TimePassageMessage
+from talemate.emit import emit
 
-from .base import Agent, set_processing, AgentAction, AgentActionConfig
+from .base import Agent, set_processing, AgentAction, AgentActionConfig, AgentEmission
 from .registry import register
 
 import structlog
-
+import isodate
 import time
-import re
 
 if TYPE_CHECKING:
     from talemate.agents.conversation import ConversationAgentEmission
     
 
 log = structlog.get_logger("talemate.agents.world_state")
+
+talemate.emit.async_signals.register("agent.world_state.time")
+
+@dataclasses.dataclass
+class WorldStateAgentEmission(AgentEmission):
+    """
+    Emission class for world state agent
+    """
+    pass
+
+@dataclasses.dataclass
+class TimePassageEmission(WorldStateAgentEmission):
+    """
+    Emission class for time passage
+    """
+    duration: str
+    narrative: str
+    
 
 @register()
 class WorldStateAgent(Agent):
@@ -59,6 +75,26 @@ class WorldStateAgent(Agent):
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("agent.conversation.generated").connect(self.on_conversation_generated)
+
+    async def advance_time(self, duration:str, narrative:str=None):
+        """
+        Emit a time passage message
+        """
+        
+        isodate.parse_duration(duration)
+        msg_text = narrative or util.iso8601_duration_to_human(duration, suffix=" later")
+        message = TimePassageMessage(ts=duration, message=msg_text)
+        
+        log.debug("world_state.advance_time", message=message)
+        self.scene.push_history(message)
+        self.scene.emit_status()
+        
+        emit("time", message)
+        
+        await talemate.emit.async_signals.get("agent.world_state.time").send(
+            TimePassageEmission(agent=self, duration=duration, narrative=msg_text)
+        )
+        
 
     async def on_conversation_generated(self, emission:ConversationAgentEmission):
         """

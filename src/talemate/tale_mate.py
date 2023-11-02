@@ -1066,8 +1066,13 @@ class Scene(Emitter):
             new_message = await narrator.agent.narrate_character(character)
         elif source == "narrate_query":
             new_message = await narrator.agent.narrate_query(arg)
+
         else:
-            return
+            fn = getattr(narrator.agent, source, None)
+            if not fn:
+                return
+            args = arg.split(";") if arg else []
+            new_message = await fn(*args)
         
         save_source = f"{source}:{arg}" if arg else source
         

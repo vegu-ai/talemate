@@ -28,4 +28,3 @@ class CmdNarrate(TalemateCommand):
         
         self.narrator_message(message)
         self.scene.push_history(message)
-        await asyncio.sleep(0)

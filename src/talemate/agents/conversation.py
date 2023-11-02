@@ -306,6 +306,7 @@ class ConversationAgent(Agent):
             scene, long_term_memory_budget, 
             scene_and_dialogue + [f"{character.name}: {character.description}" for character in scene.get_characters()]
         )
+        
 
         main_character = scene.main_character.character
 

@@ -1,0 +1,67 @@
+<|SECTION:EXAMPLE|>
+{
+    "characters": {
+        # the character name is the key
+        "Character name": {
+            "emotion": "The current emotional state or mood of the character. (neutral, happy, sad, angry, etc.)",
+            "snapshot": "A brief narrative description of what the character is doing at this moment in the scene."
+        },
+        # ...
+    },
+    "items": {
+        # the item name is the key in natural language (short)
+        "Item name": {
+            "snapshot": "A brief narrative description of the item and the state its currently in."
+        },
+        # ...
+    },
+    "location": "A brief narrative description of the location the scene is taking place in.",
+}
+<|CLOSE_SECTION|>
+<|SECTION:CONTEXT|>
+Player character: {{ scene.get_player_character().name }}
+Other major characters:
+{% for npc_name in scene.npc_character_names -%}
+{{ npc_name }}
+{% endfor -%}
+
+{% for scene_context in scene.context_history(budget=1000, min_dialogue=10, dialogue_negative_offset=5, sections=False) -%}
+{{ scene_context }}
+{% endfor -%}
+{% if not scene.history -%}
+<|SECTION:DIALOGUE|>
+No dialogue so far
+{% endif -%}
+<|CLOSE_SECTION|>
+{% if scene.world_state.characters -%}
+<|SECTION:LAST KNOWN WORLD STATE|>
+{{ scene.world_state.pretty_json }}
+<|CLOSE_SECTION|>
+{% endif -%}
+<|SECTION:SCENE PROGRESS|>
+{% for scene_context in scene.context_history(budget=300, min_dialogue=5, add_archieved_history=False, max_dialogue=5) -%}
+{{ scene_context }}
+{% endfor -%}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+{% if scene.world_state.characters -%}
+Update the existing JSON object for the world state to reflect the changes in the scene progression.
+
+Objects that are no longer explicitly mentioned in the scene progression should be removed from the JSON object.
+{% else %}
+Create a JSON object for the world state that reflects the scene progression so far.
+{% endif -%}
+
+The world state needs to include important concrete and material items present at the very end of the dialogue.
+The world state needs to include persons (characters) interacting at the very end of the dialogue
+Be factual and truthful. Don't make up things that are not in the context or dialogue.
+Snapshot text should always be specified. If you don't know what to write, write "You see nothing special."
+Emotion should always be specified. If you don't know what to write, write "neutral".
+
+Required response: a complete and valid JSON response according to the JSON example containing items and characters.
+
+characters should have the following attributes: `emotion`, `snapshot`
+items should have the following attributes: `snapshot`
+<|CLOSE_SECTION|>
+<|SECTION:UPDATED WORLD STATE|>
+{{ set_json_response(dict(characters={"name":{}}), cutoff=3) }}

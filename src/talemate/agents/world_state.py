@@ -133,7 +133,7 @@ class WorldStateAgent(Agent):
         t1 = time.time()
 
         _, world_state = await Prompt.request(
-            "world_state.request-world-state",
+            "world_state.request-world-state-v2",
             self.client,
             "analyze_long",
             vars = {
@@ -147,6 +147,7 @@ class WorldStateAgent(Agent):
         self.scene.log.debug("request_world_state", response=world_state, time=time.time() - t1)
         
         return world_state
+    
 
     @set_processing
     async def request_world_state_inline(self):
@@ -159,10 +160,10 @@ class WorldStateAgent(Agent):
 
         # first, we need to get the marked items (objects etc.)
 
-        marked_items_response = await Prompt.request(
+        _, marked_items_response = await Prompt.request(
             "world_state.request-world-state-inline-items",
             self.client,
-            "analyze_freeform",
+            "analyze_long",
             vars = {
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
@@ -283,3 +284,26 @@ class WorldStateAgent(Agent):
             data[name.strip()] = value.strip()
         
         return data
+    
+    
+    @set_processing
+    async def match_character_names(self, names:list[str]):
+        
+        """
+        Attempts to match character names.
+        """
+        
+        _, response = await Prompt.request(
+            "world_state.match-character-names",
+            self.client,
+            "analyze_long",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "names": names,
+            }
+        )
+        
+        log.debug("match_character_names", names=names, response=response)
+        
+        return response

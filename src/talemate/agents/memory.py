@@ -153,13 +153,13 @@ class MemoryAgent(Agent):
                 break
         return memory_context
 
-    async def query(self, query:str, max_tokens:int=1000, filter:Callable=lambda x:True):
+    async def query(self, query:str, max_tokens:int=1000, filter:Callable=lambda x:True, **where):
         """
         Get the character memory context for a given character
         """
 
         try:
-            return (await self.multi_query([query], max_tokens=max_tokens, filter=filter))[0]
+            return (await self.multi_query([query], max_tokens=max_tokens, filter=filter, **where))[0]
         except IndexError:
             return None
 

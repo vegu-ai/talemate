@@ -499,7 +499,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
     
     def prompt_config_analyze_long(self, prompt: str) -> dict:
         config = self.prompt_config_analyze(prompt)
-        config["max_new_tokens"] = 1000
+        config["max_new_tokens"] = 2048
         return config
 
     def prompt_config_analyze_freeform(self, prompt: str) -> dict:

@@ -374,17 +374,17 @@ class Prompt:
             f"Answer: " + loop.run_until_complete(summarizer.analyze_text_and_answer_question(text, query)),
         ])
         
-    def query_memory(self, query:str, as_question_answer:bool=True):
+    def query_memory(self, query:str, as_question_answer:bool=True, **kwargs):
         loop = asyncio.get_event_loop()
         memory = instance.get_agent("memory")
         query = query.format(**self.vars)
         
         if not as_question_answer:
-            return loop.run_until_complete(memory.query(query))
+            return loop.run_until_complete(memory.query(query, **kwargs))
         
         return "\n".join([
             f"Question: {query}",
-            f"Answer: " + loop.run_until_complete(memory.query(query)),
+            f"Answer: " + loop.run_until_complete(memory.query(query, **kwargs)),
         ])
               
     def set_prepared_response(self, response:str, prepend:str=""):
@@ -437,6 +437,7 @@ class Prompt:
         prepared_response  = json.dumps(initial_object, indent=2).split("\n")
         self.json_response = True
         
+        
         prepared_response = ["".join(prepared_response[:-cutoff])]
         if instruction:
             prepared_response.insert(0, f"// {instruction}")
@@ -445,6 +446,7 @@ class Prompt:
         
         # remove all duplicate whitespace
         cleaned = re.sub(r"\s+", " ", cleaned)
+        print("set_json_response", cleaned)
         
         return self.set_prepared_response(cleaned)
         
@@ -489,7 +491,7 @@ class Prompt:
                 
                 log.warning("parse_json_response error on first attempt - sending to AI to fix", response=response, error=e)
                 fixed_response = await self.client.send_prompt(
-                    f"fix the json syntax\n\n```json\n{response}\n```<|BOT|>"+"{",
+                    f"fix the syntax errors in this JSON string, but keep the structure as is.\n\nError:{e}\n\n```json\n{response}\n```<|BOT|>"+"{",
                     kind="analyze_long",
                 )
                 log.warning("parse_json_response error on first attempt - sending to AI to fix", response=response, error=e)

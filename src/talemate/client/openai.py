@@ -2,7 +2,7 @@ import asyncio
 import os
 from typing import Callable
 
-import openai
+from openai import AsyncOpenAI
 
 from talemate.client.registry import register
 from talemate.emit import emit
@@ -31,6 +31,7 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613"):
         "gpt-4-32k-0314",
         "gpt-4-0613",
         "gpt-4-32k-0613",
+        "gpt-4-1106-preview",
     }:
         tokens_per_message = 3
         tokens_per_name = 1
@@ -76,7 +77,7 @@ class OpenAIClient:
     client_type = "openai"
     conversation_retries = 0
 
-    def __init__(self, model="gpt-3.5-turbo", **kwargs):
+    def __init__(self, model="gpt-4-1106-preview", **kwargs):
         self.name = kwargs.get("name", "openai")
         self.model_name = model
         self.last_token_length = 0
@@ -127,13 +128,15 @@ class OpenAIClient:
             log.error("No OpenAI API key set")
             return
         
-        self.chat = openai.ChatCompletion
+        self.client = AsyncOpenAI()
         if model == "gpt-3.5-turbo":
             self.max_token_length = min(max_token_length or 4096, 4096)
         elif model == "gpt-4":
             self.max_token_length = min(max_token_length or 8192, 8192)
         elif model == "gpt-3.5-turbo-16k":
             self.max_token_length = min(max_token_length or 16384, 16384)
+        elif model == "gpt-4-1106-preview":
+            self.max_token_length = min(max_token_length or 128000, 128000)
         else:
             self.max_token_length = max_token_length or 2048
             
@@ -175,11 +178,15 @@ class OpenAIClient:
     ) -> str:
         
         right = ""
+        opts = {}
         
         if "<|BOT|>" in prompt:
             _, right = prompt.split("<|BOT|>", 1)
             if right:
                 prompt = prompt.replace("<|BOT|>",  "\nContinue this response: ")
+                expected_response = prompt.split("\nContinue this response: ")[1].strip()
+                if expected_response.startswith("{"):
+                    opts["response_format"] = {"type": "json_object"}
             else:
                 prompt = prompt.replace("<|BOT|>", "")
                 
@@ -190,11 +197,11 @@ class OpenAIClient:
         
         human_message = {'role': 'user', 'content': prompt}
 
-        log.debug("openai send", kind=kind, sys_message=sys_message)
+        log.debug("openai send", kind=kind, sys_message=sys_message, opts=opts)
 
-        response = await self.chat.acreate(model=self.model_name, messages=[sys_message, human_message])
+        response = await self.client.chat.completions.create(model=self.model_name, messages=[sys_message, human_message], **opts)
         
-        response = response['choices'][0]['message']['content']
+        response = response.choices[0].message.content
         
         if right and response.startswith(right):
             response = response[len(right):].strip()

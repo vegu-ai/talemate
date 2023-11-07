@@ -26,7 +26,7 @@
             hide-details
             v-model="client.max_token_length"
             :min="1024"
-            :max="16384"
+            :max="128000"
             :step="512"
             @update:modelValue="saveClient(client)"
             @click.stop

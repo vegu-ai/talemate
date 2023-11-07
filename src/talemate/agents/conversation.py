@@ -80,6 +80,12 @@ class ConversationAgent(Agent):
                         min=32,
                         max=512,
                         step=32,
+                    ),#
+                    "instructions": AgentActionConfig(
+                        type="text",
+                        label="Instructions",
+                        value="1-3 sentences.",
+                        description="Extra instructions to give the AI for dialog generatrion.",
                     ),
                     "jiggle": AgentActionConfig(
                         type="number",
@@ -117,6 +123,7 @@ class ConversationAgent(Agent):
                     ),
                 }
             ),
+                
         }
 
     def connect(self, scene):
@@ -328,6 +335,10 @@ class ConversationAgent(Agent):
             director_message = isinstance(scene_and_dialogue[-1], DirectorMessage)
         except IndexError:
             director_message = False
+            
+        extra_instructions = ""
+        if self.actions["generation_override"].enabled:
+            extra_instructions = self.actions["generation_override"].config["instructions"].value
 
         prompt = Prompt.get("conversation.dialogue", vars={
             "scene": scene,
@@ -341,6 +352,7 @@ class ConversationAgent(Agent):
             "talking_character": character,
             "partial_message": char_message,
             "director_message": director_message,
+            "extra_instructions": extra_instructions,
         })
         
         return str(prompt)

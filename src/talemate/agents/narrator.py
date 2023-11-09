@@ -76,6 +76,9 @@ class NarratorAgent(Agent):
             }
         )
         
+        response = response.strip("*")
+        response = util.strip_partial_sentences(response)
+        
         response = f"*{response.strip('*')}*"
 
         return response

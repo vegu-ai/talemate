@@ -73,6 +73,7 @@ class WorldState(BaseModel):
             # character name may not always come back exactly as we have
             # it defined in the scene. We assign the correct name by checking occurences
             # of both names in each other.
+            
             if character_name not in character_names:
                 for _character_name in character_names:
                     if _character_name.lower() in character_name.lower() or character_name.lower() in _character_name.lower():
@@ -113,15 +114,17 @@ class WorldState(BaseModel):
         # to with an alias
         
         states = []
+        scene = self.agent.scene
 
         for character_name in self.characters.keys():
             states.append(
                 {
-                    "text": f"{character_name} current world state: {self.characters[character_name].snapshot}",
+                    "text": f"{character_name}: {self.characters[character_name].snapshot}",
                     "id": f"{character_name}.world_state.snapshot",
                     "meta": {
                         "typ": "world_state",
                         "character": character_name,
+                        "ts": scene.ts,
                     }
                 }
             )
@@ -129,11 +132,12 @@ class WorldState(BaseModel):
         for item_name in self.items.keys():
             states.append(
                 {
-                    "text": f"{item_name} current world state: {self.items[item_name].snapshot}",
+                    "text": f"{item_name}: {self.items[item_name].snapshot}",
                     "id": f"{item_name}.world_state.snapshot",
                     "meta": {
                         "typ": "world_state",
                         "item": item_name,
+                        "ts": scene.ts,
                     }
                 }
             )

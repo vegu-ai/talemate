@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional, Union
 
 import talemate.client as client
+import talemate.instance as instance
 import talemate.util as util
 import structlog
 from talemate.emit import emit
@@ -123,7 +124,19 @@ class ConversationAgent(Agent):
                     ),
                 }
             ),
-                
+            "use_long_term_memory": AgentAction(
+                enabled = True,
+                label = "Long Term Memory",
+                description = "Will augment the conversation prompt with long term memory.",
+                config = {
+                    "ai_selected": AgentActionConfig(
+                        type="bool",
+                        label="AI Selected",
+                        description="If enabled, the AI will select the long term memory to use. (will increase how long it takes to generate a response)",
+                        value=True,
+                    ),
+                }
+            ),  
         }
 
     def connect(self, scene):
@@ -309,11 +322,7 @@ class ConversationAgent(Agent):
             insert_bot_token=10
         )
         
-        memory = await self.build_prompt_default_memory(
-            scene, long_term_memory_budget, 
-            scene_and_dialogue + [f"{character.name}: {character.description}" for character in scene.get_characters()]
-        )
-        
+        memory = await self.build_prompt_default_memory(character)
 
         main_character = scene.main_character.character
 
@@ -358,7 +367,7 @@ class ConversationAgent(Agent):
         return str(prompt)
     
     async def build_prompt_default_memory(
-        self, scene: Scene, budget: int, existing_context: list
+        self, character: Character
     ):
         """
         Builds long term memory for the conversation prompt
@@ -371,29 +380,35 @@ class ConversationAgent(Agent):
         Also it will only add information that is not already in the existing context.
         """
 
-        memory = scene.get_helper("memory").agent
-
-        if not memory:
+        if not self.actions["use_long_term_memory"].enabled:
             return []
+
 
         if self.current_memory_context:
             return self.current_memory_context
 
-        self.current_memory_context = []
+        self.current_memory_context = ""
+        
+        history = self.scene.context_history(min_dialogue=3, max_dialogue=3, keep_director=False, sections=False, add_archieved_history=False)
+        text = "\n".join(history)
 
-        # feed the last 3 history message into multi_query
-        history_length = len(scene.history)
-        i = history_length - 1
-        while i >= 0 and i >= len(scene.history) - 3:
-            self.current_memory_context += await memory.multi_query(
-                [scene.history[i]],
-                filter=lambda x: x
-                not in self.current_memory_context + existing_context,
+        if self.actions["use_long_term_memory"].config["ai_selected"].value:
+            world_state = instance.get_agent("world_state")
+            log.debug("conversation_agent.build_prompt_default_memory", direct=False)
+            # feed the last 3 history message into multi_query
+            self.current_memory_context = await world_state.analyze_text_and_extract_context(
+                text, f"continue the conversation as {character.name}"
             )
-            i -= 1
 
+        else:
+            log.debug("conversation_agent.build_prompt_default_memory", history=history, direct=True)
+            memory = instance.get_agent("memory")
+            
+            context = await memory.multi_query(history, max_tokens=500, iterate=5)
+             
+            self.current_memory_context = "\n".join(context)
+        
         return self.current_memory_context
-    
 
     async def build_prompt(self, character, char_message: str = ""):
         fn = self.build_prompt_default

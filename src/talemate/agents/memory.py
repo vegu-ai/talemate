@@ -180,7 +180,7 @@ class MemoryAgent(Agent):
         memory_context = []
         for query in queries:
             i = 0
-            for memory in await self.get(formatter(query), **where):
+            for memory in await self.get(formatter(query), limit=iterate, **where):
                 if memory in memory_context:
                     continue
 
@@ -433,7 +433,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         await self.emit_status(processing=False)
 
-    async def _get(self, text, character=None, **kwargs):
+    async def _get(self, text, character=None, limit:int=15, **kwargs):
         await self.emit_status(processing=True)
 
         where = {}
@@ -457,7 +457,10 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         #log.debug("crhomadb agent get", text=text, where=where)
 
-        _results = self.db.query(query_texts=[text], where=where)
+        _results = self.db.query(query_texts=[text], where=where, n_results=limit)
+        
+        #import json
+        #print(json.dumps(_results["ids"], indent=2))
         
         results = []
 
@@ -484,9 +487,9 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
             # log.debug("crhomadb agent get", result=results[-1], distance=distance)
 
-            if len(results) > 10:
+            if len(results) > limit:
                 break
 
         await self.emit_status(processing=False)
-
+        
         return results

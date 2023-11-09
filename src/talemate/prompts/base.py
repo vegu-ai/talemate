@@ -290,6 +290,7 @@ class Prompt:
         env.globals["query_scene"] = self.query_scene
         env.globals["query_memory"] = self.query_memory
         env.globals["query_text"] = self.query_text
+        env.globals["retrieve_memories"] = self.retrieve_memories
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
         env.globals["config"] = self.config
@@ -365,28 +366,48 @@ class Prompt:
         ])
         
     
-    def query_text(self, query:str, text:str):
+    def query_text(self, query:str, text:str, as_question_answer:bool=True):
         loop = asyncio.get_event_loop()
-        summarizer = instance.get_agent("summarizer")
+        summarizer = instance.get_agent("world_state")
         query = query.format(**self.vars)
+        
+        if not as_question_answer:
+            return loop.run_until_complete(summarizer.analyze_text_and_answer_question(text, query))
+        
         return "\n".join([
             f"Question: {query}",
             f"Answer: " + loop.run_until_complete(summarizer.analyze_text_and_answer_question(text, query)),
         ])
+        
         
     def query_memory(self, query:str, as_question_answer:bool=True, **kwargs):
         loop = asyncio.get_event_loop()
         memory = instance.get_agent("memory")
         query = query.format(**self.vars)
         
-        if not as_question_answer:
-            return loop.run_until_complete(memory.query(query, **kwargs))
+        if not kwargs.get("iterate"):
+            if not as_question_answer:
+                return loop.run_until_complete(memory.query(query, **kwargs))
+            
+            return "\n".join([
+                f"Question: {query}",
+                f"Answer: " + loop.run_until_complete(memory.query(query, **kwargs)),
+            ])
+        else:
+            return loop.run_until_complete(memory.multi_query([query], **kwargs))
+            
+            
+            
+    def retrieve_memories(self, lines:list[str], goal:str=None):
         
-        return "\n".join([
-            f"Question: {query}",
-            f"Answer: " + loop.run_until_complete(memory.query(query, **kwargs)),
-        ])
-              
+        loop = asyncio.get_event_loop()
+        world_state = instance.get_agent("world_state")
+        
+        lines = [str(line) for line in lines]
+        
+        return loop.run_until_complete(world_state.analyze_text_and_extract_context("\n".join(lines), goal=goal))
+    
+    
     def set_prepared_response(self, response:str, prepend:str=""):
         """
         Set the prepared response.

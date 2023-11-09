@@ -1101,8 +1101,7 @@ class Scene(Emitter):
         
         director = self.get_helper("director")
         
-        response = await director.agent.direct(character)
-
+        response = await director.agent.direct_scene(character)
         if not response:
             log.info("Director returned no response")
             return
@@ -1489,6 +1488,7 @@ class Scene(Emitter):
             self.signals["archive_add"].send(
                 events.ArchiveEvent(scene=self, event_type="archive_add", text=ah["text"], ts=ts)
             )
+            await asyncio.sleep(0)
 
         for character_name, cs in self.character_states.items():
             self.set_character_state(character_name, cs)

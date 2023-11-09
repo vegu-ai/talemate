@@ -37,11 +37,11 @@ Spoken word should be enclosed in double quotes, e.g. "Hello, how are you?"
 Narration and actions should be enclosed in asterisks, e.g. *She smiles.*
 {{ extra_instructions }}
 <|CLOSE_SECTION|>
-<|SECTION:CONTEXT|>
-{% for memory_line in memory -%}
-{{ memory_line }}
-{% endfor %}
+{% if memory -%}
+<|SECTION:EXTRA CONTEXT|>
+{{ memory }}
 <|CLOSE_SECTION|>
+{% endif -%}
 <|SECTION:SCENE|>
 {% endblock -%}
 {% block scene_history -%}

@@ -17,7 +17,7 @@
 
 
       </v-card-title>
-      <v-card-text>
+      <v-card-text class="scrollable-content">
         <v-select v-model="agent.client" :items="agent.data.client" label="Client"></v-select>
 
         <v-alert type="warning" variant="tonal" density="compact" v-if="agent.data.experimental">
@@ -98,3 +98,11 @@ export default {
   }
 }
 </script>
+
+<style>
+.scrollable-content {
+  overflow-y: auto;
+  max-height: 70vh;
+  padding-right: 16px;
+}
+</style>

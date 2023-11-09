@@ -197,6 +197,53 @@ class WorldStateAgent(Agent):
             duration = "P"+duration
         
         return duration
+    
+    
+    @set_processing
+    async def analyze_text_and_extract_context(
+        self,
+        text: str,
+        goal: str,
+    ):
+        
+        response = await Prompt.request(
+            "world_state.analyze-text-and-extract-context",
+            self.client,
+            "analyze_freeform",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "text": text,
+                "goal": goal,
+            }
+        )
+        
+        log.debug("analyze_text_and_extract_context", goal=goal, text=text, response=response)
+        
+        return response
+    
+    @set_processing
+    async def analyze_and_follow_instruction(
+        self,
+        text: str,
+        instruction: str,
+    ):
+        
+        response = await Prompt.request(
+            "world_state.analyze-and-follow-instruction",
+            self.client,
+            "analyze_freeform",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "text": text,
+                "instruction": instruction,
+            }
+        )
+        
+        log.debug("analyze_and_follow_instruction", instruction=instruction, text=text, response=response)
+        
+        return response
 
     @set_processing
     async def analyze_text_and_answer_question(

@@ -389,18 +389,18 @@ class ConversationAgent(Agent):
 
         self.current_memory_context = ""
         
-        history = self.scene.context_history(min_dialogue=3, max_dialogue=3, keep_director=False, sections=False, add_archieved_history=False)
-        text = "\n".join(history)
 
         if self.actions["use_long_term_memory"].config["ai_selected"].value:
+            history = self.scene.context_history(min_dialogue=3, max_dialogue=15, keep_director=False, sections=False, add_archieved_history=False)
+            text = "\n".join(history)
             world_state = instance.get_agent("world_state")
             log.debug("conversation_agent.build_prompt_default_memory", direct=False)
-            # feed the last 3 history message into multi_query
             self.current_memory_context = await world_state.analyze_text_and_extract_context(
                 text, f"continue the conversation as {character.name}"
             )
 
         else:
+            history = self.scene.context_history(min_dialogue=3, max_dialogue=3, keep_director=False, sections=False, add_archieved_history=False)
             log.debug("conversation_agent.build_prompt_default_memory", history=history, direct=True)
             memory = instance.get_agent("memory")
             

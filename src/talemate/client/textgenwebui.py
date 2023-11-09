@@ -3,6 +3,7 @@ import random
 import json
 import copy
 import structlog
+import time
 import httpx
 from abc import ABC, abstractmethod
 from typing import Callable, Union
@@ -671,7 +672,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         fn_url = self.prompt_url
         message = fn_prompt_config(prompt)
                 
-        if client_context_attribute("nuke_repetition") > 0.0:
+        if client_context_attribute("nuke_repetition") > 0.0 and kind in ["conversation", "story"]:
             log.info("nuke repetition", offset=client_context_attribute("nuke_repetition"), temperature=message["temperature"], repetition_penalty=message["repetition_penalty"])
             message = jiggle_randomness(message, offset=client_context_attribute("nuke_repetition"))
             log.info("nuke repetition (applied)", offset=client_context_attribute("nuke_repetition"), temperature=message["temperature"], repetition_penalty=message["repetition_penalty"])
@@ -700,8 +701,12 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         #    if k == "prompt":
         #        continue
         #    print(f"{k}: {v}")
+        
+        time_start = time.time()
 
         response = await self.send_message(message, fn_url())
+        
+        time_end = time.time()
 
         response = response.split("#")[0]
         self.emit_status(processing=False)
@@ -711,7 +716,8 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
             "prompt": message["prompt"],
             "response": response,
             "prompt_tokens": token_length,
-            "response_tokens": int(len(response) / 3.6)
+            "response_tokens": int(len(response) / 3.6),
+            "time": time_end - time_start,
         })
         
         return response

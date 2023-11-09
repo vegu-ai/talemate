@@ -13,12 +13,13 @@
             {{ prompt.kind }}
         </v-list-item-title>
         <v-list-item-subtitle>
-            <v-chip size="x-small"><v-icon size="14"
+            <v-chip size="x-small" class="mr-1"><v-icon size="14"
             class="mr-1">mdi-pound</v-icon>{{ prompt.num }}</v-chip>
-            <v-chip size="x-small" color="primary">{{ prompt.prompt_tokens }}<v-icon size="14"
+            <v-chip size="x-small" class="mr-1" color="primary">{{ prompt.prompt_tokens }}<v-icon size="14"
             class="ml-1">mdi-arrow-down-bold</v-icon></v-chip>
-            <v-chip size="x-small" color="secondary">{{ prompt.response_tokens }}<v-icon size="14"
+            <v-chip size="x-small" class="mr-1" color="secondary">{{ prompt.response_tokens }}<v-icon size="14"
             class="ml-1">mdi-arrow-up-bold</v-icon></v-chip>
+            <v-chip size="x-small">{{ prompt.time }}s<v-icon size="14" class="ml-1">mdi-clock</v-icon></v-chip>
         </v-list-item-subtitle>
         <v-divider class="mt-1"></v-divider>
     </v-list-item>
@@ -68,6 +69,7 @@ export default {
                     kind: data.data.kind,
                     response_tokens: data.data.response_tokens,
                     prompt_tokens: data.data.prompt_tokens,
+                    time: parseInt(data.data.time),
                     num: this.total++,
                 })
 

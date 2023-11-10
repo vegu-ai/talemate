@@ -18,7 +18,7 @@
             <v-row>
               <v-col cols="12">
                 <v-text-field v-model="client.apiUrl" v-if="client.type === 'textgenwebui'" label="API URL"></v-text-field>
-                <v-select v-model="client.model" v-if="client.type === 'openai'" :items="['gpt-4', 'gpt-3.5-turbo', 'gpt-3.5-turbo-16k']" label="Model"></v-select>
+                <v-select v-model="client.model" v-if="client.type === 'openai'" :items="['gpt-4-1106-preview', 'gpt-4', 'gpt-3.5-turbo', 'gpt-3.5-turbo-16k']" label="Model"></v-select>
               </v-col>
             </v-row>  
             <v-row>

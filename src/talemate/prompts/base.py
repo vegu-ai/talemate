@@ -290,11 +290,13 @@ class Prompt:
         env.globals["query_scene"] = self.query_scene
         env.globals["query_memory"] = self.query_memory
         env.globals["query_text"] = self.query_text
+        env.globals["retrieve_memories"] = self.retrieve_memories
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
         env.globals["config"] = self.config
         env.globals["len"] = lambda x: len(x)
-        env.globals["count_tokens"] = lambda x: count_tokens(x) 
+        env.globals["count_tokens"] = lambda x: count_tokens(dedupe_string(x, debug=False))
+        env.globals["print"] = lambda x: print(x)
         
         ctx.update(self.vars)
         
@@ -364,28 +366,48 @@ class Prompt:
         ])
         
     
-    def query_text(self, query:str, text:str):
+    def query_text(self, query:str, text:str, as_question_answer:bool=True):
         loop = asyncio.get_event_loop()
-        summarizer = instance.get_agent("summarizer")
+        summarizer = instance.get_agent("world_state")
         query = query.format(**self.vars)
+        
+        if not as_question_answer:
+            return loop.run_until_complete(summarizer.analyze_text_and_answer_question(text, query))
+        
         return "\n".join([
             f"Question: {query}",
             f"Answer: " + loop.run_until_complete(summarizer.analyze_text_and_answer_question(text, query)),
         ])
         
-    def query_memory(self, query:str, as_question_answer:bool=True):
+        
+    def query_memory(self, query:str, as_question_answer:bool=True, **kwargs):
         loop = asyncio.get_event_loop()
         memory = instance.get_agent("memory")
         query = query.format(**self.vars)
         
-        if not as_question_answer:
-            return loop.run_until_complete(memory.query(query))
+        if not kwargs.get("iterate"):
+            if not as_question_answer:
+                return loop.run_until_complete(memory.query(query, **kwargs))
+            
+            return "\n".join([
+                f"Question: {query}",
+                f"Answer: " + loop.run_until_complete(memory.query(query, **kwargs)),
+            ])
+        else:
+            return loop.run_until_complete(memory.multi_query([query], **kwargs))
+            
+            
+            
+    def retrieve_memories(self, lines:list[str], goal:str=None):
         
-        return "\n".join([
-            f"Question: {query}",
-            f"Answer: " + loop.run_until_complete(memory.query(query)),
-        ])
-              
+        loop = asyncio.get_event_loop()
+        world_state = instance.get_agent("world_state")
+        
+        lines = [str(line) for line in lines]
+        
+        return loop.run_until_complete(world_state.analyze_text_and_extract_context("\n".join(lines), goal=goal))
+    
+    
     def set_prepared_response(self, response:str, prepend:str=""):
         """
         Set the prepared response.
@@ -436,13 +458,18 @@ class Prompt:
         prepared_response  = json.dumps(initial_object, indent=2).split("\n")
         self.json_response = True
         
+        
         prepared_response = ["".join(prepared_response[:-cutoff])]
         if instruction:
             prepared_response.insert(0, f"// {instruction}")
+            
+        cleaned = "\n".join(prepared_response)
         
-        return self.set_prepared_response(
-            "\n".join(prepared_response)
-        )
+        # remove all duplicate whitespace
+        cleaned = re.sub(r"\s+", " ", cleaned)
+        print("set_json_response", cleaned)
+        
+        return self.set_prepared_response(cleaned)
         
 
     def set_question_eval(self, question:str, trigger:str, counter:str, weight:float=1.0):
@@ -464,6 +491,12 @@ class Prompt:
         
         # strip comments
         try:
+            
+            try:
+                response = json.loads(response)
+                return response
+            except json.decoder.JSONDecodeError as e:
+                pass
             response = response.replace("True", "true").replace("False", "false")
             response = "\n".join([line for line in response.split("\n") if validate_line(line)]).strip()
             
@@ -477,9 +510,9 @@ class Prompt:
             
             if self.client and ai_fix:
                 
-                
+                log.warning("parse_json_response error on first attempt - sending to AI to fix", response=response, error=e)
                 fixed_response = await self.client.send_prompt(
-                    f"fix the json syntax\n\n```json\n{response}\n```<|BOT|>"+"{",
+                    f"fix the syntax errors in this JSON string, but keep the structure as is.\n\nError:{e}\n\n```json\n{response}\n```<|BOT|>"+"{",
                     kind="analyze_long",
                 )
                 log.warning("parse_json_response error on first attempt - sending to AI to fix", response=response, error=e)
@@ -563,9 +596,23 @@ class Prompt:
         
         response = await client.send_prompt(str(self), kind=kind)
         
-        if not response.lower().startswith(self.prepared_response.lower()):
-            pad = " " if self.pad_prepended_response else ""
-            response = self.prepared_response.rstrip() + pad + response.strip()
+        if not self.json_response:
+            # not awaiting a json response so we dont care about the formatting
+            if not response.lower().startswith(self.prepared_response.lower()):
+                pad = " " if self.pad_prepended_response else ""
+                response = self.prepared_response.rstrip() + pad + response.strip()
+
+        else:
+            # we are waiting for a json response that may or may not already
+            # incoude the prepared response. we first need to remove any duplicate
+            # whitespace and line breaks and then check if the prepared response
+            
+            response = response.replace("\n", " ")
+            response = re.sub(r"\s+", " ", response)
+            
+            if not response.lower().startswith(self.prepared_response.lower()):
+                pad = " " if self.pad_prepended_response else ""
+                response = self.prepared_response.rstrip() + pad + response.strip()
 
         
         if self.eval_response:

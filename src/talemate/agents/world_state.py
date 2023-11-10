@@ -1,28 +1,44 @@
 from __future__ import annotations
+import dataclasses
 
-import asyncio
-import traceback
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
-import talemate.data_objects as data_objects
 import talemate.emit.async_signals
 import talemate.util as util
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, TimePassageMessage
+from talemate.emit import emit
 
-from .base import Agent, set_processing, AgentAction, AgentActionConfig
+from .base import Agent, set_processing, AgentAction, AgentActionConfig, AgentEmission
 from .registry import register
 
 import structlog
-
+import isodate
 import time
-import re
 
 if TYPE_CHECKING:
     from talemate.agents.conversation import ConversationAgentEmission
     
 
 log = structlog.get_logger("talemate.agents.world_state")
+
+talemate.emit.async_signals.register("agent.world_state.time")
+
+@dataclasses.dataclass
+class WorldStateAgentEmission(AgentEmission):
+    """
+    Emission class for world state agent
+    """
+    pass
+
+@dataclasses.dataclass
+class TimePassageEmission(WorldStateAgentEmission):
+    """
+    Emission class for time passage
+    """
+    duration: str
+    narrative: str
+    
 
 @register()
 class WorldStateAgent(Agent):
@@ -59,6 +75,26 @@ class WorldStateAgent(Agent):
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("agent.conversation.generated").connect(self.on_conversation_generated)
+
+    async def advance_time(self, duration:str, narrative:str=None):
+        """
+        Emit a time passage message
+        """
+        
+        isodate.parse_duration(duration)
+        msg_text = narrative or util.iso8601_duration_to_human(duration, suffix=" later")
+        message = TimePassageMessage(ts=duration, message=msg_text)
+        
+        log.debug("world_state.advance_time", message=message)
+        self.scene.push_history(message)
+        self.scene.emit_status()
+        
+        emit("time", message)
+        
+        await talemate.emit.async_signals.get("agent.world_state.time").send(
+            TimePassageEmission(agent=self, duration=duration, narrative=msg_text)
+        )
+        
 
     async def on_conversation_generated(self, emission:ConversationAgentEmission):
         """
@@ -97,7 +133,7 @@ class WorldStateAgent(Agent):
         t1 = time.time()
 
         _, world_state = await Prompt.request(
-            "world_state.request-world-state",
+            "world_state.request-world-state-v2",
             self.client,
             "analyze_long",
             vars = {
@@ -111,6 +147,7 @@ class WorldStateAgent(Agent):
         self.scene.log.debug("request_world_state", response=world_state, time=time.time() - t1)
         
         return world_state
+    
 
     @set_processing
     async def request_world_state_inline(self):
@@ -123,10 +160,10 @@ class WorldStateAgent(Agent):
 
         # first, we need to get the marked items (objects etc.)
 
-        marked_items_response = await Prompt.request(
+        _, marked_items_response = await Prompt.request(
             "world_state.request-world-state-inline-items",
             self.client,
-            "analyze_freeform",
+            "analyze_long",
             vars = {
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
@@ -160,6 +197,53 @@ class WorldStateAgent(Agent):
             duration = "P"+duration
         
         return duration
+    
+    
+    @set_processing
+    async def analyze_text_and_extract_context(
+        self,
+        text: str,
+        goal: str,
+    ):
+        
+        response = await Prompt.request(
+            "world_state.analyze-text-and-extract-context",
+            self.client,
+            "analyze_freeform",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "text": text,
+                "goal": goal,
+            }
+        )
+        
+        log.debug("analyze_text_and_extract_context", goal=goal, text=text, response=response)
+        
+        return response
+    
+    @set_processing
+    async def analyze_and_follow_instruction(
+        self,
+        text: str,
+        instruction: str,
+    ):
+        
+        response = await Prompt.request(
+            "world_state.analyze-and-follow-instruction",
+            self.client,
+            "analyze_freeform",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "text": text,
+                "instruction": instruction,
+            }
+        )
+        
+        log.debug("analyze_and_follow_instruction", instruction=instruction, text=text, response=response)
+        
+        return response
 
     @set_processing
     async def analyze_text_and_answer_question(
@@ -247,3 +331,26 @@ class WorldStateAgent(Agent):
             data[name.strip()] = value.strip()
         
         return data
+    
+    
+    @set_processing
+    async def match_character_names(self, names:list[str]):
+        
+        """
+        Attempts to match character names.
+        """
+        
+        _, response = await Prompt.request(
+            "world_state.match-character-names",
+            self.client,
+            "analyze_long",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "names": names,
+            }
+        )
+        
+        log.debug("match_character_names", names=names, response=response)
+        
+        return response

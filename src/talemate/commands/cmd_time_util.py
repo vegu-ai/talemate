@@ -11,6 +11,7 @@ from talemate.prompts.base import set_default_sectioning_handler
 from talemate.scene_message import TimePassageMessage
 from talemate.util import iso8601_duration_to_human
 from talemate.emit import wait_for_input, emit
+import talemate.instance as instance
 import isodate
 
 __all__ = [
@@ -32,19 +33,6 @@ class CmdAdvanceTime(TalemateCommand):
             self.emit("system", "You must specify an amount of time to advance")
             return
         
-        try:
-            isodate.parse_duration(self.args[0])
-        except isodate.ISO8601Error:
-            self.emit("system", "Invalid duration")
-            return
         
-        try:
-            msg = self.args[1]
-        except IndexError:
-            msg = iso8601_duration_to_human(self.args[0], suffix=" later")
-                
-        message = TimePassageMessage(ts=self.args[0], message=msg)
-        emit('time', message)
-        
-        self.scene.push_history(message)
-        self.scene.emit_status()
+        world_state = instance.get_agent("world_state")
+        await world_state.advance_time(self.args[0])

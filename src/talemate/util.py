@@ -572,7 +572,7 @@ def iso8601_duration_to_human(iso_duration, suffix:str=" ago"):
     elif components:
         human_str = components[0]
     else:
-        human_str = "0 Seconds"
+        human_str = "Moments"
     
     return f"{human_str}{suffix}"
 
@@ -766,99 +766,131 @@ def replace_exposition_markers(s:str) -> str:
 
 def ensure_dialog_format(line:str, talking_character:str=None) -> str:
     
-    line = mark_exposition(line, talking_character)
-    line = mark_spoken_words(line, talking_character)
+    #if "*" not in line and '"' not in line:
+    #    if talking_character:
+    #        line = line[len(talking_character)+1:].lstrip()
+    #        return f"{talking_character}: \"{line}\""
+    #    return f"\"{line}\""
+    #
+
+    if talking_character:
+        line = line[len(talking_character)+1:].lstrip()
+
+    lines = []
+
+    for _line in line.split("\n"):
+        _line = ensure_dialog_line_format(_line)
+    
+        lines.append(_line)
+        
+    if len(lines) > 1:
+        line = "\n".join(lines)
+    else:
+        line = lines[0]
+    
+    if talking_character:
+        line = f"{talking_character}: {line}"
+    
     return line
     
 
-def mark_spoken_words(line:str, talking_character:str=None) -> str:
-    # if there are no asterisks in the line, it means its impossible to tell
-    # dialogue apart from exposition
-    if "*" not in line:
-        return line
-
-    if talking_character and line.startswith(f"{talking_character}:"):
-        line = line[len(talking_character)+1:].lstrip()
+def ensure_dialog_line_format(line:str):
     
-
-    # Splitting the text into segments based on asterisks
-    segments = re.split('(\*[^*]*\*)', line)
-    formatted_line = ""
-
-    for i, segment in enumerate(segments):
-        if segment.startswith("*") and segment.endswith("*"):
-            # If the segment is an action or thought, add it as is
-            formatted_line += segment
-        else:
-            # For non-action/thought parts, trim and add quotes only if not empty and not already quoted
-            trimmed_segment = segment.strip()
-            if trimmed_segment:
-                if not (trimmed_segment.startswith('"') and trimmed_segment.endswith('"')):
-                    formatted_line += f' "{trimmed_segment}"'
-                else:
-                    formatted_line += f' {trimmed_segment}'
-
-
-    # adds spaces betwen *" and "* to make it easier to read
-    formatted_line = formatted_line.replace('*"', '* "')
-    formatted_line = formatted_line.replace('"*', '" *')
-
-    if talking_character:
-        formatted_line = f"{talking_character}: {formatted_line}"
+    """
+    a Python function that standardizes the formatting of dialogue and action/thought 
+    descriptions in text strings. This function is intended for use in a text-based 
+    game where spoken dialogue is encased in double quotes (" ") and actions/thoughts are
+    encased in asterisks (* *). The function must correctly format strings, ensuring that
+    each spoken sentence and action/thought is properly encased
+    """
         
-    log.debug("mark_spoken_words", line=line, formatted_line=formatted_line)
-
-    return formatted_line.strip()  # Trim any leading/trailing whitespace
-
-
-def mark_exposition(line:str, talking_character:str=None) -> str:
-    """
-    Will loop through the string and make sure chunks outside of "" are marked with *.
     
-    For example:
+    i = 0
     
-    "No, you're not wrong" sips his wine "This tastes gross." coughs "acquired taste i guess?"
+    segments = []
+    segment = None
+    segment_open = None
     
-    becomes
-    
-    "No, you're not wrong" *sips his wine* "This tastes gross." *coughs* "acquired taste i guess?"
-    """
-    
-    # no quotes in string, means its impossible to tell dialogue apart from exposition
-    if '"' not in line:
-        return line
-    
-    if talking_character and line.startswith(f"{talking_character}:"):
-        line = line[len(talking_character)+1:].lstrip()
-    
-    # Splitting the text into segments based on quotes
-    segments = re.split('("[^"]*")', line)
-    formatted_line = ""
-
-    for i, segment in enumerate(segments):
-        # If the segment is a spoken part (inside quotes), add it as is
-        if segment.startswith('"') and segment.endswith('"'):
-            formatted_line += segment
+    for i in range(len(line)):
+        
+        
+        c = line[i]
+        
+        #print("segment_open", segment_open)
+        #print("segment", segment)
+        
+        if c in ['"', '*']:
+            if segment_open == c:
+                # open segment is the same as the current character
+                # closing
+                segment_open = None
+                segment += c
+                segments += [segment.strip()]
+                segment = None
+            elif segment_open is not None and segment_open != c:
+                # open segment is not the same as the current character
+                # opening - close the current segment and open a new one
+                segments += [segment.strip()]
+                segment_open = c
+                segment = c
+            elif segment_open is None:
+                # we're opening a segment
+                segment_open = c
+                segment = c
         else:
-            # Split the non-spoken segment into sub-segments based on existing asterisks
-            sub_segments = re.split('(\*[^*]*\*)', segment)
-            for sub_segment in sub_segments:
-                if sub_segment.startswith("*") and sub_segment.endswith("*"):
-                    # If the sub-segment is already formatted, add it as is
-                    formatted_line += sub_segment
-                else:
-                    # Trim and add asterisks only to non-empty sub-segments
-                    trimmed_sub_segment = sub_segment.strip()
-                    if trimmed_sub_segment:
-                        formatted_line += f" *{trimmed_sub_segment}*"
-
-    # adds spaces betwen *" and "* to make it easier to read
-    formatted_line = formatted_line.replace('*"', '* "')
-    formatted_line = formatted_line.replace('"*', '" *')
-
-    if talking_character:
-        formatted_line = f"{talking_character}: {formatted_line}"
-    log.debug("mark_exposition", line=line, formatted_line=formatted_line)
+            if segment_open is None:
+                segment_open = "unclassified"
+                segment = c
+            else:
+                segment += c
+                
+    if segment is not None:
+        segments += [segment.strip()]
+        
+    for i in range(len(segments)):
+        segment = segments[i]
+        if segment in ['"', '*']:
+            if i > 0:
+                prev_segment = segments[i-1]
+                if prev_segment[-1] not in ['"', '*']:
+                    segments[i-1] = f"{prev_segment}{segment}"
+                    segments[i] = ""
+                    continue
     
-    
-    return formatted_line.strip()  # Trim any leading/trailing whitespace
+    for i in range(len(segments)):
+        segment = segments[i]
+        
+        if not segment:
+            continue
+                
+        if segment[0] == "*" and segment[-1] != "*":
+            segment += "*"
+        elif segment[-1] == "*" and segment[0] != "*":
+            segment = "*" + segment
+        elif segment[0] == '"' and segment[-1] != '"':
+            segment += '"'
+        elif segment[-1] == '"' and segment[0] != '"':
+            segment = '"' + segment
+        elif segment[0] in ['"', '*'] and segment[-1] == segment[0]:
+            continue
+        
+        segments[i] = segment
+        
+    for i in range(len(segments)):
+        segment = segments[i]
+        if not segment or segment[0] in ['"', '*']:
+            continue
+        
+        prev_segment = segments[i-1] if i > 0 else None
+        next_segment = segments[i+1] if i < len(segments)-1 else None
+        
+        if prev_segment and prev_segment[-1] == '"':
+            segments[i] = f"*{segment}*"
+        elif prev_segment and prev_segment[-1] == '*':
+            segments[i] = f"\"{segment}\""
+        elif next_segment and next_segment[0] == '"':
+            segments[i] = f"*{segment}*"
+        elif next_segment and next_segment[0] == '*':
+            segments[i] = f"\"{segment}\""
+            
+    return " ".join(segment for segment in segments if segment)

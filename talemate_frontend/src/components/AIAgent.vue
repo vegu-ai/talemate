@@ -91,7 +91,6 @@ export default {
         openModal() {
             this.state.formTitle = 'Add AI Agent';
             this.state.dialog = true;
-            console.log("got here")
         },
         saveAgent(agent) {
             const index = this.state.agents.findIndex(c => c.name === agent.name);
@@ -120,7 +119,6 @@ export default {
         handleMessage(data) {
             // Handle agent_status message type
             if (data.type === 'agent_status') {
-                console.log("agents: got agent_status message", data)
                 // Find the client with the given name
                 const agent = this.state.agents.find(agent => agent.name === data.name);
                 if (agent) {

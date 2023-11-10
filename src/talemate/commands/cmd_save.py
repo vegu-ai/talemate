@@ -11,6 +11,7 @@ class CmdSave(TalemateCommand):
     name = "save"
     description = "Save the scene"
     aliases = ["s"]
+    sets_scene_unsaved = False
 
     async def run(self):
         await self.scene.save()

@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional, Union
 
 import talemate.client as client
+import talemate.instance as instance
 import talemate.util as util
 import structlog
 from talemate.emit import emit
@@ -30,6 +31,7 @@ class ConversationAgentEmission(AgentEmission):
     generation: list[str]
     
 talemate.emit.async_signals.register(
+    "agent.conversation.before_generate",
     "agent.conversation.generated"
 )
 
@@ -79,6 +81,12 @@ class ConversationAgent(Agent):
                         min=32,
                         max=512,
                         step=32,
+                    ),#
+                    "instructions": AgentActionConfig(
+                        type="text",
+                        label="Instructions",
+                        value="1-3 sentences.",
+                        description="Extra instructions to give the AI for dialog generatrion.",
                     ),
                     "jiggle": AgentActionConfig(
                         type="number",
@@ -116,6 +124,19 @@ class ConversationAgent(Agent):
                     ),
                 }
             ),
+            "use_long_term_memory": AgentAction(
+                enabled = True,
+                label = "Long Term Memory",
+                description = "Will augment the conversation prompt with long term memory.",
+                config = {
+                    "ai_selected": AgentActionConfig(
+                        type="bool",
+                        label="AI Selected",
+                        description="If enabled, the AI will select the long term memory to use. (will increase how long it takes to generate a response)",
+                        value=False,
+                    ),
+                }
+            ),  
         }
 
     def connect(self, scene):
@@ -301,10 +322,7 @@ class ConversationAgent(Agent):
             insert_bot_token=10
         )
         
-        memory = await self.build_prompt_default_memory(
-            scene, long_term_memory_budget, 
-            scene_and_dialogue + [f"{character.name}: {character.description}" for character in scene.get_characters()]
-        )
+        memory = await self.build_prompt_default_memory(character)
 
         main_character = scene.main_character.character
 
@@ -326,6 +344,10 @@ class ConversationAgent(Agent):
             director_message = isinstance(scene_and_dialogue[-1], DirectorMessage)
         except IndexError:
             director_message = False
+            
+        extra_instructions = ""
+        if self.actions["generation_override"].enabled:
+            extra_instructions = self.actions["generation_override"].config["instructions"].value
 
         prompt = Prompt.get("conversation.dialogue", vars={
             "scene": scene,
@@ -339,12 +361,13 @@ class ConversationAgent(Agent):
             "talking_character": character,
             "partial_message": char_message,
             "director_message": director_message,
+            "extra_instructions": extra_instructions,
         })
         
         return str(prompt)
     
     async def build_prompt_default_memory(
-        self, scene: Scene, budget: int, existing_context: list
+        self, character: Character
     ):
         """
         Builds long term memory for the conversation prompt
@@ -357,29 +380,35 @@ class ConversationAgent(Agent):
         Also it will only add information that is not already in the existing context.
         """
 
-        memory = scene.get_helper("memory").agent
-
-        if not memory:
+        if not self.actions["use_long_term_memory"].enabled:
             return []
+
 
         if self.current_memory_context:
             return self.current_memory_context
 
-        self.current_memory_context = []
+        self.current_memory_context = ""
+        
 
-        # feed the last 3 history message into multi_query
-        history_length = len(scene.history)
-        i = history_length - 1
-        while i >= 0 and i >= len(scene.history) - 3:
-            self.current_memory_context += await memory.multi_query(
-                [scene.history[i]],
-                filter=lambda x: x
-                not in self.current_memory_context + existing_context,
+        if self.actions["use_long_term_memory"].config["ai_selected"].value:
+            history = self.scene.context_history(min_dialogue=3, max_dialogue=15, keep_director=False, sections=False, add_archieved_history=False)
+            text = "\n".join(history)
+            world_state = instance.get_agent("world_state")
+            log.debug("conversation_agent.build_prompt_default_memory", direct=False)
+            self.current_memory_context = await world_state.analyze_text_and_extract_context(
+                text, f"continue the conversation as {character.name}"
             )
-            i -= 1
 
+        else:
+            history = self.scene.context_history(min_dialogue=3, max_dialogue=3, keep_director=False, sections=False, add_archieved_history=False)
+            log.debug("conversation_agent.build_prompt_default_memory", history=history, direct=True)
+            memory = instance.get_agent("memory")
+            
+            context = await memory.multi_query(history, max_tokens=500, iterate=5)
+             
+            self.current_memory_context = "\n".join(context)
+        
         return self.current_memory_context
-    
 
     async def build_prompt(self, character, char_message: str = ""):
         fn = self.build_prompt_default
@@ -422,6 +451,9 @@ class ConversationAgent(Agent):
         self.current_memory_context = None
 
         character = actor.character
+        
+        emission = ConversationAgentEmission(agent=self, generation="", actor=actor, character=character)
+        await talemate.emit.async_signals.get("agent.conversation.before_generate").send(emission)
         
         self.set_generation_overrides()
 
@@ -472,9 +504,6 @@ class ConversationAgent(Agent):
         
         # Remove "{character.name}:" - all occurences
         total_result = total_result.replace(f"{character.name}:", "")
-
-        if total_result.count("*") % 2 == 1:
-            total_result += "*"
 
         # Check if total_result starts with character name, if not, prepend it
         if not total_result.startswith(character.name):

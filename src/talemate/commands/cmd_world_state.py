@@ -22,10 +22,15 @@ class CmdWorldState(TalemateCommand):
     async def run(self):
         
         inline = self.args[0] == "inline" if self.args else False
+        reset = self.args[0] == "reset" if self.args else False
         
         if inline:
             await self.scene.world_state.request_update_inline()
             return True
+        
+        if reset:
+            self.scene.world_state.reset()
+        
         await self.scene.world_state.request_update()
 
 @register

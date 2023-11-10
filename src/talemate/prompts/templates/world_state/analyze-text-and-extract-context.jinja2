@@ -1,0 +1,16 @@
+
+<|SECTION:CONTEXT|>
+{% for memory in query_memory(text, as_question_answer=False, max_tokens=max_tokens-500, iterate=20) -%}
+{{ memory }}
+
+{% endfor -%}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Answer the following questions:
+
+{{ query_text("What are 1 to 3 questions to ask the narrator of the story to gather more context from the past for the continuation of this conversation? If a character is asking about a status, location or information about an item or another character, make sure to include question(s) that help gather context for this. Don't explain your reasoning. Don't ask the actors directly.", text, as_question_answer=False) }}
+
+You answers should be precise, truthful and short.
+
+<|CLOSE_SECTION|>
+<|SECTION:RELEVANT CONTEXT|>

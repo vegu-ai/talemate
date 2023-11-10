@@ -6,3 +6,8 @@
 *.internal*
 *_internal*
 talemate_env
+chroma
+scenes
+config.yaml
+!scenes/infinity-quest/assets
+!scenes/infinity-quest/infinity-quest.json

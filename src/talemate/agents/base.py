@@ -10,22 +10,29 @@ from blinker import signal
 import talemate.instance as instance
 import talemate.util as util
 from talemate.emit import emit
+from talemate.events import GameLoopStartEvent
+import talemate.emit.async_signals
 import dataclasses
 import pydantic
+import structlog
 
 __all__ = [
     "Agent",
     "set_processing",
 ]
 
+log = structlog.get_logger("talemate.agents.base")
+
 class AgentActionConfig(pydantic.BaseModel):
     type: str
     label: str
     description: str = ""
     value: Union[int, float, str, bool]
+    default_value: Union[int, float, str, bool] = None
     max: Union[int, float, None] = None
     min: Union[int, float, None] = None
     step: Union[int, float, None] = None
+    scope: str = "global"
 
 class AgentAction(pydantic.BaseModel):
     enabled: bool = True
@@ -160,7 +167,34 @@ class Agent(ABC):
                     config.value = kwargs.get("actions", {}).get(action_key, {}).get("config", {}).get(config_key, {}).get("value", config.value)
                 except AttributeError:
                     pass
-                
+    
+    async def on_game_loop_start(self, event:GameLoopStartEvent):
+        
+        """
+        Finds all ActionConfigs that have a scope of "scene" and resets them to their default values
+        """
+        
+        if not getattr(self, "actions", None):
+            return
+        
+        for _, action in self.actions.items():
+            if not action.config:
+                continue
+            
+            for _, config in action.config.items():
+                if config.scope == "scene":
+                    # if default_value is None, just use the `type` of the current 
+                    # value
+                    if config.default_value is None:
+                        default_value = type(config.value)()
+                    else:
+                        default_value = config.default_value
+                    
+                    log.debug("resetting config", config=config, default_value=default_value)
+                    config.value = default_value
+        
+        await self.emit_status()
+              
     async def emit_status(self, processing: bool = None):
         
         # should keep a count of processing requests, and when the
@@ -195,6 +229,8 @@ class Agent(ABC):
 
     def connect(self, scene):
         self.scene = scene
+        talemate.emit.async_signals.get("game_loop_start").connect(self.on_game_loop_start)
+
 
     def clean_result(self, result):
         if "#" in result:

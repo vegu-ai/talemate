@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-import asyncio
-import re
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
-
+import structlog
 import talemate.util as util
-from talemate.emit import wait_for_input
+from talemate.emit import emit
+import talemate.emit.async_signals
 from talemate.prompts import Prompt
-from talemate.agents.base import set_processing, Agent
+from talemate.agents.base import set_processing, Agent, AgentAction, AgentActionConfig
+from talemate.agents.world_state import TimePassageEmission
+from talemate.scene_message import NarratorMessage
 import talemate.client as client
 
 from .registry import register
+
+log = structlog.get_logger("talemate.agents.narrator")
 
 @register()
 class NarratorAgent(Agent):
@@ -23,6 +26,10 @@ class NarratorAgent(Agent):
         **kwargs,
     ):
         self.client = client
+        
+        self.actions = {
+            "narrate_time_passage": AgentAction(enabled=False, label="Narrate Time Passage", description="Whenever you indicate passage of time, narrate right after"),
+        }
         
     def clean_result(self, result):
         
@@ -39,6 +46,20 @@ class NarratorAgent(Agent):
 
         return "\n".join(cleaned)
 
+    def connect(self, scene):
+        super().connect(scene)
+        talemate.emit.async_signals.get("agent.world_state.time").connect(self.on_time_passage)
+
+    async def on_time_passage(self, event:TimePassageEmission):
+        
+        if not self.actions["narrate_time_passage"].enabled:
+            return
+        
+        response = await self.narrate_time_passage(event.duration, event.narrative)
+        narrator_message = NarratorMessage(response, source=f"narrate_time_passage:{event.duration};{event.narrative}")
+        emit("narrator", narrator_message)
+        self.scene.push_history(narrator_message)
+
     @set_processing
     async def narrate_scene(self):
         """
@@ -54,6 +75,9 @@ class NarratorAgent(Agent):
                 "max_tokens": self.client.max_token_length,
             }
         )
+        
+        response = response.strip("*")
+        response = util.strip_partial_sentences(response)
         
         response = f"*{response.strip('*')}*"
 
@@ -217,3 +241,28 @@ class NarratorAgent(Agent):
         
         # return questions and answers
         return list(zip(questions, answers))
+    
+    @set_processing
+    async def narrate_time_passage(self, duration:str, narrative:str=None):
+        """
+        Narrate a specific character
+        """
+
+        response = await Prompt.request(
+            "narrator.narrate-time-passage",
+            self.client,
+            "narrate",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "duration": duration,
+                "narrative": narrative,
+            }
+        )
+        
+        log.info("narrate_time_passage", response=response)
+
+        response = self.clean_result(response.strip())
+        response = f"*{response}*"
+
+        return response

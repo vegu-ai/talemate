@@ -10,7 +10,12 @@
 
     <v-list-item v-for="(prompt, index) in prompts" :key="index" @click="openPromptView(prompt)">
         <v-list-item-title class="text-caption">
-            {{ prompt.kind }}
+
+            <v-row>
+                <v-col cols="2" class="text-info">#{{ prompt.num }}</v-col>
+                <v-col cols="10" class="text-right">{{ prompt.kind }}</v-col>
+            </v-row>
+
         </v-list-item-title>
         <v-list-item-subtitle>
             <v-chip size="x-small" class="mr-1" color="primary">{{ prompt.prompt_tokens }}<v-icon size="14"
@@ -33,7 +38,7 @@ export default {
     data() {
         return {
             prompts: [],
-            total: 0,
+            total: 1,
             max_prompts: 50,
         }
     },

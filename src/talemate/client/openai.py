@@ -1,5 +1,6 @@
 import asyncio
 import os
+import time
 from typing import Callable
 
 from openai import AsyncOpenAI
@@ -180,12 +181,15 @@ class OpenAIClient:
         right = ""
         opts = {}
         
+        # only gpt-4-1106-preview supports json_object response coersion
+        supports_json_object = self.model_name in ["gpt-4-1106-preview"]
+        
         if "<|BOT|>" in prompt:
             _, right = prompt.split("<|BOT|>", 1)
             if right:
                 prompt = prompt.replace("<|BOT|>",  "\nContinue this response: ")
                 expected_response = prompt.split("\nContinue this response: ")[1].strip()
-                if expected_response.startswith("{"):
+                if expected_response.startswith("{") and supports_json_object:
                     opts["response_format"] = {"type": "json_object"}
             else:
                 prompt = prompt.replace("<|BOT|>", "")
@@ -199,7 +203,11 @@ class OpenAIClient:
 
         log.debug("openai send", kind=kind, sys_message=sys_message, opts=opts)
 
+        time_start = time.time()
+
         response = await self.client.chat.completions.create(model=self.model_name, messages=[sys_message, human_message], **opts)
+        
+        time_end = time.time()
         
         response = response.choices[0].message.content
         
@@ -215,9 +223,9 @@ class OpenAIClient:
             "kind": kind,
             "prompt": prompt,
             "response": response,
-            # TODO use tiktoken
             "prompt_tokens": num_tokens_from_messages([sys_message, human_message], model=self.model_name),
             "response_tokens": num_tokens_from_messages([{"role": "assistant", "content": response}], model=self.model_name),
+            "time": time_end - time_start,
         })
 
         self.emit_status(processing=False)

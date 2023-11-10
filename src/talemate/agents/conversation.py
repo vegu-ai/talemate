@@ -133,7 +133,7 @@ class ConversationAgent(Agent):
                         type="bool",
                         label="AI Selected",
                         description="If enabled, the AI will select the long term memory to use. (will increase how long it takes to generate a response)",
-                        value=True,
+                        value=False,
                     ),
                 }
             ),  

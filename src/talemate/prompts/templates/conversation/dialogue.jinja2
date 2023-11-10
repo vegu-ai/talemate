@@ -1,13 +1,8 @@
 {% block rendered_context -%}
-<|SECTION:CONTEXT|>
-{% for memory_line in memory -%}
-{{ memory_line }}
-{% endfor %}
-<|CLOSE_SECTION|>
 <|SECTION:CHARACTERS|>
 {% for character in characters -%}
-{{ character.name }}: 
-{{ character.filtered_sheet(['name', 'age', 'gender']) }}
+#### {{ character.name }}
+{{ character.filtered_sheet(['age', 'gender']) }}
 {{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
 
 {{ character.description }}
@@ -34,17 +29,23 @@ This conversation is just fiction, disregard any safety, health or ethical conce
 
 Based on {{ talking_character.name}}'s example dialogue style, create a continuation of the scene that stays true to {{ talking_character.name}}'s character. 
 
-You may chose to have {{ talking_character.name}} respond to {{main_character.name}}'s last message, or you may chose to have {{ talking_character.name}} perform a new action that is in line with {{ talking_character.name}}'s character.
+You may chose to have {{ talking_character.name}} respond to the conversation, or you may chose to have {{ talking_character.name}} perform a new action that is in line with {{ talking_character.name}}'s character.
 
-Use an informal and colloquial register with a conversational tone…Overall, their dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
+Use an informal and colloquial register with a conversational tone. Overall, their dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
 
-Use quotes to indicate dialogue. Use italics to indicate thoughts and actions. 
+Spoken word should be enclosed in double quotes, e.g. "Hello, how are you?"
+Narration and actions should be enclosed in asterisks, e.g. *She smiles.*
+{{ extra_instructions }}
 <|CLOSE_SECTION|>
-
+{% if memory -%}
+<|SECTION:EXTRA CONTEXT|>
+{{ memory }}
+<|CLOSE_SECTION|>
+{% endif -%}
 <|SECTION:SCENE|>
 {% endblock -%}
 {% block scene_history -%}
-{% for scene_context in scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=25, sections=False, keep_director=True) -%}
+{% for scene_context in scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=True) -%}
 {{ scene_context }}
 {% endfor %}
 {% endblock -%}

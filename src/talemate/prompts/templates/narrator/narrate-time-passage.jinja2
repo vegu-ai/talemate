@@ -1,0 +1,16 @@
+<|SECTION:CONTEXT|>
+Scenario Premise: {{ scene.description }}
+NPCs: {{ scene.npc_character_names }}
+Player Character: {{ scene.get_player_character().name }}
+Content Context: {{ scene.context }}
+<|CLOSE_SECTION|>
+
+{% for scene_context in scene.context_history(budget=max_tokens-300) -%}
+{{ scene_context }}
+{% endfor %}
+
+<|SECTION:TASK|>
+Narrate the passage of time that just occured, subtly move the story forward, and set up the next scene.
+Write 1 to 3 sentences.
+<|CLOSE_SECTION|>
+{{ bot_token }}{{ narrative }}:

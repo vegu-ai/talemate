@@ -63,8 +63,8 @@ class WebsocketHandler(Receiver):
         abort_wait_for_input()
 
         memory_agent = instance.get_agent("memory")
-        if memory_agent:
-            memory_agent.close_db()
+        if memory_agent and self.scene:
+            memory_agent.close_db(self.scene)
 
     def connect_llm_clients(self):
         client = None
@@ -128,6 +128,10 @@ class WebsocketHandler(Receiver):
 
     async def load_scene(self, path_or_data, reset=False, callback=None, file_name=None):
         try:
+            
+            if self.scene:
+                instance.get_agent("memory").close_db(self.scene)
+            
             scene = self.init_scene()
 
             if not scene:
@@ -135,19 +139,10 @@ class WebsocketHandler(Receiver):
                 return
 
             conversation_helper = scene.get_helper("conversation")
-            memory_helper = scene.get_helper("memory")
 
-            await memory_helper.agent.set_db()
-            
             scene = await load_scene(
                 scene, path_or_data, conversation_helper.agent.client, reset=reset
             )
-            #elif isinstance(path_or_data, dict):
-            #    scene = await load_scene_from_data(
-            #        scene, path_or_data, conversation_helper.agent.client, reset=reset
-            #    )
-
-            # Continuously ask the user for input and send it to the actor's talk_to method
 
             self.scene = scene
 
@@ -281,12 +276,20 @@ class WebsocketHandler(Receiver):
         )
         
     def handle_director(self, emission: Emission):
+        
+        if emission.character:
+            character = emission.character.name
+        elif emission.message_object.source:
+            character = emission.message_object.source
+        else:
+            character = ""
+        
         self.queue_put(
             {
                 "type": "director",
                 "message": emission.message,
                 "id": emission.id,
-                "character": emission.character.name if emission.character else "",
+                "character": character,
             }
         )
 

@@ -1,0 +1,30 @@
+<|SECTION:CHARACTERS|>
+Player / main character:
+- {{ scene.get_player_character().name }}
+Other characters:
+{% for name in scene.npc_character_names -%}
+- {{ name }}
+{% endfor -%}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Match the following character aliases to the existing characters.
+
+Respond in the following JSON format:
+
+{
+    "matched_names": [
+        {
+            "alias": "alias", # given alias name for the task
+            "matched_name": "character name" # name of the character
+        }
+    ]
+}
+
+If the name cannot be matched to a character, skip it
+<|CLOSE_SECTION|>
+<|SECTION:ALIASES|>
+{% for name in names -%}
+- {{ name }}
+{% endfor -%}
+<|CLOSE_SECTION|>
+{{ set_json_response(dict(matched_names=[""])) }}

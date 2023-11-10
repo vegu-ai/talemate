@@ -17,7 +17,7 @@
 
 
       </v-card-title>
-      <v-card-text>
+      <v-card-text class="scrollable-content">
         <v-select v-model="agent.client" :items="agent.data.client" label="Client"></v-select>
 
         <v-alert type="warning" variant="tonal" density="compact" v-if="agent.data.experimental">
@@ -32,10 +32,12 @@
           <v-card-text>
               {{ agent.data.actions[key].description }}
               <div v-for="(action_config, config_key) in agent.data.actions[key].config" :key="config_key">
+                <div v-if="action.enabled">
                 <!-- render config widgets based on action_config.type (int, str, bool, float) -->
-                <v-text-field v-if="action_config.type === 'str'" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" density="compact"></v-text-field>
+                <v-text-field v-if="action_config.type === 'text'" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" density="compact"></v-text-field>
                 <v-slider v-if="action_config.type === 'number' && action_config.step !== null" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" :min="action_config.min" :max="action_config.max" :step="action_config.step" density="compact" thumb-label></v-slider>
                 <v-checkbox v-if="action_config.type === 'bool'" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" density="compact"></v-checkbox>
+                </div>
               </div>
           </v-card-text>
         </v-card>
@@ -98,3 +100,11 @@ export default {
   }
 }
 </script>
+
+<style>
+.scrollable-content {
+  overflow-y: auto;
+  max-height: 70vh;
+  padding-right: 16px;
+}
+</style>

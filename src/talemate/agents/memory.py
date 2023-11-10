@@ -6,8 +6,10 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 from chromadb.config import Settings
 import talemate.events as events
 import talemate.util as util
+from talemate.context import scene_is_loading
 from talemate.config import load_config
 import structlog
+import shutil
 
 try:
     import chromadb
@@ -34,6 +36,18 @@ class MemoryAgent(Agent):
     agent_type = "memory"
     verbose_name = "Long-term memory"
 
+    @property
+    def readonly(self):
+        
+        if scene_is_loading.get() and not getattr(self.scene, "_memory_never_persisted", False):
+            return True
+        
+        return False
+
+    @property
+    def db_name(self):
+        raise NotImplementedError()
+
     @classmethod
     def config_options(cls, agent=None):
         return {}
@@ -50,16 +64,24 @@ class MemoryAgent(Agent):
     def close_db(self):
         raise NotImplementedError()
 
+    async def count(self):
+        raise NotImplementedError()
+
     async def add(self, text, character=None, uid=None, ts:str=None, **kwargs):
         if not text:
             return
-
+        if self.readonly:
+            log.debug("memory agent", status="readonly")
+            return
         await self._add(text, character=character, uid=uid, ts=ts, **kwargs)
 
     async def _add(self, text, character=None, ts:str=None, **kwargs):
         raise NotImplementedError()
 
     async def add_many(self, objects: list[dict]):
+        if self.readonly:
+            log.debug("memory agent", status="readonly")
+            return
         await self._add_many(objects)
     
     async def _add_many(self, objects: list[dict]):
@@ -131,13 +153,13 @@ class MemoryAgent(Agent):
                 break
         return memory_context
 
-    async def query(self, query:str, max_tokens:int=1000, filter:Callable=lambda x:True):
+    async def query(self, query:str, max_tokens:int=1000, filter:Callable=lambda x:True, **where):
         """
         Get the character memory context for a given character
         """
 
         try:
-            return (await self.multi_query([query], max_tokens=max_tokens, filter=filter))[0]
+            return (await self.multi_query([query], max_tokens=max_tokens, filter=filter, **where))[0]
         except IndexError:
             return None
 
@@ -158,7 +180,7 @@ class MemoryAgent(Agent):
         memory_context = []
         for query in queries:
             i = 0
-            for memory in await self.get(formatter(query), **where):
+            for memory in await self.get(formatter(query), limit=iterate, **where):
                 if memory in memory_context:
                     continue
 
@@ -238,26 +260,52 @@ class ChromaDBMemoryAgent(MemoryAgent):
     @property
     def USE_INSTRUCTOR(self):
         return self.embeddings == "instructor"
+    
+    @property
+    def db_name(self):
+        return getattr(self, "collection_name", "<unnamed>")
+
+    def make_collection_name(self, scene):
+        
+        if self.USE_OPENAI:
+            suffix = "-openai"
+        elif self.USE_INSTRUCTOR:
+            suffix = "-instructor"
+            model = self.config.get("chromadb").get("instructor_model", "hkunlp/instructor-xl")
+            if "xl" in model:
+                suffix += "-xl"
+            elif "large" in model:
+                suffix += "-large"
+        else:
+            suffix = ""
+        
+        return f"{scene.memory_id}-tm{suffix}"
+
+    async def count(self):
+        await asyncio.sleep(0)
+        return self.db.count()
 
     async def set_db(self):
         await self.emit_status(processing=True)
 
-        if getattr(self, "db", None):
-            try:
-                self.db.delete(where={"source": "talemate"})
-            except ValueError:
-                pass
-            await self.emit_status(processing=False)
-            
-            return
 
-        log.info("chromadb agent", status="setting up db")
-
-        self.db_client = chromadb.Client(Settings(anonymized_telemetry=False))
+        if not getattr(self, "db_client", None):
+            log.info("chromadb agent", status="setting up db client to persistent db")
+            self.db_client = chromadb.PersistentClient(
+                settings=Settings(anonymized_telemetry=False)
+            )
 
         openai_key = self.config.get("openai").get("api_key") or os.environ.get("OPENAI_API_KEY")
-
-        if openai_key and self.USE_OPENAI:
+        
+        self.collection_name = collection_name = self.make_collection_name(self.scene)
+        
+        log.info("chromadb agent", status="setting up db", collection_name=collection_name)
+        
+        if self.USE_OPENAI:
+            
+            if not openai_key:
+                raise ValueError("You must provide an the openai ai key in the config if you want to use it for chromadb embeddings")
+            
             log.info(
                 "crhomadb", status="using openai", openai_key=openai_key[:5] + "..."
             )
@@ -266,7 +314,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 model_name="text-embedding-ada-002",
             )
             self.db = self.db_client.get_or_create_collection(
-                "talemate-story", embedding_function=openai_ef
+                collection_name, embedding_function=openai_ef
             )
         elif self.USE_INSTRUCTOR:
             
@@ -281,24 +329,55 @@ class ChromaDBMemoryAgent(MemoryAgent):
             )
             
             self.db = self.db_client.get_or_create_collection(
-                "talemate-story", embedding_function=ef
+                collection_name, embedding_function=ef
             )
         else:
             log.info("chromadb", status="using default embeddings")
-            self.db = self.db_client.get_or_create_collection("talemate-story")
+            self.db = self.db_client.get_or_create_collection(collection_name)
+        
+        self.scene._memory_never_persisted = self.db.count() == 0
 
         await self.emit_status(processing=False)
         log.info("chromadb agent", status="db ready")
 
-    def close_db(self):
+    def clear_db(self):
         if not self.db:
             return
         
+        log.info("chromadb agent", status="clearing db", collection_name=self.collection_name)
+        
+        self.db.delete(where={"source": "talemate"})
+        
+    def drop_db(self):
+        if not self.db:
+            return
+        
+        log.info("chromadb agent", status="dropping db", collection_name=self.collection_name)
+        
         try:
-            self.db.delete(where={"source": "talemate"})
-        except ValueError:
-            pass
+            self.db_client.delete_collection(self.collection_name)
+        except ValueError as exc:
+            if "Collection not found" not in str(exc):
+                raise
 
+    def close_db(self, scene):
+        if not self.db:
+            return
+        
+        log.info("chromadb agent", status="closing db", collection_name=self.collection_name)
+        
+        if not scene.saved:
+            # scene was never saved so we can discard the memory
+            collection_name = self.make_collection_name(scene)
+            log.info("chromadb agent", status="discarding memory", collection_name=collection_name)
+            try:
+                self.db_client.delete_collection(collection_name)
+            except ValueError as exc:
+                if "Collection not found" not in str(exc):
+                    raise
+        
+        self.db = None
+        
     async def _add(self, text, character=None, uid=None, ts:str=None, **kwargs):
         metadatas = []
         ids = []
@@ -329,7 +408,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         log.debug("chromadb agent add", text=text, meta=meta, id=id)
 
         self.db.upsert(documents=[text], metadatas=metadatas, ids=ids)
-
+        
         await self.emit_status(processing=False)
 
     async def _add_many(self, objects: list[dict]):
@@ -354,7 +433,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         await self.emit_status(processing=False)
 
-    async def _get(self, text, character=None, **kwargs):
+    async def _get(self, text, character=None, limit:int=15, **kwargs):
         await self.emit_status(processing=True)
 
         where = {}
@@ -378,7 +457,10 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         #log.debug("crhomadb agent get", text=text, where=where)
 
-        _results = self.db.query(query_texts=[text], where=where)
+        _results = self.db.query(query_texts=[text], where=where, n_results=limit)
+        
+        #import json
+        #print(json.dumps(_results["ids"], indent=2))
         
         results = []
 
@@ -405,9 +487,9 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
             # log.debug("crhomadb agent get", result=results[-1], distance=distance)
 
-            if len(results) > 10:
+            if len(results) > limit:
                 break
 
         await self.emit_status(processing=False)
-
+        
         return results

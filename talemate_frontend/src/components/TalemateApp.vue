@@ -89,7 +89,8 @@
       <v-app-bar-nav-icon @click="toggleNavigation('game')"><v-icon>mdi-script</v-icon></v-app-bar-nav-icon>
       <v-toolbar-title v-if="scene.name !== undefined">
         {{ scene.name || 'Untitled Scenario' }}
-        <v-chip size="x-small" v-if="scene.environment === 'creative'" class="ml-1"><v-icon text="Creative" size="14"
+        <span v-if="scene.saved === false" class="text-red">*</span>
+        <v-chip size="x-small" v-if="scene.environment === 'creative'" class="ml-2"><v-icon text="Creative" size="14"
             class="mr-1">mdi-palette-outline</v-icon>Creative Mode</v-chip>
         <v-chip size="x-small" v-else-if="scene.environment === 'scene'" class="ml-1"><v-icon text="Play" size="14"
             class="mr-1">mdi-gamepad-square</v-icon>Game Mode</v-chip>
@@ -244,8 +245,10 @@ export default {
       }
 
       this.connecting = true;
+      let currentUrl = new URL(window.location.href);
+      console.log(currentUrl);
 
-      this.websocket = new WebSocket('ws://localhost:5050/ws');
+      this.websocket = new WebSocket(`ws://${currentUrl.hostname}:5050/ws`);
       console.log("Websocket connecting ...")
       this.websocket.onmessage = this.handleMessage;
       this.websocket.onopen = () => {
@@ -300,6 +303,7 @@ export default {
           name: data.name,
           environment: data.data.environment,
           scene_time: data.data.scene_time,
+          saved: data.data.saved,
         }
         this.sceneActive = true;
         return;

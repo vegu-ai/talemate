@@ -53,7 +53,7 @@ class SummarizeAgent(Agent):
         return result
 
     @set_processing
-    async def build_archive(self, scene):
+    async def build_archive(self, scene, token_threshold:int=1500):
         end = None
 
         if not scene.archived_history:
@@ -63,11 +63,12 @@ class SummarizeAgent(Agent):
             recent_entry = scene.archived_history[-1]
             start = recent_entry.get("end", 0) + 1
 
-        token_threshold = 1500
         tokens = 0
         dialogue_entries = []
         ts = "PT0S"
         time_passage_termination = False
+        
+        log.debug("build_archive", start=start, recent_entry=recent_entry)
         
         if recent_entry:
             ts = recent_entry.get("ts", ts)

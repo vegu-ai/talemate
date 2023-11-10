@@ -6,6 +6,8 @@ import random
 import traceback
 import re
 import isodate
+import uuid
+import time
 from typing import Dict, List, Optional, Union
 
 from blinker import signal
@@ -520,7 +522,8 @@ class Player(Actor):
             emit("character", self.history[-1], character=self.character)
             
         return message
-    
+
+async_signals.register("game_loop_start")
 async_signals.register("game_loop")
 
 class Scene(Emitter):
@@ -548,6 +551,8 @@ class Scene(Emitter):
         
         self.name = ""
         self.filename = ""
+        self.memory_id = str(uuid.uuid4())[:10]
+        self.saved = False
         
         self.context = ""
         self.commands = commands.Manager(self)
@@ -569,6 +574,7 @@ class Scene(Emitter):
             "archive_add": signal("archive_add"),
             "character_state": signal("character_state"),
             "game_loop": async_signals.get("game_loop"),
+            "game_loop_start": async_signals.get("game_loop_start"),
         }
 
         self.setup_emitter(scene=self)
@@ -583,6 +589,10 @@ class Scene(Emitter):
     @property
     def character_names(self):
         return [character.name for character in self.characters]
+
+    @property
+    def npc_character_names(self):
+        return [character.name for character in self.get_npc_characters()]
 
     @property
     def log(self):
@@ -933,11 +943,12 @@ class Scene(Emitter):
         reserved_min_archived_history_tokens = count_tokens(self.archived_history[-1]["text"]) if self.archived_history else 0
         reserved_intro_tokens = count_tokens(self.get_intro()) if show_intro else 0
             
-        max_dialogue_budget = min(max(budget - reserved_intro_tokens - reserved_min_archived_history_tokens, 1000), budget)
+        max_dialogue_budget = min(max(budget - reserved_intro_tokens - reserved_min_archived_history_tokens, 500), budget)
         
         dialogue_popped = False
         while count_tokens(dialogue) > max_dialogue_budget:
             dialogue.pop(0)
+            
             dialogue_popped = True
 
         if dialogue:
@@ -949,7 +960,7 @@ class Scene(Emitter):
             context_history = [context_history[1]]
             
         # we only have room for dialogue, so we return it
-        if dialogue_popped:
+        if dialogue_popped and max_dialogue_budget >= budget:
             return context_history
 
         # if we dont have lots of archived history, we can also include the scene
@@ -983,7 +994,6 @@ class Scene(Emitter):
         i = len(self.archived_history) - 1
         limit = 5
         
-        
         if sections:
             context_history.insert(archive_insert_idx, "<|CLOSE_SECTION|>")
         
@@ -998,6 +1008,7 @@ class Scene(Emitter):
             text = self.archived_history[i]["text"]
             if count_tokens(context_history) + count_tokens(text) > budget:
                 break
+            
             context_history.insert(archive_insert_idx, text)
             i -= 1
             limit -= 1
@@ -1055,8 +1066,13 @@ class Scene(Emitter):
             new_message = await narrator.agent.narrate_character(character)
         elif source == "narrate_query":
             new_message = await narrator.agent.narrate_query(arg)
+
         else:
-            return
+            fn = getattr(narrator.agent, source, None)
+            if not fn:
+                return
+            args = arg.split(";") if arg else []
+            new_message = await fn(*args)
         
         save_source = f"{source}:{arg}" if arg else source
         
@@ -1085,8 +1101,7 @@ class Scene(Emitter):
         
         director = self.get_helper("director")
         
-        response = await director.agent.direct(character)
-
+        response = await director.agent.direct_scene(character)
         if not response:
             log.info("Director returned no response")
             return
@@ -1143,7 +1158,7 @@ class Scene(Emitter):
                 break
 
     def emit_status(self):
-       emit(
+        emit(
             "scene_status",
             self.name,
             status="started",
@@ -1153,8 +1168,11 @@ class Scene(Emitter):
                 "assets": self.assets.dict(),
                 "characters": [actor.character.serialize for actor in self.actors],
                 "scene_time": util.iso8601_duration_to_human(self.ts, suffix="") if self.ts else None,
+                "saved": self.saved,
             },
-        )    
+        )
+    
+        self.log.debug("scene_status", scene=self.name, scene_time=self.ts, saved=self.saved)
 
     def set_environment(self, environment: str):
         """
@@ -1177,10 +1195,19 @@ class Scene(Emitter):
         Loops through self.history looking for TimePassageMessage and will
         advance the world state by the amount of time passed for each
         """
-        
         # reset time
-        
         self.ts = "PT0S"
+        
+        # archived history (if "ts" is set) should provide the base line
+        # find the first archived_history entry from the back that has a ts
+        # and set that as the base line
+        
+        if self.archived_history:
+            for i in range(len(self.archived_history) - 1, -1, -1):
+                if self.archived_history[i].get("ts"):
+                    self.ts = self.archived_history[i]["ts"]
+                    break
+        
         
         for message in self.history:
             if isinstance(message, TimePassageMessage):
@@ -1283,6 +1310,8 @@ class Scene(Emitter):
         self.active_actor = None
         self.next_actor = None
         
+        await self.signals["game_loop_start"].send(events.GameLoopStartEvent(scene=self, event_type="game_loop_start"))
+        
         while continue_scene:
             
             try:
@@ -1312,6 +1341,8 @@ class Scene(Emitter):
                         await self.call_automated_actions()
                         continue
                     
+                    self.saved = False
+                    
                     # Store the most recent AI Actor
                     self.most_recent_ai_actor = actor
 
@@ -1319,6 +1350,9 @@ class Scene(Emitter):
                         emit(
                             "character", item, character=actor.character
                         )
+                
+                self.emit_status()
+                    
             except TalemateInterrupt:
                 raise
             except LLMAccuracyError as e:
@@ -1349,6 +1383,10 @@ class Scene(Emitter):
                     continue
                 
                 await command.execute(message)
+                
+                self.saved = False
+                self.emit_status()
+                
             except TalemateInterrupt:
                 raise
             except LLMAccuracyError as e:
@@ -1375,13 +1413,15 @@ class Scene(Emitter):
         
         return saves_dir
             
-    async def save(self):
+    async def save(self, save_as:bool=False):
         """
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
         scene = self
-
-
+        
+        if save_as:
+            self.filename = None
+            
         if not self.name:
             self.name = await wait_for_input("Enter scenario name: ")
             self.filename = "base.json"
@@ -1389,6 +1429,13 @@ class Scene(Emitter):
         elif not self.filename:
             self.filename = await wait_for_input("Enter save name: ")
             self.filename = self.filename.replace(" ", "-").lower()+".json"
+            
+        if save_as:
+            memory_agent = self.get_helper("memory").agent
+            memory_agent.close_db(self)
+            self.memory_id = str(uuid.uuid4())[:10]
+            await memory_agent.set_db()
+            await self.commit_to_memory()
 
         saves_dir = self.save_dir
         
@@ -1412,6 +1459,7 @@ class Scene(Emitter):
             "context": scene.context,
             "world_state": scene.world_state.dict(),
             "assets": scene.assets.dict(),
+            "memory_id": scene.memory_id,
             "ts": scene.ts,
         }
 
@@ -1419,8 +1467,35 @@ class Scene(Emitter):
 
         with open(filepath, "w") as f:
             json.dump(scene_data, f, indent=2, cls=save.SceneEncoder)
+            
+        self.saved = True
+        self.emit_status()
 
-        await asyncio.sleep(0)
+    async def commit_to_memory(self):
+        
+        # will recommit scene to long term memory
+        
+        memory = self.get_helper("memory").agent
+        memory.drop_db()
+        await memory.set_db()
+        
+        for ah in self.archived_history:
+            ts = ah.get("ts", "PT1S")
+                
+            if not ah.get("ts"):
+                ah["ts"] = ts
+            
+            self.signals["archive_add"].send(
+                events.ArchiveEvent(scene=self, event_type="archive_add", text=ah["text"], ts=ts)
+            )
+            await asyncio.sleep(0)
+
+        for character_name, cs in self.character_states.items():
+            self.set_character_state(character_name, cs)
+
+        for character in self.characters:
+            await character.commit_to_memory(memory)
+        
 
     def reset(self):
         self.history = []

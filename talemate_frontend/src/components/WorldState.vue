@@ -12,7 +12,7 @@
             <v-expansion-panel rounded="0" density="compact">
                 <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
                     {{ name }}
-                    <v-chip label size="x-small" variant="outlined" class="ml-1">{{ character.emotion }}</v-chip>
+                    <v-chip v-if="character.emotion !== null && character.emotion !== ''" label size="x-small" variant="outlined" class="ml-1">{{ character.emotion }}</v-chip>
                     <template v-slot:actions>
                         <v-icon icon="mdi-account"></v-icon>
                     </template>

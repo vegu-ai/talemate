@@ -1,6 +1,7 @@
 <template>
     <v-list-subheader class="text-uppercase"><v-icon>mdi-post-outline</v-icon> Prompts
         <v-chip size="x-small" color="primary">{{ max_prompts }}</v-chip>
+        <v-icon color="primary" class="ml-2" @click="clearPrompts">mdi-close</v-icon>
     </v-list-subheader>
 
     <v-list-item density="compact">
@@ -9,15 +10,19 @@
 
     <v-list-item v-for="(prompt, index) in prompts" :key="index" @click="openPromptView(prompt)">
         <v-list-item-title class="text-caption">
-            {{ prompt.kind }}
+
+            <v-row>
+                <v-col cols="2" class="text-info">#{{ prompt.num }}</v-col>
+                <v-col cols="10" class="text-right">{{ prompt.kind }}</v-col>
+            </v-row>
+
         </v-list-item-title>
         <v-list-item-subtitle>
-            <v-chip size="x-small"><v-icon size="14"
-            class="mr-1">mdi-pound</v-icon>{{ prompt.num }}</v-chip>
-            <v-chip size="x-small" color="primary">{{ prompt.prompt_tokens }}<v-icon size="14"
+            <v-chip size="x-small" class="mr-1" color="primary">{{ prompt.prompt_tokens }}<v-icon size="14"
             class="ml-1">mdi-arrow-down-bold</v-icon></v-chip>
-            <v-chip size="x-small" color="secondary">{{ prompt.response_tokens }}<v-icon size="14"
+            <v-chip size="x-small" class="mr-1" color="secondary">{{ prompt.response_tokens }}<v-icon size="14"
             class="ml-1">mdi-arrow-up-bold</v-icon></v-chip>
+            <v-chip size="x-small">{{ prompt.time }}s<v-icon size="14" class="ml-1">mdi-clock</v-icon></v-chip>
         </v-list-item-subtitle>
         <v-divider class="mt-1"></v-divider>
     </v-list-item>
@@ -33,7 +38,7 @@ export default {
     data() {
         return {
             prompts: [],
-            total: 0,
+            total: 1,
             max_prompts: 50,
         }
     },
@@ -47,6 +52,10 @@ export default {
     ],
 
     methods: {
+        clearPrompts() {
+            this.prompts = [];
+            this.total = 0;
+        },
         handleMessage(data) {
 
             if(data.type === "system"&& data.id === "scene.loaded") {
@@ -63,6 +72,7 @@ export default {
                     kind: data.data.kind,
                     response_tokens: data.data.response_tokens,
                     prompt_tokens: data.data.prompt_tokens,
+                    time: parseInt(data.data.time),
                     num: this.total++,
                 })
 

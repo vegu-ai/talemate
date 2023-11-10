@@ -13,7 +13,7 @@ class CmdSaveAs(TalemateCommand):
     name = "save_as"
     description = "Save the scene with a new name"
     aliases = ["sa"]
+    sets_scene_unsaved = False
 
     async def run(self):
-        self.scene.filename = ""
-        await self.scene.save()
+        await self.scene.save(save_as=True)

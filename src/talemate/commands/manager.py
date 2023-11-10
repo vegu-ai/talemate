@@ -52,6 +52,8 @@ class Manager(Emitter):
                     self.processing_command = True
                     command.command_start()
                     await command.run()
+                    if command.sets_scene_unsaved:
+                        self.scene.saved = False
                 except AbortCommand:
                     self.system_message(f"Action `{command.verbose_name}` ended")
                 except Exception:

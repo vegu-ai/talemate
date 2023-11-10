@@ -13,8 +13,6 @@
             {{ prompt.kind }}
         </v-list-item-title>
         <v-list-item-subtitle>
-            <v-chip size="x-small" class="mr-1"><v-icon size="14"
-            class="mr-1">mdi-pound</v-icon>{{ prompt.num }}</v-chip>
             <v-chip size="x-small" class="mr-1" color="primary">{{ prompt.prompt_tokens }}<v-icon size="14"
             class="ml-1">mdi-arrow-down-bold</v-icon></v-chip>
             <v-chip size="x-small" class="mr-1" color="secondary">{{ prompt.response_tokens }}<v-icon size="14"

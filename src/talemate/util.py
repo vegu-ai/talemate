@@ -303,6 +303,9 @@ def strip_partial_sentences(text:str) -> str:
     # Sentence ending characters
     sentence_endings = ['.', '!', '?', '"', "*"]
     
+    if not text:
+        return text
+    
     # Check if the last character is already a sentence ending
     if text[-1] in sentence_endings:
         return text

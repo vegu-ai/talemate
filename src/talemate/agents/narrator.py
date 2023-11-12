@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 import structlog
+import random
 import talemate.util as util
 from talemate.emit import emit
 import talemate.emit.async_signals
@@ -9,14 +10,23 @@ from talemate.prompts import Prompt
 from talemate.agents.base import set_processing, Agent, AgentAction, AgentActionConfig
 from talemate.agents.world_state import TimePassageEmission
 from talemate.scene_message import NarratorMessage
+from talemate.events import GameLoopActorIterEvent
 import talemate.client as client
 
 from .registry import register
+
+if TYPE_CHECKING:
+    from talemate.tale_mate import Actor, Player
 
 log = structlog.get_logger("talemate.agents.narrator")
 
 @register()
 class NarratorAgent(Agent):
+    
+    """
+    Handles narration of the story
+    """
+    
     agent_type = "narrator"
     verbose_name = "Narrator"
     
@@ -27,11 +37,42 @@ class NarratorAgent(Agent):
     ):
         self.client = client
         
+        # agent actions
+        
         self.actions = {
-            "narrate_time_passage": AgentAction(enabled=False, label="Narrate Time Passage", description="Whenever you indicate passage of time, narrate right after"),
+            "narrate_time_passage": AgentAction(enabled=True, label="Narrate Time Passage", description="Whenever you indicate passage of time, narrate right after"),
+            "narrate_dialogue": AgentAction(
+                enabled=True, 
+                label="Narrate Dialogue", 
+                description="Narrator will get a chance to narrate after every line of dialogue",
+                config = {
+                    "ai_dialog": AgentActionConfig(
+                        type="number",
+                        label="AI Dialogue", 
+                        description="Chance to narrate after every line of dialogue, 1 = always, 0 = never",
+                        value=0.3,
+                        min=0.0,
+                        max=1.0,
+                        step=0.1,
+                    ),
+                    "player_dialog": AgentActionConfig(
+                        type="number",
+                        label="Player Dialogue", 
+                        description="Chance to narrate after every line of dialogue, 1 = always, 0 = never",
+                        value=0.3,
+                        min=0.0,
+                        max=1.0,
+                        step=0.1,
+                    ),
+                }
+            ),
         }
         
     def clean_result(self, result):
+        
+        """
+        Cleans the result of a narration
+        """
         
         result = result.strip().strip(":").strip()
         
@@ -44,19 +85,56 @@ class NarratorAgent(Agent):
                 break
             cleaned.append(line)
 
-        return "\n".join(cleaned)
+        result = "\n".join(cleaned)
+        result = util.strip_partial_sentences(result)
+        return result
 
     def connect(self, scene):
+        
+        """
+        Connect to signals
+        """
+        
         super().connect(scene)
         talemate.emit.async_signals.get("agent.world_state.time").connect(self.on_time_passage)
+        talemate.emit.async_signals.get("game_loop_actor_iter").connect(self.on_dialog)
 
     async def on_time_passage(self, event:TimePassageEmission):
+        
+        """
+        Handles time passage narration, if enabled
+        """
         
         if not self.actions["narrate_time_passage"].enabled:
             return
         
         response = await self.narrate_time_passage(event.duration, event.narrative)
         narrator_message = NarratorMessage(response, source=f"narrate_time_passage:{event.duration};{event.narrative}")
+        emit("narrator", narrator_message)
+        self.scene.push_history(narrator_message)
+        
+    async def on_dialog(self, event:GameLoopActorIterEvent):
+        
+        """
+        Handles dialogue narration, if enabled
+        """
+        
+        if not self.actions["narrate_dialogue"].enabled:
+            return
+        
+        narrate_on_ai_chance = random.random() < self.actions["narrate_dialogue"].config["ai_dialog"].value
+        narrate_on_player_chance = random.random() < self.actions["narrate_dialogue"].config["player_dialog"].value
+        
+        log.debug("narrate on dialog", narrate_on_ai_chance=narrate_on_ai_chance, narrate_on_player_chance=narrate_on_player_chance)
+        
+        if event.actor.character.is_player and not narrate_on_player_chance:
+            return
+        
+        if not event.actor.character.is_player and not narrate_on_ai_chance:
+            return
+        
+        response = await self.narrate_after_dialogue(event.actor)
+        narrator_message = NarratorMessage(response, source=f"narrate_dialogue:{event.actor.character.name}")
         emit("narrator", narrator_message)
         self.scene.push_history(narrator_message)
 
@@ -263,6 +341,32 @@ class NarratorAgent(Agent):
         log.info("narrate_time_passage", response=response)
 
         response = self.clean_result(response.strip())
+        response = f"*{response}*"
+
+        return response
+    
+    
+    @set_processing
+    async def narrate_after_dialogue(self, actor:Actor):
+        """
+        Narrate after a line of dialogue
+        """
+
+        response = await Prompt.request(
+            "narrator.narrate-after-dialogue",
+            self.client,
+            "narrate",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "actor": actor,
+                "last_line": str(self.scene.history[-1])
+            }
+        )
+        
+        log.info("narrate_after_dialogue", response=response)
+
+        response = self.clean_result(response.strip().strip("*"))
         response = f"*{response}*"
 
         return response

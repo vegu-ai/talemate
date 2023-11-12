@@ -328,9 +328,13 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 model_name=instructor_model, device=instructor_device
             )
             
+            log.info("chromadb", status="embedding function ready")
+            
             self.db = self.db_client.get_or_create_collection(
                 collection_name, embedding_function=ef
             )
+            
+            log.info("chromadb", status="instructor db ready")
         else:
             log.info("chromadb", status="using default embeddings")
             self.db = self.db_client.get_or_create_collection(collection_name)

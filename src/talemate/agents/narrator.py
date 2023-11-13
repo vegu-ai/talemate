@@ -16,7 +16,7 @@ import talemate.client as client
 from .registry import register
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Actor, Player
+    from talemate.tale_mate import Actor, Player, Character
 
 log = structlog.get_logger("talemate.agents.narrator")
 
@@ -78,15 +78,19 @@ class NarratorAgent(Agent):
         
         if "#" in result:
             result = result.split("#")[0]
+            
+        character_names = [c.name for c in self.scene.get_characters()]
+    
         
         cleaned = []
         for line in result.split("\n"):
-            if ":" in line.strip():
-                break
+            for character_name in character_names:
+                if line.startswith(f"{character_name}:"):
+                    break
             cleaned.append(line)
 
         result = "\n".join(cleaned)
-        result = util.strip_partial_sentences(result)
+        #result = util.strip_partial_sentences(result)
         return result
 
     def connect(self, scene):
@@ -133,7 +137,7 @@ class NarratorAgent(Agent):
         if not event.actor.character.is_player and not narrate_on_ai_chance:
             return
         
-        response = await self.narrate_after_dialogue(event.actor)
+        response = await self.narrate_after_dialogue(event.actor.character)
         narrator_message = NarratorMessage(response, source=f"narrate_dialogue:{event.actor.character.name}")
         emit("narrator", narrator_message)
         self.scene.push_history(narrator_message)
@@ -233,8 +237,9 @@ class NarratorAgent(Agent):
                 "as_narrative": as_narrative,
             }
         )
-
+        log.info("narrate_query", response=response)
         response = self.clean_result(response.strip())
+        log.info("narrate_query (after clean)", response=response)
         if as_narrative:
             response = f"*{response}*"
         
@@ -347,7 +352,7 @@ class NarratorAgent(Agent):
     
     
     @set_processing
-    async def narrate_after_dialogue(self, actor:Actor):
+    async def narrate_after_dialogue(self, character:Character):
         """
         Narrate after a line of dialogue
         """
@@ -359,7 +364,7 @@ class NarratorAgent(Agent):
             vars = {
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
-                "actor": actor,
+                "character": character,
                 "last_line": str(self.scene.history[-1])
             }
         )

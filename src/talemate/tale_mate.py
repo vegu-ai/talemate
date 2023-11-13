@@ -1069,7 +1069,9 @@ class Scene(Emitter):
             new_message = await narrator.agent.narrate_character(character)
         elif source == "narrate_query":
             new_message = await narrator.agent.narrate_query(arg)
-
+        elif source == "narrate_dialogue":
+            character = self.get_character(arg)
+            new_message = await narrator.agent.narrate_after_dialogue(character)
         else:
             fn = getattr(narrator.agent, source, None)
             if not fn:

@@ -8,6 +8,7 @@ import talemate.util as util
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, TimePassageMessage
 from talemate.emit import emit
+from talemate.events import GameLoopEvent
 
 from .base import Agent, set_processing, AgentAction, AgentActionConfig, AgentEmission
 from .registry import register
@@ -16,9 +17,6 @@ import structlog
 import isodate
 import time
 
-if TYPE_CHECKING:
-    from talemate.agents.conversation import ConversationAgentEmission
-    
 
 log = structlog.get_logger("talemate.agents.world_state")
 
@@ -74,7 +72,7 @@ class WorldStateAgent(Agent):
 
     def connect(self, scene):
         super().connect(scene)
-        talemate.emit.async_signals.get("agent.conversation.generated").connect(self.on_conversation_generated)
+        talemate.emit.async_signals.get("game_loop").connect(self.on_game_loop)
 
     async def advance_time(self, duration:str, narrative:str=None):
         """
@@ -96,7 +94,7 @@ class WorldStateAgent(Agent):
         )
         
 
-    async def on_conversation_generated(self, emission:ConversationAgentEmission):
+    async def on_game_loop(self, emission:GameLoopEvent):
         """
         Called when a conversation is generated
         """
@@ -104,8 +102,7 @@ class WorldStateAgent(Agent):
         if not self.enabled:
             return
         
-        for _ in emission.generation:
-            await self.update_world_state()
+        await self.update_world_state()
             
 
     async def update_world_state(self):

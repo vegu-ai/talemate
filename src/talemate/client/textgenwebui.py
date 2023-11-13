@@ -133,6 +133,16 @@ def jiggle_randomness(prompt_config:dict, offset:float=0.3) -> dict:
     return copied_config
     
     
+def jiggle_enabled_for(kind:str):
+    
+    if kind in ["conversation", "story"]:
+        return True
+    
+    if kind.startswith("narrate"):
+        return True
+    
+    return False
+    
 class TaleMateClient:
     """
     An abstract TaleMate client that can be implemented for different communication methods with the AI.
@@ -193,21 +203,7 @@ class RESTTaleMateClient(TaleMateClient, ABC):
     A RESTful TaleMate client that connects to the REST API endpoint.
     """
 
-    async def send_message(self, message: dict, url: str) -> str:
-        """
-        Sends a message to the REST API and returns the AI's response.
-        :param message: The message to be sent.
-        :return: The AI's response text.
-        """
-        
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, json=message, timeout=None)
-                response_data = response.json()
-                return response_data["results"][0]["text"]
-        except KeyError:
-            return response_data["results"][0]["history"]["visible"][0][-1]
-
+    pass
 
 @register()
 class TextGeneratorWebuiClient(RESTTaleMateClient):
@@ -217,13 +213,15 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
 
     client_type = "textgenwebui"
     conversation_retries = 5
+    
+    # in order to support both the legacy textgenwebui api and their new
+    # openai api implementation, this will either hold "legacy" or "openai"
+    # once determined. If None, it has not been determined yet.
+    api_version = None
 
     def __init__(self, api_url: str, max_token_length: int = 2048, **kwargs):
         
         api_url = self.cleanup_api_url(api_url)
-        
-        self.api_url_base = api_url
-        api_url = f"{api_url}/v1/chat"
         super().__init__(api_url, max_token_length=max_token_length)
         self.model_name = None
         self.limited_ram = False
@@ -234,6 +232,12 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
     def __str__(self):
         return f"TextGeneratorWebuiClient[{self.api_url_base}][{self.model_name or ''}]"
 
+    @property
+    def api_url_base(self):
+        if not self.api_url.endswith("/api") and self.api_version == "legacy":
+            return f"{self.api_url}/api"
+        return self.api_url
+
     def cleanup_api_url(self, api_url:str):
         """
         Strips trailing / and ensures endpoint is /api
@@ -241,10 +245,9 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         
         if api_url.endswith("/"):
             api_url = api_url[:-1]
-            
-        if not api_url.endswith("/api"):
-            api_url = api_url + "/api"
-            
+           
+        if api_url.endswith("/api"):
+            api_url = api_url[:-4]
         return api_url
 
     def reconfigure(self, **kwargs):
@@ -253,7 +256,6 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
             log.debug("reconfigure", api_url=kwargs["api_url"])
             api_url = kwargs["api_url"]
             api_url = self.cleanup_api_url(api_url)
-            self.api_url_base = api_url
             self.api_url = api_url
         
     def toggle_disabled_if_remote(self):
@@ -299,6 +301,50 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         if status_change:
             instance.emit_agent_status_by_client(self) 
 
+    async def send_message(self, message: dict, url: str, headers:dict[str, str]=None) -> str:
+        """
+        Sends a message to the REST API and returns the AI's response.
+        :param message: The message to be sent.
+        :return: The AI's response text.
+        """
+        
+        # set json content type
+        if not headers:
+            headers = {}
+        headers["Content-Type"] = "application/json"
+        
+        try:
+            self.processing = True
+            async with httpx.AsyncClient() as client:
+                log.info("sending message", url=url, message=message, method="POST")
+                response = await client.post(url, json=message, timeout=None, headers=headers)
+                response_data = response.json()
+                if self.api_version == "legacy":
+                    return response_data["results"][0]["text"]
+                return response_data["choices"][0]["text"]
+        finally:
+            self.processing = False
+
+
+    async def determine_version(self):
+        """
+        First attempts to retrieve the model using the v1/model endpoint
+        
+        If that returns something its the legacy api otherwise its the openai api
+        """
+        
+        if self.api_version is not None:
+            return
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{self.api_url_base}/v1/model", timeout=2)
+        
+        if response.status_code == 200:
+            self.api_version = "legacy"
+            log.info("determined legacy api", api_url=self.api_url_base)
+            return
+        log.info("determined openai api", api_url=self.api_url_base)
+        self.api_version = "openai"
 
     # Add the 'status' method
     async def status(self):
@@ -307,16 +353,26 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         Raises an error if no model name is returned.
         :return: None
         """
+        if self.processing:
+            return
         
         if not self.enabled:
             self.connected = False
             self.emit_status()
             return
         
+        
         try:
             
+            await self.determine_version()
+            
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"{self.api_url_base}/v1/model", timeout=2)
+                if self.api_version == "legacy":
+                    # legacy
+                    response = await client.get(f"{self.api_url_base}/v1/model", timeout=2)
+                else:
+                    # openai
+                    response = await client.get(f"{self.api_url_base}/v1/internal/model/info", timeout=2)
             
         except (
             httpx.TimeoutException,
@@ -344,7 +400,10 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
             self.emit_status()
             return
 
-        model_name = response_data.get("result")
+        if self.api_version == "legacy":
+            model_name = response_data.get("result")
+        else:
+            model_name = response_data.get("model_name")
 
         if not model_name or model_name == "None":
             log.warning("client model not loaded", client=self.name)
@@ -393,7 +452,9 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         return ""
 
     def prompt_url(self):
-        return self.api_url_base + "/v1/generate"
+        if self.api_version == "legacy":
+            return self.api_url_base + "/v1/generate"
+        return self.api_url_base + "/v1/completions"
 
     def prompt_config_conversation_old(self, prompt: str) -> dict:
         prompt = self.prompt_template(
@@ -671,8 +732,9 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         fn_prompt_config = getattr(self, f"prompt_config_{kind}")
         fn_url = self.prompt_url
         message = fn_prompt_config(prompt)
+        
                 
-        if client_context_attribute("nuke_repetition") > 0.0 and kind in ["conversation", "story"]:
+        if client_context_attribute("nuke_repetition") > 0.0 and jiggle_enabled_for(kind):
             log.info("nuke repetition", offset=client_context_attribute("nuke_repetition"), temperature=message["temperature"], repetition_penalty=message["repetition_penalty"])
             message = jiggle_randomness(message, offset=client_context_attribute("nuke_repetition"))
             log.info("nuke repetition (applied)", offset=client_context_attribute("nuke_repetition"), temperature=message["temperature"], repetition_penalty=message["repetition_penalty"])
@@ -703,6 +765,10 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         #    print(f"{k}: {v}")
         
         time_start = time.time()
+        
+        if self.api_version == "openai":
+            message["max_tokens"] = message.get("max_new_tokens")
+            message["stream"] = False
 
         response = await self.send_message(message, fn_url())
         

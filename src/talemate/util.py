@@ -782,7 +782,11 @@ def ensure_dialog_format(line:str, talking_character:str=None) -> str:
     lines = []
 
     for _line in line.split("\n"):
-        _line = ensure_dialog_line_format(_line)
+        try:
+            _line = ensure_dialog_line_format(_line)
+        except Exception as exc:
+            log.error("ensure_dialog_format", msg="Error ensuring dialog line format", line=_line, exc_info=exc)
+            pass
     
         lines.append(_line)
         

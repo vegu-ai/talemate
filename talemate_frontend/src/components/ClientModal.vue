@@ -8,7 +8,7 @@
             <v-container>
             <v-row>
                 <v-col cols="6">
-                  <v-select v-model="client.type" :items="['openai', 'textgenwebui']" label="Client Type"></v-select>
+                  <v-select v-model="client.type" :items="['openai', 'textgenwebui', 'lmstudio']" label="Client Type"></v-select>
                 </v-col>
                 <v-col cols="6">
                   <v-text-field v-model="client.name" label="Client Name"></v-text-field>
@@ -17,13 +17,13 @@
             </v-row>
             <v-row>
               <v-col cols="12">
-                <v-text-field v-model="client.apiUrl" v-if="client.type === 'textgenwebui'" label="API URL"></v-text-field>
+                <v-text-field v-model="client.apiUrl" v-if="isLocalApiClient(client)" label="API URL"></v-text-field>
                 <v-select v-model="client.model" v-if="client.type === 'openai'" :items="['gpt-4-1106-preview', 'gpt-4', 'gpt-3.5-turbo', 'gpt-3.5-turbo-16k']" label="Model"></v-select>
               </v-col>
             </v-row>  
             <v-row>
               <v-col cols="6">
-                <v-text-field v-model="client.max_token_length" v-if="client.type === 'textgenwebui'" type="number" label="Context Length"></v-text-field> 
+                <v-text-field v-model="client.max_token_length" v-if="isLocalApiClient(client)" type="number" label="Context Length"></v-text-field> 
               </v-col>
             </v-row>
             </v-container>
@@ -74,6 +74,9 @@ export default {
     save() {
       this.$emit('save', this.client); // Emit save event with client object
       this.close();
+    },
+    isLocalApiClient(client) {
+      return client.type === 'textgenwebui' || client.type === 'lmstudio';
     }
   }
 }

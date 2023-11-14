@@ -316,7 +316,7 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         try:
             self.processing = True
             async with httpx.AsyncClient() as client:
-                log.info("sending message", url=url, message=message, method="POST")
+                #log.info("sending message", url=url, message=message, method="POST")
                 response = await client.post(url, json=message, timeout=None, headers=headers)
                 response_data = response.json()
                 if self.api_version == "legacy":
@@ -773,9 +773,18 @@ class TextGeneratorWebuiClient(RESTTaleMateClient):
         response = await self.send_message(message, fn_url())
         
         time_end = time.time()
-
-        response = response.split("#")[0]
+        
+        
+        # stopping strings sometimes get appended to the end of the response anyways
+        # split the response by the first stopping string and take the first part
+        
+        for stopping_string in message["stopping_strings"]:
+            if stopping_string in response:
+                response = response.split(stopping_string)[0]
+                break
+        
         self.emit_status(processing=False)
+        
         
         emit("prompt_sent", data={
             "kind": kind,

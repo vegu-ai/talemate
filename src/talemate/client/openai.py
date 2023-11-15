@@ -1,9 +1,11 @@
 import asyncio
 import os
 import time
+import logging
 from typing import Callable
 
 from openai import AsyncOpenAI
+
 
 from talemate.client.registry import register
 from talemate.emit import emit
@@ -15,7 +17,6 @@ import tiktoken
 __all__ = [
     "OpenAIClient",
 ]
-
 log = structlog.get_logger("talemate")
 
 def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613"):

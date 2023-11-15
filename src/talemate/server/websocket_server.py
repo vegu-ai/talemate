@@ -385,7 +385,7 @@ class WebsocketHandler(Receiver):
                 "status": emission.status,
                 "data": emission.data,
                 "max_token_length": client.max_token_length if client else 2048,
-                "apiUrl": getattr(client, "api_url_base", None) if client else None,
+                "apiUrl": getattr(client, "api_url", None) if client else None,
             }
         )
 

@@ -394,7 +394,7 @@ class Prompt:
                 f"Answer: " + loop.run_until_complete(memory.query(query, **kwargs)),
             ])
         else:
-            return loop.run_until_complete(memory.multi_query([query], **kwargs))
+            return loop.run_until_complete(memory.multi_query(query.split("\n"), **kwargs))
             
             
             

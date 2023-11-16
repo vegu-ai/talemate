@@ -39,6 +39,7 @@ class ClientBase:
     max_token_length: int = 4096
     randomizable_inference_parameters: list[str] = ["temperature"]
     processing: bool = False
+    connected: bool = False
     conversation_retries: int = 5
 
     client_type = "base"
@@ -108,7 +109,9 @@ class ClientBase:
                     self.log.warn("remote service unreachable, disabling client", client=self.name)
                 self.enabled = False
                 
-                return
+                return True
+            
+        return False
             
 
     def get_system_message(self, kind: str) -> str:
@@ -168,7 +171,7 @@ class ClientBase:
         else:
             model_name = "No model loaded"
             status = "warning"
-            
+        
         status_change = status != self.current_status
         self.current_status = status
         
@@ -190,8 +193,6 @@ class ClientBase:
             return models.data[0].id
         except IndexError:
             return None
-        return models.get("data", [{}])[0].get("id", None)
-    
             
     async def status(self):
         """
@@ -238,9 +239,26 @@ class ClientBase:
     def tune_prompt_parameters(self, parameters:dict, kind:str):
         parameters["stream"] = False
         if client_context_attribute("nuke_repetition") > 0.0 and self.jiggle_enabled_for(kind):
-            prompt_param = self.jiggle_randomness(prompt_param, offset=client_context_attribute("nuke_repetition"))
+            self.jiggle_randomness(parameters, offset=client_context_attribute("nuke_repetition"))
             
-
+        fn_tune_kind = getattr(self, f"tune_prompt_parameters_{kind}", None)
+        if fn_tune_kind:
+            fn_tune_kind(parameters)
+        
+    def tune_prompt_parameters_conversation(self, parameters:dict):
+        conversation_context = client_context_attribute("conversation")
+        parameters["max_tokens"] = conversation_context.get("length", 96)
+        
+        dialog_stopping_strings = [
+            f"{character}:" for character in conversation_context["other_characters"]
+        ]
+        
+        if "extra_stopping_strings" in parameters:
+            parameters["extra_stopping_strings"] += dialog_stopping_strings
+        else:
+            parameters["extra_stopping_strings"] = dialog_stopping_strings
+            
+            
     async def generate(self, prompt:str, parameters:dict, kind:str):
         
         """
@@ -274,12 +292,13 @@ class ClientBase:
             finalized_prompt = self.prompt_template(self.get_system_message(kind), prompt).strip()
             prompt_param = finalize(prompt_param)
 
-            token_length = util.count_tokens(finalized_prompt)
+            token_length = self.count_tokens(finalized_prompt)
 
-            self.log.debug("send_prompt",  token_length=token_length, max_token_length=self.max_token_length, parameters=prompt_param)
             
             time_start = time.time()
+            extra_stopping_strings = prompt_param.pop("extra_stopping_strings", [])
 
+            self.log.debug("send_prompt",  token_length=token_length, max_token_length=self.max_token_length, parameters=prompt_param)
             response = await self.generate(finalized_prompt, prompt_param, kind)
             
             time_end = time.time()
@@ -287,7 +306,8 @@ class ClientBase:
             # stopping strings sometimes get appended to the end of the response anyways
             # split the response by the first stopping string and take the first part
             
-            for stopping_string in STOPPING_STRINGS:
+            
+            for stopping_string in STOPPING_STRINGS + extra_stopping_strings:
                 if stopping_string in response:
                     response = response.split(stopping_string)[0]
                     break
@@ -297,7 +317,7 @@ class ClientBase:
                 "prompt": finalized_prompt,
                 "response": response,
                 "prompt_tokens": token_length,
-                "response_tokens": int(len(response) / 3.6),
+                "response_tokens": self.count_tokens(response),
                 "time": time_end - time_start,
             })
             
@@ -305,7 +325,8 @@ class ClientBase:
         finally:
             self.emit_status(processing=False)
             
-    
+    def count_tokens(self, content:str):
+        return util.count_tokens(content)
 
     def jiggle_randomness(self, prompt_config:dict, offset:float=0.3) -> dict:
         """
@@ -314,12 +335,8 @@ class ClientBase:
         """
         
         temp = prompt_config["temperature"]
-        copied_config = copy.deepcopy(prompt_config)
         min_offset = offset * 0.3
-        copied_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
-        
-        return copied_config
-        
+        prompt_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
         
     def jiggle_enabled_for(self, kind:str):
         

@@ -13,7 +13,9 @@ class TextGeneratorWebuiClient(ClientBase):
     
     def tune_prompt_parameters(self, parameters:dict, kind:str):
         super().tune_prompt_parameters(parameters, kind)
-        parameters["stopping_strings"] = STOPPING_STRINGS
+        parameters["stopping_strings"] = STOPPING_STRINGS + parameters.get("extra_stopping_strings", [])
+        # is this needed?
+        parameters["max_new_tokens"] = parameters["max_tokens"]
 
     def set_client(self):
         self.client = AsyncOpenAI(base_url=self.api_url+"/v1", api_key="sk-1111")
@@ -51,11 +53,7 @@ class TextGeneratorWebuiClient(ClientBase):
         temp = prompt_config["temperature"]
         rep_pen = prompt_config["repetition_penalty"]
         
-        copied_config = copy.deepcopy(prompt_config)
-        
         min_offset = offset * 0.3
 
-        copied_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
-        copied_config["repetition_penalty"] = random.uniform(rep_pen + min_offset * 0.3, rep_pen + offset * 0.3)
-        
-        return copied_config
+        prompt_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
+        prompt_config["repetition_penalty"] = random.uniform(rep_pen + min_offset * 0.3, rep_pen + offset * 0.3)

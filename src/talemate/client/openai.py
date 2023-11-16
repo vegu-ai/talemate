@@ -1,12 +1,9 @@
-import asyncio
 import os
-import time
-import logging
-from typing import Callable
-
+import json
 from openai import AsyncOpenAI
 
 
+from talemate.client.base import ClientBase
 from talemate.client.registry import register
 from talemate.emit import emit
 from talemate.config import load_config
@@ -19,7 +16,7 @@ __all__ = [
 ]
 log = structlog.get_logger("talemate")
 
-def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613"):
+def num_tokens_from_messages(messages:list[dict], model:str="gpt-3.5-turbo-0613"):
     """Return the number of tokens used by a list of messages."""
     try:
         encoding = tiktoken.encoding_for_model(model)
@@ -71,7 +68,7 @@ def num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613"):
     return num_tokens
 
 @register()
-class OpenAIClient:
+class OpenAIClient(ClientBase):
     """
     OpenAI client for generating text.
     """
@@ -80,13 +77,10 @@ class OpenAIClient:
     conversation_retries = 0
 
     def __init__(self, model="gpt-4-1106-preview", **kwargs):
-        self.name = kwargs.get("name", "openai")
+        
         self.model_name = model
-        self.last_token_length = 0
-        self.max_token_length = 2048
-        self.processing = False
-        self.current_status = "idle"
         self.config = load_config()
+        super().__init__(**kwargs)
         
         # if os.environ.get("OPENAI_API_KEY") is not set, look in the config file
         # and set it
@@ -95,7 +89,7 @@ class OpenAIClient:
             if self.config.get("openai", {}).get("api_key"):
                 os.environ["OPENAI_API_KEY"] = self.config["openai"]["api_key"]
 
-        self.set_client(model)
+        self.set_client()
 
 
     @property
@@ -124,11 +118,13 @@ class OpenAIClient:
             status=status,
         )
 
-    def set_client(self, model:str, max_token_length:int=None):
+    def set_client(self, max_token_length:int=None):
 
         if not self.openai_api_key:
             log.error("No OpenAI API key set")
             return
+        
+        model = self.model_name
         
         self.client = AsyncOpenAI()
         if model == "gpt-3.5-turbo":
@@ -145,89 +141,72 @@ class OpenAIClient:
     def reconfigure(self, **kwargs):
         if "model" in kwargs:
             self.model_name = kwargs["model"]
-            self.set_client(self.model_name, kwargs.get("max_token_length"))
+            self.set_client(kwargs.get("max_token_length"))
+
+    def count_tokens(self, content: str):
+        return num_tokens_from_messages([{"content": content}], model=self.model_name)
 
     async def status(self):
         self.emit_status()
 
-    def get_system_message(self, kind: str) -> str:
-       
-        if "narrate" in kind:
-            return system_prompts.NARRATOR
-        if "story" in kind:
-            return system_prompts.NARRATOR
-        if "director" in kind:
-            return system_prompts.DIRECTOR
-        if "create" in kind:
-            return system_prompts.CREATOR
-        if "roleplay" in kind:
-            return system_prompts.ROLEPLAY
-        if "conversation" in kind:
-            return system_prompts.ROLEPLAY
-        if "editor" in kind:
-            return system_prompts.EDITOR
-        if "world_state" in kind:
-            return system_prompts.WORLD_STATE
-        if "analyst" in kind:
-            return system_prompts.ANALYST
-        if "analyze" in kind:
-            return system_prompts.ANALYST
-       
-        return system_prompts.BASIC
-                  
-    async def send_prompt(
-        self, prompt: str, kind: str = "conversation", finalize: Callable = lambda x: x
-    ) -> str:
-        
-        right = ""
-        opts = {}
-        
+
+    def prompt_template(self, system_message:str, prompt:str):
         # only gpt-4-1106-preview supports json_object response coersion
-        supports_json_object = self.model_name in ["gpt-4-1106-preview"]
         
         if "<|BOT|>" in prompt:
             _, right = prompt.split("<|BOT|>", 1)
             if right:
                 prompt = prompt.replace("<|BOT|>",  "\nContinue this response: ")
-                expected_response = prompt.split("\nContinue this response: ")[1].strip()
-                if expected_response.startswith("{") and supports_json_object:
-                    opts["response_format"] = {"type": "json_object"}
             else:
                 prompt = prompt.replace("<|BOT|>", "")
                 
-        self.emit_status(processing=True)
-        await asyncio.sleep(0.1)
+        return prompt
 
-        sys_message = {'role': 'system', 'content': self.get_system_message(kind)}
+    def tune_prompt_parameters(self, parameters:dict, kind:str):
+        super().tune_prompt_parameters(parameters, kind)
+        
+        keys = list(parameters.keys())
+        
+        valid_keys = ["temperature", "top_p"]
+        
+        for key in keys:
+            if key not in valid_keys:
+                del parameters[key]
+
+    async def generate(self, prompt:str, parameters:dict, kind:str):
+        
+        """
+        Generates text from the given prompt and parameters.
+        """
+        
+        # only gpt-4-1106-preview supports json_object response coersion
+        supports_json_object = self.model_name in ["gpt-4-1106-preview"]
+        right = None
+        try:
+            _, right = prompt.split("\nContinue this response: ")
+            expected_response = right.strip()
+            if expected_response.startswith("{") and supports_json_object:
+                parameters["response_format"] = {"type": "json_object"}
+        except IndexError:
+            pass
         
         human_message = {'role': 'user', 'content': prompt}
-
-        log.debug("openai send", kind=kind, sys_message=sys_message, opts=opts)
-
-        time_start = time.time()
-
-        response = await self.client.chat.completions.create(model=self.model_name, messages=[sys_message, human_message], **opts)
+        system_message = {'role': 'system', 'content': self.get_system_message(kind)}
         
-        time_end = time.time()
+        self.log.debug("generate", prompt=prompt[:128]+" ...", parameters=parameters)
         
-        response = response.choices[0].message.content
-        
-        if right and response.startswith(right):
-            response = response[len(right):].strip()
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.model_name, messages=[system_message, human_message], **parameters
+            )
             
-        if kind == "conversation":
-            response = response.replace("\n", " ").strip()
-
-        log.debug("openai response", response=response)
-
-        emit("prompt_sent", data={
-            "kind": kind,
-            "prompt": prompt,
-            "response": response,
-            "prompt_tokens": num_tokens_from_messages([sys_message, human_message], model=self.model_name),
-            "response_tokens": num_tokens_from_messages([{"role": "assistant", "content": response}], model=self.model_name),
-            "time": time_end - time_start,
-        })
-
-        self.emit_status(processing=False)
-        return response
+            response = response.choices[0].message.content
+            
+            if right and response.startswith(right):
+                response = response[len(right):].strip()
+                
+            return response
+                
+        except Exception as e:
+            self.log.error("generate error", e=e)
+            return ""

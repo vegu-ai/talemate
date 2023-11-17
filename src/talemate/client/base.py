@@ -268,7 +268,7 @@ class ClientBase:
         self.log.debug("generate", prompt=prompt[:128]+" ...", parameters=parameters)
         
         try:
-            response = await self.client.completions.create(prompt=prompt, **parameters)
+            response = await self.client.completions.create(prompt=prompt.strip(), **parameters)
             return response.get("choices", [{}])[0].get("text", "")
         except Exception as e:
             self.log.error("generate error", e=e)

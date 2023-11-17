@@ -190,7 +190,7 @@ class OpenAIClient(ClientBase):
         except IndexError:
             pass
         
-        human_message = {'role': 'user', 'content': prompt}
+        human_message = {'role': 'user', 'content': prompt.strip()}
         system_message = {'role': 'system', 'content': self.get_system_message(kind)}
         
         self.log.debug("generate", prompt=prompt[:128]+" ...", parameters=parameters)

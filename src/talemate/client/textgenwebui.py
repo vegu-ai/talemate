@@ -37,7 +37,7 @@ class TextGeneratorWebuiClient(ClientBase):
         headers = {}
         headers["Content-Type"] = "application/json"
         
-        parameters["prompt"] = prompt
+        parameters["prompt"] = prompt.strip()
         
         async with httpx.AsyncClient() as client:
             response = await client.post(f"{self.api_url}/v1/completions", json=parameters, timeout=None, headers=headers)

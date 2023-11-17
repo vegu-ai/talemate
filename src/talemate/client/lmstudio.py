@@ -41,7 +41,7 @@ class LMStudioClient(ClientBase):
         """
         Generates text from the given prompt and parameters.
         """
-        human_message = {'role': 'user', 'content': prompt}
+        human_message = {'role': 'user', 'content': prompt.strip()}
         
         self.log.debug("generate", prompt=prompt[:128]+" ...", parameters=parameters)
         

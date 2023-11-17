@@ -3,8 +3,8 @@
 REM activate the virtual environment
 call talemate_env\Scripts\activate
 
-REM update dependencies from requirements.txt
-python -m pip install -r requirements.txt --upgrade
+REM use poetry to install dependencies
+python -m poetry install
 
-echo Virtual environment re-created.
+echo Virtual environment updated
 pause

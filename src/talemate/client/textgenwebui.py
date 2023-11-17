@@ -23,6 +23,8 @@ class TextGeneratorWebuiClient(ClientBase):
     async def get_model_name(self):
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{self.api_url}/v1/internal/model/info", timeout=2)
+        if response.status_code == 404:
+            raise Exception("Could not find model info (wrong api version?)")
         response_data = response.json()
         model_name = response_data.get("model_name")
         return model_name

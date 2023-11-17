@@ -227,7 +227,7 @@ class WorldStateAgent(Agent):
     ):
         
         response = await Prompt.request(
-            "world_state.analyze-and-follow-instruction",
+            "world_state.analyze-text-and-follow-instruction",
             self.client,
             "analyze_freeform",
             vars = {

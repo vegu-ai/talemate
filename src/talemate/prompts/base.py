@@ -290,6 +290,7 @@ class Prompt:
         env.globals["query_scene"] = self.query_scene
         env.globals["query_memory"] = self.query_memory
         env.globals["query_text"] = self.query_text
+        env.globals["instruct_text"] = self.instruct_text
         env.globals["retrieve_memories"] = self.retrieve_memories
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
@@ -396,7 +397,12 @@ class Prompt:
         else:
             return loop.run_until_complete(memory.multi_query(query.split("\n"), **kwargs))
             
-            
+    def instruct_text(self, instruction:str, text:str):
+        loop = asyncio.get_event_loop()
+        world_state = instance.get_agent("world_state")
+        instruction = instruction.format(**self.vars)
+        
+        return loop.run_until_complete(world_state.analyze_and_follow_instruction(text, instruction))      
             
     def retrieve_memories(self, lines:list[str], goal:str=None):
         

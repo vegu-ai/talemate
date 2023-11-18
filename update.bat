@@ -6,5 +6,5 @@ call talemate_env\Scripts\activate
 REM use poetry to install dependencies
 python -m poetry install
 
-echo Virtual environment re-created.
+echo Virtual environment updated
 pause

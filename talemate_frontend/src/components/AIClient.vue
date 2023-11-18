@@ -120,7 +120,7 @@ export default {
       this.state.currentClient = {
         name: 'TextGenWebUI',
         type: 'textgenwebui',
-        apiUrl: 'http://localhost:5000/api',
+        apiUrl: 'http://localhost:5000',
         model_name: '',
         max_token_length: 4096,
       };

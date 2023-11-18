@@ -34,7 +34,7 @@ No dialogue so far
 {% endif -%}
 <|CLOSE_SECTION|>
 <|SECTION:SCENE PROGRESS|>
-{% for scene_context in scene.context_history(budget=300, min_dialogue=5, add_archieved_history=False, max_dialogue=5) -%}
+{% for scene_context in scene.context_history(budget=500, min_dialogue=5, add_archieved_history=False, max_dialogue=5) -%}
 {{ scene_context }}
 {% endfor -%}
 <|CLOSE_SECTION|>

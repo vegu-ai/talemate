@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Scene
+    from talemate.tale_mate import Scene, Actor
 
 __all__ = [
     "Event",
@@ -43,3 +43,7 @@ class GameLoopEvent(Event):
 @dataclass
 class GameLoopStartEvent(GameLoopEvent):
     pass
+
+@dataclass
+class GameLoopActorIterEvent(GameLoopEvent):
+    actor: Actor

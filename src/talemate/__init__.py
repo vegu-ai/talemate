@@ -2,4 +2,4 @@ from .agents import Agent
 from .client import TextGeneratorWebuiClient
 from .tale_mate import *
 
-VERSION = "0.12.0"
+VERSION = "0.13.0"

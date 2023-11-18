@@ -67,9 +67,9 @@ def _client_bootstrap(client_type: ClientType, pod):
     id = pod["id"]
     
     if client_type == ClientType.textgen:
-        api_url = f"https://{id}-5000.proxy.runpod.net/api"
+        api_url = f"https://{id}-5000.proxy.runpod.net"
     elif client_type == ClientType.automatic1111:
-        api_url = f"https://{id}-5000.proxy.runpod.net/api"
+        api_url = f"https://{id}-5000.proxy.runpod.net"
     
     return ClientBootstrap(
         client_type=client_type,

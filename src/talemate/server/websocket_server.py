@@ -167,14 +167,14 @@ class WebsocketHandler(Receiver):
         log.info("Configuring clients", clients=clients)
         
         for client in clients:
-            if client["type"] == "textgenwebui":
+            if client["type"] in ["textgenwebui", "lmstudio"]:
                 try:
                     max_token_length = int(client.get("max_token_length", 2048))
                 except ValueError:
                     continue
 
                 self.llm_clients[client["name"]] = {
-                    "type": "textgenwebui",
+                    "type": client["type"],
                     "api_url": client["apiUrl"],
                     "name": client["name"],
                     "max_token_length": max_token_length,
@@ -385,7 +385,7 @@ class WebsocketHandler(Receiver):
                 "status": emission.status,
                 "data": emission.data,
                 "max_token_length": client.max_token_length if client else 2048,
-                "apiUrl": getattr(client, "api_url_base", None) if client else None,
+                "apiUrl": getattr(client, "api_url", None) if client else None,
             }
         )
 

@@ -303,6 +303,9 @@ def strip_partial_sentences(text:str) -> str:
     # Sentence ending characters
     sentence_endings = ['.', '!', '?', '"', "*"]
     
+    if not text:
+        return text
+    
     # Check if the last character is already a sentence ending
     if text[-1] in sentence_endings:
         return text
@@ -779,7 +782,11 @@ def ensure_dialog_format(line:str, talking_character:str=None) -> str:
     lines = []
 
     for _line in line.split("\n"):
-        _line = ensure_dialog_line_format(_line)
+        try:
+            _line = ensure_dialog_line_format(_line)
+        except Exception as exc:
+            log.error("ensure_dialog_format", msg="Error ensuring dialog line format", line=_line, exc_info=exc)
+            pass
     
         lines.append(_line)
         

@@ -43,6 +43,10 @@ __all__ = [
 
 log = structlog.get_logger("talemate")
 
+async_signals.register("game_loop_start")
+async_signals.register("game_loop")
+async_signals.register("game_loop_actor_iter")
+
 
 class Character:
     """
@@ -523,8 +527,6 @@ class Player(Actor):
             
         return message
 
-async_signals.register("game_loop_start")
-async_signals.register("game_loop")
 
 class Scene(Emitter):
     """
@@ -575,6 +577,7 @@ class Scene(Emitter):
             "character_state": signal("character_state"),
             "game_loop": async_signals.get("game_loop"),
             "game_loop_start": async_signals.get("game_loop_start"),
+            "game_loop_actor_iter": async_signals.get("game_loop_actor_iter"),
         }
 
         self.setup_emitter(scene=self)
@@ -1066,7 +1069,9 @@ class Scene(Emitter):
             new_message = await narrator.agent.narrate_character(character)
         elif source == "narrate_query":
             new_message = await narrator.agent.narrate_query(arg)
-
+        elif source == "narrate_dialogue":
+            character = self.get_character(arg)
+            new_message = await narrator.agent.narrate_after_dialogue(character)
         else:
             fn = getattr(narrator.agent, source, None)
             if not fn:
@@ -1339,6 +1344,10 @@ class Scene(Emitter):
                         if await command.execute(message):
                             break
                         await self.call_automated_actions()
+                        
+                        await self.signals["game_loop_actor_iter"].send(
+                            events.GameLoopActorIterEvent(scene=self, event_type="game_loop_actor_iter", actor=actor)
+                        )
                         continue
                     
                     self.saved = False
@@ -1350,6 +1359,10 @@ class Scene(Emitter):
                         emit(
                             "character", item, character=actor.character
                         )
+                    
+                    await self.signals["game_loop_actor_iter"].send(
+                        events.GameLoopActorIterEvent(scene=self, event_type="game_loop_actor_iter", actor=actor)
+                    )
                 
                 self.emit_status()
                     

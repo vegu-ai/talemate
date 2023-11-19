@@ -47,7 +47,7 @@ class ClientBase:
     
     def __init__(
         self,
-        api_url: str,
+        api_url: str = None,
         name = None,
         **kwargs,
     ):

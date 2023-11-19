@@ -8,7 +8,7 @@
             <v-container>
             <v-row>
                 <v-col cols="6">
-                  <v-select v-model="client.type" :items="['openai', 'textgenwebui', 'lmstudio']" label="Client Type"></v-select>
+                  <v-select v-model="client.type" :disabled="!typeEditable()" :items="['openai', 'textgenwebui', 'lmstudio']" label="Client Type"></v-select>
                 </v-col>
                 <v-col cols="6">
                   <v-text-field v-model="client.name" label="Client Name"></v-text-field>
@@ -68,6 +68,9 @@ export default {
     }
   },
   methods: {
+    typeEditable() {
+      return this.state.formTitle === 'Add Client';
+    },
     close() {
       this.$emit('update:dialog', false);
     },

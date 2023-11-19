@@ -15,13 +15,15 @@ As of version 0.13.0 the legacy text-generator-webui API `--extension api` is no
 
 - responive modern ui
 - agents
-    - conversation
-    - narration
-    - summarization
-    - director
-    - creative
+    - conversation: handles character dialogue
+    - narration: handles narrative exposition
+    - summarization: handles summarization to compress context while maintain history
+    - director: can be used to direct the story / characters
+    - editor: improves AI responses (very hit and miss at the moment)
+    - world state: generates world snapshot and handles passage of time (objects and characters)
+    - creator: character / scenario creator
 - multi-client (agents can be connected to separate APIs)
-- long term memory (experimental)
+- long term memory
     - chromadb integration
     - passage of time
 - narrative world state
@@ -51,7 +53,7 @@ In no particular order:
     - objectives
     - quests
     - win / lose conditions
-- Automatic1111 client
+- Automatic1111 client for in place visual generation
 
 # Quickstart
 
@@ -114,6 +116,8 @@ https://www.reddit.com/r/LocalLLaMA/comments/17fhp9k/huge_llm_comparisontest_39_
 ## Connecting to an LLM
 
 On the right hand side click the "Add Client" button. If there is no button, you may need to toggle the client options by clicking this button:
+
+As of version 0.13.0 the legacy text-generator-webui API `--extension api` is no longer supported, please use their new `--extension openai` api implementation instead. 
 
 ![Client options](docs/img/client-options-toggle.png)
 

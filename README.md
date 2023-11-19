@@ -40,6 +40,7 @@ Kinda making it up as i go along, but i want to lean more into gameplay through 
 
 In no particular order:
 
+- TTS support
 - Extension support
     - modular agents and clients
 - Improved world state

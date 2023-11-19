@@ -27,6 +27,10 @@ class TextGeneratorWebuiClient(ClientBase):
             raise Exception("Could not find model info (wrong api version?)")
         response_data = response.json()
         model_name = response_data.get("model_name")
+        
+        if model_name == "None":
+            model_name = None
+        
         return model_name
     
     

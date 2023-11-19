@@ -167,11 +167,16 @@ class WebsocketHandler(Receiver):
         log.info("Configuring clients", clients=clients)
         
         for client in clients:
+            
+            client.pop("status", None)
+            
             if client["type"] in ["textgenwebui", "lmstudio"]:
                 try:
                     max_token_length = int(client.get("max_token_length", 2048))
                 except ValueError:
                     continue
+                
+                client.pop("model", None)
 
                 self.llm_clients[client["name"]] = {
                     "type": client["type"],
@@ -180,6 +185,10 @@ class WebsocketHandler(Receiver):
                     "max_token_length": max_token_length,
                 }
             elif client["type"] == "openai":
+                
+                client.pop("model_name", None)
+                client.pop("apiUrl", None)
+                
                 self.llm_clients[client["name"]] = {
                     "type": "openai",
                     "name": client["name"],

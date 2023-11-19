@@ -89,7 +89,7 @@ class Agent(ABC):
         if not getattr(self.client, "enabled", True):
             return False
         
-        if self.client.current_status in ["error", "warning"]:
+        if self.client and self.client.current_status in ["error", "warning"]:
             return False
         
         return self.client is not None

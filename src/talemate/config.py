@@ -93,6 +93,8 @@ class Config(BaseModel):
     
     elevenlabs: ElevenLabsConfig = ElevenLabsConfig()
     
+    coqui: CoquiConfig = CoquiConfig()
+    
     class Config:
         extra = "ignore"
 

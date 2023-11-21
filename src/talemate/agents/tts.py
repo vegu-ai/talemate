@@ -6,6 +6,7 @@ import traceback
 import httpx
 import io
 import threading
+import pydantic
 
 from elevenlabs.utils import play
 import talemate.data_objects as data_objects
@@ -15,7 +16,7 @@ import talemate.emit.async_signals
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, TimePassageMessage
 
-from .base import Agent, set_processing, AgentAction, AgentActionConfig
+from .base import Agent, set_processing, AgentAction, AgentActionConfig, CallableConfigValue
 from .registry import register
 
 import structlog
@@ -45,6 +46,17 @@ def parse_chunks(text):
     return matches
 
 
+class Voice(pydantic.BaseModel):
+    value:str
+    label:str
+
+class VoiceLibrary(pydantic.BaseModel):
+    
+    api: str
+    voices: list[Voice] = pydantic.Field(default_factory=list)
+    last_synced: float = None
+
+
 @register()
 class TTSAgent(Agent):
     
@@ -55,10 +67,26 @@ class TTSAgent(Agent):
     agent_type = "tts"
     verbose_name = "Text to speech"
     
+    @classmethod
+    def config_options(cls, agent=None):
+        config_options = super().config_options(agent=agent)
+        
+        if agent:
+            config_options["actions"]["_config"]["config"]["voice_id"]["choices"] = [
+                voice.model_dump() for voice in agent.list_voices_sync()
+            ]
+        
+        return config_options
+
     def __init__(self, **kwargs):
         
         self.is_enabled = False
         
+        self.voices = {
+            "elevenlabs": VoiceLibrary(api="elevenlabs"),
+            "coqui": VoiceLibrary(api="coqui"),
+            "tts": VoiceLibrary(api="tts"),
+        }
         self.config = config.load_config()
         self.playback_done_event = asyncio.Event()
         self.audio_queue = asyncio.Queue()
@@ -82,18 +110,21 @@ class TTSAgent(Agent):
                     "voice_id": AgentActionConfig(
                         type="text",
                         value="default",
-                        label="Voice ID",
+                        label="Narrator Voice",
                         description="Voice ID/Name to use for TTS",
+                        choices=[]
                     ),
                     "generate_chunks": AgentActionConfig(
                         type="bool",
                         value=True,
-                        label="Generate chunks",
+                        label="Split generation",
                         description="Generate audio chunks for each sentence - will be much more responsive but may loose context to inform inflection",
                     )
                 }  
             ),
         }
+        
+        self.actions["_config"].model_dump()
 
 
     @property
@@ -115,6 +146,8 @@ class TTSAgent(Agent):
             suffix = " (no token)"
         elif not self.ready and not self.default_voice_id:
             suffix = " (no voice id)"
+        elif self.default_voice_id:
+            suffix = f"  - {self.voice_id_to_label(self.default_voice_id)}"
         
         api = self.api
         choices = self.actions["_config"].config["api"].choices
@@ -159,7 +192,34 @@ class TTSAgent(Agent):
             return "active" if not getattr(self, "processing", False) else "busy"
         if self.requires_token and not self.token:
             return "error"
-
+    
+    def voice_id_to_label(self, voice_id:str):
+        for voice in self.voices[self.api].voices:
+            if voice.value == voice_id:
+                return voice.label
+        return None
+    
+    def list_voices_sync(self):
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.list_voices())
+    
+    async def list_voices(self):
+        if not self.enabled or not self.ready:
+            return
+        
+        library = self.voices[self.api]
+        
+        log.info("Listing voices", api=self.api, last_synced=library.last_synced)
+        
+        # TODO: allow re-syncing voices
+        if library.last_synced:
+            return library.voices
+        
+        list_fn = getattr(self, f"_list_voices_{self.api}")
+        log.info("Listing voices", api=self.api)
+        library.voices = await list_fn()
+        library.last_synced = time.time()
+        return library.voices
 
     @set_processing
     async def generate(self, text: str):
@@ -240,3 +300,107 @@ class TTSAgent(Agent):
                 await self.audio_queue.put(bytes_io.getvalue())
             else:
                 log.error(f"Error generating audio: {response.text}")
+
+    async def _list_voices_elevenlabs(self) -> dict[str, str]:
+        
+        url_voices = "https://api.elevenlabs.io/v1/voices"
+        
+        voices = []
+        
+        async with httpx.AsyncClient() as client:
+            headers = {
+                "Accept": "application/json",
+                "xi-api-key": self.token,
+            }
+            response = await client.get(url_voices, headers=headers, params={"per_page":1000})
+            speakers = response.json()["voices"]
+            voices.extend([Voice(value=speaker["voice_id"], label=speaker["name"]) for speaker in speakers])
+            
+        # sort by name
+        voices.sort(key=lambda x: x.label)
+            
+        return voices    
+            
+    # COQUI STUDIO
+                
+    async def _generate_coqui(self, text: str):
+        api_key = self.token
+        if not api_key:
+            return
+
+        async with httpx.AsyncClient() as client:
+            url = "https://app.coqui.ai/api/v2/samples/xtts/render/"
+            headers = {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}"
+            }
+            data = {
+                "voice_id": self.default_voice_id,
+                "text": text,
+                "language": "en"  # Assuming English language for simplicity; this could be parameterized
+            }
+
+            # Make the POST request to Coqui API
+            response = await client.post(url, json=data, headers=headers, timeout=300)
+            if response.status_code in [200, 201]:
+                # Parse the JSON response to get the audio URL
+                response_data = response.json()
+                audio_url = response_data.get('audio_url')
+                if audio_url:
+                    # Make a GET request to download the audio file
+                    audio_response = await client.get(audio_url)
+                    if audio_response.status_code == 200:
+                        # Put the audio data in the queue for playback
+                        await self.audio_queue.put(audio_response.content)
+                        # delete the sample from Coqui Studio
+                        # await self._cleanup_coqui(response_data.get('id'))
+                    else:
+                        log.error(f"Error downloading audio: {audio_response.text}")
+                else:
+                    log.error("No audio URL in response")
+            else:
+                log.error(f"Error generating audio: {response.text}")
+                
+    async def _cleanup_coqui(self, sample_id: str):
+        api_key = self.token
+        if not api_key or not sample_id:
+            return
+
+        async with httpx.AsyncClient() as client:
+            url = f"https://app.coqui.ai/api/v2/samples/xtts/{sample_id}"
+            headers = {
+                "Authorization": f"Bearer {api_key}"
+            }
+
+            # Make the DELETE request to Coqui API
+            response = await client.delete(url, headers=headers)
+
+            if response.status_code == 204:
+                log.info(f"Successfully deleted sample with ID: {sample_id}")
+            else:
+                log.error(f"Error deleting sample with ID: {sample_id}: {response.text}")
+
+    async def _list_voices_coqui(self) -> dict[str, str]:
+        
+        url_speakers = "https://app.coqui.ai/api/v2/speakers"
+        url_custom_voices = "https://app.coqui.ai/api/v2/voices"
+        
+        voices = []
+        
+        async with httpx.AsyncClient() as client:
+            headers = {
+                "Authorization": f"Bearer {self.token}"
+            }
+            response = await client.get(url_speakers, headers=headers, params={"per_page":1000})
+            speakers = response.json()["result"]
+            voices.extend([Voice(value=speaker["id"], label=speaker["name"]) for speaker in speakers])
+            
+            response = await client.get(url_custom_voices, headers=headers, params={"per_page":1000})
+            custom_voices = response.json()["result"]
+            voices.extend([Voice(value=voice["id"], label=voice["name"]) for voice in custom_voices])
+            
+        # sort by name
+        voices.sort(key=lambda x: x.label)
+            
+        return voices

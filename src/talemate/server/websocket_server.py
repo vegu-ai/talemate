@@ -91,7 +91,7 @@ class WebsocketHandler(Receiver):
         for agent_typ, agent_config in self.agents.items():
             try:
                 client = self.llm_clients.get(agent_config.get("client"))["client"]
-            except TypeError:
+            except TypeError as e:
                 client = None
                 
             if not client:

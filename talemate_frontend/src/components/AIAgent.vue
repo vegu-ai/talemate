@@ -12,7 +12,7 @@
                     <span class="ml-1" v-if="agent.label"> {{ agent.label }}</span>
                     <span class="ml-1" v-else> {{ agent.name }}</span>
                 </v-list-item-title>
-                <v-list-item-subtitle>
+                <v-list-item-subtitle class="text-caption">
                     {{ agent.client }}
                 </v-list-item-subtitle>
                 <v-chip class="mr-1" v-if="agent.status === 'disabled'" size="x-small">Disabled</v-chip>

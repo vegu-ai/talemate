@@ -23,6 +23,16 @@ __all__ = [
 
 log = structlog.get_logger("talemate.agents.base")
 
+class CallableConfigValue:
+    def __init__(self, fn):
+        self.fn = fn
+    
+    def __str__(self):
+        return "CallableConfigValue"
+    
+    def __repr__(self):
+        return "CallableConfigValue"
+
 class AgentActionConfig(pydantic.BaseModel):
     type: str
     label: str
@@ -33,7 +43,11 @@ class AgentActionConfig(pydantic.BaseModel):
     min: Union[int, float, None] = None
     step: Union[int, float, None] = None
     scope: str = "global"
-    choices: Union[list[dict[str, str]], None] = None
+    choices: Union[list[dict[str, str]], None, Callable] = None
+        
+    class Config:
+        arbitrary_types_allowed = True
+        
 
 class AgentAction(pydantic.BaseModel):
     enabled: bool = True

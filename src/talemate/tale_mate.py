@@ -46,7 +46,7 @@ log = structlog.get_logger("talemate")
 async_signals.register("game_loop_start")
 async_signals.register("game_loop")
 async_signals.register("game_loop_actor_iter")
-
+async_signals.register("game_loop_new_message")
 
 class Character:
     """
@@ -578,6 +578,7 @@ class Scene(Emitter):
             "game_loop": async_signals.get("game_loop"),
             "game_loop_start": async_signals.get("game_loop_start"),
             "game_loop_actor_iter": async_signals.get("game_loop_actor_iter"),
+            "game_loop_new_message": async_signals.get("game_loop_new_message"),
         }
 
         self.setup_emitter(scene=self)
@@ -704,6 +705,12 @@ class Scene(Emitter):
                 messages=messages,
             )
         )
+        
+        loop = asyncio.get_event_loop()
+        for message in messages:
+            loop.run_until_complete(self.signals["game_loop_new_message"].send(
+                events.GameLoopNewMessageEvent(scene=self, event_type="game_loop_new_message", message=message)
+            ))
 
     def push_archive(self, entry: data_objects.ArchiveEntry):
         

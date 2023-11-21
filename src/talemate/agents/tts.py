@@ -7,14 +7,17 @@ import httpx
 import io
 import threading
 import pydantic
+import nltk
+from nltk.tokenize import sent_tokenize
 
 from elevenlabs.utils import play
 import talemate.data_objects as data_objects
 import talemate.util as util
 import talemate.config as config
 import talemate.emit.async_signals
+from talemate.events import GameLoopNewMessageEvent
 from talemate.prompts import Prompt
-from talemate.scene_message import DirectorMessage, TimePassageMessage
+from talemate.scene_message import CharacterMessage, NarratorMessage
 
 from .base import Agent, set_processing, AgentAction, AgentActionConfig, CallableConfigValue
 from .registry import register
@@ -30,20 +33,53 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger("talemate.agents.tts")
 
+nltk.download("punkt")
 
 async def play_audio_chunk(audio_data, play_event):
     play(audio_data)
     play_event.set()  # Signal that the chunk has finished playing
 
 def parse_chunks(text):
-    # Modified regular expression to match chunks based on double quotes or sentence endings,
-    # and to capture the last chunk of a line regardless of its ending character
-    pattern = r'"[^"]*"|[\w0-9 ,\']*(?:[\.\!\?\,]|$)'
-    # Find all matches
-    matches = re.findall(pattern, text)
-    # Remove empty matches that might occur due to the end-of-line capture
-    matches = [match for match in matches if match.strip()]
-    return matches
+    chunks = sent_tokenize(text)
+    cleaned_chunks = []
+    
+    for chunk in chunks:
+        chunk = chunk.strip("*")
+        
+        if not chunk:
+            continue
+        
+        if chunk[0] == '"' and chunk[-1] != '"':
+            chunk += '"'
+        elif chunk[-1] == '"' and chunk[0] != '"':
+            chunk = '"' + chunk
+        cleaned_chunks.append(chunk)
+    
+    return cleaned_chunks
+
+def rejoin_chunks(chunks:list[str], chunk_size:int=250):
+    
+    """
+    Will combine chunks split by punctuation into a single chunk until
+    max chunk size is reached
+    """
+    
+    joined_chunks = []
+    
+    current_chunk = ""
+    
+    for chunk in chunks:
+            
+        if len(current_chunk) + len(chunk) > chunk_size:
+            joined_chunks.append(current_chunk)
+            current_chunk = ""
+        
+        current_chunk += chunk
+        
+    if current_chunk:
+        joined_chunks.append(current_chunk)
+        
+    return joined_chunks
 
 
 class Voice(pydantic.BaseModel):
@@ -99,7 +135,8 @@ class TTSAgent(Agent):
                     "api": AgentActionConfig(
                         type="text",
                         choices=[
-                            {"value": "tts", "label": "TTS (Local)"},
+                            # TODO at local TTS support
+                            #{"value": "tts", "label": "TTS (Local)"},
                             {"value": "elevenlabs", "label": "Eleven Labs"},
                             {"value": "coqui", "label": "Coqui Studio"},
                         ],
@@ -113,6 +150,24 @@ class TTSAgent(Agent):
                         label="Narrator Voice",
                         description="Voice ID/Name to use for TTS",
                         choices=[]
+                    ),
+                    "generate_for_player": AgentActionConfig(
+                        type="bool",
+                        value=False,
+                        label="Generate for player",
+                        description="Generate audio for player messages",
+                    ),
+                    "generate_for_npc": AgentActionConfig(
+                        type="bool",
+                        value=True,
+                        label="Generate for NPCs",
+                        description="Generate audio for NPC messages",
+                    ),
+                    "generate_for_narration": AgentActionConfig(
+                        type="bool",
+                        value=True,
+                        label="Generate for narration",
+                        description="Generate audio for narration messages",
                     ),
                     "generate_chunks": AgentActionConfig(
                         type="bool",
@@ -192,7 +247,50 @@ class TTSAgent(Agent):
             return "active" if not getattr(self, "processing", False) else "busy"
         if self.requires_token and not self.token:
             return "error"
+
+    @property
+    def max_generation_length(self):
+        if self.api == "elevenlabs":
+            return 1024
+        elif self.api == "coqui":
+            return 250
+            
+        return 250
+
+    def connect(self, scene):
+        super().connect(scene)
+        talemate.emit.async_signals.get("game_loop_new_message").connect(self.on_game_loop_new_message)
+        
+    async def on_game_loop_new_message(self, emission:GameLoopNewMessageEvent):
+        """
+        Called when a conversation is generated
+        """
+        
+        if not self.enabled:
+            return
+        
+        if not isinstance(emission.message, (CharacterMessage, NarratorMessage)):
+            return
     
+        if isinstance(emission.message, NarratorMessage) and not self.actions["_config"].config["generate_for_narration"].value:
+            return
+        
+        if isinstance(emission.message, CharacterMessage):
+            
+            if emission.message.source == "player" and not self.actions["_config"].config["generate_for_player"].value:
+                return
+            elif emission.message.source == "ai" and not self.actions["_config"].config["generate_for_npc"].value:
+                return
+        
+        if isinstance(emission.message, CharacterMessage):
+            character_prefix = emission.message.split(":", 1)[0]
+        else:
+            character_prefix = ""
+        
+        log.info("reactive tts", message=emission.message, character_prefix=character_prefix)
+        
+        await self.generate(str(emission.message).replace(character_prefix+": ", ""))
+
     def voice_id_to_label(self, voice_id:str):
         for voice in self.voices[self.api].voices:
             if voice.value == voice_id:
@@ -205,7 +303,7 @@ class TTSAgent(Agent):
     
     async def list_voices(self):
         if not self.enabled or not self.ready:
-            return
+            return []
         
         library = self.voices[self.api]
         
@@ -233,8 +331,10 @@ class TTSAgent(Agent):
         
         if self.actions["_config"].config["generate_chunks"].value:
             chunks = parse_chunks(text)
+            chunks = rejoin_chunks(chunks)
         else:
-            chunks = [text]
+            chunks = parse_chunks(text)
+            chunks = rejoin_chunks(chunks, chunk_size=self.max_generation_length)
 
         # Start generating audio chunks in the background
         generation_task = asyncio.create_task(self.generate_chunks(generate_fn, chunks))

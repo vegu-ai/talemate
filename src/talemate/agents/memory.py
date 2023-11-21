@@ -222,6 +222,10 @@ class ChromaDBMemoryAgent(MemoryAgent):
     @property
     def agent_details(self):
         return f"ChromaDB: {self.embeddings}"
+    
+    @property
+    def requires_llm_client(self):
+        return False
 
     @property
     def embeddings(self):

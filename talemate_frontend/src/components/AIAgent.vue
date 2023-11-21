@@ -7,6 +7,7 @@
                         size="14"></v-progress-circular>
                     <v-icon v-else-if="agent.status === 'uninitialized'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>
                     <v-icon v-else-if="agent.status === 'disabled'" color="grey-darken-2" size="14">mdi-checkbox-blank-circle</v-icon>
+                    <v-icon v-else-if="agent.status === 'error'" color="red" size="14">mdi-checkbox-blank-circle</v-icon>
                     <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
                     <span class="ml-1" v-if="agent.label"> {{ agent.label }}</span>
                     <span class="ml-1" v-else> {{ agent.name }}</span>
@@ -64,6 +65,9 @@ export default {
 
             for(let i = 0; i < this.state.agents.length; i++) {
                 let agent = this.state.agents[i];
+
+                if(!agent.data.requires_llm_agent)
+                    continue
 
                 if(agent.status  === 'warning' || agent.status === 'error') {
                     console.log("agents: configuration required (1)", agent.status)

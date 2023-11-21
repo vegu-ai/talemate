@@ -228,10 +228,19 @@ class WebsocketHandler(Receiver):
             name = agent["name"]
 
             # special case for memory agent
-            if name == "memory":
+            if name == "memory" or name == "tts":
                 self.agents[name] = {
                     "name": name,
                 }
+                agent_instance = instance.get_agent(name, **self.agents[name])
+                if agent_instance.has_toggle:
+                    self.agents[name]["enabled"] = agent["enabled"]
+
+                if getattr(agent_instance, "actions", None):
+                    self.agents[name]["actions"] = agent.get("actions", {})
+                    
+                agent_instance.apply_config(**self.agents[name])
+                log.debug("Configured agent", name=name)
                 continue
 
             if name not in self.agents:

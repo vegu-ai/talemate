@@ -65,6 +65,12 @@ class OpenAIConfig(BaseModel):
     
 class RunPodConfig(BaseModel):
     api_key: Union[str,None]=None
+    
+class ElevenLabsConfig(BaseModel):
+    api_key: Union[str,None]=None
+    
+class CoquiConfig(BaseModel):
+    api_key: Union[str,None]=None
 
 class ChromaDB(BaseModel):
     instructor_device: str="cpu"
@@ -84,6 +90,8 @@ class Config(BaseModel):
     runpod: RunPodConfig = RunPodConfig()
     
     chromadb: ChromaDB = ChromaDB()
+    
+    elevenlabs: ElevenLabsConfig = ElevenLabsConfig()
     
     class Config:
         extra = "ignore"

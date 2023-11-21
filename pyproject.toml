@@ -38,6 +38,9 @@ isodate = ">=0.6.1"
 thefuzz = ">=0.20.0"
 tiktoken = ">=0.5.1"
 
+#TTS
+elevenlabs = ">=0.2.26"
+
 # ChromaDB
 chromadb = ">=0.4.17,<1"
 InstructorEmbedding = "^1.0.1"

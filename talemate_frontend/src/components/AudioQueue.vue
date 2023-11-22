@@ -1,8 +1,9 @@
 <template>
   <div class="audio-queue">
     <span>{{ queue.length }} sound(s) queued</span>
-    <v-icon v-if="isPlaying">mdi-volume-high</v-icon>
-    <v-icon v-else>mdi-volume-off</v-icon>
+    <v-icon :color="isPlaying ? 'green' : ''" v-if="!isMuted" @click="toggleMute">mdi-volume-high</v-icon>
+    <v-icon :color="isPlaying ? 'red' : ''" v-else @click="toggleMute">mdi-volume-off</v-icon>
+    <v-icon class="ml-1" @click="stopAndClear">mdi-stop-circle-outline</v-icon>
   </div>
 </template>
 
@@ -13,7 +14,9 @@ export default {
     return {
       queue: [],
       audioContext: null,
-      isPlaying: false
+      isPlaying: false,
+      isMuted: false,
+      currentSource: null
     };
   },
   inject: ['getWebsocket', 'registerMessageHandler'],
@@ -51,7 +54,10 @@ export default {
       this.audioContext.decodeAudioData(soundBuffer, (buffer) => {
         const source = this.audioContext.createBufferSource();
         source.buffer = buffer;
-        source.connect(this.audioContext.destination);
+        this.currentSource = source;
+        if (!this.isMuted) {
+          source.connect(this.audioContext.destination);
+        }
         source.onended = () => {
           this.isPlaying = false;
           this.playNextSound();
@@ -60,6 +66,23 @@ export default {
       }, (error) => {
         console.error('Error with decoding audio data', error);
       });
+    },
+    toggleMute() {
+      this.isMuted = !this.isMuted;
+      if (this.isMuted && this.currentSource) {
+        this.currentSource.disconnect(this.audioContext.destination);
+      } else if (this.currentSource) {
+        this.currentSource.connect(this.audioContext.destination);
+      }
+    },
+    stopAndClear() {
+      if (this.currentSource) {
+        this.currentSource.stop();
+        this.currentSource.disconnect();
+        this.currentSource = null;
+      }
+      this.queue = [];
+      this.isPlaying = false;
     }
   }
 };

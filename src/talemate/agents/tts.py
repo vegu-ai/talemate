@@ -1,45 +1,30 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, List, Optional, Union
+from typing import Union
 import asyncio
-import traceback
 import httpx
 import io
-import threading
 import pydantic
 import nltk
 import base64
 from nltk.tokenize import sent_tokenize
 
-from elevenlabs.utils import play
-import talemate.data_objects as data_objects
-import talemate.util as util
 import talemate.config as config
 import talemate.emit.async_signals
 from talemate.emit import emit
 from talemate.events import GameLoopNewMessageEvent
-from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage, NarratorMessage
 
-from .base import Agent, set_processing, AgentAction, AgentActionConfig, CallableConfigValue
+from .base import Agent, set_processing, AgentAction, AgentActionConfig
 from .registry import register
 
 import structlog
 
 import time
-import re
-
-if TYPE_CHECKING:
-    from talemate.tale_mate import Actor, Character, Scene
-    from talemate.agents.conversation import ConversationAgentEmission
 
 log = structlog.get_logger("talemate.agents.tts")
 
 nltk.download("punkt")
-
-async def play_audio_chunk(audio_data, play_event):
-    play(audio_data)
-    play_event.set()  # Signal that the chunk has finished playing
 
 def parse_chunks(text):
     chunks = sent_tokenize(text)
@@ -127,7 +112,6 @@ class TTSAgent(Agent):
         }
         self.config = config.load_config()
         self.playback_done_event = asyncio.Event()
-        self.audio_queue = asyncio.Queue()
         self.actions = {
             "_config": AgentAction(
                 enabled=True, 
@@ -341,31 +325,15 @@ class TTSAgent(Agent):
         # Start generating audio chunks in the background
         generation_task = asyncio.create_task(self.generate_chunks(generate_fn, chunks))
 
-        # Start playing audio chunks as they become available
-        playback_task = asyncio.create_task(self.play_audio_chunks())
-
         # Wait for both tasks to complete
-        await asyncio.gather(generation_task, playback_task)
+        await asyncio.gather(generation_task)
 
     async def generate_chunks(self, generate_fn, chunks):
         for chunk in chunks:
             chunk = chunk.replace("*","")
             log.info("Generating audio", api=self.api, chunk=chunk)
-            await generate_fn(chunk)
-        await self.audio_queue.put(None)  # Signal the end of generation
-
-    async def play_audio_chunks(self):
-        
-        while True:
-            await self.playback_done_event.wait()  # Wait for previous playback to finish
-            self.playback_done_event.clear()
-
-            audio_data = await self.audio_queue.get()
-            if audio_data is None:  # Signal to stop playback
-                break
+            audio_data = await generate_fn(chunk)
             self.play_audio(audio_data)
-            #play_thread = threading.Thread(target=self.play_audio, args=(audio_data,))
-            #play_thread.start()
 
     def play_audio(self, audio_data):
         # play audio through the python audio player
@@ -377,7 +345,7 @@ class TTSAgent(Agent):
         
         self.playback_done_event.set()  # Signal that playback is finished
 
-    async def _generate_elevenlabs(self, text: str, chunk_size: int = 1024):
+    async def _generate_elevenlabs(self, text: str, chunk_size: int = 1024) -> Union[bytes, None]:
         api_key = self.token
         if not api_key:
             return
@@ -407,7 +375,7 @@ class TTSAgent(Agent):
                         bytes_io.write(chunk)
 
                 # Put the audio data in the queue for playback
-                await self.audio_queue.put(bytes_io.getvalue())
+                return bytes_io.getvalue()
             else:
                 log.error(f"Error generating audio: {response.text}")
 
@@ -433,7 +401,7 @@ class TTSAgent(Agent):
             
     # COQUI STUDIO
                 
-    async def _generate_coqui(self, text: str):
+    async def _generate_coqui(self, text: str) -> Union[bytes, None]:
         api_key = self.token
         if not api_key:
             return
@@ -461,10 +429,9 @@ class TTSAgent(Agent):
                     # Make a GET request to download the audio file
                     audio_response = await client.get(audio_url)
                     if audio_response.status_code == 200:
-                        # Put the audio data in the queue for playback
-                        await self.audio_queue.put(audio_response.content)
                         # delete the sample from Coqui Studio
                         # await self._cleanup_coqui(response_data.get('id'))
+                        return audio_response.content
                     else:
                         log.error(f"Error downloading audio: {audio_response.text}")
                 else:

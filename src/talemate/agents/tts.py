@@ -4,9 +4,13 @@ from typing import Union
 import asyncio
 import httpx
 import io
+import os
 import pydantic
 import nltk
+import tempfile
 import base64
+import uuid
+import functools
 from nltk.tokenize import sent_tokenize
 
 import talemate.config as config
@@ -22,25 +26,37 @@ import structlog
 
 import time
 
-log = structlog.get_logger("talemate.agents.tts")
+try:
+    from TTS.api import TTS
+except ImportError:
+    TTS = None
+
+log = structlog.get_logger("talemate.agents.tts")#
+
+if not TTS:
+    # TTS installation is massive and requires a lot of dependencies
+    # so we don't want to require it unless the user wants to use it
+    log.info("TTS (local) requires the TTS package, please install with `pip install TTS` if you want to use the local api")
 
 nltk.download("punkt")
 
 def parse_chunks(text):
+    
+    text = text.replace("...", "__ellipsis__")
+    
     chunks = sent_tokenize(text)
     cleaned_chunks = []
     
     for chunk in chunks:
-        chunk = chunk.strip("*")
-        
+        chunk = chunk.replace("*","")
         if not chunk:
             continue
-        
-        if chunk[0] == '"' and chunk[-1] != '"':
-            chunk += '"'
-        elif chunk[-1] == '"' and chunk[0] != '"':
-            chunk = '"' + chunk
         cleaned_chunks.append(chunk)
+    
+    
+    for i, chunk in enumerate(cleaned_chunks):
+        chunk = chunk.replace("__ellipsis__", "...")
+        cleaned_chunks[i] = chunk
     
     return cleaned_chunks
 
@@ -122,7 +138,7 @@ class TTSAgent(Agent):
                         type="text",
                         choices=[
                             # TODO at local TTS support
-                            #{"value": "tts", "label": "TTS (Local)"},
+                            {"value": "tts", "label": "TTS (Local)"},
                             {"value": "elevenlabs", "label": "Eleven Labs"},
                             {"value": "coqui", "label": "Coqui Studio"},
                         ],
@@ -181,13 +197,31 @@ class TTSAgent(Agent):
         return False
     
     @property
+    def not_ready_reason(self) -> str:
+        """
+        Returns a string explaining why the agent is not ready
+        """
+        
+        if self.ready:
+            return ""
+        
+        if self.api == "tts":
+            if not TTS:
+                return "TTS not installed"
+        
+        elif self.requires_token and not self.token:
+            return "No API token"
+        
+        elif not self.default_voice_id:
+            return "No voice selected"
+            
+    @property
     def agent_details(self):
         suffix = ""
-        if not self.ready and not self.token:
-            suffix = " (no token)"
-        elif not self.ready and not self.default_voice_id:
-            suffix = " (no voice id)"
-        elif self.default_voice_id:
+        
+        if not self.ready:
+            suffix = f"  - {self.not_ready_reason}"
+        else:
             suffix = f"  - {self.voice_id_to_label(self.default_voice_id)}"
         
         api = self.api
@@ -223,6 +257,12 @@ class TTSAgent(Agent):
     
     @property
     def ready(self):
+        
+        if self.api == "tts":
+            if not TTS:
+                return False
+            return True
+        
         return (not self.requires_token or self.token) and self.default_voice_id
 
     @property
@@ -233,6 +273,9 @@ class TTSAgent(Agent):
             return "active" if not getattr(self, "processing", False) else "busy"
         if self.requires_token and not self.token:
             return "error"
+        if self.api == "tts":
+            if not TTS:
+                return "error"
 
     @property
     def max_generation_length(self):
@@ -277,6 +320,13 @@ class TTSAgent(Agent):
         
         await self.generate(str(emission.message).replace(character_prefix+": ", ""))
 
+
+    def voice(self, voice_id:str) -> Union[Voice, None]:
+        for voice in self.voices[self.api].voices:
+            if voice.value == voice_id:
+                return voice
+        return None
+    
     def voice_id_to_label(self, voice_id:str):
         for voice in self.voices[self.api].voices:
             if voice.value == voice_id:
@@ -330,7 +380,7 @@ class TTSAgent(Agent):
 
     async def generate_chunks(self, generate_fn, chunks):
         for chunk in chunks:
-            chunk = chunk.replace("*","")
+            chunk = chunk.replace("*","").strip()
             log.info("Generating audio", api=self.api, chunk=chunk)
             audio_data = await generate_fn(chunk)
             self.play_audio(audio_data)
@@ -344,6 +394,45 @@ class TTSAgent(Agent):
         emit("audio_queue", data={"audio_data": base64.b64encode(audio_data).decode("utf-8")})
         
         self.playback_done_event.set()  # Signal that playback is finished
+
+    # LOCAL
+    
+    async def _generate_tts(self, text: str) -> Union[bytes, None]:
+        
+        if not TTS:
+            return
+        
+        tts_config = self.config.get("tts",{})
+        model = tts_config.get("model")
+        device = tts_config.get("device", "cpu")
+        
+        log.debug("tts local", model=model, device=device)
+        
+        if not hasattr(self, "tts_instance"):
+            self.tts_instance = TTS(model).to(device)
+        
+        tts = self.tts_instance
+        
+        loop = asyncio.get_event_loop()
+        
+        voice = self.voice(self.default_voice_id)
+        
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = os.path.join(temp_dir, f"tts-{uuid.uuid4()}.wav")
+            
+            await loop.run_in_executor(None, functools.partial(tts.tts_to_file, text=text, speaker_wav=voice.value, language="en", file_path=file_path))
+            #tts.tts_to_file(text=text, speaker_wav=voice.value, language="en", file_path=file_path)
+            
+            
+            with open(file_path, "rb") as f:
+                return f.read()
+        
+            
+    async def _list_voices_tts(self) -> dict[str, str]:
+        return [Voice(**voice) for voice in self.config.get("tts",{}).get("voices",[])]
+        
+    # ELEVENLABS
 
     async def _generate_elevenlabs(self, text: str, chunk_size: int = 1024) -> Union[bytes, None]:
         api_key = self.token

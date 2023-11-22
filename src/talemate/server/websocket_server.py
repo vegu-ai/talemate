@@ -437,6 +437,14 @@ class WebsocketHandler(Receiver):
             }
         )
 
+    def handle_audio_queue(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "audio_queue",
+                "data": emission.data,
+            }
+        )
+
     def handle_request_input(self, emission: Emission):
         self.waiting_for_input = True
 

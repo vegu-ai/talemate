@@ -37,6 +37,7 @@ nest_asyncio = "^1.5.7"
 isodate = ">=0.6.1"
 thefuzz = ">=0.20.0"
 tiktoken = ">=0.5.1"
+nltk = ">=3.8.1"
 
 #TTS
 elevenlabs = ">=0.2.26"

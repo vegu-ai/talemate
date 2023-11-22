@@ -8,6 +8,7 @@ import io
 import threading
 import pydantic
 import nltk
+import base64
 from nltk.tokenize import sent_tokenize
 
 from elevenlabs.utils import play
@@ -15,6 +16,7 @@ import talemate.data_objects as data_objects
 import talemate.util as util
 import talemate.config as config
 import talemate.emit.async_signals
+from talemate.emit import emit
 from talemate.events import GameLoopNewMessageEvent
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage, NarratorMessage
@@ -353,6 +355,7 @@ class TTSAgent(Agent):
         await self.audio_queue.put(None)  # Signal the end of generation
 
     async def play_audio_chunks(self):
+        
         while True:
             await self.playback_done_event.wait()  # Wait for previous playback to finish
             self.playback_done_event.clear()
@@ -360,11 +363,18 @@ class TTSAgent(Agent):
             audio_data = await self.audio_queue.get()
             if audio_data is None:  # Signal to stop playback
                 break
-            play_thread = threading.Thread(target=self.play_audio, args=(audio_data,))
-            play_thread.start()
+            self.play_audio(audio_data)
+            #play_thread = threading.Thread(target=self.play_audio, args=(audio_data,))
+            #play_thread.start()
 
     def play_audio(self, audio_data):
-        play(audio_data)
+        # play audio through the python audio player
+        #play(audio_data)
+        
+        print("playing audio")
+        
+        emit("audio_queue", data={"audio_data": base64.b64encode(audio_data).decode("utf-8")})
+        
         self.playback_done_event.set()  # Signal that playback is finished
 
     async def _generate_elevenlabs(self, text: str, chunk_size: int = 1024):

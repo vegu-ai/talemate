@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from talemate.emit import emit
 import structlog
+import traceback
 from typing import Union
 
 import talemate.instance as instance
@@ -59,7 +60,8 @@ class WorldState(BaseModel):
             world_state = await self.agent.request_world_state()
         except Exception as e:
             self.emit()
-            raise e
+            log.error("world_state.request_update", error=e, traceback=traceback.format_exc())
+            return
         
         previous_characters = self.characters
         previous_items = self.items

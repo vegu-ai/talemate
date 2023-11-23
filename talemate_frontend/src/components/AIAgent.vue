@@ -66,10 +66,10 @@ export default {
             for(let i = 0; i < this.state.agents.length; i++) {
                 let agent = this.state.agents[i];
 
-                if(!agent.data.requires_llm_agent)
+                if(!agent.data.requires_llm_client)
                     continue
 
-                if(agent.status  === 'warning' || agent.status === 'error') {
+                if(agent.status === 'warning' || agent.status === 'error' || agent.status === 'uninitialized') {
                     console.log("agents: configuration required (1)", agent.status)
                     return true;
                 }

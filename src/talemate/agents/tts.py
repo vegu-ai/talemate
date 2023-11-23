@@ -145,6 +145,7 @@ class TTSAgent(Agent):
                         value="tts",
                         label="API",
                         description="Which TTS API to use",
+                        onchange="emit",
                     ),
                     "voice_id": AgentActionConfig(
                         type="text",
@@ -286,6 +287,27 @@ class TTSAgent(Agent):
             
         return 250
 
+    def apply_config(self, *args, **kwargs):
+        
+        try:
+            api = kwargs["actions"]["_config"]["config"]["api"]["value"]
+        except KeyError:
+            api = self.api
+        
+        api_changed = api != self.api
+        
+        log.debug("apply_config", api=api, api_changed=api != self.api, current_api=self.api)
+
+        super().apply_config(*args, **kwargs)
+        
+        
+        if api_changed:
+            try:
+                self.actions["_config"].config["voice_id"].value = self.voices[api].voices[0].value
+            except IndexError:
+                self.actions["_config"].config["voice_id"].value = ""
+
+        
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("game_loop_new_message").connect(self.on_game_loop_new_message)
@@ -338,7 +360,7 @@ class TTSAgent(Agent):
         return loop.run_until_complete(self.list_voices())
     
     async def list_voices(self):
-        if not self.enabled or not self.ready:
+        if not self.enabled:
             return []
         
         library = self.voices[self.api]
@@ -353,6 +375,9 @@ class TTSAgent(Agent):
         log.info("Listing voices", api=self.api)
         library.voices = await list_fn()
         library.last_synced = time.time()
+        self.actions["_config"].config["voice_id"].value = ""
+        
+        # set loading to false
         return library.voices
 
     @set_processing

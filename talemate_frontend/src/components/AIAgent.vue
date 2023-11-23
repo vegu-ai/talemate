@@ -103,7 +103,6 @@ export default {
             } else {
                 this.state.agents[index] = agent;
             }
-            this.state.dialog = false;
             this.$emit('agents-updated', this.state.agents);
         },
         editAgent(index) {

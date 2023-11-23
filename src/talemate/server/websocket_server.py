@@ -222,7 +222,7 @@ class WebsocketHandler(Receiver):
     def configure_agents(self, agents):
         self.agents = {typ: {} for typ in instance.agent_types()}
         
-        log.debug("Configuring agents", agents=agents)
+        log.debug("Configuring agents")
 
         for agent in agents:
             name = agent["name"]

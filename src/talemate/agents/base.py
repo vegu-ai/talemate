@@ -37,13 +37,13 @@ class AgentActionConfig(pydantic.BaseModel):
     type: str
     label: str
     description: str = ""
-    value: Union[int, float, str, bool]
+    value: Union[int, float, str, bool, None]
     default_value: Union[int, float, str, bool] = None
     max: Union[int, float, None] = None
     min: Union[int, float, None] = None
     step: Union[int, float, None] = None
     scope: str = "global"
-    choices: Union[list[dict[str, str]], None, Callable] = None
+    choices: Union[list[dict[str, str]], None] = None
         
     class Config:
         arbitrary_types_allowed = True

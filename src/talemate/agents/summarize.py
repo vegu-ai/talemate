@@ -5,11 +5,13 @@ import traceback
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import talemate.data_objects as data_objects
+import talemate.emit.async_signals
 import talemate.util as util
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, TimePassageMessage
+from talemate.events import GameLoopEvent
 
-from .base import Agent, set_processing
+from .base import Agent, set_processing, AgentAction, AgentActionConfig
 from .registry import register
 
 import structlog
@@ -34,14 +36,40 @@ class SummarizeAgent(Agent):
 
     def __init__(self, client, **kwargs):
         self.client = client
-
-    def on_history_add(self, event):
-        asyncio.ensure_future(self.build_archive(event.scene))
-
+        
+        self.actions = {
+            "archive": AgentAction(
+                enabled=True,
+                label="Summarize to long-term memory archive",
+                description="Automatically summarize scene dialogue when the number of tokens in the history exceeds a threshold. This helps keep the context history from growing too large.",
+                config={
+                    "threshold": AgentActionConfig(
+                        type="number",
+                        label="Token Threshold",
+                        description="Will summarize when the number of tokens in the history exceeds this threshold",
+                        min=512,
+                        max=8192,
+                        step=256,
+                        value=1536,
+                    )
+                }
+            )
+        }
+        
+    
     def connect(self, scene):
         super().connect(scene)
-        scene.signals["history_add"].connect(self.on_history_add)
+        talemate.emit.async_signals.get("game_loop").connect(self.on_game_loop)
+        
+        
+    async def on_game_loop(self, emission:GameLoopEvent):
+        """
+        Called when a conversation is generated
+        """
 
+        await self.build_archive(self.scene)
+        
+        
     def clean_result(self, result):
         if "#" in result:
             result = result.split("#")[0]
@@ -53,9 +81,12 @@ class SummarizeAgent(Agent):
         return result
 
     @set_processing
-    async def build_archive(self, scene, token_threshold:int=1500):
+    async def build_archive(self, scene):
         end = None
-
+        
+        if not self.actions["archive"].enabled:
+            return
+        
         if not scene.archived_history:
             start = 0
             recent_entry = None
@@ -67,6 +98,8 @@ class SummarizeAgent(Agent):
         dialogue_entries = []
         ts = "PT0S"
         time_passage_termination = False
+        
+        token_threshold = self.actions["archive"].config["threshold"].value
         
         log.debug("build_archive", start=start, recent_entry=recent_entry)
         

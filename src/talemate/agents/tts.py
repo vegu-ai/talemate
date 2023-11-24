@@ -105,6 +105,7 @@ class TTSAgent(Agent):
     
     agent_type = "tts"
     verbose_name = "Text to speech"
+    requires_llm_client = False
     
     @classmethod
     def config_options(cls, agent=None):
@@ -235,10 +236,6 @@ class TTSAgent(Agent):
         
         return f"{api_label}{suffix}"
 
-    @property
-    def requires_llm_client(self):
-        return False
-    
     @property
     def api(self):
         return self.actions["_config"].config["api"].value

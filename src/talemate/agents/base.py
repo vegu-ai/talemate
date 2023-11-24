@@ -84,6 +84,7 @@ class Agent(ABC):
     agent_type = "agent"
     verbose_name = None
     set_processing = set_processing
+    requires_llm_client = True
 
     @property
     def agent_details(self):
@@ -141,12 +142,6 @@ class Agent(ABC):
         # by default, agents are not experimental, an agent class that
         # is experimental should override this property
         return False
-    
-    @property
-    def requires_llm_client(self):
-        # by default, agents require an LLM client, an agent class that
-        # does not require an LLM client should override this property
-        return True
 
     @classmethod
     def config_options(cls, agent=None):
@@ -155,7 +150,7 @@ class Agent(ABC):
             "enabled": agent.enabled if agent else True,
             "has_toggle": agent.has_toggle if agent else False,
             "experimental": agent.experimental if agent else False,
-            "requires_llm_client": agent.requires_llm_client if agent else False,
+            "requires_llm_client": cls.requires_llm_client,
         }
         actions = getattr(agent, "actions", None)
         

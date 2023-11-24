@@ -206,6 +206,7 @@ from .registry import register
 @register(condition=lambda: chromadb is not None)
 class ChromaDBMemoryAgent(MemoryAgent):
 
+    requires_llm_client = False
 
     @property
     def ready(self):
@@ -223,10 +224,6 @@ class ChromaDBMemoryAgent(MemoryAgent):
     def agent_details(self):
         return f"ChromaDB: {self.embeddings}"
     
-    @property
-    def requires_llm_client(self):
-        return False
-
     @property
     def embeddings(self):
         """

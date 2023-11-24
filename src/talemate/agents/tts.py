@@ -274,6 +274,7 @@ class TTSAgent(Agent):
         if self.api == "tts":
             if not TTS:
                 return "error"
+        return "uninitialized"
 
     @property
     def max_generation_length(self):
@@ -314,7 +315,7 @@ class TTSAgent(Agent):
         Called when a conversation is generated
         """
         
-        if not self.enabled:
+        if not self.enabled or not self.ready:
             return
         
         if not isinstance(emission.message, (CharacterMessage, NarratorMessage)):

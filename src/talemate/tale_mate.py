@@ -1184,7 +1184,7 @@ class Scene(Emitter):
             },
         )
     
-        self.log.debug("scene_status", scene=self.name, scene_time=self.ts, saved=self.saved)
+        self.log.debug("scene_status", scene=self.name, scene_time=self.ts, human_ts=util.iso8601_duration_to_human(self.ts, suffix=""), saved=self.saved)
 
     def set_environment(self, environment: str):
         """
@@ -1197,6 +1197,7 @@ class Scene(Emitter):
         """
         Accepts an iso6801 duration string and advances the scene's world state by that amount
         """
+        log.debug("advance_time", ts=ts, scene_ts=self.ts, duration=isodate.parse_duration(ts), scene_duration=isodate.parse_duration(self.ts))
         
         self.ts = isodate.duration_isoformat(
             isodate.parse_duration(self.ts) + isodate.parse_duration(ts)
@@ -1219,9 +1220,12 @@ class Scene(Emitter):
                 if self.archived_history[i].get("ts"):
                     self.ts = self.archived_history[i]["ts"]
                     break
+            
+            end = self.archived_history[-1].get("end", 0)
+        else:
+            end = 0
         
-        
-        for message in self.history:
+        for message in self.history[end:]:
             if isinstance(message, TimePassageMessage):
                 self.advance_time(message.ts)
                 

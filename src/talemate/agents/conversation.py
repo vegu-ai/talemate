@@ -406,7 +406,7 @@ class ConversationAgent(Agent):
             
             context = await memory.multi_query(history, max_tokens=500, iterate=5)
              
-            self.current_memory_context = "\n".join(context)
+            self.current_memory_context = "\n\n".join(context)
         
         return self.current_memory_context
 

@@ -490,30 +490,43 @@ def clean_attribute(attribute: str) -> str:
 
 
 
+
 def duration_to_timedelta(duration):
-    """Convert an isodate.Duration object to a datetime.timedelta object."""
+    """Convert an isodate.Duration object or a datetime.timedelta object to a datetime.timedelta object."""
+    # Check if the duration is already a timedelta object
+    if isinstance(duration, datetime.timedelta):
+        return duration
+
+    # Check if the duration is an isodate.Duration object with a tdelta attribute
+    if hasattr(duration, 'tdelta'):
+        return duration.tdelta
+
+    # If it's an isodate.Duration object with separate year, month, day, hour, minute, second attributes
     days = int(duration.years) * 365 + int(duration.months) * 30 + int(duration.days)
-    return datetime.timedelta(days=days)
+    seconds = int(duration.hours) * 3600 + int(duration.minutes) * 60 + int(duration.seconds)
+    return datetime.timedelta(days=days, seconds=seconds)
 
 def timedelta_to_duration(delta):
     """Convert a datetime.timedelta object to an isodate.Duration object."""
+    # Extract days and convert to years, months, and days
     days = delta.days
     years = days // 365
     days %= 365
     months = days // 30
     days %= 30
-    return isodate.duration.Duration(years=years, months=months, days=days)
+    # Convert remaining seconds to hours, minutes, and seconds
+    seconds = delta.seconds
+    hours = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    return isodate.Duration(years=years, months=months, days=days, hours=hours, minutes=minutes, seconds=seconds)
 
 def parse_duration_to_isodate_duration(duration_str):
     """Parse ISO 8601 duration string and ensure the result is an isodate.Duration."""
     parsed_duration = isodate.parse_duration(duration_str)
     if isinstance(parsed_duration, datetime.timedelta):
-        days = parsed_duration.days
-        years = days // 365
-        days %= 365
-        months = days // 30
-        days %= 30
-        return isodate.duration.Duration(years=years, months=months, days=days)
+        return timedelta_to_duration(parsed_duration)
     return parsed_duration
 
 def iso8601_diff(duration_str1, duration_str2):
@@ -533,40 +546,52 @@ def iso8601_diff(duration_str1, duration_str2):
 
     return difference
 
-def iso8601_duration_to_human(iso_duration, suffix:str=" ago"):
-    # Parse the ISO8601 duration string into an isodate duration object
+def iso8601_duration_to_human(iso_duration, suffix: str = " ago"):
     
-    if isinstance(iso_duration, isodate.Duration):
-        duration = iso_duration
-    else:
+    print("iso8601_duration_to_human", type(iso_duration), iso_duration, suffix)
+    
+    # Parse the ISO8601 duration string into an isodate duration object
+    if not isinstance(iso_duration, isodate.Duration):
         duration = isodate.parse_duration(iso_duration)
+    else:
+        duration = iso_duration
+
+    # Extract years, months, days, and the time part as seconds
+    years, months, days, hours, minutes, seconds = 0, 0, 0, 0, 0, 0
 
     if isinstance(duration, isodate.Duration):
         years = duration.years
         months = duration.months
         days = duration.days
-        seconds = duration.tdelta.total_seconds()
-    else:
-        years, months = 0, 0
+        hours = duration.tdelta.seconds // 3600
+        minutes = (duration.tdelta.seconds % 3600) // 60
+        seconds = duration.tdelta.seconds % 60
+    elif isinstance(duration, datetime.timedelta):
         days = duration.days
-        seconds = duration.total_seconds() - days * 86400  # Extract time-only part
+        hours = duration.seconds // 3600
+        minutes = (duration.seconds % 3600) // 60
+        seconds = duration.seconds % 60
 
-    hours, seconds = divmod(seconds, 3600)
-    minutes, seconds = divmod(seconds, 60)
-    
+    # Adjust for cases where duration is a timedelta object
+    # Convert days to weeks and days if applicable
+    weeks, days = divmod(days, 7)
+
+    # Build the human-readable components
     components = []
     if years:
         components.append(f"{years} Year{'s' if years > 1 else ''}")
     if months:
         components.append(f"{months} Month{'s' if months > 1 else ''}")
+    if weeks:
+        components.append(f"{weeks} Week{'s' if weeks > 1 else ''}")
     if days:
         components.append(f"{days} Day{'s' if days > 1 else ''}")
     if hours:
-        components.append(f"{int(hours)} Hour{'s' if hours > 1 else ''}")
+        components.append(f"{hours} Hour{'s' if hours > 1 else ''}")
     if minutes:
-        components.append(f"{int(minutes)} Minute{'s' if minutes > 1 else ''}")
+        components.append(f"{minutes} Minute{'s' if minutes > 1 else ''}")
     if seconds:
-        components.append(f"{int(seconds)} Second{'s' if seconds > 1 else ''}")
+        components.append(f"{seconds} Second{'s' if seconds > 1 else ''}")
 
     # Construct the human-readable string
     if len(components) > 1:
@@ -576,7 +601,7 @@ def iso8601_duration_to_human(iso_duration, suffix:str=" ago"):
         human_str = components[0]
     else:
         human_str = "Moments"
-    
+
     return f"{human_str}{suffix}"
 
 def iso8601_diff_to_human(start, end):
@@ -584,6 +609,7 @@ def iso8601_diff_to_human(start, end):
         return ""
     
     diff = iso8601_diff(start, end)
+    
     return iso8601_duration_to_human(diff)
 
 

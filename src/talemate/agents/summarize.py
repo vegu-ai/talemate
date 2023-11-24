@@ -92,7 +92,12 @@ class SummarizeAgent(Agent):
             recent_entry = None
         else:
             recent_entry = scene.archived_history[-1]
-            start = recent_entry.get("end", 0) + 1
+            if "end" not in recent_entry:
+                # permanent historical archive entry, not tied to any specific history entry
+                # meaning we are still at the beginning of the scene
+                start = 0
+            else:
+                start = recent_entry.get("end", 0)+1
 
         tokens = 0
         dialogue_entries = []
@@ -108,6 +113,9 @@ class SummarizeAgent(Agent):
         
         for i in range(start, len(scene.history)):
             dialogue = scene.history[i]
+            
+            #log.debug("build_archive", idx=i, content=str(dialogue)[:64]+"...")
+            
             if isinstance(dialogue, DirectorMessage):
                 if i == start:
                     start += 1
@@ -164,7 +172,7 @@ class SummarizeAgent(Agent):
                         break
                     adjusted_dialogue.append(line)
                 dialogue_entries = adjusted_dialogue
-                end = start + len(dialogue_entries)
+                end = start + len(dialogue_entries)-1
             
         if dialogue_entries:
             summarized = await self.summarize(

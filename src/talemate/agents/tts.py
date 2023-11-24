@@ -372,7 +372,10 @@ class TTSAgent(Agent):
         log.info("Listing voices", api=self.api)
         library.voices = await list_fn()
         library.last_synced = time.time()
-        self.actions["_config"].config["voice_id"].value = ""
+        
+        # if the current voice cannot be found, reset it
+        if not self.voice(self.default_voice_id):
+            self.actions["_config"].config["voice_id"].value = ""
         
         # set loading to false
         return library.voices

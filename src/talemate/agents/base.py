@@ -37,7 +37,7 @@ class AgentActionConfig(pydantic.BaseModel):
     type: str
     label: str
     description: str = ""
-    value: Union[int, float, str, bool, None]
+    value: Union[int, float, str, bool, None] = None
     default_value: Union[int, float, str, bool] = None
     max: Union[int, float, None] = None
     min: Union[int, float, None] = None

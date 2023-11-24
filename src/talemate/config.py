@@ -20,7 +20,7 @@ class Client(BaseModel):
  
 
 class AgentActionConfig(BaseModel):
-    value: Union[int, float, str, bool]
+    value: Union[int, float, str, bool, None] = None
         
 class AgentAction(BaseModel):
     enabled: bool = True

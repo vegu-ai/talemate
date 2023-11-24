@@ -314,7 +314,7 @@ class TTSAgent(Agent):
         Called when a conversation is generated
         """
         
-        if not self.enabled:
+        if not self.enabled or not self.ready:
             return
         
         if not isinstance(emission.message, (CharacterMessage, NarratorMessage)):

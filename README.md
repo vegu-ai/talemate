@@ -22,6 +22,7 @@ As of version 0.13.0 the legacy text-generator-webui API `--extension api` is no
     - editor: improves AI responses (very hit and miss at the moment)
     - world state: generates world snapshot and handles passage of time (objects and characters)
     - creator: character / scenario creator
+    - tts: text to speech via elevenlabs, coqui studio, coqui local
 - multi-client (agents can be connected to separate APIs)
 - long term memory
     - chromadb integration
@@ -40,7 +41,7 @@ Kinda making it up as i go along, but i want to lean more into gameplay through 
 
 In no particular order:
 
-- TTS support
+
 - Extension support
     - modular agents and clients
 - Improved world state

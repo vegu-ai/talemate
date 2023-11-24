@@ -548,8 +548,6 @@ def iso8601_diff(duration_str1, duration_str2):
 
 def iso8601_duration_to_human(iso_duration, suffix: str = " ago"):
     
-    print("iso8601_duration_to_human", type(iso_duration), iso_duration, suffix)
-    
     # Parse the ISO8601 duration string into an isodate duration object
     if not isinstance(iso_duration, isodate.Duration):
         duration = isodate.parse_duration(iso_duration)

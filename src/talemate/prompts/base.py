@@ -473,8 +473,6 @@ class Prompt:
         
         # remove all duplicate whitespace
         cleaned = re.sub(r"\s+", " ", cleaned)
-        print("set_json_response", cleaned)
-        
         return self.set_prepared_response(cleaned)
         
 

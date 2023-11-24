@@ -414,8 +414,6 @@ class TTSAgent(Agent):
         # play audio through the python audio player
         #play(audio_data)
         
-        print("playing audio")
-        
         emit("audio_queue", data={"audio_data": base64.b64encode(audio_data).decode("utf-8")})
         
         self.playback_done_event.set()  # Signal that playback is finished

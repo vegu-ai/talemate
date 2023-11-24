@@ -80,6 +80,12 @@ export default {
             this.getWebsocket().send(JSON.stringify({ type: 'request_scenes_list', query: this.sceneSearchInput }));
         },
         loadCreative() {
+            if(this.sceneSaved === false) {
+                if(!confirm("The current scene is not saved. Are you sure you want to load a new scene?")) {
+                    return;
+                }
+            }
+
             this.loading = true;
             this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: "environment:creative" }));
         },

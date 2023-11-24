@@ -65,6 +65,21 @@ class OpenAIConfig(BaseModel):
     
 class RunPodConfig(BaseModel):
     api_key: Union[str,None]=None
+    
+class ElevenLabsConfig(BaseModel):
+    api_key: Union[str,None]=None
+    
+class CoquiConfig(BaseModel):
+    api_key: Union[str,None]=None
+    
+class TTSVoiceSamples(BaseModel):
+    label:str
+    value:str
+
+class TTSConfig(BaseModel):
+    device:str = "cuda"
+    model:str = "tts_models/multilingual/multi-dataset/xtts_v2"
+    voices: list[TTSVoiceSamples] = pydantic.Field(default_factory=list)
 
 class ChromaDB(BaseModel):
     instructor_device: str="cpu"
@@ -84,6 +99,12 @@ class Config(BaseModel):
     runpod: RunPodConfig = RunPodConfig()
     
     chromadb: ChromaDB = ChromaDB()
+    
+    elevenlabs: ElevenLabsConfig = ElevenLabsConfig()
+    
+    coqui: CoquiConfig = CoquiConfig()
+    
+    tts: TTSConfig = TTSConfig()
     
     class Config:
         extra = "ignore"

@@ -14,13 +14,32 @@ game:
     gender: male
     name: Elmer
 
+## Long-term memory
+
 #chromadb:
 #  embeddings: instructor
 #  instructor_device: cuda
 #  instructor_model: hkunlp/instructor-xl
   
+## Remote LLMs
+
 #openai:
 #  api_key: <API_KEY>
 
 #runpod:
 #  api_key: <API_KEY>
+
+## TTS (Text-to-Speech)
+
+#elevenlabs:
+#  api_key: <API_KEY>
+
+#coqui:
+#  api_key: <API_KEY>
+
+#tts:
+#  device: cuda
+#  model: tts_models/multilingual/multi-dataset/xtts_v2
+#  voices:
+#  - label: <name>
+#    value: <path to .wav for voice sample>

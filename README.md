@@ -162,7 +162,10 @@ Make sure you save the scene after the character is loaded as it can then be loa
 
 ## Further documentation
 
+Please read the documents in the `docs` folder for more advanced configuration and usage.
+
 - Creative mode (docs WIP)
 - Prompt template overrides
+- [Text-to-Speech (TTS)](docs/tts.md)
 - [ChromaDB (long term memory)](docs/chromadb.md)
 - Runpod Integration

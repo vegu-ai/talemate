@@ -7,11 +7,12 @@
                         size="14"></v-progress-circular>
                     <v-icon v-else-if="agent.status === 'uninitialized'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>
                     <v-icon v-else-if="agent.status === 'disabled'" color="grey-darken-2" size="14">mdi-checkbox-blank-circle</v-icon>
+                    <v-icon v-else-if="agent.status === 'error'" color="red" size="14">mdi-checkbox-blank-circle</v-icon>
                     <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
                     <span class="ml-1" v-if="agent.label"> {{ agent.label }}</span>
                     <span class="ml-1" v-else> {{ agent.name }}</span>
                 </v-list-item-title>
-                <v-list-item-subtitle>
+                <v-list-item-subtitle class="text-caption">
                     {{ agent.client }}
                 </v-list-item-subtitle>
                 <v-chip class="mr-1" v-if="agent.status === 'disabled'" size="x-small">Disabled</v-chip>
@@ -65,7 +66,10 @@ export default {
             for(let i = 0; i < this.state.agents.length; i++) {
                 let agent = this.state.agents[i];
 
-                if(agent.status  === 'warning' || agent.status === 'error') {
+                if(!agent.data.requires_llm_client)
+                    continue
+
+                if(agent.status === 'warning' || agent.status === 'error' || agent.status === 'uninitialized') {
                     console.log("agents: configuration required (1)", agent.status)
                     return true;
                 }
@@ -99,7 +103,6 @@ export default {
             } else {
                 this.state.agents[index] = agent;
             }
-            this.state.dialog = false;
             this.$emit('agents-updated', this.state.agents);
         },
         editAgent(index) {

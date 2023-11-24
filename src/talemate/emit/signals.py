@@ -24,6 +24,8 @@ CommandStatus = signal("command_status")
 WorldState = signal("world_state")
 ArchivedHistory = signal("archived_history")
 
+AudioQueue = signal("audio_queue")
+
 MessageEdited = signal("message_edited")
 
 handlers = {
@@ -46,4 +48,5 @@ handlers = {
     "archived_history": ArchivedHistory,
     "message_edited": MessageEdited,
     "prompt_sent": PromptSent,
+    "audio_queue": AudioQueue,
 }

@@ -190,8 +190,11 @@ async def load_scene_from_data(
         await scene.add_actor(actor)
     
     if scene.environment != "creative":
-        await scene.world_state.request_update(initial_only=True)  
-
+        try:
+            await scene.world_state.request_update(initial_only=True)  
+        except Exception as e:
+            log.error("world_state.request_update", error=e)
+            
     # the scene has been saved before (since we just loaded it), so we set the saved flag to True
     # as long as the scene has a memory_id.
     scene.saved = "memory_id" in scene_data

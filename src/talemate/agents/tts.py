@@ -274,6 +274,7 @@ class TTSAgent(Agent):
         if self.api == "tts":
             if not TTS:
                 return "error"
+        return "uninitialized"
 
     @property
     def max_generation_length(self):

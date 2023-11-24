@@ -357,7 +357,7 @@ class TTSAgent(Agent):
         return loop.run_until_complete(self.list_voices())
     
     async def list_voices(self):
-        if not self.enabled:
+        if self.requires_token and not self.token:
             return []
         
         library = self.voices[self.api]

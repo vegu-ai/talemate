@@ -75,6 +75,8 @@
       <span v-if="connecting" class="ml-1"><v-icon class="mr-1">mdi-progress-helper</v-icon>connecting</span>
       <span v-else-if="connected" class="ml-1"><v-icon class="mr-1" color="green" size="14">mdi-checkbox-blank-circle</v-icon>connected</span>
       <span v-else class="ml-1"><v-icon class="mr-1">mdi-progress-close</v-icon>disconnected</span>
+      <v-divider class="ml-1 mr-1" vertical></v-divider>
+      <AudioQueue ref="audioQueue" />
       <v-spacer></v-spacer>
       <span v-if="version !== null">v{{ version }}</span>
       <span v-if="configurationRequired()">
@@ -161,6 +163,7 @@ import SceneHistory from './SceneHistory.vue';
 import CreativeEditor from './CreativeEditor.vue';
 import AppConfig from './AppConfig.vue';
 import DebugTools from './DebugTools.vue';
+import AudioQueue from './AudioQueue.vue';
 
 export default {
   components: {
@@ -177,6 +180,7 @@ export default {
     CreativeEditor,
     AppConfig,
     DebugTools,
+    AudioQueue,
   },
   name: 'TalemateApp',
   data() {

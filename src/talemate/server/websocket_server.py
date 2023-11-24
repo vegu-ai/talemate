@@ -91,7 +91,7 @@ class WebsocketHandler(Receiver):
         for agent_typ, agent_config in self.agents.items():
             try:
                 client = self.llm_clients.get(agent_config.get("client"))["client"]
-            except TypeError:
+            except TypeError as e:
                 client = None
                 
             if not client:
@@ -222,16 +222,25 @@ class WebsocketHandler(Receiver):
     def configure_agents(self, agents):
         self.agents = {typ: {} for typ in instance.agent_types()}
         
-        log.debug("Configuring agents", agents=agents)
+        log.debug("Configuring agents")
 
         for agent in agents:
             name = agent["name"]
 
             # special case for memory agent
-            if name == "memory":
+            if name == "memory" or name == "tts":
                 self.agents[name] = {
                     "name": name,
                 }
+                agent_instance = instance.get_agent(name, **self.agents[name])
+                if agent_instance.has_toggle:
+                    self.agents[name]["enabled"] = agent["enabled"]
+
+                if getattr(agent_instance, "actions", None):
+                    self.agents[name]["actions"] = agent.get("actions", {})
+                    
+                agent_instance.apply_config(**self.agents[name])
+                log.debug("Configured agent", name=name)
                 continue
 
             if name not in self.agents:
@@ -425,6 +434,14 @@ class WebsocketHandler(Receiver):
                 "message": emission.message,
                 "id": emission.id,
                 "character": emission.character.name if emission.character else "",
+            }
+        )
+
+    def handle_audio_queue(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "audio_queue",
+                "data": emission.data,
             }
         )
 

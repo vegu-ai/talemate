@@ -110,7 +110,6 @@ async def websocket_endpoint(websocket, path):
             elif action_type == "request_scenes_list":
                 query = data.get("query", "")
                 handler.request_scenes_list(query)
-
             elif action_type == "configure_clients":
                 handler.configure_clients(data.get("clients"))
             elif action_type == "configure_agents":

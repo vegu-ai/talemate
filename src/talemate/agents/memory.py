@@ -206,6 +206,7 @@ from .registry import register
 @register(condition=lambda: chromadb is not None)
 class ChromaDBMemoryAgent(MemoryAgent):
 
+    requires_llm_client = False
 
     @property
     def ready(self):
@@ -222,7 +223,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
     @property
     def agent_details(self):
         return f"ChromaDB: {self.embeddings}"
-
+    
     @property
     def embeddings(self):
         """
@@ -409,7 +410,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             id = uid or f"__narrator__-{self.memory_tracker['__narrator__']}"
             ids = [id]
 
-        log.debug("chromadb agent add", text=text, meta=meta, id=id)
+        #log.debug("chromadb agent add", text=text, meta=meta, id=id)
 
         self.db.upsert(documents=[text], metadatas=metadatas, ids=ids)
         
@@ -479,9 +480,10 @@ class ChromaDBMemoryAgent(MemoryAgent):
             if distance < 1:
                 
                 try:
+                    log.debug("chromadb agent get", ts=ts, scene_ts=self.scene.ts)
                     date_prefix = util.iso8601_diff_to_human(ts, self.scene.ts)
-                except Exception:
-                    log.error("chromadb agent", error="failed to get date prefix", ts=ts, scene_ts=self.scene.ts)
+                except Exception as e:
+                    log.error("chromadb agent", error="failed to get date prefix", details=e, ts=ts, scene_ts=self.scene.ts)
                     date_prefix = None
                     
                 if date_prefix:

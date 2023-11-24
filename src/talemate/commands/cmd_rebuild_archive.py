@@ -32,4 +32,5 @@ class CmdRebuildArchive(TalemateCommand):
             if not more:
                 break
 
+        self.scene.sync_time()
         await self.scene.commit_to_memory()

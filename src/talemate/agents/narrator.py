@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
+import dataclasses
 import structlog
 import random
 import talemate.util as util
 from talemate.emit import emit
 import talemate.emit.async_signals
 from talemate.prompts import Prompt
-from talemate.agents.base import set_processing, Agent, AgentAction, AgentActionConfig
+from talemate.agents.base import set_processing as _set_processing, Agent, AgentAction, AgentActionConfig, AgentEmission
 from talemate.agents.world_state import TimePassageEmission
 from talemate.scene_message import NarratorMessage
 from talemate.events import GameLoopActorIterEvent
@@ -19,6 +20,33 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Actor, Player, Character
 
 log = structlog.get_logger("talemate.agents.narrator")
+
+@dataclasses.dataclass
+class NarratorAgentEmission(AgentEmission):
+    generation: list[str] = dataclasses.field(default_factory=list)
+    
+talemate.emit.async_signals.register(
+    "agent.narrator.generated"
+)
+
+def set_processing(fn):
+    
+    """
+    Custom decorator that emits the agent status as processing while the function
+    is running and then emits the result of the function as a NarratorAgentEmission
+    """
+    
+    @_set_processing
+    async def wrapper(self, *args, **kwargs):
+        response = await fn(self, *args, **kwargs)
+        emission = NarratorAgentEmission(
+            agent=self,
+            generation=[response],
+        )
+        await talemate.emit.async_signals.get("agent.narrator.generated").send(emission)
+        return emission.generation[0]
+    wrapper.__name__ = fn.__name__
+    return wrapper
 
 @register()
 class NarratorAgent(Agent):

@@ -23,16 +23,31 @@ __all__ = [
 
 log = structlog.get_logger("talemate.agents.base")
 
+class CallableConfigValue:
+    def __init__(self, fn):
+        self.fn = fn
+    
+    def __str__(self):
+        return "CallableConfigValue"
+    
+    def __repr__(self):
+        return "CallableConfigValue"
+
 class AgentActionConfig(pydantic.BaseModel):
     type: str
     label: str
     description: str = ""
-    value: Union[int, float, str, bool]
+    value: Union[int, float, str, bool, None]
     default_value: Union[int, float, str, bool] = None
     max: Union[int, float, None] = None
     min: Union[int, float, None] = None
     step: Union[int, float, None] = None
     scope: str = "global"
+    choices: Union[list[dict[str, str]], None] = None
+        
+    class Config:
+        arbitrary_types_allowed = True
+        
 
 class AgentAction(pydantic.BaseModel):
     enabled: bool = True
@@ -40,7 +55,6 @@ class AgentAction(pydantic.BaseModel):
     description: str = ""
     config: Union[dict[str, AgentActionConfig], None] = None
     
-
 def set_processing(fn):
     """
     decorator that emits the agent status as processing while the function
@@ -70,6 +84,7 @@ class Agent(ABC):
     agent_type = "agent"
     verbose_name = None
     set_processing = set_processing
+    requires_llm_client = True
 
     @property
     def agent_details(self):
@@ -135,6 +150,7 @@ class Agent(ABC):
             "enabled": agent.enabled if agent else True,
             "has_toggle": agent.has_toggle if agent else False,
             "experimental": agent.experimental if agent else False,
+            "requires_llm_client": cls.requires_llm_client,
         }
         actions = getattr(agent, "actions", None)
         

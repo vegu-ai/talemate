@@ -127,7 +127,7 @@ As of version 0.13.0 the legacy text-generator-webui API `--extension api` is no
 
 In the modal if you're planning to connect to text-generation-webui, you can likely leave everything as is and just click Save.
 
-![Add client modal](docs/img/add-client-modal.png)
+![Add client modal](docs/img/client-setup-0.13.png)
 
 ### OpenAI
 

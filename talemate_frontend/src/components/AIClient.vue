@@ -153,10 +153,13 @@ export default {
       let agents = this.getAgents();
       let client = this.state.clients[index];
 
+      this.saveClient(client);
+
       for (let i = 0; i < agents.length; i++) {
         agents[i].client = client.name;
-        this.$emit('client-assigned', agents);
+        console.log("Assigning client", client.name, "to agent", agents[i].name);
       }
+      this.$emit('client-assigned', agents);
     },
     updateDialog(newVal) {
       this.state.dialog = newVal;

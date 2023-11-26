@@ -61,13 +61,13 @@ In no particular order:
 
 ## Installation
 
-Post [here](https://github.com/final-wombat/talemate/issues/17) if you run into problems during installation.
+Post [here](https://github.com/vegu-ai/talemate/issues/17) if you run into problems during installation.
 
 ### Windows
 
 1. Download and install Python 3.10 or higher from the [official Python website](https://www.python.org/downloads/windows/).
 1. Download and install Node.js from the [official Node.js website](https://nodejs.org/en/download/). This will also install npm.
-1. Download the Talemate project to your local machine. Download from [the Releases page](https://github.com/final-wombat/talemate/releases).
+1. Download the Talemate project to your local machine. Download from [the Releases page](https://github.com/vegu-ai/talemate/releases).
 1. Unpack the download and run `install.bat` by double clicking it. This will set up the project on your local machine.
 1. Once the installation is complete, you can start the backend and frontend servers by running `start.bat`.
 1. Navigate your browser to http://localhost:8080
@@ -76,7 +76,7 @@ Post [here](https://github.com/final-wombat/talemate/issues/17) if you run into 
 
 `python 3.10` or higher is required.
 
-1. `git clone git@github.com:final-wombat/talemate`
+1. `git clone git@github.com:vegu-ai/talemate`
 1. `cd talemate`
 1. `source install.sh`
 1. Start the backend: `python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050`.

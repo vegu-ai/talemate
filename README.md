@@ -2,14 +2,17 @@
 
 Allows you to play roleplay scenarios with large language models. 
 
-It does not run any large language models itself but relies on existing APIs. Currently supports **text-generation-webui** and **openai**.
 
-This means you need to either have an openai api key or know how to setup [oobabooga/text-generation-webui](https://github.com/oobabooga/text-generation-webui) (locally or remotely via gpu renting. `--extension openai` flag needs to be set)
+|![Screenshot 1](docs/img/Screenshot_9.png)|![Screenshot 2](docs/img/Screenshot_2.png)|
+|------------------------------------------|------------------------------------------|
 
-As of version 0.13.0 the legacy text-generator-webui API `--extension api` is no longer supported, please use their new `--extension openai` api implementation instead. 
+> :warning: **It does not run any large language models itself but relies on existing APIs. Currently supports OpenAI, text-generation-webui and LMStudio.**
 
-![Screenshot 1](docs/img/Screenshot_9.png)
-![Screenshot 2](docs/img/Screenshot_2.png)
+This means you need to either have:
+- an [OpenAI](https://platform.openai.com/overview) api key
+- OR setup local (or remote via runpod) LLM inference via one of these options:
+    - [oobabooga/text-generation-webui](https://github.com/oobabooga/text-generation-webui)
+    - [LMStudio](https://lmstudio.ai/)
 
 ## Current features
 
@@ -23,7 +26,7 @@ As of version 0.13.0 the legacy text-generator-webui API `--extension api` is no
     - world state: generates world snapshot and handles passage of time (objects and characters)
     - creator: character / scenario creator
     - tts: text to speech via elevenlabs, coqui studio, coqui local
-- multi-client (agents can be connected to separate APIs)
+- multi-client support (agents can be connected to separate APIs)
 - long term memory
     - chromadb integration
     - passage of time
@@ -119,11 +122,11 @@ https://www.reddit.com/r/LocalLLaMA/comments/17fhp9k/huge_llm_comparisontest_39_
 
 On the right hand side click the "Add Client" button. If there is no button, you may need to toggle the client options by clicking this button:
 
-As of version 0.13.0 the legacy text-generator-webui API `--extension api` is no longer supported, please use their new `--extension openai` api implementation instead. 
-
 ![Client options](docs/img/client-options-toggle.png)
 
 ### Text-generation-webui
+
+> :warning: As of version 0.13.0 the legacy text-generator-webui API `--extension api` is no longer supported, please use their new `--extension openai` api implementation instead. 
 
 In the modal if you're planning to connect to text-generation-webui, you can likely leave everything as is and just click Save.
 
@@ -165,8 +168,8 @@ Make sure you save the scene after the character is loaded as it can then be loa
 
 Please read the documents in the `docs` folder for more advanced configuration and usage.
 
-- Creative mode (docs WIP)
-- Prompt template overrides
+- [Prompt template overrides](docs/templates.md)
 - [Text-to-Speech (TTS)](docs/tts.md)
 - [ChromaDB (long term memory)](docs/chromadb.md)
 - Runpod Integration
+- Creative mode

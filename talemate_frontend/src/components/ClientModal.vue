@@ -2,36 +2,37 @@
     <v-dialog v-model="localDialog" persistent max-width="600px">
         <v-card>
         <v-card-title>
-            <span class="headline">{{ formTitle }}</span>
+            <v-icon>mdi-network-outline</v-icon>
+            <span class="headline">{{ title() }}</span>
         </v-card-title>
         <v-card-text>
             <v-container>
-            <v-row>
-                <v-col cols="6">
-                  <v-select v-model="client.type" :disabled="!typeEditable()" :items="['openai', 'textgenwebui', 'lmstudio']" label="Client Type" @update:model-value="resetToDefaults"></v-select>
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field v-model="client.name" label="Client Name"></v-text-field>
-                </v-col> 
+              <v-row>
+                  <v-col cols="6">
+                    <v-select v-model="client.type" :disabled="!typeEditable()" :items="['openai', 'textgenwebui', 'lmstudio']" label="Client Type" @update:model-value="resetToDefaults"></v-select>
+                  </v-col>
+                  <v-col cols="6">
+                    <v-text-field v-model="client.name" label="Client Name"></v-text-field>
+                  </v-col> 
 
-            </v-row>
-            <v-row>
-              <v-col cols="12">
-                <v-text-field v-model="client.apiUrl" v-if="isLocalApiClient(client)" label="API URL"></v-text-field>
-                <v-select v-model="client.model" v-if="client.type === 'openai'" :items="['gpt-4-1106-preview', 'gpt-4', 'gpt-3.5-turbo', 'gpt-3.5-turbo-16k']" label="Model"></v-select>
-              </v-col>
-            </v-row>  
-            <v-row>
-              <v-col cols="6">
-                <v-text-field v-model="client.max_token_length" v-if="isLocalApiClient(client)" type="number" label="Context Length"></v-text-field> 
-              </v-col>
-            </v-row>
+              </v-row>
+              <v-row>
+                <v-col cols="12">
+                  <v-text-field v-model="client.apiUrl" v-if="isLocalApiClient(client)" label="API URL"></v-text-field>
+                  <v-select v-model="client.model" v-if="client.type === 'openai'" :items="['gpt-4-1106-preview', 'gpt-4', 'gpt-3.5-turbo', 'gpt-3.5-turbo-16k']" label="Model"></v-select>
+                </v-col>
+              </v-row>  
+              <v-row>
+                <v-col cols="6">
+                  <v-text-field v-model="client.max_token_length" v-if="isLocalApiClient(client)" type="number" label="Context Length"></v-text-field> 
+                </v-col>
+              </v-row>
             </v-container>
         </v-card-text>
         <v-card-actions>
             <v-spacer></v-spacer>
-            <v-btn color="blue darken-1" text @click="close">Close</v-btn>
-            <v-btn color="blue darken-1" text @click="save">Save</v-btn>
+            <v-btn color="primary" text @click="close" prepend-icon="mdi-cancel">Cancel</v-btn>
+            <v-btn color="primary" text @click="save" prepend-icon="mdi-check-circle-outline">Save</v-btn>
         </v-card-actions>
         </v-card>
     </v-dialog>
@@ -107,6 +108,9 @@ export default {
     },
     typeEditable() {
       return this.state.formTitle === 'Add Client';
+    },
+    title() {
+      return this.typeEditable() ? 'Add Client' : 'Edit Client';
     },
     close() {
       this.$emit('update:dialog', false);

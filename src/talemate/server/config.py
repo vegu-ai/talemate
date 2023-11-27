@@ -1,5 +1,6 @@
 import pydantic
 import structlog
+from talemate import VERSION
 
 from talemate.config import Config as AppConfigData, load_config, save_config
 
@@ -7,6 +8,12 @@ log = structlog.get_logger("talemate.server.config")
 
 class ConfigPayload(pydantic.BaseModel):
     config: AppConfigData
+    
+class DefaultCharacterPayload(pydantic.BaseModel):
+    name: str
+    gender: str
+    description: str
+    color: str = "#3362bb"
     
 class ConfigPlugin:
     
@@ -36,8 +43,38 @@ class ConfigPlugin:
         save_config(current_config)
         
         self.websocket_handler.config = current_config
-
+        self.websocket_handler.queue_put({
+            "type": "app_config",
+            "data": load_config(),
+            "version": VERSION
+        })
         self.websocket_handler.queue_put({
             "type": "config",
             "action": "save_complete",
         }) 
+        
+    async def handle_save_default_character(self, data):
+        
+        log.info("Saving default character", data=data["data"])
+        
+        payload = DefaultCharacterPayload(**data["data"])
+        
+        current_config = load_config()
+        
+        current_config["game"]["default_player_character"] = payload.model_dump()
+        
+        log.info("Saving default character", character=current_config["game"]["default_player_character"])
+        
+        save_config(current_config)
+        
+        self.websocket_handler.config = current_config
+        self.websocket_handler.queue_put({
+            "type": "app_config",
+            "data": load_config(),
+            "version": VERSION
+        })
+        self.websocket_handler.queue_put({
+            "type": "config",
+            "action": "save_default_character_complete",
+        })
+        

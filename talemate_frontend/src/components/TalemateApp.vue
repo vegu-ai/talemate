@@ -11,7 +11,7 @@
             Make sure the backend process is running.
           </p>
         </v-alert>
-        <LoadScene ref="loadScene" />
+        <LoadScene ref="loadScene" @loading="sceneStartedLoading" />
         <v-divider></v-divider>
         <div :style="(sceneActive && scene.environment === 'scene' ? 'display:block' : 'display:none')">
           <!-- <GameOptions v-if="sceneActive" ref="gameOptions" /> -->
@@ -451,6 +451,10 @@ export default {
     uxErrorHandler(error) {
       this.errorNotification = true;
       this.errorMessage = error;
+    },
+    sceneStartedLoading() {
+      this.loading = true;
+      this.sceneActive = false;
     }
   }
 }

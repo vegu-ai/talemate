@@ -42,17 +42,17 @@ class Agent(BaseModel):
         return super().model_dump(exclude_none=True)
 
 class GamePlayerCharacter(BaseModel):
-    name: str
-    color: str
-    gender: str
-    description: Optional[str]
+    name: str = ""
+    color: str = "#3362bb"
+    gender: str = ""
+    description: Optional[str] = ""
 
     class Config:
         extra = "ignore"
 
 
 class Game(BaseModel):
-    default_player_character: GamePlayerCharacter
+    default_player_character: GamePlayerCharacter = GamePlayerCharacter()
     
     class Config:
         extra = "ignore"

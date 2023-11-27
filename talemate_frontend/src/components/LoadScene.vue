@@ -1,10 +1,13 @@
 <template>
-    <v-list-subheader @click="toggle()" class="text-uppercase"><v-icon>mdi-script-text-outline</v-icon> Load
+    <v-list-subheader v-if="appConfig !== null" @click="toggle()" class="text-uppercase"><v-icon>mdi-script-text-outline</v-icon> Load
         <v-progress-circular v-if="loading" indeterminate color="primary" size="20"></v-progress-circular>
         <v-icon v-if="expanded" icon="mdi-chevron-down"></v-icon>
         <v-icon v-else icon="mdi-chevron-up"></v-icon>
     </v-list-subheader>
-    <v-list-item-group v-if="!loading && isConnected() && expanded && !configurationRequired()">
+    <v-list-subheader class="text-uppercase" v-else>
+        <v-progress-circular indeterminate color="primary" size="20"></v-progress-circular> Waiting for config...
+    </v-list-subheader>
+    <v-list-item-group v-if="!loading && isConnected() && expanded && !configurationRequired() && appConfig !== null">
         <v-list-item>
             <v-list-item-content class="mb-3">
                 <!-- Toggle buttons for switching between file upload and path input -->
@@ -43,12 +46,18 @@
     <div v-else-if="configurationRequired()">
         <v-alert type="warning" variant="tonal">You need to configure a Talemate client before you can load scenes.</v-alert>
     </div>
+    <DefaultCharacter ref="defaultCharacterModal" @save="loadScene" @cancel="loadCanceled"></DefaultCharacter>
 </template>
   
 
 <script>
+import DefaultCharacter from './DefaultCharacter.vue';
+
 export default {
     name: 'LoadScene',
+    components: {
+        DefaultCharacter,
+    },
     data() {
         return {
             loading: false,
@@ -60,10 +69,16 @@ export default {
             sceneSearchLoading: false,
             sceneSaved: null,
             expanded: true,
+            appConfig: null, // Store the app configuration
         }
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'isConnected', 'configurationRequired'],
     methods: {
+        // Method to show the DefaultCharacter modal
+        showDefaultCharacterModal() {
+            this.$refs.defaultCharacterModal.open();
+        },
+
         toggle() {
             this.expanded = !this.expanded;
         },
@@ -89,6 +104,12 @@ export default {
             this.loading = true;
             this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: "environment:creative" }));
         },
+        loadCanceled() {
+            console.log("Load canceled");
+            this.loading = false;
+            this.sceneFile = [];
+        },
+
         loadScene() {
 
             if(this.sceneSaved === false) {
@@ -97,13 +118,26 @@ export default {
                 }
             }
 
-            this.loading = true;
+            this.sceneSaved = null;
+
             if (this.inputMethod === 'file' && this.sceneFile.length > 0) { // Check if the input method is "file" and there is at least one file
+            
+                // if file is image check if default character is set
+                if(this.sceneFile[0].type.startsWith("image/")) {
+                    if(!this.appConfig.game.default_player_character.name) {
+                        this.showDefaultCharacterModal();
+                        return;
+                    }
+                }
+
+                this.loading = true;
+            
                 // Convert the uploaded file to base64
                 const reader = new FileReader();
                 reader.readAsDataURL(this.sceneFile[0]); // Access the first file in the array
                 reader.onload = () => {
                     //const base64File = reader.result.split(',')[1];
+                    this.$emit("loading", true)
                     this.getWebsocket().send(JSON.stringify({ 
                         type: 'load_scene', 
                         scene_data: reader.result, 
@@ -112,11 +146,18 @@ export default {
                     this.sceneFile = [];
                 };
             } else if (this.inputMethod === 'path' && this.sceneInput) { // Check if the input method is "path" and the scene input is not empty
+                this.loading = true;
+                this.$emit("loading", true)
                 this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: this.sceneInput }));
                 this.sceneInput = '';
             }
         },
         handleMessage(data) {
+            // Handle app configuration
+            if (data.type === 'app_config') {
+                this.appConfig = data.data;
+                console.log("App config", this.appConfig);
+            }
 
             // Scene loaded
             if (data.type === "system") {
@@ -139,10 +180,11 @@ export default {
                 return;
             }
 
-        }
+        },
     },
     created() {
         this.registerMessageHandler(this.handleMessage);
+        //this.getWebsocket().send(JSON.stringify({ type: 'request_config' })); // Request the current app configuration
     },
     mounted() {
         console.log("Websocket", this.getWebsocket()); // Check if websocket is available

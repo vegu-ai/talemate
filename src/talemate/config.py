@@ -68,6 +68,7 @@ class RunPodConfig(BaseModel):
     
 class ElevenLabsConfig(BaseModel):
     api_key: Union[str,None]=None
+    model_id: str = "eleven_turbo_v2"
     
 class CoquiConfig(BaseModel):
     api_key: Union[str,None]=None

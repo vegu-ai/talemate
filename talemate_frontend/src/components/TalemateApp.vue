@@ -39,7 +39,7 @@
           Clients</v-list-subheader>
         <v-list-item-group>
           <v-list-item>
-            <AIClient ref="aiClient" @save="saveClients" @clients-updated="saveClients" @client-assigned="saveAgents"></AIClient>
+            <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents"></AIClient>
           </v-list-item>
         </v-list-item-group>
         <v-divider></v-divider>
@@ -448,6 +448,10 @@ export default {
     openAppConfig() {
       this.$refs.appConfig.show();
     },
+    uxErrorHandler(error) {
+      this.errorNotification = true;
+      this.errorMessage = error;
+    }
   }
 }
 </script>

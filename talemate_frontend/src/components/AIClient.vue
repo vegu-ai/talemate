@@ -56,7 +56,7 @@
         </v-list-item-subtitle>
       </v-list-item>
     </v-list>
-    <ClientModal :dialog="dialog" :formTitle="formTitle" @save="saveClient" @update:dialog="updateDialog"></ClientModal>
+    <ClientModal :dialog="dialog" :formTitle="formTitle" @save="saveClient" @error="propagateError" @update:dialog="updateDialog"></ClientModal>
     <v-alert type="warning" variant="tonal" v-if="state.clients.length === 0">You have no LLM clients configured. Add one.</v-alert>
     <v-btn @click="openModal" prepend-icon="mdi-plus-box">Add client</v-btn>
   </div>
@@ -126,6 +126,9 @@ export default {
       };
       this.state.formTitle = 'Add Client';
       this.state.dialog = true;
+    },
+    propagateError(error) {
+      this.$emit('error', error);
     },
     saveClient(client) {
       const index = this.state.clients.findIndex(c => c.name === client.name);

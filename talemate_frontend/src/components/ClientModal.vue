@@ -8,7 +8,7 @@
             <v-container>
             <v-row>
                 <v-col cols="6">
-                  <v-select v-model="client.type" :disabled="!typeEditable()" :items="['openai', 'textgenwebui', 'lmstudio']" label="Client Type"></v-select>
+                  <v-select v-model="client.type" :disabled="!typeEditable()" :items="['openai', 'textgenwebui', 'lmstudio']" label="Client Type" @update:model-value="resetToDefaults"></v-select>
                 </v-col>
                 <v-col cols="6">
                   <v-text-field v-model="client.name" label="Client Name"></v-text-field>
@@ -47,7 +47,25 @@ export default {
   data() {
     return {
       localDialog: this.state.dialog,
-      client: { ...this.state.currentClient } // Define client data property
+      client: { ...this.state.currentClient },
+      defaultValuesByCLientType: {
+        // when client type is changed in the modal, these values will be used
+        // to populate the form
+        'textgenwebui': {
+          apiUrl: 'http://localhost:5000',
+          max_token_length: 4096,
+          name_prefix: 'TextGenWebUI',
+        },
+        'openai': {
+          model: 'gpt4-1106-preview',
+          name_prefix: 'OpenAI',
+        },
+        'lmstudio': {
+          apiUrl: 'http://localhost:1234',
+          max_token_length: 4096,
+          name_prefix: 'LMStudio',
+        }
+      }
     };
   },
   watch: {
@@ -68,6 +86,25 @@ export default {
     }
   },
   methods: {
+    resetToDefaults() {
+      const defaults = this.defaultValuesByCLientType[this.client.type];
+      if (defaults) {
+        this.client.model = defaults.model || '';
+        this.client.apiUrl = defaults.apiUrl || '';
+        this.client.max_token_length = defaults.max_token_length || 4096;
+        // loop and build name from prefix, checking against current clients
+        let name = defaults.name_prefix;
+        let i = 2;
+        while (this.state.clients.find(c => c.name === name)) {
+          name = `${defaults.name_prefix} ${i}`;
+          i++;
+        }
+        this.client.name = name;
+      }
+    },
+    validateName() {
+      return this.state.clients.findIndex(c => c.name === this.client.name) === -1;
+    },
     typeEditable() {
       return this.state.formTitle === 'Add Client';
     },
@@ -75,6 +112,12 @@ export default {
       this.$emit('update:dialog', false);
     },
     save() {
+
+      if(!this.validateName()) {
+        this.$emit('error', 'Client name already exists');
+        return;
+      }
+
       this.$emit('save', this.client); // Emit save event with client object
       this.close();
     },

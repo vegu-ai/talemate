@@ -472,7 +472,7 @@ class TTSAgent(Agent):
             }
             data = {
                 "text": text,
-                "model_id": self.config.get("elevenlabs",{}).get("model_id"),
+                "model_id": self.config.get("elevenlabs",{}).get("model"),
                 "voice_settings": {
                     "stability": 0.5,
                     "similarity_boost": 0.5

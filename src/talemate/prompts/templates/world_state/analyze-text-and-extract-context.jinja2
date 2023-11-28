@@ -1,6 +1,6 @@
-
+{% set questions = instruct_text("Ask the narrator three (3) questions to gather more context from the past for the continuation of this conversation. If a character is asking about a state, location or information about an item or another character, make sure to include question(s) that help gather context for this.", text) %}
 <|SECTION:CONTEXT|>
-{% for memory in query_memory(text, as_question_answer=False, max_tokens=max_tokens-500, iterate=20) -%}
+{% for memory in query_memory(questions, as_question_answer=False, max_tokens=max_tokens-500, iterate=10) -%}
 {{ memory }}
 
 {% endfor -%}
@@ -8,7 +8,7 @@
 <|SECTION:TASK|>
 Answer the following questions:
 
-{{ instruct_text("Ask the narrator three (3) questions to gather more context from the past for the continuation of this conversation. If a character is asking about a state, location or information about an item or another character, make sure to include question(s) that help gather context for this.", text) }}
+{{ questions }}
 
 You answers should be precise, truthful and short. Pay close attention to timestamps when retrieving information from the context.
 

@@ -412,5 +412,7 @@ class NarratorAgent(Agent):
         
         if not allow_dialogue:
             response = response.split('"')[0].strip()
+            response = response.replace("*", "")
+            response = f"*{response}*"
 
         return response

@@ -497,13 +497,9 @@ def duration_to_timedelta(duration):
     if isinstance(duration, datetime.timedelta):
         return duration
 
-    # Check if the duration is an isodate.Duration object with a tdelta attribute
-    if hasattr(duration, 'tdelta'):
-        return duration.tdelta
-
     # If it's an isodate.Duration object with separate year, month, day, hour, minute, second attributes
     days = int(duration.years) * 365 + int(duration.months) * 30 + int(duration.days)
-    seconds = int(duration.hours) * 3600 + int(duration.minutes) * 60 + int(duration.seconds)
+    seconds = duration.tdelta.seconds
     return datetime.timedelta(days=days, seconds=seconds)
 
 def timedelta_to_duration(delta):

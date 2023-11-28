@@ -104,7 +104,7 @@ class TTSAgent(Agent):
     """
     
     agent_type = "tts"
-    verbose_name = "Text to speech"
+    verbose_name = "Voice"
     requires_llm_client = False
     
     @classmethod

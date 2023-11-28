@@ -429,7 +429,7 @@ export default {
       let agent = this.$refs.aiAgent.getActive();
 
       if (agent) {
-        return agent.name;
+        return agent.label;
       }
       return null;
     },

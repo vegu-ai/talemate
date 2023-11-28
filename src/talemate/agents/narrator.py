@@ -92,6 +92,12 @@ class NarratorAgent(Agent):
                         max=1.0,
                         step=0.1,
                     ),
+                    "generate_dialogue": AgentActionConfig(
+                        type="bool",
+                        label="Allow Dialogue in Narration", 
+                        description="Allow the narrator to generate dialogue in narration",
+                        value=False,
+                    ),
                 }
             ),
         }
@@ -401,5 +407,10 @@ class NarratorAgent(Agent):
 
         response = self.clean_result(response.strip().strip("*"))
         response = f"*{response}*"
+        
+        allow_dialogue = self.actions["narrate_dialogue"].config["generate_dialogue"].value
+        
+        if not allow_dialogue:
+            response = response.split('"')[0].strip()
 
         return response

@@ -38,7 +38,6 @@ if not TTS:
     # so we don't want to require it unless the user wants to use it
     log.info("TTS (local) requires the TTS package, please install with `pip install TTS` if you want to use the local api")
 
-nltk.download("punkt")
 
 def parse_chunks(text):
     
@@ -121,6 +120,7 @@ class TTSAgent(Agent):
     def __init__(self, **kwargs):
         
         self.is_enabled = False
+        nltk.download("punkt", quiet=True)
         
         self.voices = {
             "elevenlabs": VoiceLibrary(api="elevenlabs"),

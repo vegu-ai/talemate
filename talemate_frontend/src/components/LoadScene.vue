@@ -146,6 +146,16 @@ export default {
                     this.sceneFile = [];
                 };
             } else if (this.inputMethod === 'path' && this.sceneInput) { // Check if the input method is "path" and the scene input is not empty
+                
+                // if path ends with .png/jpg/webp check if default character is set
+
+                if(this.sceneInput.endsWith(".png") || this.sceneInput.endsWith(".jpg") || this.sceneInput.endsWith(".webp")) {
+                    if(!this.appConfig.game.default_player_character.name) {
+                        this.showDefaultCharacterModal();
+                        return;
+                    }
+                }
+            
                 this.loading = true;
                 this.$emit("loading", true)
                 this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: this.sceneInput }));

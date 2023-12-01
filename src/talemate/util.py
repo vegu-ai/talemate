@@ -857,6 +857,15 @@ def ensure_dialog_line_format(line:str):
             elif segment_open is not None and segment_open != c:
                 # open segment is not the same as the current character
                 # opening - close the current segment and open a new one
+                
+                # if we are at the last character we append the segment
+                if i == len(line)-1 and segment.strip():
+                    segment += c
+                    segments += [segment.strip()]
+                    segment_open = None
+                    segment = None
+                    continue
+        
                 segments += [segment.strip()]
                 segment_open = c
                 segment = c
@@ -921,4 +930,27 @@ def ensure_dialog_line_format(line:str):
         elif next_segment and next_segment[0] == '*':
             segments[i] = f"\"{segment}\""
             
+    for i in range(len(segments)):
+        segments[i] = clean_uneven_markers(segments[i], '"')
+        segments[i] = clean_uneven_markers(segments[i], '*')
+            
     return " ".join(segment for segment in segments if segment).strip()
+
+
+def clean_uneven_markers(chunk:str, marker:str):
+    
+    # if there is an uneven number of quotes, remove the last one if its
+    # at the end of the chunk. If its in the middle, add a quote to the endc
+    count = chunk.count(marker)
+    
+    if count % 2 == 1:
+        if chunk.endswith(marker):
+            chunk = chunk[:-1]
+        elif chunk.startswith(marker):
+            chunk = chunk[1:]
+        elif count == 1:
+            chunk = chunk.replace(marker, "")
+        else:
+            chunk += marker
+    
+    return chunk

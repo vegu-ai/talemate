@@ -872,14 +872,15 @@ def ensure_dialog_line_format(line:str):
                 segment += c
                 
     if segment is not None:
-        segments += [segment.strip()]
+        if segment.strip().strip("*").strip('"'):
+            segments += [segment.strip()]
         
     for i in range(len(segments)):
         segment = segments[i]
         if segment in ['"', '*']:
             if i > 0:
                 prev_segment = segments[i-1]
-                if prev_segment[-1] not in ['"', '*']:
+                if prev_segment and prev_segment[-1] not in ['"', '*']:
                     segments[i-1] = f"{prev_segment}{segment}"
                     segments[i] = ""
                     continue
@@ -920,4 +921,4 @@ def ensure_dialog_line_format(line:str):
         elif next_segment and next_segment[0] == '*':
             segments[i] = f"\"{segment}\""
             
-    return " ".join(segment for segment in segments if segment)
+    return " ".join(segment for segment in segments if segment).strip()

@@ -11,7 +11,7 @@
             Make sure the backend process is running.
           </p>
         </v-alert>
-        <LoadScene ref="loadScene" />
+        <LoadScene ref="loadScene" @loading="sceneStartedLoading" />
         <v-divider></v-divider>
         <div :style="(sceneActive && scene.environment === 'scene' ? 'display:block' : 'display:none')">
           <!-- <GameOptions v-if="sceneActive" ref="gameOptions" /> -->
@@ -39,7 +39,7 @@
           Clients</v-list-subheader>
         <v-list-item-group>
           <v-list-item>
-            <AIClient ref="aiClient" @save="saveClients" @clients-updated="saveClients" @client-assigned="saveAgents"></AIClient>
+            <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents"></AIClient>
           </v-list-item>
         </v-list-item-group>
         <v-divider></v-divider>
@@ -429,7 +429,7 @@ export default {
       let agent = this.$refs.aiAgent.getActive();
 
       if (agent) {
-        return agent.name;
+        return agent.label;
       }
       return null;
     },
@@ -448,6 +448,14 @@ export default {
     openAppConfig() {
       this.$refs.appConfig.show();
     },
+    uxErrorHandler(error) {
+      this.errorNotification = true;
+      this.errorMessage = error;
+    },
+    sceneStartedLoading() {
+      this.loading = true;
+      this.sceneActive = false;
+    }
   }
 }
 </script>

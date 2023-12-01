@@ -156,6 +156,12 @@ class EditorAgent(Agent):
                 message = content.split(character_prefix)[1]
                 content = f"{character_prefix}*{message.strip('*')}*"
                 return content
+            elif '"' in content:
+                # if both are present we strip the * and add them back later
+                # through ensure_dialog_format - right now most LLMs aren't
+                # smart enough to do quotes and italics at the same time consistently
+                # especially throughout long conversations
+                content = content.replace('*', '')
         
         content = util.clean_dialogue(content, main_name=character.name)        
         content = util.strip_partial_sentences(content)

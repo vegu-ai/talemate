@@ -38,7 +38,6 @@ if not TTS:
     # so we don't want to require it unless the user wants to use it
     log.info("TTS (local) requires the TTS package, please install with `pip install TTS` if you want to use the local api")
 
-nltk.download("punkt")
 
 def parse_chunks(text):
     
@@ -56,9 +55,24 @@ def parse_chunks(text):
     
     for i, chunk in enumerate(cleaned_chunks):
         chunk = chunk.replace("__ellipsis__", "...")
+
         cleaned_chunks[i] = chunk
     
     return cleaned_chunks
+
+def clean_quotes(chunk:str):
+    
+    # if there is an uneven number of quotes, remove the last one if its
+    # at the end of the chunk. If its in the middle, add a quote to the end
+    if chunk.count('"') % 2 == 1:
+        
+        if chunk.endswith('"'):
+            chunk = chunk[:-1]
+        else:
+            chunk += '"'
+    
+    return chunk
+        
 
 def rejoin_chunks(chunks:list[str], chunk_size:int=250):
     
@@ -74,14 +88,13 @@ def rejoin_chunks(chunks:list[str], chunk_size:int=250):
     for chunk in chunks:
             
         if len(current_chunk) + len(chunk) > chunk_size:
-            joined_chunks.append(current_chunk)
+            joined_chunks.append(clean_quotes(current_chunk))
             current_chunk = ""
         
         current_chunk += chunk
         
     if current_chunk:
-        joined_chunks.append(current_chunk)
-        
+        joined_chunks.append(clean_quotes(current_chunk))
     return joined_chunks
 
 
@@ -104,7 +117,7 @@ class TTSAgent(Agent):
     """
     
     agent_type = "tts"
-    verbose_name = "Text to speech"
+    verbose_name = "Voice"
     requires_llm_client = False
     
     @classmethod
@@ -121,6 +134,7 @@ class TTSAgent(Agent):
     def __init__(self, **kwargs):
         
         self.is_enabled = False
+        nltk.download("punkt", quiet=True)
         
         self.voices = {
             "elevenlabs": VoiceLibrary(api="elevenlabs"),
@@ -175,7 +189,7 @@ class TTSAgent(Agent):
                     ),
                     "generate_chunks": AgentActionConfig(
                         type="bool",
-                        value=True,
+                        value=False,
                         label="Split generation",
                         description="Generate audio chunks for each sentence - will be much more responsive but may loose context to inform inflection",
                     )
@@ -472,7 +486,7 @@ class TTSAgent(Agent):
             }
             data = {
                 "text": text,
-                "model_id": "eleven_monolingual_v1",
+                "model_id": self.config.get("elevenlabs",{}).get("model"),
                 "voice_settings": {
                     "stability": 0.5,
                     "similarity_boost": 0.5

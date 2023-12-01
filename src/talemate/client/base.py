@@ -142,6 +142,8 @@ class ClientBase:
             return system_prompts.EDITOR
         if "world_state" in kind:
             return system_prompts.WORLD_STATE
+        if "analyze_freeform" in kind:
+            return system_prompts.ANALYST_FREEFORM
         if "analyst" in kind:
             return system_prompts.ANALYST
         if "analyze" in kind:

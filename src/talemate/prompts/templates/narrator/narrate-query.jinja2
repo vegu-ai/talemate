@@ -6,15 +6,21 @@
 {% endfor %}
 <|SECTION:TASK|>
 {% if query.endswith("?") -%}
-Question: {{ query }}
 Extra context: {{ query_memory(query, as_question_answer=False) }}
-Instruction: Analyze Context, History and Dialogue. When evaluating both story and memory, story is more important. You can fill in gaps using imagination as long as it is based on the existing context. Respect the scene progression and answer in the context of the end of the dialogue.
+Instruction: Analyze Context, History and Dialogue and then answer the question: "{{ query }}". 
+
+When evaluating both story and context, story is more important. You can fill in gaps using imagination as long as it is based on the existing context. 
+
+Respect the scene progression and answer in the context of the end of the dialogue. 
+
+Use your imagination to fill in gaps in order to answer the question in a confident and decisive manner. Avoid uncertainty and vagueness.
 {% else -%}
 Instruction: {{ query }}
 Extra context: {{ query_memory(query, as_question_answer=False) }}
-Answer based on Context, History and Dialogue. When evaluating both story and memory, story is more important. You can fill in gaps using imagination as long as it is based on the existing context. 
+Answer based on Context, History and Dialogue. 
+When evaluating both story and context, story is more important. You can fill in gaps using imagination as long as it is based on the existing context. 
 {% endif -%}
 Content Context: This is a specific scene from {{ scene.context }}
-Your answer should be in the style of short narration that fits the context of the scene.
+Your answer should be in the style of short, concise narration that fits the context of the scene. (1 to 2 sentences)
 <|CLOSE_SECTION|>
 Narrator answers: {% if at_the_end %}{{ bot_token }}At the end of the dialogue, {% endif %}

@@ -14,9 +14,17 @@ Content Context: {{ scene.context }}
 {{ scene_context }}
 {% endfor %}
 <|SECTION:TASK|>
-Continue the current dialogue by narrating the progression of the scene
-Narration style: point and click adventure game from the 90s
+Continue the current dialogue by narrating the progression of the scene.
+
 If the scene is over, narrate the beginning of the next scene.
+
+Be creative and generate something new and interesting, but stay true to the setting and context of the story so far.
+
+Use an informal and colloquial register with a conversational tone. Overall, the narrative is informal, conversational, natural, and spontaneous, with a sense of immediacy.
+
+Narration style should be that of a 90s point and click adventure game. You are omniscient and can describe the scene in detail.
+
+Only generate new narration. Avoid including any character's internal thoughts or dialogue.
 <|CLOSE_SECTION|>
 {{ bot_token }}
 {% for row in scene.history[-10:] -%}

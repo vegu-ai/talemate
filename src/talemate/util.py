@@ -497,13 +497,9 @@ def duration_to_timedelta(duration):
     if isinstance(duration, datetime.timedelta):
         return duration
 
-    # Check if the duration is an isodate.Duration object with a tdelta attribute
-    if hasattr(duration, 'tdelta'):
-        return duration.tdelta
-
     # If it's an isodate.Duration object with separate year, month, day, hour, minute, second attributes
     days = int(duration.years) * 365 + int(duration.months) * 30 + int(duration.days)
-    seconds = int(duration.hours) * 3600 + int(duration.minutes) * 60 + int(duration.seconds)
+    seconds = duration.tdelta.seconds
     return datetime.timedelta(days=days, seconds=seconds)
 
 def timedelta_to_duration(delta):
@@ -861,6 +857,15 @@ def ensure_dialog_line_format(line:str):
             elif segment_open is not None and segment_open != c:
                 # open segment is not the same as the current character
                 # opening - close the current segment and open a new one
+                
+                # if we are at the last character we append the segment
+                if i == len(line)-1 and segment.strip():
+                    segment += c
+                    segments += [segment.strip()]
+                    segment_open = None
+                    segment = None
+                    continue
+        
                 segments += [segment.strip()]
                 segment_open = c
                 segment = c
@@ -876,14 +881,15 @@ def ensure_dialog_line_format(line:str):
                 segment += c
                 
     if segment is not None:
-        segments += [segment.strip()]
+        if segment.strip().strip("*").strip('"'):
+            segments += [segment.strip()]
         
     for i in range(len(segments)):
         segment = segments[i]
         if segment in ['"', '*']:
             if i > 0:
                 prev_segment = segments[i-1]
-                if prev_segment[-1] not in ['"', '*']:
+                if prev_segment and prev_segment[-1] not in ['"', '*']:
                     segments[i-1] = f"{prev_segment}{segment}"
                     segments[i] = ""
                     continue
@@ -924,4 +930,27 @@ def ensure_dialog_line_format(line:str):
         elif next_segment and next_segment[0] == '*':
             segments[i] = f"\"{segment}\""
             
-    return " ".join(segment for segment in segments if segment)
+    for i in range(len(segments)):
+        segments[i] = clean_uneven_markers(segments[i], '"')
+        segments[i] = clean_uneven_markers(segments[i], '*')
+            
+    return " ".join(segment for segment in segments if segment).strip()
+
+
+def clean_uneven_markers(chunk:str, marker:str):
+    
+    # if there is an uneven number of quotes, remove the last one if its
+    # at the end of the chunk. If its in the middle, add a quote to the endc
+    count = chunk.count(marker)
+    
+    if count % 2 == 1:
+        if chunk.endswith(marker):
+            chunk = chunk[:-1]
+        elif chunk.startswith(marker):
+            chunk = chunk[1:]
+        elif count == 1:
+            chunk = chunk.replace(marker, "")
+        else:
+            chunk += marker
+    
+    return chunk

@@ -516,7 +516,7 @@ class Prompt:
                 
                 log.warning("parse_json_response error on first attempt - sending to AI to fix", response=response, error=e)
                 fixed_response = await self.client.send_prompt(
-                    f"fix the syntax errors in this JSON string, but keep the structure as is.\n\nError:{e}\n\n```json\n{response}\n```<|BOT|>"+"{",
+                    f"fix the syntax errors in this JSON string, but keep the structure as is. Remove any comments.\n\nError:{e}\n\n```json\n{response}\n```<|BOT|>"+"{",
                     kind="analyze_long",
                 )
                 log.warning("parse_json_response error on first attempt - sending to AI to fix", response=response, error=e)

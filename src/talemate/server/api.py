@@ -56,7 +56,7 @@ async def websocket_endpoint(websocket, path):
                     await instance.sync_client_bootstraps()
                 except Exception as e:
                     log.error("send_client_bootstraps", error=e, traceback=traceback.format_exc())
-                await asyncio.sleep(60)
+                await asyncio.sleep(15)
                 
         send_client_bootstraps_task = asyncio.create_task(send_client_bootstraps())
 

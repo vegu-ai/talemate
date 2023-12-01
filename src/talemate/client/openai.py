@@ -187,7 +187,7 @@ class OpenAIClient(ClientBase):
             expected_response = right.strip()
             if expected_response.startswith("{") and supports_json_object:
                 parameters["response_format"] = {"type": "json_object"}
-        except IndexError:
+        except (IndexError, ValueError):
             pass
         
         human_message = {'role': 'user', 'content': prompt.strip()}

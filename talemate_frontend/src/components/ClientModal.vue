@@ -58,7 +58,7 @@ export default {
           name_prefix: 'TextGenWebUI',
         },
         'openai': {
-          model: 'gpt4-1106-preview',
+          model: 'gpt-4-1106-preview',
           name_prefix: 'OpenAI',
         },
         'lmstudio': {
@@ -104,6 +104,12 @@ export default {
       }
     },
     validateName() {
+
+      // if we are editing a client, we should exclude the current client from the check
+      if(!this.typeEditable()) {
+        return this.state.clients.findIndex(c => c.name === this.client.name && c.name !== this.state.currentClient.name) === -1;
+      }
+
       return this.state.clients.findIndex(c => c.name === this.client.name) === -1;
     },
     typeEditable() {

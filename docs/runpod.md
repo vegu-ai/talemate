@@ -37,7 +37,7 @@ When choosing the template for your pod, choose the `RunPod TheBloke LLMs` templ
 
 > :warning: The name of your pod is important and ensures that Talemate will be able to find it. Talemate will only be able to find pods that have the word `thebloke llms` or `textgen` in their name. (case insensitive)
 
-Once your pod is deployed has finished setup and is running the client will pop up in the Talemate client list, making it available for you to use like you would use a locally hosted text-generation-webui instance.
+Once your pod is and deployed has finished setup and is running, the client will automatically appear in the Talemate client list, making it available for you to use like you would use a locally hosted text-generation-webui instance.
 
 ![RunPod client](img/runpod-docs-1.png)
 

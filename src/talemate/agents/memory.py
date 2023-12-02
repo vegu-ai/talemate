@@ -480,7 +480,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             if distance < 1:
                 
                 try:
-                    log.debug("chromadb agent get", ts=ts, scene_ts=self.scene.ts)
+                    #log.debug("chromadb agent get", ts=ts, scene_ts=self.scene.ts)
                     date_prefix = util.iso8601_diff_to_human(ts, self.scene.ts)
                 except Exception as e:
                     log.error("chromadb agent", error="failed to get date prefix", details=e, ts=ts, scene_ts=self.scene.ts)

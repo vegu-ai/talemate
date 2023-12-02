@@ -17,7 +17,7 @@ import talemate.client.system_prompts as system_prompts
 import talemate.util as util
 from talemate.client.context import client_context_attribute
 from talemate.client.model_prompts import model_prompt
-
+from talemate.agents.context import active_agent
 
 # Set up logging level for httpx to WARNING to suppress debug logs.
 logging.getLogger('httpx').setLevel(logging.WARNING)
@@ -246,6 +246,10 @@ class ClientBase:
         fn_tune_kind = getattr(self, f"tune_prompt_parameters_{kind}", None)
         if fn_tune_kind:
             fn_tune_kind(parameters)
+
+        agent_context = active_agent.get()
+        if agent_context.agent:
+            agent_context.agent.inject_prompt_paramters(parameters, kind, agent_context.action)
         
     def tune_prompt_parameters_conversation(self, parameters:dict):
         conversation_context = client_context_attribute("conversation")
@@ -277,7 +281,7 @@ class ClientBase:
             return ""
         
     async def send_prompt(
-        self, prompt: str, kind: str = "conversation", finalize: Callable = lambda x: x
+        self, prompt: str, kind: str = "conversation", finalize: Callable = lambda x: x, retries:int=2
     ) -> str:
         """
         Send a prompt to the AI and return its response.
@@ -300,8 +304,18 @@ class ClientBase:
             time_start = time.time()
             extra_stopping_strings = prompt_param.pop("extra_stopping_strings", [])
 
-            self.log.debug("send_prompt",  token_length=token_length, max_token_length=self.max_token_length, parameters=prompt_param)
+            self.log.debug("send_prompt", token_length=token_length, max_token_length=self.max_token_length, parameters=prompt_param)
             response = await self.generate(finalized_prompt, prompt_param, kind)
+            
+            agent_context = active_agent.get()
+            if self.jiggle_enabled_for(kind):
+                is_repetition, similarity_score = util.similarity_score(response, finalized_prompt.split("\n"), threshold=90)
+                while is_repetition and retries > 0:
+                    self.log.warn("send_prompt similarity retry", agent=agent_context.agent.agent_type, similarity_score=similarity_score, retries=retries)
+                    self.jiggle_randomness(prompt_param)
+                    response = await self.generate(finalized_prompt, prompt_param, kind)
+                    is_repetition, similarity_score = util.similarity_score(response, finalized_prompt.split("\n"), threshold=90)
+                    retries -= 1
             
             time_end = time.time()
             
@@ -342,10 +356,10 @@ class ClientBase:
         
     def jiggle_enabled_for(self, kind:str):
         
-        if kind in ["conversation", "story"]:
-            return True
+        agent_context = active_agent.get()
+        agent = agent_context.agent
         
-        if kind.startswith("narrate"):
-            return True
+        if not agent:
+            return False
         
-        return False
+        return agent.allow_repetition_break(kind, agent_context.action)

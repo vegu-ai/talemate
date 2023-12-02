@@ -90,14 +90,19 @@ class ConversationAgent(Agent):
                     ),
                     "jiggle": AgentActionConfig(
                         type="number",
-                        label="Jiggle",
+                        label="Jiggle (Increased Randomness)",
                         description="If > 0.0 will cause certain generation parameters to have a slight random offset applied to them. The bigger the number, the higher the potential offset.",
                         value=0.0,
                         min=0.0,
                         max=1.0,
                         step=0.1,
-                    ),
+                    )
                 }
+            ),
+            "auto_break_repetition": AgentAction(
+                enabled = True,
+                label = "Auto Break Repetition",
+                description = "Will attempt to automatically break AI repetition.",
             ),
             "natural_flow": AgentAction(
                 enabled = True,
@@ -534,3 +539,11 @@ class ConversationAgent(Agent):
         actor.scene.push_history(messages)
 
         return messages
+
+
+    def allow_repetition_break(self, kind: str, agent_function_name: str):
+        
+        if not self.actions["auto_break_repetition"].enabled:
+            return False
+        
+        return agent_function_name == "converse"

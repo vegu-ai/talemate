@@ -68,6 +68,11 @@ class NarratorAgent(Agent):
         # agent actions
         
         self.actions = {
+            "auto_break_repetition": AgentAction(
+                enabled = True,
+                label = "Auto Break Repetition",
+                description = "Will attempt to automatically break AI repetition.",
+            ),
             "narrate_time_passage": AgentAction(enabled=True, label="Narrate Time Passage", description="Whenever you indicate passage of time, narrate right after"),
             "narrate_dialogue": AgentAction(
                 enabled=True, 
@@ -416,3 +421,18 @@ class NarratorAgent(Agent):
             response = f"*{response}*"
 
         return response
+    
+    # LLM client related methods. These are called during or after the client
+    
+    def inject_prompt_paramters(self, prompt_param: dict, kind: str, agent_function_name: str):
+        log.debug("inject_prompt_paramters", prompt_param=prompt_param, kind=kind, agent_function_name=agent_function_name)
+        character_names = [f"\n{c.name}:" for c in self.scene.get_characters()]
+        if prompt_param.get("extra_stopping_strings") is None:
+            prompt_param["extra_stopping_strings"] = []
+        prompt_param["extra_stopping_strings"] += character_names
+        
+    def allow_repetition_break(self, kind: str, agent_function_name: str):
+        if not self.actions["auto_break_repetition"].enabled:
+            return False
+        
+        return True

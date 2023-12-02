@@ -733,6 +733,31 @@ def extract_json(s):
     json_object = json.loads(json_string)
     return json_string, json_object
 
+def similarity_score(line: str, lines: list[str], threshold: int = 95) -> tuple[bool, int]:
+    """
+    Checks if a line is similar to any of the lines in the list of lines.
+    
+    Parameters:
+        line (str): The line to check.
+        lines (list): The list of lines to check against.
+        threshold (int): The similarity threshold to use when comparing lines.
+        
+    Returns:
+        bool: Whether a similar line was found.
+        int: The similarity score of the line. If no similar line was found, the highest similarity score is returned.
+    """
+    
+    highest_similarity = 0
+    
+    for existing_line in lines:
+        similarity = fuzz.ratio(line, existing_line)
+        highest_similarity = max(highest_similarity, similarity)
+        if similarity >= threshold:
+            return True, similarity
+        
+    return False, highest_similarity
+
+
 def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False) -> str:
     
     """

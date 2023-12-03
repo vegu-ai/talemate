@@ -41,6 +41,7 @@ class ClientBase:
     processing: bool = False
     connected: bool = False
     conversation_retries: int = 5
+    auto_break_repetition_enabled: bool = True
 
     client_type = "base"
 
@@ -307,15 +308,7 @@ class ClientBase:
             self.log.debug("send_prompt", token_length=token_length, max_token_length=self.max_token_length, parameters=prompt_param)
             response = await self.generate(finalized_prompt, prompt_param, kind)
             
-            agent_context = active_agent.get()
-            if self.jiggle_enabled_for(kind):
-                is_repetition, similarity_score = util.similarity_score(response, finalized_prompt.split("\n"), threshold=90)
-                while is_repetition and retries > 0:
-                    self.log.warn("send_prompt similarity retry", agent=agent_context.agent.agent_type, similarity_score=similarity_score, retries=retries)
-                    self.jiggle_randomness(prompt_param)
-                    response = await self.generate(finalized_prompt, prompt_param, kind)
-                    is_repetition, similarity_score = util.similarity_score(response, finalized_prompt.split("\n"), threshold=90)
-                    retries -= 1
+            response = await self.auto_break_repetition(finalized_prompt, prompt_param, response, kind, retries)
             
             time_end = time.time()
             
@@ -341,6 +334,78 @@ class ClientBase:
         finally:
             self.emit_status(processing=False)
             
+            
+    async def auto_break_repetition(
+        self, 
+        finalized_prompt:str, 
+        prompt_param:dict, 
+        response:str, 
+        kind:str, 
+        retries:int
+    ) -> str:
+        
+        """
+        If repetition breaking is enabled, this will retry the prompt if its
+        response is too similar to other messages in the prompt
+        
+        This requires the agent to have the allow_repetition_break method
+        and the jiggle_enabled_for method and the client to have the
+        auto_break_repetition_enabled attribute set to True
+        
+        Arguments:
+
+        - finalized_prompt: the prompt that was sent
+        - prompt_param: the parameters that were used
+        - response: the response that was received
+        - kind: the kind of generation
+        - retries: the number of retries left
+        
+        Returns:
+        
+        - the response
+        """
+        
+        if not self.auto_break_repetition_enabled:
+            return response
+        
+        agent_context = active_agent.get()
+        if self.jiggle_enabled_for(kind, auto=True):
+            
+            is_repetition, similarity_score, matched_line = util.similarity_score(
+                response, 
+                finalized_prompt.split("\n"), 
+            )
+            
+            if not is_repetition:
+                self.log.debug("send_prompt no similarity", similarity_score=similarity_score)
+                return response
+            
+            while is_repetition and retries > 0:
+                self.log.warn(
+                    "send_prompt similarity retry", 
+                    agent=agent_context.agent.agent_type, 
+                    similarity_score=similarity_score, 
+                    retries=retries
+                )
+                
+                self.jiggle_randomness(prompt_param, offset=0.5)
+                response = retried_response = await self.generate(finalized_prompt, prompt_param, kind)
+                self.log.debug("send_prompt dedupe sentences", response=response, matched_line=matched_line)
+                
+                response = util.dedupe_sentences(response, matched_line, similarity_threshold=85, debug=True)
+                self.log.debug("send_prompt dedupe sentences (after)", response=response)
+                
+                if not util.strip_partial_sentences(response).strip():
+                    response = retried_response
+                
+                is_repetition, similarity_score, matched_line = util.similarity_score(
+                    response, 
+                    finalized_prompt.split("\n"), 
+                )
+                retries -= 1
+        
+        return response
+        
     def count_tokens(self, content:str):
         return util.count_tokens(content)
 
@@ -354,7 +419,7 @@ class ClientBase:
         min_offset = offset * 0.3
         prompt_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
         
-    def jiggle_enabled_for(self, kind:str):
+    def jiggle_enabled_for(self, kind:str, auto:bool=False) -> bool:
         
         agent_context = active_agent.get()
         agent = agent_context.agent
@@ -362,4 +427,4 @@ class ClientBase:
         if not agent:
             return False
         
-        return agent.allow_repetition_break(kind, agent_context.action)
+        return agent.allow_repetition_break(kind, agent_context.action, auto=auto)

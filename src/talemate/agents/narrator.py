@@ -418,6 +418,7 @@ class NarratorAgent(Agent):
         if not allow_dialogue:
             response = response.split('"')[0].strip()
             response = response.replace("*", "")
+            response = util.strip_partial_sentences(response)
             response = f"*{response}*"
 
         return response
@@ -431,8 +432,8 @@ class NarratorAgent(Agent):
             prompt_param["extra_stopping_strings"] = []
         prompt_param["extra_stopping_strings"] += character_names
         
-    def allow_repetition_break(self, kind: str, agent_function_name: str):
-        if not self.actions["auto_break_repetition"].enabled:
+    def allow_repetition_break(self, kind: str, agent_function_name: str, auto:bool=False):
+        if auto and not self.actions["auto_break_repetition"].enabled:
             return False
         
         return True

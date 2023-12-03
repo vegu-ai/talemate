@@ -10,6 +10,7 @@ from typing import List
 from thefuzz import fuzz
 from colorama import Back, Fore, Style, init
 from PIL import Image
+from nltk.tokenize import sent_tokenize
 
 from talemate.scene_message import SceneMessage
 log = structlog.get_logger("talemate.util")
@@ -733,11 +734,11 @@ def extract_json(s):
     json_object = json.loads(json_string)
     return json_string, json_object
 
-def similarity_score(line: str, lines: list[str], threshold: int = 95) -> tuple[bool, int]:
+def similarity_score(line: str, lines: list[str], similarity_threshold: int = 95) -> tuple[bool, int, str]:
     """
     Checks if a line is similar to any of the lines in the list of lines.
     
-    Parameters:
+    Arguments:
         line (str): The line to check.
         lines (list): The list of lines to check against.
         threshold (int): The similarity threshold to use when comparing lines.
@@ -745,6 +746,7 @@ def similarity_score(line: str, lines: list[str], threshold: int = 95) -> tuple[
     Returns:
         bool: Whether a similar line was found.
         int: The similarity score of the line. If no similar line was found, the highest similarity score is returned.
+        str: The similar line that was found. If no similar line was found, None is returned.
     """
     
     highest_similarity = 0
@@ -752,18 +754,54 @@ def similarity_score(line: str, lines: list[str], threshold: int = 95) -> tuple[
     for existing_line in lines:
         similarity = fuzz.ratio(line, existing_line)
         highest_similarity = max(highest_similarity, similarity)
-        if similarity >= threshold:
-            return True, similarity
+        if similarity >= similarity_threshold:
+            return True, similarity, existing_line
         
-    return False, highest_similarity
+    return False, highest_similarity, None
 
+def dedupe_sentences(line_a:str, line_b:str, similarity_threshold:int=95, debug:bool=False) -> str:
+    """
+    Will split both lines into sentences and then compare each sentence in line_a
+    against similar sentences in line_b. If a similar sentence is found, it will be
+    removed from line_a.
+    
+    The similarity threshold is used to determine if two sentences are similar.
+    
+    Arguments:
+        line_a (str): The first line.
+        line_b (str): The second line.
+        similarity_threshold (int): The similarity threshold to use when comparing sentences.
+        debug (bool): Whether to log debug messages.
+    
+    Returns:
+        str: the cleaned line_a.
+    """
+    
+    line_a_sentences = sent_tokenize(line_a)
+    line_b_sentences = sent_tokenize(line_b)
+    
+    cleaned_line_a_sentences = []
+    
+    for line_a_sentence in line_a_sentences:
+        similar_found = False
+        for line_b_sentence in line_b_sentences:
+            similarity = fuzz.ratio(line_a_sentence, line_b_sentence)
+            if similarity >= similarity_threshold:
+                if debug:
+                    log.debug("DEDUPE SENTENCE", similarity=similarity, line_a_sentence=line_a_sentence, line_b_sentence=line_b_sentence)
+                similar_found = True
+                break
+        if not similar_found:
+            cleaned_line_a_sentences.append(line_a_sentence)
+            
+    return " ".join(cleaned_line_a_sentences)
 
 def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False) -> str:
     
     """
     Removes duplicate lines from a string.
     
-    Parameters:
+    Arguments:
         s (str): The input string.
         min_length (int): The minimum length of a line to be checked for duplicates.
         similarity_threshold (int): The similarity threshold to use when comparing lines.

@@ -75,6 +75,7 @@ class OpenAIClient(ClientBase):
 
     client_type = "openai"
     conversation_retries = 0
+    auto_break_repetition_enabled = False
 
     def __init__(self, model="gpt-4-1106-preview", **kwargs):
         

@@ -136,7 +136,7 @@ class ConversationAgent(Agent):
                 config = {
                     "ai_selected": AgentActionConfig(
                         type="bool",
-                        label="AI Selected",
+                        label="AI memory retrieval",
                         description="If enabled, the AI will select the long term memory to use. (will increase how long it takes to generate a response)",
                         value=False,
                     ),
@@ -541,9 +541,9 @@ class ConversationAgent(Agent):
         return messages
 
 
-    def allow_repetition_break(self, kind: str, agent_function_name: str):
+    def allow_repetition_break(self, kind: str, agent_function_name: str, auto: bool = False):
         
-        if not self.actions["auto_break_repetition"].enabled:
+        if auto and not self.actions["auto_break_repetition"].enabled:
             return False
         
         return agent_function_name == "converse"

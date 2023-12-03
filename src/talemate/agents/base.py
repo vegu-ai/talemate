@@ -296,7 +296,7 @@ class Agent(ABC):
         """
         pass
 
-    def allow_repetition_break(self, kind:str, agent_function_name:str):
+    def allow_repetition_break(self, kind:str, agent_function_name:str, auto:bool=False):
         """
         Returns True if repetition breaking is allowed, False otherwise.
         """

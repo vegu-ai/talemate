@@ -8,8 +8,10 @@ import talemate.events as events
 import talemate.util as util
 from talemate.context import scene_is_loading
 from talemate.config import load_config
+from talemate.agents.base import set_processing
 import structlog
 import shutil
+import functools
 
 try:
     import chromadb
@@ -67,33 +69,43 @@ class MemoryAgent(Agent):
     async def count(self):
         raise NotImplementedError()
 
+    @set_processing
     async def add(self, text, character=None, uid=None, ts:str=None, **kwargs):
         if not text:
             return
         if self.readonly:
             log.debug("memory agent", status="readonly")
             return
-        await self._add(text, character=character, uid=uid, ts=ts, **kwargs)
+        
+        loop = asyncio.get_running_loop()
+        
+        await loop.run_in_executor(None, functools.partial(self._add, text, character, uid=uid, ts=ts, **kwargs))
 
-    async def _add(self, text, character=None, ts:str=None, **kwargs):
+    def _add(self, text, character=None, ts:str=None, **kwargs):
         raise NotImplementedError()
 
+    @set_processing
     async def add_many(self, objects: list[dict]):
         if self.readonly:
             log.debug("memory agent", status="readonly")
             return
-        await self._add_many(objects)
+        
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._add_many, objects)
     
-    async def _add_many(self, objects: list[dict]):
+    def _add_many(self, objects: list[dict]):
         """
         Add multiple objects to the memory
         """
         raise NotImplementedError()
 
+    @set_processing
     async def get(self, text, character=None, **query):
-        return await self._get(str(text), character, **query)
+        loop = asyncio.get_running_loop()
+        
+        return await loop.run_in_executor(None, functools.partial(self._get, text, character, **query))
 
-    async def _get(self, text, character=None, **query):
+    def _get(self, text, character=None, **query):
         raise NotImplementedError()
 
     def get_document(self, id):
@@ -286,10 +298,12 @@ class ChromaDBMemoryAgent(MemoryAgent):
         await asyncio.sleep(0)
         return self.db.count()
 
+    @set_processing
     async def set_db(self):
-        await self.emit_status(processing=True)
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._set_db)
 
-
+    def _set_db(self):
         if not getattr(self, "db_client", None):
             log.info("chromadb agent", status="setting up db client to persistent db")
             self.db_client = chromadb.PersistentClient(
@@ -341,8 +355,6 @@ class ChromaDBMemoryAgent(MemoryAgent):
             self.db = self.db_client.get_or_create_collection(collection_name)
         
         self.scene._memory_never_persisted = self.db.count() == 0
-
-        await self.emit_status(processing=False)
         log.info("chromadb agent", status="db ready")
 
     def clear_db(self):
@@ -383,11 +395,9 @@ class ChromaDBMemoryAgent(MemoryAgent):
         
         self.db = None
         
-    async def _add(self, text, character=None, uid=None, ts:str=None, **kwargs):
+    def _add(self, text, character=None, uid=None, ts:str=None, **kwargs):
         metadatas = []
         ids = []
-
-        await self.emit_status(processing=True)
 
         if character:
             meta = {"character": character.name, "source": "talemate"}
@@ -413,16 +423,12 @@ class ChromaDBMemoryAgent(MemoryAgent):
         #log.debug("chromadb agent add", text=text, meta=meta, id=id)
 
         self.db.upsert(documents=[text], metadatas=metadatas, ids=ids)
-        
-        await self.emit_status(processing=False)
 
-    async def _add_many(self, objects: list[dict]):
+    def _add_many(self, objects: list[dict]):
         
         documents = []
         metadatas = []
         ids = []
-
-        await self.emit_status(processing=True)
 
         for obj in objects:
             documents.append(obj["text"])
@@ -436,11 +442,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             ids.append(uid)
         self.db.upsert(documents=documents, metadatas=metadatas, ids=ids)
 
-        await self.emit_status(processing=False)
-
-    async def _get(self, text, character=None, limit:int=15, **kwargs):
-        await self.emit_status(processing=True)
-
+    def _get(self, text, character=None, limit:int=15, **kwargs):
         where = {}
         where.setdefault("$and", [])
         
@@ -497,6 +499,4 @@ class ChromaDBMemoryAgent(MemoryAgent):
             if len(results) > limit:
                 break
 
-        await self.emit_status(processing=False)
-        
         return results

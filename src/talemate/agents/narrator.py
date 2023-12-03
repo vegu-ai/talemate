@@ -217,22 +217,11 @@ class NarratorAgent(Agent):
         """
 
         scene = self.scene
-        director = scene.get_helper("director").agent
         pc = scene.get_player_character()
         npcs = list(scene.get_npc_characters())
         npc_names=  ", ".join([npc.name for npc in npcs])
         
-        #summarized_history = await scene.summarized_dialogue_history(
-        #    budget = self.client.max_token_length - 300,
-        #    min_dialogue = 50,
-        #)
-        
-        #augmented_context = await self.augment_context()
-
         if narrative_direction is None:
-            #narrative_direction = await director.direct_narrative(
-            #    scene.context_history(budget=self.client.max_token_length - 500, min_dialogue=20),
-            #)
             narrative_direction = "Slightly move the current scene forward."
         
         self.scene.log.info("narrative_direction", narrative_direction=narrative_direction)
@@ -243,8 +232,6 @@ class NarratorAgent(Agent):
             "narrate",
             vars = {
                 "scene": self.scene,
-                #"summarized_history": summarized_history,
-                #"augmented_context": augmented_context,
                 "max_tokens": self.client.max_token_length,
                 "narrative_direction": narrative_direction,
                 "player_character": pc,

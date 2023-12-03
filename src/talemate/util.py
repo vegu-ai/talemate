@@ -759,7 +759,7 @@ def similarity_score(line: str, lines: list[str], similarity_threshold: int = 95
         
     return False, highest_similarity, None
 
-def dedupe_sentences(line_a:str, line_b:str, similarity_threshold:int=95, debug:bool=False) -> str:
+def dedupe_sentences(line_a:str, line_b:str, similarity_threshold:int=95, debug:bool=False, split_on_comma:bool=True) -> str:
     """
     Will split both lines into sentences and then compare each sentence in line_a
     against similar sentences in line_b. If a similar sentence is found, it will be
@@ -772,6 +772,7 @@ def dedupe_sentences(line_a:str, line_b:str, similarity_threshold:int=95, debug:
         line_b (str): The second line.
         similarity_threshold (int): The similarity threshold to use when comparing sentences.
         debug (bool): Whether to log debug messages.
+        split_on_comma (bool): Whether to split line_b sentences on commas as well.
     
     Returns:
         str: the cleaned line_a.
@@ -781,6 +782,21 @@ def dedupe_sentences(line_a:str, line_b:str, similarity_threshold:int=95, debug:
     line_b_sentences = sent_tokenize(line_b)
     
     cleaned_line_a_sentences = []
+    
+    if split_on_comma:
+        # collect all sentences from line_b that contain a comma
+        line_b_sentences_with_comma = []
+        for line_b_sentence in line_b_sentences:
+            if "," in line_b_sentence:
+                line_b_sentences_with_comma.append(line_b_sentence)
+                
+        # then split all sentences in line_b_sentences_with_comma on the comma
+        # and extend line_b_sentences with the split sentences, making sure
+        # to strip whitespace from the beginning and end of each sentence
+        
+        for line_b_sentence in line_b_sentences_with_comma:
+            line_b_sentences.extend([s.strip() for s in line_b_sentence.split(",")])
+            
     
     for line_a_sentence in line_a_sentences:
         similar_found = False

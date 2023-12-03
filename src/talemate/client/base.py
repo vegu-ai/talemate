@@ -37,7 +37,6 @@ class ClientBase:
     enabled: bool = True
     current_status: str = None
     max_token_length: int = 4096
-    randomizable_inference_parameters: list[str] = ["temperature"]
     processing: bool = False
     connected: bool = False
     conversation_retries: int = 5
@@ -341,7 +340,8 @@ class ClientBase:
         prompt_param:dict, 
         response:str, 
         kind:str, 
-        retries:int
+        retries:int,
+        pad_max_tokens:int=32,
     ) -> str:
         
         """
@@ -359,7 +359,8 @@ class ClientBase:
         - response: the response that was received
         - kind: the kind of generation
         - retries: the number of retries left
-        
+        - pad_max_tokens: increase response max_tokens by this amount per iteration
+                
         Returns:
         
         - the response
@@ -371,16 +372,26 @@ class ClientBase:
         agent_context = active_agent.get()
         if self.jiggle_enabled_for(kind, auto=True):
             
+            # check if the response is a repetition
+            # using the default similarity threshold of 98, meaning it needs
+            # to be really similar to be considered a repetition
+            
             is_repetition, similarity_score, matched_line = util.similarity_score(
                 response, 
                 finalized_prompt.split("\n"), 
             )
             
             if not is_repetition:
+                
+                # not a repetition, return the response
+                
                 self.log.debug("send_prompt no similarity", similarity_score=similarity_score)
                 return response
             
             while is_repetition and retries > 0:
+                
+                # it's a repetition, retry the prompt with adjusted parameters
+                
                 self.log.warn(
                     "send_prompt similarity retry", 
                     agent=agent_context.agent.agent_type, 
@@ -388,15 +399,41 @@ class ClientBase:
                     retries=retries
                 )
                 
+                # first we apply the client's randomness jiggle which will adjust
+                # parameters like temperature and repetition_penalty, depending
+                # on the client
+                #
+                # this is a cumulative adjustment, so it will add to the previous
+                # iteration's adjustment, this also means retries should be kept low
+                # otherwise it will get out of hand and start generating nonsense
+                
                 self.jiggle_randomness(prompt_param, offset=0.5)
+                
+                # then we pad the max_tokens by the pad_max_tokens amount
+                
+                prompt_param["max_tokens"] += pad_max_tokens
+                
+                # send the prompt again
+                
                 response = retried_response = await self.generate(finalized_prompt, prompt_param, kind)
                 self.log.debug("send_prompt dedupe sentences", response=response, matched_line=matched_line)
+                
+                # a lot of the times the response will now contain the repetition + something new
+                # so we dedupe the response to remove the repetition on sentences level
                 
                 response = util.dedupe_sentences(response, matched_line, similarity_threshold=85, debug=True)
                 self.log.debug("send_prompt dedupe sentences (after)", response=response)
                 
+                # deduping may have removed the entire response, so we check for that
+                
                 if not util.strip_partial_sentences(response).strip():
+                    
+                    # if the response is empty, we set the response to the original
+                    # and try again next loop
+                    
                     response = retried_response
+                
+                # check if the response is a repetition again
                 
                 is_repetition, similarity_score, matched_line = util.similarity_score(
                     response, 

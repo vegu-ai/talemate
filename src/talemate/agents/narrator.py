@@ -164,16 +164,22 @@ class NarratorAgent(Agent):
         
         if not self.actions["narrate_dialogue"].enabled:
             return
+        narrate_on_ai_chance = self.actions["narrate_dialogue"].config["ai_dialog"].value
+        narrate_on_player_chance = self.actions["narrate_dialogue"].config["player_dialog"].value
+        narrate_on_ai = random.random() < narrate_on_ai_chance
+        narrate_on_player = random.random() < narrate_on_player_chance
+        log.debug(
+            "narrate on dialog", 
+            narrate_on_ai=narrate_on_ai, 
+            narrate_on_ai_chance=narrate_on_ai_chance, 
+            narrate_on_player=narrate_on_player,
+            narrate_on_player_chance=narrate_on_player_chance,
+        )
         
-        narrate_on_ai_chance = random.random() < self.actions["narrate_dialogue"].config["ai_dialog"].value
-        narrate_on_player_chance = random.random() < self.actions["narrate_dialogue"].config["player_dialog"].value
-        
-        log.debug("narrate on dialog", narrate_on_ai_chance=narrate_on_ai_chance, narrate_on_player_chance=narrate_on_player_chance)
-        
-        if event.actor.character.is_player and not narrate_on_player_chance:
+        if event.actor.character.is_player and not narrate_on_player:
             return
         
-        if not event.actor.character.is_player and not narrate_on_ai_chance:
+        if not event.actor.character.is_player and not narrate_on_ai:
             return
         
         response = await self.narrate_after_dialogue(event.actor.character)

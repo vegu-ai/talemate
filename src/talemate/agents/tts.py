@@ -15,7 +15,9 @@ from nltk.tokenize import sent_tokenize
 
 import talemate.config as config
 import talemate.emit.async_signals
+import talemate.instance as instance
 from talemate.emit import emit
+from talemate.emit.signals import handlers
 from talemate.events import GameLoopNewMessageEvent
 from talemate.scene_message import CharacterMessage, NarratorMessage
 
@@ -198,6 +200,7 @@ class TTSAgent(Agent):
         }
         
         self.actions["_config"].model_dump()
+        handlers["config_saved"].connect(self.on_config_saved)
 
 
     @property
@@ -324,6 +327,11 @@ class TTSAgent(Agent):
         super().connect(scene)
         talemate.emit.async_signals.get("game_loop_new_message").connect(self.on_game_loop_new_message)
         
+    def on_config_saved(self, event):
+        config = event.data
+        self.config = config
+        instance.emit_agent_status(self.__class__, self)
+        
     async def on_game_loop_new_message(self, emission:GameLoopNewMessageEvent):
         """
         Called when a conversation is generated
@@ -377,21 +385,20 @@ class TTSAgent(Agent):
         
         library = self.voices[self.api]
         
-        log.info("Listing voices", api=self.api, last_synced=library.last_synced)
-        
         # TODO: allow re-syncing voices
         if library.last_synced:
             return library.voices
         
         list_fn = getattr(self, f"_list_voices_{self.api}")
         log.info("Listing voices", api=self.api)
+        
         library.voices = await list_fn()
         library.last_synced = time.time()
         
         # if the current voice cannot be found, reset it
         if not self.voice(self.default_voice_id):
             self.actions["_config"].config["voice_id"].value = ""
-        
+                 
         # set loading to false
         return library.voices
 

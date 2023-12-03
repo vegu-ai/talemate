@@ -28,6 +28,8 @@ AudioQueue = signal("audio_queue")
 
 MessageEdited = signal("message_edited")
 
+ConfigSaved = signal("config_saved")
+
 handlers = {
     "system": SystemMessage,
     "narrator": NarratorMessage,
@@ -49,4 +51,5 @@ handlers = {
     "message_edited": MessageEdited,
     "prompt_sent": PromptSent,
     "audio_queue": AudioQueue,
+    "config_saved": ConfigSaved,
 }

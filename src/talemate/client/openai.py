@@ -6,7 +6,9 @@ from openai import AsyncOpenAI
 from talemate.client.base import ClientBase
 from talemate.client.registry import register
 from talemate.emit import emit
+from talemate.emit.signals import handlers
 from talemate.config import load_config
+import talemate.instance as instance
 import talemate.client.system_prompts as system_prompts
 import structlog
 import tiktoken
@@ -83,31 +85,30 @@ class OpenAIClient(ClientBase):
         self.config = load_config()
         super().__init__(**kwargs)
         
-        # if os.environ.get("OPENAI_API_KEY") is not set, look in the config file
-        # and set it
-        
-        if not os.environ.get("OPENAI_API_KEY"):
-            if self.config.get("openai", {}).get("api_key"):
-                os.environ["OPENAI_API_KEY"] = self.config["openai"]["api_key"]
-
         self.set_client()
+        
+        handlers["config_saved"].connect(self.on_config_saved)
 
 
     @property
     def openai_api_key(self):
-        return os.environ.get("OPENAI_API_KEY")
+        return self.config.get("openai",{}).get("api_key")
 
 
     def emit_status(self, processing: bool = None):
         if processing is not None:
             self.processing = processing
 
-        if os.environ.get("OPENAI_API_KEY"):
+        if self.openai_api_key:
             status = "busy" if self.processing else "idle"
-            model_name = self.model_name or "No model loaded"
+            model_name = self.model_name
         else:
             status = "error"
             model_name = "No API key set"
+            
+        if not self.model_name:
+            status = "error"
+            model_name = "No model loaded"
             
         self.current_status = status
 
@@ -122,12 +123,13 @@ class OpenAIClient(ClientBase):
     def set_client(self, max_token_length:int=None):
 
         if not self.openai_api_key:
+            self.client = AsyncOpenAI(api_key="sk-1111")
             log.error("No OpenAI API key set")
             return
         
         model = self.model_name
         
-        self.client = AsyncOpenAI()
+        self.client = AsyncOpenAI(api_key=self.openai_api_key)
         if model == "gpt-3.5-turbo":
             self.max_token_length = min(max_token_length or 4096, 4096)
         elif model == "gpt-4":
@@ -144,7 +146,14 @@ class OpenAIClient(ClientBase):
             self.model_name = kwargs["model"]
             self.set_client(kwargs.get("max_token_length"))
 
+    def on_config_saved(self, event):
+        config = event.data
+        self.config = config
+        self.set_client()
+
     def count_tokens(self, content: str):
+        if not self.model_name:
+            return 0
         return num_tokens_from_messages([{"content": content}], model=self.model_name)
 
     async def status(self):
@@ -180,6 +189,9 @@ class OpenAIClient(ClientBase):
         Generates text from the given prompt and parameters.
         """
         
+        if not self.openai_api_key:
+            raise Exception("No OpenAI API key set")
+        
         # only gpt-4-1106-preview supports json_object response coersion
         supports_json_object = self.model_name in ["gpt-4-1106-preview"]
         right = None
@@ -209,5 +221,4 @@ class OpenAIClient(ClientBase):
             return response
                 
         except Exception as e:
-            self.log.error("generate error", e=e)
-            return ""
+            raise

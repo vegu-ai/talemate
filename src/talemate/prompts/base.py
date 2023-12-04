@@ -343,7 +343,7 @@ class Prompt:
         parsed_text = env.from_string(prompt_text).render(self.vars)
         
         if self.dedupe_enabled:
-            parsed_text = dedupe_string(parsed_text, debug=True)
+            parsed_text = dedupe_string(parsed_text, debug=False)
         
         parsed_text = remove_extra_linebreaks(parsed_text)
         

@@ -6,7 +6,7 @@ import textwrap
 import structlog
 import isodate
 import datetime
-from typing import List
+from typing import List, Union
 from thefuzz import fuzz
 from colorama import Back, Fore, Style, init
 from PIL import Image
@@ -754,6 +754,7 @@ def similarity_score(line: str, lines: list[str], similarity_threshold: int = 95
     for existing_line in lines:
         similarity = fuzz.ratio(line, existing_line)
         highest_similarity = max(highest_similarity, similarity)
+        #print("SIMILARITY", similarity, existing_line[:32]+"...")
         if similarity >= similarity_threshold:
             return True, similarity, existing_line
         

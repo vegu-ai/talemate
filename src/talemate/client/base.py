@@ -305,9 +305,13 @@ class ClientBase:
             extra_stopping_strings = prompt_param.pop("extra_stopping_strings", [])
 
             self.log.debug("send_prompt", token_length=token_length, max_token_length=self.max_token_length, parameters=prompt_param)
-            response = await self.generate(finalized_prompt, prompt_param, kind)
+            response = await self.generate(
+                self.repetition_adjustment(finalized_prompt), 
+                prompt_param, 
+                kind
+            )
             
-            response = await self.auto_break_repetition(finalized_prompt, prompt_param, response, kind, retries)
+            response, finalized_prompt = await self.auto_break_repetition(finalized_prompt, prompt_param, response, kind, retries)
             
             time_end = time.time()
             
@@ -414,8 +418,17 @@ class ClientBase:
                 prompt_param["max_tokens"] += pad_max_tokens
                 
                 # send the prompt again
+                # we use the repetition_adjustment method to further encourage
+                # the AI to break the repetition on its own as well.
                 
-                response = retried_response = await self.generate(finalized_prompt, prompt_param, kind)
+                finalized_prompt = self.repetition_adjustment(finalized_prompt, is_repetitive=True)
+                
+                response = retried_response = await self.generate(
+                    finalized_prompt, 
+                    prompt_param, 
+                    kind
+                )
+                
                 self.log.debug("send_prompt dedupe sentences", response=response, matched_line=matched_line)
                 
                 # a lot of the times the response will now contain the repetition + something new
@@ -440,8 +453,8 @@ class ClientBase:
                     finalized_prompt.split("\n"), 
                 )
                 retries -= 1
-        
-        return response
+                
+        return response, finalized_prompt
         
     def count_tokens(self, content:str):
         return util.count_tokens(content)
@@ -465,3 +478,26 @@ class ClientBase:
             return False
         
         return agent.allow_repetition_break(kind, agent_context.action, auto=auto)
+    
+    def repetition_adjustment(self, prompt:str, is_repetitive:bool=False):
+        """
+        Breaks the prompt into lines and checkse each line for a match with
+        [$REPETITION|{repetition_adjustment}].
+        
+        On match and if is_repetitive is True, the line is removed from the prompt and
+        replaced with the repetition_adjustment.
+        
+        On match and if is_repetitive is False, the line is removed from the prompt.        
+        """
+        
+        lines = prompt.split("\n")
+        new_lines = []
+        
+        for line in lines:
+            if line.startswith("[$REPETITION|"):
+                if is_repetitive:
+                    new_lines.append(line.split("|")[1][:-1])
+            else:
+                new_lines.append(line)
+        
+        return "\n".join(new_lines)

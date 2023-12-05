@@ -44,7 +44,6 @@ async def websocket_endpoint(websocket, path):
         async def send_status():
             while True:
                 await instance.emit_clients_status()
-                instance.emit_agents_status()
                 await asyncio.sleep(3)
 
         send_status_task = asyncio.create_task(send_status())

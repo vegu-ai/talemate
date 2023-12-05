@@ -13,7 +13,9 @@ RequestInput = signal("request_input")
 ReceiveInput = signal("receive_input")
 
 ClientStatus = signal("client_status")
+RequestClientStatus = signal("request_client_status")
 AgentStatus = signal("agent_status")
+RequestAgentStatus = signal("request_agent_status")
 ClientBootstraps = signal("client_bootstraps") 
 PromptSent = signal("prompt_sent")
 
@@ -40,7 +42,9 @@ handlers = {
     "request_input": RequestInput,
     "receive_input": ReceiveInput,
     "client_status": ClientStatus,
+    "request_client_status": RequestClientStatus,
     "agent_status": AgentStatus,
+    "request_agent_status": RequestAgentStatus,
     "client_bootstraps": ClientBootstraps,
     "clear_screen": ClearScreen,
     "remove_message": RemoveMessage,

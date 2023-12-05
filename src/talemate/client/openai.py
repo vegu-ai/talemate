@@ -7,6 +7,7 @@ from talemate.client.base import ClientBase
 from talemate.client.registry import register
 from talemate.emit import emit
 from talemate.emit.signals import handlers
+import talemate.emit.async_signals as async_signals
 from talemate.config import load_config
 import talemate.instance as instance
 import talemate.client.system_prompts as system_prompts
@@ -82,6 +83,7 @@ class OpenAIClient(ClientBase):
     def __init__(self, model="gpt-4-1106-preview", **kwargs):
         
         self.model_name = model
+        self.api_key_status = None
         self.config = load_config()
         super().__init__(**kwargs)
         
@@ -125,6 +127,10 @@ class OpenAIClient(ClientBase):
         if not self.openai_api_key:
             self.client = AsyncOpenAI(api_key="sk-1111")
             log.error("No OpenAI API key set")
+            if self.api_key_status:
+                self.api_key_status = False
+                emit('request_client_status')
+                emit('request_agent_status')
             return
         
         model = self.model_name
@@ -140,6 +146,12 @@ class OpenAIClient(ClientBase):
             self.max_token_length = min(max_token_length or 128000, 128000)
         else:
             self.max_token_length = max_token_length or 2048
+            
+        if not self.api_key_status:
+            if self.api_key_status is False:
+                emit('request_client_status')
+                emit('request_agent_status')
+            self.api_key_status = True
             
     def reconfigure(self, **kwargs):
         if "model" in kwargs:

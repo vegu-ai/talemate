@@ -26,7 +26,7 @@
                 <v-col cols="4">
                   <v-text-field v-model="client.max_token_length" v-if="isLocalApiClient(client)" type="number" label="Context Length"></v-text-field> 
                 </v-col>
-                <v-col cols="8" v-if="client.data && client.data.prompt_template_example !== null">
+                <v-col cols="8" v-if="!typeEditable() && client.data && client.data.prompt_template_example !== null">
                   <v-card elevation="3" :color="(client.data.has_prompt_template ? 'primary' : 'warning')" variant="tonal">
                     <v-card-title>Prompt Template</v-card-title>
 

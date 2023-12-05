@@ -33,7 +33,7 @@
                                 </v-col>
                                 <v-col cols="8">
                                     <div v-if="gamePageSelected === 'character'">
-                                        <v-alert type="neutral" variant="text" icon="mdi-human-edit" density="compact">
+                                        <v-alert color="white" variant="text" icon="mdi-human-edit" density="compact">
                                             <v-alert-title>Default player character</v-alert-title>
                                             <div class="text-grey">
                                                 This will be default player character that will be added to a game if the game does not come with a defined player character. Essentially this is relevant for when you load character-cards that aren't in the talemate scene format.                     
@@ -82,7 +82,7 @@
 
                                     <!-- OPENAI API -->
                                     <div v-if="applicationPageSelected === 'openai_api'">
-                                        <v-alert type="neutral" variant="text" icon="mdi-api" density="compact">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
                                             <v-alert-title>OpenAI</v-alert-title>
                                             <div class="text-grey">
                                                 Configure your OpenAI API key here. You can get one from <a href="https://platform.openai.com/" target="_blank">https://platform.openai.com/</a> 
@@ -99,7 +99,7 @@
 
                                     <!-- ELEVENLABS API -->
                                     <div v-if="applicationPageSelected === 'elevenlabs_api'">
-                                        <v-alert type="neutral" variant="text" icon="mdi-api" density="compact">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
                                             <v-alert-title>ElevenLabs</v-alert-title>
                                             <div class="text-grey">
                                                 <p class="mb-1">Generate realistic speech with the most advanced AI voice model ever.</p>
@@ -117,7 +117,7 @@
 
                                     <!-- COQUI API -->
                                     <div v-if="applicationPageSelected === 'coqui_api'">
-                                        <v-alert type="neutral" variant="text" icon="mdi-api" density="compact">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
                                             <v-alert-title>Coqui Studio</v-alert-title>
                                             <div class="text-grey">
                                                 <p class="mb-1">Realistic, emotive text-to-speech through generative AI.</p>
@@ -135,7 +135,7 @@
 
                                     <!-- RUNPOD API -->
                                     <div v-if="applicationPageSelected === 'runpod_api'">
-                                        <v-alert type="neutral" variant="text" icon="mdi-api" density="compact">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
                                             <v-alert-title>RunPod</v-alert-title>
                                             <div class="text-grey">
                                                 <p class="mb-1">Launch a GPU instance in seconds.</p>
@@ -173,7 +173,7 @@
                                 <v-col cols="8">
                                     <div v-if="creatorPageSelected === 'content_context'">
                                         <!-- Content for Content context will go here -->
-                                        <v-alert type="neutral" variant="text" icon="mdi-cube-scan" density="compact">
+                                        <v-alert color="white" variant="text" icon="mdi-cube-scan" density="compact">
                                             <v-alert-title>Content context</v-alert-title>
                                             <div class="text-grey">
                                                 Available content-context choices when generating characters or scenarios. This can strongly influence the content that is generated.

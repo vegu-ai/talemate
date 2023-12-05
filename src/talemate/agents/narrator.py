@@ -68,6 +68,19 @@ class NarratorAgent(Agent):
         # agent actions
         
         self.actions = {
+            "generation_override": AgentAction(
+                enabled = True,
+                label = "Generation Override",
+                description = "Override generation parameters",
+                config = {
+                    "instructions": AgentActionConfig(
+                        type="text",
+                        label="Instructions",
+                        value="Never wax poetic.",
+                        description="Extra instructions to give to the AI for narrative generation.",
+                    ),
+                }
+            ),
             "auto_break_repetition": AgentAction(
                 enabled = True,
                 label = "Auto Break Repetition",
@@ -106,6 +119,12 @@ class NarratorAgent(Agent):
                 }
             ),
         }
+        
+    @property
+    def extra_instructions(self):
+        if self.actions["generation_override"].enabled:
+            return self.actions["generation_override"].config["instructions"].value
+        return ""
         
     def clean_result(self, result):
         
@@ -200,6 +219,7 @@ class NarratorAgent(Agent):
             vars = {
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
+                "extra_instructions": self.extra_instructions,
             }
         )
         
@@ -237,6 +257,7 @@ class NarratorAgent(Agent):
                 "player_character": pc,
                 "npcs": npcs,
                 "npc_names": npc_names,
+                "extra_instructions": self.extra_instructions,
             }
         )
 
@@ -267,6 +288,7 @@ class NarratorAgent(Agent):
                 "query": query,
                 "at_the_end": at_the_end,
                 "as_narrative": as_narrative,
+                "extra_instructions": self.extra_instructions,
             }
         )
         log.info("narrate_query", response=response)
@@ -303,6 +325,7 @@ class NarratorAgent(Agent):
                 "character": character,
                 "max_tokens": self.client.max_token_length,
                 "memory": memory_context,
+                "extra_instructions": self.extra_instructions,
             }
         )
 
@@ -327,6 +350,7 @@ class NarratorAgent(Agent):
             vars = {
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
+                "extra_instructions": self.extra_instructions,
             }
         )
         
@@ -347,6 +371,7 @@ class NarratorAgent(Agent):
                 "max_tokens": self.client.max_token_length,
                 "memory": memory_context,
                 "questions": questions,
+                "extra_instructions": self.extra_instructions,
             }
         )
         
@@ -372,6 +397,7 @@ class NarratorAgent(Agent):
                 "max_tokens": self.client.max_token_length,
                 "duration": duration,
                 "narrative": narrative,
+                "extra_instructions": self.extra_instructions,
             }
         )
         
@@ -397,7 +423,8 @@ class NarratorAgent(Agent):
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "character": character,
-                "last_line": str(self.scene.history[-1])
+                "last_line": str(self.scene.history[-1]),
+                "extra_instructions": self.extra_instructions,
             }
         )
         

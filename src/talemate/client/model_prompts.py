@@ -39,6 +39,9 @@ class ModelPrompt:
             "set_response" : self.set_response
         })
         
+    def exists(self, model_name:str):
+        return bool(self.get_template(model_name))
+        
     def set_response(self, prompt:str, response_str:str):
         
         prompt = prompt.strip("\n").strip()

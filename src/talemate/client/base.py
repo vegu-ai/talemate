@@ -74,6 +74,17 @@ class ClientBase:
         
         return model_prompt(self.model_name, sys_msg, prompt)   
     
+    def has_prompt_template(self):
+        if not self.model_name:
+            return False
+        
+        return model_prompt.exists(self.model_name)
+    
+    def prompt_template_example(self):
+        if not self.model_name:
+            return None
+        return model_prompt(self.model_name, "sysmsg", "prompt<|BOT|>{LLM coercion}")
+    
     def reconfigure(self, **kwargs):
         
         """
@@ -183,6 +194,10 @@ class ClientBase:
             id=self.name,
             details=model_name,
             status=status,
+            data={
+                "prompt_template_example": self.prompt_template_example(),
+                "has_prompt_template": self.has_prompt_template(),
+            }
         )
 
         if status_change:

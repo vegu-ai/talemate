@@ -37,18 +37,14 @@
       <v-list>
         <v-list-subheader class="text-uppercase"><v-icon>mdi-network-outline</v-icon>
           Clients</v-list-subheader>
-        <v-list-item-group>
-          <v-list-item>
-            <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents"></AIClient>
-          </v-list-item>
-        </v-list-item-group>
+        <v-list-item>
+          <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents"></AIClient>
+        </v-list-item>
         <v-divider></v-divider>
         <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
-        <v-list-item-group>
-          <v-list-item>
-            <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents"></AIAgent>
-          </v-list-item>
-        </v-list-item-group>
+        <v-list-item>
+          <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents"></AIAgent>
+        </v-list-item>
         <!-- More sections can be added here -->
       </v-list>
     </v-navigation-drawer>

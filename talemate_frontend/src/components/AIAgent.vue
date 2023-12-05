@@ -19,7 +19,7 @@
                 <v-chip v-if="agent.data.experimental" color="warning" size="x-small">experimental</v-chip>
             </v-list-item>
         </v-list>
-        <AgentModal :dialog="dialog" :formTitle="formTitle" @save="saveAgent" @update:dialog="updateDialog"></AgentModal>
+        <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" @save="saveAgent" @update:dialog="updateDialog"></AgentModal>
     </div>
 </template>
     

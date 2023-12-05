@@ -97,7 +97,7 @@ async def emit_clients_status():
     """
     Will emit status of all clients
     """
-
+    log.debug("emit_clients_status")
     for client in CLIENTS.values():
         if client:
             await client.status()
@@ -107,10 +107,8 @@ def _sync_emit_clients_status(*args, **kwargs):
     Will emit status of all clients
     in synchronous mode
     """
-    pass
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(emit_clients_status()) 
-    
+    loop.run_until_complete(emit_clients_status())     
 handlers["request_client_status"].connect(_sync_emit_clients_status)
 
 def emit_client_bootstraps():
@@ -161,6 +159,7 @@ def emit_agents_status(*args, **kwargs):
     """
     Will emit status of all agents
     """
+    log.debug("emit_agents_status")
     for typ, cls in agents.AGENT_CLASSES.items():
         agent = AGENTS.get(typ)
         emit_agent_status(cls, agent)

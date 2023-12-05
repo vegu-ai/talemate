@@ -152,6 +152,8 @@ class OpenAIClient(ClientBase):
                 emit('request_client_status')
                 emit('request_agent_status')
             self.api_key_status = True
+        
+        log.info("openai set client")
             
     def reconfigure(self, **kwargs):
         if "model" in kwargs:

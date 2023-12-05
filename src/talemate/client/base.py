@@ -386,7 +386,7 @@ class ClientBase:
         """
         
         if not self.auto_break_repetition_enabled:
-            return response
+            return response, finalized_prompt
         
         agent_context = active_agent.get()
         if self.jiggle_enabled_for(kind, auto=True):
@@ -405,7 +405,7 @@ class ClientBase:
                 # not a repetition, return the response
                 
                 self.log.debug("send_prompt no similarity", similarity_score=similarity_score)
-                return response
+                return response, finalized_prompt
             
             while is_repetition and retries > 0:
                 

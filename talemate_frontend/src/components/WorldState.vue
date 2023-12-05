@@ -2,7 +2,7 @@
     <v-list-subheader class="text-uppercase">
         <v-icon class="mr-1">mdi-earth</v-icon>World
         <v-progress-circular class="ml-1 mr-3" size="14" v-if="requesting" indeterminate color="primary"></v-progress-circular>   
-        <v-btn v-else size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh()" icon="mdi-refresh"></v-btn>
+        <v-btn v-else size="x-small" class="mr-1" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh()" icon="mdi-refresh"></v-btn>
      
     </v-list-subheader>
 

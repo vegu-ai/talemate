@@ -93,13 +93,12 @@
         <v-chip size="x-small" v-else-if="scene.environment === 'scene'" class="ml-1"><v-icon text="Play" size="14"
             class="mr-1">mdi-gamepad-square</v-icon>Game Mode</v-chip>
 
-        <v-btn v-if="scene.environment === 'scene'" class="ml-1" @click="openSceneHistory()"><v-icon size="14"
-            class="mr-1">mdi-playlist-star</v-icon>History</v-btn>
-
-        <v-chip size="x-small" v-if="scene.scene_time !== undefined">
-          <v-icon>mdi-clock</v-icon>
-          {{ scene.scene_time }}
-        </v-chip>
+        <v-tooltip :text="scene.scene_time" v-if="scene.scene_time !== undefined">
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" v-if="scene.environment === 'scene'" class="ml-1" @click="openSceneHistory()"><v-icon size="14"
+            class="mr-1">mdi-clock</v-icon>History</v-btn>
+          </template>
+        </v-tooltip>
 
       </v-toolbar-title>
       <v-toolbar-title v-else>

@@ -8,7 +8,7 @@ Last time we checked on {{ character.name }}:
 {% endfor %}
 <|CLOSE_SECTION|>
 
-{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=30) -%}
+{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=20) -%}
 {{ scene_context }}
 {% endfor %}
 

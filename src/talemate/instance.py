@@ -97,7 +97,7 @@ async def emit_clients_status():
     """
     Will emit status of all clients
     """
-    log.debug("emit", type="client status")
+    #log.debug("emit", type="client status")
     for client in CLIENTS.values():
         if client:
             await client.status()
@@ -159,7 +159,7 @@ def emit_agents_status(*args, **kwargs):
     """
     Will emit status of all agents
     """
-    log.debug("emit", type="agent status")
+    #log.debug("emit", type="agent status")
     for typ, cls in agents.AGENT_CLASSES.items():
         agent = AGENTS.get(typ)
         emit_agent_status(cls, agent)

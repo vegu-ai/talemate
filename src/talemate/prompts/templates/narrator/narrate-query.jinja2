@@ -22,5 +22,6 @@ When evaluating both story and context, story is more important. You can fill in
 {% endif -%}
 Content Context: This is a specific scene from {{ scene.context }}
 Your answer should be in the style of short, concise narration that fits the context of the scene. (1 to 2 sentences)
+{{ extra_instructions }}
 <|CLOSE_SECTION|>
-Narrator answers: {% if at_the_end %}{{ bot_token }}At the end of the dialogue, {% endif %}
+{% if at_the_end %}{{ bot_token }}At the end of the dialogue, {% endif %}

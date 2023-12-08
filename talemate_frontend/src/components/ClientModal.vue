@@ -23,8 +23,19 @@
                 </v-col>
               </v-row>  
               <v-row>
-                <v-col cols="6">
+                <v-col cols="4">
                   <v-text-field v-model="client.max_token_length" v-if="isLocalApiClient(client)" type="number" label="Context Length"></v-text-field> 
+                </v-col>
+                <v-col cols="8" v-if="!typeEditable() && client.data && client.data.prompt_template_example !== null">
+                  <v-card elevation="3" :color="(client.data.has_prompt_template ? 'primary' : 'warning')" variant="tonal">
+                    <v-card-title>Prompt Template</v-card-title>
+
+                    <v-card-text>
+                      <div class="text-caption" v-if="!client.data.has_prompt_template">No matching LLM prompt template found. Using default.</div>
+                      <pre>{{ client.data.prompt_template_example }}</pre>
+                    </v-card-text>
+                  </v-card>
+                  
                 </v-col>
               </v-row>
             </v-container>
@@ -101,6 +112,7 @@ export default {
           i++;
         }
         this.client.name = name;
+        this.client.data = {};
       }
     },
     validateName() {

@@ -18,7 +18,7 @@
                 <v-tooltip v-if="isEnvironment('scene')" :disabled="isInputDisabled()" location="top"
                     text="Redo most recent AI message">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey" v-bind="props" v-on="on" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey" v-bind="props" :disabled="isInputDisabled()"
                             @click="sendHotButtonMessage('!rerun')" color="primary" icon>
                             <v-icon>mdi-refresh</v-icon>
                         </v-btn>
@@ -28,7 +28,7 @@
                 <v-tooltip v-if="isEnvironment('scene')" :disabled="isInputDisabled()" location="top"
                     text="Redo most recent AI message (Nuke Option - use this to attempt to break out of repetition)">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey" v-bind="props" v-on="on" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey" v-bind="props" :disabled="isInputDisabled()"
                             @click="sendHotButtonMessage('!rerun:0.5')" color="primary" icon>
                             <v-icon>mdi-nuke</v-icon>
                         </v-btn>
@@ -39,7 +39,7 @@
                 <v-tooltip v-if="commandActive" location="top"
                     text="Abort / end action.">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mr-3" v-bind="props" v-on="on" :disabled="!isWaitingForInput()"
+                        <v-btn class="hotkey mr-3" v-bind="props" :disabled="!isWaitingForInput()"
                             @click="sendHotButtonMessage('!abort')" color="primary" icon>
                             <v-icon>mdi-cancel</v-icon>
                             
@@ -56,7 +56,7 @@
             <v-card-actions>
                 <v-tooltip :disabled="isInputDisabled()" location="top" text="Narrate: Progress Story">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" v-on="on" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
                             @click="sendHotButtonMessage('!narrate_progress')" color="primary" icon>
                             <v-icon>mdi-script-text-play</v-icon>
                         </v-btn>
@@ -64,7 +64,7 @@
                 </v-tooltip>
                 <v-tooltip :disabled="isInputDisabled()" location="top" text="Narrate: Scene">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" v-on="on" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
                             @click="sendHotButtonMessage('!narrate')" color="primary" icon>
                             <v-icon>mdi-script-text</v-icon>
                         </v-btn>
@@ -72,7 +72,7 @@
                 </v-tooltip>
                 <v-tooltip :disabled="isInputDisabled()" location="top" text="Narrate: Character">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" v-on="on" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
                             @click="sendHotButtonMessage('!narrate_c')" color="primary" icon>
                             <v-icon>mdi-account-voice</v-icon>
                         </v-btn>
@@ -80,7 +80,7 @@
                 </v-tooltip>
                 <v-tooltip :disabled="isInputDisabled()" location="top" text="Narrate: Query">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" v-on="on" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
                             @click="sendHotButtonMessage('!narrate_q')" color="primary" icon>
                             <v-icon>mdi-crystal-ball</v-icon>
                         </v-btn>
@@ -103,7 +103,7 @@
                 <v-divider vertical></v-divider>
                 <v-tooltip :disabled="isInputDisabled()" location="top" text="Direct a character">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" v-on="on" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
                             @click="sendHotButtonMessage('!director')" color="primary" icon>
                             <v-icon>mdi-bullhorn</v-icon>
                         </v-btn>
@@ -118,7 +118,7 @@
 
                 <v-tooltip :disabled="isInputDisabled()" location="top" text="Save">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" v-on="on" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
                             @click="sendHotButtonMessage('!save')" color="primary" icon>
                             <v-icon>mdi-content-save</v-icon>
                         </v-btn>
@@ -127,7 +127,7 @@
 
                 <v-tooltip :disabled="isInputDisabled()" location="top" text="Save As">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" v-on="on" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
                             @click="sendHotButtonMessage('!save_as')" color="primary" icon>
                             <v-icon>mdi-content-save-all</v-icon>
                         </v-btn>
@@ -136,7 +136,7 @@
 
                 <v-tooltip v-if="isEnvironment('scene')" :disabled="isInputDisabled()" location="top" text="Switch to creative mode">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" v-on="on" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
                             @click="sendHotButtonMessage('!setenv_creative')" color="primary" icon>
                             <v-icon>mdi-palette-outline</v-icon>
                         </v-btn>
@@ -145,7 +145,7 @@
 
                 <v-tooltip v-else-if="isEnvironment('creative')" :disabled="isInputDisabled()" location="top" text="Switch to game mode">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" v-on="on" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
                             @click="sendHotButtonMessage('!setenv_scene')" color="primary" icon>
                             <v-icon>mdi-gamepad-square</v-icon>
                         </v-btn>

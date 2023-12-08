@@ -85,19 +85,24 @@ class ConversationAgent(Agent):
                     "instructions": AgentActionConfig(
                         type="text",
                         label="Instructions",
-                        value="1-3 sentences.",
+                        value="Write 1-3 sentences. Never wax poetic.",
                         description="Extra instructions to give the AI for dialog generatrion.",
                     ),
                     "jiggle": AgentActionConfig(
                         type="number",
-                        label="Jiggle",
+                        label="Jiggle (Increased Randomness)",
                         description="If > 0.0 will cause certain generation parameters to have a slight random offset applied to them. The bigger the number, the higher the potential offset.",
                         value=0.0,
                         min=0.0,
                         max=1.0,
                         step=0.1,
-                    ),
+                    )
                 }
+            ),
+            "auto_break_repetition": AgentAction(
+                enabled = True,
+                label = "Auto Break Repetition",
+                description = "Will attempt to automatically break AI repetition.",
             ),
             "natural_flow": AgentAction(
                 enabled = True,
@@ -131,7 +136,7 @@ class ConversationAgent(Agent):
                 config = {
                     "ai_selected": AgentActionConfig(
                         type="bool",
-                        label="AI Selected",
+                        label="AI memory retrieval",
                         description="If enabled, the AI will select the long term memory to use. (will increase how long it takes to generate a response)",
                         value=False,
                     ),
@@ -534,3 +539,11 @@ class ConversationAgent(Agent):
         actor.scene.push_history(messages)
 
         return messages
+
+
+    def allow_repetition_break(self, kind: str, agent_function_name: str, auto: bool = False):
+        
+        if auto and not self.actions["auto_break_repetition"].enabled:
+            return False
+        
+        return agent_function_name == "converse"

@@ -6,6 +6,8 @@ import os
 from pydantic import BaseModel
 from typing import Optional, Dict, Union
 
+from talemate.emit import emit
+
 log = structlog.get_logger("talemate.config")
 
 class Client(BaseModel):
@@ -159,3 +161,5 @@ def save_config(config, file_path: str = "./config.yaml"):
 
     with open(file_path, "w") as file:
         yaml.dump(config, file)
+        
+    emit("config_saved", data=config)

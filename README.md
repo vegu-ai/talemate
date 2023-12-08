@@ -171,5 +171,5 @@ Please read the documents in the `docs` folder for more advanced configuration a
 - [Prompt template overrides](docs/templates.md)
 - [Text-to-Speech (TTS)](docs/tts.md)
 - [ChromaDB (long term memory)](docs/chromadb.md)
-- Runpod Integration
+- [Runpod Integration](docs/runpod.md)
 - Creative mode

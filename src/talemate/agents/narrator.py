@@ -68,6 +68,24 @@ class NarratorAgent(Agent):
         # agent actions
         
         self.actions = {
+            "generation_override": AgentAction(
+                enabled = True,
+                label = "Generation Override",
+                description = "Override generation parameters",
+                config = {
+                    "instructions": AgentActionConfig(
+                        type="text",
+                        label="Instructions",
+                        value="Never wax poetic.",
+                        description="Extra instructions to give to the AI for narrative generation.",
+                    ),
+                }
+            ),
+            "auto_break_repetition": AgentAction(
+                enabled = True,
+                label = "Auto Break Repetition",
+                description = "Will attempt to automatically break AI repetition.",
+            ),
             "narrate_time_passage": AgentAction(enabled=True, label="Narrate Time Passage", description="Whenever you indicate passage of time, narrate right after"),
             "narrate_dialogue": AgentAction(
                 enabled=True, 
@@ -101,6 +119,12 @@ class NarratorAgent(Agent):
                 }
             ),
         }
+        
+    @property
+    def extra_instructions(self):
+        if self.actions["generation_override"].enabled:
+            return self.actions["generation_override"].config["instructions"].value
+        return ""
         
     def clean_result(self, result):
         
@@ -159,16 +183,22 @@ class NarratorAgent(Agent):
         
         if not self.actions["narrate_dialogue"].enabled:
             return
+        narrate_on_ai_chance = self.actions["narrate_dialogue"].config["ai_dialog"].value
+        narrate_on_player_chance = self.actions["narrate_dialogue"].config["player_dialog"].value
+        narrate_on_ai = random.random() < narrate_on_ai_chance
+        narrate_on_player = random.random() < narrate_on_player_chance
+        log.debug(
+            "narrate on dialog", 
+            narrate_on_ai=narrate_on_ai, 
+            narrate_on_ai_chance=narrate_on_ai_chance, 
+            narrate_on_player=narrate_on_player,
+            narrate_on_player_chance=narrate_on_player_chance,
+        )
         
-        narrate_on_ai_chance = random.random() < self.actions["narrate_dialogue"].config["ai_dialog"].value
-        narrate_on_player_chance = random.random() < self.actions["narrate_dialogue"].config["player_dialog"].value
-        
-        log.debug("narrate on dialog", narrate_on_ai_chance=narrate_on_ai_chance, narrate_on_player_chance=narrate_on_player_chance)
-        
-        if event.actor.character.is_player and not narrate_on_player_chance:
+        if event.actor.character.is_player and not narrate_on_player:
             return
         
-        if not event.actor.character.is_player and not narrate_on_ai_chance:
+        if not event.actor.character.is_player and not narrate_on_ai:
             return
         
         response = await self.narrate_after_dialogue(event.actor.character)
@@ -189,6 +219,7 @@ class NarratorAgent(Agent):
             vars = {
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
+                "extra_instructions": self.extra_instructions,
             }
         )
         
@@ -206,22 +237,11 @@ class NarratorAgent(Agent):
         """
 
         scene = self.scene
-        director = scene.get_helper("director").agent
         pc = scene.get_player_character()
         npcs = list(scene.get_npc_characters())
         npc_names=  ", ".join([npc.name for npc in npcs])
         
-        #summarized_history = await scene.summarized_dialogue_history(
-        #    budget = self.client.max_token_length - 300,
-        #    min_dialogue = 50,
-        #)
-        
-        #augmented_context = await self.augment_context()
-
         if narrative_direction is None:
-            #narrative_direction = await director.direct_narrative(
-            #    scene.context_history(budget=self.client.max_token_length - 500, min_dialogue=20),
-            #)
             narrative_direction = "Slightly move the current scene forward."
         
         self.scene.log.info("narrative_direction", narrative_direction=narrative_direction)
@@ -232,13 +252,12 @@ class NarratorAgent(Agent):
             "narrate",
             vars = {
                 "scene": self.scene,
-                #"summarized_history": summarized_history,
-                #"augmented_context": augmented_context,
                 "max_tokens": self.client.max_token_length,
                 "narrative_direction": narrative_direction,
                 "player_character": pc,
                 "npcs": npcs,
                 "npc_names": npc_names,
+                "extra_instructions": self.extra_instructions,
             }
         )
 
@@ -269,6 +288,7 @@ class NarratorAgent(Agent):
                 "query": query,
                 "at_the_end": at_the_end,
                 "as_narrative": as_narrative,
+                "extra_instructions": self.extra_instructions,
             }
         )
         log.info("narrate_query", response=response)
@@ -305,6 +325,7 @@ class NarratorAgent(Agent):
                 "character": character,
                 "max_tokens": self.client.max_token_length,
                 "memory": memory_context,
+                "extra_instructions": self.extra_instructions,
             }
         )
 
@@ -329,6 +350,7 @@ class NarratorAgent(Agent):
             vars = {
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
+                "extra_instructions": self.extra_instructions,
             }
         )
         
@@ -349,6 +371,7 @@ class NarratorAgent(Agent):
                 "max_tokens": self.client.max_token_length,
                 "memory": memory_context,
                 "questions": questions,
+                "extra_instructions": self.extra_instructions,
             }
         )
         
@@ -374,6 +397,7 @@ class NarratorAgent(Agent):
                 "max_tokens": self.client.max_token_length,
                 "duration": duration,
                 "narrative": narrative,
+                "extra_instructions": self.extra_instructions,
             }
         )
         
@@ -399,7 +423,8 @@ class NarratorAgent(Agent):
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "character": character,
-                "last_line": str(self.scene.history[-1])
+                "last_line": str(self.scene.history[-1]),
+                "extra_instructions": self.extra_instructions,
             }
         )
         
@@ -413,6 +438,22 @@ class NarratorAgent(Agent):
         if not allow_dialogue:
             response = response.split('"')[0].strip()
             response = response.replace("*", "")
+            response = util.strip_partial_sentences(response)
             response = f"*{response}*"
 
         return response
+    
+    # LLM client related methods. These are called during or after the client
+    
+    def inject_prompt_paramters(self, prompt_param: dict, kind: str, agent_function_name: str):
+        log.debug("inject_prompt_paramters", prompt_param=prompt_param, kind=kind, agent_function_name=agent_function_name)
+        character_names = [f"\n{c.name}:" for c in self.scene.get_characters()]
+        if prompt_param.get("extra_stopping_strings") is None:
+            prompt_param["extra_stopping_strings"] = []
+        prompt_param["extra_stopping_strings"] += character_names
+        
+    def allow_repetition_break(self, kind: str, agent_function_name: str, auto:bool=False):
+        if auto and not self.actions["auto_break_repetition"].enabled:
+            return False
+        
+        return True

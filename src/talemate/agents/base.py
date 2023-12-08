@@ -9,6 +9,7 @@ from blinker import signal
 
 import talemate.instance as instance
 import talemate.util as util
+from talemate.agents.context import ActiveAgent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 import talemate.emit.async_signals
@@ -23,15 +24,6 @@ __all__ = [
 
 log = structlog.get_logger("talemate.agents.base")
 
-class CallableConfigValue:
-    def __init__(self, fn):
-        self.fn = fn
-    
-    def __str__(self):
-        return "CallableConfigValue"
-    
-    def __repr__(self):
-        return "CallableConfigValue"
 
 class AgentActionConfig(pydantic.BaseModel):
     type: str
@@ -65,11 +57,12 @@ def set_processing(fn):
     """
     
     async def wrapper(self, *args, **kwargs):
-        try:
-            await self.emit_status(processing=True)
-            return await fn(self, *args, **kwargs)
-        finally:
-            await self.emit_status(processing=False)
+        with ActiveAgent(self, fn):
+            try:
+                await self.emit_status(processing=True)
+                return await fn(self, *args, **kwargs)
+            finally:
+                await self.emit_status(processing=False)
             
     wrapper.__name__ = fn.__name__
             
@@ -85,6 +78,7 @@ class Agent(ABC):
     verbose_name = None
     set_processing = set_processing
     requires_llm_client = True
+    auto_break_repetition = False
 
     @property
     def agent_details(self):
@@ -291,6 +285,22 @@ class Agent(ABC):
 
                 current_memory_context.append(memory)
         return current_memory_context
+    
+    # LLM client related methods. These are called during or after the client
+    # sends the prompt to the API.
+
+    def inject_prompt_paramters(self, prompt_param:dict, kind:str, agent_function_name:str):
+        """
+        Injects prompt parameters before the client sends off the prompt
+        Override as needed.
+        """
+        pass
+
+    def allow_repetition_break(self, kind:str, agent_function_name:str, auto:bool=False):
+        """
+        Returns True if repetition breaking is allowed, False otherwise.
+        """
+        return False
 
 @dataclasses.dataclass
 class AgentEmission:

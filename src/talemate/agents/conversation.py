@@ -85,7 +85,7 @@ class ConversationAgent(Agent):
                     "instructions": AgentActionConfig(
                         type="text",
                         label="Instructions",
-                        value="1-3 sentences.",
+                        value="Write 1-3 sentences. Never wax poetic.",
                         description="Extra instructions to give the AI for dialog generatrion.",
                     ),
                     "jiggle": AgentActionConfig(

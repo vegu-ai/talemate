@@ -7,9 +7,9 @@
     <v-list-subheader class="text-uppercase" v-else>
         <v-progress-circular indeterminate color="primary" size="20"></v-progress-circular> Waiting for config...
     </v-list-subheader>
-    <v-list-item-group v-if="!loading && isConnected() && expanded && !configurationRequired() && appConfig !== null">
+    <div v-if="!loading && isConnected() && expanded && !configurationRequired() && appConfig !== null">
         <v-list-item>
-            <v-list-item-content class="mb-3">
+            <div class="mb-3">
                 <!-- Toggle buttons for switching between file upload and path input -->
                 <v-btn-toggle density="compact" class="mb-3" v-model="inputMethod" mandatory>
                     <v-btn value="file">
@@ -40,9 +40,9 @@
                     <v-icon left>mdi-palette-outline</v-icon>
                     Creative Mode
                 </v-btn>
-            </v-list-item-content>
+            </div>
         </v-list-item>
-    </v-list-item-group>
+    </div>
     <div v-else-if="configurationRequired()">
         <v-alert type="warning" variant="tonal">You need to configure a Talemate client before you can load scenes.</v-alert>
     </div>
@@ -71,6 +71,9 @@ export default {
             expanded: true,
             appConfig: null, // Store the app configuration
         }
+    },
+    emits: {
+        loading: null,
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'isConnected', 'configurationRequired'],
     methods: {

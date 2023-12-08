@@ -8,7 +8,7 @@ Last time we checked on {{ character.name }}:
 {% endfor %}
 <|CLOSE_SECTION|>
 
-{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=30) -%}
+{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=20) -%}
 {{ scene_context }}
 {% endfor %}
 
@@ -25,5 +25,6 @@ Instruction: Answer the questions to describe {{ character.name }}'s appearance 
 Content Context: This is a specific scene from {{ scene.context }}
 Narration style: point and click adventure game from the 90s
 Expected Answer: A brief summarized visual description of {{ character.name }}'s appearance at the end of the dialogue. NEVER break the fourth wall. (2 to 3 sentences)
+{{ extra_instructions }}
 <|CLOSE_SECTION|>
-Narrator answers: {{ bot_token }}At the end of the dialogue, 
+{{ bot_token }}At the end of the dialogue, 

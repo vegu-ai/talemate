@@ -1,10 +1,11 @@
 """
 Keep track of clients and agents
 """
-
+import asyncio
 import talemate.agents as agents
 import talemate.client as clients
 from talemate.emit import emit
+from talemate.emit.signals import handlers
 import talemate.client.bootstrap as bootstrap
 
 import structlog
@@ -12,6 +13,8 @@ log = structlog.get_logger("talemate")
 
 AGENTS = {}
 CLIENTS = {}
+
+
 
 
 def get_agent(typ: str, *create_args, **create_kwargs):
@@ -94,11 +97,19 @@ async def emit_clients_status():
     """
     Will emit status of all clients
     """
-
+    #log.debug("emit", type="client status")
     for client in CLIENTS.values():
         if client:
             await client.status()
 
+def _sync_emit_clients_status(*args, **kwargs):
+    """
+    Will emit status of all clients
+    in synchronous mode
+    """
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(emit_clients_status())     
+handlers["request_client_status"].connect(_sync_emit_clients_status)
 
 def emit_client_bootstraps():
     emit(
@@ -144,11 +155,13 @@ def emit_agent_status(cls, agent=None):
         )
 
 
-def emit_agents_status():
+def emit_agents_status(*args, **kwargs):
     """
     Will emit status of all agents
     """
-
+    #log.debug("emit", type="agent status")
     for typ, cls in agents.AGENT_CLASSES.items():
         agent = AGENTS.get(typ)
         emit_agent_status(cls, agent)
+        
+handlers["request_agent_status"].connect(emit_agents_status)

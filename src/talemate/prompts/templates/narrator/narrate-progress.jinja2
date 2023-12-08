@@ -1,3 +1,4 @@
+{% block extra_context -%}
 <|SECTION:CONTEXT|>
 Scenario Premise: {{ scene.description }}
 
@@ -9,8 +10,8 @@ NPCs: {{ npc_names }}
 Player Character: {{ player_character.name }}
 Content Context: {{ scene.context }}
 <|CLOSE_SECTION|>
-
-{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=30, sections=False, dialogue_negative_offset=10) -%}
+{% endblock -%}
+{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=20, sections=False) -%}
 {{ scene_context }}
 {% endfor %}
 <|SECTION:TASK|>
@@ -25,11 +26,8 @@ Use an informal and colloquial register with a conversational tone. Overall, the
 Narration style should be that of a 90s point and click adventure game. You are omniscient and can describe the scene in detail.
 
 Only generate new narration. Avoid including any character's internal thoughts or dialogue.
+Write 2 to 4 sentences. {{ extra_instructions }}
 <|CLOSE_SECTION|>
-{{ bot_token }}
-{% for row in scene.history[-10:] -%}
-{{ row }}
-{% endfor %}
 {{ 
 set_prepared_response_random(
     npc_names.split(", ") + [

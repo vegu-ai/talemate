@@ -343,7 +343,7 @@ class Prompt:
         parsed_text = env.from_string(prompt_text).render(self.vars)
         
         if self.dedupe_enabled:
-            parsed_text = dedupe_string(parsed_text, debug=True)
+            parsed_text = dedupe_string(parsed_text, debug=False)
         
         parsed_text = remove_extra_linebreaks(parsed_text)
         
@@ -395,7 +395,7 @@ class Prompt:
                 f"Answer: " + loop.run_until_complete(memory.query(query, **kwargs)),
             ])
         else:
-            return loop.run_until_complete(memory.multi_query(query.split("\n"), **kwargs))
+            return loop.run_until_complete(memory.multi_query([q for q in query.split("\n") if q.strip()], **kwargs))
             
     def instruct_text(self, instruction:str, text:str):
         loop = asyncio.get_event_loop()

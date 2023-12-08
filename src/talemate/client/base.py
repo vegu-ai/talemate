@@ -17,7 +17,7 @@ import talemate.client.system_prompts as system_prompts
 import talemate.util as util
 from talemate.client.context import client_context_attribute
 from talemate.client.model_prompts import model_prompt
-
+from talemate.agents.context import active_agent
 
 # Set up logging level for httpx to WARNING to suppress debug logs.
 logging.getLogger('httpx').setLevel(logging.WARNING)
@@ -37,10 +37,10 @@ class ClientBase:
     enabled: bool = True
     current_status: str = None
     max_token_length: int = 4096
-    randomizable_inference_parameters: list[str] = ["temperature"]
     processing: bool = False
     connected: bool = False
     conversation_retries: int = 5
+    auto_break_repetition_enabled: bool = True
 
     client_type = "base"
 
@@ -73,6 +73,17 @@ class ClientBase:
             return f"{sys_msg}\n{prompt}"
         
         return model_prompt(self.model_name, sys_msg, prompt)   
+    
+    def has_prompt_template(self):
+        if not self.model_name:
+            return False
+        
+        return model_prompt.exists(self.model_name)
+    
+    def prompt_template_example(self):
+        if not self.model_name:
+            return None
+        return model_prompt(self.model_name, "sysmsg", "prompt<|BOT|>{LLM coercion}")
     
     def reconfigure(self, **kwargs):
         
@@ -183,6 +194,10 @@ class ClientBase:
             id=self.name,
             details=model_name,
             status=status,
+            data={
+                "prompt_template_example": self.prompt_template_example(),
+                "has_prompt_template": self.has_prompt_template(),
+            }
         )
 
         if status_change:
@@ -246,6 +261,10 @@ class ClientBase:
         fn_tune_kind = getattr(self, f"tune_prompt_parameters_{kind}", None)
         if fn_tune_kind:
             fn_tune_kind(parameters)
+
+        agent_context = active_agent.get()
+        if agent_context.agent:
+            agent_context.agent.inject_prompt_paramters(parameters, kind, agent_context.action)
         
     def tune_prompt_parameters_conversation(self, parameters:dict):
         conversation_context = client_context_attribute("conversation")
@@ -277,7 +296,7 @@ class ClientBase:
             return ""
         
     async def send_prompt(
-        self, prompt: str, kind: str = "conversation", finalize: Callable = lambda x: x
+        self, prompt: str, kind: str = "conversation", finalize: Callable = lambda x: x, retries:int=2
     ) -> str:
         """
         Send a prompt to the AI and return its response.
@@ -300,8 +319,14 @@ class ClientBase:
             time_start = time.time()
             extra_stopping_strings = prompt_param.pop("extra_stopping_strings", [])
 
-            self.log.debug("send_prompt",  token_length=token_length, max_token_length=self.max_token_length, parameters=prompt_param)
-            response = await self.generate(finalized_prompt, prompt_param, kind)
+            self.log.debug("send_prompt", token_length=token_length, max_token_length=self.max_token_length, parameters=prompt_param)
+            response = await self.generate(
+                self.repetition_adjustment(finalized_prompt), 
+                prompt_param, 
+                kind
+            )
+            
+            response, finalized_prompt = await self.auto_break_repetition(finalized_prompt, prompt_param, response, kind, retries)
             
             time_end = time.time()
             
@@ -327,6 +352,125 @@ class ClientBase:
         finally:
             self.emit_status(processing=False)
             
+            
+    async def auto_break_repetition(
+        self, 
+        finalized_prompt:str, 
+        prompt_param:dict, 
+        response:str, 
+        kind:str, 
+        retries:int,
+        pad_max_tokens:int=32,
+    ) -> str:
+        
+        """
+        If repetition breaking is enabled, this will retry the prompt if its
+        response is too similar to other messages in the prompt
+        
+        This requires the agent to have the allow_repetition_break method
+        and the jiggle_enabled_for method and the client to have the
+        auto_break_repetition_enabled attribute set to True
+        
+        Arguments:
+
+        - finalized_prompt: the prompt that was sent
+        - prompt_param: the parameters that were used
+        - response: the response that was received
+        - kind: the kind of generation
+        - retries: the number of retries left
+        - pad_max_tokens: increase response max_tokens by this amount per iteration
+                
+        Returns:
+        
+        - the response
+        """
+        
+        if not self.auto_break_repetition_enabled:
+            return response, finalized_prompt
+        
+        agent_context = active_agent.get()
+        if self.jiggle_enabled_for(kind, auto=True):
+            
+            # check if the response is a repetition
+            # using the default similarity threshold of 98, meaning it needs
+            # to be really similar to be considered a repetition
+            
+            is_repetition, similarity_score, matched_line = util.similarity_score(
+                response, 
+                finalized_prompt.split("\n"), 
+            )
+            
+            if not is_repetition:
+                
+                # not a repetition, return the response
+                
+                self.log.debug("send_prompt no similarity", similarity_score=similarity_score)
+                return response, finalized_prompt
+            
+            while is_repetition and retries > 0:
+                
+                # it's a repetition, retry the prompt with adjusted parameters
+                
+                self.log.warn(
+                    "send_prompt similarity retry", 
+                    agent=agent_context.agent.agent_type, 
+                    similarity_score=similarity_score, 
+                    retries=retries
+                )
+                
+                # first we apply the client's randomness jiggle which will adjust
+                # parameters like temperature and repetition_penalty, depending
+                # on the client
+                #
+                # this is a cumulative adjustment, so it will add to the previous
+                # iteration's adjustment, this also means retries should be kept low
+                # otherwise it will get out of hand and start generating nonsense
+                
+                self.jiggle_randomness(prompt_param, offset=0.5)
+                
+                # then we pad the max_tokens by the pad_max_tokens amount
+                
+                prompt_param["max_tokens"] += pad_max_tokens
+                
+                # send the prompt again
+                # we use the repetition_adjustment method to further encourage
+                # the AI to break the repetition on its own as well.
+                
+                finalized_prompt = self.repetition_adjustment(finalized_prompt, is_repetitive=True)
+                
+                response = retried_response = await self.generate(
+                    finalized_prompt, 
+                    prompt_param, 
+                    kind
+                )
+                
+                self.log.debug("send_prompt dedupe sentences", response=response, matched_line=matched_line)
+                
+                # a lot of the times the response will now contain the repetition + something new
+                # so we dedupe the response to remove the repetition on sentences level
+                
+                response = util.dedupe_sentences(response, matched_line, similarity_threshold=85, debug=True)
+                self.log.debug("send_prompt dedupe sentences (after)", response=response)
+                
+                # deduping may have removed the entire response, so we check for that
+                
+                if not util.strip_partial_sentences(response).strip():
+                    
+                    # if the response is empty, we set the response to the original
+                    # and try again next loop
+                    
+                    response = retried_response
+                
+                # check if the response is a repetition again
+                
+                is_repetition, similarity_score, matched_line = util.similarity_score(
+                    response, 
+                    finalized_prompt.split("\n"), 
+                )
+                retries -= 1
+                
+        return response, finalized_prompt
+        
     def count_tokens(self, content:str):
         return util.count_tokens(content)
 
@@ -340,12 +484,35 @@ class ClientBase:
         min_offset = offset * 0.3
         prompt_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
         
-    def jiggle_enabled_for(self, kind:str):
+    def jiggle_enabled_for(self, kind:str, auto:bool=False) -> bool:
         
-        if kind in ["conversation", "story"]:
-            return True
+        agent_context = active_agent.get()
+        agent = agent_context.agent
         
-        if kind.startswith("narrate"):
-            return True
+        if not agent:
+            return False
         
-        return False
+        return agent.allow_repetition_break(kind, agent_context.action, auto=auto)
+    
+    def repetition_adjustment(self, prompt:str, is_repetitive:bool=False):
+        """
+        Breaks the prompt into lines and checkse each line for a match with
+        [$REPETITION|{repetition_adjustment}].
+        
+        On match and if is_repetitive is True, the line is removed from the prompt and
+        replaced with the repetition_adjustment.
+        
+        On match and if is_repetitive is False, the line is removed from the prompt.        
+        """
+        
+        lines = prompt.split("\n")
+        new_lines = []
+        
+        for line in lines:
+            if line.startswith("[$REPETITION|"):
+                if is_repetitive:
+                    new_lines.append(line.split("|")[1][:-1])
+            else:
+                new_lines.append(line)
+        
+        return "\n".join(new_lines)

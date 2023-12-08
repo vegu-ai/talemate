@@ -44,10 +44,10 @@
           <v-window-item value="details">
             <v-card-text style="max-height:600px; overflow-y:scroll;">
               <v-list-item v-for="(value, key) in base_attributes" :key="key">
-                <v-list-item-content>
+                <div>
                   <v-list-item-title>{{ key }}</v-list-item-title>
                   <v-list-item-subtitle>{{ value }}</v-list-item-subtitle>
-                </v-list-item-content>
+                </div>
               </v-list-item>
             </v-card-text>
           </v-window-item>

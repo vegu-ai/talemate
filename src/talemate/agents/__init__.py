@@ -1,6 +1,5 @@
 from .base import Agent
 from .creator import CreatorAgent
-from .context import ContextAgent
 from .conversation import ConversationAgent
 from .director import DirectorAgent
 from .memory import ChromaDBMemoryAgent, MemoryAgent

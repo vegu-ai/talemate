@@ -21,7 +21,7 @@
           {{ client.type }} 
           <v-chip label size="x-small" variant="outlined" class="ml-1">ctx {{ client.max_token_length }}</v-chip>
         </v-list-item-subtitle>
-        <v-list-item-content density="compact">
+        <div density="compact">
           <v-slider
             hide-details
             v-model="client.max_token_length"
@@ -32,8 +32,14 @@
             @click.stop
             density="compact"
           ></v-slider>
-        </v-list-item-content>
+        </div>
         <v-list-item-subtitle class="text-center">
+
+          <v-tooltip text="No LLM prompt template for this model. Using default. Templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template" max-width="200">
+            <template v-slot:activator="{ props }">
+              <v-icon x-size="14" class="mr-1" v-bind="props" color="orange">mdi-alert</v-icon>
+            </template>
+          </v-tooltip>
 
           <v-tooltip text="Edit client">
             <template v-slot:activator="{ props }">
@@ -56,7 +62,7 @@
         </v-list-item-subtitle>
       </v-list-item>
     </v-list>
-    <ClientModal :dialog="dialog" :formTitle="formTitle" @save="saveClient" @error="propagateError" @update:dialog="updateDialog"></ClientModal>
+    <ClientModal :dialog="state.dialog" :formTitle="state.formTitle" @save="saveClient" @error="propagateError" @update:dialog="updateDialog"></ClientModal>
     <v-alert type="warning" variant="tonal" v-if="state.clients.length === 0">You have no LLM clients configured. Add one.</v-alert>
     <v-btn @click="openModal" prepend-icon="mdi-plus-box">Add client</v-btn>
   </div>
@@ -81,6 +87,9 @@ export default {
           apiUrl: '',
           model_name: '',
           max_token_length: 2048,
+          data: {
+            has_prompt_template: false,
+          }
         }, // Add a new field to store the model name
         formTitle: ''
       }
@@ -90,7 +99,6 @@ export default {
     'getWebsocket',
     'registerMessageHandler',
     'isConnected',
-    'chekcingStatus',
     'getAgents',
   ],
   provide() {
@@ -123,6 +131,9 @@ export default {
         apiUrl: 'http://localhost:5000',
         model_name: '',
         max_token_length: 4096,
+        data: {
+          has_prompt_template: false,
+        }
       };
       this.state.formTitle = 'Add Client';
       this.state.dialog = true;
@@ -181,6 +192,7 @@ export default {
           client.status = data.status;
           client.max_token_length = data.max_token_length;
           client.apiUrl = data.apiUrl;
+          client.data = data.data;
         } else {
           console.log("Adding new client", data);
           this.state.clients.push({ 
@@ -190,6 +202,7 @@ export default {
             status: data.status,
             max_token_length: data.max_token_length,
             apiUrl: data.apiUrl,
+            data: data.data,
           });
           // sort the clients by name
           this.state.clients.sort((a, b) => (a.name > b.name) ? 1 : -1);

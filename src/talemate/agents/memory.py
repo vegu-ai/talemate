@@ -152,6 +152,10 @@ class MemoryAgent(Agent):
         """
 
         memory_context = []
+        
+        if not query:
+            return memory_context
+        
         for memory in await self.get(query):
             if memory in memory_context:
                 continue
@@ -191,6 +195,10 @@ class MemoryAgent(Agent):
 
         memory_context = []
         for query in queries:
+            
+            if not query:
+                continue
+            
             i = 0
             for memory in await self.get(formatter(query), limit=iterate, **where):
                 if memory in memory_context:

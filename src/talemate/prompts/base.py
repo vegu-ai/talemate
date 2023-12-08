@@ -395,7 +395,7 @@ class Prompt:
                 f"Answer: " + loop.run_until_complete(memory.query(query, **kwargs)),
             ])
         else:
-            return loop.run_until_complete(memory.multi_query(query.split("\n"), **kwargs))
+            return loop.run_until_complete(memory.multi_query([q for q in query.split("\n") if q.strip()], **kwargs))
             
     def instruct_text(self, instruction:str, text:str):
         loop = asyncio.get_event_loop()

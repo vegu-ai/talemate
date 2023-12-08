@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 from chromadb.config import Settings
 import talemate.events as events
 import talemate.util as util
+from talemate.emit import emit
+from talemate.emit.signals import handlers
 from talemate.context import scene_is_loading
 from talemate.config import load_config
 from talemate.agents.base import set_processing
@@ -59,6 +61,15 @@ class MemoryAgent(Agent):
         self.scene = scene
         self.memory_tracker = {}
         self.config = load_config()
+        
+        handlers["config_saved"].connect(self.on_config_saved)
+        
+    def on_config_saved(self, event):
+        openai_key = self.openai_api_key
+        self.config = load_config()
+        if openai_key != self.openai_api_key:
+            loop = asyncio.get_running_loop()
+            loop.run_until_complete(self.emit_status())
 
     async def set_db(self):
         raise NotImplementedError()
@@ -230,6 +241,10 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
     @property
     def ready(self):
+        
+        if self.embeddings == "openai" and not self.openai_api_key:
+            return False
+        
         if getattr(self, "db_client", None):
             return True
         return False
@@ -238,10 +253,18 @@ class ChromaDBMemoryAgent(MemoryAgent):
     def status(self):
         if self.ready:
             return "active" if not getattr(self, "processing", False) else "busy"
+        
+        if self.embeddings == "openai" and not self.openai_api_key:
+            return "error"
+        
         return "waiting"
 
     @property
     def agent_details(self):
+        
+        if self.embeddings == "openai" and not self.openai_api_key:
+            return "No OpenAI API key set"
+        
         return f"ChromaDB: {self.embeddings}"
     
     @property
@@ -286,6 +309,10 @@ class ChromaDBMemoryAgent(MemoryAgent):
     def db_name(self):
         return getattr(self, "collection_name", "<unnamed>")
 
+    @property
+    def openai_api_key(self):
+        return self.config.get("openai",{}).get("api_key")
+
     def make_collection_name(self, scene):
         
         if self.USE_OPENAI:
@@ -318,7 +345,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 settings=Settings(anonymized_telemetry=False)
             )
 
-        openai_key = self.config.get("openai").get("api_key") or os.environ.get("OPENAI_API_KEY")
+        openai_key = self.openai_api_key
         
         self.collection_name = collection_name = self.make_collection_name(self.scene)
         

@@ -80,7 +80,7 @@ Post [here](https://github.com/vegu-ai/talemate/issues/17) if you run into probl
 
 ### Linux
 
-`python 3.10` or higher is required.
+`python 3.10` or `python 3.11` is required. :warning: `python 3.12` not supported yet. 
 
 1. `git clone git@github.com:vegu-ai/talemate`
 1. `cd talemate`

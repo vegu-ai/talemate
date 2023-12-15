@@ -398,6 +398,7 @@ class ClientBase:
             is_repetition, similarity_score, matched_line = util.similarity_score(
                 response, 
                 finalized_prompt.split("\n"), 
+                similarity_threshold=80
             )
             
             if not is_repetition:
@@ -466,6 +467,7 @@ class ClientBase:
                 is_repetition, similarity_score, matched_line = util.similarity_score(
                     response, 
                     finalized_prompt.split("\n"), 
+                    similarity_threshold=80
                 )
                 retries -= 1
                 

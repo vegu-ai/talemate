@@ -16,6 +16,7 @@ import asyncio
 import nest_asyncio
 import uuid
 import random
+from contextvars import ContextVar
 from typing import Any
 from talemate.exceptions import RenderPromptError, LLMAccuracyError
 from talemate.emit import emit
@@ -34,6 +35,22 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate")
+
+prepended_template_dirs = ContextVar("prepended_template_dirs", default=[])
+
+class PrependTemplateDirectories:
+    def __init__(self, prepend_dir:list):
+        
+        if isinstance(prepend_dir, str):
+            prepend_dir = [prepend_dir]
+        
+        self.prepend_dir = prepend_dir
+        
+    def __enter__(self):
+        self.token = prepended_template_dirs.set(self.prepend_dir)
+        
+    def __exit__(self, *args):
+        prepended_template_dirs.reset(self.token)
 
 
 nest_asyncio.apply()
@@ -198,7 +215,12 @@ class Prompt:
         
         #split uid into agent_type and prompt_name
         
-        agent_type, prompt_name = uid.split(".")
+        try:
+            agent_type, prompt_name = uid.split(".")
+        except ValueError as exc:
+            log.warning("prompt.get", uid=uid, error=exc)
+            agent_type = ""
+            prompt_name = uid
         
         prompt = cls(
             uid = uid,
@@ -235,12 +257,18 @@ class Prompt:
         # Get the directory of this file
         dir_path = os.path.dirname(os.path.realpath(__file__))
         
+        _prepended_template_dirs = prepended_template_dirs.get() or []
+        
+        _fixed_template_dirs = [
+            os.path.join(dir_path, '..', '..', '..', 'templates', 'prompts', self.agent_type),
+            os.path.join(dir_path, 'templates', self.agent_type),
+        ]
+        
+        template_dirs = _prepended_template_dirs + _fixed_template_dirs
+        
         # Create a jinja2 environment with the appropriate template paths
         return jinja2.Environment(
-            loader=jinja2.FileSystemLoader([
-                os.path.join(dir_path, '..', '..', '..', 'templates', 'prompts', self.agent_type),
-                os.path.join(dir_path, 'templates', self.agent_type),
-            ])
+            loader=jinja2.FileSystemLoader(template_dirs),
         )
         
     def list_templates(self, search_pattern:str):
@@ -287,6 +315,8 @@ class Prompt:
         env.globals["set_question_eval"] = self.set_question_eval
         env.globals["disable_dedupe"] = self.disable_dedupe
         env.globals["random"] = self.random
+        env.globals["random_as_str"] = lambda x,y: str(random.randint(x,y))
+        env.globals["random_choice"] = lambda x: random.choice(x)
         env.globals["query_scene"] = self.query_scene
         env.globals["query_memory"] = self.query_memory
         env.globals["query_text"] = self.query_text
@@ -372,6 +402,9 @@ class Prompt:
         summarizer = instance.get_agent("world_state")
         query = query.format(**self.vars)
         
+        if isinstance(text, list):
+            text = "\n".join(text)
+        
         if not as_question_answer:
             return loop.run_until_complete(summarizer.analyze_text_and_answer_question(text, query))
         
@@ -401,6 +434,9 @@ class Prompt:
         loop = asyncio.get_event_loop()
         world_state = instance.get_agent("world_state")
         instruction = instruction.format(**self.vars)
+        
+        if isinstance(text, list):
+            text = "\n".join(text)
         
         return loop.run_until_complete(world_state.analyze_and_follow_instruction(text, instruction))      
             

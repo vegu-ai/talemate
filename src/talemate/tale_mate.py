@@ -25,6 +25,7 @@ from talemate.util import colored_text, count_tokens, extract_metadata, wrap_tex
 from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, NarratorMessage, TimePassageMessage
 from talemate.exceptions import ExitScene, RestartSceneLoop, ResetScene, TalemateError, TalemateInterrupt, LLMAccuracyError
 from talemate.world_state import WorldState
+from talemate.game_state import GameState
 from talemate.config import SceneConfig
 from talemate.scene_assets import SceneAssets
 from talemate.client.context import ClientContext, ConversationContext
@@ -561,6 +562,7 @@ class Scene(Emitter):
         self.environment = "scene"
         self.goal = None
         self.world_state = WorldState()
+        self.game_state = GameState()
         self.ts = "PT0S"
         
         self.automated_actions = {}
@@ -625,7 +627,26 @@ class Scene(Emitter):
         for idx in range(len(self.history) - 1, -1, -1):
             if isinstance(self.history[idx], CharacterMessage):
                 return self.history[idx].character_name
+
+    @property
+    def save_dir(self):
+        saves_dir = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "..",
+            "..",
+            "scenes",
+            self.project_name,
+        )
+        
+        if not os.path.exists(saves_dir):
+            os.makedirs(saves_dir)
+        
+        return saves_dir
     
+    @property
+    def template_dir(self):
+        return os.path.join(self.save_dir, "templates")
+
     def apply_scene_config(self, scene_config:dict):
         scene_config = SceneConfig(**scene_config)
         
@@ -1079,6 +1100,10 @@ class Scene(Emitter):
         elif source == "narrate_dialogue":
             character = self.get_character(arg)
             new_message = await narrator.agent.narrate_after_dialogue(character)
+        elif source == "__director__":
+            director = self.get_helper("director").agent
+            await director.direct_scene(None, None)
+            return
         else:
             fn = getattr(narrator.agent, source, None)
             if not fn:
@@ -1177,10 +1202,12 @@ class Scene(Emitter):
             data={
                 "environment": self.environment,
                 "scene_config": self.scene_config,
+                "context": self.context,
                 "assets": self.assets.dict(),
                 "characters": [actor.character.serialize for actor in self.actors],
                 "scene_time": util.iso8601_duration_to_human(self.ts, suffix="") if self.ts else None,
                 "saved": self.saved,
+                "game_state": self.game_state.model_dump(),
             },
         )
     
@@ -1288,6 +1315,9 @@ class Scene(Emitter):
 
 
         if init:
+            
+            self.game_state.init(self)
+            
             emit("clear_screen", "")
             self.narrator_message(self.get_intro())
 
@@ -1325,6 +1355,7 @@ class Scene(Emitter):
         
         self.active_actor = None
         self.next_actor = None
+        signal_game_loop = True
         
         await self.signals["game_loop_start"].send(events.GameLoopStartEvent(scene=self, event_type="game_loop_start"))
         
@@ -1332,7 +1363,10 @@ class Scene(Emitter):
             
             try:
                 
-                await self.signals["game_loop"].send(events.GameLoopEvent(scene=self, event_type="game_loop"))
+                if signal_game_loop:
+                    await self.signals["game_loop"].send(events.GameLoopEvent(scene=self, event_type="game_loop"))
+                
+                signal_game_loop = True
             
                 for actor in self.actors:
                     
@@ -1353,6 +1387,7 @@ class Scene(Emitter):
                     if isinstance(actor, Player) and type(message) != list:
                         # Don't append message to the history if it's "rerun"
                         if await command.execute(message):
+                            signal_game_loop = False
                             break
                         await self.call_automated_actions()
                         
@@ -1374,6 +1409,8 @@ class Scene(Emitter):
                     await self.signals["game_loop_actor_iter"].send(
                         events.GameLoopActorIterEvent(scene=self, event_type="game_loop_actor_iter", actor=actor)
                     )
+
+
                 
                 self.emit_status()
                     
@@ -1422,20 +1459,7 @@ class Scene(Emitter):
                 self.log.error("creative_loop", error=e, unhandled=True, traceback=traceback.format_exc())
                 emit("system", status="error", message=f"Unhandled Error: {e}")
 
-    @property
-    def save_dir(self):
-        saves_dir = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "..",
-            "..",
-            "scenes",
-            self.project_name,
-        )
-        
-        if not os.path.exists(saves_dir):
-            os.makedirs(saves_dir)
-        
-        return saves_dir
+
             
     async def save(self, save_as:bool=False):
         """
@@ -1481,7 +1505,8 @@ class Scene(Emitter):
             "goal": scene.goal,
             "goals": scene.goals,
             "context": scene.context,
-            "world_state": scene.world_state.dict(),
+            "world_state": scene.world_state.model_dump(),
+            "game_state": scene.game_state.model_dump(),
             "assets": scene.assets.dict(),
             "memory_id": scene.memory_id,
             "ts": scene.ts,

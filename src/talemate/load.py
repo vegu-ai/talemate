@@ -10,6 +10,7 @@ from talemate.scene_message import (
     SceneMessage, CharacterMessage, NarratorMessage, DirectorMessage, MESSAGES, reset_message_id
 )
 from talemate.world_state import WorldState
+from talemate.game_state import GameState
 from talemate.context import SceneIsLoading
 import talemate.instance as instance
 
@@ -152,6 +153,7 @@ async def load_scene_from_data(
         scene.archived_history = scene_data["archived_history"]
         scene.character_states = scene_data.get("character_states", {})
         scene.world_state = WorldState(**scene_data.get("world_state", {}))
+        scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.context = scene_data.get("context", "")
         scene.filename = os.path.basename(
             name or scene.name.lower().replace(" ", "_") + ".json"

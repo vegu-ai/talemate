@@ -1,3 +1,25 @@
+{% if character -%}
+<|SECTION:TASK|>
+Current scene goal: {{ prompt }}
+
+Give actionable directions to the actor playing {{ character.name }} by instructing {{ character.name }} to do or say something to progress the scene subtly towards meeting the condition of the current goal.
+
+Take the most recent update to the scene into consideration: {{ scene.history[-1] }}
+{% set director_instructions = "Director instructs "+character.name+": \"To progress the scene, i want you to "%}
+<|CLOSE_SECTION|>
+{% elif game_state.has_scene_instructions -%}
+<|SECTION:GAME RULES|>
+Only you know the entire set of rules. Don't assume the players know until the scene has included this information.
+
+{{ player_character.name }} is an autonomous character played by a person. You run this game for {{ player_character.name }}. They make their own decisions.
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+{{ game_state.scene_instructions }}
+Write 1 to 3 (one to three) sentences of new unrepetitive narration to subtly progress the story.
+Narration style should be that of a 90s point and click adventure game. You are omniscient and can describe the scene in detail.
+<|CLOSE_SECTION|>
+{% set director_instructions = "" %}
+{% endif %}
 <|SECTION:SCENE|>
 {% block scene_history -%}
 {% for scene_context in scene.context_history(budget=1000, min_dialogue=25, sections=False, keep_director=False) -%}
@@ -5,11 +27,4 @@
 {% endfor %}
 {% endblock -%}
 <|CLOSE_SECTION|>
-<|SECTION:TASK|>
-Current scene goal: {{ prompt }}
-
-Give actionable directions to the actor playing {{ character.name }} by instructing {{ character.name }} to do or say something to progress the scene subtly towards meeting the condition of the current goal.
-
-Take the most recent update to the scene into consideration: {{ scene.history[-1] }}
-<|CLOSE_SECTION|>
-{{ set_prepared_response("Director instructs "+character.name+": \"To progress the scene, i want you to ") }}
+{{ set_prepared_response(director_instructions) }}

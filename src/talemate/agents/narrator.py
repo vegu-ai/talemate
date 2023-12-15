@@ -187,6 +187,7 @@ class NarratorAgent(Agent):
         narrate_on_player_chance = self.actions["narrate_dialogue"].config["player_dialog"].value
         narrate_on_ai = random.random() < narrate_on_ai_chance
         narrate_on_player = random.random() < narrate_on_player_chance
+
         log.debug(
             "narrate on dialog", 
             narrate_on_ai=narrate_on_ai, 

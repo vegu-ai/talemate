@@ -12,7 +12,11 @@ Scenario Premise: {{ scene.description }}
 {{ scene_context }}
 {% endfor %}
 <|SECTION:TASK|>
-Based on the previous line '{{ last_line }}', create the next line of narration. This line should focus solely on describing sensory details (like sounds, sights, smells, tactile sensations) or external actions that move the story forward. Avoid including any character's internal thoughts, feelings, or dialogue. Your narration should directly respond to '{{ last_line }}', either by elaborating on the immediate scene or by subtly advancing the plot. Generate exactly one sentence of new narration. If the character is trying to determine some state, truth or situation, try to answer as part of the narration.
+In response to "{{ last_line}}"
+
+Generate a line of new narration that provides sensory details about the scene.
+
+This line should focus solely on describing sensory details (like sounds, sights, smells, tactile sensations) or external actions that move the story forward. Avoid including any character's internal thoughts, feelings, or dialogue. Your narration should directly response to the last line either by elaborating on the immediate scene or by subtly advancing the plot. Generate exactly one sentence of new narration. If the character is trying to determine some state, truth or situation, try to answer as part of the narration.
 
 Be creative and generate something new and interesting, but stay true to the setting and context of the story so far.
 
@@ -23,4 +27,3 @@ Narration style should be that of a 90s point and click adventure game. You are 
 Only generate new narration. {{ extra_instructions }}
 [$REPETITION|Narration is getting repetitive. Try to choose different words to break up the repetitive text.]
 <|CLOSE_SECTION|>
-{{ set_prepared_response('*') }}

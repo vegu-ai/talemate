@@ -123,3 +123,25 @@ class CmdLongTermMemoryReset(TalemateCommand):
         await self.scene.commit_to_memory()
         
         self.emit("system", f"Long term memory for {self.scene.name} has been reset")
+        
+@register
+class CmdSetContentContext(TalemateCommand):
+    """
+    Command class for the 'set_content_context' command
+    """
+    
+    name = "set_content_context"
+    description = "Set the content context for the scene"
+    aliases = ["set_context"]
+    
+    async def run(self):
+        
+        if not self.args:
+            self.emit("system", "You must specify a context")
+            return
+        
+        context = self.args[0]
+        
+        self.scene.context = context
+        
+        self.emit("system", f"Content context set to {context}")

@@ -67,6 +67,10 @@ class SceneMessage:
     def endswith(self, *args, **kwargs):
         return self.message.endswith(*args, **kwargs)
     
+    @property
+    def secondary_source(self):
+        return self.source
+    
 @dataclass
 class CharacterMessage(SceneMessage):
     typ = "character"
@@ -78,6 +82,10 @@ class CharacterMessage(SceneMessage):
     @property
     def character_name(self):
         return self.message.split(":", 1)[0]
+   
+    @property
+    def secondary_source(self):
+        return self.character_name
     
 @dataclass
 class NarratorMessage(SceneMessage):

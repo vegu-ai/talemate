@@ -22,6 +22,7 @@ from talemate.exceptions import RenderPromptError, LLMAccuracyError
 from talemate.emit import emit
 from talemate.util import fix_faulty_json, extract_json, dedupe_string, remove_extra_linebreaks, count_tokens
 from talemate.config import load_config
+import talemate.thematic_generators as thematic_generators
 
 import talemate.instance as instance
 
@@ -305,7 +306,8 @@ class Prompt:
         template = env.get_template('{}.jinja2'.format(self.name))
         
         ctx = {
-            "bot_token": "<|BOT|>"
+            "bot_token": "<|BOT|>",
+            "thematic_generator": thematic_generators.ThematicGenerator(),
         }
         
         env.globals["set_prepared_response"] = self.set_prepared_response
@@ -321,14 +323,14 @@ class Prompt:
         env.globals["query_memory"] = self.query_memory
         env.globals["query_text"] = self.query_text
         env.globals["instruct_text"] = self.instruct_text
+        env.globals["agent_action"] = self.agent_action
         env.globals["retrieve_memories"] = self.retrieve_memories
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
         env.globals["config"] = self.config
         env.globals["len"] = lambda x: len(x)
         env.globals["count_tokens"] = lambda x: count_tokens(dedupe_string(x, debug=False))
-        env.globals["print"] = lambda x: print(x)
-        
+        env.globals["print"] = lambda x: print(x)    
         ctx.update(self.vars)
         
         sectioning_handler = SECTIONING_HANDLERS.get(self.sectioning_hander)
@@ -449,6 +451,12 @@ class Prompt:
         
         return loop.run_until_complete(world_state.analyze_text_and_extract_context("\n".join(lines), goal=goal))
     
+    
+    def agent_action(self, agent_name:str, action_name:str, **kwargs):
+        loop = asyncio.get_event_loop()
+        agent = instance.get_agent(agent_name)
+        action = getattr(agent, action_name)
+        return loop.run_until_complete(action(**kwargs))
     
     def set_prepared_response(self, response:str, prepend:str=""):
         """

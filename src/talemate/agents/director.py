@@ -17,6 +17,7 @@ from talemate.agents.conversation import ConversationAgentEmission
 from .registry import register
 from .base import set_processing, AgentAction, AgentActionConfig, Agent
 from talemate.events import GameLoopEvent, GameLoopActorIterEvent
+import talemate.instance as instance
 
 if TYPE_CHECKING:
     from talemate import Actor, Character, Player, Scene
@@ -141,6 +142,38 @@ class DirectorAgent(Agent):
             
             self.scene.push_history(message)        
 
+
+    @set_processing
+    async def persist_character(
+        self, 
+        name:str, 
+        content:str = None
+    ):
+        
+        world_state = instance.get_agent("world_state")
+        creator = instance.get_agent("creator")
+        self.scene.log.debug("persist_character", name=name)
+
+        character = self.scene.Character(name=name)
+        character.color = random.choice(['#F08080', '#FFD700', '#90EE90', '#ADD8E6', '#DDA0DD', '#FFB6C1', '#FAFAD2', '#D3D3D3', '#B0E0E6', '#FFDEAD'])
+
+        attributes = await world_state.extract_character_sheet(name=name, text=content)
+        self.scene.log.debug("persist_character", attributes=attributes)
+
+        character.base_attributes = attributes
+
+        description = await creator.determine_character_description(character)
+
+        character.description = description
+
+        self.scene.log.debug("persist_character", description=description)
+
+        actor = self.scene.Actor(character=character, agent=instance.get_agent("conversation"))
+
+        await self.scene.add_actor(actor)
+        self.emit("system", f"Added character {name} to the scene.")
+        self.scene.emit_status()
+        
         
     def inject_prompt_paramters(self, prompt_param: dict, kind: str, agent_function_name: str):
         log.debug("inject_prompt_paramters", prompt_param=prompt_param, kind=kind, agent_function_name=agent_function_name)

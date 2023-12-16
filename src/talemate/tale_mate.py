@@ -565,6 +565,9 @@ class Scene(Emitter):
         self.game_state = GameState()
         self.ts = "PT0S"
         
+        self.Actor = Actor
+        self.Character = Character
+        
         self.automated_actions = {}
 
         self.summary_pins = []
@@ -885,6 +888,27 @@ class Scene(Emitter):
         Calculate and return the length of all strings in the history added together.
         """
         return count_tokens(self.history)
+    
+    def count_messages(self, message_type:str=None, source:str=None) -> int:
+        """
+        Counts the number of messages in the history that match the given message_type and source
+        If no message_type or source is given, will return the total number of messages in the history
+        """
+        
+        count = 0
+        
+        for message in self.history:
+            if message_type and message.typ != message_type:
+                continue
+            if source and message.source != source and message.secondary_source != source:
+                continue
+            count += 1
+        
+        return count
+    
+    def count_character_messages(self, character:Character) -> int:
+        return self.count_messages(message_type="character", source=character.name)
+        
     
     async def summarized_dialogue_history(
         self,

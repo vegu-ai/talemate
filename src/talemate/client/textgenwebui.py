@@ -16,6 +16,7 @@ class TextGeneratorWebuiClient(ClientBase):
         parameters["stopping_strings"] = STOPPING_STRINGS + parameters.get("extra_stopping_strings", [])
         # is this needed?
         parameters["max_new_tokens"] = parameters["max_tokens"]
+        parameters["stop"] = parameters["stopping_strings"]
 
     def set_client(self):
         self.client = AsyncOpenAI(base_url=self.api_url+"/v1", api_key="sk-1111")

@@ -3,10 +3,12 @@ import os
 from typing import TYPE_CHECKING, Any
 import pydantic
 import structlog
-
+import asyncio
+import nest_asyncio
 from talemate.prompts.base import Prompt, PrependTemplateDirectories
 from talemate.instance import get_agent
 from talemate.agents.director import DirectorAgent
+from talemate.agents.memory import MemoryAgent
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
@@ -28,6 +30,10 @@ class GameState(pydantic.BaseModel):
     @property
     def director(self) -> DirectorAgent:
         return get_agent('director')
+    
+    @property
+    def memory(self) -> MemoryAgent:
+        return get_agent('memory')
     
     @property
     def scene(self) -> 'Scene':
@@ -63,8 +69,11 @@ class GameState(pydantic.BaseModel):
     def init(self, scene: 'Scene') -> 'GameState':
         return self
     
-    def set_var(self, key: str, value: Any):
+    def set_var(self, key: str, value: Any, commit: bool = False):
         self.variables[key] = value
+        if commit:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(self.memory.add(value, uid=f"game_state.{key}"))
         
     def has_var(self, key: str) -> bool:
         return key in self.variables
@@ -72,9 +81,9 @@ class GameState(pydantic.BaseModel):
     def get_var(self, key: str) -> Any:
         return self.variables[key]
     
-    def get_or_set_var(self, key: str, value: Any) -> Any:
+    def get_or_set_var(self, key: str, value: Any, commit: bool = False) -> Any:
         if not self.has_var(key):
-            self.set_var(key, value)
+            self.set_var(key, value, commit=commit)
         return self.get_var(key)
 
 def scene_has_game_template(scene: 'Scene') -> bool:

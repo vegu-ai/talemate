@@ -1,13 +1,15 @@
 <|SECTION:CONTENT|>
 {% if text -%}
 {{ text }}
-{% else -%}
+{% endif -%}
 {% set scene_context_history = scene.context_history(budget=max_tokens-500, min_dialogue=25, sections=False, keep_director=True) -%}
 {% if scene.num_history_entries < 25 %}{{ scene.description.replace("\r\n","\n") }}{% endif -%}
 {% for scene_context in scene_context_history -%}
 {{ scene_context }}
 {% endfor %}
-{% endif %}
+{% for memory in query_memory("Who is "+name+"?", as_question_answer=False, iterate=3) %}
+{{ memory }}
+{% endfor %}
 <|SECTION:TASK|>
 Generate a real world character profile for {{ name }}, one attribute per line. You are a creative writer and are allowed to fill in any gaps in the profile with your own ideas.
 {{ set_prepared_response("Name: "+name+"\nAge:") }}

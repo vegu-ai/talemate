@@ -290,6 +290,19 @@ class WorldStateAgent(Agent):
         
         return data
     
+    def _parse_character_sheet(self, response):
+        
+        data = {}
+        for line in response.split("\n"):
+            if not line.strip():
+                continue
+            if not ":" in line:
+                break
+            name, value = line.split(":", 1)
+            data[name.strip()] = value.strip()
+        
+        return data
+    
     @set_processing
     async def extract_character_sheet(
         self,
@@ -304,7 +317,7 @@ class WorldStateAgent(Agent):
         response = await Prompt.request(
             "world_state.extract-character-sheet",
             self.client,
-            "analyze_creative",
+            "create",
             vars = {
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
@@ -318,17 +331,8 @@ class WorldStateAgent(Agent):
         #
         # break as soon as a non-empty line is found that doesn't contain a :
         
-        data = {}
-        for line in response.split("\n"):
-            if not line.strip():
-                continue
-            if not ":" in line:
-                break
-            name, value = line.split(":", 1)
-            data[name.strip()] = value.strip()
+        return self._parse_character_sheet(response)
         
-        return data
-    
     
     @set_processing
     async def match_character_names(self, names:list[str]):

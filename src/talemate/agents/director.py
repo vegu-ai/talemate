@@ -16,7 +16,7 @@ import talemate.automated_action as automated_action
 from talemate.agents.conversation import ConversationAgentEmission
 from .registry import register
 from .base import set_processing, AgentAction, AgentActionConfig, Agent
-from talemate.events import GameLoopEvent, GameLoopActorIterEvent
+from talemate.events import GameLoopActorIterEvent
 import talemate.instance as instance
 
 if TYPE_CHECKING:
@@ -74,20 +74,24 @@ class DirectorAgent(Agent):
 
         if not event.actor.character.is_player:
             return
-
-        await self.direct(None)
         
-    async def direct(self, character: Character):
+        if event.game_loop.had_passive_narration:
+            log.debug("director.on_player_dialog", skip=True, had_passive_narration=event.game_loop.had_passive_narration)
+            return
+
+        event.game_loop.had_passive_narration = await self.direct(None)
+        
+    async def direct(self, character: Character) -> bool:
         
         if not self.actions["direct"].enabled:
-            return
+            return False
         
         prompt = self.actions["direct"].config["prompt"].value
         
         # TODO: old way, will be replaced with game_state.director_instructions
         if not prompt and character:
             log.info("direct_scene", skip=True, prompt=prompt)
-            return
+            return False
         
         always_direct = (not self.scene.npc_character_names)
         
@@ -95,11 +99,12 @@ class DirectorAgent(Agent):
             if not always_direct:
                 log.info("direct_scene", skip=True, next_direct=self.next_direct)
                 self.next_direct += 1
-                return
+                return False
             
         self.next_direct = 0
         
         await self.direct_scene(character, prompt)
+        return True
         
     @set_processing
     async def direct_scene(self, character: Character, prompt:str):
@@ -130,6 +135,7 @@ class DirectorAgent(Agent):
             emit("director", message, character=character)
             self.scene.push_history(message)
         else:
+            response = response.split('"')[0].strip()
             response = util.strip_partial_sentences(response).strip()
             response = response.replace('*','').strip()
             
@@ -147,7 +153,8 @@ class DirectorAgent(Agent):
     async def persist_character(
         self, 
         name:str, 
-        content:str = None
+        content:str = None,
+        attributes:str = None,
     ):
         
         world_state = instance.get_agent("world_state")
@@ -157,7 +164,11 @@ class DirectorAgent(Agent):
         character = self.scene.Character(name=name)
         character.color = random.choice(['#F08080', '#FFD700', '#90EE90', '#ADD8E6', '#DDA0DD', '#FFB6C1', '#FAFAD2', '#D3D3D3', '#B0E0E6', '#FFDEAD'])
 
-        attributes = await world_state.extract_character_sheet(name=name, text=content)
+        if not attributes:
+            attributes = await world_state.extract_character_sheet(name=name, text=content)
+        else:
+            attributes = world_state._parse_character_sheet(attributes)
+        
         self.scene.log.debug("persist_character", attributes=attributes)
 
         character.base_attributes = attributes

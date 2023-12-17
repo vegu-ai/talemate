@@ -1386,9 +1386,9 @@ class Scene(Emitter):
         while continue_scene:
             
             try:
-                
+                game_loop = events.GameLoopEvent(scene=self, event_type="game_loop", had_passive_narration=False)
                 if signal_game_loop:
-                    await self.signals["game_loop"].send(events.GameLoopEvent(scene=self, event_type="game_loop"))
+                    await self.signals["game_loop"].send(game_loop)
                 
                 signal_game_loop = True
             
@@ -1416,7 +1416,12 @@ class Scene(Emitter):
                         await self.call_automated_actions()
                         
                         await self.signals["game_loop_actor_iter"].send(
-                            events.GameLoopActorIterEvent(scene=self, event_type="game_loop_actor_iter", actor=actor)
+                            events.GameLoopActorIterEvent(
+                                scene=self, 
+                                event_type="game_loop_actor_iter",
+                                actor=actor,
+                                game_loop=game_loop,
+                            )
                         )
                         continue
                     
@@ -1431,7 +1436,12 @@ class Scene(Emitter):
                         )
                     
                     await self.signals["game_loop_actor_iter"].send(
-                        events.GameLoopActorIterEvent(scene=self, event_type="game_loop_actor_iter", actor=actor)
+                        events.GameLoopActorIterEvent(
+                            scene=self, 
+                            event_type="game_loop_actor_iter", 
+                            actor=actor,
+                            game_loop=game_loop,
+                        )
                     )
 
 

@@ -183,6 +183,12 @@ class NarratorAgent(Agent):
         
         if not self.actions["narrate_dialogue"].enabled:
             return
+        
+        
+        if event.game_loop.had_passive_narration:
+            log.debug("narrate on dialog", skip=True, had_passive_narration=event.game_loop.had_passive_narration)
+            return
+        
         narrate_on_ai_chance = self.actions["narrate_dialogue"].config["ai_dialog"].value
         narrate_on_player_chance = self.actions["narrate_dialogue"].config["player_dialog"].value
         narrate_on_ai = random.random() < narrate_on_ai_chance
@@ -206,6 +212,8 @@ class NarratorAgent(Agent):
         narrator_message = NarratorMessage(response, source=f"narrate_dialogue:{event.actor.character.name}")
         emit("narrator", narrator_message)
         self.scene.push_history(narrator_message)
+        
+        event.game_loop.had_passive_narration = True
 
     @set_processing
     async def narrate_scene(self):

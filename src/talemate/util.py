@@ -918,6 +918,14 @@ def ensure_dialog_line_format(line:str):
     segment = None
     segment_open = None
     
+    line = line.strip()
+    
+    if line.startswith('"*'):
+        line = line.lstrip('"')
+        
+    if line.endswith('*"'):
+        line = line.rstrip('"')
+    
     for i in range(len(line)):
         
         
@@ -1014,7 +1022,9 @@ def ensure_dialog_line_format(line:str):
         segments[i] = clean_uneven_markers(segments[i], '"')
         segments[i] = clean_uneven_markers(segments[i], '*')
             
-    return " ".join(segment for segment in segments if segment).strip()
+    final = " ".join(segment for segment in segments if segment).strip()
+    final = final.replace('","', '').replace('"."', '')
+    return final
 
 
 def clean_uneven_markers(chunk:str, marker:str):

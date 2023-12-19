@@ -39,7 +39,7 @@ class ClientBase:
     max_token_length: int = 4096
     processing: bool = False
     connected: bool = False
-    conversation_retries: int = 5
+    conversation_retries: int = 2
     auto_break_repetition_enabled: bool = True
 
     client_type = "base"
@@ -406,6 +406,7 @@ class ClientBase:
                 # not a repetition, return the response
                 
                 self.log.debug("send_prompt no similarity", similarity_score=similarity_score)
+                finalized_prompt = self.repetition_adjustment(finalized_prompt, is_repetitive=False)
                 return response, finalized_prompt
             
             while is_repetition and retries > 0:
@@ -514,6 +515,8 @@ class ClientBase:
             if line.startswith("[$REPETITION|"):
                 if is_repetitive:
                     new_lines.append(line.split("|")[1][:-1])
+                else:
+                    new_lines.append("")
             else:
                 new_lines.append(line)
         

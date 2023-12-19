@@ -12,7 +12,7 @@ abstract_artistic_prefixes = [
     "Dawnlike", "Dusky", "Midnight", "Noonday", "Twilight",
     "Melodic", "Harmonic", "Rhythmic", "Crescendoing", "Silent",
     "Existential", "Chaotic", "Orderly", "Free", "Destined",
-    "Crimson", "Azure", "Emerald", "Onyx", "Golden"
+    "Crimson", "Azure", "Emerald", "Onyx", "Golden",
 ]
 
 abstract_artistic_suffixes = [
@@ -26,6 +26,32 @@ abstract_artistic_suffixes = [
     "Laughter", "Tears", "Sigh", "Shiver", "Whisper"
 ]
 
+# PERSONALITY
+
+personality = [
+    "Adventurous", "Ambitious", "Amiable", "Amusing", "Articulate",
+    "Assertive", "Attentive", "Bold", "Brave", "Calm",
+    "Capable", "Careful", "Caring", "Cautious", "Charming",
+    "Cheerful", "Clever", "Confident", "Conscientious", "Considerate",
+    "Cooperative", "Courageous", "Courteous", "Creative", "Curious",
+    "Daring", "Decisive", "Determined", "Diligent", "Diplomatic",
+    "Discreet", "Dynamic", "Easygoing", "Efficient", "Energetic",
+    "Enthusiastic", "Fair", "Faithful", "Fearless", "Forceful",
+    "Forgiving", "Frank", "Friendly", "Funny", "Generous",
+    "Gentle", "Good", "Hardworking", "Helpful", "Honest",
+    "Honorable", "Humorous", "Idealistic", "Imaginative", "Impartial",
+    "Independent", "Intelligent", "Intuitive", "Inventive", "Kind",
+    "Lively", "Logical", "Loving", "Loyal", "Modest",
+    "Neat", "Nice", "Optimistic", "Passionate", "Patient",
+    "Persistent", "Philosophical", "Placid", "Plucky", "Polite",
+    "Powerful", "Practical", "Proactive", "Quick", "Quiet",
+    "Rational", "Realistic", "Reliable", "Reserved", "Resourceful",
+    "Respectful", "Responsible", "Romantic", "Self-confident", "Self-disciplined",
+    "Sensible", "Sensitive", "Shy", "Sincere", "Sociable",
+    "Straightforward", "Sympathetic", "Thoughtful", "Tidy", "Tough",
+    "Trustworthy", "Unassuming", "Understanding", "Versatile", "Warmhearted",
+    "Willing", "Wise", "Witty"
+]
 
 # BERRY DESSERT
 
@@ -44,8 +70,16 @@ dessert_suffixes = [
 # HUMAN ETHNICITY
 
 ethnicities = [
-    "African", "Arab", "Asian", "European", "Indian",
-    "Indigenous", "Latin American", "North American", "South American"
+    "African", 
+    "Arab", 
+    "Asian", 
+    "European",
+    "Scaninavian",
+    "East European",
+    "Indian",
+    "Latin American", 
+    "North American", 
+    "South American"
 ]
 
 # HUMAN NAMES, FEMALE, 20 PER ETHNICITY
@@ -75,17 +109,23 @@ human_names_female = {
         "Andreea", "Aneta", "Aniela", "Anita", "Anna",
         "Antonia", "Ariana", "Aurelia", "Beatrice", "Bianca"
     ],
+    "Scaninavian": [
+        "Aase", "Aina", "Alfhild", "Ane", "Anja",
+        "Astrid", "Birgit", "Bodil", "Borghild", "Dagmar",
+        "Elin", "Ellinor", "Elsa", "Else", "Embla",
+        "Emma", "Erika", "Freja", "Gerd", "Gudrun"
+    ],
+    "East European": [
+        "Adela", "Adriana", "Agata", "Alina", "Ana",
+        "Anastasia", "Anca", "Andreea", "Aneta", "Aniela",
+        "Anita", "Anna", "Antonia", "Ariana", "Aurelia",
+        "Beatrice", "Bianca", "Camelia", "Carina", "Carmen"
+    ],
     "Indian": [
         "Aarushi", "Aditi", "Aishwarya", "Amrita", "Ananya",
         "Anika", "Anjali", "Anushka", "Aparna", "Arya",
         "Avani", "Chandni", "Darshana", "Deepika", "Devika",
         "Diya", "Gauri", "Gayatri", "Isha", "Ishani"
-    ],
-    "Indigenous": [
-        "Aiyana", "Aponi", "Ayita", "Chenoa", "Chilali",
-        "Dyani", "Enola", "Halona", "Hania", "Hokona",
-        "Kai", "Kaya", "Kiona", "Luyu", "Maiara",
-        "Makawee", "Mika", "Nina", "Nokomis", "Noya"
     ],
     "Latin American": [
         "Adriana", "Alejandra", "Alicia", "Ana", "Andrea",
@@ -134,17 +174,23 @@ human_names_male = {
         "Eduard", "Florin", "Gabriel", "George", "Ion",
         "Iulian", "Lucian", "Marius", "Mihai", "Nicolae"
     ],
+    "Scaninavian": [
+        "Aage", "Aksel", "Alf", "Anders", "Arne",
+        "Asbjorn", "Bjarne", "Bo", "Carl", "Christian",
+        "Einar", "Elias", "Erik", "Finn", "Frederik",
+        "Gunnar", "Gustav", "Hans", "Harald", "Henrik"
+    ],
+    "East European": [
+        "Adrian", "Alexandru", "Andrei", "Anton", "Bogdan",
+        "Cristian", "Daniel", "David", "Dorian", "Dragos",
+        "Eduard", "Florin", "Gabriel", "George", "Ion",
+        "Iulian", "Lucian", "Marius", "Mihai", "Nicolae"
+    ],
     "Indian": [
         "Aarav", "Aayush", "Aditya", "Aman", "Amit",
         "Anand", "Anil", "Anirudh", "Anish", "Anuj",
         "Arjun", "Arun", "Aryan", "Ashish", "Ashok",
         "Ayush", "Deepak", "Dev", "Dhruv", "Ganesh"
-    ],
-    "Indigenous": [
-        "Ahanu", "Aiyetoro", "Alo", "Amitola", "Anele",
-        "Ayawamat", "Chayton", "Chochmo", "Dakota", "Delsin",
-        "Enapay", "Hakan", "Hinto", "Kai", "Kangee",
-        "Kohana", "Makya", "Mato", "Nakos", "Nokomis"
     ],
     "Latin American": [
         "Alejandro", "Andres", "Antonio", "Carlos", "Cesar",
@@ -177,22 +223,52 @@ class ThematicGenerator:
     
     def __init__(self, seed:int=None):
         self.seed = seed
+        self.custom_lists = {}
         
-    def generate(self, prefixes:list[str], suffixes:list[str]):
+    def _generate(self, prefixes:list[str], suffixes:list[str]):
         try:
             random.seed(self.seed)
             if prefixes and suffixes:
                 return (random.choice(prefixes) + " " + random.choice(suffixes)).strip()
             else:
                 return random.choice(prefixes or suffixes)
+            
         finally:
             random.seed()
 
+    def generate(self, *list_names) -> str:
+        """
+        Generates a name from a list of lists
+        """
+        try:
+            random.seed(self.seed)
+            generation = ""
+            for list_name in list_names:
+                fn = getattr(self, list_name)
+                generation += fn() + " "
+            
+            return generation.strip()
+            
+        finally:
+            random.seed()
+
+    def add(self, list_name:str, words:list[str]):
+        """
+        Adds a custom list
+        """
+        if hasattr(self, list_name):
+            raise ValueError(f"List name {list_name} is already in use")
+        self.custom_lists[list_name] = words
+        setattr(self, list_name, lambda: random.choice(self.custom_lists[list_name]))
+
     def abstract_artistic(self):
-        return self.generate(abstract_artistic_prefixes, abstract_artistic_suffixes)
+        return self._generate(abstract_artistic_prefixes, abstract_artistic_suffixes)
     
     def berry_dessert(self):
-        return self.generate(berry_prefixes, dessert_suffixes)
+        return self._generate(berry_prefixes, dessert_suffixes)
+    
+    def personality(self):
+        return random.choice(personality)
     
     def ethnicity(self):
         return random.choice(ethnicities)
@@ -204,10 +280,10 @@ class ThematicGenerator:
         if not ethnicity:
             ethnicity = self.ethnicity()
         
-        return self.generate(human_names_female[ethnicity], [])
+        return self._generate(human_names_female[ethnicity], [])
     
     def human_name_male(self, ethnicity:str=None):
         if not ethnicity:
             ethnicity = self.ethnicity()
         
-        return self.generate(human_names_male[ethnicity], [])
+        return self._generate(human_names_male[ethnicity], [])

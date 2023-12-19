@@ -131,3 +131,17 @@ class ScenarioCreatorMixin:
             "text": text,
         })
         return description
+
+    @set_processing
+    async def generate_json_list(
+        self,
+        text:str,
+        count:int=20,
+        first_item:str=None,
+    ):
+        _, json_list = await Prompt.request(f"creator.generate-json-list", self.client, "create", vars={
+            "text": text,
+            "first_item": first_item,
+            "count": count,
+        })
+        return json_list.get("items",[])

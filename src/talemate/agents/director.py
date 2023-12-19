@@ -90,7 +90,7 @@ class DirectorAgent(Agent):
         
         # TODO: old way, will be replaced with game_state.director_instructions
         if not prompt and character:
-            log.info("direct_scene", skip=True, prompt=prompt)
+            log.info("direct_scene", skip=True, reason="no prompt for character")
             return False
         
         always_direct = (not self.scene.npc_character_names)

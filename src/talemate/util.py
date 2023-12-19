@@ -920,11 +920,7 @@ def ensure_dialog_line_format(line:str):
     
     line = line.strip()
     
-    if line.startswith('"*'):
-        line = line.lstrip('"')
-        
-    if line.endswith('*"'):
-        line = line.rstrip('"')
+    line = line.replace('"*', '"').replace('*"', '"')
     
     for i in range(len(line)):
         

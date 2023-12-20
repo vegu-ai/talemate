@@ -185,6 +185,20 @@ class DirectorAgent(Agent):
         self.emit("system", f"Added character {name} to the scene.")
         self.scene.emit_status()
         
+    @set_processing
+    async def update_content_context(self, content:str=None, extra_choices:list[str]=None):
+        
+        if not content:
+            content = "\n".join(self.scene.context_history(sections=False, min_dialogue=25, budget=2048))
+            
+        response = await Prompt.request("world_state.determine-content-context", self.client, "analyze_freeform", vars={
+            "content": content,
+            "extra_choices": extra_choices or [],
+        })
+        
+        self.scene.context = response.strip()
+        self.scene.emit_status()
+        
         
     def inject_prompt_paramters(self, prompt_param: dict, kind: str, agent_function_name: str):
         log.debug("inject_prompt_paramters", prompt_param=prompt_param, kind=kind, agent_function_name=agent_function_name)
@@ -192,6 +206,8 @@ class DirectorAgent(Agent):
         if prompt_param.get("extra_stopping_strings") is None:
             prompt_param["extra_stopping_strings"] = []
         prompt_param["extra_stopping_strings"] += character_names + ["#"]
+        if agent_function_name == "update_content_context":
+            prompt_param["extra_stopping_strings"] += ["\n"]
         
     def allow_repetition_break(self, kind: str, agent_function_name: str, auto:bool=False):
         return True

@@ -283,6 +283,17 @@ class WebsocketHandler(Receiver):
             }
         )
 
+    def handle_status(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "status",
+                "message": emission.message,
+                "id": emission.id,
+                "status": emission.status,
+                "data": emission.data,
+            }
+        )
+
     def handle_narrator(self, emission: Emission):
         self.queue_put(
             {

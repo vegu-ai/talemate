@@ -1,20 +1,24 @@
 {% block rendered_context -%}
 <|SECTION:CHARACTERS|>
-{% for character in characters -%}
-#### {{ character.name }}
+{% for character in characters %}
+### {{ character.name }}
+{% if max_tokens > 4000 -%}
+{{ character.sheet }}
+{% else -%}
 {{ character.filtered_sheet(['age', 'gender']) }}
 {{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
+{% endif %}
 
 {{ character.description }}
-
 {% endfor %}
 <|CLOSE_SECTION|>
+{% if talking_character.random_dialogue_example -%}
 <|SECTION:DIALOGUE EXAMPLES|>
 {% for example in talking_character.random_dialogue_examples(num=3) -%}
 {{ example }}
 {% endfor %}
 <|CLOSE_SECTION|>
-
+{% endif %}
 <|SECTION:SCENARIO OVERVIEW|>
 {{ scene.description }}
 <|CLOSE_SECTION|>
@@ -33,11 +37,19 @@ Based on {{ talking_character.name}}'s example dialogue style, create a continua
 
 You may chose to have {{ talking_character.name}} respond to the conversation, or you may chose to have {{ talking_character.name}} perform a new action that is in line with {{ talking_character.name}}'s character.
 
+Always contain actions in asterisks. For example, *{{ talking_character.name}} smiles*.
+Always contain dialogue in quotation marks. For example, {{ talking_character.name}}: "Hello!"
+
 {{ extra_instructions }}
 
 {% if scene.count_character_messages(talking_character) >= 5 %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
 {% endif -%}
 <|CLOSE_SECTION|>
+{% if talking_character.get_detail("goals") %}
+<|SECTION:YOUR GOALS|>
+{{ talking_character.get_detail("goals") }}
+<|CLOSE_SECTION|>
+{% endif %}
 {% if memory -%}
 <|SECTION:EXTRA CONTEXT|>
 {{ memory }}

@@ -61,6 +61,7 @@ class MemoryAgent(Agent):
         self.scene = scene
         self.memory_tracker = {}
         self.config = load_config()
+        self._ready_to_add = False
         
         handlers["config_saved"].connect(self.on_config_saved)
         
@@ -88,6 +89,11 @@ class MemoryAgent(Agent):
             log.debug("memory agent", status="readonly")
             return
         
+        while not self._ready_to_add:
+            await asyncio.sleep(0.1)
+            
+        log.debug("memory agent add", text=text[:50], character=character, uid=uid, ts=ts, **kwargs)
+         
         loop = asyncio.get_running_loop()
         
         await loop.run_in_executor(None, functools.partial(self._add, text, character, uid=uid, ts=ts, **kwargs))
@@ -100,7 +106,12 @@ class MemoryAgent(Agent):
         if self.readonly:
             log.debug("memory agent", status="readonly")
             return
-        
+
+        while not self._ready_to_add:
+            await asyncio.sleep(0.1)
+ 
+        log.debug("memory agent add many", len=len(objects)) 
+ 
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._add_many, objects)
     
@@ -339,6 +350,9 @@ class ChromaDBMemoryAgent(MemoryAgent):
         await loop.run_in_executor(None, self._set_db)
 
     def _set_db(self):
+        
+        self._ready_to_add = False
+        
         if not getattr(self, "db_client", None):
             log.info("chromadb agent", status="setting up db client to persistent db")
             self.db_client = chromadb.PersistentClient(
@@ -391,6 +405,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         
         self.scene._memory_never_persisted = self.db.count() == 0
         log.info("chromadb agent", status="db ready")
+        self._ready_to_add = True
 
     def clear_db(self):
         if not self.db:
@@ -506,6 +521,12 @@ class ChromaDBMemoryAgent(MemoryAgent):
         #print(json.dumps(_results["distances"], indent=2))
         
         results = []
+        
+        max_distance = 1.5
+        if self.USE_INSTRUCTOR:
+            max_distance = 1
+        elif self.USE_OPENAI:
+            max_distance = 1
 
         for i in range(len(_results["distances"][0])):
             distance = _results["distances"][0][i]
@@ -514,7 +535,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             meta = _results["metadatas"][0][i]
             ts = meta.get("ts")
             
-            if distance < 1:
+            if distance < max_distance:
                 
                 try:
                     #log.debug("chromadb agent get", ts=ts, scene_ts=self.scene.ts)

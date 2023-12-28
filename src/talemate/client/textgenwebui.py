@@ -4,7 +4,9 @@ from openai import AsyncOpenAI
 import httpx
 import copy
 import random
+import structlog
 
+log = structlog.get_logger("talemate.client.textgenwebui")
 
 @register()
 class TextGeneratorWebuiClient(ClientBase):
@@ -17,6 +19,12 @@ class TextGeneratorWebuiClient(ClientBase):
         # is this needed?
         parameters["max_new_tokens"] = parameters["max_tokens"]
         parameters["stop"] = parameters["stopping_strings"]
+        
+        # Half temperature on -Yi- models
+        if self.model_name and "-yi-" in self.model_name.lower() and parameters["temperature"] > 0.1:
+            parameters["temperature"] = parameters["temperature"] / 2
+            log.debug("halfing temperature for -yi- model", temperature=parameters["temperature"])
+            
 
     def set_client(self):
         self.client = AsyncOpenAI(base_url=self.api_url+"/v1", api_key="sk-1111")
@@ -44,7 +52,7 @@ class TextGeneratorWebuiClient(ClientBase):
         headers = {}
         headers["Content-Type"] = "application/json"
         
-        parameters["prompt"] = prompt.strip()
+        parameters["prompt"] = prompt.strip(" ")
         
         async with httpx.AsyncClient() as client:
             response = await client.post(f"{self.api_url}/v1/completions", json=parameters, timeout=None, headers=headers)

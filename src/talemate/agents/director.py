@@ -32,11 +32,13 @@ class DirectorAgent(Agent):
     def __init__(self, client, **kwargs):
         self.is_enabled = False
         self.client = client
-        self.next_direct = 0
+        self.next_direct_character = {}
+        self.next_direct_scene = 0
         self.actions = {
             "direct": AgentAction(enabled=True, label="Direct", description="Will attempt to direct the scene. Runs automatically after AI dialogue (n turns).", config={
                 "turns": AgentActionConfig(type="number", label="Turns", description="Number of turns to wait before directing the sceen", value=5, min=1, max=100, step=1),
-                "prompt": AgentActionConfig(type="text", label="Instructions", description="Instructions to the director", value="", scope="scene")
+                "direct_scene": AgentActionConfig(type="bool", label="Direct Scene", description="If enabled, the scene will be directed through narration", value=True),
+                "direct_actors": AgentActionConfig(type="bool", label="Direct Actors", description="If enabled, direction will be given to actors based on their goals.", value=True),
             }),
         }
         
@@ -86,25 +88,50 @@ class DirectorAgent(Agent):
         if not self.actions["direct"].enabled:
             return False
         
-        prompt = self.actions["direct"].config["prompt"].value
-        
-        # TODO: old way, will be replaced with game_state.director_instructions
-        if not prompt and character:
-            log.info("direct_scene", skip=True, reason="no prompt for character")
-            return False
-        
-        always_direct = (not self.scene.npc_character_names)
-        
-        if self.next_direct % self.actions["direct"].config["turns"].value != 0 or self.next_direct == 0:
-            if not always_direct:
-                log.info("direct_scene", skip=True, next_direct=self.next_direct)
-                self.next_direct += 1
+        if character:
+            
+            if not self.actions["direct"].config["direct_actors"].value:
+                log.info("direct", skip=True, reason="direct_actors disabled", character=character)
                 return False
             
-        self.next_direct = 0
+            # character direction, see if there are character goals 
+            # defined
+            character_goals = character.get_detail("goals")
+            if not character_goals:
+                log.info("direct", skip=True, reason="no goals", character=character)
+                return False
         
-        await self.direct_scene(character, prompt)
-        return True
+            next_direct = self.next_direct_character.get(character.name, 0)
+            
+            if next_direct % self.actions["direct"].config["turns"].value != 0 or next_direct == 0:
+                log.info("direct", skip=True, next_direct=next_direct, character=character)
+                self.next_direct_character[character.name] = next_direct + 1
+                return False
+            
+            self.next_direct_character[character.name] = 0
+            await self.direct_scene(character, character_goals)
+            return True
+        else:
+            
+            if not self.actions["direct"].config["direct_scene"].value:
+                log.info("direct", skip=True, reason="direct_scene disabled")
+                return False
+            
+            # no character, see if there are NPC characters at all
+            # if not we always want to direct narration
+            always_direct = (not self.scene.npc_character_names)
+            
+            next_direct = self.next_direct_scene
+            
+            if next_direct % self.actions["direct"].config["turns"].value != 0 or next_direct == 0:
+                if not always_direct:
+                    log.info("direct", skip=True, next_direct=next_direct)
+                    self.next_direct_scene += 1
+                    return False
+        
+            self.next_direct_scene = 0
+            await self.direct_scene(None, None)
+            return True
         
     @set_processing
     async def direct_scene(self, character: Character, prompt:str):
@@ -130,12 +157,11 @@ class DirectorAgent(Agent):
         
         if character:
             response = response.strip().split("\n")[0].strip()
-            response += f" (current story goal: {prompt})"
+            #response += f" (current story goal: {prompt})"
             message = DirectorMessage(response, source=character.name)
             emit("director", message, character=character)
             self.scene.push_history(message)
         else:
-            response = response.split('"')[0].strip()
             response = util.strip_partial_sentences(response).strip()
             response = response.replace('*','').strip()
             
@@ -182,8 +208,9 @@ class DirectorAgent(Agent):
         actor = self.scene.Actor(character=character, agent=instance.get_agent("conversation"))
 
         await self.scene.add_actor(actor)
-        self.emit("system", f"Added character {name} to the scene.")
         self.scene.emit_status()
+        
+        return character
         
     @set_processing
     async def update_content_context(self, content:str=None, extra_choices:list[str]=None):

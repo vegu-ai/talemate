@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 import os
 
-from talemate.agents.base import Agent
+from talemate.agents.base import Agent, set_processing
 from talemate.agents.registry import register
 from talemate.emit import emit
+from talemate.prompts import Prompt
 import talemate.client as client
 
 from .character import CharacterCreatorMixin
@@ -157,3 +158,17 @@ class CreatorAgent(CharacterCreatorMixin, ScenarioCreatorMixin, Agent):
 
         return rv
 
+
+    @set_processing
+    async def generate_json_list(
+        self,
+        text:str,
+        count:int=20,
+        first_item:str=None,
+    ):
+        _, json_list = await Prompt.request(f"creator.generate-json-list", self.client, "create", vars={
+            "text": text,
+            "first_item": first_item,
+            "count": count,
+        })
+        return json_list.get("items",[])

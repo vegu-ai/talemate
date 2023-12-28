@@ -400,6 +400,20 @@ class Character:
             await memory_agent.add_many(items)
 
 
+    async def set_detail(self, name:str, value):
+        self.details[name] = value
+        # TODO: add to memory
+        
+    def get_detail(self, name:str):
+        return self.details.get(name)
+    
+    async def set_base_attribute(self, name:str, value):
+        self.base_attributes[name] = value
+        # TODO: add to memory
+        
+    def get_base_attribute(self, name:str):
+        return self.base_attributes.get(name)
+    
 class Helper:
     """
     Wrapper for non-conversational agents, such as summarization agents
@@ -1242,6 +1256,13 @@ class Scene(Emitter):
         Set the environment of the scene
         """
         self.environment = environment
+        self.emit_status()
+        
+    def set_content_context(self, context: str):
+        """
+        Updates the content context of the scene
+        """      
+        self.context = context
         self.emit_status()
         
     def advance_time(self, ts: str):

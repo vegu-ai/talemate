@@ -330,7 +330,8 @@ class Prompt:
         env.globals["config"] = self.config
         env.globals["len"] = lambda x: len(x)
         env.globals["count_tokens"] = lambda x: count_tokens(dedupe_string(x, debug=False))
-        env.globals["print"] = lambda x: print(x)    
+        env.globals["print"] = lambda x: print(x)
+        env.globals["emit_status"] = self.emit_status
         ctx.update(self.vars)
         
         sectioning_handler = SECTIONING_HANDLERS.get(self.sectioning_hander)
@@ -457,6 +458,9 @@ class Prompt:
         agent = instance.get_agent(agent_name)
         action = getattr(agent, action_name)
         return loop.run_until_complete(action(**kwargs))
+    
+    def emit_status(self, status:str, message:str):
+        emit("status", status=status, message=message)
     
     def set_prepared_response(self, response:str, prepend:str=""):
         """

@@ -48,41 +48,43 @@ class ScenarioCreatorMixin:
             
     
     
+    @set_processing
     async def create_scene_name(
         self,
         prompt:str,
         content_context:str,
         description:str,
     ):
+        
+        """
+        Generates a scene name.
+        
+        Arguments:
+        
+            prompt (str): The prompt to use to generate the scene name.
             
-            """
-            Generates a scene name.
+            content_context (str): The content context to use for the scene.
             
-            Arguments:
-            
-                prompt (str): The prompt to use to generate the scene name.
-                
-                content_context (str): The content context to use for the scene.
-                
-                description (str): The description of the scene.
-            """
-            scene = self.scene
-            
-            name = await Prompt.request(
-                "creator.scenario-name",
-                self.client,
-                "create",
-                vars={
-                    "prompt": prompt,
-                    "content_context": content_context,
-                    "description": description,
-                    "scene": scene,
-                }
-            )
-            name = name.strip().strip('.!').replace('"','')
-            return name
+            description (str): The description of the scene.
+        """
+        scene = self.scene
+        
+        name = await Prompt.request(
+            "creator.scenario-name",
+            self.client,
+            "create",
+            vars={
+                "prompt": prompt,
+                "content_context": content_context,
+                "description": description,
+                "scene": scene,
+            }
+        )
+        name = name.strip().strip('.!').replace('"','')
+        return name
     
     
+    @set_processing
     async def create_scene_intro(
         self,
         prompt:str,
@@ -131,17 +133,3 @@ class ScenarioCreatorMixin:
             "text": text,
         })
         return description
-
-    @set_processing
-    async def generate_json_list(
-        self,
-        text:str,
-        count:int=20,
-        first_item:str=None,
-    ):
-        _, json_list = await Prompt.request(f"creator.generate-json-list", self.client, "create", vars={
-            "text": text,
-            "first_item": first_item,
-            "count": count,
-        })
-        return json_list.get("items",[])

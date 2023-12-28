@@ -6,6 +6,7 @@ CharacterMessage = signal("character")
 PlayerMessage = signal("player")
 DirectorMessage = signal("director")
 TimePassageMessage = signal("time")
+StatusMessage = signal("status")
 
 ClearScreen = signal("clear_screen")
 
@@ -56,4 +57,5 @@ handlers = {
     "prompt_sent": PromptSent,
     "audio_queue": AudioQueue,
     "config_saved": ConfigSaved,
+    "status": StatusMessage,
 }

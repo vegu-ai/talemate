@@ -1,22 +1,21 @@
 <|SECTION:CONTEXT|>
 {{ scene.description }}
+Extra context: {{ query_memory(query, as_question_answer=False) }}
 <|CLOSE_SECTION|>
-{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=30) -%}
-{{ scene_context }}
+{% for scene_context in scene.context_history_new(budget=max_tokens-300) -%}
+{{ loop.index }}. {{ scene_context }}
 {% endfor %}
 <|SECTION:TASK|>
 {% if query.endswith("?") -%}
-Extra context: {{ query_memory(query, as_question_answer=False) }}
 Instruction: Analyze Context, History and Dialogue and then answer the question: "{{ query }}". 
 
 When evaluating both story and context, story is more important. You can fill in gaps using imagination as long as it is based on the existing context. 
 
-Respect the scene progression and answer in the context of the end of the dialogue. 
+Respect the scene progression and answer in the context of line {{ len(scene.context_history_new(budget=max_tokens-300)) }}.
 
 Use your imagination to fill in gaps in order to answer the question in a confident and decisive manner. Avoid uncertainty and vagueness.
 {% else -%}
 Instruction: {{ query }}
-Extra context: {{ query_memory(query, as_question_answer=False) }}
 Answer based on Context, History and Dialogue. 
 When evaluating both story and context, story is more important. You can fill in gaps using imagination as long as it is based on the existing context. 
 {% endif -%}

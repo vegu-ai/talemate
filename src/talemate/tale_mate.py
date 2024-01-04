@@ -951,12 +951,66 @@ class Scene(Emitter):
         summary = await summarizer.agent.summarize("\n".join(history))
         
         return summary
+    
+    def context_history_new(
+        self,
+        budget: int = 2048,
+        keep_director:bool = False,
+        **kwargs        
+    ):
+        parts_context = []
+        parts_dialogue = []
+        
+        budget_context = int(0.5 * budget)
+        budget_dialogue = int(0.5 * budget)
+        
+        # collect dialogue
+        
+        count = 0
+        
+        for i in range(len(self.history) - 1, -1, -1):
+            
+            count += 1
+            
+            if isinstance(self.history[i], DirectorMessage) and not keep_director:
+                continue
+            
+            if count_tokens(parts_dialogue) + count_tokens(self.history[i]) > budget_dialogue:
+                break
+            
+            parts_dialogue.insert(0, self.history[i])
+            
+        # collect context, ignore where end > len(history) - count
+        
+        for i in range(len(self.archived_history) - 1, -1, -1):
+            
+            end = self.archived_history[i].get("end")
+            start = self.archived_history[i].get("start")
+            
+            if end is None:
+                continue
+            
+            if start > len(self.history) - count:
+                continue
+            
+            if count_tokens(parts_context) + count_tokens(self.archived_history[i]["text"]) > budget_context:
+                break
+            
+            parts_context.insert(0, self.archived_history[i]["text"])
+                  
+        if count_tokens(parts_context + parts_dialogue) < 1024:
+            intro = self.get_intro()
+            if intro:
+                parts_context.insert(0, intro)
+                
+        return parts_context + parts_dialogue
+        
 
     def context_history(
         self, 
         budget: int = 1024,
         min_dialogue: int = 10,
-        keep_director:bool=False,
+        keep_director:bool = False,
         insert_bot_token:int = None,
         add_archieved_history:bool = True,
         dialogue_negative_offset:int = 0,

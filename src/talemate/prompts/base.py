@@ -390,10 +390,14 @@ class Prompt:
             result = await self.send(client, kind=kind)
             loop.update(result)
     
-    def query_scene(self, query:str, at_the_end:bool=True, as_narrative:bool=False):
+    def query_scene(self, query:str, at_the_end:bool=True, as_narrative:bool=False, as_question_answer:bool=True):
         loop = asyncio.get_event_loop()
         narrator = instance.get_agent("narrator")
         query = query.format(**self.vars)
+        
+        if not as_question_answer:
+            return loop.run_until_complete(narrator.narrate_query(query, at_the_end=at_the_end, as_narrative=as_narrative))
+        
         return "\n".join([
             f"Question: {query}",
             f"Answer: " + loop.run_until_complete(narrator.narrate_query(query, at_the_end=at_the_end, as_narrative=as_narrative)),

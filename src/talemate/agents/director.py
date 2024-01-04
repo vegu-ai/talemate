@@ -141,39 +141,32 @@ class DirectorAgent(Agent):
             # so we don't need to direct the scene any further
             return
         
-        response = await Prompt.request("director.direct-scene", self.client, "director", vars={
-            "max_tokens": self.client.max_token_length,
-            "scene": self.scene,
-            "prompt": prompt,
-            "character": character,
-            "player_character": self.scene.get_player_character(),
-            "game_state": self.scene.game_state,
-        })
-        
-        if "#" in response:
-            response = response.split("#")[0]
-        
-        log.info("direct_scene", character=character, prompt=prompt, response=response)
-        
         if character:
+            
+            # direct a character
+    
+            response = await Prompt.request("director.direct-character", self.client, "director", vars={
+                "max_tokens": self.client.max_token_length,
+                "scene": self.scene,
+                "prompt": prompt,
+                "character": character,
+                "player_character": self.scene.get_player_character(),
+                "game_state": self.scene.game_state,
+            })
+            
+            if "#" in response:
+                response = response.split("#")[0]
+            
+            log.info("direct_character", character=character, prompt=prompt, response=response)
+            
             response = response.strip().split("\n")[0].strip()
             #response += f" (current story goal: {prompt})"
             message = DirectorMessage(response, source=character.name)
             emit("director", message, character=character)
             self.scene.push_history(message)
         else:
-            response = util.strip_partial_sentences(response).strip()
-            response = response.replace('*','').strip()
-            
-            if not response:
-                return
-            
-            response = f"*{response}*"
-            message = NarratorMessage(response, source="__director__")
-            emit("narrator", message)
-            
-            self.scene.push_history(message)        
-
+            # run scene instructions
+            self.scene.game_state.scene_instructions
 
     @set_processing
     async def persist_character(

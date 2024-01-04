@@ -25,18 +25,13 @@ Other major characters:
 {{ npc_name }}
 {% endfor -%}
 
-{% for scene_context in scene.context_history(budget=1000, min_dialogue=10, dialogue_negative_offset=5, sections=False) -%}
+{% for scene_context in scene.context_history(budget=1000) -%}
 {{ scene_context }}
 {% endfor -%}
 {% if not scene.history -%}
 <|SECTION:DIALOGUE|>
 No dialogue so far
 {% endif -%}
-<|CLOSE_SECTION|>
-<|SECTION:SCENE PROGRESS|>
-{% for scene_context in scene.context_history(budget=500, min_dialogue=5, add_archieved_history=False, max_dialogue=5) -%}
-{{ scene_context }}
-{% endfor -%}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
 Create a JSON object for the world state that reflects the scene progression so far.

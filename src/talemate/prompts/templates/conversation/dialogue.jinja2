@@ -58,7 +58,7 @@ Always contain dialogue in quotation marks. For example, {{ talking_character.na
 <|SECTION:SCENE|>
 {% endblock -%}
 {% block scene_history -%}
-{% for scene_context in scene.context_history_new(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=True) -%}
+{% for scene_context in scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=True) -%}
 {{ scene_context }}
 {% endfor %}
 {% endblock -%}

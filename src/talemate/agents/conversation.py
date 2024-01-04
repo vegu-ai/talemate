@@ -321,10 +321,8 @@ class ConversationAgent(Agent):
         
         scene_and_dialogue = scene.context_history(
             budget=scene_and_dialogue_budget, 
-            min_dialogue=25, 
             keep_director=True,
             sections=False,
-            insert_bot_token=10
         )
         
         memory = await self.build_prompt_default_memory(character)

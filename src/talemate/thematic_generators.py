@@ -53,6 +53,34 @@ personality = [
     "Willing", "Wise", "Witty"
 ]
 
+# COLORS
+
+colors = [
+    "Amaranth", "Amber", "Amethyst", "Apricot", "Aquamarine",
+    "Azure", "Baby blue", "Beige", "Black", "Blue",
+    "Blue-green", "Blue-violet", "Blush", "Bronze", "Brown",
+    "Burgundy", "Byzantium", "Carmine", "Cerise", "Cerulean",
+    "Champagne", "Chartreuse green", "Chocolate", "Cobalt blue", "Coffee",
+    "Copper", "Coral", "Crimson", "Cyan", "Desert sand",
+    "Electric blue", "Emerald", "Erin", "Gold", "Gray",
+    "Green", "Harlequin", "Indigo", "Ivory", "Jade",
+    "Jungle green", "Lavender", "Lemon", "Lilac", "Lime",
+    "Magenta", "Magenta rose", "Maroon", "Mauve", "Navy blue",
+    "Ocher", "Olive", "Orange", "Orange-red", "Orchid",
+    "Peach", "Pear", "Periwinkle", "Persian blue", "Pink",
+    "Plum", "Prussian blue", "Puce", "Purple", "Raspberry",
+    "Red", "Red-violet", "Rose", "Ruby", "Salmon",
+    "Sangria", "Sapphire", "Scarlet", "Silver", "Slate gray",
+    "Spring bud", "Spring green", "Tan", "Taupe", "Teal",
+    "Turquoise", "Violet", "Viridian", "White", "Yellow"
+]
+
+# STATES OF MATTER
+
+states_of_matter = [
+    "Solid", "Liquid", "Gas", "Plasma",
+]
+
 # BERRY DESSERT
 
 berry_prefixes = [
@@ -74,7 +102,7 @@ ethnicities = [
     "Arab", 
     "Asian", 
     "European",
-    "Scaninavian",
+    "Scandinavian",
     "East European",
     "Indian",
     "Latin American", 
@@ -109,7 +137,7 @@ human_names_female = {
         "Andreea", "Aneta", "Aniela", "Anita", "Anna",
         "Antonia", "Ariana", "Aurelia", "Beatrice", "Bianca"
     ],
-    "Scaninavian": [
+    "Scandinavian": [
         "Aase", "Aina", "Alfhild", "Ane", "Anja",
         "Astrid", "Birgit", "Bodil", "Borghild", "Dagmar",
         "Elin", "Ellinor", "Elsa", "Else", "Embla",
@@ -174,7 +202,7 @@ human_names_male = {
         "Eduard", "Florin", "Gabriel", "George", "Ion",
         "Iulian", "Lucian", "Marius", "Mihai", "Nicolae"
     ],
-    "Scaninavian": [
+    "Scandinavian": [
         "Aage", "Aksel", "Alf", "Anders", "Arne",
         "Asbjorn", "Bjarne", "Bo", "Carl", "Christian",
         "Einar", "Elias", "Erik", "Finn", "Frederik",
@@ -275,6 +303,12 @@ class ThematicGenerator:
     
     def actor_name_color(self):
         return random.choice(actor_name_colors)
+    
+    def color(self):
+        return random.choice(colors)
+    
+    def state_of_matter(self):
+        return random.choice(states_of_matter)
     
     def human_name_female(self, ethnicity:str=None):
         if not ethnicity:

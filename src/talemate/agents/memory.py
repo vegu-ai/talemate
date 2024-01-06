@@ -30,6 +30,16 @@ if not chromadb:
 
 from .base import Agent
 
+class MemoryDocument(str):
+    
+    def __new__(cls, text, meta, id, raw):
+        inst = super().__new__(cls, text)
+
+        inst.meta = meta
+        inst.id = id
+        inst.raw = raw
+        
+        return inst
 
 class MemoryAgent(Agent):
     """
@@ -514,6 +524,12 @@ class ChromaDBMemoryAgent(MemoryAgent):
         self.db.upsert(documents=documents, metadatas=metadatas, ids=ids)
 
     def _delete(self, meta:dict):
+        
+        if "ids" in meta:
+            log.debug("chromadb agent delete", ids=meta["ids"])
+            self.db.delete(ids=meta["ids"])
+            return
+        
         where = {"$and": [{k:v} for k,v in meta.items()]}
         self.db.delete(where=where)
         log.debug("chromadb agent delete", meta=meta, where=where)
@@ -569,9 +585,14 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 except Exception as e:
                     log.error("chromadb agent", error="failed to get date prefix", details=e, ts=ts, scene_ts=self.scene.ts)
                     date_prefix = None
-                    
+                
+                raw = doc
+                
                 if date_prefix:
                     doc = f"{date_prefix}: {doc}"
+                    
+                doc = MemoryDocument(doc, meta, _results["ids"][0][i], raw)
+                    
                 results.append(doc)
             else:
                 break

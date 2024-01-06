@@ -1,5 +1,7 @@
 import pydantic
 import structlog
+from typing import Union, Any
+import uuid
 
 from talemate.world_state.manager import WorldStateManager
 
@@ -26,6 +28,18 @@ class SetCharacterDetailReinforcementPayload(pydantic.BaseModel):
 class CharacterDetailReinforcementPayload(pydantic.BaseModel):
     name: str
     question: str
+    
+class QueryContextDBPayload(pydantic.BaseModel):
+    query: str
+    meta: dict = {}
+
+class UpdateContextDBPayload(pydantic.BaseModel):
+    text: str
+    meta: dict = {}
+    id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
+
+class DeleteContextDBPayload(pydantic.BaseModel):
+    id: Any
 
 class WorldStateManagerPlugin:
     
@@ -176,8 +190,55 @@ class WorldStateManagerPlugin:
             "data": payload.model_dump()
         })
         
-        print("DELETED")
-
         # resend character details
         await self.handle_get_character_details({"name":payload.name})
+        await self.signal_operation_done()
+
+
+    async def handle_query_context_db(self, data):
+        
+        payload = QueryContextDBPayload(**data)
+        
+        log.debug("Query context db", query=payload.query, meta=payload.meta)
+        
+        context_db = await self.world_state_manager.get_context_db_entries(payload.query, **payload.meta)
+        
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "context_db_result",
+            "data": context_db.model_dump()
+        })
+        
+        await self.signal_operation_done()
+        
+    async def handle_update_context_db(self, data):
+        
+        payload = UpdateContextDBPayload(**data)
+        
+        log.debug("Update context db", text=payload.text, meta=payload.meta, id=payload.id)
+        
+        await self.world_state_manager.update_context_db_entry(payload.id, payload.text, payload.meta)
+        
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "context_db_updated",
+            "data": payload.model_dump()
+        })
+        
+        await self.signal_operation_done()
+        
+    async def handle_delete_context_db(self, data):
+        
+        payload = DeleteContextDBPayload(**data)
+        
+        log.debug("Delete context db", id=payload.id)
+        
+        await self.world_state_manager.delete_context_db_entry(payload.id)
+        
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "context_db_deleted",
+            "data": payload.model_dump()
+        })
+        
         await self.signal_operation_done()

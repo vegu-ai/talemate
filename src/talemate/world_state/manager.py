@@ -1,5 +1,6 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 import pydantic
+import structlog
 
 from talemate.instance import get_agent
 from talemate.world_state import Reinforcement
@@ -7,14 +8,20 @@ from talemate.world_state import Reinforcement
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
+log = structlog.get_logger("talemate.server.world_state_manager")
+
 class CharacterSelect(pydantic.BaseModel):
     name: str
     active: bool = True
     is_player: bool = False
     
-class LoreItem(pydantic.BaseModel):
+class ContextDBEntry(pydantic.BaseModel):
     text: str
     meta: dict
+    id: Any
+    
+class ContextDB(pydantic.BaseModel):
+    entries: list[ContextDBEntry] = []
     
 class CharacterDetails(pydantic.BaseModel):
     name: str
@@ -24,7 +31,6 @@ class CharacterDetails(pydantic.BaseModel):
     base_attributes: dict[str,str] = {}
     details: dict[str,str] = {}
     reinforcements: dict[str, Reinforcement] = {}
-    lore: list[LoreItem] = []
     
     
 class HistoryEntry(pydantic.BaseModel):
@@ -76,6 +82,18 @@ class WorldStateManager:
             
         return details
     
+    async def get_context_db_entries(self, query:str, limit:int=20, **meta) -> ContextDB:
+        
+        _entries = await self.memory_agent.multi_query([query], iterate=limit, max_tokens=9999999, **meta)
+        
+        entries = []
+        for entry in _entries:
+            entries.append(ContextDBEntry(text=entry.raw, meta=entry.meta, id=entry.id))
+        
+        context_db = ContextDB(entries=entries)
+        
+        return context_db
+    
     async def update_character_attribute(self, character_name:str, attribute:str, value:str):
         character = self.scene.get_character(character_name)
         await character.set_base_attribute(attribute, value)
@@ -106,3 +124,18 @@ class WorldStateManager:
         idx, reinforcement = await self.world_state.find_reinforcement(question, character_name)
         if idx is not None:
             await self.world_state.remove_reinforcement(idx)
+            
+            
+    async def update_context_db_entry(self, entry_id:str, text:str, meta:dict):
+        await self.memory_agent.add_many([
+            {
+                "id": entry_id,
+                "text": text,
+                "meta": meta
+            }
+        ])
+        
+    async def delete_context_db_entry(self, entry_id:str):
+        await self.memory_agent.delete({
+            "ids": entry_id
+        })

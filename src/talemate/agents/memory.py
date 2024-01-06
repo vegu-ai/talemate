@@ -121,6 +121,27 @@ class MemoryAgent(Agent):
         """
         raise NotImplementedError()
 
+    def _delete(self, meta:dict):
+        """
+        Delete an object from the memory
+        """
+        raise NotImplementedError()
+    
+    @set_processing
+    async def delete(self, meta:dict):
+        """
+        Delete an object from the memory
+        """
+        if self.readonly:
+            log.debug("memory agent", status="readonly")
+            return
+        
+        while not self._ready_to_add:
+            await asyncio.sleep(0.1)
+        
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._delete, meta)
+
     @set_processing
     async def get(self, text, character=None, **query):
         loop = asyncio.get_running_loop()
@@ -491,6 +512,11 @@ class ChromaDBMemoryAgent(MemoryAgent):
             uid = obj.get("id", f"{character}-{self.memory_tracker[character]}")
             ids.append(uid)
         self.db.upsert(documents=documents, metadatas=metadatas, ids=ids)
+
+    def _delete(self, meta:dict):
+        where = {"$and": [{k:v} for k,v in meta.items()]}
+        self.db.delete(where=where)
+        log.debug("chromadb agent delete", meta=meta, where=where)
 
     def _get(self, text, character=None, limit:int=15, **kwargs):
         where = {}

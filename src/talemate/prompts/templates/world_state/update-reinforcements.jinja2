@@ -1,0 +1,57 @@
+<|SECTION:CONTEXT AND DIALOGUE|>
+{% block rendered_memory %}
+{% endblock %}
+{% for scene_context in scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_memory())) -%}
+{{ scene_context }}
+{% endfor -%}
+{% if not scene.history -%}
+No dialogue so far
+{% endif -%}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+{# QUESTION #}
+{%- if question.strip()[-1] == '?' %}
+Shortly answer the following question: {{ question }}
+
+Consider the entire context and honor the sequentiality of the dialogue. Answer based on the final state of the dialogue.
+
+Progression of the dialogue is important. The last line is the most important, the first line is the least important.
+
+Use your imagination to fill in gaps in order to answer the question in a confident and decisive manner. Avoid uncertainty and vagueness.
+You are omniscient and can describe the scene in detail.
+
+{% if not instructions %}
+YOUR ANSWER MUST BE SHORT AND TO THE POINT.
+YOUR ANSWER MUST BE A SINGLE SENTENCE.
+YOUR RESPONSE MUST BE ONLY THE ANSWER TO THE QUESTION. NEVER EXPLAIN YOUR REASONING.
+{% else %}
+{{ instructions }}
+{% endif %}
+Question: {{ question }}
+{% if answer %}Previous Answer: {{ answer }}
+{% endif %}
+<|CLOSE_SECTION|>
+{{ bot_token }}Updated Answer:
+{# ATTRIBUTE #}
+{%- else %}
+Generate the following attribute{% if character %} for {{ character.name }}{% endif %}: {{ question }}
+
+Consider the entire context and honor the sequentiality of the dialogue. Answer based on the final state of the dialogue.
+
+Progression of the dialogue is important. The last line is the most important, the first line is the least important.
+
+Use your imagination to fill in gaps in order to generate the attribute in a confident and decisive manner. Avoid uncertainty and vagueness.
+You are omniscient and can describe the scene in detail.
+
+{% if not instructions %}
+YOUR ANSWER MUST BE SHORT AND TO THE POINT.
+YOUR ANSWER MUST BE A SINGLE SENTENCE.
+YOUR RESPONSE MUST BE ONLY THE ANSWER TO THE QUESTION. NEVER EXPLAIN YOUR REASONING.
+{% else %}
+{{ instructions }}
+{% endif %}
+{% if answer %}Previous Value: {{ answer }}
+{% endif %}
+<|CLOSE_SECTION|>
+{{ bot_token }}New value for {{ question }}:
+{%- endif %}

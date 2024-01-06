@@ -7,6 +7,7 @@ PlayerMessage = signal("player")
 DirectorMessage = signal("director")
 TimePassageMessage = signal("time")
 StatusMessage = signal("status")
+ReinforcementMessage = signal("reinforcement")
 
 ClearScreen = signal("clear_screen")
 
@@ -40,6 +41,7 @@ handlers = {
     "player": PlayerMessage,
     "director": DirectorMessage,
     "time": TimePassageMessage,
+    "reinforcement": ReinforcementMessage,
     "request_input": RequestInput,
     "receive_input": ReceiveInput,
     "client_status": ClientStatus,

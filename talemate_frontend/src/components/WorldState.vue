@@ -2,8 +2,21 @@
     <v-list-subheader class="text-uppercase">
         <v-icon class="mr-1">mdi-earth</v-icon>World
         <v-progress-circular class="ml-1 mr-3" size="14" v-if="requesting" indeterminate color="primary"></v-progress-circular>   
-        <v-btn v-else :disabled="isInputDisabled()" size="x-small" class="mr-1" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh()" icon="mdi-refresh"></v-btn>
+        <v-tooltip v-else  text="Update Worldstate">
+            <template v-slot:activator="{ props }">
+                <v-btn :disabled="isInputDisabled()"  size="x-small" icon="mdi-refresh" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh()"></v-btn>
+            </template>
+        </v-tooltip>
+
+        <v-tooltip text="Worldstate Manager">
+            <template v-slot:activator="{ props }">
+                <v-btn size="x-small" icon="mdi-book-open-page-variant" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openWorldStateManager"></v-btn>
+            </template>
+        </v-tooltip>
+
     </v-list-subheader>
+
+
     <div ref="charactersContainer">   
 
         <v-expansion-panels density="compact" v-for="(character,name) in characters" :key="name">
@@ -72,9 +85,12 @@
         </v-expansion-panels>
 
     </div>
+    <WorldStateManager ref="worldStateManager" />
 </template>
 
 <script>
+import WorldStateManager from './WorldStateManager.vue';
+
 export default {
     name: 'WorldState',
     data() {
@@ -85,6 +101,9 @@ export default {
             requesting: false,
             sceneTime: null,
         }
+    },
+    components: {
+        WorldStateManager,
     },
 
     inject: [
@@ -97,6 +116,9 @@ export default {
     ],
 
     methods: {
+        openWorldStateManager() {
+            this.$refs.worldStateManager.show();
+        },
         lookAtCharacter(name) {
             this.getWebsocket().send(JSON.stringify({
                 type: 'interact',

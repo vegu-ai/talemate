@@ -16,6 +16,7 @@ from talemate.server import character_creator
 from talemate.server import character_importer
 from talemate.server import scene_creator
 from talemate.server import config
+from talemate.server import world_state_manager
 
 log = structlog.get_logger("talemate.server.websocket_server")
 
@@ -52,6 +53,7 @@ class WebsocketHandler(Receiver):
             character_importer.CharacterImporterServerPlugin.router: character_importer.CharacterImporterServerPlugin(self),
             scene_creator.SceneCreatorServerPlugin.router: scene_creator.SceneCreatorServerPlugin(self),
             config.ConfigPlugin.router: config.ConfigPlugin(self),
+            world_state_manager.WorldStateManagerPlugin.router: world_state_manager.WorldStateManagerPlugin(self),
         }
 
         # self.request_scenes_list()

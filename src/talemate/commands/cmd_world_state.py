@@ -6,6 +6,7 @@ from talemate.commands.manager import register
 from talemate.util import colored_text, wrap_text
 from talemate.scene_message import NarratorMessage
 from talemate.emit import wait_for_input
+from talemate.instance import get_agent
 import talemate.instance as instance
 
 
@@ -92,3 +93,85 @@ class CmdPersistCharacter(TalemateCommand):
         self.emit("system", f"Added character {name} to the scene.")
         
         scene.emit_status()
+        
+@register
+class CmdAddReinforcement(TalemateCommand):
+    
+    """
+    Will attempt to create an actual character from a currently non
+    tracked character in the scene, by name.
+    
+    Once persisted this character can then participate in the scene.
+    """
+    
+    name = "add_reinforcement"
+    description = "Add a reinforcement to the world state"
+    aliases = ["ws_ar"]
+    
+    async def run(self):
+        
+        scene = self.scene
+        
+        world_state = scene.world_state
+        
+        if not len(self.args):
+            question = await wait_for_input("Ask reinforcement question")
+        else:
+            question = self.args[0]
+        
+        await world_state.add_reinforcement(question)
+        
+        
+@register
+class CmdRemoveReinforcement(TalemateCommand):
+    
+    """
+    Will attempt to create an actual character from a currently non
+    tracked character in the scene, by name.
+    
+    Once persisted this character can then participate in the scene.
+    """
+    
+    name = "remove_reinforcement"
+    description = "Remove a reinforcement from the world state"
+    aliases = ["ws_rr"]
+    
+    async def run(self):
+        
+        scene = self.scene
+        
+        world_state = scene.world_state
+        
+        if not len(self.args):
+            question = await wait_for_input("Ask reinforcement question")
+        else:
+            question = self.args[0]
+            
+        idx, reinforcement = await world_state.find_reinforcement(question)
+        
+        if idx is None:
+            raise ValueError(f"Reinforcement {question} not found.")
+        
+        await world_state.remove_reinforcement(idx)
+        
+@register
+class CmdUpdateReinforcements(TalemateCommand):
+    
+    """
+    Will attempt to create an actual character from a currently non
+    tracked character in the scene, by name.
+    
+    Once persisted this character can then participate in the scene.
+    """
+    
+    name = "update_reinforcements"
+    description = "Update the reinforcements in the world state"
+    aliases = ["ws_ur"]
+    
+    async def run(self):
+        
+        scene = self.scene
+        
+        world_state = get_agent("world_state")
+        
+        await world_state.update_reinforcements(force=True)

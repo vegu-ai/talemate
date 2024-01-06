@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 import talemate.emit.async_signals
 import talemate.util as util
 from talemate.prompts import Prompt
-from talemate.scene_message import DirectorMessage, TimePassageMessage
+from talemate.scene_message import DirectorMessage, TimePassageMessage, ReinforcementMessage
 from talemate.emit import emit
 from talemate.events import GameLoopEvent
 
@@ -103,6 +103,7 @@ class WorldStateAgent(Agent):
             return
         
         await self.update_world_state()
+        await self.update_reinforcements()
             
 
     async def update_world_state(self):
@@ -355,3 +356,63 @@ class WorldStateAgent(Agent):
         log.debug("match_character_names", names=names, response=response)
         
         return response
+    
+    
+    @set_processing
+    async def update_reinforcements(self, force:bool=False):
+        
+        """
+        Queries due worldstate re-inforcements
+        """
+        
+        for reinforcement in self.scene.world_state.reinforce:
+            if reinforcement.due <= 0 or force:
+                await self.update_reinforcement(reinforcement.question, reinforcement.character)
+            else:
+                reinforcement.due -= 1
+                
+    
+    @set_processing
+    async def update_reinforcement(self, question:str, character:str=None):
+        
+        """
+        Queries a single re-inforcement
+        """
+        
+        idx, reinforcement = await self.scene.world_state.find_reinforcement(question, character)
+        
+        if not reinforcement:
+            return
+        
+        answer = await Prompt.request(
+            "world_state.update-reinforcements",
+            self.client,
+            "analyze_freeform",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "question": reinforcement.question,
+                "instructions": reinforcement.instructions or "",
+                "character": self.scene.get_character(reinforcement.character) if reinforcement.character else None,
+                "answer": reinforcement.answer or "",
+            }
+        )
+        
+        reinforcement.answer = answer
+        reinforcement.due = reinforcement.interval
+        
+        source = f"{reinforcement.question}:{reinforcement.character if reinforcement.character else ''}"
+        message = ReinforcementMessage(message=answer, source=source)
+        
+        # remove previous reinforcement message with same question
+        self.scene.pop_history(typ="reinforcement", source=source)
+        
+        log.debug("update_reinforcement", message=message)
+        self.scene.push_history(message)
+        
+        # if reinforcement has a character name set, update the character detail
+        if reinforcement.character:
+            character = self.scene.get_character(reinforcement.character)
+            await character.set_detail(reinforcement.question, answer)
+        
+        return message  

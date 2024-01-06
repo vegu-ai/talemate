@@ -19,10 +19,11 @@ import talemate.data_objects as data_objects
 import talemate.events as events
 import talemate.util as util
 import talemate.save as save
+from talemate.instance import get_agent
 from talemate.emit import Emitter, emit, wait_for_input
 import talemate.emit.async_signals as async_signals
 from talemate.util import colored_text, count_tokens, extract_metadata, wrap_text
-from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, NarratorMessage, TimePassageMessage
+from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, NarratorMessage, TimePassageMessage, ReinforcementMessage
 from talemate.exceptions import ExitScene, RestartSceneLoop, ResetScene, TalemateError, TalemateInterrupt, LLMAccuracyError
 from talemate.world_state import WorldState
 from talemate.game_state import GameState
@@ -377,6 +378,7 @@ class Character:
                 "meta": {
                     "character": self.name,
                     "typ": "details",
+                    "detail": key,
                 }
             })
             
@@ -399,20 +401,119 @@ class Character:
         if items:
             await memory_agent.add_many(items)
 
+    async def commit_single_attribute_to_memory(self, memory_agent, attribute:str, value:str):
+        """
+        Commits a single attribute to memory
+        """
+        
+        items = []
+        
+        # remove old attribute if it exists
+        
+        await memory_agent.delete({"character": self.name, "typ": "base_attribute", "attr": attribute})
+        
+        self.base_attributes[attribute] = value
+        
+        items.append({
+            "text": f"{self.name}'s {attribute}: {self.base_attributes[attribute]}",
+            "id": f"{self.name}.{attribute}",
+            "meta": {
+                "character": self.name,
+                "attr": attribute,
+                "typ": "base_attribute",
+            }
+        })
+        
+        log.info("commit_single_attribute_to_memory", items=items)
+        
+        await memory_agent.add_many(items)
+
+    async def commit_single_detail_to_memory(self, memory_agent, detail:str, value:str):
+        
+        """
+        Commits a single detail to memory
+        """
+        
+        items = []
+        
+        # remove old detail if it exists
+        
+        await memory_agent.delete({"character": self.name, "typ": "details", "detail": detail})
+        
+        self.details[detail] = value
+        
+        items.append({
+            "text": f"{self.name} - {detail}: {value}",
+            "meta": {
+                "character": self.name,
+                "typ": "details",
+                "detail": detail,
+            }
+        })
+        
+        log.info("commit_single_detail_to_memory", items=items)
+        
+        await memory_agent.add_many(items)
 
     async def set_detail(self, name:str, value):
-        self.details[name] = value
-        # TODO: add to memory
+        memory_agent = get_agent("memory")
+        if not value:
+            try:
+                del self.details[name]
+                await memory_agent.delete({"character": self.name, "typ": "details", "detail": name})
+            except KeyError:
+                pass
+        else:
+            self.details[name] = value
+            await self.commit_single_detail_to_memory(memory_agent, name, value)
         
     def get_detail(self, name:str):
         return self.details.get(name)
     
     async def set_base_attribute(self, name:str, value):
-        self.base_attributes[name] = value
-        # TODO: add to memory
+        
+        memory_agent = get_agent("memory")
+        
+        if not value:
+            try:
+                del self.base_attributes[name]
+                await memory_agent.delete({"character": self.name, "typ": "base_attribute", "attr": name})
+            except KeyError:
+                pass
+        else:
+            self.base_attributes[name] = value
+            await self.commit_single_attribute_to_memory(memory_agent, name, value)
+        
         
     def get_base_attribute(self, name:str):
         return self.base_attributes.get(name)
+    
+    
+    async def set_description(self, description:str):
+        memory_agent = get_agent("memory")
+        self.description = description
+        
+        items = []
+        
+        await memory_agent.delete({"character": self.name, "typ": "base_attribute", "attr": "description"})
+        
+        description_chunks = [chunk.strip() for chunk in self.description.split("\n") if chunk.strip()]
+        
+        for idx in range(len(description_chunks)):
+            chunk = description_chunks[idx]
+
+            items.append({
+                "text": f"{self.name}: {chunk}",
+                "id": f"{self.name}.description.{idx}",
+                "meta": {
+                    "character": self.name,
+                    "attr": "description",
+                    "typ": "base_attribute",
+                }
+            })
+        
+        await memory_agent.add_many(items)
+        
     
 class Helper:
     """
@@ -750,6 +851,32 @@ class Scene(Emitter):
                 events.GameLoopNewMessageEvent(scene=self, event_type="game_loop_new_message", message=message)
             ))
 
+    def pop_history(self, typ:str, source:str, all:bool=False):
+        
+        """
+        Removes the last message from the history that matches the given typ and source
+        """
+        
+        for idx in range(len(self.history) - 1, -1, -1):
+            if self.history[idx].typ == typ and self.history[idx].source == source:
+                self.history.pop(idx)
+                if not all:
+                    return
+                
+    def find_message(self, typ:str, source:str,  max_iterations:int=100):
+        
+        """
+        Finds the last message in the history that matches the given typ and source
+        """
+        iterations = 0
+        for idx in range(len(self.history) - 1, -1, -1):
+            if self.history[idx].typ == typ and self.history[idx].source == source:
+                return self.history[idx]
+            
+            iterations += 1
+            if iterations >= max_iterations:
+                return None
+
     def push_archive(self, entry: data_objects.ArchiveEntry):
         
         """
@@ -951,6 +1078,7 @@ class Scene(Emitter):
         summary = await summarizer.agent.summarize("\n".join(history))
         
         return summary
+
     
     def context_history(
         self,
@@ -1003,7 +1131,7 @@ class Scene(Emitter):
             if intro:
                 parts_context.insert(0, intro)
                 
-        return parts_context + parts_dialogue
+        return list(map(str, parts_context)) +  list(map(str, parts_dialogue))
 
     async def rerun(self, editor: Optional[Helper] = None):
         """
@@ -1011,11 +1139,24 @@ class Scene(Emitter):
         and call talk() for the most recent AI Character.
         """
         # Remove AI's last response and player's last message from the history
-        
+        idx = -1
         try:
-            message = self.history[-1]
+            message = self.history[idx]
         except IndexError:
             return
+        
+        # while message type is ReinforcementMessage, keep going back in history
+        # until we find a message that is not a ReinforcementMessage
+        #
+        # we need to pop the ReinforcementMessage from the history because
+        # previous messages may have contributed to the answer that the AI gave
+        # for the reinforcement message
+        
+        popped_reinforcement_messages = []
+        
+        while isinstance(message, ReinforcementMessage):
+            popped_reinforcement_messages.append(self.history.pop())
+            message = self.history[idx]
         
         log.debug(f"Rerunning message: {message} [{message.id}]")
         
@@ -1033,6 +1174,9 @@ class Scene(Emitter):
             await self._rerun_director_message(message)
         else:
             return
+        
+        for message in popped_reinforcement_messages:
+            await self._rerun_reinforcement_message(message)
             
         
     async def _rerun_narrator_message(self, message):
@@ -1131,7 +1275,14 @@ class Scene(Emitter):
         await asyncio.sleep(0)
 
         return new_messages
-    
+
+    async def _rerun_reinforcement_message(self, message):
+        log.info(f"Rerunning reinforcement message: {message} [{message.id}]")
+        world_state_agent = self.get_helper("world_state").agent
+        
+        question, character_name = message.source.split(":")
+        
+        await world_state_agent.update_reinforcement(question, character_name)
 
     def delete_message(self, message_id: int):
         """
@@ -1485,7 +1636,7 @@ class Scene(Emitter):
             "ts": scene.ts,
         }
 
-        emit("system", "Saving scene data to: " + filepath)
+        emit("status", status="success", message="Saved scene")
 
         with open(filepath, "w") as f:
             json.dump(scene_data, f, indent=2, cls=save.SceneEncoder)

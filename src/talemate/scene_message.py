@@ -123,10 +123,19 @@ class TimePassageMessage(SceneMessage):
             "ts": self.ts,
         }
     
+@dataclass
+class ReinforcementMessage(SceneMessage):
+    typ = "reinforcement"
+    
+    def __str__(self):
+        question, _ = self.source.split(":", 1)
+        return f"[{question}: {self.message}]"
+    
 MESSAGES = {
     "scene": SceneMessage,
     "character": CharacterMessage,
     "narrator": NarratorMessage,
     "director": DirectorMessage,
     "time": TimePassageMessage,
+    "reinforcement": ReinforcementMessage,
 }

@@ -16,6 +16,14 @@ class CharacterState(BaseModel):
     
 class ObjectState(BaseModel):
     snapshot: Union[str, None] = None
+    
+class Reinforcement(BaseModel):
+    question: str
+    answer: Union[str, None] = None
+    interval: int = 10
+    due: int = 0
+    character: Union[str, None] = None
+    instructions: Union[str, None] = None
 
 class WorldState(BaseModel):
     
@@ -27,6 +35,9 @@ class WorldState(BaseModel):
     
     # location description
     location: Union[str, None] = None
+    
+    # reinforcers
+    reinforce: list[Reinforcement] = []
     
     @property
     def agent(self):
@@ -160,6 +171,62 @@ class WorldState(BaseModel):
         
         self.emit()
         
+    
+    async def add_reinforcement(self, question:str, character:str=None, instructions:str=None, interval:int=10, answer:str=""):
+        
+        # if reinforcement already exists, update it
+        
+        idx, reinforcement = await self.find_reinforcement(question, character)
+        
+        if reinforcement:
+            
+            # update the reinforcement object
+            
+            reinforcement.instructions = instructions
+            reinforcement.interval = interval
+            reinforcement.answer = answer
+            
+            # find the reinforcement message i nthe scene history and update the answer
+            
+            message = self.agent.scene.find_message(typ="reinforcement", source=f"{question}:{character if character else ''}")
+            
+            if message:
+                message.message = answer
+                
+            # update the character detail if character name is specified
+            if character:
+                character = self.agent.scene.get_character(character)
+                await character.set_detail(question, answer)
+            
+            return
+        
+        self.reinforce.append(
+            Reinforcement(
+                question=question,
+                character=character,
+                instructions=instructions,
+                interval=interval,
+                answer=answer,
+            )
+        )
+    
+    async def find_reinforcement(self, question:str, character:str=None):
+        for idx, reinforcement in enumerate(self.reinforce):
+            if reinforcement.question == question and reinforcement.character == character:
+                return idx, reinforcement
+        return None, None
+    
+    def reinforcements_for_character(self, character:str):
+        reinforcements = {}
+        
+        for reinforcement in self.reinforce:
+            if reinforcement.character == character:
+                reinforcements[reinforcement.question] = reinforcement
+        
+        return reinforcements
+    
+    async def remove_reinforcement(self, idx:int):
+        self.reinforce.pop(idx)
     
     def render(self):
         

@@ -1,8 +1,13 @@
+{% block rendered_context %}
 <|SECTION:CONTEXT|>
 {{ scene.description }}
-Extra context: {{ query_memory(query, as_question_answer=False) }}
+
+{% for memory in query_memory(query, as_question_answer=False, iterate=10) %}
+{{ memory }}
+{% endfor %}
 <|CLOSE_SECTION|>
-{% for scene_context in scene.context_history(budget=max_tokens-300) -%}
+{% endblock %}
+{% for scene_context in scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context())) -%}
 {{ loop.index }}. {{ scene_context }}
 {% endfor %}
 <|SECTION:TASK|>
@@ -14,6 +19,7 @@ When evaluating both story and context, story is more important. You can fill in
 Respect the scene progression and answer in the context of line {{ len(scene.context_history(budget=max_tokens-300)) }}.
 
 Use your imagination to fill in gaps in order to answer the question in a confident and decisive manner. Avoid uncertainty and vagueness.
+Question: {{ query }}
 {% else -%}
 Instruction: {{ query }}
 Answer based on Context, History and Dialogue. 
@@ -23,4 +29,4 @@ Content Context: This is a specific scene from {{ scene.context }}
 Your answer should be in the style of short, concise narration that fits the context of the scene. (1 to 2 sentences)
 {{ extra_instructions }}
 <|CLOSE_SECTION|>
-{% if at_the_end %}{{ bot_token }}At the end of the dialogue, {% endif %}
+{% if query.endswith("?") -%}Answer: {% endif %}{% if at_the_end %}{{ bot_token }}At the end of the dialogue, {% endif %}

@@ -1628,15 +1628,13 @@ class Scene(Emitter):
             self.filename = self.filename.replace(" ", "-").lower()+".json"
         
         self.set_new_memory_session_id()
-        memory_agent = self.get_helper("memory").agent
         
         if save_as:
+            memory_agent = self.get_helper("memory").agent
             memory_agent.close_db(self)
             self.memory_id = str(uuid.uuid4())[:10]
             await memory_agent.set_db()
             await self.commit_to_memory()
-        else:
-            memory_agent.backup()
 
         saves_dir = self.save_dir
         

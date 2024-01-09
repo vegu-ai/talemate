@@ -373,7 +373,7 @@
                                             </td>
                                             <td>
                                                 <!-- render entry.meta as v-chip elements showing both name and value -->
-                                                <v-chip v-for="(value, name) in entry.meta" :key="name" label size="x-small" variant="outlined" class="ml-1">{{ name }}: {{ value }}</v-chip>
+                                                <v-chip v-for="(value, name) in visibleMetaTags(entry.meta)" :key="name" label size="x-small" variant="outlined" class="ml-1">{{ name }}: {{ value }}</v-chip>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -845,6 +845,19 @@ export default {
         },
 
         // contextdb
+        isHiddenMetaTag(name) {
+            return name === "source" || name === "session"
+        },
+
+        visibleMetaTags(meta) {
+            let tags = {}
+            for(let name in meta) {
+                if(!this.isHiddenMetaTag(name)) {
+                    tags[name] = meta[name];
+                }
+            }
+            return tags;
+        },
 
         queryContextDB() {
             let meta = {};
@@ -887,6 +900,7 @@ export default {
 
             this.contextDBEntryUpdateTimeout = setTimeout(() => {
                 this.updateContextDBEntry(entry);
+                entry.dirty = false;
             }, 500);
         },
 

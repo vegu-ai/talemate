@@ -9,6 +9,7 @@ from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, TimePassageMessage, ReinforcementMessage
 from talemate.emit import emit
 from talemate.events import GameLoopEvent
+from talemate.instance import get_agent
 
 from .base import Agent, set_processing, AgentAction, AgentActionConfig, AgentEmission
 from .registry import register
@@ -219,6 +220,35 @@ class WorldStateAgent(Agent):
         log.debug("analyze_text_and_extract_context", goal=goal, text=text, response=response)
         
         return response
+    
+    @set_processing
+    async def analyze_text_and_extract_context_via_queries(
+        self,
+        text: str,
+        goal: str,
+    ) -> list[str]:
+        
+        response = await Prompt.request(
+            "world_state.analyze-text-and-generate-rag-queries",
+            self.client,
+            "analyze_freeform",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "text": text,
+                "goal": goal,
+            }
+        )
+        
+        queries = response.split("\n")
+        
+        memory_agent = get_agent("memory")
+        
+        context = await memory_agent.multi_query(queries, iterate=2)
+        
+        log.debug("analyze_text_and_extract_context_via_queries", goal=goal, text=text, queries=queries, context=context)
+        
+        return context
     
     @set_processing
     async def analyze_and_follow_instruction(

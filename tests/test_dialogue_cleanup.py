@@ -16,6 +16,9 @@ from talemate.util import ensure_dialog_format
     ('This is a string with an ending quote"', '"This is a string with an ending quote"'),
     ('This is a string with an ending asterisk*', '*This is a string with an ending asterisk*'),
     ('"Mixed markers*', '*Mixed markers*'),
+    ('*narrative.* dialogue" *more narrative.*', '*narrative.* "dialogue" *more narrative.*'),
+    ('"*messed up dialogue formatting.*" *some narration.*', '"messed up dialogue formatting." *some narration.*'),
+    ('*"messed up narration formatting."* "some dialogue."', '"messed up narration formatting." "some dialogue."'),
 ])
 def test_dialogue_cleanup(input, expected):
     assert ensure_dialog_format(input) == expected

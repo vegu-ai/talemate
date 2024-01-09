@@ -1,0 +1,17 @@
+<|SECTION:TASK|>
+Generate a json list of {{ text }}.
+
+Number of items: {{ count }}.
+
+Return valid json in this format: 
+
+{
+    "items": [
+        "first",
+        "second",
+        "third"
+    ]
+}
+
+<|CLOSE_SECTION|>
+{{ set_json_response({"items": ["first"]}) }}

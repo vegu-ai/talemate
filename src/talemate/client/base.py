@@ -39,7 +39,7 @@ class ClientBase:
     max_token_length: int = 4096
     processing: bool = False
     connected: bool = False
-    conversation_retries: int = 5
+    conversation_retries: int = 2
     auto_break_repetition_enabled: bool = True
 
     client_type = "base"
@@ -54,6 +54,8 @@ class ClientBase:
         self.api_url = api_url
         self.name = name or self.client_type
         self.log = structlog.get_logger(f"client.{self.client_type}")
+        if "max_token_length" in kwargs:
+            self.max_token_length = kwargs["max_token_length"]
         self.set_client()
         
     def __str__(self):
@@ -289,7 +291,7 @@ class ClientBase:
         self.log.debug("generate", prompt=prompt[:128]+" ...", parameters=parameters)
         
         try:
-            response = await self.client.completions.create(prompt=prompt.strip(), **parameters)
+            response = await self.client.completions.create(prompt=prompt.strip(" "), **parameters)
             return response.get("choices", [{}])[0].get("text", "")
         except Exception as e:
             self.log.error("generate error", e=e)
@@ -310,7 +312,7 @@ class ClientBase:
 
             prompt_param = self.generate_prompt_parameters(kind)
 
-            finalized_prompt = self.prompt_template(self.get_system_message(kind), prompt).strip()
+            finalized_prompt = self.prompt_template(self.get_system_message(kind), prompt).strip(" ")
             prompt_param = finalize(prompt_param)
 
             token_length = self.count_tokens(finalized_prompt)
@@ -398,6 +400,7 @@ class ClientBase:
             is_repetition, similarity_score, matched_line = util.similarity_score(
                 response, 
                 finalized_prompt.split("\n"), 
+                similarity_threshold=80
             )
             
             if not is_repetition:
@@ -405,6 +408,7 @@ class ClientBase:
                 # not a repetition, return the response
                 
                 self.log.debug("send_prompt no similarity", similarity_score=similarity_score)
+                finalized_prompt = self.repetition_adjustment(finalized_prompt, is_repetitive=False)
                 return response, finalized_prompt
             
             while is_repetition and retries > 0:
@@ -466,6 +470,7 @@ class ClientBase:
                 is_repetition, similarity_score, matched_line = util.similarity_score(
                     response, 
                     finalized_prompt.split("\n"), 
+                    similarity_threshold=80
                 )
                 retries -= 1
                 
@@ -512,6 +517,8 @@ class ClientBase:
             if line.startswith("[$REPETITION|"):
                 if is_repetitive:
                     new_lines.append(line.split("|")[1][:-1])
+                else:
+                    new_lines.append("")
             else:
                 new_lines.append(line)
         

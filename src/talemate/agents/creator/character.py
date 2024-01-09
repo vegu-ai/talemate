@@ -201,6 +201,28 @@ class CharacterCreatorMixin:
         return description.strip()
     
     @set_processing
+    async def determine_character_goals(
+        self,
+        character: Character,
+        goal_instructions: str,
+    ):
+        
+        goals = await Prompt.request(f"creator.determine-character-goals", self.client, "create", vars={
+            "character": character,
+            "scene": self.scene,
+            "goal_instructions": goal_instructions,
+            "npc_name": character.name,
+            "player_name": self.scene.get_player_character().name,
+            "max_tokens": self.client.max_token_length,
+        })
+        
+        log.debug("determine_character_goals", goals=goals, character=character)
+        await character.set_detail("goals", goals.strip())
+        
+        return goals.strip()
+    
+    
+    @set_processing
     async def generate_character_from_text(
         self,
         text: str,

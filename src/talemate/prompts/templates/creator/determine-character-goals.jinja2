@@ -1,0 +1,20 @@
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=1024, min_dialogue=25, sections=False, keep_director=False) -%}
+{{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:CHARACTERS|>
+{% for character in scene.characters %}
+### {{ character.name }}
+{{ character.sheet }}
+
+{{ character.description }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+{{ goal_instructions }}
+
+Please come up with one long-term goal a list of five short term goals for the NPC {{ npc_name }} that fit their character and the content context of the scenario. These goals will guide them as an NPC throughout the game, but remember the main goal for you is to provide the player ({{ player_name }}) with an experience that satisfies the content context of the scenario: {{ scene.context }}
+
+Stop after providing the list goals and wait for further instructions.
+<|CLOSE_SECTION|>

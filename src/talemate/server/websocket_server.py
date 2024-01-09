@@ -16,6 +16,8 @@ from talemate.server import character_creator
 from talemate.server import character_importer
 from talemate.server import scene_creator
 from talemate.server import config
+from talemate.server import world_state_manager
+from talemate.server import quick_settings
 
 log = structlog.get_logger("talemate.server.websocket_server")
 
@@ -52,6 +54,8 @@ class WebsocketHandler(Receiver):
             character_importer.CharacterImporterServerPlugin.router: character_importer.CharacterImporterServerPlugin(self),
             scene_creator.SceneCreatorServerPlugin.router: scene_creator.SceneCreatorServerPlugin(self),
             config.ConfigPlugin.router: config.ConfigPlugin(self),
+            world_state_manager.WorldStateManagerPlugin.router: world_state_manager.WorldStateManagerPlugin(self),
+            quick_settings.QuickSettingsPlugin.router: quick_settings.QuickSettingsPlugin(self),
         }
 
         # self.request_scenes_list()
@@ -131,6 +135,7 @@ class WebsocketHandler(Receiver):
             
             if self.scene:
                 instance.get_agent("memory").close_db(self.scene)
+                self.scene.disconnect()
             
             scene = self.init_scene()
 
@@ -280,6 +285,17 @@ class WebsocketHandler(Receiver):
                 "id": emission.id,
                 "status": emission.status,
                 "character": emission.character.name if emission.character else "",
+            }
+        )
+
+    def handle_status(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "status",
+                "message": emission.message,
+                "id": emission.id,
+                "status": emission.status,
+                "data": emission.data,
             }
         )
 

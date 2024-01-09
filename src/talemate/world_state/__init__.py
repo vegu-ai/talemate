@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from talemate.emit import emit
 import structlog
 import traceback
-from typing import Union
+from typing import Union, Any
 
 import talemate.instance as instance
 from talemate.prompts import Prompt
@@ -16,6 +16,24 @@ class CharacterState(BaseModel):
     
 class ObjectState(BaseModel):
     snapshot: Union[str, None] = None
+    
+class Reinforcement(BaseModel):
+    question: str
+    answer: Union[str, None] = None
+    interval: int = 10
+    due: int = 0
+    character: Union[str, None] = None
+    instructions: Union[str, None] = None
+
+class ManualContext(BaseModel):
+    id: str
+    text: str
+    meta: dict[str, Any] = {}
+    
+class ContextPin(BaseModel):
+    entry_id: str
+    condition: str
+    condition_state: bool = False
 
 class WorldState(BaseModel):
     
@@ -27,6 +45,15 @@ class WorldState(BaseModel):
     
     # location description
     location: Union[str, None] = None
+    
+    # reinforcers
+    reinforce: list[Reinforcement] = []
+    
+    # pins
+    pins: list[ContextPin] = []
+    
+    # manual context
+    manual_context: dict[str, ManualContext] = {}
     
     @property
     def agent(self):
@@ -161,6 +188,62 @@ class WorldState(BaseModel):
         self.emit()
         
     
+    async def add_reinforcement(self, question:str, character:str=None, instructions:str=None, interval:int=10, answer:str=""):
+        
+        # if reinforcement already exists, update it
+        
+        idx, reinforcement = await self.find_reinforcement(question, character)
+        
+        if reinforcement:
+            
+            # update the reinforcement object
+            
+            reinforcement.instructions = instructions
+            reinforcement.interval = interval
+            reinforcement.answer = answer
+            
+            # find the reinforcement message i nthe scene history and update the answer
+            
+            message = self.agent.scene.find_message(typ="reinforcement", source=f"{question}:{character if character else ''}")
+            
+            if message:
+                message.message = answer
+                
+            # update the character detail if character name is specified
+            if character:
+                character = self.agent.scene.get_character(character)
+                await character.set_detail(question, answer)
+            
+            return
+        
+        self.reinforce.append(
+            Reinforcement(
+                question=question,
+                character=character,
+                instructions=instructions,
+                interval=interval,
+                answer=answer,
+            )
+        )
+    
+    async def find_reinforcement(self, question:str, character:str=None):
+        for idx, reinforcement in enumerate(self.reinforce):
+            if reinforcement.question == question and reinforcement.character == character:
+                return idx, reinforcement
+        return None, None
+    
+    def reinforcements_for_character(self, character:str):
+        reinforcements = {}
+        
+        for reinforcement in self.reinforce:
+            if reinforcement.character == character:
+                reinforcements[reinforcement.question] = reinforcement
+        
+        return reinforcements
+    
+    async def remove_reinforcement(self, idx:int):
+        self.reinforce.pop(idx)
+    
     def render(self):
         
         """
@@ -175,3 +258,8 @@ class WorldState(BaseModel):
                 "location": self.location,
             }
         )
+        
+    async def commit_to_memory(self, memory_agent):
+        await memory_agent.add_many([
+            manual_context.model_dump() for manual_context in self.manual_context.values()
+        ])

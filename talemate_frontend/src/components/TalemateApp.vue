@@ -141,6 +141,7 @@
     <v-snackbar v-model="errorNotification" color="red" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
+    <StatusNotification />
   </v-app>
 </template>
   
@@ -159,6 +160,7 @@ import CreativeEditor from './CreativeEditor.vue';
 import AppConfig from './AppConfig.vue';
 import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
+import StatusNotification from './StatusNotification.vue';
 
 export default {
   components: {
@@ -176,6 +178,7 @@ export default {
     AppConfig,
     DebugTools,
     AudioQueue,
+    StatusNotification,
   },
   name: 'TalemateApp',
   data() {

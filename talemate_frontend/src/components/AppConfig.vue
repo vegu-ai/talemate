@@ -32,7 +32,22 @@
                                     </v-list>
                                 </v-col>
                                 <v-col cols="8">
-                                    <div v-if="gamePageSelected === 'character'">
+                                    <div v-if="gamePageSelected === 'general'">
+                                        <v-alert color="white" variant="text" icon="mdi-cog" density="compact">
+                                            <v-alert-title>General</v-alert-title>
+                                            <div class="text-grey">
+                                                General game settings.
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-checkbox v-model="app_config.game.general.auto_save" label="Auto save" messages="Automatically save after each game-loop"></v-checkbox>
+                                                <v-checkbox v-model="app_config.game.general.auto_progress" label="Auto progress" messages="AI automatically progresses after player turn."></v-checkbox>
+                                            </v-col>
+                                        </v-row>        
+                                    </div>
+                                    <div v-else-if="gamePageSelected === 'character'">
                                         <v-alert color="white" variant="text" icon="mdi-human-edit" density="compact">
                                             <v-alert-title>Default player character</v-alert-title>
                                             <div class="text-grey">
@@ -228,6 +243,7 @@ export default {
             content_context_input: '',
             navigation: {
                 game: [
+                    {title: 'General', icon: 'mdi-cog', value: 'general'},
                     {title: 'Default Character', icon: 'mdi-human-edit', value: 'character'},
                 ],
                 application: [
@@ -240,7 +256,7 @@ export default {
                     {title: 'Content Context', icon: 'mdi-cube-scan', value: 'content_context'},
                 ]
             },
-            gamePageSelected: 'character',
+            gamePageSelected: 'general',
             applicationPageSelected: 'openai_api',
             creatorPageSelected: 'content_context',
         }

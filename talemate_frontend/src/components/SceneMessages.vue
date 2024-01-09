@@ -175,7 +175,7 @@ export default {
                     const character = parts.shift();
                     const text = parts.join(':');
                     this.messages.push({ id: data.id, type: data.type, character: character.trim(), text: text.trim(), color: data.color }); // Add color property to the message
-                } else if (data.type != 'request_input' && data.type != 'client_status' && data.type != 'agent_status') {
+                } else if (data.type != 'request_input' && data.type != 'client_status' && data.type != 'agent_status' && data.type != 'status') {
                     this.messages.push({ id: data.id, type: data.type, text: data.message, color: data.color, character: data.character, status:data.status, ts:data.ts }); // Add color property to the message
                 }
             }

@@ -19,7 +19,7 @@
 
 <|CLOSE_SECTION|>
 <|SECTION:CONTEXT|>
-{% for scene_context in scene.context_history(budget=1000, min_dialogue=10, dialogue_negative_offset=5, sections=False) -%}
+{% for scene_context in scene.context_history(budget=1000, min_dialogue=10) -%}
 {{ scene_context }}
 {% endfor -%}
 {% if not scene.history -%}

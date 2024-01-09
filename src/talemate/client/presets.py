@@ -148,7 +148,7 @@ def max_tokens_for_kind(kind: str, total_budget: int):
     elif kind == "create_precise":
         return min(400, int(total_budget * 0.25))  # Example calculation, adjust as needed
     elif kind == "director":
-        return min(600, int(total_budget * 0.25))  # Example calculation, adjust as needed
+        return min(192, int(total_budget * 0.25))  # Example calculation, adjust as needed
     elif kind == "director_short":
         return 25  # Example value, adjust as needed
     elif kind == "director_yesno":

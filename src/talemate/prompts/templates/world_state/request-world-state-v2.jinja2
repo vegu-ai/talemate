@@ -25,7 +25,7 @@ Other major characters:
 {{ npc_name }}
 {% endfor -%}
 
-{% for scene_context in scene.context_history(budget=1000, min_dialogue=10, dialogue_negative_offset=5, sections=False) -%}
+{% for scene_context in scene.context_history(budget=1000) -%}
 {{ scene_context }}
 {% endfor -%}
 {% if not scene.history -%}
@@ -33,16 +33,11 @@ Other major characters:
 No dialogue so far
 {% endif -%}
 <|CLOSE_SECTION|>
-<|SECTION:SCENE PROGRESS|>
-{% for scene_context in scene.context_history(budget=500, min_dialogue=5, add_archieved_history=False, max_dialogue=5) -%}
-{{ scene_context }}
-{% endfor -%}
-<|CLOSE_SECTION|>
 <|SECTION:TASK|>
 Create a JSON object for the world state that reflects the scene progression so far.
 
-The world state needs to include important concrete and material items present at the very end of the dialogue.
-The world state needs to include persons (characters) interacting at the very end of the dialogue
+The world state needs to include important concrete and material items present at the sequential end of the dialogue.
+The world state needs to include persons (characters) interacting at the sequential end of the dialogue
 Be factual and truthful. Don't make up things that are not in the context or dialogue.
 Snapshot text should always be specified. If you don't know what to write, write "You see nothing special."
 Emotion should always be specified. If you don't know what to write, write "neutral".

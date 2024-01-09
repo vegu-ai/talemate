@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 import talemate.emit.async_signals
 import talemate.util as util
 from talemate.prompts import Prompt
-from talemate.scene_message import DirectorMessage, TimePassageMessage
+from talemate.scene_message import DirectorMessage, TimePassageMessage, ReinforcementMessage
 from talemate.emit import emit
 from talemate.events import GameLoopEvent
+from talemate.instance import get_agent
 
 from .base import Agent, set_processing, AgentAction, AgentActionConfig, AgentEmission
 from .registry import register
@@ -103,6 +104,7 @@ class WorldStateAgent(Agent):
             return
         
         await self.update_world_state()
+        await self.update_reinforcements()
             
 
     async def update_world_state(self):
@@ -220,6 +222,35 @@ class WorldStateAgent(Agent):
         return response
     
     @set_processing
+    async def analyze_text_and_extract_context_via_queries(
+        self,
+        text: str,
+        goal: str,
+    ) -> list[str]:
+        
+        response = await Prompt.request(
+            "world_state.analyze-text-and-generate-rag-queries",
+            self.client,
+            "analyze_freeform",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "text": text,
+                "goal": goal,
+            }
+        )
+        
+        queries = response.split("\n")
+        
+        memory_agent = get_agent("memory")
+        
+        context = await memory_agent.multi_query(queries, iterate=2)
+        
+        log.debug("analyze_text_and_extract_context_via_queries", goal=goal, text=text, queries=queries, context=context)
+        
+        return context
+    
+    @set_processing
     async def analyze_and_follow_instruction(
         self,
         text: str,
@@ -290,6 +321,19 @@ class WorldStateAgent(Agent):
         
         return data
     
+    def _parse_character_sheet(self, response):
+        
+        data = {}
+        for line in response.split("\n"):
+            if not line.strip():
+                continue
+            if not ":" in line:
+                break
+            name, value = line.split(":", 1)
+            data[name.strip()] = value.strip()
+        
+        return data
+    
     @set_processing
     async def extract_character_sheet(
         self,
@@ -304,7 +348,7 @@ class WorldStateAgent(Agent):
         response = await Prompt.request(
             "world_state.extract-character-sheet",
             self.client,
-            "analyze_creative",
+            "create",
             vars = {
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
@@ -318,17 +362,8 @@ class WorldStateAgent(Agent):
         #
         # break as soon as a non-empty line is found that doesn't contain a :
         
-        data = {}
-        for line in response.split("\n"):
-            if not line.strip():
-                continue
-            if not ":" in line:
-                break
-            name, value = line.split(":", 1)
-            data[name.strip()] = value.strip()
+        return self._parse_character_sheet(response)
         
-        return data
-    
     
     @set_processing
     async def match_character_names(self, names:list[str]):
@@ -351,3 +386,63 @@ class WorldStateAgent(Agent):
         log.debug("match_character_names", names=names, response=response)
         
         return response
+    
+    
+    @set_processing
+    async def update_reinforcements(self, force:bool=False):
+        
+        """
+        Queries due worldstate re-inforcements
+        """
+        
+        for reinforcement in self.scene.world_state.reinforce:
+            if reinforcement.due <= 0 or force:
+                await self.update_reinforcement(reinforcement.question, reinforcement.character)
+            else:
+                reinforcement.due -= 1
+                
+    
+    @set_processing
+    async def update_reinforcement(self, question:str, character:str=None):
+        
+        """
+        Queries a single re-inforcement
+        """
+        
+        idx, reinforcement = await self.scene.world_state.find_reinforcement(question, character)
+        
+        if not reinforcement:
+            return
+        
+        answer = await Prompt.request(
+            "world_state.update-reinforcements",
+            self.client,
+            "analyze_freeform",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "question": reinforcement.question,
+                "instructions": reinforcement.instructions or "",
+                "character": self.scene.get_character(reinforcement.character) if reinforcement.character else None,
+                "answer": reinforcement.answer or "",
+            }
+        )
+        
+        reinforcement.answer = answer
+        reinforcement.due = reinforcement.interval
+        
+        source = f"{reinforcement.question}:{reinforcement.character if reinforcement.character else ''}"
+        message = ReinforcementMessage(message=answer, source=source)
+        
+        # remove previous reinforcement message with same question
+        self.scene.pop_history(typ="reinforcement", source=source)
+        
+        log.debug("update_reinforcement", message=message)
+        self.scene.push_history(message)
+        
+        # if reinforcement has a character name set, update the character detail
+        if reinforcement.character:
+            character = self.scene.get_character(reinforcement.character)
+            await character.set_detail(reinforcement.question, answer)
+        
+        return message  

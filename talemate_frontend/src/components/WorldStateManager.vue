@@ -272,6 +272,20 @@
                                 <v-select v-if="contextDBQueryMetaKey !== null && contextDBMetaValuesByType[contextDBQueryMetaKey]" v-model="contextDBQueryMetaValue" :items="contextDBMetaValuesByType[contextDBQueryMetaKey]()" label="Tag value"  class="mr-1 mb-1" variant="underlined"  single-line hide-details density="compact"></v-select>
                                 <v-text-field v-else v-model="contextDBQueryMetaValue" label="Tag value"  class="mr-1 mb-1" variant="underlined"  single-line hide-details density="compact"></v-text-field>
                                 <v-spacer></v-spacer>
+                                <!-- button that opens the tools menu -->
+                                <v-menu>
+                                    <template v-slot:activator="{ props }">
+                                        <v-btn rounded="sm" v-bind="props" prepend-icon="mdi-tools" variant="text">
+                                            Tools
+                                        </v-btn>
+                                    </template>
+                                    <v-list>
+                                        <v-list-item @click.stop="resetContextDB" append-icon="mdi-shield-alert">
+                                            <v-list-item-title>Reset</v-list-item-title>
+                                        </v-list-item>
+                                    </v-list>
+                                </v-menu>
+
                                 <!-- button to open add content db entry dialog -->
                                 <v-btn rounded="sm" prepend-icon="mdi-plus" @click.stop="dialogAddContextDBEntry=true"  variant="text">
                                     Add entry
@@ -912,6 +926,18 @@ export default {
                 type: 'world_state_manager',
                 action: 'delete_context_db',
                 id: id,
+            }));
+        },
+
+        resetContextDB() {
+            let confirm = window.confirm("Are you sure you want to reset the context database? This will remove all entries and reimport them from the current save file. Manually added context entries will be lost.");
+            if(!confirm) {
+                return;
+            }
+
+            this.getWebsocket().send(JSON.stringify({
+                type: 'interact',
+                text: "!ltm_reset",
             }));
         },
 

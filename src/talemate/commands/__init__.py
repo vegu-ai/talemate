@@ -9,10 +9,7 @@ from .cmd_inject import CmdInject
 from .cmd_list_scenes import CmdListScenes
 from .cmd_memget import CmdMemget
 from .cmd_memset import CmdMemset
-from .cmd_narrate import CmdNarrate
-from .cmd_narrate_c import CmdNarrateC
-from .cmd_narrate_q import CmdNarrateQ
-from .cmd_narrate_progress import CmdNarrateProgress
+from .cmd_narrate import *
 from .cmd_rebuild_archive import CmdRebuildArchive
 from .cmd_rename import CmdRename
 from .cmd_rerun import CmdRerun

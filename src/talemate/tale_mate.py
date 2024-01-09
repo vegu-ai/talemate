@@ -1252,8 +1252,14 @@ class Scene(Emitter):
         
         
         narrator = self.get_helper("narrator")
-        if source == "progress_story":
-            new_message = await narrator.agent.progress_story()
+        if source.startswith("progress_story"):
+            
+            if ":" in source:
+                _, direction = source.split(":", 1)
+            else:
+                direction = None
+            
+            new_message = await narrator.agent.progress_story(direction)
         elif source == "narrate_scene":
             new_message = await narrator.agent.narrate_scene()
         elif source == "narrate_character" and arg:

@@ -207,7 +207,7 @@ class ConversationAgent(Agent):
     async def on_game_loop(self, event:GameLoopEvent):
         await self.apply_natural_flow()
     
-    async def apply_natural_flow(self):
+    async def apply_natural_flow(self, force: bool = False, npcs_only: bool = False):
         """
         If the natural flow action is enabled, this will attempt to determine
         the ideal character to talk next.
@@ -222,15 +222,21 @@ class ConversationAgent(Agent):
         """
         
         scene = self.scene
+        
+        if not scene.auto_progress and not force:
+            # we only apply natural flow if auto_progress is enabled
+            return
+        
         if self.actions["natural_flow"].enabled and len(scene.character_names) > 2:
             
             # last time each character spoke (turns ago)
             max_idle_turns = self.actions["natural_flow"].config["max_idle_turns"].value
             max_auto_turns = self.actions["natural_flow"].config["max_auto_turns"].value
             last_turn = self.last_spoken()
-            last_turn_player = last_turn.get(scene.get_player_character().name, 0)
+            player_name = scene.get_player_character().name
+            last_turn_player = last_turn.get(player_name, 0)
             
-            if last_turn_player >= max_auto_turns:
+            if last_turn_player >= max_auto_turns and not npcs_only:
                 self.scene.next_actor = scene.get_player_character().name
                 log.debug("conversation_agent.natural_flow", next_actor="player", overdue=True, player_character=scene.get_player_character().name)
                 return
@@ -245,14 +251,24 @@ class ConversationAgent(Agent):
                 # we dont want to talk to the same person twice in a row
                 character_names = scene.character_names
                 character_names.remove(scene.prev_actor)
+                
+                if npcs_only:
+                    character_names = [c for c in character_names if c != player_name]
+                    
                 random_character_name = random.choice(character_names)
             else:
                 character_names = scene.character_names                
                 # no one has talked yet, so we just pick a random character
                 
+                if npcs_only:
+                    character_names = [c for c in character_names if c != player_name]
+                    
                 random_character_name = random.choice(scene.character_names)
             
             overdue_characters = [character for character, turn in last_turn.items() if turn >= max_idle_turns]
+            
+            if npcs_only:
+                overdue_characters = [c for c in overdue_characters if c != player_name]
             
             if overdue_characters and self.scene.history:
                 # Pick a random character from the overdue characters

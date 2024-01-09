@@ -54,49 +54,72 @@
         <!-- Section 1: Game Interaction -->
         <v-card class="hotbuttons-section-1" v-if="isEnvironment('scene')">
             <v-card-actions>
-                <v-tooltip :disabled="isInputDisabled()" location="top" text="Narrate: Progress Story">
+
+                <!-- actor actions -->
+
+                <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!narrate_progress')" color="primary" icon>
-                            <v-icon>mdi-script-text-play</v-icon>
-                        </v-btn>
-                    </template>
-                </v-tooltip>
-                <v-tooltip :disabled="isInputDisabled()" location="top" text="Narrate: Scene">
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!narrate')" color="primary" icon>
-                            <v-icon>mdi-script-text</v-icon>
-                        </v-btn>
-                    </template>
-                </v-tooltip>
-                <v-tooltip :disabled="isInputDisabled()" location="top" text="Narrate: Character">
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!narrate_c')" color="primary" icon>
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
                             <v-icon>mdi-account-voice</v-icon>
                         </v-btn>
                     </template>
-                </v-tooltip>
-                <v-tooltip :disabled="isInputDisabled()" location="top" text="Narrate: Query">
+                    <v-list>
+                        <v-list-subheader>Actor Actions</v-list-subheader>
+                        <v-list-item density="compact" v-for="npc_name in npc_characters" :key="npc_name"
+                            @click="sendHotButtonMessage('!ai_dialogue_directed:' + npc_name)" prepend-icon="mdi-bullhorn">
+                            <v-list-item-title>Talk with Direction ({{ npc_name }})</v-list-item-title>
+                            <v-list-item-subtitle>Generate dialogue ({{ npc_name }}) with prompt guide</v-list-item-subtitle>
+                        </v-list-item>
+                        <v-list-item density="compact" v-for="npc_name in npc_characters" :key="npc_name"
+                            @click="sendHotButtonMessage('!ai_dialogue_selective:' + npc_name)" prepend-icon="mdi-comment-account-outline">
+                            <v-list-item-title>Talk ({{ npc_name }})</v-list-item-title>
+                            <v-list-item-subtitle>Generate dialogue ({{ npc_name }})</v-list-item-subtitle>
+                        </v-list-item>
+                        <v-list-item density="compact" v-for="(option, index) in actorActions" :key="index"
+                            @click="sendHotButtonMessage('!' + option.value)" :prepend-icon="option.icon">
+                            <v-list-item-title>{{ option.title }}</v-list-item-title>
+                            <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
+
+                <!-- narrator actions -->
+
+                <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!narrate_q')" color="primary" icon>
-                            <v-icon>mdi-crystal-ball</v-icon>
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
+                            <v-icon>mdi-script-text</v-icon>
                         </v-btn>
                     </template>
-                </v-tooltip>
+                    <v-list>
+                        <v-list-subheader>Narrator Actions</v-list-subheader>
+
+                        <v-list-item density="compact" v-for="(option, index) in narratorActions" :key="index"
+                            @click="sendHotButtonMessage('!' + option.value)" :prepend-icon="option.icon">
+                            <v-list-item-title>{{ option.title }}</v-list-item-title>
+                            <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
+                        </v-list-item>
+                        <v-list-item density="compact" v-for="npc_name in npc_characters" :key="npc_name"
+                            @click="sendHotButtonMessage('!narrate_c:' + npc_name)" prepend-icon="mdi-eye">
+                            <v-list-item-title>Look at {{ npc_name }}</v-list-item-title>
+                            <v-list-item-subtitle>Look at a character</v-list-item-subtitle>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
+
+                <!-- advance time -->
+
                 <v-menu>
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
                             <v-icon>mdi-clock</v-icon>
                         </v-btn>
                     </template>
-                    <v-list>
+                    <v-list density="compact">
                         <v-list-subheader>Advance Time</v-list-subheader>
-                        <v-list-item v-for="(option, index) in advanceTimeOptions" :key="index"
+                        <v-list-item density="compact" v-for="(option, index) in advanceTimeOptions" :key="index"
                             @click="sendHotButtonMessage('!advance_time:' + option.value)">
-                            <v-list-item-title>{{ option.title }}</v-list-item-title>
+                            <v-list-item-title density="compact">{{ option.title }}</v-list-item-title>
                         </v-list-item>
                     </v-list>
                 </v-menu>
@@ -106,9 +129,10 @@
         <!-- Section 2: Tools -->
         <v-card class="hotbuttons-section-2">
             <v-card-actions>
+                
+                <!-- quick settings menu -->
 
                 <v-menu>
-                    <!-- quick settings -->
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
                             <v-icon>mdi-cog</v-icon>
@@ -126,23 +150,26 @@
                     </v-list>
                 </v-menu>
 
-                <v-tooltip :disabled="isInputDisabled()" location="top" text="Save">
+                <!-- save menu -->
+
+                <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!save')" color="primary" icon>
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
                             <v-icon>mdi-content-save</v-icon>
                         </v-btn>
                     </template>
-                </v-tooltip>
+                    <v-list>
+                        <v-list-subheader>Save</v-list-subheader>
+                        <v-list-item v-for="(option, index) in saveMenu" :key="index"
+                            @click.stop="sendHotButtonMessage('!' + option.value)"
+                            :prepend-icon="option.icon">
+                            <v-list-item-title>{{ option.title }}</v-list-item-title>
+                            <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
 
-                <v-tooltip :disabled="isInputDisabled()" location="top" text="Save As">
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!save_as')" color="primary" icon>
-                            <v-icon>mdi-content-save-all</v-icon>
-                        </v-btn>
-                    </template>
-                </v-tooltip>
+                <!-- creative / game mode toggle -->
 
                 <v-tooltip v-if="isEnvironment('scene')" :disabled="isInputDisabled()" location="top" text="Switch to creative mode">
                     <template v-slot:activator="{ props }">
@@ -181,21 +208,43 @@ export default {
             commandName: null,
             autoSave: true,
             autoProgress: true,
+            npc_characters: [],
 
             quickSettings: [
                 {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.autoSave; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
             ],
 
+            saveMenu: [
+                {"value": "saveAs", "title": "Save As", "icon": "mdi-content-save-all", "description": "Save the current scene as a new scene"},
+                {"value": "save", "title": "Save", "icon": "mdi-content-save", "description": "Save the current scene"},
+            ],
+
+            narratorActions: [
+                {"value": "narrate_progress", "title": "Progress Story", "icon": "mdi-script-text-play", "description": "Progress the story"},
+                {"value": "narrate_progress_suggestion", "title": "Progress Story via Prompt", "icon": "mdi-script-text-play", "description": "Progress the story (Provide prompt)"},
+                {"value": "narrate_sensory", "title": "Sensory Narration", "icon": "mdi-waves", "description": "Describe visuals, smells and sounds."},
+                {"value": "narrate_q", "title": "Query", "icon": "mdi-crystal-ball", "description": "Ask the narrator a question, or instruct to tell something."},
+                {"value": "narrate", "title": "Look at Scene", "icon": "mdi-table-headers-eye", "description": "Look at the current scene"},
+            ],
+
+            actorActions: [
+                {"value": "ai_dialogue", "title": "Talk", "icon": "mdi-comment-text-outline", "description": "Generate dialogue"},
+            ],
+
             advanceTimeOptions: [
                 {"value" : "P10Y", "title": "10 years"},
                 {"value" : "P5Y", "title": "5 years"},
+                {"value" : "P3Y", "title": "3 years"},
+                {"value" : "P2Y", "title": "2 years"},
                 {"value" : "P1Y", "title": "1 year"},
                 {"value" : "P6M", "title": "6 months"},
                 {"value" : "P3M", "title": "3 months"},
                 {"value" : "P1M", "title": "1 month"},
+                {"value" : "P14D:2 Weeks later", "title": "2 weeks"},
                 {"value" : "P7D:1 Week later", "title": "1 week"},
                 {"value" : "P3D", "title": "3 days"},
+                {"value" : "P2D", "title": "2 days"},
                 {"value" : "P1D", "title": "1 day"},
                 {"value" : "PT8H", "title": "8 hours"},
                 {"value" : "PT4H", "title": "4 hours"},
@@ -252,6 +301,14 @@ export default {
                 this.autoSave = data.data.auto_save;
                 this.autoProgress = data.data.auto_progress;
                 console.log({autoSave: this.autoSave, autoProgress: this.autoProgress});
+
+                // collect npc characters
+                this.npc_characters = [];
+                for (let character of data.data.characters) {
+                    if (!character.is_player) {
+                        this.npc_characters.push(character.name);
+                    }
+                }
                 return;
             } else if (data.type === "quick_settings" && data.action === 'set_done') {
                 return;

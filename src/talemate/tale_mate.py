@@ -249,7 +249,8 @@ class Character:
         if self.description:
             self.description = self.description.replace(f"{orig_name}", self.name)
         for k, v in self.base_attributes.items():
-            self.base_attributes[k] = v.replace(f"{orig_name}", self.name)
+            if isinstance(v, str):
+                self.base_attributes[k] = v.replace(f"{orig_name}", self.name)
         for i, v in enumerate(self.details):
             self.details[i] = v.replace(f"{orig_name}", self.name)
 
@@ -730,7 +731,7 @@ class Scene(Emitter):
     def scene_config(self):
         return SceneConfig(
             automated_actions={action.uid: action.enabled for action in self.automated_actions.values()}
-        ).dict()
+        ).model_dump()
         
     @property
     def project_name(self):
@@ -860,7 +861,7 @@ class Scene(Emitter):
         for message in messages:
             if isinstance(message, DirectorMessage):
                 for idx in range(len(self.history) - 1, -1, -1):
-                    if isinstance(self.history[idx], DirectorMessage):
+                    if isinstance(self.history[idx], DirectorMessage) and self.history[idx].source == message.source:
                         self.history.pop(idx)
                         break
             
@@ -1043,7 +1044,7 @@ class Scene(Emitter):
         for actor in self.actors:
             if not isinstance(actor, Player):
                 yield actor.character
-                
+           
     def num_npc_characters(self):
         return len(list(self.get_npc_characters()))
 
@@ -1054,6 +1055,17 @@ class Scene(Emitter):
         
         for actor in self.actors:
             yield actor.character
+
+    def process_npc_dialogue(self, actor:Actor, message: str):
+        self.saved = False
+        
+        # Store the most recent AI Actor
+        self.most_recent_ai_actor = actor
+
+        for item in message:
+            emit(
+                "character", item, character=actor.character
+            )
 
     def set_description(self, description: str):
         """
@@ -1132,7 +1144,7 @@ class Scene(Emitter):
     def context_history(
         self,
         budget: int = 2048,
-        keep_director:bool = False,
+        keep_director:Union[bool, str] = False,
         **kwargs        
     ):
         parts_context = []
@@ -1149,8 +1161,11 @@ class Scene(Emitter):
             
             count += 1
             
-            if isinstance(self.history[i], DirectorMessage) and not keep_director:
-                continue
+            if isinstance(self.history[i], DirectorMessage):
+                if not keep_director:
+                    continue
+                elif isinstance(keep_director, str) and self.history[i].source != keep_director:
+                    continue
             
             if count_tokens(parts_dialogue) + count_tokens(self.history[i]) > budget_dialogue:
                 break
@@ -1541,7 +1556,7 @@ class Scene(Emitter):
                         # auto progress is disabled, so NPCs don't get automatic turns
                         continue
                     
-                    if self.next_actor and actor.character.name != self.next_actor:
+                    if self.next_actor and actor.character.name != self.next_actor and self.auto_progress:
                         self.log.debug(f"Skipping actor", actor=actor.character.name, next_actor=self.next_actor)
                         continue
                         
@@ -1572,15 +1587,7 @@ class Scene(Emitter):
                         )
                         continue
                     
-                    self.saved = False
-                    
-                    # Store the most recent AI Actor
-                    self.most_recent_ai_actor = actor
-
-                    for item in message:
-                        emit(
-                            "character", item, character=actor.character
-                        )
+                    self.process_npc_dialogue(actor, message)
                     
                     await self.signals["game_loop_actor_iter"].send(
                         events.GameLoopActorIterEvent(
@@ -1665,7 +1672,7 @@ class Scene(Emitter):
             self.filename = await wait_for_input("Enter save name: ")
             self.filename = self.filename.replace(" ", "-").lower()+".json"
             
-        elif not self.filename and not self.name and auto:
+        elif not self.filename or not self.name and auto:
             # scene has never been saved, don't auto save
             return
         

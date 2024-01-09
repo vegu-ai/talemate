@@ -21,13 +21,14 @@ import talemate.util as util
 import talemate.save as save
 from talemate.instance import get_agent
 from talemate.emit import Emitter, emit, wait_for_input
+from talemate.emit.signals import handlers, ConfigSaved
 import talemate.emit.async_signals as async_signals
 from talemate.util import colored_text, count_tokens, extract_metadata, wrap_text
 from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, NarratorMessage, TimePassageMessage, ReinforcementMessage
 from talemate.exceptions import ExitScene, RestartSceneLoop, ResetScene, TalemateError, TalemateInterrupt, LLMAccuracyError
 from talemate.world_state import WorldState
 from talemate.game_state import GameState
-from talemate.config import SceneConfig
+from talemate.config import SceneConfig, load_config
 from talemate.scene_assets import SceneAssets
 from talemate.client.context import ClientContext, ConversationContext
 import talemate.automated_action as automated_action
@@ -673,6 +674,7 @@ class Scene(Emitter):
         self.saved_memory_session_id = None
         self.memory_session_id = str(uuid.uuid4())[:10]
         self.saved = False
+        self.config = load_config()
         
         self.context = ""
         self.commands = commands.Manager(self)
@@ -766,7 +768,34 @@ class Scene(Emitter):
     @property
     def template_dir(self):
         return os.path.join(self.save_dir, "templates")
+    
+    @property
+    def auto_save(self):
+        return self.config.get("game", {}).get("general", {}).get("auto_save", True)
+    
+    @property
+    def auto_progress(self):
+        return self.config.get("game", {}).get("general", {}).get("auto_progress", True)
 
+    def connect(self):
+        """
+        connect scenes to signals
+        """
+        handlers["config_saved"].connect(self.on_config_saved)
+        
+    def disconnect(self):
+        """
+        disconnect scenes from signals
+        """
+        handlers["config_saved"].disconnect(self.on_config_saved)
+        
+    def __del__(self):
+        self.disconnect()
+        
+    def on_config_saved(self, event:ConfigSaved):
+        self.config = event.data
+        self.emit_status()
+        
     def apply_scene_config(self, scene_config:dict):
         scene_config = SceneConfig(**scene_config)
         
@@ -1334,6 +1363,8 @@ class Scene(Emitter):
                 "characters": [actor.character.serialize for actor in self.actors],
                 "scene_time": util.iso8601_duration_to_human(self.ts, suffix="") if self.ts else None,
                 "saved": self.saved,
+                "auto_save": self.auto_save,
+                "auto_progress": self.auto_progress,
                 "game_state": self.game_state.model_dump(),
             },
         )
@@ -1495,6 +1526,8 @@ class Scene(Emitter):
         
         while continue_scene:
             
+            log.debug("game loop", auto_save=self.auto_save, auto_progress=self.auto_progress)
+            
             try:
                 game_loop = events.GameLoopEvent(scene=self, event_type="game_loop", had_passive_narration=False)
                 if signal_game_loop:
@@ -1503,6 +1536,10 @@ class Scene(Emitter):
                 signal_game_loop = True
             
                 for actor in self.actors:
+                    
+                    if not self.auto_progress and not actor.character.is_player:
+                        # auto progress is disabled, so NPCs don't get automatic turns
+                        continue
                     
                     if self.next_actor and actor.character.name != self.next_actor:
                         self.log.debug(f"Skipping actor", actor=actor.character.name, next_actor=self.next_actor)
@@ -1555,7 +1592,8 @@ class Scene(Emitter):
                     )
 
 
-                
+                if self.auto_save:
+                    await self.save(auto=True)
                 self.emit_status()
                     
             except TalemateInterrupt:
@@ -1610,7 +1648,7 @@ class Scene(Emitter):
         log.debug("set_new_memory_session_id", saved_memory_session_id=self.saved_memory_session_id, memory_session_id=self.memory_session_id)
         self.emit_status()
             
-    async def save(self, save_as:bool=False):
+    async def save(self, save_as:bool=False, auto:bool=False):
         """
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
@@ -1619,13 +1657,17 @@ class Scene(Emitter):
         if save_as:
             self.filename = None
             
-        if not self.name:
+        if not self.name and not auto:
             self.name = await wait_for_input("Enter scenario name: ")
             self.filename = "base.json"
 
-        elif not self.filename:
+        elif not self.filename and not auto:
             self.filename = await wait_for_input("Enter save name: ")
             self.filename = self.filename.replace(" ", "-").lower()+".json"
+            
+        elif not self.filename and not self.name and auto:
+            # scene has never been saved, don't auto save
+            return
         
         self.set_new_memory_session_id()
         
@@ -1638,7 +1680,7 @@ class Scene(Emitter):
 
         saves_dir = self.save_dir
         
-        log.info(f"Saving to: {saves_dir}")
+        log.info("Saving", filename=self.filename, saves_dir=saves_dir, auto=auto)
         
         # Generate filename with date and normalized character name
         filepath = os.path.join(saves_dir, self.filename)
@@ -1665,7 +1707,8 @@ class Scene(Emitter):
             "ts": scene.ts,
         }
 
-        emit("status", status="success", message="Saved scene")
+        if not auto:
+            emit("status", status="success", message="Saved scene")
 
         with open(filepath, "w") as f:
             json.dump(scene_data, f, indent=2, cls=save.SceneEncoder)

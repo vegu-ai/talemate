@@ -52,9 +52,13 @@ class GamePlayerCharacter(BaseModel):
     class Config:
         extra = "ignore"
 
+class General(BaseModel):
+    auto_save: bool = True
+    auto_progress: bool = True
 
 class Game(BaseModel):
     default_player_character: GamePlayerCharacter = GamePlayerCharacter()
+    general: General = General()
     
     class Config:
         extra = "ignore"

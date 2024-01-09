@@ -100,21 +100,31 @@
                         </v-list-item>
                     </v-list>
                 </v-menu>
-                <v-divider vertical></v-divider>
-                <v-tooltip :disabled="isInputDisabled()" location="top" text="Direct a character">
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!director')" color="primary" icon>
-                            <v-icon>mdi-bullhorn</v-icon>
-                        </v-btn>
-                    </template>
-                </v-tooltip>
             </v-card-actions>
         </v-card>
 
         <!-- Section 2: Tools -->
         <v-card class="hotbuttons-section-2">
             <v-card-actions>
+
+                <v-menu>
+                    <!-- quick settings -->
+                    <template v-slot:activator="{ props }">
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
+                            <v-icon>mdi-cog</v-icon>
+                        </v-btn>
+                    </template>
+                    <v-list>
+                        <v-list-subheader>Quick Settings</v-list-subheader>
+                        <v-list-item v-for="(option, index) in quickSettings" :key="index"
+                            @click.stop="toggleQuickSetting(option.value)"
+                            :prepend-icon="option.icon"
+                            :append-icon="option.status() ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'">
+                            <v-list-item-title>{{ option.title }}</v-list-item-title>
+                            <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
 
                 <v-tooltip :disabled="isInputDisabled()" location="top" text="Save">
                     <template v-slot:activator="{ props }">
@@ -169,6 +179,13 @@ export default {
         return {
             commandActive: false,
             commandName: null,
+            autoSave: true,
+            autoProgress: true,
+
+            quickSettings: [
+                {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.autoSave; }},
+                {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
+            ],
 
             advanceTimeOptions: [
                 {"value" : "P10Y", "title": "10 years"},
@@ -211,17 +228,36 @@ export default {
             }
         },
 
+        toggleQuickSetting(setting) {
+            if (setting == "toggleAutoSave") {
+                this.autoSave = !this.autoSave;
+                this.getWebsocket().send(JSON.stringify({ type: 'quick_settings', action: 'set', setting: 'auto_save', value: this.autoSave }));
+            } else if (setting == "toggleAutoProgress") {
+                this.autoProgress = !this.autoProgress;
+                this.getWebsocket().send(JSON.stringify({ type: 'quick_settings', action: 'set', setting: 'auto_progress', value: this.autoProgress }));
+            }
+        },
+
         handleMessage(data) {
 
-            if (data.type == "command_status") {
-                if(data.status == "started") {
+            if (data.type === "command_status") {
+                if(data.status === "started") {
                     this.commandActive = true;
                     this.commandName = data.name;
                 } else {
                     this.commandActive = false;
                     this.commandName = null;
                 }
+            } else if (data.type === "scene_status") {
+                this.autoSave = data.data.auto_save;
+                this.autoProgress = data.data.auto_progress;
+                console.log({autoSave: this.autoSave, autoProgress: this.autoProgress});
+                return;
+            } else if (data.type === "quick_settings" && data.action === 'set_done') {
+                return;
             }
+
+
         }
     },
     mounted() {

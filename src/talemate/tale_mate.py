@@ -670,6 +670,8 @@ class Scene(Emitter):
         self.name = ""
         self.filename = ""
         self.memory_id = str(uuid.uuid4())[:10]
+        self.saved_memory_session_id = None
+        self.memory_session_id = str(uuid.uuid4())[:10]
         self.saved = False
         
         self.context = ""
@@ -876,6 +878,24 @@ class Scene(Emitter):
             iterations += 1
             if iterations >= max_iterations:
                 return None
+            
+    def collect_messages(self, typ:str=None, source:str=None, max_iterations:int=100):
+
+        """
+        Finds all messages in the history that match the given typ and source
+        """
+        
+        messages = []
+        iterations = 0
+        for idx in range(len(self.history) - 1, -1, -1):
+            if (not typ or self.history[idx].typ == typ) and (not source or self.history[idx].source == source):
+                messages.append(self.history[idx])
+            
+            iterations += 1
+            if iterations >= max_iterations:
+                break
+            
+        return messages
 
     def push_archive(self, entry: data_objects.ArchiveEntry):
         
@@ -1584,6 +1604,11 @@ class Scene(Emitter):
                 emit("system", status="error", message=f"Unhandled Error: {e}")
 
 
+    def set_new_memory_session_id(self):
+        self.saved_memory_session_id = self.memory_session_id
+        self.memory_session_id = str(uuid.uuid4())[:10]
+        log.debug("set_new_memory_session_id", saved_memory_session_id=self.saved_memory_session_id, memory_session_id=self.memory_session_id)
+        self.emit_status()
             
     async def save(self, save_as:bool=False):
         """
@@ -1601,13 +1626,17 @@ class Scene(Emitter):
         elif not self.filename:
             self.filename = await wait_for_input("Enter save name: ")
             self.filename = self.filename.replace(" ", "-").lower()+".json"
-            
+        
+        self.set_new_memory_session_id()
+        memory_agent = self.get_helper("memory").agent
+        
         if save_as:
-            memory_agent = self.get_helper("memory").agent
             memory_agent.close_db(self)
             self.memory_id = str(uuid.uuid4())[:10]
             await memory_agent.set_db()
             await self.commit_to_memory()
+        else:
+            memory_agent.backup()
 
         saves_dir = self.save_dir
         
@@ -1633,6 +1662,8 @@ class Scene(Emitter):
             "game_state": scene.game_state.model_dump(),
             "assets": scene.assets.dict(),
             "memory_id": scene.memory_id,
+            "memory_session_id": scene.memory_session_id,
+            "saved_memory_session_id": scene.saved_memory_session_id,
             "ts": scene.ts,
         }
 

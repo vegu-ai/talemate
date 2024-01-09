@@ -464,7 +464,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         
         log.info("chromadb agent", status="closing db", collection_name=self.collection_name)
         
-        if not scene.saved:
+        if not scene.saved and not scene.saved_memory_session_id:
             # scene was never saved so we can discard the memory
             collection_name = self.make_collection_name(scene)
             log.info("chromadb agent", status="discarding memory", collection_name=collection_name)
@@ -473,15 +473,20 @@ class ChromaDBMemoryAgent(MemoryAgent):
             except ValueError as exc:
                 if "Collection not found" not in str(exc):
                     raise
+        elif not scene.saved:
+            # scene was saved but memory was never persisted
+            # so we need to remove the memory from the db
+            self._remove_unsaved_memory()
         
         self.db = None
         
     def _add(self, text, character=None, uid=None, ts:str=None, **kwargs):
         metadatas = []
         ids = []
+        scene = self.scene
 
         if character:
-            meta = {"character": character.name, "source": "talemate"}
+            meta = {"character": character.name, "source": "talemate", "session": scene.memory_session_id}
             if ts:
                 meta["ts"] = ts
             meta.update(kwargs)
@@ -491,7 +496,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             id = uid or f"{character.name}-{self.memory_tracker[character.name]}"
             ids = [id]
         else:
-            meta = {"character": "__narrator__", "source": "talemate"}
+            meta = {"character": "__narrator__", "source": "talemate", "session": scene.memory_session_id}
             if ts:
                 meta["ts"] = ts
             meta.update(kwargs)
@@ -510,6 +515,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         documents = []
         metadatas = []
         ids = []
+        scene = self.scene
 
         for obj in objects:
             documents.append(obj["text"])
@@ -518,6 +524,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             self.memory_tracker.setdefault(character, 0)
             self.memory_tracker[character] += 1
             meta["source"] = "talemate"
+            meta["session"] = scene.memory_session_id
             metadatas.append(meta)
             uid = obj.get("id", f"{character}-{self.memory_tracker[character]}")
             ids.append(uid)
@@ -603,3 +610,24 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 break
 
         return results
+
+    @set_processing
+    async def remove_unsaved_memory(self):
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._remove_unsaved_memory)
+        
+    def _remove_unsaved_memory(self):
+    
+        scene = self.scene
+        
+        if not scene.memory_session_id:
+            return
+            
+        if scene.saved_memory_session_id == self.scene.memory_session_id:
+            return
+        
+        log.info("chromadb agent", status="removing unsaved memory", session_id=scene.memory_session_id)
+        
+        self._delete({"session": scene.memory_session_id, "source": "talemate"})
+        
+    

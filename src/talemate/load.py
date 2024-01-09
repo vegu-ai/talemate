@@ -147,8 +147,11 @@ async def load_scene_from_data(
     #reset = True
     
     if not reset:
+        
         scene.goal = scene_data.get("goal", 0)
         scene.memory_id = scene_data.get("memory_id", scene.memory_id)
+        scene.saved_memory_session_id = scene_data.get("saved_memory_session_id", None)
+        scene.memory_session_id = scene_data.get("memory_session_id", None)
         scene.history = _load_history(scene_data["history"])
         scene.archived_history = scene_data["archived_history"]
         scene.character_states = scene_data.get("character_states", {})
@@ -163,8 +166,12 @@ async def load_scene_from_data(
         
         scene.sync_time()
         log.debug("scene time", ts=scene.ts)
-        
+    
     await memory.set_db()
+    await memory.remove_unsaved_memory()
+    
+    if not scene.memory_session_id:
+        scene.set_new_memory_session_id()
         
     for ah in scene.archived_history:
         if reset:

@@ -484,7 +484,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         metadatas = []
         ids = []
         scene = self.scene
-
+        
         if character:
             meta = {"character": character.name, "source": "talemate", "session": scene.memory_session_id}
             if ts:
@@ -520,10 +520,11 @@ class ChromaDBMemoryAgent(MemoryAgent):
         for obj in objects:
             documents.append(obj["text"])
             meta = obj.get("meta", {})
+            source = meta.get("source", "talemate")
             character = meta.get("character", "__narrator__")
             self.memory_tracker.setdefault(character, 0)
             self.memory_tracker[character] += 1
-            meta["source"] = "talemate"
+            meta["source"] = source
             meta["session"] = scene.memory_session_id
             metadatas.append(meta)
             uid = obj.get("id", f"{character}-{self.memory_tracker[character]}")

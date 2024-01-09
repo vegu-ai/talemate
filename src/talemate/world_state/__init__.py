@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from talemate.emit import emit
 import structlog
 import traceback
-from typing import Union
+from typing import Union, Any
 
 import talemate.instance as instance
 from talemate.prompts import Prompt
@@ -25,6 +25,16 @@ class Reinforcement(BaseModel):
     character: Union[str, None] = None
     instructions: Union[str, None] = None
 
+class ManualContext(BaseModel):
+    id: str
+    text: str
+    meta: dict[str, Any] = {}
+    
+class ContextPin(BaseModel):
+    entry_id: str
+    condition: str
+    condition_state: bool = False
+
 class WorldState(BaseModel):
     
     # characters in the scene by name
@@ -38,6 +48,12 @@ class WorldState(BaseModel):
     
     # reinforcers
     reinforce: list[Reinforcement] = []
+    
+    # pins
+    pins: list[ContextPin] = []
+    
+    # manual context
+    manual_context: dict[str, ManualContext] = {}
     
     @property
     def agent(self):
@@ -242,3 +258,8 @@ class WorldState(BaseModel):
                 "location": self.location,
             }
         )
+        
+    async def commit_to_memory(self, memory_agent):
+        await memory_agent.add_many([
+            manual_context.model_dump() for manual_context in self.manual_context.values()
+        ])

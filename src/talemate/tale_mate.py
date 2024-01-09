@@ -1698,6 +1698,7 @@ class Scene(Emitter):
         for character in self.characters:
             await character.commit_to_memory(memory)
         
+        await self.world_state.commit_to_memory(memory)
 
     def reset(self):
         self.history = []

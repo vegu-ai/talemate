@@ -846,7 +846,7 @@ export default {
 
         // contextdb
         isHiddenMetaTag(name) {
-            return name === "source" || name === "session"
+            return name === "session"
         },
 
         visibleMetaTags(meta) {
@@ -919,6 +919,9 @@ export default {
             for(let key in this.newContextDBEntryMeta) {
                 meta[key] = this.newContextDBEntryMeta[key];
             }
+
+            meta.source = "manual";
+
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'update_context_db',

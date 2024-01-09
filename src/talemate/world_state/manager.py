@@ -3,7 +3,7 @@ import pydantic
 import structlog
 
 from talemate.instance import get_agent
-from talemate.world_state import Reinforcement
+from talemate.world_state import Reinforcement, ManualContext
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -127,6 +127,15 @@ class WorldStateManager:
             
             
     async def update_context_db_entry(self, entry_id:str, text:str, meta:dict):
+        
+        if meta.get("source") == "manual":
+            self.world_state.manual_context[entry_id] = ManualContext(
+                text=text,
+                meta=meta,
+                id=entry_id
+            )
+            
+        
         await self.memory_agent.add_many([
             {
                 "id": entry_id,
@@ -139,3 +148,6 @@ class WorldStateManager:
         await self.memory_agent.delete({
             "ids": entry_id
         })
+        
+        if entry_id in self.world_state.manual_context:
+            del self.world_state.manual_context[entry_id]

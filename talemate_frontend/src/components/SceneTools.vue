@@ -216,7 +216,7 @@ export default {
             ],
 
             saveMenu: [
-                {"value": "saveAs", "title": "Save As", "icon": "mdi-content-save-all", "description": "Save the current scene as a new scene"},
+                {"value": "save_as", "title": "Save As", "icon": "mdi-content-save-all", "description": "Save the current scene as a new scene"},
                 {"value": "save", "title": "Save", "icon": "mdi-content-save", "description": "Save the current scene"},
             ],
 

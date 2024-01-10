@@ -240,6 +240,7 @@ class MemoryAgent(Agent):
         max_tokens: int = 1000,
         filter: Callable = lambda x: True,
         formatter: Callable = lambda x: x,
+        limit: int = 10,
         **where
     ):
         """
@@ -253,7 +254,7 @@ class MemoryAgent(Agent):
                 continue
             
             i = 0
-            for memory in await self.get(formatter(query), limit=iterate, **where):
+            for memory in await self.get(formatter(query), limit=limit, **where):
                 if memory in memory_context:
                     continue
 

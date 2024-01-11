@@ -361,9 +361,6 @@ class ConversationAgent(Agent):
         else:
             formatted_names = character_names[0] if character_names else ""
             
-        # if there is more than 10 lines in scene_and_dialogue insert
-        # a <|BOT|> token at -10, otherwise insert it at 0
-
         try:
             director_message = isinstance(scene_and_dialogue[-1], DirectorMessage)
         except IndexError:

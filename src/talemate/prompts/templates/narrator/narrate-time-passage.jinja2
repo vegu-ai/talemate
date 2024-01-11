@@ -1,11 +1,17 @@
+{% block rendered_context %}
 <|SECTION:CONTEXT|>
 Scenario Premise: {{ scene.description }}
 NPCs: {{ scene.npc_character_names }}
 Player Character: {{ scene.get_player_character().name }}
 Content Context: {{ scene.context }}
-<|CLOSE_SECTION|>
 
-{% for scene_context in scene.context_history(budget=max_tokens-300) -%}
+{% for pin in scene.active_pins %}
+{{ pin.text }}
+
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endblock %}
+{% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context())) -%}
 {{ scene_context }}
 {% endfor %}
 

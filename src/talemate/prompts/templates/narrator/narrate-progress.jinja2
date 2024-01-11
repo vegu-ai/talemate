@@ -1,7 +1,10 @@
-{% block extra_context -%}
+{% block rendered_context -%}
 <|SECTION:CONTEXT|>
 Scenario Premise: {{ scene.description }}
+{% for pin in scene.active_pins %}
+{{ pin.text }}
 
+{% endfor %}
 {% for memory_line in memory -%}
 {{ memory_line }}
 {% endfor -%}
@@ -11,9 +14,11 @@ Player Character: {{ player_character.name }}
 Content Context: {{ scene.context }}
 <|CLOSE_SECTION|>
 {% endblock -%}
-{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=20, sections=False) -%}
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context()), min_dialogue=20, sections=False) -%}
 {{ scene_context }}
 {% endfor %}
+<|CLOSE_SECTION|>
 <|SECTION:TASK|>
 Continue the current dialogue by narrating the progression of the scene.
 

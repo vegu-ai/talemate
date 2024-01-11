@@ -1,7 +1,10 @@
 {% block rendered_context %}
 <|SECTION:CONTEXT|>
 {{ scene.description }}
+{% for pin in scene.active_pins %}
+{{ pin.text }}
 
+{% endfor %}
 {% for memory in query_memory(query, as_question_answer=False, iterate=10) %}
 {{ memory }}
 {% endfor %}

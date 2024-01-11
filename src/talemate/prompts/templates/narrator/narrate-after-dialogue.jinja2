@@ -2,6 +2,10 @@
 <|SECTION:CONTEXT|>
 Content Context: This is a specific scene from {{ scene.context }}
 Scenario Premise: {{ scene.description }}
+{% for pin in scene.active_pins %}
+{{ pin.text }}
+
+{% endfor %}
 {% for memory in query_memory(last_line, as_question_answer=False, iterate=10) -%}
 {{ memory }}
 

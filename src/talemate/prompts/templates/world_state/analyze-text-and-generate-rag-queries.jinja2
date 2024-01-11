@@ -1,4 +1,8 @@
 <|SECTION:CONTEXT|>
+{% for pin in scene.active_pins %}
+{{ pin.text }}
+
+{% endfor %}
 {{ text }}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>

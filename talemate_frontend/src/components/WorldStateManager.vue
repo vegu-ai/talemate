@@ -10,13 +10,17 @@
                     <v-icon start>mdi-account-group</v-icon>
                     Characters
                 </v-tab>
-                <v-tab value="history" disabled>
+                <v-tab v-if="historyEnabled" value="history" disabled>
                     <v-icon start>mdi-history</v-icon>
                     History
                 </v-tab>
                 <v-tab value="contextdb">
                     <v-icon start>mdi-book-open-page-variant</v-icon>
                     Context
+                </v-tab>
+                <v-tab value="pins">
+                    <v-icon start>mdi-pin</v-icon>
+                    Pins
                 </v-tab>
             </v-tabs>
             <v-window v-model="tab">
@@ -349,6 +353,7 @@
                                         <tr>
                                             <th class="text-left"></th>
                                             <th class="text-left" width="60%">Content</th>
+                                            <th class="text-center">Pin</th>
                                             <th class="text-left">Tags</th>
                                         </tr>
                                     </thead>
@@ -356,9 +361,13 @@
                                         <tr v-for="entry in contextDB.entries" :key="entry.id">
                                             <td>
                                                 <!-- remove -->
-                                                <v-btn icon size="x-small" rounded="sm" color="red" variant="text" @click.stop="deleteContextDBEntry(entry.id)">
-                                                    <v-icon>mdi-delete</v-icon>
-                                                </v-btn>
+                                                <v-tooltip text="Delete entry">
+                                                    <template v-slot:activator="{ props }">
+                                                        <v-btn icon size="x-small"  v-bind="props" rounded="sm" variant="text" color="red" @click.stop="deleteContextDBEntry(entry.id)">
+                                                            <v-icon>mdi-delete</v-icon>
+                                                        </v-btn>
+                                                    </template>
+                                                </v-tooltip>
                                             </td>
                                             <td>
                                                 <v-textarea
@@ -370,6 +379,16 @@
                                                     v-model="entry.text"
                                                     @update:model-value="queueUpdateContextDBEntry(entry)"
                                                 ></v-textarea>
+                                            </td>
+                                            <td>
+                                                <v-tooltip :text="entryHasPin(entry.id) ? 'Manage pin' : 'Add pin'">
+                                                    <template v-slot:activator="{ props }">
+                                                        <v-btn  v-bind="props" size="x-small" rounded="sm" variant="text" v-if="entryIsPinned(entry.id)" color="success" icon @click.stop="selectPin(entry.id)"><v-icon>mdi-pin</v-icon></v-btn>
+                                                        <v-btn  v-bind="props" size="x-small" rounded="sm" variant="text" v-else-if="entryHasPin(entry.id)" color="red-darken-2" icon @click.stop="selectPin(entry.id)"><v-icon>mdi-pin</v-icon></v-btn>
+                                                        <v-btn  v-bind="props" size="x-small" rounded="sm" variant="text" v-else color="grey-lighten-2" icon @click.stop="addPin(entry.id)"><v-icon>mdi-pin</v-icon></v-btn>
+                                                    </template>
+                                                </v-tooltip>
+
                                             </td>
                                             <td>
                                                 <!-- render entry.meta as v-chip elements showing both name and value -->
@@ -386,6 +405,100 @@
                                 </v-alert>
                             </div>
 
+                        </v-card-text>
+                    </v-card>
+                </v-window-item>
+
+                <!-- PINS -->
+
+                <v-window-item value="pins">
+                    <v-card flat>
+                        <v-card-text>
+                            <v-row>
+                                <v-col cols="3">
+                                    <v-list dense v-if="pinsExist()">
+                                        <v-list-item prepend-icon="mdi-help" @click.stop="selectedPin=null">
+                                            <v-list-item-title>Information</v-list-item-title>
+                                        </v-list-item>
+                                        <v-list-item v-for="pin in pins" :key="pin.pin.entry_id" @click.stop="selectedPin = pin" :prepend-icon="pin.pin.active ? 'mdi-pin' : 'mdi-pin-off'" :class="pin.pin.active ? '' : 'inactive'">
+                                            <v-list-item-title>{{ pin.text }}</v-list-item-title>
+                                            <v-list-item-subtitle>
+
+                                            </v-list-item-subtitle>
+                                        </v-list-item>
+                                    </v-list>
+                                    <v-card v-else>
+                                        <v-card-text>
+                                            No pins defined.
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="9">
+                                    <v-row v-if="selectedPin !== null">
+                                        <v-col cols="7">
+                                            <v-card>
+                                                <v-checkbox hide-details dense v-model="selectedPin.pin.active" label="Pin active" @change="updatePin(selectedPin)"></v-checkbox>
+                                                <v-alert class="mb-2" variant="text" color="grey" icon="mdi-book-open-page-variant">
+                                                    {{ selectedPin.text }}
+        
+                                                </v-alert>   
+                                                <v-card-actions>
+                                                    <v-btn v-if="removePinConfirm===false" rounded="sm" prepend-icon="mdi-delete" color="error" variant="text" @click.stop="removePinConfirm=true" >
+                                                        Remove Pin
+                                                    </v-btn>
+                                                    <span v-else>
+                                                        <v-btn rounded="sm" prepend-icon="mdi-delete" @click.stop="removePin(selectedPin.pin.entry_id)"  color="error" variant="text">
+                                                            Confirm removal
+                                                        </v-btn>
+                                                        <v-btn class="ml-1" rounded="sm" prepend-icon="mdi-cancel" @click.stop="removePinConfirm=false" color="info" variant="text">
+                                                            Cancel
+                                                        </v-btn>
+                                                    </span>
+                                                    <v-spacer></v-spacer>
+                                                    <v-btn variant="text" color="primary" @click.stop="loadContextDBEntry(selectedPin.pin.entry_id)" prepend-icon="mdi-book-open-page-variant">View in context DB</v-btn>
+                                                </v-card-actions>
+                                            </v-card>
+                                        </v-col>
+                                        <v-col cols="5">
+                                            <v-card>
+                                                <v-card-title><v-icon size="small">mdi-robot</v-icon> Conditional auto pinning</v-card-title>
+                                                <v-card-text>
+                                                    <v-textarea
+                                                        rows="1"
+                                                        auto-grow
+                                                        v-model="selectedPin.pin.condition"
+                                                        label="Condition question prompt for auto pinning"
+                                                        hint="The condition that must be met for the pin to be active. Prompt will be evaluated by the AI (World State agent) regularly. This should be a question that the AI can answer with a yes or no."
+                                                        @update:model-value="queueUpdatePin(selectedPin)">
+                                                    </v-textarea>
+                                                    <v-checkbox  hide-details dense v-model="selectedPin.pin.condition_state" label="Current condition evaluation" @change="updatePin(selectedPin)"></v-checkbox>
+                                                </v-card-text>
+                                            </v-card>
+                                        </v-col>
+
+
+                                    </v-row>
+                                    <v-alert v-else type="info" color="grey" variant="text">
+                                        Pins allow you to permanently pin a context entry to the AI context. While a pin is
+                                        active, the AI will always consider the pinned entry when generating text. <v-icon color="warning">mdi-alert</v-icon> Pinning too many entries may use up your available context size, so use them wisely.
+
+                                        <br><br>
+                                        Additionally you may also define auto pin conditions that the World State agent will
+                                        check every turn. If the condition is met, the entry will be pinned. If the condition
+                                        is no longer met, the entry will be unpinned. 
+
+                                        <br><br>
+                                        Finally, remember there is also automatic insertion of relevant context based on relevance
+                                        which happens regardless of pins. Pins are just a way to ensure that a specific entry
+                                        is always considered relevant.
+
+                                        <br><br>
+                                        <v-btn color="primary" variant="text" prepend-icon="mdi-plus" @click.stop="tab = 'contextdb'">Add new pins through the context manager.</v-btn>
+
+                                    </v-alert>
+
+                                </v-col>
+                            </v-row>
                         </v-card-text>
                     </v-card>
                 </v-window-item>
@@ -419,6 +532,7 @@ export default {
             dialog: false,
             requireSceneSave: false,
             isBusy: false,
+            historyEnabled: false,
 
             // characters
             selectedCharacter: null,
@@ -497,6 +611,15 @@ export default {
             newContextDBEntryMetaKey: null,
             newContextDBEntryMetaValue: null,
             newContextDBEntryMeta: {},
+
+            // pins
+
+            pins : {},
+            selectedPin: null,
+            pinUpdateTimeout: null,
+            removePinConfirm: false,
+
+
         }
     },
     watch: {
@@ -518,6 +641,7 @@ export default {
         show() {
             this.reset();
             this.requestCharacterList();
+            this.requestPins();
             this.dialog = true;
         },
         reset() {
@@ -525,6 +649,7 @@ export default {
                 characters: [],
             };
             this.characterDetails = {};
+            this.pins = {};
             this.contextDB = {entries: []};
             this.selectedCharacter = null;
             this.selectedCharacterPage = 'description';
@@ -556,6 +681,9 @@ export default {
             this.newContextDBEntryMetaKey = null;
             this.newContextDBEntryMetaValue = null;
             this.dialogAddContextDBEntry = false;
+            this.selectedPin = null;
+            this.pinUpdateTimeout = null;
+            this.removePinConfirm = false;
             this.isBusy = false;
         },
         exit() {
@@ -878,6 +1006,12 @@ export default {
             }));
         },
 
+        loadContextDBEntry(id) {
+            this.contextDBQuery = "id:" + id;
+            this.queryContextDB();
+            this.tab = 'contextdb';
+        },
+
         handleNewContextDBEntryMeta() {
             if(this.newContextDBEntryMetaKey === null || this.newContextDBEntryMetaValue === null) {
                 return;
@@ -958,6 +1092,80 @@ export default {
             }));
         },
 
+        // pins
+
+        requestPins() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'get_pins',
+            }));
+        },
+
+        pinsExist() {
+            return Object.keys(this.pins).length > 0;
+        },
+
+        entryHasPin(entryId) {
+            return this.pins[entryId] !== undefined;
+        },
+
+        entryIsPinned(entryId) {
+            return this.entryHasPin(entryId) && this.pins[entryId].pin.active;
+        },
+
+        selectPin(entryId) {
+            this.selectedPin = this.pins[entryId];
+            this.tab = 'pins';
+        },
+
+        addPin(entryId) {
+
+            this.pins[entryId] = {
+                text: "",
+                pin: {
+                    entry_id: entryId,
+                    active: false,
+                    condition: "",
+                    condition_state: false,
+                }
+            };
+            this.selectPin(entryId);
+
+            this.updatePin(this.pins[entryId]);
+        },
+        
+        removePin(entryId) {
+            delete this.pins[entryId];
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'remove_pin',
+                entry_id: entryId,
+            }));
+            this.selectedPin = null;
+            this.removePinConfirm = false;
+        },
+
+        updatePin(pin) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_pin',
+                entry_id: pin.pin.entry_id,
+                active: pin.pin.active,
+                condition: pin.pin.condition,
+                condition_state: pin.pin.condition_state,
+            }));
+        },
+
+        queueUpdatePin(pin) {
+            if(this.pinUpdateTimeout !== null) {
+                clearTimeout(this.pinUpdateTimeout);
+            }
+
+            this.pinUpdateTimeout = setTimeout(() => {
+                this.updatePin(pin);
+            }, 500);
+        },
+
         // websocket
 
         handleMessage(message) {
@@ -987,7 +1195,14 @@ export default {
 
                 console.log("DETAILS", this.characterDetails);
                 
-            }    
+            }  
+            else if(message.action === 'pins') {
+                this.pins = message.data.pins;
+                if(this.selectedPin !== null)
+                    this.selectedPin = this.pins[this.selectedPin.pin.entry_id];
+                console.log("PINS", this.pins);
+                this.requireSceneSave = true;
+            }  
             else if(message.action === 'character_attribute_updated') {
                 this.characterAttributeDirty = false;
                 this.requireSceneSave = true;
@@ -1009,6 +1224,7 @@ export default {
             }
             else if(message.action === 'context_db_result') {
                 this.contextDB = message.data;
+                console.log({contextDB: this.contextDB});
                 this.contextDBCurrentQuery = this.contextDBQuery;
             }
             else if(message.action === 'context_db_deleted') {
@@ -1032,5 +1248,9 @@ export default {
 </script>
 
 <style scoped>
-/* Placeholder for scoped styles */
+
+.inactive {
+    opacity: 0.5;
+}
+
 </style>

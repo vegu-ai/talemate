@@ -40,6 +40,15 @@ class UpdateContextDBPayload(pydantic.BaseModel):
 
 class DeleteContextDBPayload(pydantic.BaseModel):
     id: Any
+    
+class UpdatePinPayload(pydantic.BaseModel):
+    entry_id: str
+    condition: Union[str, None] = None
+    condition_state: bool = False
+    active: bool = False
+
+class RemovePinPayload(pydantic.BaseModel):
+    entry_id: str    
 
 class WorldStateManagerPlugin:
     
@@ -88,6 +97,14 @@ class WorldStateManagerPlugin:
             "type": "world_state_manager",
             "action": "character_details",
             "data": character_details.model_dump()
+        })
+        
+    async def handle_get_pins(self, data):
+        context_pins = await self.world_state_manager.get_pins()
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "pins",
+            "data": context_pins.model_dump()
         })
         
     async def handle_update_character_attribute(self, data):
@@ -241,4 +258,38 @@ class WorldStateManagerPlugin:
             "data": payload.model_dump()
         })
         
+        await self.signal_operation_done()
+        
+    async def handle_set_pin(self, data):
+        
+        payload = UpdatePinPayload(**data)
+        
+        log.debug("Set pin", entry_id=payload.entry_id, condition=payload.condition, condition_state=payload.condition_state, active=payload.active)
+        
+        await self.world_state_manager.set_pin(payload.entry_id, payload.condition, payload.condition_state, payload.active)
+        
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "pin_set",
+            "data": payload.model_dump()
+        })
+        
+        await self.handle_get_pins({})
+        await self.signal_operation_done()
+        
+    async def handle_remove_pin(self, data):
+        
+        payload = RemovePinPayload(**data)
+        
+        log.debug("Remove pin", entry_id=payload.entry_id)
+        
+        await self.world_state_manager.remove_pin(payload.entry_id)
+        
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "pin_removed",
+            "data": payload.model_dump()
+        })
+        
+        await self.handle_get_pins({})
         await self.signal_operation_done()

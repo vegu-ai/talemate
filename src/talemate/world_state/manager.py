@@ -3,7 +3,7 @@ import pydantic
 import structlog
 
 from talemate.instance import get_agent
-from talemate.world_state import Reinforcement, ManualContext
+from talemate.world_state import Reinforcement, ManualContext, ContextPin
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -45,7 +45,13 @@ class CharacterList(pydantic.BaseModel):
 class History(pydantic.BaseModel):
     history: list[HistoryEntry] = []
     
+
+class AnnotatedContextPin(pydantic.BaseModel):
+    pin: ContextPin
+    text: str
     
+class ContextPins(pydantic.BaseModel):
+    pins: dict[str, AnnotatedContextPin] = []
     
 class WorldStateManager:
     
@@ -84,7 +90,11 @@ class WorldStateManager:
     
     async def get_context_db_entries(self, query:str, limit:int=20, **meta) -> ContextDB:
         
-        _entries = await self.memory_agent.multi_query([query], iterate=limit, max_tokens=9999999, **meta)
+        if query.startswith("id:"):
+            _entries = await self.memory_agent.get_document(id=query[3:])
+            _entries = list(_entries.values())
+        else:
+            _entries = await self.memory_agent.multi_query([query], iterate=limit, max_tokens=9999999, **meta)
         
         entries = []
         for entry in _entries:
@@ -93,6 +103,29 @@ class WorldStateManager:
         context_db = ContextDB(entries=entries)
         
         return context_db
+    
+    async def get_pins(self, active:bool=None) -> ContextPins:
+        
+        pins = self.world_state.pins
+        
+        candidates = [pin for pin in pins.values() if pin.active == active or active is None]
+        
+        _ids = [pin.entry_id for pin in candidates]
+        _pins = {}
+        documents = await self.memory_agent.get_document(id=_ids)
+        
+        for pin in sorted(candidates, key=lambda x: x.active, reverse=True):
+            
+            if pin.entry_id not in documents:
+                text = ""
+            else:
+                text = documents[pin.entry_id].raw
+                
+            annotated_pin = AnnotatedContextPin(pin=pin, text=text)
+            
+            _pins[pin.entry_id] = annotated_pin
+            
+        return ContextPins(pins=_pins)
     
     async def update_character_attribute(self, character_name:str, attribute:str, value:str):
         character = self.scene.get_character(character_name)
@@ -151,3 +184,22 @@ class WorldStateManager:
         
         if entry_id in self.world_state.manual_context:
             del self.world_state.manual_context[entry_id]
+            
+    async def set_pin(self, entry_id:str, condition:str=None, condition_state:bool=False, active:bool=False):
+        
+        if not condition:
+            condition = None
+            condition_state = False
+        
+        pin = ContextPin(
+            entry_id=entry_id,
+            condition=condition,
+            condition_state=condition_state,
+            active=active
+        )
+        
+        self.world_state.pins[entry_id] = pin
+        
+    async def remove_pin(self, entry_id:str):
+        if entry_id in self.world_state.pins:
+            del self.world_state.pins[entry_id]

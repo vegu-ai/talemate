@@ -161,8 +161,13 @@ class MemoryAgent(Agent):
     def _get(self, text, character=None, **query):
         raise NotImplementedError()
 
-    def get_document(self, id):
-        return self.db.get(id)
+    @set_processing
+    async def get_document(self, id):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_document, id)
+    
+    def _get_document(self, id):
+        raise NotImplementedError()
 
     def on_archive_add(self, event: events.ArchiveEvent):
         asyncio.ensure_future(self.add(event.text, uid=event.memory_id, ts=event.ts, typ="history"))
@@ -612,6 +617,15 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 break
 
         return results
+
+    def _get_document(self, id) -> dict:
+        result = self.db.get(ids=[id] if isinstance(id, str) else id)
+        documents = {}
+        
+        for idx, doc in enumerate(result["documents"]):
+            documents[result["ids"][idx]] = MemoryDocument(doc, result["metadatas"][idx], result["ids"][idx], doc)
+            
+        return documents
 
     @set_processing
     async def remove_unsaved_memory(self):

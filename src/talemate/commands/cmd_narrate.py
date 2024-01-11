@@ -164,10 +164,10 @@ class CmdNarrateDialogue(TalemateCommand):
     async def run(self):
         narrator = self.scene.get_helper("narrator")
 
-        character_messages = self.scene.collect_messages("character", max_iterations=1)
+        character_messages = self.scene.collect_messages("character", max_iterations=5)
         
         if not character_messages:
-            self.system_message("No dialogue message found")
+            self.system_message("No recent dialogue message found")
             return True
         
         character_message = character_messages[0]

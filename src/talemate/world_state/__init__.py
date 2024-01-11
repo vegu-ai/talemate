@@ -32,9 +32,10 @@ class ManualContext(BaseModel):
     
 class ContextPin(BaseModel):
     entry_id: str
-    condition: str
+    condition: Union[str, None] = None
     condition_state: bool = False
-
+    active: bool = False
+    
 class WorldState(BaseModel):
     
     # characters in the scene by name
@@ -50,7 +51,7 @@ class WorldState(BaseModel):
     reinforce: list[Reinforcement] = []
     
     # pins
-    pins: list[ContextPin] = []
+    pins: dict[str, ContextPin] = {}
     
     # manual context
     manual_context: dict[str, ManualContext] = {}

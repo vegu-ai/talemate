@@ -50,9 +50,14 @@ Always contain dialogue in quotation marks. For example, {{ talking_character.na
 {{ talking_character.get_detail("goals") }}
 <|CLOSE_SECTION|>
 {% endif %}
-{% if memory -%}
+{% if memory or scene.active_pins -%}
 <|SECTION:EXTRA CONTEXT|>
 {{ memory }}
+
+{% for pin in scene.active_pins %}
+{{ pin.text }}
+
+{% endfor %}
 <|CLOSE_SECTION|>
 {% endif -%}
 <|SECTION:SCENE|>

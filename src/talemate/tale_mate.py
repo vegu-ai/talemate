@@ -27,6 +27,7 @@ from talemate.util import colored_text, count_tokens, extract_metadata, wrap_tex
 from talemate.scene_message import SceneMessage, CharacterMessage, DirectorMessage, NarratorMessage, TimePassageMessage, ReinforcementMessage
 from talemate.exceptions import ExitScene, RestartSceneLoop, ResetScene, TalemateError, TalemateInterrupt, LLMAccuracyError
 from talemate.world_state import WorldState
+from talemate.world_state.manager import WorldStateManager
 from talemate.game_state import GameState
 from talemate.config import SceneConfig, load_config
 from talemate.scene_assets import SceneAssets
@@ -690,7 +691,7 @@ class Scene(Emitter):
         
         self.automated_actions = {}
 
-        self.summary_pins = []
+        self.active_pins = []
         # Add an attribute to store the most recent AI Actor
         self.most_recent_ai_actor = None
 
@@ -777,6 +778,10 @@ class Scene(Emitter):
     @property
     def auto_progress(self):
         return self.config.get("game", {}).get("general", {}).get("auto_progress", True)
+
+    @property
+    def world_state_manager(self):
+        return WorldStateManager(self)
 
     def connect(self):
         """
@@ -1542,12 +1547,15 @@ class Scene(Emitter):
         self.active_actor = None
         self.next_actor = None
         signal_game_loop = True
+        self.active_pins = list((await self.world_state_manager.get_pins(active=True)).pins.values())
         
         await self.signals["game_loop_start"].send(events.GameLoopStartEvent(scene=self, event_type="game_loop_start"))
         
         while continue_scene:
             
             log.debug("game loop", auto_save=self.auto_save, auto_progress=self.auto_progress)
+            
+            self.active_pins = list((await self.world_state_manager.get_pins(active=True)).pins.values())
             
             try:
                 game_loop = events.GameLoopEvent(scene=self, event_type="game_loop", had_passive_narration=False)

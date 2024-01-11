@@ -1,13 +1,20 @@
-
-{% for scene_context in scene.context_history(budget=max_tokens-300) -%}
-{{ scene_context }}
-{% endfor %}
+{% block rendered_context %}
 <|SECTION:CONTEXT|>
 Content Context: This is a specific scene from {{ scene.context }}
 Scenario Premise: {{ scene.description }}
+{% for pin in scene.active_pins %}
+{{ pin.text }}
+
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endblock %}
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context())) -%}
+{{ scene_context }}
+{% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
 Provide a visual description of what is currently happening in the scene. Don't progress the scene.
 {{ extra_instructions }}
 <|CLOSE_SECTION|>
-{{ bot_token }}At the end of the scene we currently see:
+{{ bot_token }}At the end of the scene we currently see that

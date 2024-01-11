@@ -329,6 +329,8 @@ class Prompt:
         env.globals["to_int"] = lambda x: int(x)
         env.globals["config"] = self.config
         env.globals["len"] = lambda x: len(x)
+        env.globals["max"] = lambda x,y: max(x,y)
+        env.globals["min"] = lambda x,y: min(x,y)
         env.globals["count_tokens"] = lambda x: count_tokens(dedupe_string(x, debug=False))
         env.globals["print"] = lambda x: print(x)
         env.globals["emit_status"] = self.emit_status

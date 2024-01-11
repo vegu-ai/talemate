@@ -100,15 +100,15 @@ class NarratorAgent(Agent):
                 }
             ),
             "narrate_dialogue": AgentAction(
-                enabled=True, 
-                label="Narrate Dialogue", 
+                enabled=False, 
+                label="Narrate after Dialogue", 
                 description="Narrator will get a chance to narrate after every line of dialogue",
                 config = {
                     "ai_dialog": AgentActionConfig(
                         type="number",
                         label="AI Dialogue", 
                         description="Chance to narrate after every line of dialogue, 1 = always, 0 = never",
-                        value=0.3,
+                        value=0.0,
                         min=0.0,
                         max=1.0,
                         step=0.1,
@@ -117,7 +117,7 @@ class NarratorAgent(Agent):
                         type="number",
                         label="Player Dialogue", 
                         description="Chance to narrate after every line of dialogue, 1 = always, 0 = never",
-                        value=0.3,
+                        value=0.1,
                         min=0.0,
                         max=1.0,
                         step=0.1,

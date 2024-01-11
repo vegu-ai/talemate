@@ -34,7 +34,7 @@
                 {{ agent.data.actions[key].description }}
               </div>
               <div v-for="(action_config, config_key) in agent.data.actions[key].config" :key="config_key">
-                <div v-if="action.enabled">
+                <div v-if="action.enabled" class="ml-1">
                 <!-- render config widgets based on action_config.type (int, str, bool, float) -->
                 <v-text-field v-if="action_config.type === 'text' && action_config.choices === null" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" density="compact" @update:modelValue="save(true)"></v-text-field>
                 <v-autocomplete v-else-if="action_config.type === 'text' && action_config.choices !== null" v-model="action.config[config_key].value" :items="action_config.choices" :label="action_config.label" :hint="action_config.description" density="compact" item-title="label" item-value="value" @update:modelValue="save(false)"></v-autocomplete>

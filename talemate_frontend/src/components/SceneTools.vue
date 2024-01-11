@@ -119,7 +119,7 @@
                         <v-list-subheader>Advance Time</v-list-subheader>
                         <v-list-item density="compact" v-for="(option, index) in advanceTimeOptions" :key="index"
                             @click="sendHotButtonMessage('!advance_time:' + option.value)">
-                            <v-list-item-title density="compact">{{ option.title }}</v-list-item-title>
+                            <v-list-item-title density="compact" class="text-capitalize">{{ option.title }}</v-list-item-title>
                         </v-list-item>
                     </v-list>
                 </v-menu>
@@ -250,7 +250,8 @@ export default {
                 {"value" : "PT4H", "title": "4 hours"},
                 {"value" : "PT1H", "title": "1 hour"},
                 {"value" : "PT30M", "title": "30 minutes"},
-                {"value" : "PT15M", "title": "15 minutes"}
+                {"value" : "PT15M", "title": "15 minutes"},
+                {"value" : "PT5M", "title": "5 minutes"}
             ],
         }
     },

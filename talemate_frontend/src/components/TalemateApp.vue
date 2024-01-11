@@ -124,8 +124,15 @@
           <CharacterSheet ref="characterSheet" />
           <SceneHistory ref="sceneHistory" />
 
-          <v-text-field v-model="messageInput" :label="inputHint" outlined ref="messageInput" @keyup.enter="sendMessage"
-            :disabled="inputDisabled">
+          <v-text-field
+            v-model="messageInput" 
+            :label="inputHint" 
+            outlined 
+            ref="messageInput" 
+            @keyup.enter="sendMessage"
+            :disabled="inputDisabled" 
+            :prepend-inner-icon="messageInputIcon()"
+            :color="messageInputColor()">
             <template v-slot:append>
               <v-btn @click="sendMessage" color="primary" icon>
                 <v-icon v-if="messageInput">mdi-send</v-icon>
@@ -306,6 +313,7 @@ export default {
           environment: data.data.environment,
           scene_time: data.data.scene_time,
           saved: data.data.saved,
+          player_character_name: data.data.player_character_name,
         }
         this.sceneActive = true;
         return;
@@ -453,6 +461,26 @@ export default {
     sceneStartedLoading() {
       this.loading = true;
       this.sceneActive = false;
+    },
+    messageInputIcon() {
+      if (this.waitingForInput) {
+        if (this.inputHint != this.scene.player_character_name+":") {
+          return 'mdi-information-outline';
+        } else {
+          return 'mdi-comment-outline';
+        }
+      }
+      return 'mdi-cancel';
+    },
+    messageInputColor() {
+      if (this.waitingForInput) {
+        if (this.inputHint != this.scene.player_character_name+":") {
+          return 'warning';
+        } else {
+          return 'purple-lighten-3';
+        }
+      }
+      return null;
     }
   }
 }

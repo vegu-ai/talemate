@@ -86,7 +86,19 @@ class NarratorAgent(Agent):
                 label = "Auto Break Repetition",
                 description = "Will attempt to automatically break AI repetition.",
             ),
-            "narrate_time_passage": AgentAction(enabled=True, label="Narrate Time Passage", description="Whenever you indicate passage of time, narrate right after"),
+            "narrate_time_passage": AgentAction(
+                enabled=True, 
+                label="Narrate Time Passage", 
+                description="Whenever you indicate passage of time, narrate right after",
+                config = {
+                    "ask_for_prompt": AgentActionConfig(
+                        type="bool",
+                        label="Guide time narration via prompt", 
+                        description="Ask the user for a prompt to generate the time passage narration",
+                        value=True,
+                    )
+                }
+            ),
             "narrate_dialogue": AgentAction(
                 enabled=True, 
                 label="Narrate Dialogue", 
@@ -170,7 +182,7 @@ class NarratorAgent(Agent):
         if not self.actions["narrate_time_passage"].enabled:
             return
         
-        response = await self.narrate_time_passage(event.duration, event.narrative)
+        response = await self.narrate_time_passage(event.duration, event.human_duration, event.narrative)
         narrator_message = NarratorMessage(response, source=f"narrate_time_passage:{event.duration};{event.narrative}")
         emit("narrator", narrator_message)
         self.scene.push_history(narrator_message)
@@ -392,7 +404,7 @@ class NarratorAgent(Agent):
         return list(zip(questions, answers))
     
     @set_processing
-    async def narrate_time_passage(self, duration:str, narrative:str=None):
+    async def narrate_time_passage(self, duration:str, time_passed:str, narrative:str):
         """
         Narrate a specific character
         """
@@ -405,6 +417,7 @@ class NarratorAgent(Agent):
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "duration": duration,
+                "time_passed": time_passed,
                 "narrative": narrative,
                 "extra_instructions": self.extra_instructions,
             }

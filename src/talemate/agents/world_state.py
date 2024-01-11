@@ -37,6 +37,7 @@ class TimePassageEmission(WorldStateAgentEmission):
     """
     duration: str
     narrative: str
+    human_duration: str = None
     
 
 @register()
@@ -86,8 +87,8 @@ class WorldStateAgent(Agent):
         """
         
         isodate.parse_duration(duration)
-        msg_text = narrative or util.iso8601_duration_to_human(duration, suffix=" later")
-        message = TimePassageMessage(ts=duration, message=msg_text)
+        human_duration = util.iso8601_duration_to_human(duration, suffix=" later")
+        message = TimePassageMessage(ts=duration, message=human_duration)
         
         log.debug("world_state.advance_time", message=message)
         self.scene.push_history(message)
@@ -96,7 +97,7 @@ class WorldStateAgent(Agent):
         emit("time", message)
         
         await talemate.emit.async_signals.get("agent.world_state.time").send(
-            TimePassageEmission(agent=self, duration=duration, narrative=msg_text)
+            TimePassageEmission(agent=self, duration=duration, narrative=narrative, human_duration=human_duration)
         )
         
 

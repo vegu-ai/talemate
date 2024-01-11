@@ -7,10 +7,7 @@ import logging
 
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
-from talemate.prompts.base import set_default_sectioning_handler
-from talemate.scene_message import TimePassageMessage
-from talemate.util import iso8601_duration_to_human
-from talemate.emit import wait_for_input, emit
+from talemate.emit import wait_for_input
 import talemate.instance as instance
 import isodate
 
@@ -34,5 +31,18 @@ class CmdAdvanceTime(TalemateCommand):
             return
         
         
+        narrator = instance.get_agent("narrator")
+        narration_prompt = None
+        
+        # if narrator has narrate_time_passage action enabled ask the user
+        # for a prompt to guide the narration
+        
+        if narrator.actions["narrate_time_passage"].enabled and narrator.actions["narrate_time_passage"].config["ask_for_prompt"].value:
+            
+            narration_prompt = await wait_for_input("Enter a prompt to guide the time passage narration (or leave blank): ")
+        
+            if not narration_prompt.strip():
+                narration_prompt = None
+        
         world_state = instance.get_agent("world_state")
-        await world_state.advance_time(self.args[0])
+        await world_state.advance_time(self.args[0], narration_prompt)

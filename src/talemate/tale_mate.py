@@ -1377,6 +1377,7 @@ class Scene(Emitter):
                 break
 
     def emit_status(self):
+        player_character = self.get_player_character()
         emit(
             "scene_status",
             self.name,
@@ -1384,6 +1385,7 @@ class Scene(Emitter):
             data={
                 "environment": self.environment,
                 "scene_config": self.scene_config,
+                "player_character_name": player_character.name if player_character else None,
                 "context": self.context,
                 "assets": self.assets.dict(),
                 "characters": [actor.character.serialize for actor in self.actors],

@@ -17,3 +17,5 @@ ANALYST_FREEFORM = str(Prompt.get("world_state.system-analyst-freeform"))
 EDITOR = str(Prompt.get("editor.system"))
 
 WORLD_STATE = str(Prompt.get("world_state.system-analyst"))
+
+SUMMARIZE = str(Prompt.get("summarizer.system"))

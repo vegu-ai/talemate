@@ -813,7 +813,7 @@ def dedupe_sentences(line_a:str, line_b:str, similarity_threshold:int=95, debug:
             
     return " ".join(cleaned_line_a_sentences)
 
-def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False) -> str:
+def dedupe_string_old(s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False) -> str:
     
     """
     Removes duplicate lines from a string.
@@ -848,6 +848,42 @@ def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 95, 
             deduped.append(line)  # Allow shorter strings without dupe check
             
     return "\n".join(deduped)
+
+def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False) -> str:
+    
+    """
+    Removes duplicate lines from a string going from the bottom up.
+    
+    Arguments:
+        s (str): The input string.
+        min_length (int): The minimum length of a line to be checked for duplicates.
+        similarity_threshold (int): The similarity threshold to use when comparing lines.
+        debug (bool): Whether to log debug messages.
+        
+    Returns:
+        str: The deduplicated string.
+    """
+    
+    lines = s.split("\n")
+    deduped = []
+    
+    for line in reversed(lines):
+        stripped_line = line.strip()
+        if len(stripped_line) > min_length:
+            similar_found = False
+            for existing_line in deduped:
+                similarity = fuzz.ratio(stripped_line, existing_line.strip())
+                if similarity >= similarity_threshold:
+                    similar_found = True
+                    if debug:
+                        log.debug("DEDUPE", similarity=similarity, line=line, existing_line=existing_line)
+                    break
+            if not similar_found:
+                deduped.append(line)
+        else:
+            deduped.append(line)  # Allow shorter strings without dupe check
+            
+    return "\n".join(reversed(deduped))
 
 def remove_extra_linebreaks(s: str) -> str:
     """

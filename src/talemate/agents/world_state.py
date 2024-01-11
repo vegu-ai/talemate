@@ -1,6 +1,6 @@
 from __future__ import annotations
 import dataclasses
-
+import json
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import talemate.emit.async_signals
@@ -52,12 +52,17 @@ class WorldStateAgent(Agent):
         self.client = client
         self.is_enabled = True
         self.actions = {
-            "update_world_state": AgentAction(enabled=True, label="Update world state", description="Will attempt to update the world state based on the current scene. Runs automatically after AI dialogue (n turns).", config={
+            "update_world_state": AgentAction(enabled=True, label="Update world state", description="Will attempt to update the world state based on the current scene. Runs automatically every N turns.", config={
                 "turns": AgentActionConfig(type="number", label="Turns", description="Number of turns to wait before updating the world state.", value=5, min=1, max=100, step=1)
+            }),
+            "update_reinforcements": AgentAction(enabled=True, label="Update state reinforcements", description="Will attempt to update any due state reinforcements.", config={}),
+            "check_pin_conditions": AgentAction(enabled=True, label="Update conditional context pins", description="Will evaluate context pins conditions and toggle those pins accordingly. Runs automatically every N turns.", config={
+                "turns": AgentActionConfig(type="number", label="Turns", description="Number of turns to wait before checking conditions.", value=2, min=1, max=100, step=1)
             }),
         }
         
         self.next_update = 0
+        self.next_pin_check = 0
         
     @property
     def enabled(self):
@@ -104,8 +109,36 @@ class WorldStateAgent(Agent):
             return
         
         await self.update_world_state()
-        await self.update_reinforcements()
+        await self.auto_update_reinforcments()
+        await self.auto_check_pin_conditions()
             
+            
+    async def auto_update_reinforcments(self):
+        if not self.enabled:
+            return
+        
+        if not self.actions["update_reinforcements"].enabled:
+            return
+        
+        await self.update_reinforcements()
+        
+    async def auto_check_pin_conditions(self):
+        
+        if not self.enabled:
+            return
+        
+        if not self.actions["check_pin_conditions"].enabled:
+            return
+        
+        if self.next_pin_check % self.actions["check_pin_conditions"].config["turns"].value != 0 or self.next_pin_check == 0:
+            
+            self.next_pin_check += 1
+            return
+        
+        self.next_pin_check = 0
+        
+        await self.check_pin_conditions()
+        
 
     async def update_world_state(self):
         if not self.enabled:
@@ -446,3 +479,63 @@ class WorldStateAgent(Agent):
             await character.set_detail(reinforcement.question, answer)
         
         return message  
+    
+    @set_processing
+    async def check_pin_conditions(
+        self,
+    ):
+        
+        """
+        Checks if any context pin conditions
+        """
+        
+        pins_with_condition = {
+            entry_id: {
+                "condition": pin.condition,
+                "state": pin.condition_state,
+            }
+            for entry_id, pin in self.scene.world_state.pins.items()
+            if pin.condition
+        }
+        
+        if not pins_with_condition:
+            return
+        
+        first_entry_id = list(pins_with_condition.keys())[0]
+        
+        _, answers = await Prompt.request(
+            "world_state.check-pin-conditions",
+            self.client,
+            "analyze",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "previous_states": json.dumps(pins_with_condition,indent=2),
+                "coercion": {first_entry_id:{ "condition": "" }},
+            }
+        )
+        
+        world_state = self.scene.world_state
+        state_change = False  
+        
+        for entry_id, answer in answers.items():
+            
+            log.info("check_pin_conditions", entry_id=entry_id, answer=answer)
+            state = answer.get("state")
+            if state is True or (isinstance(state, str) and state.lower() in ["true", "yes", "y"]):
+                prev_state = world_state.pins[entry_id].condition_state
+                
+                world_state.pins[entry_id].condition_state = True
+                world_state.pins[entry_id].active = True
+                
+                if prev_state != world_state.pins[entry_id].condition_state:
+                    state_change = True
+            else:
+                if world_state.pins[entry_id].condition_state is not False:
+                    world_state.pins[entry_id].condition_state = False
+                    world_state.pins[entry_id].active = False
+                    state_change = True
+                
+        if state_change:
+            await self.scene.load_active_pins()
+            self.scene.emit_status()

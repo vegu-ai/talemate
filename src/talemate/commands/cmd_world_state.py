@@ -175,3 +175,21 @@ class CmdUpdateReinforcements(TalemateCommand):
         world_state = get_agent("world_state")
         
         await world_state.update_reinforcements(force=True)
+        
+@register
+class CmdCheckPinConditions(TalemateCommand):
+    
+    """
+    Will attempt to create an actual character from a currently non
+    tracked character in the scene, by name.
+    
+    Once persisted this character can then participate in the scene.
+    """
+    
+    name = "check_pin_conditions"
+    description = "Check the pin conditions in the world state"
+    aliases = ["ws_cpc"]
+    
+    async def run(self):
+        world_state = get_agent("world_state")
+        await world_state.check_pin_conditions()

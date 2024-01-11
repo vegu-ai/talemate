@@ -161,6 +161,8 @@ class ClientBase:
             return system_prompts.ANALYST
         if "analyze" in kind:
             return system_prompts.ANALYST
+        if "summarize" in kind:
+            return system_prompts.SUMMARIZE
        
         return system_prompts.BASIC
     

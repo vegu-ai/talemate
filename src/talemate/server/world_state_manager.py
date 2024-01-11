@@ -276,6 +276,8 @@ class WorldStateManagerPlugin:
         
         await self.handle_get_pins({})
         await self.signal_operation_done()
+        await self.scene.load_active_pins()
+        self.scene.emit_status()
         
     async def handle_remove_pin(self, data):
         
@@ -293,3 +295,6 @@ class WorldStateManagerPlugin:
         
         await self.handle_get_pins({})
         await self.signal_operation_done()
+        await self.scene.load_active_pins()
+        self.scene.emit_status()
+        

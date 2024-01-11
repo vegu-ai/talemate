@@ -438,7 +438,7 @@
                                         <v-col cols="7">
                                             <v-card>
                                                 <v-checkbox hide-details dense v-model="selectedPin.pin.active" label="Pin active" @change="updatePin(selectedPin)"></v-checkbox>
-                                                <v-alert class="mb-2" variant="text" color="grey" icon="mdi-book-open-page-variant">
+                                                <v-alert class="mb-2 pre-wrap" variant="text" color="grey" icon="mdi-book-open-page-variant">
                                                     {{ selectedPin.text }}
         
                                                 </v-alert>   
@@ -638,11 +638,14 @@ export default {
         'isInputDisabled',
     ],
     methods: {
-        show() {
+        show(tab) {
             this.reset();
             this.requestCharacterList();
             this.requestPins();
             this.dialog = true;
+            if(tab) {
+                this.tab = tab;
+            }
         },
         reset() {
             this.characterList = {
@@ -1251,6 +1254,9 @@ export default {
 
 .inactive {
     opacity: 0.5;
+}
+.pre-wrap {
+    white-space: pre-wrap;
 }
 
 </style>

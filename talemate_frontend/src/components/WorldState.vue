@@ -85,6 +85,37 @@
         </v-expansion-panels>
 
     </div>
+
+    <div ref="extrasContainer">
+
+        <v-expansion-panels density="compact">
+            <!-- active pin container-->
+            <v-expansion-panel rounded="0" density="compact"  v-if="activePins.length > 0">
+                <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
+                    Active Pins ({{ activePins.length }})
+                    <template v-slot:actions>
+                        <v-icon icon="mdi-pin"></v-icon>
+                    </template>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                    <div class="mt-1 text-caption" v-for="(pin,index) in activePins" :key="index">
+                        {{ truncatedPinText(pin) }}
+                        <v-btn rounded="sm" variant="text" size="x-small" class="ml-1"  @click.stop="openWorldStateManager('pins')" icon="mdi-book-open-page-variant"></v-btn>
+                        <v-divider></v-divider>
+                    </div>
+                    <!--
+
+                    <v-list density="compact">
+                        <v-list-item v-for="(pin,index) in activePins" :key="index">
+                            <v-list-item-subtitle>{{ pin.text }}</v-list-item-subtitle>
+                        </v-list-item>
+                    </v-list>
+                    -->
+                </v-expansion-panel-text>
+            </v-expansion-panel>
+        </v-expansion-panels>
+
+    </div>
     <WorldStateManager ref="worldStateManager" />
 </template>
 
@@ -100,6 +131,7 @@ export default {
             location: null,
             requesting: false,
             sceneTime: null,
+            activePins: [],
         }
     },
     components: {
@@ -116,8 +148,16 @@ export default {
     ],
 
     methods: {
-        openWorldStateManager() {
-            this.$refs.worldStateManager.show();
+        truncatedPinText(pin) {
+            let max = 75;
+            if(pin.text.length > 20) {
+                return pin.text.substring(0,max) + "...";
+            } else {
+                return pin.text;
+            }
+        },
+        openWorldStateManager(tab) {
+            this.$refs.worldStateManager.show(tab);
         },
         lookAtCharacter(name) {
             this.getWebsocket().send(JSON.stringify({
@@ -151,6 +191,8 @@ export default {
                 this.requesting = (data.status==="requested")
             } else if (data.type == "scene_status") {
                 this.sceneTime = data.data.scene_time;
+                this.activePins = data.data.active_pins;
+                console.log("PINS", data.data.active_pins);
             }
         },
     },

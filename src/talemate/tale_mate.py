@@ -1392,6 +1392,7 @@ class Scene(Emitter):
                 "auto_save": self.auto_save,
                 "auto_progress": self.auto_progress,
                 "game_state": self.game_state.model_dump(),
+                "active_pins": [pin.model_dump() for pin in self.active_pins],
             },
         )
     
@@ -1473,13 +1474,24 @@ class Scene(Emitter):
         if not found:
             return None
                 
-        return ts        
+        return ts  
     
+    async def load_active_pins(self):
+        """
+        Loads active pins from the world state manager
+        """
+        
+        _active_pins = await self.world_state_manager.get_pins(active=True)
+        self.active_pins = list(_active_pins.pins.values())
+        
     async def start(self):
         """
         Start the scene
         """
         automated_action.initialize_for_scene(self)
+        
+        await self.load_active_pins()
+        
         self.emit_status()
         
         first_loop = True
@@ -1500,7 +1512,6 @@ class Scene(Emitter):
             first_loop = False
             
             await asyncio.sleep(0.01)
-
 
     async def _run_game_loop(self, init: bool = True):
 
@@ -1547,7 +1558,6 @@ class Scene(Emitter):
         self.active_actor = None
         self.next_actor = None
         signal_game_loop = True
-        self.active_pins = list((await self.world_state_manager.get_pins(active=True)).pins.values())
         
         await self.signals["game_loop_start"].send(events.GameLoopStartEvent(scene=self, event_type="game_loop_start"))
         
@@ -1555,9 +1565,9 @@ class Scene(Emitter):
             
             log.debug("game loop", auto_save=self.auto_save, auto_progress=self.auto_progress)
             
-            self.active_pins = list((await self.world_state_manager.get_pins(active=True)).pins.values())
             
             try:
+                await self.load_active_pins()
                 game_loop = events.GameLoopEvent(scene=self, event_type="game_loop", had_passive_narration=False)
                 if signal_game_loop:
                     await self.signals["game_loop"].send(game_loop)
@@ -1615,6 +1625,7 @@ class Scene(Emitter):
 
                 if self.auto_save:
                     await self.save(auto=True)
+                
                 self.emit_status()
                     
             except TalemateInterrupt:

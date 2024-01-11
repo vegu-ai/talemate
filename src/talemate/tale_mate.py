@@ -1253,7 +1253,7 @@ class Scene(Emitter):
         emit("remove_message", "", id=message.id)
         source, arg = message.source.split(":") if message.source and ":" in message.source else (message.source, None)
         
-        log.debug(f"Rerunning narrator message: {source} [{message.id}]")
+        log.debug(f"Rerunning narrator message: {source} - {arg} [{message.id}]")
         
         
         narrator = self.get_helper("narrator")
@@ -1284,7 +1284,7 @@ class Scene(Emitter):
             if not fn:
                 return
             args = arg.split(";") if arg else []
-            new_message = await fn(*args)
+            new_message = await fn(narrator.agent, *args)
         
         save_source = f"{source}:{arg}" if arg else source
         

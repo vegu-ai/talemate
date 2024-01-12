@@ -420,13 +420,13 @@ class ConversationAgent(Agent):
             log.debug("conversation_agent.build_prompt_default_memory", direct=False, version=retrieval_method)
                     
             if retrieval_method == "questions":
-                self.current_memory_context = await world_state.analyze_text_and_extract_context(
+                self.current_memory_context = (await world_state.analyze_text_and_extract_context(
+                    text, f"continue the conversation as {character.name}"
+                )).split("\n")
+            elif retrieval_method == "queries":
+                self.current_memory_context = await world_state.analyze_text_and_extract_context_via_queries(
                     text, f"continue the conversation as {character.name}"
                 )
-            elif retrieval_method == "queries":
-                self.current_memory_context = "\n\n".join(await world_state.analyze_text_and_extract_context_via_queries(
-                    text, f"continue the conversation as {character.name}"
-                ))
 
         else:
             history = list(map(str, self.scene.collect_messages(max_iterations=3)))
@@ -435,7 +435,7 @@ class ConversationAgent(Agent):
             
             context = await memory.multi_query(history, max_tokens=500, iterate=5)
              
-            self.current_memory_context = "\n\n".join(context)
+            self.current_memory_context = context
         
         return self.current_memory_context
 

@@ -24,6 +24,7 @@ class SetCharacterDetailReinforcementPayload(pydantic.BaseModel):
     interval: int = 10
     answer: str = ""
     update_state: bool = False
+    insert: str = "sequential"
     
 class CharacterDetailReinforcementPayload(pydantic.BaseModel):
     name: str
@@ -166,6 +167,7 @@ class WorldStateManagerPlugin:
             payload.instructions, 
             payload.interval, 
             payload.answer,
+            payload.insert,
             payload.update_state
         )
         

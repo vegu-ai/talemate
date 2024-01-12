@@ -931,6 +931,16 @@ class Scene(Emitter):
                 break
             
         return messages
+    
+    def snapshot(self, lines:int=3, ignore:list=None) -> str:
+        """
+        Returns a snapshot of the scene history
+        """
+        
+        if not ignore:
+            ignore = [ReinforcementMessage]
+        
+        return "\n".join([str(message) for message in self.history[-lines:] if not isinstance(message, tuple(ignore))])
 
     def push_archive(self, entry: data_objects.ArchiveEntry):
         
@@ -1258,13 +1268,7 @@ class Scene(Emitter):
         
         narrator = self.get_helper("narrator")
         if source.startswith("progress_story"):
-            
-            if ":" in source:
-                _, direction = source.split(":", 1)
-            else:
-                direction = None
-            
-            new_message = await narrator.agent.progress_story(direction)
+            new_message = await narrator.agent.progress_story(arg)
         elif source == "narrate_scene":
             new_message = await narrator.agent.narrate_scene()
         elif source == "narrate_character" and arg:

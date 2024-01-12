@@ -326,17 +326,6 @@ class NarratorAgent(Agent):
         Narrate a specific character
         """
 
-        budget = self.client.max_token_length - 300
-
-        memory_budget = min(int(budget * 0.05), 200)
-        memory = self.scene.get_helper("memory").agent
-        query = [
-            f"What does {character.name} currently look like?",
-            f"What is {character.name} currently wearing?",
-        ]
-        memory_context = await memory.multi_query(
-            query, iterate=1, max_tokens=memory_budget
-        )
         response = await Prompt.request(
             "narrator.narrate-character",
             self.client,
@@ -345,7 +334,6 @@ class NarratorAgent(Agent):
                 "scene": self.scene,
                 "character": character,
                 "max_tokens": self.client.max_token_length,
-                "memory": memory_context,
                 "extra_instructions": self.extra_instructions,
             }
         )

@@ -1,12 +1,15 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from talemate.emit import emit
 import structlog
 import traceback
 from typing import Union, Any
+from enum import Enum
 
 import talemate.instance as instance
 from talemate.prompts import Prompt
 import talemate.automated_action as automated_action
+
+ANY_CHARACTER = "__any_character__"
 
 log = structlog.get_logger("talemate")
 
@@ -17,6 +20,12 @@ class CharacterState(BaseModel):
 class ObjectState(BaseModel):
     snapshot: Union[str, None] = None
     
+class InsertionMode(Enum):
+    sequential = "sequential"
+    conversation_context = "conversation-context"
+    all_context = "all-context"
+    never = "never"
+
 class Reinforcement(BaseModel):
     question: str
     answer: Union[str, None] = None
@@ -24,6 +33,21 @@ class Reinforcement(BaseModel):
     due: int = 0
     character: Union[str, None] = None
     instructions: Union[str, None] = None
+    insert: str = "sequential"
+    
+    @property
+    def as_context_line(self) -> str:
+        if self.character:
+            
+            if self.question.strip().endswith("?"):
+                return f"{self.character}: {self.question} {self.answer}"
+            else:
+                return f"{self.character}'s {self.question}: {self.answer}"
+
+        if self.question.strip().endswith("?"):
+            return f"{self.question} {self.answer}"
+        
+        return f"{self.question}: {self.answer}"
 
 class ManualContext(BaseModel):
     id: str
@@ -61,12 +85,38 @@ class WorldState(BaseModel):
         return instance.get_agent("world_state")
     
     @property
+    def scene(self):
+        return self.agent.scene
+    
+    @property
     def pretty_json(self):
         return self.model_dump_json(indent=2)
     
     @property
     def as_list(self):
         return self.render().as_list
+    
+    def filter_reinforcements(self, character:str=ANY_CHARACTER, insert:list[str]=None) -> list[Reinforcement]:
+        """
+        Returns a filtered set of results as list
+        """
+        
+        result = []
+        
+        for reinforcement in self.reinforce:
+                        
+            if not reinforcement.answer:
+                continue
+            
+            if character != ANY_CHARACTER and reinforcement.character != character:
+                continue
+            
+            if insert and reinforcement.insert not in insert:
+                continue
+            
+            result.append(reinforcement)
+            
+        return result
     
     def reset(self):
         self.characters = {}
@@ -189,7 +239,15 @@ class WorldState(BaseModel):
         self.emit()
         
     
-    async def add_reinforcement(self, question:str, character:str=None, instructions:str=None, interval:int=10, answer:str=""):
+    async def add_reinforcement(
+        self, 
+        question:str, 
+        character:str=None, 
+        instructions:str=None, 
+        interval:int=10, 
+        answer:str="",
+        insert:str="sequential",
+    ):
         
         # if reinforcement already exists, update it
         
@@ -203,12 +261,23 @@ class WorldState(BaseModel):
             reinforcement.interval = interval
             reinforcement.answer = answer
             
+            old_insert_method = reinforcement.insert
+            
+            reinforcement.insert = insert
+            
             # find the reinforcement message i nthe scene history and update the answer
+            if old_insert_method == "sequential":
+                message = self.agent.scene.find_message(typ="reinforcement", source=f"{question}:{character if character else ''}")
             
-            message = self.agent.scene.find_message(typ="reinforcement", source=f"{question}:{character if character else ''}")
-            
-            if message:
-                message.message = answer
+                if old_insert_method != insert and message:
+                    
+                    # if it used to be sequential we need to remove its ReinforcmentMessage
+                    # from the scene history
+                    
+                    self.scene.pop_history(typ="reinforcement", source=message.source)
+                
+                elif message:
+                    message.message = answer
                 
             # update the character detail if character name is specified
             if character:
@@ -217,6 +286,8 @@ class WorldState(BaseModel):
             
             return
         
+        log.debug("world_state.add_reinforcement", question=question, character=character, instructions=instructions, interval=interval, answer=answer, insert=insert)
+        
         self.reinforce.append(
             Reinforcement(
                 question=question,
@@ -224,6 +295,7 @@ class WorldState(BaseModel):
                 instructions=instructions,
                 interval=interval,
                 answer=answer,
+                insert=insert,
             )
         )
     

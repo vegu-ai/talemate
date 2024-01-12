@@ -216,7 +216,28 @@
                                                 <v-col cols="8">
                                                     <div v-if="selectedCharacterStateReinforcer">
                                                         <v-textarea rows="3" auto-grow max-rows="5" :label="selectedCharacterStateReinforcer" v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].answer"  @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)" :color="characterStateReinforcerDirty ? 'info' : ''"></v-textarea>
-                                                        <v-text-field v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].interval" label="Re-inforce / Update detail every N turns" type="number" min="1" max="100" step="1" class="mb-2" @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)" :color="characterStateReinforcerDirty ? 'info' : ''"></v-text-field>
+
+                                                        <v-row>
+                                                            <v-col cols="6">
+                                                                <v-text-field v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].interval" label="Re-inforce / Update detail every N turns" type="number" min="1" max="100" step="1" class="mb-2" @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)" :color="characterStateReinforcerDirty ? 'info' : ''"></v-text-field>
+                                                            </v-col>
+                                                            <v-col cols="6">
+                                                                <v-select 
+                                                                    v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].insert" :items="insertionModes" 
+                                                                    label="Automatically insert into context" 
+                                                                    class="mr-1 mb-1" 
+                                                                    variant="underlined"  
+                                                                    density="compact" @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)" :color="characterStateReinforcerDirty ? 'info' : ''">
+                                                                </v-select>
+                                                                <!--
+                                                                <v-checkbox density="compact" v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].insert" label="Insert into scene progression" messages="Insert into current scene progression after update. This is invisible to you, but they AI will"></v-checkbox>
+                                                                -->
+
+                                                            </v-col>
+                                                        </v-row>
+
+
+
                                                         <v-textarea rows="3" auto-grow max-rows="5" label="Additional instructions to the AI for generating this state." v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].instructions" @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)" :color="characterStateReinforcerDirty ? 'info' : ''"></v-textarea>
                                                         
                                                         <v-row>
@@ -538,6 +559,12 @@ export default {
             requireSceneSave: false,
             isBusy: false,
             historyEnabled: false,
+            insertionModes: [
+                {"title": "Never", "value": "never", "props": { "subtitle": "Never insert into context" }},
+                {"title": "Sequential", "value": "sequential", "props": {"subtitle": "Insert into current scene progression"}},
+                {"title": "Conversation Context", "value": "conversation-context", "props": {"subtitle":"Insert into conversation context for this character"}},
+                {"title": "All context", "value": "all-context", "props": {"subtitle":"Insert into all context"}},
+            ],
 
             // characters
             selectedCharacter: null,
@@ -555,6 +582,7 @@ export default {
             newCharacterStateReinforcerInterval: 10,
             newCharacterStateReinforcerInstructions: "",
             newCharacterStateReinforcerQuestion: null,
+            newCharacterStateReinforcerInsert: "sequential",
 
             removeCharacterAttributeConfirm: false,
             removeCharacterDetailConfirm: false,
@@ -676,6 +704,7 @@ export default {
             this.newCharacterStateReinforcerInterval = 10;
             this.newCharacterStateReinforcerInstructions = "";
             this.newCharacterStateReinforcerQuestion = null;
+            this.newCharacterStateReinforcerInsert = "sequential";
             this.characterAttributeDirty = false;
             this.characterDetailDirty = false;
             this.characterDescriptionDirty = false;
@@ -896,6 +925,7 @@ export default {
             this.characterDetails.reinforcements[name] = {
                 interval: this.characterDetailReinforceInterval,
                 instructions: this.characterDetailReinforceIntructions,
+                insert: this.newCharacterStateReinforcerInsert,
             };
         },
 
@@ -914,6 +944,7 @@ export default {
         updateCharacterStateReinforcement(name, updateState) {
             let interval = this.characterDetails.reinforcements[name].interval;
             let instructions = this.characterDetails.reinforcements[name].instructions;
+            let insert = this.characterDetails.reinforcements[name].insert;
             if(updateState === true)
                 this.isBusy = true;
             this.getWebsocket().send(JSON.stringify({
@@ -925,6 +956,7 @@ export default {
                 instructions: instructions,
                 answer: this.characterDetails.reinforcements[name].answer,
                 update_state: updateState,
+                insert: insert,
             }));
         },
 

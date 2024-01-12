@@ -83,6 +83,13 @@ def validate_line(line):
         not line.strip().startswith("</")
     )
 
+def condensed(s):
+    """Replace all line breaks in a string with spaces."""
+    r = s.replace('\n', ' ').replace('\r', '')
+
+    # also replace multiple spaces with a single space
+    return re.sub(r'\s+', ' ', r)
+
 def clean_response(response):
     
     # remove invalid lines
@@ -302,8 +309,6 @@ class Prompt:
         
         env = self.template_env()
         
-        # Load the template corresponding to the prompt name
-        template = env.get_template('{}.jinja2'.format(self.name))
         
         ctx = {
             "bot_token": "<|BOT|>",
@@ -334,7 +339,11 @@ class Prompt:
         env.globals["count_tokens"] = lambda x: count_tokens(dedupe_string(x, debug=False))
         env.globals["print"] = lambda x: print(x)
         env.globals["emit_status"] = self.emit_status
+        env.filters["condensed"] = condensed
         ctx.update(self.vars)
+        
+        # Load the template corresponding to the prompt name
+        template = env.get_template('{}.jinja2'.format(self.name))
         
         sectioning_handler = SECTIONING_HANDLERS.get(self.sectioning_hander)
         

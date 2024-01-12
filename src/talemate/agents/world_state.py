@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import talemate.emit.async_signals
 import talemate.util as util
+from talemate.world_state import InsertionMode
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, TimePassageMessage, ReinforcementMessage
 from talemate.emit import emit
@@ -442,7 +443,7 @@ class WorldStateAgent(Agent):
         """
         Queries a single re-inforcement
         """
-        
+        message = None
         idx, reinforcement = await self.scene.world_state.find_reinforcement(question, character)
         
         if not reinforcement:
@@ -466,13 +467,15 @@ class WorldStateAgent(Agent):
         reinforcement.due = reinforcement.interval
         
         source = f"{reinforcement.question}:{reinforcement.character if reinforcement.character else ''}"
-        message = ReinforcementMessage(message=answer, source=source)
         
         # remove previous reinforcement message with same question
         self.scene.pop_history(typ="reinforcement", source=source)
         
-        log.debug("update_reinforcement", message=message)
-        self.scene.push_history(message)
+        if reinforcement.insert == "sequential":
+            # insert the reinforcement message at the current position
+            message = ReinforcementMessage(message=answer, source=source)
+            log.debug("update_reinforcement", message=message)
+            self.scene.push_history(message)
         
         # if reinforcement has a character name set, update the character detail
         if reinforcement.character:

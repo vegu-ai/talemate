@@ -25,8 +25,10 @@ Other major characters:
 {{ npc_name }}
 {% endfor -%}
 
-{% for scene_context in scene.context_history(budget=1000) -%}
-{{ scene_context }}
+{% set scene_history=scene.context_history(budget=1000) %}
+{% set final_line_number=len(scene_history) %}
+{% for scene_context in scene_history -%}
+Line {{ loop.index }}: {{ scene_context }}
 {% endfor -%}
 {% if not scene.history -%}
 <|SECTION:DIALOGUE|>
@@ -36,11 +38,14 @@ No dialogue so far
 <|SECTION:TASK|>
 Create a JSON object for the world state that reflects the scene progression so far.
 
-The world state needs to include important concrete and material items present at the sequential end of the dialogue.
-The world state needs to include persons (characters) interacting at the sequential end of the dialogue
+The world state needs to include important concrete and material items present in the scene during line {{ final_line_number }}.
+The world state needs to include persons (characters) interacting during line {{ final_line_number }}.
+What are the present characters doing during line {{ final_line_number }}?
 Be factual and truthful. Don't make up things that are not in the context or dialogue.
 Snapshot text should always be specified. If you don't know what to write, write "You see nothing special."
 Emotion should always be specified. If you don't know what to write, write "neutral".
+
+Respect the scene progression and answer in the context of line {{ final_line_number }}.
 
 Required response: a complete and valid JSON response according to the JSON example containing items and characters.
 

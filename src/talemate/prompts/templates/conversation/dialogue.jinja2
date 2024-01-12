@@ -45,21 +45,41 @@ Always contain dialogue in quotation marks. For example, {{ talking_character.na
 {% if scene.count_character_messages(talking_character) >= 5 %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
 {% endif -%}
 <|CLOSE_SECTION|>
-{% if talking_character.get_detail("goals") %}
-<|SECTION:YOUR GOALS|>
-{{ talking_character.get_detail("goals") }}
-<|CLOSE_SECTION|>
-{% endif %}
-{% if memory or scene.active_pins -%}
-<|SECTION:EXTRA CONTEXT|>
-{{ memory }}
 
-{% for pin in scene.active_pins %}
-IMPORTANT: {{ pin.text }}
+{% set general_reinforcements = scene.world_state.filter_reinforcements(insert=['all-context']) %}
+{% set char_reinforcements = scene.world_state.filter_reinforcements(character=talking_character.name, insert=["conversation-context"]) %}
+{% if memory or scene.active_pins or general_reinforcements -%} {# EXTRA CONTEXT #}
+<|SECTION:EXTRA CONTEXT|>
+{#- MEMORY #}
+{%- for mem in memory %}
+{{ mem|condensed }}
 
 {% endfor %}
+{# END MEMORY #}
+
+{# GENERAL REINFORCEMENTS #}
+{%- for reinforce in general_reinforcements %}
+{{ reinforce.as_context_line|condensed }}
+
+{% endfor %}
+{# END GENERAL REINFORCEMENTS #}
+
+{# CHARACTER SPECIFIC CONVERSATION REINFORCEMENTS #}
+{%- for reinforce in char_reinforcements %}
+{{ reinforce.as_context_line|condensed }}
+
+{% endfor %}
+{# END CHARACTER SPECIFIC CONVERSATION REINFORCEMENTS #}
+
+{# ACTIVE PINS #}
+{%- for pin in scene.active_pins %}
+IMPORTANT: {{ pin.text|condensed }}
+
+{% endfor %}
+{# END ACTIVE PINS #}
 <|CLOSE_SECTION|>
-{% endif -%}
+{% endif -%} {# END EXTRA CONTEXT #}
+
 <|SECTION:SCENE|>
 {% endblock -%}
 {% block scene_history -%}

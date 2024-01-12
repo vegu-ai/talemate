@@ -3,7 +3,7 @@ import pydantic
 import structlog
 
 from talemate.instance import get_agent
-from talemate.world_state import Reinforcement, ManualContext, ContextPin
+from talemate.world_state import Reinforcement, ManualContext, ContextPin, InsertionMode
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -139,11 +139,19 @@ class WorldStateManager:
         character = self.scene.get_character(character_name)
         await character.set_description(description)
         
-    async def add_detail_reinforcement(self, character_name:str, question:str, instructions:str=None, interval:int=10, answer:str="",
-                                       run_immediately:bool=False):
+    async def add_detail_reinforcement(
+        self, 
+        character_name:str, 
+        question:str, 
+        instructions:str=None, 
+        interval:int=10,
+        answer:str="",            
+        insert:str="sequential", 
+        run_immediately:bool=False
+    ):
         character = self.scene.get_character(character_name)
         world_state_agent = get_agent("world_state")
-        await self.world_state.add_reinforcement(question, character_name, instructions, interval, answer)
+        await self.world_state.add_reinforcement(question, character_name, instructions, interval, answer, insert)
         
         if run_immediately:
             await world_state_agent.update_reinforcement(question, character_name)

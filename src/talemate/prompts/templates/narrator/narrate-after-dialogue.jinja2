@@ -1,20 +1,16 @@
-{% block rendered_context -%}
+{% block rendered_context %}
 <|SECTION:CONTEXT|>
-Content Context: This is a specific scene from {{ scene.context }}
-Scenario Premise: {{ scene.description }}
-{% for pin in scene.active_pins %}
-{{ pin.text }}
-
-{% endfor %}
-{% for memory in query_memory(last_line, as_question_answer=False, iterate=10) -%}
-{{ memory }}
-
-{% endfor %}
-{% endblock -%}
+{%- with memory_query=last_line -%}
+    {% include "extra-context.jinja2" %}
+{% endwith -%}
 <|CLOSE_SECTION|>
+{% endblock %}
+<|SECTION:SCENE|>
 {% for scene_context in scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=25) -%}
 {{ scene_context }}
 {% endfor %}
+<|CLOSE_SECTION|>
+
 <|SECTION:TASK|>
 In response to "{{ last_line}}"
 

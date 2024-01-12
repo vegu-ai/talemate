@@ -9,14 +9,14 @@
                     <v-icon v-else-if="agent.status === 'disabled'" color="grey-darken-2" size="14">mdi-checkbox-blank-circle</v-icon>
                     <v-icon v-else-if="agent.status === 'error'" color="red" size="14">mdi-checkbox-blank-circle</v-icon>
                     <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
-                    <v-tooltip v-if="agent.data.experimental" text="Experimental" density="compact">
-                        <template v-slot:activator="{ props }">
-                            <v-icon v-bind="props" color="warning" size="14">mdi-flask-outline</v-icon>
-                        </template>
-                        
-                    </v-tooltip>
+
                     <span class="ml-1" v-if="agent.label"> {{ agent.label }}</span>
                     <span class="ml-1" v-else> {{ agent.name }}</span>
+                    <v-tooltip v-if="agent.data.experimental" text="Experimental" density="compact">
+                        <template v-slot:activator="{ props }">
+                            <v-icon v-bind="props" color="warning" size="14" class="ml-1">mdi-flask-outline</v-icon>
+                        </template>
+                    </v-tooltip>
                 </v-list-item-title>
                 <v-list-item-subtitle class="text-caption">
                     {{ agent.client }}

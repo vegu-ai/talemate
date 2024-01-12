@@ -120,7 +120,7 @@
 
         <div style="flex-shrink: 0;" v-if="sceneActive">
 
-          <SceneTools />
+          <SceneTools @open-world-state-manager="onOpenWorldStateManager"/>
           <CharacterSheet ref="characterSheet" />
           <SceneHistory ref="sceneHistory" />
 
@@ -450,6 +450,9 @@ export default {
     },
     openSceneHistory() {
       this.$refs.sceneHistory.open();
+    },
+    onOpenWorldStateManager(tab) {
+      this.$refs.worldState.openWorldStateManager(tab);
     },
     openAppConfig() {
       this.$refs.appConfig.show();

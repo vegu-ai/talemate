@@ -246,6 +246,13 @@
                                             </v-row>
                                         </div>
                                     </div>
+                                    <v-alert v-else type="info" color="grey" variant="text" icon="mdi-account">
+                                        Manage character attributes and add extra details.
+                                        <br><br>
+                                        You can also set up automatic reinforcement of character states. This will cause the AI to regularly re-evaluate the state and update the detail accordingly.
+                                        <br><br>
+                                        Select a character from the list on the left to get started.
+                                    </v-alert>
                                 </v-col>
                             </v-row>
                         </v-card-text>
@@ -478,7 +485,7 @@
 
 
                                     </v-row>
-                                    <v-alert v-else type="info" color="grey" variant="text">
+                                    <v-alert v-else type="info" color="grey" variant="text" icon="mdi-pin">
                                         Pins allow you to permanently pin a context entry to the AI context. While a pin is
                                         active, the AI will always consider the pinned entry when generating text. <v-icon color="warning">mdi-alert</v-icon> Pinning too many entries may use up your available context size, so use them wisely.
 
@@ -488,9 +495,7 @@
                                         is no longer met, the entry will be unpinned. 
 
                                         <br><br>
-                                        Finally, remember there is also automatic insertion of relevant context based on relevance
-                                        which happens regardless of pins. Pins are just a way to ensure that a specific entry
-                                        is always considered relevant.
+                                        Finally, remember there is also automatic insertion of context based on relevance to the current scene progress, which happens regardless of pins. Pins are just a way to ensure that a specific entry is always considered relevant.
 
                                         <br><br>
                                         <v-btn color="primary" variant="text" prepend-icon="mdi-plus" @click.stop="tab = 'contextdb'">Add new pins through the context manager.</v-btn>

@@ -123,12 +123,37 @@
                         </v-list-item>
                     </v-list>
                 </v-menu>
+
             </v-card-actions>
         </v-card>
 
         <!-- Section 2: Tools -->
         <v-card class="hotbuttons-section-2">
             <v-card-actions>
+
+
+                <!-- world tools -->
+
+                <v-menu>
+                    <template v-slot:activator="{ props }">
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
+                            <v-icon>mdi-earth</v-icon>
+                        </v-btn>
+                    </template>
+                    <v-list>
+                        <v-list-subheader>World Tools</v-list-subheader>
+                        <!-- open world state manager -->
+                        <v-list-item density="compact" prepend-icon="mdi-book-open-page-variant" @click="openWorldStateManager()">
+                            <v-list-item-title>Open the world state manager</v-list-item-title>
+                            <v-list-item-subtitle>Manage characters, context and states</v-list-item-subtitle>
+                        </v-list-item>
+                        <!-- update world state -->
+                        <v-list-item density="compact" prepend-icon="mdi-refresh" @click="updateWorlState()">
+                            <v-list-item-title>Update the world state</v-list-item-title>
+                            <v-list-item-subtitle>Refresh the current world state snapshot</v-list-item-subtitle>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
                 
                 <!-- quick settings menu -->
 
@@ -248,6 +273,7 @@ export default {
                 {"value" : "P1D", "title": "1 day"},
                 {"value" : "PT8H", "title": "8 hours"},
                 {"value" : "PT4H", "title": "4 hours"},
+                {"value" : "PT2H", "title": "2 hours"},
                 {"value" : "PT1H", "title": "1 hour"},
                 {"value" : "PT30M", "title": "30 minutes"},
                 {"value" : "PT15M", "title": "15 minutes"},
@@ -286,6 +312,14 @@ export default {
                 this.autoProgress = !this.autoProgress;
                 this.getWebsocket().send(JSON.stringify({ type: 'quick_settings', action: 'set', setting: 'auto_progress', value: this.autoProgress }));
             }
+        },
+
+        openWorldStateManager() {
+            this.$emit('open-world-state-manager');
+        },
+
+        updateWorlState() {
+            this.getWebsocket().send(JSON.stringify({ type: 'interact', text: '!ws' }));
         },
 
         handleMessage(data) {

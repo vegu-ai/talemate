@@ -212,8 +212,9 @@ class CmdApplyWorldStateTemplate(TalemateCommand):
     """
     
     name = "apply_world_state_template"
-    description = "Add State"
+    description = "Apply a world state template, creating an auto state reinforcement."
     aliases = ["ws_awst"]
+    label = "Add state"
     
     async def run(self):
         

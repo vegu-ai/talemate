@@ -243,6 +243,9 @@ export default {
       requestAppConfig: () => this.requestAppConfig(),
       appConfig: () => this.appConfig,
       configurationRequired: () => this.configurationRequired(),
+      getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
+      getPlayerCharacterName: () => this.getPlayerCharacterName(),
+      formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
     };
   },
   methods: {
@@ -451,8 +454,8 @@ export default {
     openSceneHistory() {
       this.$refs.sceneHistory.open();
     },
-    onOpenWorldStateManager(tab) {
-      this.$refs.worldState.openWorldStateManager(tab);
+    onOpenWorldStateManager(tab, sub1, sub2, sub3) {
+      this.$refs.worldState.openWorldStateManager(tab, sub1, sub2, sub3);
     },
     openAppConfig() {
       this.$refs.appConfig.show();
@@ -465,6 +468,29 @@ export default {
       this.loading = true;
       this.sceneActive = false;
     },
+
+    getPlayerCharacterName() {
+      if (!this.scene || !this.scene.player_character_name) {
+        return null;
+      }
+      return this.scene.player_character_name;
+    },
+
+    formatWorldStateTemplateString(templateString, chracterName) {
+      let playerCharacterName = this.getPlayerCharacterName();
+      // replace {character_name} and {player_name}
+
+      if (playerCharacterName) {
+        templateString = templateString.replace(/{character_name}/g, chracterName);
+        templateString = templateString.replace(/{player_name}/g, playerCharacterName);
+      } else {
+        templateString = templateString.replace(/{character_name}/g, chracterName);
+        templateString = templateString.replace(/{player_name}/g, chracterName);
+      }
+
+      return templateString;
+    },
+
     messageInputIcon() {
       if (this.waitingForInput) {
         if (this.inputHint != this.scene.player_character_name+":") {

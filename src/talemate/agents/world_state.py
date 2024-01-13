@@ -460,6 +460,7 @@ class WorldStateAgent(Agent):
                 "instructions": reinforcement.instructions or "",
                 "character": self.scene.get_character(reinforcement.character) if reinforcement.character else None,
                 "answer": reinforcement.answer or "",
+                "reinforcement": reinforcement,
             }
         )
         
@@ -481,6 +482,8 @@ class WorldStateAgent(Agent):
         if reinforcement.character:
             character = self.scene.get_character(reinforcement.character)
             await character.set_detail(reinforcement.question, answer)
+            
+        self.scene.world_state.emit()
         
         return message  
     

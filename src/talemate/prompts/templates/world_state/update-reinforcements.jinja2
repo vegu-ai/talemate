@@ -1,12 +1,16 @@
-<|SECTION:CONTEXT AND DIALOGUE|>
 {% block rendered_context -%}
 <|SECTION:CONTEXT|>
 {%- with memory_query=scene.snapshot() -%}
     {% include "extra-context.jinja2" %}
 {% endwith %}
+{% if character %}
+{{ character.name }}'s description: {{ character.description|condensed }}
+{% endif %}
+
 {{ text }}
 <|CLOSE_SECTION|>
 {% endblock -%}
+<|SECTION:SCENE|>
 {% set scene_history=scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context())) -%}
 {% set final_line_number=len(scene_history) -%}
 {% for scene_context in scene_history -%}
@@ -30,16 +34,19 @@ Respect the scene progression and answer in the context of line {{ final_line_nu
 Use your imagination to fill in gaps in order to answer the question in a confident and decisive manner. Avoid uncertainty and vagueness.
 You are omniscient and can describe the scene in detail.
 
-{% if not instructions %}
+{% if reinforcement.insert == 'sequential' %}
 YOUR ANSWER MUST BE SHORT AND TO THE POINT.
 YOUR ANSWER MUST BE A SINGLE SENTENCE.
 YOUR RESPONSE MUST BE ONLY THE ANSWER TO THE QUESTION. NEVER EXPLAIN YOUR REASONING.
-{% else %}
+{% endif %}
+{% if instructions %}
 {{ instructions }}
 {% endif %}
+The tone of your answer should be consistent with the tone of the story so far.
+
 Question: {{ question }}
 {% if answer %}Previous Answer: {{ answer }}
-{% endif %}
+{% endif -%}
 <|CLOSE_SECTION|>
 {{ bot_token }}Updated Answer:
 {# ATTRIBUTE #}
@@ -55,18 +62,18 @@ Respect the scene progression and answer in the context of line {{ final_line_nu
 Use your imagination to fill in gaps in order to generate the attribute in a confident and decisive manner. Avoid uncertainty and vagueness.
 You are omniscient and can describe the scene in detail.
 
-{% if not instructions %}
+{% if reinforcement.insert == 'sequential' %}
 YOUR ANSWER MUST BE SHORT AND TO THE POINT.
 YOUR ANSWER MUST BE A SINGLE SENTENCE.
-YOUR ANSWER MUST BE CONFIDENT.
 YOUR RESPONSE MUST BE ONLY THE ANSWER TO THE QUESTION. NEVER EXPLAIN YOUR REASONING.
-{% else %}
+{% endif %}
+{% if instructions %}
 {{ instructions }}
 {% endif %}
-
 The tone of your answer should be consistent with the tone of the story so far.
+
 {% if answer %}Previous Value: {{ answer }}
-{% endif %}
+{% endif-%}
 <|CLOSE_SECTION|>
 {{ bot_token }}New value for {{ question }}:
 {%- endif %}

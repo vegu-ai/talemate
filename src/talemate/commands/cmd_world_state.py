@@ -5,10 +5,19 @@ from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
 from talemate.util import colored_text, wrap_text
 from talemate.scene_message import NarratorMessage
-from talemate.emit import wait_for_input
+from talemate.emit import wait_for_input, emit
 from talemate.instance import get_agent
 import talemate.instance as instance
 
+__all__ = [
+    "CmdWorldState",
+    "CmdPersistCharacter",
+    "CmdAddReinforcement",
+    "CmdRemoveReinforcement",
+    "CmdUpdateReinforcements",
+    "CmdCheckPinConditions",
+    "CmdApplyWorldStateTemplate",
+]
 
 @register
 class CmdWorldState(TalemateCommand):
@@ -193,3 +202,44 @@ class CmdCheckPinConditions(TalemateCommand):
     async def run(self):
         world_state = get_agent("world_state")
         await world_state.check_pin_conditions()
+        
+@register
+class CmdApplyWorldStateTemplate(TalemateCommand):
+    
+    """
+    Will apply a world state template setting up
+    automatic state tracking.
+    """
+    
+    name = "apply_world_state_template"
+    description = "Add State"
+    aliases = ["ws_awst"]
+    
+    async def run(self):
+        
+        scene = self.scene
+        
+        if not len(self.args):
+            raise ValueError("No template name provided.")
+        
+        template_name = self.args[0]
+        template_type = self.args[1] if len(self.args) > 1 else None
+        
+        character_name = self.args[2] if len(self.args) > 2 else None
+        
+        templates = await self.scene.world_state_manager.get_templates()
+        
+        try:
+            template = getattr(templates,template_type)[template_name]
+        except KeyError:
+            raise ValueError(f"Template {template_name} not found.")
+        
+        reinforcement = await scene.world_state_manager.apply_template_state_reinforcement(
+            template, character_name=character_name, run_immediately=True
+        )
+        
+        if reinforcement is None:
+            emit("status", message="State already tracked.", status="info")
+        else:
+            emit("status", message="Auto state added.", status="success")
+        

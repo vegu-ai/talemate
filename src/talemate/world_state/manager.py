@@ -149,13 +149,18 @@ class WorldStateManager:
         answer:str="",            
         insert:str="sequential", 
         run_immediately:bool=False
-    ):
+    ) -> Reinforcement:
         character = self.scene.get_character(character_name)
         world_state_agent = get_agent("world_state")
-        await self.world_state.add_reinforcement(question, character_name, instructions, interval, answer, insert)
+        reinforcement = await self.world_state.add_reinforcement(question, character_name, instructions, interval, answer, insert)
         
         if run_immediately:
             await world_state_agent.update_reinforcement(question, character_name)
+        else:
+            # if not running immediately, we need to emit the world state manually
+            self.world_state.emit()
+        
+        return reinforcement
             
     async def run_detail_reinforcement(self, character_name:str, question:str):
         world_state_agent = get_agent("world_state")
@@ -166,7 +171,8 @@ class WorldStateManager:
         idx, reinforcement = await self.world_state.find_reinforcement(question, character_name)
         if idx is not None:
             await self.world_state.remove_reinforcement(idx)
-            
+        self.world_state.emit()
+          
             
     async def update_context_db_entry(self, entry_id:str, text:str, meta:dict):
         
@@ -270,24 +276,33 @@ class WorldStateManager:
             characters = [character.name for character in self.scene.get_characters()]
         elif template.state_type == "player":
             characters = [self.scene.get_player_character().name]
-        
-        player_name = self.scene.get_player_character().name
             
         for character_name in characters:
-            formatted_query = template.query.format(character_name=character_name, player_name=player_name)
-            formatted_instructions = template.instructions.format(character_name=character_name, player_name=player_name) if template.instructions else None
+            await self.apply_template_state_reinforcement(template, character_name)
             
+            
+    async def apply_template_state_reinforcement(self, template:StateReinforcementTemplate, character_name:str=None, run_immediately:bool=False) -> Reinforcement:
+        
+        if not character_name and template.state_type in ["npc", "character", "player"]:
+            raise ValueError("Character name required for this template type.")
+        
+        player_name = self.scene.get_player_character().name
+  
+        formatted_query = template.query.format(character_name=character_name, player_name=player_name)
+        formatted_instructions = template.instructions.format(character_name=character_name, player_name=player_name) if template.instructions else None
+        
+        if character_name:
             details = await self.get_character_details(character_name)
             
             # if reinforcement already exists, skip
             if formatted_query in details.reinforcements:
-                continue
-            
-            await self.add_detail_reinforcement(
-                character_name,
-                formatted_query,
-                formatted_instructions,
-                template.interval,
-                insert=template.insert,
-                run_immediately=False,
-            )
+                return None
+        
+        return await self.add_detail_reinforcement(
+            character_name,
+            formatted_query,
+            formatted_instructions,
+            template.interval,
+            insert=template.insert,
+            run_immediately=run_immediately,
+        )

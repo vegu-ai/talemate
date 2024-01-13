@@ -62,6 +62,7 @@ class StateReinforcementTemplate(BaseModel):
     state_type: str = "npc"
     insert: str = "sequential"
     instructions: Union[str, None] = None
+    description: Union[str, None] = None
     interval: int = 10
     auto_create: bool = False
     favorite: bool = False

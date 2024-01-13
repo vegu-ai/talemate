@@ -224,7 +224,7 @@
                                                 </v-col>
                                                 <v-col cols="8">
                                                     <div v-if="selectedCharacterStateReinforcer">
-                                                        <v-textarea rows="3" auto-grow max-rows="5" :label="selectedCharacterStateReinforcer" v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].answer"  @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)" :color="characterStateReinforcerDirty ? 'info' : ''"></v-textarea>
+                                                        <v-textarea rows="3" auto-grow max-rows="15" :label="selectedCharacterStateReinforcer" v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].answer"  @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)" :color="characterStateReinforcerDirty ? 'info' : ''"></v-textarea>
 
                                                         <v-row>
                                                             <v-col cols="6">
@@ -553,7 +553,6 @@
 </template>
 
 <script>
-
 import WorldStateManagerTemplates from './WorldStateManagerTemplates.vue';
 
 export default {
@@ -584,6 +583,7 @@ export default {
                 {"title": "Conversation Context", "value": "conversation-context", "props": {"subtitle":"Insert into conversation context for this character"}},
                 {"title": "All context", "value": "all-context", "props": {"subtitle":"Insert into all context"}},
             ],
+            deferedNavigation: null,
 
             // characters
             selectedCharacter: null,
@@ -686,6 +686,25 @@ export default {
                     this.$refs.templates.requestTemplates();
                 });
             }
+        },
+        characterDetails() {
+            console.log("character details changed", this.characterDetails, this.deferedNavigation)
+            if(this.deferedNavigation !== null) {
+                if(this.deferedNavigation[0] === 'characters') {
+                    this.selectedCharacter = this.deferedNavigation[1];
+                    this.selectedCharacterPage = this.deferedNavigation[2];
+                    if(this.deferedNavigation[2] == 'attributes') {
+                        this.selectedCharacterAttribute = this.deferedNavigation[3];
+                    }
+                    else if(this.deferedNavigation[2] == 'details') {
+                        this.selectedCharacterDetail = this.deferedNavigation[3];
+                    }
+                    else if(this.deferedNavigation[2] == 'reinforce') {
+                        this.selectedCharacterStateReinforcer = this.deferedNavigation[3];
+                    }
+                }
+                this.deferedNavigation = null;
+            }
         }
     },
     provide() {
@@ -702,14 +721,34 @@ export default {
         'isInputDisabled',
     ],
     methods: {
-        show(tab) {
+        show(tab, sub1, sub2, sub3) {
             this.reset();
             this.requestCharacterList();
             this.requestPins();
 
+            console.log("showing world state manager", tab, sub1, sub2, sub3)
+
             this.dialog = true;
             if(tab) {
                 this.tab = tab;
+            }
+            if(tab == 'characters') {
+                if(sub1 != null) {
+                    this.$nextTick(() => {
+                        this.loadCharacter(sub1);
+                        this.deferedNavigation = ['characters', sub1, sub2, sub3];
+                    });
+                }
+            }
+            else if(tab == 'pins') {
+                if(sub1 != null) {
+                    this.selectedPin = this.pins[sub1];
+                }
+            }
+            else if(tab == 'templates') {
+                this.$nextTick(() => {
+                    this.$refs.templates.requestTemplates();
+                });
             }
         },
         reset() {
@@ -720,6 +759,7 @@ export default {
             this.pins = {};
             this.contextDB = {entries: []};
             this.selectedCharacter = null;
+            this.deferSelectedCharacter = null;
             this.selectedCharacterPage = 'description';
             this.selectedCharacterAttribute = null;
             this.selectedCharacterDetail = null;
@@ -753,6 +793,7 @@ export default {
             this.selectedPin = null;
             this.pinUpdateTimeout = null;
             this.removePinConfirm = false;
+            this.deferedNavigation = null;
             this.isBusy = false;
         },
         exit() {
@@ -1264,15 +1305,11 @@ export default {
                         this.characterDetails.base_attributes[attribute] = JSON.stringify(this.characterDetails.base_attributes[attribute]);
                     }
                 }
-
-                console.log("DETAILS", this.characterDetails);
-                
             }  
             else if(message.action === 'pins') {
                 this.pins = message.data.pins;
                 if(this.selectedPin !== null)
                     this.selectedPin = this.pins[this.selectedPin.pin.entry_id];
-                console.log("PINS", this.pins);
                 this.requireSceneSave = true;
             }  
             else if(message.action === 'character_attribute_updated') {

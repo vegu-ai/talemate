@@ -124,7 +124,7 @@ class WorldState(BaseModel):
         self.location = None    
     
     def emit(self, status="update"):
-        emit("world_state", status=status, data=self.dict())
+        emit("world_state", status=status, data=self.model_dump())
         
     async def request_update(self, initial_only:bool=False):
 
@@ -247,7 +247,7 @@ class WorldState(BaseModel):
         interval:int=10, 
         answer:str="",
         insert:str="sequential",
-    ):
+    ) -> Reinforcement:
         
         # if reinforcement already exists, update it
         
@@ -284,20 +284,22 @@ class WorldState(BaseModel):
                 character = self.agent.scene.get_character(character)
                 await character.set_detail(question, answer)
             
-            return
+            return reinforcement
         
         log.debug("world_state.add_reinforcement", question=question, character=character, instructions=instructions, interval=interval, answer=answer, insert=insert)
         
-        self.reinforce.append(
-            Reinforcement(
-                question=question,
-                character=character,
-                instructions=instructions,
-                interval=interval,
-                answer=answer,
-                insert=insert,
-            )
+        reinforcement = Reinforcement(
+            question=question,
+            character=character,
+            instructions=instructions,
+            interval=interval,
+            answer=answer,
+            insert=insert,
         )
+        
+        self.reinforce.append(reinforcement)
+        
+        return reinforcement
     
     async def find_reinforcement(self, question:str, character:str=None):
         for idx, reinforcement in enumerate(self.reinforce):

@@ -1,15 +1,22 @@
 <template>
     <v-card flat>
         <v-card-text>
-            <v-toolbar floating density="compact" class="mb-2">
-                <v-text-field v-model="filter" label="Filter templates" append-inner-icon="mdi-magnify" clearable
-                    single-line hide-details density="compact" variant="underlined" class="ml-1 mb-1"
+            <v-row floating  color="grey-darken-5">
+                <v-col cols="3">
+                    <v-text-field v-model="filter" label="Filter templates" append-inner-icon="mdi-magnify" clearable
+                    density="compact" variant="underlined" class="ml-1 mb-1"
                     @update:modelValue="filter"></v-text-field>
-                <v-spacer></v-spacer>
-                <v-text-field v-model="newTemplateName" label="New template" append-inner-icon="mdi-plus" class="mr-1 mb-1"
-                    variant="underlined" single-line hide-details density="compact"
-                    @keyup.enter="createTemplate"></v-text-field>
-            </v-toolbar>
+                </v-col>
+                <v-col cols="3"></v-col>
+                <v-col cols="2"></v-col>
+                <v-col cols="4">
+                    <v-text-field v-model="newTemplateName" label="New template" append-inner-icon="mdi-plus" class="mr-1 mb-1"
+                    variant="underlined" density="compact" hint="Enter a name for a new template. (Enter to create)"
+                    @keyup.enter="createTemplate" :rules="[validateTemplateName]"></v-text-field>
+                </v-col>
+
+            </v-row>
+            <v-divider></v-divider>
             <v-row>
                 <v-col cols="3">
                     <!-- template list -->
@@ -44,7 +51,7 @@
                         </v-card-title>
                         <v-card-text>
                             <v-row>
-                                <v-col cols="12">
+                                <v-col cols="6">
                                     <v-text-field 
                                     v-model="template.query" 
                                     label="Question or attribute name" 
@@ -53,6 +60,13 @@
                                     :color="dirty ? 'info' : ''"
                                     @update:model-value="queueSaveTemplate">
                                     </v-text-field>
+                                </v-col>
+                                <v-col cols="6">
+                                    <v-text-field v-model="template.description" 
+                                    hint="A short description of what this state is for."
+                                    :color="dirty ? 'info' : ''"
+                                    @update:model-value="queueSaveTemplate"
+                                    label="Description"></v-text-field>
                                 </v-col>
                             </v-row>
 
@@ -165,6 +179,7 @@ export default {
                     state_type: "npc",
                     insert: 'sequential',
                     instructions: '',
+                    description: '',
                     interval: 10,
                     auto_create: false,
                     favorite: false,
@@ -176,6 +191,7 @@ export default {
                 state_type: "npc",
                 insert: 'sequential',
                 instructions: '',
+                description: '',
                 interval: 10,
                 auto_create: false,
                 favorite: false,
@@ -192,6 +208,13 @@ export default {
         'isInputDisabled',
     ],
     methods: {
+        validateTemplateName(value) {
+            // no special characters, return false if there are any
+            if(value.match(/[^a-zA-Z0-9_ ]/)) {
+                return "No special characters allowed";
+            }
+            return true
+        },
         filteredTemplates(templateType) {
             if (this.filter === null) {
                 return this.templates[templateType];
@@ -212,6 +235,10 @@ export default {
 
         createTemplate() {
             if (this.newTemplateName === null || this.newTemplateName === '') {
+                return;
+            }
+
+            if(this.validateTemplateName(this.newTemplateName) !== true) {
                 return;
             }
 

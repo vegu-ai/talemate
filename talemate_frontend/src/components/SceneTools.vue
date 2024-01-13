@@ -134,18 +134,45 @@
 
                 <!-- world tools -->
 
-                <v-menu>
+                <v-menu max-width="500px">
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
                             <v-icon>mdi-earth</v-icon>
                         </v-btn>
                     </template>
                     <v-list>
-                        <v-list-subheader>World Tools</v-list-subheader>
+
+                        <v-list-subheader>Automatic state updates</v-list-subheader>
+                        <div v-if="!worldStateTemplateFavoriteExists()">
+                            <v-alert dense variant="text" color="grey" icon="mdi-cube-scan">
+                                <span>There are no favorite world state templates. You can add them in the <b>World State Manager</b>. Favorites will be shown here.
+                                </span>
+                            </v-alert>
+                        </div>
+                        <div v-else>
+                            <div v-for="npc_name in npc_characters" :key="npc_name" :prepend-icon="'mdi-account' + (npc_name == 'player' ? '-outline' : '')">
+                                <v-list-item v-for="(template, index) in worldStateTemplateFavoritesForNPCs()" :key="index" 
+                                    @click="handleClickWorldStateTemplate(template, npc_name)" 
+                                    prepend-icon="mdi-image-auto-adjust">
+                                    <div v-if="getTrackedCharacterState(npc_name, template.query) !== null">
+                                        <v-list-item-title>{{ template.name }} ({{ npc_name }})</v-list-item-title>
+                                        <v-list-item-subtitle>
+                                            <v-chip size="x-small" label variant="outlined" prepend-icon="mdi-check-circle-outline" color="success">Active</v-chip>
+                                        </v-list-item-subtitle>
+                                    </div>
+                                    <div v-else>
+                                        <v-list-item-title>{{ template.name }} ({{ npc_name }})</v-list-item-title>
+                                        <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
+                                    </div>
+                                </v-list-item>
+                            </div>
+                        </div>
+
+                        <v-list-subheader>World State Tools</v-list-subheader>
                         <!-- open world state manager -->
                         <v-list-item density="compact" prepend-icon="mdi-book-open-page-variant" @click="openWorldStateManager()">
                             <v-list-item-title>Open the world state manager</v-list-item-title>
-                            <v-list-item-subtitle>Manage characters, context and states</v-list-item-subtitle>
+                            <v-list-item-subtitle>Manage characters, context and automatic state updates</v-list-item-subtitle>
                         </v-list-item>
                         <!-- update world state -->
                         <v-list-item density="compact" prepend-icon="mdi-refresh" @click="updateWorlState()">
@@ -289,7 +316,13 @@ export default {
         'isWaitingForInput',
         'scene',
         'creativeEditor',
+        'appConfig',
+        'getTrackedCharacterState',
+        'getPlayerCharacterName',
+        'formatWorldStateTemplateString',
     ],
+    computed:{
+    },
     methods: {
 
 
@@ -314,8 +347,66 @@ export default {
             }
         },
 
-        openWorldStateManager() {
-            this.$emit('open-world-state-manager');
+        handleClickWorldStateTemplate(template, character_name) {
+
+            let query = this.formatWorldStateTemplateString(template.query, character_name);
+            let stateActive = this.getTrackedCharacterState(character_name, query) !== null;
+
+            // if state is active, clicking should open the world state manager
+            // otherwise, clicking should apply the template
+
+            if (stateActive) {
+                this.openWorldStateManager("characters", character_name, "reinforce", query);
+            } else {
+                this.sendHotButtonMessage('!apply_world_state_template:' + template.name + ':state_reinforcement:' + character_name);
+            }
+        },
+
+        worldStateTemplates: function() {
+            let _templates = this.appConfig().game.world_state.templates.state_reinforcement;
+            let templates = [];
+
+            for (let key in _templates) {
+                let template = _templates[key];
+                templates.push(template);
+            }
+            console.log("TEMPLATES", templates)
+            return templates;
+        },
+
+        worldStateTemplateFavoriteExists: function() {
+            for (let template of this.worldStateTemplates()) {
+                if(template.favorite) {
+                    return true;
+                }
+            }
+            return false;
+        },
+
+        worldStateTemplateFavoritesForNPCs() {
+            let favorites = [];
+            console.log("WHAT IS GOING ON")
+            for (let template of this.worldStateTemplates()) {
+                console.log("template", template)
+                if(template.favorite && (template.state_type == "npc" || template.state_type == "character")) {
+                    favorites.push(template);
+                }
+            }
+            return favorites;
+        },
+
+        worldStateTemplateFavoritesForPlayer() {
+            let favorites = [];
+            for (let template of this.worldStateTemplates()) {
+                if(template.favorite && template.state_type == "player" || template.state_type == "character") {
+                    favorites.push(template);
+                }
+            }
+            return favorites;
+        },
+
+        openWorldStateManager(tab, sub1, sub2, sub3) {
+            this.$emit('open-world-state-manager', tab, sub1, sub2, sub3);
         },
 
         updateWorlState() {

@@ -7,7 +7,20 @@ creator:
   - a thrilling action story aimed at an adult audience.
   - a mysterious adventure aimed at an adult audience.
   - an epic sci-fi adventure aimed at an adult audience.
-game: {}
+game:
+  world_state:
+    templates:
+      state_reinforcement:
+        Goals:
+          auto_create: false
+          description: Long term and short term goals
+          favorite: true
+          insert: conversation-context
+          instructions: Create a long term goal and two short term goals for {character_name}
+          interval: 20
+          name: Goals
+          query: Goals
+          state_type: npc
 
 ## Long-term memory
 

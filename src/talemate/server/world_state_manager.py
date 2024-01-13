@@ -3,7 +3,7 @@ import structlog
 from typing import Union, Any
 import uuid
 
-from talemate.world_state.manager import WorldStateManager, WorldStateTemplates
+from talemate.world_state.manager import WorldStateManager, WorldStateTemplates, StateReinforcementTemplate
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -50,6 +50,12 @@ class UpdatePinPayload(pydantic.BaseModel):
 
 class RemovePinPayload(pydantic.BaseModel):
     entry_id: str    
+
+class SaveWorldStateTemplatePayload(pydantic.BaseModel):
+    template: StateReinforcementTemplate
+    
+class DeleteWorldStateTemplatePayload(pydantic.BaseModel):
+    template: StateReinforcementTemplate
 
 class WorldStateManagerPlugin:
     
@@ -308,3 +314,37 @@ class WorldStateManagerPlugin:
         await self.scene.load_active_pins()
         self.scene.emit_status()
         
+    async def handle_save_template(self, data):
+        
+        payload = SaveWorldStateTemplatePayload(**data)
+        
+        log.debug("Save world state template", template=payload.template)
+        
+        await self.world_state_manager.save_template(payload.template)
+        
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "template_saved",
+            "data": payload.model_dump()
+        })
+        
+        await self.handle_get_templates({})
+        await self.signal_operation_done()
+        
+    async def handle_delete_template(self, data):
+            
+        payload = DeleteWorldStateTemplatePayload(**data)
+        template = payload.template
+        
+        log.debug("Delete world state template", template=template.name, template_type=template.type)
+        
+        await self.world_state_manager.remove_template(template.type, template.name)
+        
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "template_deleted",
+            "data": payload.model_dump()
+        })
+        
+        await self.handle_get_templates({})
+        await self.signal_operation_done()

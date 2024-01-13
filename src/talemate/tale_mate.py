@@ -1567,6 +1567,8 @@ class Scene(Emitter):
         
         await self.signals["game_loop_start"].send(events.GameLoopStartEvent(scene=self, event_type="game_loop_start"))
         
+        await self.world_state_manager.apply_all_auto_create_templates()
+        
         while continue_scene:
             
             log.debug("game loop", auto_save=self.auto_save, auto_progress=self.auto_progress)

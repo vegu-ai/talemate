@@ -3,7 +3,7 @@ import pydantic
 import structlog
 
 from talemate.instance import get_agent
-from talemate.config import WorldStateTemplates
+from talemate.config import WorldStateTemplates, StateReinforcementTemplate, save_config
 from talemate.world_state import Reinforcement, ManualContext, ContextPin, InsertionMode
 
 if TYPE_CHECKING:
@@ -218,3 +218,76 @@ class WorldStateManager:
         templates = self.scene.config["game"]["world_state"]["templates"]
         world_state_templates = WorldStateTemplates(**templates)
         return world_state_templates
+    
+    
+    async def save_template(self, template:StateReinforcementTemplate):
+        config = self.scene.config
+        
+        template_type = template.type
+        
+        config["game"]["world_state"]["templates"][template_type][template.name] = template.model_dump()
+        
+        save_config(self.scene.config)
+        
+        if template.auto_create:
+            await self.auto_apply_template(template)
+        
+    async def remove_template(self, template_type:str, template_name:str):
+        config = self.scene.config
+        
+        try:
+            del config["game"]["world_state"]["templates"][template_type][template_name]
+            save_config(self.scene.config)
+        except KeyError:
+            log.warning("world state template not found", template_type=template_type, template_name=template_name)
+            pass
+        
+    async def apply_all_auto_create_templates(self):
+        templates = self.scene.config["game"]["world_state"]["templates"]
+        world_state_templates = WorldStateTemplates(**templates)
+        
+        candidates = []
+        
+        for template in world_state_templates.state_reinforcement.values():
+            if template.auto_create:
+                candidates.append(template)
+            
+        for template in candidates:
+            log.info("applying template", template=template)
+            await self.auto_apply_template(template)
+        
+    async def auto_apply_template(self, template:StateReinforcementTemplate):
+        fn = getattr(self, f"auto_apply_template_{template.type}")
+        await fn(template)
+    
+    async def auto_apply_template_state_reinforcement(self, template:StateReinforcementTemplate):
+        
+        characters = []
+        
+        if template.state_type == "npc":
+            characters = [character.name for character in self.scene.get_npc_characters()]
+        elif template.state_type == "character":
+            characters = [character.name for character in self.scene.get_characters()]
+        elif template.state_type == "player":
+            characters = [self.scene.get_player_character().name]
+        
+        player_name = self.scene.get_player_character().name
+            
+        for character_name in characters:
+            formatted_query = template.query.format(character_name=character_name, player_name=player_name)
+            formatted_instructions = template.instructions.format(character_name=character_name, player_name=player_name) if template.instructions else None
+            
+            details = await self.get_character_details(character_name)
+            
+            # if reinforcement already exists, skip
+            if formatted_query in details.reinforcements:
+                continue
+            
+            await self.add_detail_reinforcement(
+                character_name,
+                formatted_query,
+                formatted_instructions,
+                template.interval,
+                insert=template.insert,
+                run_immediately=False,
+            )

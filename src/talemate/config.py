@@ -4,7 +4,7 @@ import structlog
 import os
 
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, ClassVar
 
 from talemate.emit import emit
 
@@ -59,12 +59,14 @@ class General(BaseModel):
 class StateReinforcementTemplate(BaseModel):
     name: str
     query: str
-    state_type: str = "character"
+    state_type: str = "npc"
     insert: str = "sequential"
     instructions: Union[str, None] = None
     interval: int = 10
     auto_create: bool = False
     favorite: bool = False
+    
+    type:ClassVar = "state_reinforcement"
     
 class WorldStateTemplates(BaseModel):
     state_reinforcement: dict[str, StateReinforcementTemplate] = pydantic.Field(default_factory=dict)

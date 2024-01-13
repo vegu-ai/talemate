@@ -389,6 +389,14 @@ class WebsocketHandler(Receiver):
                 "status": emission.status,
             }
         )
+        
+    def handle_config_saved(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "app_config",
+                "data": emission.data,
+            }
+        )
     
     def handle_archived_history(self, emission: Emission):
         self.queue_put(

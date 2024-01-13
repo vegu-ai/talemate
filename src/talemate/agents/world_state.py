@@ -524,6 +524,10 @@ class WorldStateAgent(Agent):
         
         for entry_id, answer in answers.items():
             
+            if entry_id not in world_state.pins:
+                log.warning("check_pin_conditions", entry_id=entry_id, answer=answer, msg="entry_id not found in world_state.pins (LLM failed to produce a clean response)")
+                continue
+            
             log.info("check_pin_conditions", entry_id=entry_id, answer=answer)
             state = answer.get("state")
             if state is True or (isinstance(state, str) and state.lower() in ["true", "yes", "y"]):

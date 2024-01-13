@@ -14,6 +14,10 @@
                     <v-icon start>mdi-history</v-icon>
                     History
                 </v-tab>
+                <v-tab value="world">
+                    <v-icon start>mdi-earth</v-icon>
+                    World
+                </v-tab>
                 <v-tab value="contextdb">
                     <v-icon start>mdi-book-open-page-variant</v-icon>
                     Context
@@ -22,6 +26,11 @@
                     <v-icon start>mdi-pin</v-icon>
                     Pins
                 </v-tab>
+                <v-tab value="templates">
+                    <v-icon start>mdi-cube-scan</v-icon>
+                    Templates
+                </v-tab>
+
             </v-tabs>
             <v-window v-model="tab">
 
@@ -176,7 +185,7 @@
                                                             </div>
 
                                                         </v-col>
-                                                        <v-col cols="6">
+                                                        <v-col cols="6" class="text-right">
                                                             <div v-if="characterDetails.reinforcements[selectedCharacterDetail]">
                                                                 <v-btn rounded="sm" prepend-icon="mdi-image-auto-adjust" @click.stop="viewCharacterStateReinforcer(selectedCharacterDetail)" color="primary" variant="text">
                                                                     Manage auto state
@@ -224,7 +233,7 @@
                                                             <v-col cols="6">
                                                                 <v-select 
                                                                     v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].insert" :items="insertionModes" 
-                                                                    label="Automatically insert into context" 
+                                                                    label="Context Attachment Method" 
                                                                     class="mr-1 mb-1" 
                                                                     variant="underlined"  
                                                                     density="compact" @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)" :color="characterStateReinforcerDirty ? 'info' : ''">
@@ -256,7 +265,7 @@
                                                                     </v-btn>
                                                                 </div>
                                                             </v-col>
-                                                            <v-col cols="6">
+                                                            <v-col cols="6" class="text-right">
                                                                 <v-btn rounded="sm" prepend-icon="mdi-refresh" @click.stop="runCharacterStateReinforcement(selectedCharacterStateReinforcer)" color="primary" variant="text">
                                                                     Refresh State
                                                                 </v-btn>
@@ -529,6 +538,11 @@
                     </v-card>
                 </v-window-item>
 
+                <!-- TEMPLATES -->
+                <v-window-item value="templates">
+                    <WorldStateManagerTemplates ref="templates" />
+                </v-window-item>
+
             </v-window>
             <v-card-actions>
                 <v-spacer></v-spacer>
@@ -540,8 +554,13 @@
 
 <script>
 
+import WorldStateManagerTemplates from './WorldStateManagerTemplates.vue';
+
 export default {
     name: 'WorldStateManager',
+    components: {
+        WorldStateManagerTemplates,
+    },
     computed: {
         characterStateReinforcementsList() {
             let list = [];
@@ -560,7 +579,7 @@ export default {
             isBusy: false,
             historyEnabled: false,
             insertionModes: [
-                {"title": "Never", "value": "never", "props": { "subtitle": "Never insert into context" }},
+                {"title": "Passive", "value": "never", "props": { "subtitle": "Rely on pins and relevancy attachment" }},
                 {"title": "Sequential", "value": "sequential", "props": {"subtitle": "Insert into current scene progression"}},
                 {"title": "Conversation Context", "value": "conversation-context", "props": {"subtitle":"Insert into conversation context for this character"}},
                 {"title": "All context", "value": "all-context", "props": {"subtitle":"Insert into all context"}},
@@ -661,6 +680,18 @@ export default {
                 this.saveOnExit();
             }
         },
+        tab(val) {
+            if(val === 'templates') {
+                this.$nextTick(() => {
+                    this.$refs.templates.requestTemplates();
+                });
+            }
+        }
+    },
+    provide() {
+        return {
+            insertionModes: this.insertionModes,
+        }
     },
     inject: [
         'getWebsocket', 
@@ -675,6 +706,7 @@ export default {
             this.reset();
             this.requestCharacterList();
             this.requestPins();
+
             this.dialog = true;
             if(tab) {
                 this.tab = tab;

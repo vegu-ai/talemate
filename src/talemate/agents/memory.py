@@ -522,6 +522,9 @@ class ChromaDBMemoryAgent(MemoryAgent):
         metadatas = []
         ids = []
         scene = self.scene
+        
+        if not objects:
+            return
 
         for obj in objects:
             documents.append(obj["text"])

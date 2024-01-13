@@ -186,7 +186,7 @@
                     <v-list>
                         <v-list-subheader>Save</v-list-subheader>
                         <v-list-item v-for="(option, index) in saveMenu" :key="index"
-                            @click.stop="sendHotButtonMessage('!' + option.value)"
+                            @click="sendHotButtonMessage('!' + option.value)"
                             :prepend-icon="option.icon">
                             <v-list-item-title>{{ option.title }}</v-list-item-title>
                             <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>

@@ -3,6 +3,7 @@ import pydantic
 import structlog
 
 from talemate.instance import get_agent
+from talemate.config import WorldStateTemplates
 from talemate.world_state import Reinforcement, ManualContext, ContextPin, InsertionMode
 
 if TYPE_CHECKING:
@@ -211,3 +212,9 @@ class WorldStateManager:
     async def remove_pin(self, entry_id:str):
         if entry_id in self.world_state.pins:
             del self.world_state.pins[entry_id]
+            
+    
+    async def get_templates(self) -> WorldStateTemplates:
+        templates = self.scene.config["game"]["world_state"]["templates"]
+        world_state_templates = WorldStateTemplates(**templates)
+        return world_state_templates

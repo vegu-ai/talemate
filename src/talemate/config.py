@@ -3,7 +3,7 @@ import pydantic
 import structlog
 import os
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Dict, Union
 
 from talemate.emit import emit
@@ -56,9 +56,26 @@ class General(BaseModel):
     auto_save: bool = True
     auto_progress: bool = True
 
+class StateReinforcementTemplate(BaseModel):
+    name: str
+    query: str
+    state_type: str = "character"
+    insert: str = "sequential"
+    instructions: Union[str, None] = None
+    interval: int = 10
+    auto_create: bool = False
+    favorite: bool = False
+    
+class WorldStateTemplates(BaseModel):
+    state_reinforcement: dict[str, StateReinforcementTemplate] = pydantic.Field(default_factory=dict)
+    
+class WorldState(BaseModel):
+    templates: WorldStateTemplates =  WorldStateTemplates()
+    
 class Game(BaseModel):
     default_player_character: GamePlayerCharacter = GamePlayerCharacter()
     general: General = General()
+    world_state: WorldState = WorldState()
     
     class Config:
         extra = "ignore"

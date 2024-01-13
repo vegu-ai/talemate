@@ -3,7 +3,7 @@ import structlog
 from typing import Union, Any
 import uuid
 
-from talemate.world_state.manager import WorldStateManager
+from talemate.world_state.manager import WorldStateManager, WorldStateTemplates
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -106,6 +106,14 @@ class WorldStateManagerPlugin:
             "type": "world_state_manager",
             "action": "pins",
             "data": context_pins.model_dump()
+        })
+        
+    async def handle_get_templates(self, data):
+        templates = await self.world_state_manager.get_templates()
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "templates",
+            "data": templates.model_dump()
         })
         
     async def handle_update_character_attribute(self, data):

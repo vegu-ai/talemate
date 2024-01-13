@@ -44,7 +44,8 @@ def get_client(name: str, *create_args, **create_kwargs):
     client = CLIENTS.get(name)
 
     if client:
-        client.reconfigure(**create_kwargs)
+        if create_kwargs:
+            client.reconfigure(**create_kwargs)
         return client
 
     if "type" in create_kwargs:

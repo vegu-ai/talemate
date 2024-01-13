@@ -30,6 +30,25 @@ class CharacterDetailReinforcementPayload(pydantic.BaseModel):
     name: str
     question: str
     
+class SaveWorldEntryPayload(pydantic.BaseModel):
+    id:str
+    text: str
+    meta: dict = {}
+    
+class DeleteWorldEntryPayload(pydantic.BaseModel):
+    id: str
+
+class SetWorldEntryReinforcementPayload(pydantic.BaseModel):
+    question: str
+    instructions: str = None
+    interval: int = 10
+    answer: str = ""
+    update_state: bool = False
+    insert: str = "never"  
+    
+class WorldEntryReinforcementPayload(pydantic.BaseModel):
+    question: str
+    
 class QueryContextDBPayload(pydantic.BaseModel):
     query: str
     meta: dict = {}
@@ -90,6 +109,9 @@ class WorldStateManagerPlugin:
             "data": {}
         })
         
+        if self.scene.auto_save:
+            await self.scene.save(auto=True)
+        
     async def handle_get_character_list(self, data):
         character_list = await self.world_state_manager.get_character_list()
         self.websocket_handler.queue_put({
@@ -104,6 +126,15 @@ class WorldStateManagerPlugin:
             "type": "world_state_manager",
             "action": "character_details",
             "data": character_details.model_dump()
+        })
+        
+    async def handle_get_world(self, data):
+        world = await self.world_state_manager.get_world()
+        log.debug("World", world=world)
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "world",
+            "data": world.model_dump()
         })
         
     async def handle_get_pins(self, data):
@@ -227,6 +258,103 @@ class WorldStateManagerPlugin:
         await self.handle_get_character_details({"name":payload.name})
         await self.signal_operation_done()
 
+
+    async def handle_save_world_entry(self, data):
+            
+        payload = SaveWorldEntryPayload(**data)
+        
+        log.debug("Save world entry", id=payload.id, text=payload.text, meta=payload.meta)
+        
+        await self.world_state_manager.save_world_entry(payload.id, payload.text, payload.meta)
+        
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "world_entry_saved",
+            "data": payload.model_dump()
+        })
+        
+        await self.handle_get_world({})
+        await self.signal_operation_done()
+        
+        self.scene.world_state.emit()
+            
+    async def handle_delete_world_entry(self, data):
+        
+        payload = DeleteWorldEntryPayload(**data)
+        
+        log.debug("Delete world entry", id=payload.id)
+        
+        await self.world_state_manager.delete_context_db_entry(payload.id)
+        
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "world_entry_deleted",
+            "data": payload.model_dump()
+        })
+        
+        await self.handle_get_world({})
+        await self.signal_operation_done()
+        
+        self.scene.world_state.emit()
+        self.scene.emit_status()
+        
+    async def handle_set_world_state_reinforcement(self, data):
+        
+        payload = SetWorldEntryReinforcementPayload(**data)
+        
+        
+        log.debug("Set world state reinforcement", question=payload.question, instructions=payload.instructions, interval=payload.interval, answer=payload.answer, insert=payload.insert, update_state=payload.update_state)
+        
+        await self.world_state_manager.add_detail_reinforcement(
+            None,
+            payload.question, 
+            payload.instructions, 
+            payload.interval, 
+            payload.answer,
+            payload.insert,
+            payload.update_state
+        )
+        
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "world_state_reinforcement_set",
+            "data": payload.model_dump()
+        })
+
+        # resend world
+        await self.handle_get_world({})
+        await self.signal_operation_done()
+        
+    async def handle_run_world_state_reinforcement(self, data):
+        payload = WorldEntryReinforcementPayload(**data)
+        
+        await self.world_state_manager.run_detail_reinforcement(None, payload.question)
+        
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "world_state_reinforcement_ran",
+            "data": payload.model_dump()
+        })
+
+        # resend world
+        await self.handle_get_world({})
+        await self.signal_operation_done()
+        
+    async def handle_delete_world_state_reinforcement(self, data):
+            
+        payload = WorldEntryReinforcementPayload(**data)
+        
+        await self.world_state_manager.delete_detail_reinforcement(None, payload.question)
+        
+        self.websocket_handler.queue_put({
+            "type": "world_state_manager",
+            "action": "world_state_reinforcement_deleted",
+            "data": payload.model_dump()
+        })
+        
+        # resend world
+        await self.handle_get_world({})
+        await self.signal_operation_done()
 
     async def handle_query_context_db(self, data):
         

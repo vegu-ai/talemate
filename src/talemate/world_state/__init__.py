@@ -98,6 +98,13 @@ class WorldState(BaseModel):
     
     def filter_reinforcements(self, character:str=ANY_CHARACTER, insert:list[str]=None) -> list[Reinforcement]:
         """
+        Returns a filtered list of Reinforcement objects based on character and insert criteria.
+
+        Arguments:
+        - character: The name of the character to filter reinforcements for. Use ANY_CHARACTER to include all.
+        - insert: A list of insertion modes to filter reinforcements by.
+        """
+        """
         Returns a filtered set of results as list
         """
         
@@ -119,14 +126,32 @@ class WorldState(BaseModel):
         return result
     
     def reset(self):
+        """
+        Resets the WorldState instance to its initial state by clearing characters, items, and location.
+
+        Arguments:
+        - None
+        """
         self.characters = {}
         self.items = {}
         self.location = None    
     
     def emit(self, status="update"):
+        """
+        Emits the current world state with the given status.
+
+        Arguments:
+        - status: The status of the world state to emit, which influences the handling of the update event.
+        """
         emit("world_state", status=status, data=self.model_dump())
         
     async def request_update(self, initial_only:bool=False):
+        """
+        Requests an update of the world state from the WorldState agent. If initial_only is true, emits current state without requesting if characters exist.
+
+        Arguments:
+        - initial_only: A boolean flag to determine if only the initial state should be emitted without requesting a new one.
+        """
 
         if initial_only and self.characters:
             self.emit()
@@ -186,6 +211,12 @@ class WorldState(BaseModel):
         self.emit()
      
     async def persist(self):
+        """
+        Persists the world state snapshots of characters and items into the memory agent.
+
+        Arguments:
+        - None
+        """
         
         memory = instance.get_agent("memory")
         world_state = instance.get_agent("world_state")
@@ -231,6 +262,12 @@ class WorldState(BaseModel):
                
     
     async def request_update_inline(self):
+        """
+        Requests an inline update of the world state from the WorldState agent and immediately emits the state.
+
+        Arguments:
+        - None
+        """
         
         self.emit(status="requested")
         
@@ -248,6 +285,17 @@ class WorldState(BaseModel):
         answer:str="",
         insert:str="sequential",
     ) -> Reinforcement:
+        """
+        Adds or updates a reinforcement in the world state. If a reinforcement with the same question and character exists, it is updated.
+
+        Arguments:
+        - question: The question or prompt associated with the reinforcement.
+        - character: The character to whom the reinforcement is linked. If None, it applies globally.
+        - instructions: Instructions related to the reinforcement.
+        - interval: The interval for reinforcement repetition.
+        - answer: The answer to the reinforcement question.
+        - insert: The method of inserting the reinforcement into the context.
+        """
         
         # if reinforcement already exists, update it
         
@@ -302,12 +350,25 @@ class WorldState(BaseModel):
         return reinforcement
     
     async def find_reinforcement(self, question:str, character:str=None):
+        """
+        Finds a reinforcement based on the question and character provided. Returns the index in the list and the reinforcement object.
+
+        Arguments:
+        - question: The question associated with the reinforcement to find.
+        - character: The character to whom the reinforcement is linked. Use None for global reinforcements.
+        """
         for idx, reinforcement in enumerate(self.reinforce):
             if reinforcement.question == question and reinforcement.character == character:
                 return idx, reinforcement
         return None, None
     
     def reinforcements_for_character(self, character:str):
+        """
+        Returns a dictionary of reinforcements specifically for a given character.
+
+        Arguments:
+        - character: The name of the character for whom reinforcements should be retrieved.
+        """
         reinforcements = {}
         
         for reinforcement in self.reinforce:
@@ -316,7 +377,28 @@ class WorldState(BaseModel):
         
         return reinforcements
     
+    def reinforcements_for_world(self):
+        """
+        Returns a dictionary of global reinforcements not linked to any specific character.
+
+        Arguments:
+        - None
+        """
+        reinforcements = {}
+        
+        for reinforcement in self.reinforce:
+            if not reinforcement.character:
+                reinforcements[reinforcement.question] = reinforcement
+        
+        return reinforcements
+    
     async def remove_reinforcement(self, idx:int):
+        """
+        Removes a reinforcement from the world state.
+        
+        Arguments:
+        - idx: The index of the reinforcement to remove.
+        """
         self.reinforce.pop(idx)
     
     def render(self):
@@ -338,3 +420,15 @@ class WorldState(BaseModel):
         await memory_agent.add_many([
             manual_context.model_dump() for manual_context in self.manual_context.values()
         ])
+        
+    def manual_context_for_world(self) -> dict[str, ManualContext]:
+        
+        """
+        Returns all manual context entries where meta["typ"] == "world_state"
+        """
+        
+        return {
+            manual_context.id: manual_context
+            for manual_context in self.manual_context.values()
+            if manual_context.meta.get("typ") == "world_state"
+        }

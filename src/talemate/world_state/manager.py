@@ -32,17 +32,20 @@ class CharacterDetails(pydantic.BaseModel):
     base_attributes: dict[str,str] = {}
     details: dict[str,str] = {}
     reinforcements: dict[str, Reinforcement] = {}
+
+class World(pydantic.BaseModel):
+    entries: dict[str, ManualContext] = {}
+    reinforcements: dict[str, Reinforcement] = {}
     
+class CharacterList(pydantic.BaseModel):
+    characters: dict[str, CharacterSelect] = {}
     
 class HistoryEntry(pydantic.BaseModel):
     text: str
     start: int = None
     end: int = None
     ts: str = None    
-    
-class CharacterList(pydantic.BaseModel):
-    characters: dict[str, CharacterSelect] = {}
-    
+
 class History(pydantic.BaseModel):
     history: list[HistoryEntry] = []
     
@@ -88,6 +91,12 @@ class WorldStateManager:
         details.reinforcements = self.world_state.reinforcements_for_character(character_name)
             
         return details
+    
+    async def get_world(self) -> World:
+        return World(
+            entries=self.world_state.manual_context_for_world(),
+            reinforcements=self.world_state.reinforcements_for_world()
+        )
     
     async def get_context_db_entries(self, query:str, limit:int=20, **meta) -> ContextDB:
         
@@ -150,9 +159,12 @@ class WorldStateManager:
         insert:str="sequential", 
         run_immediately:bool=False
     ) -> Reinforcement:
-        character = self.scene.get_character(character_name)
+        if character_name:
+            self.scene.get_character(character_name)
         world_state_agent = get_agent("world_state")
-        reinforcement = await self.world_state.add_reinforcement(question, character_name, instructions, interval, answer, insert)
+        reinforcement = await self.world_state.add_reinforcement(
+            question, character_name, instructions, interval, answer, insert
+        )
         
         if run_immediately:
             await world_state_agent.update_reinforcement(question, character_name)
@@ -173,7 +185,11 @@ class WorldStateManager:
             await self.world_state.remove_reinforcement(idx)
         self.world_state.emit()
           
-            
+    async def save_world_entry(self, entry_id:str, text:str, meta:dict):
+        meta["source"] = "manual"
+        meta["typ"] = "world_state"
+        await self.update_context_db_entry(entry_id, text, meta)
+    
     async def update_context_db_entry(self, entry_id:str, text:str, meta:dict):
         
         if meta.get("source") == "manual":
@@ -199,6 +215,8 @@ class WorldStateManager:
         
         if entry_id in self.world_state.manual_context:
             del self.world_state.manual_context[entry_id]
+            
+        await self.remove_pin(entry_id)
             
     async def set_pin(self, entry_id:str, condition:str=None, condition_state:bool=False, active:bool=False):
         

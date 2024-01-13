@@ -10,13 +10,13 @@
                     <v-icon start>mdi-account-group</v-icon>
                     Characters
                 </v-tab>
-                <v-tab v-if="historyEnabled" value="history" disabled>
-                    <v-icon start>mdi-history</v-icon>
-                    History
-                </v-tab>
                 <v-tab value="world">
                     <v-icon start>mdi-earth</v-icon>
                     World
+                </v-tab>
+                <v-tab v-if="historyEnabled" value="history" disabled>
+                    <v-icon start>mdi-history</v-icon>
+                    History
                 </v-tab>
                 <v-tab value="contextdb">
                     <v-icon start>mdi-book-open-page-variant</v-icon>
@@ -49,13 +49,12 @@
                                                     <v-chip v-if="character.is_player === false" label size="x-small" variant="outlined" class="ml-1">AI</v-chip>
                                                     <v-chip v-if="character.active === true && character.is_player === false" label size="x-small" variant="outlined" color="success" class="ml-1">Active</v-chip>
                                                 </v-list-item-subtitle>
-                                                <v-divider class="mt-2"></v-divider>
                                         </v-list-item>
                                     </v-list>
                                 </v-col>
                                 <v-col cols="9">
                                     <div v-if="selectedCharacter !== null">
-                                        <v-toolbar density="compact">
+                                        <v-toolbar density="compact" color="grey-darken-4">
                                             <v-toolbar-title>
                                                 <v-icon size="small">mdi-account</v-icon>
                                                 {{ characterDetails.name }}
@@ -93,11 +92,12 @@
                                         <!-- CHARACTER ATTRIBUTES -->
 
                                         <div v-else-if="selectedCharacterPage === 'attributes'">
-                                            <v-toolbar floating density="compact" class="mb-2">
+                                            <v-toolbar floating density="compact" class="mb-2" color="grey-darken-4">
                                                 <v-text-field v-model="characterAttributeSearch" label="Filter attributes" append-inner-icon="mdi-magnify" clearable single-line hide-details density="compact" variant="underlined" class="ml-1 mb-1" @update:modelValue="autoSelectFilteredAttribute"></v-text-field>
                                                 <v-spacer></v-spacer>
                                                 <v-text-field v-model="newCharacterAttributeName" label="New attribute" append-inner-icon="mdi-plus" class="mr-1 mb-1" variant="underlined"  single-line hide-details density="compact" @keyup.enter="handleNewCharacterAttribute"></v-text-field>
                                             </v-toolbar>
+                                            <v-divider></v-divider>
                                             <v-row>
                                                 <v-col cols="4">
                                                     <v-list>
@@ -141,11 +141,12 @@
                                         <!-- CHARACTER DETAILS -->
 
                                         <div v-else-if="selectedCharacterPage === 'details'">
-                                            <v-toolbar floating density="compact" class="mb-2">
+                                            <v-toolbar floating density="compact" class="mb-2" color="grey-darken-4">
                                                 <v-text-field v-model="characterDetailSearch" label="Filter details" append-inner-icon="mdi-magnify" clearable single-line hide-details density="compact" variant="underlined" class="ml-1 mb-1" @update:modelValue="autoSelectFilteredDetail"></v-text-field>
                                                 <v-spacer></v-spacer>
                                                 <v-text-field v-model="newCharacterDetailName" label="New detail" append-inner-icon="mdi-plus" class="mr-1 mb-1" variant="underlined"  single-line hide-details density="compact" @keyup.enter="handleNewCharacterDetail"></v-text-field>
                                             </v-toolbar>
+                                            <v-divider></v-divider>
                                             <v-row>
                                                 <v-col cols="4">
                                                     <v-list>
@@ -206,18 +207,19 @@
                                         <!-- CHARACTER STATE REINFORCERS -->
 
                                         <div v-else-if="selectedCharacterPage === 'reinforce'">
-                                            <v-toolbar floating density="compact" class="mb-2">
+                                            <v-toolbar floating density="compact" class="mb-2" color="grey-darken-4">
                                                 <v-text-field v-model="characterStateReinforcerSearch" label="Filter states" append-inner-icon="mdi-magnify" clearable single-line hide-details density="compact" variant="underlined" class="ml-1 mb-1" @update:modelValue="autoSelectFilteredStateReinforcer"></v-text-field>
                                                 <v-spacer></v-spacer>
                                                 <v-text-field v-model="newCharacterStateReinforcerQuestion" label="New state" append-inner-icon="mdi-plus" class="mr-1 mb-1" variant="underlined"  single-line hide-details density="compact" @keyup.enter="handleNewCharacterStateReinforcer"></v-text-field>
                                             </v-toolbar>
+                                            <v-divider></v-divider>
                                             <v-row>
                                                 <v-col cols="4">
                                                     <v-list>
                                                         <v-list-item v-for="(value, detail) in filteredCharacterStateReinforcers()" :key="detail" @click="selectedCharacterStateReinforcer=detail">
                                                             <v-list-item-title class="text-caption">{{ detail }}</v-list-item-title>
                                                             <v-list-item-subtitle>
-                                                                <v-chip size="x-small">update in {{ value.due }} turns</v-chip>
+                                                                <v-chip size="x-small" label variant="outlined" color="info">update in {{ value.due }} turns</v-chip>
                                                             </v-list-item-subtitle>
                                                         </v-list-item>
                                                     </v-list>  
@@ -238,10 +240,6 @@
                                                                     variant="underlined"  
                                                                     density="compact" @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)" :color="characterStateReinforcerDirty ? 'info' : ''">
                                                                 </v-select>
-                                                                <!--
-                                                                <v-checkbox density="compact" v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].insert" label="Insert into scene progression" messages="Insert into current scene progression after update. This is invisible to you, but they AI will"></v-checkbox>
-                                                                -->
-
                                                             </v-col>
                                                         </v-row>
 
@@ -289,6 +287,12 @@
                     </v-card>
                 </v-window-item>
 
+                <!-- WORLD -->
+
+                <v-window-item value="world">
+                    <WorldStateManagerWorld ref="world" />
+                </v-window-item>
+
                 <!-- HISTORY -->
 
                 <v-window-item value="history">
@@ -306,7 +310,7 @@
                 <v-window-item value="contextdb">
                     <v-card flat>
                         <v-card-text>
-                            <v-toolbar floating density="compact" class="mb-2">
+                            <v-toolbar floating density="compact" class="mb-2" color="grey-darken-4">
                                 <v-text-field v-model="contextDBQuery" label="Content search" append-inner-icon="mdi-magnify" clearable single-line hide-details density="compact" variant="underlined" class="ml-1 mb-1 mr-1" @keyup.enter="queryContextDB"></v-text-field>
 
                                 <v-select v-model="contextDBQueryMetaKey" :items="contextDBMetaKeys" label="Filter By Tag" class="mr-1 mb-1" variant="underlined"  single-line hide-details density="compact"></v-select>
@@ -332,7 +336,7 @@
                                     Add entry
                                 </v-btn>
                             </v-toolbar>
-
+                            <v-divider></v-divider>
                             <!-- add entry-->
                             <v-card v-if="dialogAddContextDBEntry === true">
                                 <v-card-title>
@@ -554,11 +558,13 @@
 
 <script>
 import WorldStateManagerTemplates from './WorldStateManagerTemplates.vue';
+import WorldStateManagerWorld from './WorldStateManagerWorld.vue';
 
 export default {
     name: 'WorldStateManager',
     components: {
         WorldStateManagerTemplates,
+        WorldStateManagerWorld,
     },
     computed: {
         characterStateReinforcementsList() {
@@ -629,6 +635,10 @@ export default {
             },
             characterDetails: {},
 
+            // world
+
+            worldContext: {},
+            
             // history
 
             // context db
@@ -744,11 +754,6 @@ export default {
                 if(sub1 != null) {
                     this.selectedPin = this.pins[sub1];
                 }
-            }
-            else if(tab == 'templates') {
-                this.$nextTick(() => {
-                    this.$refs.templates.requestTemplates();
-                });
             }
         },
         reset() {

@@ -483,6 +483,14 @@ class WorldStateAgent(Agent):
             character = self.scene.get_character(reinforcement.character)
             await character.set_detail(reinforcement.question, answer)
             
+        else:
+            # set world entry
+            await self.scene.world_state_manager.save_world_entry(
+                reinforcement.question,
+                reinforcement.as_context_line,
+                {},
+            )
+            
         self.scene.world_state.emit()
         
         return message  

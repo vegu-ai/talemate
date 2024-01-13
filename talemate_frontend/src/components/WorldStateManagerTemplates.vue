@@ -4,8 +4,7 @@
             <v-row floating  color="grey-darken-5">
                 <v-col cols="3">
                     <v-text-field v-model="filter" label="Filter templates" append-inner-icon="mdi-magnify" clearable
-                    density="compact" variant="underlined" class="ml-1 mb-1"
-                    @update:modelValue="filter"></v-text-field>
+                    density="compact" variant="underlined" class="ml-1 mb-1"></v-text-field>
                 </v-col>
                 <v-col cols="3"></v-col>
                 <v-col cols="2"></v-col>
@@ -209,6 +208,9 @@ export default {
     ],
     methods: {
         validateTemplateName(value) {
+            if(value == null)
+                return true;
+            
             // no special characters, return false if there are any
             if(value.match(/[^a-zA-Z0-9_ ]/)) {
                 return "No special characters allowed";
@@ -306,6 +308,9 @@ export default {
                 this.requestTemplates();
             }
         },
+    },
+    mounted(){
+        this.requestTemplates();
     },
     created() {
         this.registerMessageHandler(this.handleMessage);

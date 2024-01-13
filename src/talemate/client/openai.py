@@ -1,5 +1,6 @@
 import os
 import json
+import traceback
 from openai import AsyncOpenAI
 
 
@@ -146,14 +147,17 @@ class OpenAIClient(ClientBase):
             self.max_token_length = min(max_token_length or 128000, 128000)
         else:
             self.max_token_length = max_token_length or 2048
-            
+        
+        if max_token_length is not None:
+            self.max_token_length = max_token_length    
+        
         if not self.api_key_status:
             if self.api_key_status is False:
                 emit('request_client_status')
                 emit('request_agent_status')
             self.api_key_status = True
         
-        log.info("openai set client")
+        log.info("openai set client", max_token_length=self.max_token_length, provided_max_token_length=max_token_length, model=model)
             
     def reconfigure(self, **kwargs):
         if "model" in kwargs:
@@ -163,7 +167,7 @@ class OpenAIClient(ClientBase):
     def on_config_saved(self, event):
         config = event.data
         self.config = config
-        self.set_client()
+        self.set_client(max_token_length=self.max_token_length)
 
     def count_tokens(self, content: str):
         if not self.model_name:

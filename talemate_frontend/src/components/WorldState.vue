@@ -16,142 +16,183 @@
 
     </v-list-subheader>
 
+    <v-sheet ref="worldStateContainer">
 
-    <div ref="charactersContainer">   
+        <div ref="charactersContainer">   
 
-        <!-- CHARACTERS -->
+            <!-- CHARACTERS -->
 
-        <v-expansion-panels density="compact" v-for="(character,name) in characters" :key="name">
-            <v-expansion-panel rounded="0" density="compact">
+            <v-expansion-panels density="compact" v-for="(character,name) in characters" :key="name">
+                <v-expansion-panel rounded="0" density="compact">
 
-                <!-- TITLE: CHARACTER NAME -->
+                    <!-- TITLE: CHARACTER NAME -->
 
-                <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
-                    {{ name }}
-                    <v-chip v-if="character.emotion !== null && character.emotion !== ''" label size="x-small" variant="outlined" class="ml-1">{{ character.emotion }}</v-chip>
-                    <template v-slot:actions>
-                        <v-icon icon="mdi-account"></v-icon>
-                    </template>
-                </v-expansion-panel-title>
+                    <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
+                        {{ name }}
+                        <v-chip v-if="character.emotion !== null && character.emotion !== ''" label size="x-small" variant="outlined" class="ml-1">{{ character.emotion }}</v-chip>
+                        <template v-slot:actions>
+                            <v-icon icon="mdi-account"></v-icon>
+                        </template>
+                    </v-expansion-panel-title>
 
-                <!-- SNAPSHOT: CHARACTER -->
-                        
-                <v-expansion-panel-text class="text-body-2">
-                    {{ character.snapshot }}
+                    <!-- SNAPSHOT: CHARACTER -->
+                            
+                    <v-expansion-panel-text class="text-body-2">
+                        {{ character.snapshot }}
 
-                    <!-- ACTIONS: LOOK AT, CHARACTER SHEET, PERSIST -->
+                        <!-- ACTIONS: LOOK AT, CHARACTER SHEET, PERSIST -->
 
-                    <div class="text-center mt-1">
-                        <v-tooltip text="Look at">
-                            <template v-slot:activator="{ props }">
-                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="lookAtCharacter(name)" icon="mdi-eye"></v-btn>
+                        <div class="text-center mt-1">
+                            <v-tooltip text="Look at">
+                                <template v-slot:activator="{ props }">
+                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="lookAtCharacter(name)" icon="mdi-eye"></v-btn>
 
-                            </template>
-                        </v-tooltip>
+                                </template>
+                            </v-tooltip>
 
-                        <v-tooltip v-if="characterSheet().characterExists(name)" text="Character details">
-                            <template v-slot:activator="{ props }">
-                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openCharacterSheet(name)" icon="mdi-account-details"></v-btn>
+                            <v-tooltip v-if="characterSheet().characterExists(name)" text="Character details">
+                                <template v-slot:activator="{ props }">
+                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openCharacterSheet(name)" icon="mdi-account-details"></v-btn>
 
-                            </template>
-                        </v-tooltip>
-                        <v-tooltip v-else text="Make this character real, adding it to the scene as an actor.">
-                            <template v-slot:activator="{ props }">
-                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(name)" icon="mdi-chat-plus-outline"></v-btn>
+                                </template>
+                            </v-tooltip>
+                            <v-tooltip v-else text="Make this character real, adding it to the scene as an actor.">
+                                <template v-slot:activator="{ props }">
+                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(name)" icon="mdi-chat-plus-outline"></v-btn>
 
-                            </template>
-                        </v-tooltip>
-                    </div>
-                    <v-divider class="mt-1"></v-divider>
+                                </template>
+                            </v-tooltip>
+                        </div>
+                        <v-divider class="mt-1"></v-divider>
 
-                    <!-- TRACKED STATES -->
+                        <!-- TRACKED STATES -->
 
-                    <div>
-                        <v-tooltip v-for="(state,index) in trackedCharacterStates(name)"
-                        :key="index"
-                        max-width="500px"
-                        class="pre-wrap"
-                        :text="state.answer">
-                            <template v-slot:activator="{ props }">
-                                <v-chip 
-                                label 
-                                v-bind="props"
-                                size="x-small"
-                                variant="outlined"
-                                color="grey-lighten-1"
-                                prepend-icon="mdi-image-auto-adjust"
-                                @click="openWorldStateManager('characters', name, 'reinforce', state.question)"
-                                class="mt-1">
-                                    {{ state.question }}
-                                </v-chip>
-                            </template>
-                        </v-tooltip>
+                        <div>
+                            <v-tooltip v-for="(state,index) in trackedCharacterStates(name)"
+                            :key="index"
+                            max-width="500px"
+                            class="pre-wrap"
+                            :text="state.answer">
+                                <template v-slot:activator="{ props }">
+                                    <v-chip 
+                                    label 
+                                    v-bind="props"
+                                    size="x-small"
+                                    variant="outlined"
+                                    color="grey-lighten-1"
+                                    prepend-icon="mdi-image-auto-adjust"
+                                    @click="openWorldStateManager('characters', name, 'reinforce', state.question)"
+                                    class="mt-1">
+                                        {{ state.question }}
+                                    </v-chip>
+                                </template>
+                            </v-tooltip>
 
-                    </div>
+                        </div>
 
-                </v-expansion-panel-text>
-            </v-expansion-panel>
-        </v-expansion-panels>
+                    </v-expansion-panel-text>
+                </v-expansion-panel>
+            </v-expansion-panels>
 
-    </div>
-    <div ref="objectsContainer">   
+        </div>
+        <div ref="objectsContainer">   
 
-        <v-expansion-panels density="compact" v-for="(obj,name) in items" :key="name">
-            <v-expansion-panel rounded="0" density="compact">
-                <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
-                    {{ name}}
-                    <template v-slot:actions>
-                        <v-icon icon="mdi-cube"></v-icon>
-                    </template>
-                </v-expansion-panel-title>
-                        
-                <v-expansion-panel-text class="text-body-2">
-                    {{ obj.snapshot }}
-                    <div class="text-center mt-1">
-                        <v-tooltip text="Look at">
-                            <template v-slot:activator="{ props }">
-                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="lookAtItem(name)" icon="mdi-eye"></v-btn>
+            <v-expansion-panels density="compact" v-for="(obj,name) in items" :key="name">
+                <v-expansion-panel rounded="0" density="compact">
+                    <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
+                        {{ name}}
+                        <template v-slot:actions>
+                            <v-icon icon="mdi-cube"></v-icon>
+                        </template>
+                    </v-expansion-panel-title>
+                            
+                    <v-expansion-panel-text class="text-body-2">
+                        {{ obj.snapshot }}
+                        <div class="text-center mt-1">
+                            <v-tooltip text="Look at">
+                                <template v-slot:activator="{ props }">
+                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="lookAtItem(name)" icon="mdi-eye"></v-btn>
 
-                            </template>
-                        </v-tooltip>
-                    </div>
-                    <v-divider class="mt-1"></v-divider>
-                </v-expansion-panel-text>
-            </v-expansion-panel>
-        </v-expansion-panels>
+                                </template>
+                            </v-tooltip>
+                        </div>
+                        <v-divider class="mt-1"></v-divider>
+                    </v-expansion-panel-text>
+                </v-expansion-panel>
+            </v-expansion-panels>
 
-    </div>
+        </div>
 
-    <div ref="extrasContainer">
+        <div ref="extrasContainer">
 
-        <v-expansion-panels density="compact">
-            <!-- active pin container-->
-            <v-expansion-panel rounded="0" density="compact"  v-if="activePins.length > 0">
-                <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
-                    Active Pins ({{ activePins.length }})
-                    <template v-slot:actions>
-                        <v-icon icon="mdi-pin"></v-icon>
-                    </template>
-                </v-expansion-panel-title>
-                <v-expansion-panel-text>
-                    <div class="mt-1 text-caption" v-for="(pin,index) in activePins" :key="index">
-                        {{ truncatedPinText(pin) }}
-                        <v-btn rounded="sm" variant="text" size="x-small" class="ml-1"  @click.stop="openWorldStateManager('pins')" icon="mdi-book-open-page-variant"></v-btn>
-                        <v-divider></v-divider>
-                    </div>
-                    <!--
+            <v-expansion-panels density="compact">
+                <!-- active pin container-->
+                <v-expansion-panel rounded="0" density="compact"  v-if="activePins.length > 0">
+                    <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
+                        Active Pins ({{ activePins.length }})
+                        <template v-slot:actions>
+                            <v-icon icon="mdi-pin"></v-icon>
+                        </template>
+                    </v-expansion-panel-title>
+                    <v-expansion-panel-text>
+                        <div class="mt-1 text-caption" v-for="(pin,index) in activePins" :key="index">
+                            {{ truncatedPinText(pin) }}
+                            <v-btn rounded="sm" variant="text" size="x-small" class="ml-1"  @click.stop="openWorldStateManager('pins')" icon="mdi-book-open-page-variant"></v-btn>
+                            <v-divider></v-divider>
+                        </div>
+                        <!--
 
-                    <v-list density="compact">
-                        <v-list-item v-for="(pin,index) in activePins" :key="index">
-                            <v-list-item-subtitle>{{ pin.text }}</v-list-item-subtitle>
-                        </v-list-item>
-                    </v-list>
-                    -->
-                </v-expansion-panel-text>
-            </v-expansion-panel>
-        </v-expansion-panels>
+                        <v-list density="compact">
+                            <v-list-item v-for="(pin,index) in activePins" :key="index">
+                                <v-list-item-subtitle>{{ pin.text }}</v-list-item-subtitle>
+                            </v-list-item>
+                        </v-list>
+                        -->
+                    </v-expansion-panel-text>
+                </v-expansion-panel>
+                
+                <!-- tracked states -->
+                <v-expansion-panel rounded="0" density="compact" v-if="hasAnyWorldState">
+                    <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
+                        World
+                        <template v-slot:actions>
+                            <v-icon icon="mdi-earth"></v-icon>
+                        </template>
+                    </v-expansion-panel-title>
+                    <v-expansion-panel-text>
 
-    </div>
+                        <!-- TRACKED STATES -->
+
+                        <div>
+
+                            <v-tooltip v-for="(state,index) in trackedWorldStates()"
+                            :key="index"
+                            max-width="500px"
+                            class="pre-wrap"
+                            :text="state.answer">
+                                <template v-slot:activator="{ props }">
+                                    <v-chip 
+                                    label 
+                                    v-bind="props"
+                                    size="x-small"
+                                    variant="outlined"
+                                    color="grey-lighten-1"
+                                    prepend-icon="mdi-image-auto-adjust"
+                                    @click="openWorldStateManager('world', 'states', state.question)"
+                                    class="mt-1">
+                                        {{ state.question }}
+                                    </v-chip>
+                                </template>
+                            </v-tooltip>
+
+                        </div>
+                    </v-expansion-panel-text>
+                </v-expansion-panel>
+            </v-expansion-panels>
+
+        </div>
+    </v-sheet>
+
     <WorldStateManager ref="worldStateManager" />
 </template>
 
@@ -169,6 +210,8 @@ export default {
             sceneTime: null,
             reinforce: {},
             activePins: [],
+            worldStateMaxHeight: null,
+            hasAnyWorldState: false,
         }
     },
     components: {
@@ -185,6 +228,17 @@ export default {
     ],
 
     methods: {
+        onResize() {
+            this.worldStateMaxHeight = this.availableHeight();
+        },
+        availableHeight() {
+            // screen height - $refs.worldStateContainer top offset
+            console.log("REFS", this.$refs)
+            if(this.$refs.charactersContainer == null) return "500px";
+            let maxHeight = (window.innerHeight - this.$refs.charactersContainer.getBoundingClientRect().top - 50)+"px";
+            console.log("MAX HEIGHT", maxHeight, this.$refs.charactersContainer.getBoundingClientRect().top);
+            return maxHeight;
+        },
         truncatedPinText(pin) {
             let max = 75;
             if(pin.text.length > max) {
@@ -255,6 +309,32 @@ export default {
             
             return states;
         },
+
+        trackedWorldState(question) {
+            // cycle through reinforce and return true if the world has a tracked state for this question
+            // by checking the `character` property of the reinforce object
+            for(let state of this.reinforce) {
+                if(state.character === null && state.question === question) {
+                    return state;
+                }
+            }
+            return null;
+        },
+
+        trackedWorldStates() {
+            // cycle through reinforce and return the states that are tracked for the world
+            // by checking the `character` property of the reinforce object
+            let states = [];
+
+            for(let state of this.reinforce) {
+                if(state.character === null) {
+                    states.push(state);
+                }
+            }
+            
+            return states;
+        },
+
         handleMessage(data) {
             if(data.type === 'world_state') {
                 this.characters = data.data.characters;
@@ -262,10 +342,23 @@ export default {
                 this.location = data.data.location;
                 this.requesting = (data.status==="requested")
                 this.reinforce = data.data.reinforce;
+
+                // check if there is any entry in reinforce that doesnt have
+                // character set, if there is, hasAnyWorldState is true
+
+                this.hasAnyWorldState = false;
+                for(let state of this.reinforce) {
+                    if(state.character === null) {
+                        this.hasAnyWorldState = true;
+                        break;
+                    }
+                }
+
+                //this.onResize()
             } else if (data.type == "scene_status") {
                 this.sceneTime = data.data.scene_time;
                 this.activePins = data.data.active_pins;
-                console.log("PINS", data.data.active_pins);
+                //this.onResize();
             }
         },
     },

@@ -755,6 +755,13 @@ export default {
                     this.selectedPin = this.pins[sub1];
                 }
             }
+            else if(tab == 'world') {
+                if(sub1 != null){
+                    this.$nextTick(() => {
+                        this.$refs.world.navigate(sub1, sub2, sub3);
+                    });
+                }
+            }
         },
         reset() {
             this.characterList = {

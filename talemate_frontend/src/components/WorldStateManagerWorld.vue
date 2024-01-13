@@ -232,6 +232,7 @@ export default {
             selectedPage: 'entries',
             saveEntryTimeout: null,
             deleteConfirm: false,
+            deferedNavigation: null,
             dirty: false,
             busy: false,
             baseEntry: {
@@ -270,7 +271,34 @@ export default {
         'isInputDisabled',
         'insertionModes',
     ],
+    watch:{
+        entries() {
+            if(this.deferedNavigation !== null && this.deferedNavigation[0] === 'entries') {
+                this.$nextTick().then(() => {
+                    this.selectedPage = 'entries';
+                    this.selectEntry(this.deferedNavigation[1]);
+                    this.deferedNavigation = null;
+                });
+            }
+        },
+        reinforcements() {
+            if(this.deferedNavigation !== null && this.deferedNavigation[0] === 'states') {
+                this.$nextTick().then(() => {
+                    this.selectedPage = 'states';
+                    this.selectState(this.deferedNavigation[1]);
+                    this.deferedNavigation = null;
+                });
+            }
+        }
+    },
     methods: {
+
+        navigate(page, stateOrEntryId) {
+            this.$nextTick().then(() => {
+                this.requestWorld();
+                this.deferedNavigation = [page, stateOrEntryId];
+            });
+        },
 
         // entries
         validateEntryId(value) {

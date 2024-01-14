@@ -1320,7 +1320,7 @@ export default {
             }  
             else if(message.action === 'pins') {
                 this.pins = message.data.pins;
-                if(this.selectedPin !== null)
+                if(this.selectedPin != null)
                     this.selectedPin = this.pins[this.selectedPin.pin.entry_id];
                 this.requireSceneSave = true;
             }  

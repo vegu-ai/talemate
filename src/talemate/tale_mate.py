@@ -921,7 +921,16 @@ class Scene(Emitter):
             iterations += 1
             if iterations >= max_iterations:
                 return None
-            
+    
+    def message_index(self, message_id:int) -> int:
+        """
+        Returns the index of the given message in the history
+        """
+        for idx in range(len(self.history) - 1, -1, -1):
+            if self.history[idx].id == message_id:
+                return idx
+        return -1
+    
     def collect_messages(self, typ:str=None, source:str=None, max_iterations:int=100):
 
         """
@@ -947,10 +956,17 @@ class Scene(Emitter):
         
         if not ignore:
             ignore = [ReinforcementMessage, DirectorMessage]
+            
+        collected = []
         
-        segment = self.history[-lines:] if not start else self.history[:-start][-lines:]
+        for idx in range(len(self.history) - 1, -1, -1):
+            if isinstance(self.history[idx], tuple(ignore)):
+                continue
+            collected.insert(0, self.history[idx])
+            if len(collected) >= lines:
+                break
         
-        return "\n".join([str(message) for message in segment if not isinstance(message, tuple(ignore))])
+        return "\n".join([str(message) for message in collected])
 
     def push_archive(self, entry: data_objects.ArchiveEntry):
         

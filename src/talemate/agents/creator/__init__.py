@@ -172,3 +172,10 @@ class CreatorAgent(CharacterCreatorMixin, ScenarioCreatorMixin, Agent):
             "count": count,
         })
         return json_list.get("items",[])
+    
+    @set_processing
+    async def generate_title(self, text:str):
+        title = await Prompt.request(f"creator.generate-title", self.client, "create_short", vars={
+            "text": text,
+        })
+        return title

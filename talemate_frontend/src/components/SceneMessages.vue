@@ -75,9 +75,14 @@ export default {
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
+            createPin: this.createPin,
         }
     },
     methods: {
+
+        createPin(message_id){
+            this.getWebsocket().send(JSON.stringify({ type: 'interact', text:'!ws_sap:'+message_id}));
+        },
 
         requestDeleteMessage(message_id) {
             this.getWebsocket().send(JSON.stringify({ type: 'delete_message', id: message_id }));

@@ -279,27 +279,6 @@ def replace_conditional(input_string: str, params) -> str:
     return modified_string
 
 
-def pronouns(gender: str) -> tuple[str, str]:
-    """
-    Returns the pronouns for gender
-    """
-
-    if gender == "female":
-        possessive_determiner = "her"
-        pronoun = "she"
-    elif gender == "male":
-        possessive_determiner = "his"
-        pronoun = "he"
-    elif gender == "fluid" or gender == "nonbinary" or not gender:
-        possessive_determiner = "their"
-        pronoun = "they"
-    else:
-        possessive_determiner = "its"
-        pronoun = "it"
-
-    return (pronoun, possessive_determiner)
-
-
 def strip_partial_sentences(text:str) -> str:
     # Sentence ending characters
     sentence_endings = ['.', '!', '?', '"', "*"]
@@ -439,58 +418,22 @@ def clean_dialogue(dialogue: str, main_name: str) -> str:
 
     return clean_message(strip_partial_sentences(dialogue))
     
-
-def clean_attribute(attribute: str) -> str:
+def clean_id(name: str) -> str:
     """
-    Cleans up an attribute by removing unnecessary whitespace and newlines.
+    Cleans up a id name by removing all characters that aren't a-zA-Z0-9_- 
 
-    Also will remove any additional attributees.
+    Spaces are allowed.
 
     Args:
-        attribute (str): The input attribute to be cleaned.
+        name (str): The input id name to be cleaned.
 
     Returns:
-        str: The cleaned attribute.
+        str: The cleaned id name.
     """
-
-    special_chars = [
-        "#",
-        "`",
-        "!",
-        "@",
-        "$",
-        "%",
-        "^",
-        "&",
-        "*",
-        "(",
-        ")",
-        "-",
-        "_",
-        "=",
-        "+",
-        "[",
-        "{",
-        "]",
-        "}",
-        "|",
-        ";",
-        ":",
-        ",",
-        "<",
-        ".",
-        ">",
-        "/",
-        "?",
-    ]
-
-    for char in special_chars:
-        attribute = attribute.split(char)[0].strip()
-
-    return attribute.strip()
-
-
-
+    # Remove all characters that aren't a-zA-Z0-9_-
+    cleaned_name = re.sub(r"[^a-zA-Z0-9_\- ]", "", name)
+    
+    return cleaned_name
 
 def duration_to_timedelta(duration):
     """Convert an isodate.Duration object or a datetime.timedelta object to a datetime.timedelta object."""

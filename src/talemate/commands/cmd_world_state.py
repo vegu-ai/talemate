@@ -17,6 +17,7 @@ __all__ = [
     "CmdUpdateReinforcements",
     "CmdCheckPinConditions",
     "CmdApplyWorldStateTemplate",
+    "CmdSummarizeAndPin",
 ]
 
 @register
@@ -243,4 +244,30 @@ class CmdApplyWorldStateTemplate(TalemateCommand):
             emit("status", message="State already tracked.", status="info")
         else:
             emit("status", message="Auto state added.", status="success")
+
+@register
+class CmdSummarizeAndPin(TalemateCommand):
+    
+    """
+    Will take a message index and then walk back N messages
+    summarizing the scene and pinning it to the context.
+    """
+    
+    name = "summarize_and_pin"
+    label = "Summarize and pin"
+    description = "Summarize a snapshot of the scene and pin it to the world state"
+    aliases = ["ws_sap"]
+    
+    async def run(self):
         
+        scene = self.scene
+        
+        world_state = get_agent("world_state")
+        
+        if not self.scene.history:
+            raise ValueError("No history to summarize.")
+        
+        message_id = int(self.args[0]) if len(self.args) else scene.history[-1].id
+        num_messages = int(self.args[1]) if len(self.args) > 1 else 3
+        
+        await world_state.summarize_and_pin(message_id, num_messages=num_messages)

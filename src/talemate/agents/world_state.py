@@ -1,6 +1,7 @@
 from __future__ import annotations
 import dataclasses
 import json
+import uuid
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import talemate.emit.async_signals
@@ -558,3 +559,38 @@ class WorldStateAgent(Agent):
         if state_change:
             await self.scene.load_active_pins()
             self.scene.emit_status()
+            
+    @set_processing
+    async def summarize_and_pin(self, message_id:int, num_messages:int=3) -> str:
+        
+        """
+        Will take a message index and then walk back N messages
+        summarizing the scene and pinning it to the context.
+        """
+        
+        creator = get_agent("creator")
+        summarizer = get_agent("summarizer")
+        
+        message_index = self.scene.message_index(message_id)
+        
+        text = self.scene.snapshot(lines=num_messages, start=message_index)
+        
+        summary = await summarizer.summarize(text, method="short")
+        
+        entry_id = util.clean_id(await creator.generate_title(summary))
+        
+        log.debug("summarize_and_pin", message_id=message_id, message_index=message_index, num_messages=num_messages, summary=summary, entry_id=entry_id)
+        
+        await self.scene.world_state_manager.save_world_entry(
+            entry_id,
+            summary,
+            {},
+        )
+        
+        await self.scene.world_state_manager.set_pin(
+            entry_id,
+            active=True,
+        )
+        
+        await self.scene.load_active_pins()
+        self.scene.emit_status()

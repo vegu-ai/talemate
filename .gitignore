@@ -7,10 +7,11 @@
 *_internal*
 talemate_env
 chroma
-scenes
 config.yaml
-!scenes/infinity-quest-dynamic-scenario/assets
-!scenes/infinity-quest-dynamic-scenario/templates
+scenes/
+!scenes/infinity-quest-dynamic-scenario/
+!scenes/infinity-quest-dynamic-scenario/assets/
+!scenes/infinity-quest-dynamic-scenario/templates/
 !scenes/infinity-quest-dynamic-scenario/infinity-quest.json
-!scenes/infinity-quest/assets
+!scenes/infinity-quest/assets/
 !scenes/infinity-quest/infinity-quest.json

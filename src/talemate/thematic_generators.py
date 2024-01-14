@@ -240,6 +240,21 @@ human_names_male = {
     ],
 }
 
+# SCIFI TROPES 
+
+scifi_tropes = [
+    "AI", "Alien", "Android", "Asteroid Belt",
+    "Black Hole", "Colony", "Dark Matter", "Droid",
+    "Dyson Sphere", "Exoplanet", "FTL", "Galaxy",
+    "Generation Ship", "Hyperspace", "Interstellar",
+    "Ion Drive", "Laser Weapon", "Lightspeed", "Meteorite",
+    "Moon", "Nebula", "Neutron Star", "Orbit",
+    "Planet", "Quasar", "Rocket", "Rogue Planet",
+    "Satellite", "Solar", "Time Travel", "Warp Drive",
+    "Wormhole", "Xenobiology", "Xenobotany", "Xenology",
+    "Xenozoology", "Zero Gravity"
+]
+
 # ACTOR NAME COLOR
 
 actor_name_colors = [
@@ -264,18 +279,22 @@ class ThematicGenerator:
         finally:
             random.seed()
 
-    def generate(self, *list_names) -> str:
+    def generate(self,*list_names) -> str:
         """
         Generates a name from a list of lists
         """
+        tags = []
+        delimiter = ", "
         try:
             random.seed(self.seed)
             generation = ""
             for list_name in list_names:
                 fn = getattr(self, list_name)
-                generation += fn() + " "
+                tags.append(fn())
+
+            generation = delimiter.join(tags)
             
-            return generation.strip()
+            return generation
             
         finally:
             random.seed()
@@ -309,6 +328,9 @@ class ThematicGenerator:
     
     def state_of_matter(self):
         return random.choice(states_of_matter)
+    
+    def scifi_trope(self):
+        return random.choice(scifi_tropes)
     
     def human_name_female(self, ethnicity:str=None):
         if not ethnicity:

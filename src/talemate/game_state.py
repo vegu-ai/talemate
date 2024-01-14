@@ -22,7 +22,11 @@ class Goal(pydantic.BaseModel):
 class Instructions(pydantic.BaseModel):
     character: dict[str, str] = pydantic.Field(default_factory=dict)
     
+class Ops(pydantic.BaseModel):
+    run_on_start: bool = False
+    
 class GameState(pydantic.BaseModel):
+    ops: Ops = Ops()
     variables: dict[str,Any] = pydantic.Field(default_factory=dict)
     goals: list[Goal] = pydantic.Field(default_factory=list)
     instructions: Instructions = pydantic.Field(default_factory=Instructions)

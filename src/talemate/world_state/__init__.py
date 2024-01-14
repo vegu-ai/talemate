@@ -157,6 +157,11 @@ class WorldState(BaseModel):
             self.emit()
             return
         
+        # if auto is true, we need to check if agent has automatic update enabled
+        if initial_only and not self.agent.actions["update_world_state"].enabled:
+            self.emit()
+            return
+
         self.emit(status="requested")
         
         try:

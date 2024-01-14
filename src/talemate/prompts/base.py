@@ -315,6 +315,9 @@ class Prompt:
             "thematic_generator": thematic_generators.ThematicGenerator(),
         }
         
+        env.globals["render_template"] = self.render_template
+        env.globals["render_and_request"] = self.render_and_request
+        env.globals["debug"] = lambda *a, **kw: log.debug(*a, **kw)
         env.globals["set_prepared_response"] = self.set_prepared_response
         env.globals["set_prepared_response_random"] = self.set_prepared_response_random
         env.globals["set_eval_response"] = self.set_eval_response
@@ -339,6 +342,7 @@ class Prompt:
         env.globals["count_tokens"] = lambda x: count_tokens(dedupe_string(x, debug=False))
         env.globals["print"] = lambda x: print(x)
         env.globals["emit_status"] = self.emit_status
+        env.globals["emit_system"] = lambda status, message: emit("system", status=status, message=message)
         env.filters["condensed"] = condensed
         ctx.update(self.vars)
         
@@ -392,7 +396,22 @@ class Prompt:
         parsed_text = remove_extra_linebreaks(parsed_text)
         
         return parsed_text
+    
+    
+    def render_template(self, uid, **kwargs) -> 'Prompt':
+        # copy self.vars and update with kwargs
+        vars = self.vars.copy()
+        vars.update(kwargs)
+        return Prompt.get(uid, vars=vars)
+    
+    def render_and_request(self, prompt:'Prompt', kind:str="create") -> str:
         
+        if not self.client:
+            raise ValueError("Prompt has no client set.")
+        
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(prompt.send(self.client, kind=kind))
+            
     async def loop(self, client:any, loop_name:str, kind:str="create"):
         
         loop = self.vars.get(loop_name)
@@ -456,8 +475,8 @@ class Prompt:
         if isinstance(text, list):
             text = "\n".join(text)
         
-        return loop.run_until_complete(world_state.analyze_and_follow_instruction(text, instruction))      
-            
+        return loop.run_until_complete(world_state.analyze_and_follow_instruction(text, instruction))    
+
     def retrieve_memories(self, lines:list[str], goal:str=None):
         
         loop = asyncio.get_event_loop()

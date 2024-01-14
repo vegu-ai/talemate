@@ -35,6 +35,9 @@ class CharacterStateEvent(Event):
     state: str
     character_name: str
 
+@dataclass
+class SceneStateEvent(Event):
+    pass
 
 @dataclass
 class GameLoopBase(Event):

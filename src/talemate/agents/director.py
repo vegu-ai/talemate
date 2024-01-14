@@ -16,13 +16,13 @@ import talemate.automated_action as automated_action
 from talemate.agents.conversation import ConversationAgentEmission
 from .registry import register
 from .base import set_processing, AgentAction, AgentActionConfig, Agent
-from talemate.events import GameLoopActorIterEvent
+from talemate.events import GameLoopActorIterEvent, GameLoopStartEvent, SceneStateEvent
 import talemate.instance as instance
 
 if TYPE_CHECKING:
     from talemate import Actor, Character, Player, Scene
 
-log = structlog.get_logger("talemate")
+log = structlog.get_logger("talemate.agent.director")
 
 @register()
 class DirectorAgent(Agent):
@@ -58,6 +58,25 @@ class DirectorAgent(Agent):
         super().connect(scene)
         talemate.emit.async_signals.get("agent.conversation.before_generate").connect(self.on_conversation_before_generate)
         talemate.emit.async_signals.get("game_loop_actor_iter").connect(self.on_player_dialog)
+        talemate.emit.async_signals.get("scene_init").connect(self.on_scene_init)
+        
+    async def on_scene_init(self, event: SceneStateEvent):
+        """
+        If game state instructions specify to be run at the start of the game loop
+        we will run them here.
+        """
+        
+        if not self.enabled:
+            return
+        
+        if not self.scene.game_state.has_scene_instructions:
+            return
+
+        if not self.scene.game_state.ops.run_on_start:
+            return
+        
+        log.info("on_game_loop_start - running game state instructions")
+        await self.run_gamestate_instructions()
         
     async def on_conversation_before_generate(self, event:ConversationAgentEmission):
         log.info("on_conversation_before_generate", director_enabled=self.enabled)
@@ -132,6 +151,17 @@ class DirectorAgent(Agent):
             self.next_direct_scene = 0
             await self.direct_scene(None, None)
             return True
+        
+    @set_processing
+    async def run_gamestate_instructions(self):
+        """
+        Run game state instructions, if they exist.
+        """
+        
+        if not self.scene.game_state.has_scene_instructions:
+            return
+        
+        await self.direct_scene(None, None)
         
     @set_processing
     async def direct_scene(self, character: Character, prompt:str):
@@ -218,7 +248,6 @@ class DirectorAgent(Agent):
         
         self.scene.context = response.strip()
         self.scene.emit_status()
-        
         
     def inject_prompt_paramters(self, prompt_param: dict, kind: str, agent_function_name: str):
         log.debug("inject_prompt_paramters", prompt_param=prompt_param, kind=kind, agent_function_name=agent_function_name)

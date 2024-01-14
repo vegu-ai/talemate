@@ -47,6 +47,7 @@ __all__ = [
 
 log = structlog.get_logger("talemate")
 
+async_signals.register("scene_init")
 async_signals.register("game_loop_start")
 async_signals.register("game_loop")
 async_signals.register("game_loop_actor_iter")
@@ -705,6 +706,7 @@ class Scene(Emitter):
             "game_loop_start": async_signals.get("game_loop_start"),
             "game_loop_actor_iter": async_signals.get("game_loop_actor_iter"),
             "game_loop_new_message": async_signals.get("game_loop_new_message"),
+            "scene_init": async_signals.get("scene_init"),
         }
 
         self.setup_emitter(scene=self)
@@ -782,6 +784,12 @@ class Scene(Emitter):
     @property
     def world_state_manager(self):
         return WorldStateManager(self)
+    
+    def set_description(self, description:str):
+        self.description = description
+    
+    def set_intro(self, intro:str):
+        self.intro = intro
 
     def connect(self):
         """
@@ -1525,6 +1533,7 @@ class Scene(Emitter):
         if init:
             
             self.game_state.init(self)
+            await self.signals["scene_init"].send(events.SceneStateEvent(scene=self, event_type="scene_init"))
             
             emit("clear_screen", "")
             self.narrator_message(self.get_intro())
@@ -1557,6 +1566,8 @@ class Scene(Emitter):
                 emit("character", item, character=actor.character)
                 if not actor.character.is_player:
                     self.most_recent_ai_actor = actor
+        elif init:
+            await self.world_state.request_update(initial_only=True)  
                     
         # sort self.actors by actor.character.is_player, making is_player the first element
         self.actors.sort(key=lambda x: x.character.is_player, reverse=True)
@@ -1564,6 +1575,7 @@ class Scene(Emitter):
         self.active_actor = None
         self.next_actor = None
         signal_game_loop = True
+        
         
         await self.signals["game_loop_start"].send(events.GameLoopStartEvent(scene=self, event_type="game_loop_start"))
         

@@ -27,7 +27,7 @@
                     </div>
                 </div>
             </div>
-            <v-alert v-else-if="message.type === 'system'" variant="tonal" closable :type="(message.status == 'error'?'error':'info')" class="system-message mb-3"
+            <v-alert v-else-if="message.type === 'system'" variant="tonal" closable :type="message.status || 'info'" class="system-message mb-3"
                 :text="message.text">
             </v-alert>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">

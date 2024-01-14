@@ -1,0 +1,42 @@
+{% set _ = debug("RUNNING GAME INSTRUCTS") -%}
+{% if not game_state.has_var('instr.premise') %}
+{# Generate scenario START #}
+
+    {%- set _ = emit_system("warning", "This is a dynamic scenario generation experiment for Infinity Quest. It will likely require a strong LLM to generate something coherent. GPT-4 or 34B+ if local. Temper your expectations.") -%}
+
+    {#- emit status update to the UX -#}
+    {%- set _ = emit_status("busy", "Generating scenario ... [1/3]") -%}
+
+    {#- thematic tags will be used to randomize generation -#}
+    {%- set tags = thematic_generator.generate("color", "state_of_matter", "scifi_trope") -%}
+    {# set tags = 'solid,meteorite,windy,theory' #}
+
+    {#- generate scenario premise -#}
+    {%- set tmpl__scenario_premise = render_template('generate-scenario-premise', thematic_tags=tags) %}
+    {%- set instr__premise = render_and_request(tmpl__scenario_premise) -%}
+
+
+    {#- generate introductory text -#}
+    {%- set _ = emit_status("busy", "Generating scenario ... [2/3]") -%}
+    {%- set tmpl__scenario_intro = render_template('generate-scenario-intro', premise=instr__premise) %}
+    {%- set instr__intro = "*"+render_and_request(tmpl__scenario_intro)+"*" -%}
+
+    {#- generate win conditions -#}
+    {%- set _ = emit_status("busy", "Generating scenario ... [3/3]") -%}
+    {%- set tmpl__win_conditions = render_template('generate-win-conditions', premise=instr__premise) %}
+    {%- set instr__win_conditions = render_and_request(tmpl__win_conditions) -%}
+
+    {#- emit status update to the UX -#}
+    {%- set status = emit_status("info", "Scenario ready.") -%}
+
+    {# set gamestate variables #}
+    {%- set _ = game_state.set_var("instr.premise", instr__premise, commit=True) -%}
+    {%- set _ = game_state.set_var("instr.intro", instr__intro, commit=True) -%}
+    {%- set _ = game_state.set_var("instr.win_conditions", instr__win_conditions, commit=True) -%}
+
+    {# set scene properties #}
+    {%- set _ = scene.set_intro(instr__intro) -%}
+    {%- set _ = scene.set_description(scene.description+"\n\n"+instr__premise) -%}
+
+{# Generate scenario END #}
+{% endif %}

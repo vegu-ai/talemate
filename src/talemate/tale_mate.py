@@ -940,15 +940,17 @@ class Scene(Emitter):
             
         return messages
     
-    def snapshot(self, lines:int=3, ignore:list=None) -> str:
+    def snapshot(self, lines:int=3, ignore:list=None, start:int=None) -> str:
         """
         Returns a snapshot of the scene history
         """
         
         if not ignore:
-            ignore = [ReinforcementMessage]
+            ignore = [ReinforcementMessage, DirectorMessage]
         
-        return "\n".join([str(message) for message in self.history[-lines:] if not isinstance(message, tuple(ignore))])
+        segment = self.history[-lines:] if not start else self.history[:-start][-lines:]
+        
+        return "\n".join([str(message) for message in segment if not isinstance(message, tuple(ignore))])
 
     def push_archive(self, entry: data_objects.ArchiveEntry):
         
@@ -1566,6 +1568,7 @@ class Scene(Emitter):
                 emit("character", item, character=actor.character)
                 if not actor.character.is_player:
                     self.most_recent_ai_actor = actor
+            self.world_state.emit()
         elif init:
             await self.world_state.request_update(initial_only=True)  
                     
@@ -1575,6 +1578,7 @@ class Scene(Emitter):
         self.active_actor = None
         self.next_actor = None
         signal_game_loop = True
+        
         
         
         await self.signals["game_loop_start"].send(events.GameLoopStartEvent(scene=self, event_type="game_loop_start"))

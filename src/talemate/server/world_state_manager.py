@@ -20,7 +20,7 @@ class UpdateCharacterDetailPayload(pydantic.BaseModel):
 class SetCharacterDetailReinforcementPayload(pydantic.BaseModel):
     name: str
     question: str
-    instructions: str = None
+    instructions: Union[str, None] = None
     interval: int = 10
     answer: str = ""
     update_state: bool = False
@@ -40,7 +40,7 @@ class DeleteWorldEntryPayload(pydantic.BaseModel):
 
 class SetWorldEntryReinforcementPayload(pydantic.BaseModel):
     question: str
-    instructions: str = None
+    instructions: Union[str, None] = None
     interval: int = 10
     answer: str = ""
     update_state: bool = False

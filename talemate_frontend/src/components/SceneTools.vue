@@ -370,7 +370,6 @@ export default {
                 let template = _templates[key];
                 templates.push(template);
             }
-            console.log("TEMPLATES", templates)
             return templates;
         },
 
@@ -385,9 +384,7 @@ export default {
 
         worldStateTemplateFavoritesForNPCs() {
             let favorites = [];
-            console.log("WHAT IS GOING ON")
             for (let template of this.worldStateTemplates()) {
-                console.log("template", template)
                 if(template.favorite && (template.state_type == "npc" || template.state_type == "character")) {
                     favorites.push(template);
                 }

@@ -16,7 +16,7 @@ game:
           description: Long term and short term goals
           favorite: true
           insert: conversation-context
-          instructions: Create a long term goal and two short term goals for {character_name}
+          instructions: Create a long term goal and two short term goals for {character_name}. Your response must only be the long terms and two short term goals.
           interval: 20
           name: Goals
           query: Goals

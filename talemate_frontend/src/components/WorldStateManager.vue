@@ -216,6 +216,28 @@
                                             <v-row>
                                                 <v-col cols="4">
                                                     <v-list>
+
+                                                        <!-- add from template -->
+                                                        <div v-if="characterStateTemplatesAvailable()">
+                                                            <v-list-item density="compact" @click.stop="showCharacterStateTemplates = !showCharacterStateTemplates" prepend-icon="mdi-cube-scan" color="info">
+                                                                <v-list-item-title>
+                                                                    Templates
+                                                                    <v-progress-circular class="ml-1 mr-3" size="14"  indeterminate
+                                                                    color="primary" v-if="characterStateTemplateBusy"></v-progress-circular>   
+                                                                </v-list-item-title>
+                                                            </v-list-item>
+                                                            <div v-if="showCharacterStateTemplates">
+                                                                <v-list-item density="compact" @click.stop="addCharacterStateFromTemplate(template, characterDetails.name)" v-for="(template, index) in characterStateTemplates()" :key="index" prepend-icon="mdi-cube-scan" :disabled="characterStateTemplateBusy">
+                                                                    <v-list-item-title>{{ template.name }}</v-list-item-title>
+                                                                    <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
+                                                                </v-list-item>
+                                                            </div>
+                                                        </div>
+
+                                                        <v-divider></v-divider>
+
+                                                        <!-- existing states list -->
+
                                                         <v-list-item v-for="(value, detail) in filteredCharacterStateReinforcers()" :key="detail" @click="selectedCharacterStateReinforcer=detail">
                                                             <v-list-item-title class="text-caption">{{ detail }}</v-list-item-title>
                                                             <v-list-item-subtitle>
@@ -590,6 +612,9 @@ export default {
                 {"title": "All context", "value": "all-context", "props": {"subtitle":"Insert into all context"}},
             ],
             deferedNavigation: null,
+            templates: {
+                state_reinforcement: {},
+            },
 
             // characters
             selectedCharacter: null,
@@ -629,6 +654,9 @@ export default {
 
             characterDetailReinforceInterval: 10,
             characterDetailReinforceIntructions: "",
+
+            characterStateTemplateBusy: false,
+            showCharacterStateTemplates: false,
 
             characterList: {
                 characters: [],
@@ -698,7 +726,6 @@ export default {
             }
         },
         characterDetails() {
-            console.log("character details changed", this.characterDetails, this.deferedNavigation)
             if(this.deferedNavigation !== null) {
                 if(this.deferedNavigation[0] === 'characters') {
                     this.selectedCharacter = this.deferedNavigation[1];
@@ -725,6 +752,7 @@ export default {
             entryHasPin: this.entryHasPin,
             selectPin: this.selectPin,
             loadContextDBEntry: this.loadContextDBEntry,
+            requestTemplates: this.requestTemplates,
         }
     },
     inject: [
@@ -740,8 +768,7 @@ export default {
             this.reset();
             this.requestCharacterList();
             this.requestPins();
-
-            console.log("showing world state manager", tab, sub1, sub2, sub3)
+            this.requestTemplates();
 
             this.dialog = true;
             if(tab) {
@@ -798,6 +825,8 @@ export default {
             this.characterDetailDirty = false;
             this.characterDescriptionDirty = false;
             this.characterStateReinforcerDirty = false;
+            this.characterStateTemplateBusy = false;
+            this.showCharacterStateTemplates = false;
             this.contextDBCurrentQuery = null;
             this.contextDBQuery = null;
             this.contextDBQueryMetaKey = null;
@@ -832,12 +861,16 @@ export default {
             }));
         },
 
-        loadCharacter(name) {
+        requestCharacter(name) {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'get_character_details',
                 name: name,
             }));
+        },
+
+        loadCharacter(name) {
+            this.requestCharacter(name);
             this.selectedCharacterPage = 'description';
             this.selectedCharacter = name;
         },
@@ -971,6 +1004,28 @@ export default {
         },
 
         // Character state reinforcement
+
+        characterStateTemplatesAvailable() {
+            for(let template in this.templates.state_reinforcement) {
+                if(this.templates.state_reinforcement[template].state_type == "character" || this.templates.state_reinforcement[template].state_type == "npc" || this.templates.state_reinforcement[template].state_type == "player") {
+                    return true;
+                }
+            }
+        },
+
+        characterStateTemplates() {
+            return Object.values(this.templates.state_reinforcement).filter(template => {
+                return template.state_type == "character" || template.state_type == "npc" || template.state_type == "player";
+            });
+        },
+
+        addCharacterStateFromTemplate(template, characterName) {
+            this.characterStateTemplateBusy = true;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'interact',
+                text: '!apply_world_state_template:'+template.name + ':state_reinforcement:' + characterName,
+            }));
+        },
 
         filteredCharacterStateReinforcers() {
             if(this.characterStateReinforcerSearch === null) {
@@ -1298,14 +1353,35 @@ export default {
 
         // websocket
 
+        requestTemplates: function () {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'get_templates',
+            }));
+        },
+
         handleMessage(message) {
+
+            if(message.type === 'status' && message.status === 'success' && message.message === 'Auto state added.') {
+                console.log("auto state added", message);
+                if(this.selectedCharacter) {
+                    if(message.data.reinforcement) {
+                        this.characterDetails.reinforcements[message.data.reinforcement.question] = message.data.reinforcement;
+                        this.selectedCharacterStateReinforcer = message.data.reinforcement.question;
+                    }
+                    //this.requestCharacter(this.selectedCharacter); 
+                    
+                }
+                this.characterStateTemplateBusy = false;
+                return;
+            }
+
             if(message.type !== 'world_state_manager') {
                 return;
             }
 
             if(message.action === 'character_list') {
                 this.characterList = message.data;
-                console.log(this.characterList);
             }
             else if(message.action === 'character_details') {
                 this.characterDetails = message.data;
@@ -1350,7 +1426,6 @@ export default {
             }
             else if(message.action === 'context_db_result') {
                 this.contextDB = message.data;
-                console.log({contextDB: this.contextDB});
                 this.contextDBCurrentQuery = this.contextDBQuery;
             }
             else if(message.action === 'context_db_deleted') {
@@ -1362,9 +1437,13 @@ export default {
                     }
                 }
             }
+            else if(message.action == 'templates') {
+                this.templates = message.data;
+            }
             else if(message.action === 'operation_done') {
                 this.isBusy = false;
             }
+
         },
     },
     created() {

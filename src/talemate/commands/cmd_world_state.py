@@ -240,10 +240,17 @@ class CmdApplyWorldStateTemplate(TalemateCommand):
             template, character_name=character_name, run_immediately=True
         )
         
+        response_data = {
+            "template_name": template_name,
+            "template_type": template_type,
+            "reinforcement": reinforcement.model_dump() if reinforcement else None,
+            "character_name": character_name,
+        }
+        
         if reinforcement is None:
-            emit("status", message="State already tracked.", status="info")
+            emit("status", message="State already tracked.", status="info", data=response_data)
         else:
-            emit("status", message="Auto state added.", status="success")
+            emit("status", message="Auto state added.", status="success", data=response_data)
 
 @register
 class CmdSummarizeAndPin(TalemateCommand):

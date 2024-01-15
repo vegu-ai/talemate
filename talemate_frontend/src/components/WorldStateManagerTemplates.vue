@@ -175,6 +175,7 @@ export default {
                 { "title": 'All characters', "value": 'character' },
                 { "title": 'Non-player characters', "value": 'npc' },
                 { "title": 'Player character', "value": 'player' },
+                { "title": 'World', "value": 'world'},
             ],
             baseTemplate: {
                 state_reinforcement: {
@@ -210,6 +211,7 @@ export default {
         'openCharacterSheet',
         'characterSheet',
         'isInputDisabled',
+        'requestTemplates',
     ],
     methods: {
         validateTemplateName(value) {
@@ -300,13 +302,6 @@ export default {
             }));
         },
 
-        requestTemplates: function () {
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'get_templates',
-            }));
-        },
-
         // responses
         handleMessage(message) {
             if (message.type !== 'world_state_manager') {
@@ -315,7 +310,6 @@ export default {
 
             if (message.action == 'templates') {
                 this.templates = message.data;
-                console.log("TEMPLATES", this.templates)
             } else if (message.action == 'template_saved') {
                 this.dirty = false;
                 this.requestTemplates();

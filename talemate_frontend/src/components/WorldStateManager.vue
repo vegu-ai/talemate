@@ -421,7 +421,7 @@
                                                     @update:model-value="queueUpdateContextDBEntry(entry)"
                                                 ></v-textarea>
                                             </td>
-                                            <td>
+                                            <td class="text-center">
                                                 <v-tooltip :text="entryHasPin(entry.id) ? 'Manage pin' : 'Add pin'">
                                                     <template v-slot:activator="{ props }">
                                                         <v-btn  v-bind="props" size="x-small" rounded="sm" variant="text" v-if="entryIsPinned(entry.id)" color="success" icon @click.stop="selectPin(entry.id)"><v-icon>mdi-pin</v-icon></v-btn>
@@ -720,6 +720,11 @@ export default {
     provide() {
         return {
             insertionModes: this.insertionModes,
+            pins: this.pins,
+            addPin: this.addPin,
+            entryHasPin: this.entryHasPin,
+            selectPin: this.selectPin,
+            loadContextDBEntry: this.loadContextDBEntry,
         }
     },
     inject: [

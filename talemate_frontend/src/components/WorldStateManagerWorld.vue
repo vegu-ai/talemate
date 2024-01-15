@@ -78,19 +78,29 @@
     
                             </v-card-text>
                             <v-card-actions>
-                                <div v-if="deleteConfirm===false">
+                                <span v-if="deleteConfirm===false">
                                     <v-btn rounded="sm" prepend-icon="mdi-delete" color="error" variant="text" @click.stop="deleteConfirm=true" >
                                         Remove entry
                                     </v-btn>
-                                </div>
-                                <div v-else>
+                                </span>
+                                <span v-else>
                                     <v-btn rounded="sm" prepend-icon="mdi-delete" @click.stop="removeEntry"  color="error" variant="text">
                                         Confirm removal
                                     </v-btn>
                                     <v-btn class="ml-1" rounded="sm" prepend-icon="mdi-cancel" @click.stop="deleteConfirm=false" color="info" variant="text">
                                         Cancel
                                     </v-btn>
-                                </div>
+                                </span>
+                                <v-spacer></v-spacer>
+                                <v-btn variant="text" color="primary" @click.stop="loadContextDBEntry(entry.id)" prepend-icon="mdi-book-open-page-variant">View in context DB</v-btn>
+                                
+                                <v-btn v-if="!entryHasPin(entry.id)" rounded="sm" prepend-icon="mdi-pin" @click.stop="addPin(entry.id)" color="primary" variant="text">
+                                    Create Pin
+                                </v-btn>
+                                <v-btn v-else rounded="sm" prepend-icon="mdi-pin" @click.stop="selectPin(entry.id)" color="primary" variant="text">
+                                    Manage Pin
+                                </v-btn>
+                               
                             </v-card-actions>
                         </v-card>
                     </v-col>
@@ -270,6 +280,11 @@ export default {
         'characterSheet',
         'isInputDisabled',
         'insertionModes',
+        'pins',
+        'addPin',
+        'entryHasPin',
+        'selectPin',
+        'loadContextDBEntry',
     ],
     watch:{
         entries() {

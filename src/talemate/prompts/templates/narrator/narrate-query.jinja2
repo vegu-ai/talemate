@@ -17,6 +17,8 @@ When evaluating both story and context, story is more important. You can fill in
 Respect the scene progression and answer in the context of line {{ len(scene.context_history(budget=max_tokens-300)) }}.
 
 Use your imagination to fill in gaps in order to answer the question in a confident and decisive manner. Avoid uncertainty and vagueness.
+
+Use an informal and colloquial register with a conversational tone. Overall, the narrative is informal, conversational, natural, and spontaneous, with a sense of immediacy.
 Question: {{ query }}
 {% else -%}
 Instruction: {{ query }}

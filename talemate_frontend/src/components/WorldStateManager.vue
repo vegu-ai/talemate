@@ -92,11 +92,18 @@
                                         <!-- CHARACTER ATTRIBUTES -->
 
                                         <div v-else-if="selectedCharacterPage === 'attributes'">
-                                            <v-toolbar floating density="compact" class="mb-2" color="grey-darken-4">
-                                                <v-text-field v-model="characterAttributeSearch" label="Filter attributes" append-inner-icon="mdi-magnify" clearable single-line hide-details density="compact" variant="underlined" class="ml-1 mb-1" @update:modelValue="autoSelectFilteredAttribute"></v-text-field>
-                                                <v-spacer></v-spacer>
-                                                <v-text-field v-model="newCharacterAttributeName" label="New attribute" append-inner-icon="mdi-plus" class="mr-1 mb-1" variant="underlined"  single-line hide-details density="compact" @keyup.enter="handleNewCharacterAttribute"></v-text-field>
-                                            </v-toolbar>
+                                            <v-row floating  color="grey-darken-5">
+                                                <v-col cols="3">
+                                                    <v-text-field v-model="characterAttributeSearch" label="Filter attributes" append-inner-icon="mdi-magnify" clearable density="compact" variant="underlined" class="ml-1 mb-1" @update:modelValue="autoSelectFilteredAttribute"></v-text-field>
+
+                                                </v-col>
+                                                <v-col cols="3"></v-col>
+                                                <v-col cols="2"></v-col>
+                                                <v-col cols="4">
+                                                    <v-text-field v-model="newCharacterAttributeName" label="New attribute" append-inner-icon="mdi-plus" class="mr-1 mb-1" variant="underlined" density="compact" @keyup.enter="handleNewCharacterAttribute" hint="Attribute name"></v-text-field>
+                                                    
+                                                </v-col>
+                                            </v-row>
                                             <v-divider></v-divider>
                                             <v-row>
                                                 <v-col cols="4">
@@ -141,11 +148,16 @@
                                         <!-- CHARACTER DETAILS -->
 
                                         <div v-else-if="selectedCharacterPage === 'details'">
-                                            <v-toolbar floating density="compact" class="mb-2" color="grey-darken-4">
-                                                <v-text-field v-model="characterDetailSearch" label="Filter details" append-inner-icon="mdi-magnify" clearable single-line hide-details density="compact" variant="underlined" class="ml-1 mb-1" @update:modelValue="autoSelectFilteredDetail"></v-text-field>
-                                                <v-spacer></v-spacer>
-                                                <v-text-field v-model="newCharacterDetailName" label="New detail" append-inner-icon="mdi-plus" class="mr-1 mb-1" variant="underlined"  single-line hide-details density="compact" @keyup.enter="handleNewCharacterDetail"></v-text-field>
-                                            </v-toolbar>
+                                            <v-row floating  color="grey-darken-5">
+                                                <v-col cols="3">
+                                                    <v-text-field v-model="characterDetailSearch" label="Filter details" append-inner-icon="mdi-magnify" clearable density="compact" variant="underlined" class="ml-1 mb-1" @update:modelValue="autoSelectFilteredDetail"></v-text-field>
+                                                </v-col>
+                                                <v-col cols="3"></v-col>
+                                                <v-col cols="2"></v-col>
+                                                <v-col cols="4">
+                                                    <v-text-field v-model="newCharacterDetailName" label="New detail" append-inner-icon="mdi-plus" class="mr-1 mb-1" variant="underlined"  density="compact" @keyup.enter="handleNewCharacterDetail" hint="Descriptive name or question."></v-text-field>
+                                                </v-col>
+                                            </v-row>
                                             <v-divider></v-divider>
                                             <v-row>
                                                 <v-col cols="4">
@@ -207,11 +219,18 @@
                                         <!-- CHARACTER STATE REINFORCERS -->
 
                                         <div v-else-if="selectedCharacterPage === 'reinforce'">
-                                            <v-toolbar floating density="compact" class="mb-2" color="grey-darken-4">
-                                                <v-text-field v-model="characterStateReinforcerSearch" label="Filter states" append-inner-icon="mdi-magnify" clearable single-line hide-details density="compact" variant="underlined" class="ml-1 mb-1" @update:modelValue="autoSelectFilteredStateReinforcer"></v-text-field>
-                                                <v-spacer></v-spacer>
-                                                <v-text-field v-model="newCharacterStateReinforcerQuestion" label="New state" append-inner-icon="mdi-plus" class="mr-1 mb-1" variant="underlined"  single-line hide-details density="compact" @keyup.enter="handleNewCharacterStateReinforcer"></v-text-field>
-                                            </v-toolbar>
+
+                                            <v-row floating  color="grey-darken-5">
+                                                <v-col cols="3">
+                                                    <v-text-field v-model="characterStateReinforcerSearch" label="Filter states" append-inner-icon="mdi-magnify" clearable  density="compact" variant="underlined" class="ml-1 mb-1" @update:modelValue="autoSelectFilteredStateReinforcer"></v-text-field>
+
+                                                </v-col>
+                                                <v-col cols="3"></v-col>
+                                                <v-col cols="2"></v-col>
+                                                <v-col cols="4">
+                                                    <v-text-field v-model="newCharacterStateReinforcerQuestion" label="New state" append-inner-icon="mdi-plus" class="mr-1 mb-1" variant="underlined" density="compact" @keyup.enter="handleNewCharacterStateReinforcer" hint="Question or attribute name."></v-text-field>
+                                                </v-col>
+                                            </v-row>
                                             <v-divider></v-divider>
                                             <v-row>
                                                 <v-col cols="4">

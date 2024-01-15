@@ -232,9 +232,8 @@
                                                                     <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
                                                                 </v-list-item>
                                                             </div>
+                                                            <v-divider></v-divider>
                                                         </div>
-
-                                                        <v-divider></v-divider>
 
                                                         <!-- existing states list -->
 

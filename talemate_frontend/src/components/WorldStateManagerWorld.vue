@@ -73,6 +73,14 @@
                                             auto-grow
                                             rows="5">
                                         </v-textarea>
+                                        <v-checkbox v-model="entry.meta['pin_only']" 
+                                        label="Include only when pinned" 
+                                        :hint="(
+                                            entry.meta['pin_only'] ? 
+                                            'This entry will only be included when pinned and never be included via automatic relevancy matching.' :
+                                            'This entry may be included via automatic relevancy matching.'
+                                        )"
+                                        @change="queueSaveEntry"></v-checkbox>
                                     </v-col>
                                 </v-row>
     

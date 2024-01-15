@@ -319,7 +319,7 @@ class WorldStateManager:
                 meta=meta,
                 id=entry_id
             )
-            
+        
         
         await self.memory_agent.add_many([
             {

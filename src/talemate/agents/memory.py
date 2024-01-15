@@ -553,6 +553,11 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
     def _get(self, text, character=None, limit:int=15, **kwargs):
         where = {}
+        
+        # this doesn't work because chromadb currently doesn't match
+        # non existing fields with $ne (or so it seems)
+        # where.setdefault("$and", [{"pin_only": {"$ne": True}}])
+        
         where.setdefault("$and", [])
         
         character_filtered = False
@@ -593,6 +598,10 @@ class ChromaDBMemoryAgent(MemoryAgent):
             doc = _results["documents"][0][i]
             meta = _results["metadatas"][0][i]
             ts = meta.get("ts")
+            
+            # skip pin_only entries
+            if meta.get("pin_only", False):
+                continue
             
             if distance < max_distance:
                 

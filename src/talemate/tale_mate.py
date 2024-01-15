@@ -959,10 +959,12 @@ class Scene(Emitter):
             
         collected = []
         
-        for idx in range(len(self.history) - 1, -1, -1):
-            if isinstance(self.history[idx], tuple(ignore)):
+        segment = self.history[-lines:] if not start else self.history[:start+1][-lines:]
+        
+        for idx in range(len(segment) - 1, -1, -1):
+            if isinstance(segment[idx], tuple(ignore)):
                 continue
-            collected.insert(0, self.history[idx])
+            collected.insert(0, segment[idx])
             if len(collected) >= lines:
                 break
         

@@ -1,13 +1,13 @@
-import asyncio
 import random
+import structlog
 
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
-from talemate.util import colored_text, wrap_text
-from talemate.scene_message import NarratorMessage
 from talemate.emit import wait_for_input, emit
 from talemate.instance import get_agent
 import talemate.instance as instance
+
+log = structlog.get_logger("talemate.cmd.world_state")
 
 __all__ = [
     "CmdWorldState",

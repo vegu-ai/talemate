@@ -534,7 +534,8 @@ class ChromaDBMemoryAgent(MemoryAgent):
             self.memory_tracker.setdefault(character, 0)
             self.memory_tracker[character] += 1
             meta["source"] = source
-            meta["session"] = scene.memory_session_id
+            if not meta.get("session"):
+                meta["session"] = scene.memory_session_id
             metadatas.append(meta)
             uid = obj.get("id", f"{character}-{self.memory_tracker[character]}")
             ids.append(uid)
@@ -604,14 +605,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 continue
             
             if distance < max_distance:
-                
-                try:
-                    #log.debug("chromadb agent get", ts=ts, scene_ts=self.scene.ts)
-                    date_prefix = util.iso8601_diff_to_human(ts, self.scene.ts)
-                except Exception as e:
-                    log.error("chromadb agent", error="failed to get date prefix", details=e, ts=ts, scene_ts=self.scene.ts)
-                    date_prefix = None
-                
+                date_prefix = self.convert_ts_to_date_prefix(ts)
                 raw = doc
                 
                 if date_prefix:
@@ -630,11 +624,24 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         return results
 
+
+    def convert_ts_to_date_prefix(self, ts):
+        if not ts:
+            return None
+        try:
+            return util.iso8601_diff_to_human(ts, self.scene.ts)
+        except Exception as e:
+            log.error("chromadb agent", error="failed to get date prefix", details=e, ts=ts, scene_ts=self.scene.ts)
+            return None
+
     def _get_document(self, id) -> dict:
         result = self.db.get(ids=[id] if isinstance(id, str) else id)
         documents = {}
         
         for idx, doc in enumerate(result["documents"]):
+            date_prefix = self.convert_ts_to_date_prefix(result["metadatas"][idx].get("ts"))
+            if date_prefix:
+                doc = f"{date_prefix}: {doc}"
             documents[result["ids"][idx]] = MemoryDocument(doc, result["metadatas"][idx], result["ids"][idx], doc)
             
         return documents

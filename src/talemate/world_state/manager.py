@@ -53,6 +53,7 @@ class History(pydantic.BaseModel):
 class AnnotatedContextPin(pydantic.BaseModel):
     pin: ContextPin
     text: str
+    time_aware_text: str
     
 class ContextPins(pydantic.BaseModel):
     pins: dict[str, AnnotatedContextPin] = []
@@ -181,10 +182,12 @@ class WorldStateManager:
             
             if pin.entry_id not in documents:
                 text = ""
+                time_aware_text = ""
             else:
                 text = documents[pin.entry_id].raw
+                time_aware_text = str(documents[pin.entry_id])
                 
-            annotated_pin = AnnotatedContextPin(pin=pin, text=text)
+            annotated_pin = AnnotatedContextPin(pin=pin, text=text, time_aware_text=time_aware_text)
             
             _pins[pin.entry_id] = annotated_pin
             
@@ -368,7 +371,19 @@ class WorldStateManager:
         )
         
         self.world_state.pins[entry_id] = pin
+    
+    async def remove_all_empty_pins(self):
         
+        """
+        Removes all pins that come back with empty `text` attributes from get_pins.
+        """
+        
+        pins = await self.get_pins()
+        
+        for pin in pins.pins.values():
+            if not pin.text:
+                await self.remove_pin(pin.pin.entry_id)
+      
     async def remove_pin(self, entry_id:str):
         """
         Removes an existing pin from a context entry using its identifier.

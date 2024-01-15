@@ -580,12 +580,24 @@ class WorldStateAgent(Agent):
         
         entry_id = util.clean_id(await creator.generate_title(summary))
         
-        log.debug("summarize_and_pin", message_id=message_id, message_index=message_index, num_messages=num_messages, summary=summary, entry_id=entry_id)
+        ts = self.scene.ts
+        
+        log.debug(
+            "summarize_and_pin",
+            message_id=message_id,
+            message_index=message_index,
+            num_messages=num_messages, 
+            summary=summary,
+            entry_id=entry_id,
+            ts=ts,
+        )
         
         await self.scene.world_state_manager.save_world_entry(
             entry_id,
             summary,
-            {},
+            {
+                "ts": ts,
+            },
         )
         
         await self.scene.world_state_manager.set_pin(

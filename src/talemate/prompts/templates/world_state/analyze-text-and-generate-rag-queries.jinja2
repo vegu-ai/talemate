@@ -1,9 +1,10 @@
 {% block rendered_context -%}
 <|SECTION:CONTEXT|>
 {% include "extra-context.jinja2" %}
-{{ text }}
 <|CLOSE_SECTION|>
 {% endblock -%}
+<|SECTION:SCENE|>
+{{ text }}
 <|SECTION:TASK|>
 You have access to a vector database to retrieve relevant data to gather more established context for the continuation of this conversation. If a character is asking about a state, location or information about an item or another character, make sure to include queries that help gather context for this.
 

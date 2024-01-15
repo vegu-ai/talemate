@@ -72,8 +72,9 @@ Always contain dialogue in quotation marks. For example, {{ talking_character.na
 {# END CHARACTER SPECIFIC CONVERSATION REINFORCEMENTS #}
 
 {# ACTIVE PINS #}
+<|SECTION:IMPORTANT CONTEXT|>
 {%- for pin in scene.active_pins %}
-IMPORTANT: {{ pin.text|condensed }}
+{{ pin.time_aware_text|condensed }}
 
 {% endfor %}
 {# END ACTIVE PINS #}

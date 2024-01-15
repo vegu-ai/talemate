@@ -896,17 +896,20 @@ class Scene(Emitter):
                 events.GameLoopNewMessageEvent(scene=self, event_type="game_loop_new_message", message=message)
             ))
 
-    def pop_history(self, typ:str, source:str, all:bool=False):
+    def pop_history(self, typ:str, source:str, all:bool=False, max_iterations:int=None):
         
         """
         Removes the last message from the history that matches the given typ and source
         """
-        
+        iterations = 0
         for idx in range(len(self.history) - 1, -1, -1):
             if self.history[idx].typ == typ and self.history[idx].source == source:
                 self.history.pop(idx)
                 if not all:
                     return
+            iterations += 1
+            if max_iterations and iterations >= max_iterations:
+                break
                 
     def find_message(self, typ:str, source:str,  max_iterations:int=100):
         

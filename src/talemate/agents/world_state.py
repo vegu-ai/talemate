@@ -470,8 +470,9 @@ class WorldStateAgent(Agent):
         
         source = f"{reinforcement.question}:{reinforcement.character if reinforcement.character else ''}"
         
-        # remove previous reinforcement message with same question
-        self.scene.pop_history(typ="reinforcement", source=source)
+        # remove any recent previous reinforcement message with same question
+        # to avoid overloading the near history with reinforcement messages
+        self.scene.pop_history(typ="reinforcement", source=source, max_iterations=10)
         
         if reinforcement.insert == "sequential":
             # insert the reinforcement message at the current position

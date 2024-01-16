@@ -408,6 +408,12 @@ class WorldState(BaseModel):
         Arguments:
         - idx: The index of the reinforcement to remove.
         """
+        
+        # find all instances of the reinforcement in the scene history
+        # and remove them
+        source=f"{self.reinforce[idx].question}:{self.reinforce[idx].character if self.reinforce[idx].character else ''}"
+        self.agent.scene.pop_history(typ="reinforcement", source=source, all=True)
+        
         self.reinforce.pop(idx)
     
     def render(self):

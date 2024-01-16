@@ -225,6 +225,7 @@ export default {
         'openCharacterSheet',
         'characterSheet',
         'isInputDisabled',
+        'formatWorldStateTemplateString',
     ],
 
     methods: {
@@ -287,7 +288,7 @@ export default {
             // by checking the `character` and `question` properties of the reinforce object
 
             // replace {character_name} with {name} in question
-            question = question.replace("{character_name}", name);
+            question = this.formatWorldStateTemplateString(question, name);
 
             for(let state of this.reinforce) {
                 if(state.character === name && state.question === question) {
@@ -313,6 +314,7 @@ export default {
         trackedWorldState(question) {
             // cycle through reinforce and return true if the world has a tracked state for this question
             // by checking the `character` property of the reinforce object
+            question = this.formatWorldStateTemplateString(question, "the characters");
             for(let state of this.reinforce) {
                 if(state.character === null && state.question === question) {
                     return state;

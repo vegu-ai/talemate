@@ -150,22 +150,47 @@
                             </v-alert>
                         </div>
                         <div v-else>
-                            <div v-for="npc_name in npc_characters" :key="npc_name" :prepend-icon="'mdi-account' + (npc_name == 'player' ? '-outline' : '')">
-                                <v-list-item v-for="(template, index) in worldStateTemplateFavoritesForNPCs()" :key="index" 
-                                    @click="handleClickWorldStateTemplate(template, npc_name)" 
-                                    prepend-icon="mdi-image-auto-adjust">
-                                    <div v-if="getTrackedCharacterState(npc_name, template.query) !== null">
-                                        <v-list-item-title>{{ template.name }} ({{ npc_name }})</v-list-item-title>
-                                        <v-list-item-subtitle>
-                                            <v-chip size="x-small" label variant="outlined" prepend-icon="mdi-check-circle-outline" color="success">Active</v-chip>
-                                        </v-list-item-subtitle>
-                                    </div>
-                                    <div v-else>
-                                        <v-list-item-title>{{ template.name }} ({{ npc_name }})</v-list-item-title>
-                                        <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
-                                    </div>
+
+                            <!-- character templates -->
+
+                            <div v-for="npc_name in npc_characters" :key="npc_name">
+                                <v-list-item v-for="(template, index) in worldStateTemplateFavoritesForNPCs()" :key="index"
+                                    @click="handleClickWorldStateTemplate(template, npc_name)"
+                                    prepend-icon="mdi-account">
+                                    <template v-slot:append>
+                                        <v-icon v-if="getTrackedCharacterState(npc_name, template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
+                                    </template>
+                                    <v-list-item-title>{{ template.name }} ({{ npc_name }})</v-list-item-title>
+                                    <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
                                 </v-list-item>
                             </div>
+
+                            <!-- player templates -->
+
+                            <v-list-item v-for="(template, index) in worldStateTemplateFavoritesForPlayer()" :key="'player' + index"
+                                @click="handleClickWorldStateTemplate(template, getPlayerCharacterName())"
+                                prepend-icon="mdi-account-tie">
+                                <template v-slot:append>
+                                    <v-icon v-if="getTrackedCharacterState(getPlayerCharacterName(), template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
+                                </template>
+                                <v-list-item-title>{{ template.name }} ({{ getPlayerCharacterName() }})</v-list-item-title>
+                                <v-list-item-subtitle>
+                                    {{ template.description }}
+                                </v-list-item-subtitle>
+                            </v-list-item>
+
+                            <!-- world entry templates -->
+
+                            <v-list-item v-for="(template, index) in worldStateTemplateFavoritesForWorldEntry()" :key="'worldEntry' + index"
+                                @click="handleClickWorldStateTemplate(template)"
+                                prepend-icon="mdi-earth">
+                                <template v-slot:append>
+                                    <v-icon v-if="getTrackedWorldState(template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
+                                </template>
+                                <v-list-item-title>{{ template.name }}</v-list-item-title>
+                                <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
+                            </v-list-item>
+
                         </div>
 
                         <v-list-subheader>World State Tools</v-list-subheader>
@@ -318,6 +343,7 @@ export default {
         'creativeEditor',
         'appConfig',
         'getTrackedCharacterState',
+        'getTrackedWorldState',
         'getPlayerCharacterName',
         'formatWorldStateTemplateString',
     ],
@@ -350,16 +376,26 @@ export default {
         handleClickWorldStateTemplate(template, character_name) {
 
             let query = this.formatWorldStateTemplateString(template.query, character_name);
-            let stateActive = this.getTrackedCharacterState(character_name, query) !== null;
 
             // if state is active, clicking should open the world state manager
             // otherwise, clicking should apply the template
 
-            if (stateActive) {
-                this.openWorldStateManager("characters", character_name, "reinforce", query);
+            if(character_name) {
+                let stateActive = this.getTrackedCharacterState(character_name, query) !== null;
+                if (stateActive) {
+                    this.openWorldStateManager("characters", character_name, "reinforce", query);
+                } else {
+                    this.sendHotButtonMessage('!apply_world_state_template:' + template.name + ':state_reinforcement:' + character_name);
+                }
             } else {
-                this.sendHotButtonMessage('!apply_world_state_template:' + template.name + ':state_reinforcement:' + character_name);
+                let stateActive = this.getTrackedWorldState(query) !== null;
+                if (stateActive) {
+                    this.openWorldStateManager("world", "states", query);
+                } else {
+                    this.sendHotButtonMessage('!apply_world_state_template:' + template.name + ':state_reinforcement');
+                }
             }
+
         },
 
         worldStateTemplates: function() {
@@ -382,7 +418,24 @@ export default {
             return false;
         },
 
+        worldStateTemplateFavoritesForWorldEntry() {
+
+            // 'world' entries
+
+            let favorites = [];
+            for (let template of this.worldStateTemplates()) {
+                if(template.favorite && template.state_type == "world") {
+                    favorites.push(template);
+                }
+            }
+            return favorites;
+
+        },
+
         worldStateTemplateFavoritesForNPCs() {
+
+            // npc templates
+
             let favorites = [];
             for (let template of this.worldStateTemplates()) {
                 if(template.favorite && (template.state_type == "npc" || template.state_type == "character")) {
@@ -393,6 +446,9 @@ export default {
         },
 
         worldStateTemplateFavoritesForPlayer() {
+
+            // player templates
+
             let favorites = [];
             for (let template of this.worldStateTemplates()) {
                 if(template.favorite && template.state_type == "player" || template.state_type == "character") {

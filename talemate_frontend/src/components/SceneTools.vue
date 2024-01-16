@@ -1,4 +1,18 @@
 <template>
+
+    <v-sheet color="transparent" v-if="isEnvironment('scene')" class="mb-2">
+        <v-spacer></v-spacer>
+        <!-- quick settings as v-chips -->
+        <v-chip size="x-small" v-for="(option, index) in quickSettings" :key="index" @click="toggleQuickSetting(option.value)"
+            :color="option.status() ? 'success' : 'grey'"
+            :disabled="isInputDisabled()" class="ma-1">
+            <v-icon class="mr-1">{{ option.icon }}</v-icon>
+            {{ option.title }}
+            <v-icon class="ml-1" v-if="option.status()">mdi-check-circle-outline</v-icon>
+            <v-icon class="ml-1" v-else>mdi-circle-outline</v-icon>
+        </v-chip>
+    </v-sheet>
+
     <!-- Hotbuttons Section -->
     <div class="hotbuttons-section">
 
@@ -207,26 +221,6 @@
                     </v-list>
                 </v-menu>
                 
-                <!-- quick settings menu -->
-
-                <v-menu>
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
-                            <v-icon>mdi-cog</v-icon>
-                        </v-btn>
-                    </template>
-                    <v-list>
-                        <v-list-subheader>Quick Settings</v-list-subheader>
-                        <v-list-item v-for="(option, index) in quickSettings" :key="index"
-                            @click.stop="toggleQuickSetting(option.value)"
-                            :prepend-icon="option.icon"
-                            :append-icon="option.status() ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'">
-                            <v-list-item-title>{{ option.title }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
-
                 <!-- save menu -->
 
                 <v-menu>

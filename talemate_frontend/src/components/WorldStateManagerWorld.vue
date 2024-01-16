@@ -525,6 +525,7 @@ export default {
                 this.selectedEntryId = null;
             } else if (message.action == 'world_state_reinforcement_set') {
                 this.dirty = false;
+                this.requestWorld();
             } else if (message.action == 'world_state_reinforcement_deleted') {
                 this.selectedStateQuery = null;
             } else if (message.action == 'world_state_reinforcement_ran') {

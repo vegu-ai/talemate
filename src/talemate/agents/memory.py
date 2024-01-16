@@ -477,8 +477,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             try:
                 self.db_client.delete_collection(collection_name)
             except ValueError as exc:
-                if "Collection not found" not in str(exc):
-                    raise
+                log.error("chromadb agent", error="failed to delete collection", details=exc)
         elif not scene.saved:
             # scene was saved but memory was never persisted
             # so we need to remove the memory from the db

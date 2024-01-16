@@ -331,6 +331,10 @@ class WorldState(BaseModel):
                 
                 elif message:
                     message.message = answer
+            elif insert == "sequential":
+                # if it used to be something else and is now sequential, we need to run the state
+                # next loop
+                reinforcement.due = 0
                 
             # update the character detail if character name is specified
             if character:

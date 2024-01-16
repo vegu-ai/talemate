@@ -130,7 +130,7 @@
             outlined 
             ref="messageInput" 
             @keyup.enter="sendMessage"
-            :disabled="inputDisabled" 
+            :disabled="isInputDisabled()" 
             :prepend-inner-icon="messageInputIcon()"
             :color="messageInputColor()">
             <template v-slot:append>
@@ -205,6 +205,7 @@ export default {
       reconnect: true,
       errorMessage: null,
       errorNotification: false,
+      notificatioonBusy: false,
       inputHint: 'Enter your text...',
       messageInput: '',
       reconnectInterval: 3000,
@@ -228,7 +229,7 @@ export default {
     return {
       getWebsocket: () => this.websocket,
       registerMessageHandler: this.registerMessageHandler,
-      isInputDisabled: () => this.inputDisabled,
+      isInputDisabled: () => this.isInputDisabled(),
       setInputDisabled: (disabled) => this.inputDisabled = disabled,
       isWaitingForInput: () => this.waitingForInput,
       setWaitingForInput: (waiting) => this.waitingForInput = waiting,
@@ -309,6 +310,10 @@ export default {
           this.errorNotification = true;
           this.errorMessage = data.message;
         }
+      }
+
+      if(data.type == 'status') {
+        this.notificatioonBusy = (data.status == 'busy');
       }
 
       if (data.type == "scene_status") {
@@ -475,6 +480,10 @@ export default {
         return null;
       }
       return this.scene.player_character_name;
+    },
+
+    isInputDisabled() {
+      return this.inputDisabled || this.notificatioonBusy;
     },
 
     formatWorldStateTemplateString(templateString, chracterName) {

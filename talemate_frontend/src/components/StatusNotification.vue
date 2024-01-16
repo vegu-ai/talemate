@@ -2,7 +2,7 @@
     <v-snackbar v-model="statusMessage" location="top" :color="notificationColor()" close-on-content-click :timeout="notificationTimeout()" elevation="5">
         <v-progress-circular v-if="statusMessageType === 'busy'" indeterminate color="primary" size="20"></v-progress-circular>
         <v-icon v-else>{{ notificationIcon() }}</v-icon>
-        {{ statusMessageText }}
+        <span class="ml-2">{{ statusMessageText }}</span>
 
     </v-snackbar>
 </template>
@@ -56,15 +56,21 @@ export default {
                 case 'info':
                     return 'info';
                 default:
-                    return 'grey-darken-3';
+                    return 'grey-darken-4';
             }
         },
 
         handleMessage(data) {
             if(data.type === 'status') {
-                this.statusMessage = true;
-                this.statusMessageText = data.message;
-                this.statusMessageType = data.status;
+                if(data.status === 'idle' && this.statusMessageType === 'busy') {
+                    this.statusMessage = false;
+                    this.statusMessageText = '';
+                    this.statusMessageType = '';
+                } else {
+                    this.statusMessage = true;
+                    this.statusMessageText = data.message;
+                    this.statusMessageType = data.status;
+                }
             }
         },
     },

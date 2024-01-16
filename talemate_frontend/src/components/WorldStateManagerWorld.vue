@@ -257,11 +257,17 @@ export default {
                 id: '',
                 text: '',
                 ts: '',
+                meta: {
+                    pin_only: false,
+                },
             },
             entry: {
                 id: '',
                 text: '',
                 ts: '',
+                meta: {
+                    pin_only: false,
+                },
             },
             baseState: {
                 question: '',

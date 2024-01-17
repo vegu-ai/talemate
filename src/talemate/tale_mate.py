@@ -676,7 +676,14 @@ class Scene(Emitter):
         self.memory_id = str(uuid.uuid4())[:10]
         self.saved_memory_session_id = None
         self.memory_session_id = str(uuid.uuid4())[:10]
+        
+        # has scene been saved before?
         self.saved = False
+        
+        # if immutable_save is True, save will always
+        # happen as save-as and not overwrite the original
+        self.immutable_save = False
+        
         self.config = load_config()
         
         self.context = ""
@@ -1730,7 +1737,10 @@ class Scene(Emitter):
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
         scene = self
-        
+
+        if self.immutable_save and not save_as:
+            save_as = True
+
         if save_as:
             self.filename = None
             
@@ -1747,8 +1757,9 @@ class Scene(Emitter):
             return
         
         self.set_new_memory_session_id()
-        
+
         if save_as:
+            self.immutable_save = False
             memory_agent = self.get_helper("memory").agent
             memory_agent.close_db(self)
             self.memory_id = str(uuid.uuid4())[:10]
@@ -1781,6 +1792,7 @@ class Scene(Emitter):
             "memory_id": scene.memory_id,
             "memory_session_id": scene.memory_session_id,
             "saved_memory_session_id": scene.saved_memory_session_id,
+            "immutable_save": scene.immutable_save,
             "ts": scene.ts,
         }
 
@@ -1791,6 +1803,7 @@ class Scene(Emitter):
             json.dump(scene_data, f, indent=2, cls=save.SceneEncoder)
             
         self.saved = True
+        
         self.emit_status()
 
     async def commit_to_memory(self):

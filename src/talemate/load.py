@@ -182,6 +182,7 @@ async def load_scene_from_data(
     scene.environment = scene_data.get("environment", "scene")
     scene.filename = None
     scene.goals = scene_data.get("goals", [])
+    scene.immutable_save = scene_data.get("immutable_save", False)
     
     #reset = True
     

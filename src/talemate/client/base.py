@@ -56,12 +56,12 @@ class ClientBase:
         self.log = structlog.get_logger(f"client.{self.client_type}")
         if "max_token_length" in kwargs:
             self.max_token_length = kwargs["max_token_length"]
-        self.set_client()
+        self.set_client(max_token_length=self.max_token_length)
         
     def __str__(self):
         return f"{self.client_type}Client[{self.api_url}][{self.model_name or ''}]"
         
-    def set_client(self):
+    def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
 
     def prompt_template(self, sys_msg, prompt):

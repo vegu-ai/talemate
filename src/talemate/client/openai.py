@@ -88,10 +88,7 @@ class OpenAIClient(ClientBase):
         self.config = load_config()
         super().__init__(**kwargs)
         
-        self.set_client()
-        
         handlers["config_saved"].connect(self.on_config_saved)
-
 
     @property
     def openai_api_key(self):
@@ -134,6 +131,9 @@ class OpenAIClient(ClientBase):
                 emit('request_agent_status')
             return
         
+        if not self.model_name:
+            self.model_name = "gpt-3.5-turbo-16k"
+        
         model = self.model_name
         
         self.client = AsyncOpenAI(api_key=self.openai_api_key)
@@ -148,8 +148,6 @@ class OpenAIClient(ClientBase):
         else:
             self.max_token_length = max_token_length or 2048
         
-        if max_token_length is not None:
-            self.max_token_length = max_token_length    
         
         if not self.api_key_status:
             if self.api_key_status is False:
@@ -160,7 +158,7 @@ class OpenAIClient(ClientBase):
         log.info("openai set client", max_token_length=self.max_token_length, provided_max_token_length=max_token_length, model=model)
             
     def reconfigure(self, **kwargs):
-        if "model" in kwargs:
+        if kwargs.get("model"):
             self.model_name = kwargs["model"]
             self.set_client(kwargs.get("max_token_length"))
 

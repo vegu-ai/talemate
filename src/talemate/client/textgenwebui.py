@@ -26,7 +26,7 @@ class TextGeneratorWebuiClient(ClientBase):
             log.debug("halfing temperature for -yi- model", temperature=parameters["temperature"])
             
 
-    def set_client(self):
+    def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url+"/v1", api_key="sk-1111")
     
     async def get_model_name(self):

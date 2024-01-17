@@ -483,6 +483,12 @@ export default {
     },
 
     isInputDisabled() {
+
+      // if any client is active and busy, disable input
+      if (this.$refs.aiClient && this.$refs.aiClient.getActive()) {
+        return true;
+      } 
+
       return this.inputDisabled || this.notificatioonBusy;
     },
 

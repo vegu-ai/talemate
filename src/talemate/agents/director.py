@@ -30,7 +30,7 @@ class DirectorAgent(Agent):
     verbose_name = "Director"
     
     def __init__(self, client, **kwargs):
-        self.is_enabled = False
+        self.is_enabled = True
         self.client = client
         self.next_direct_character = {}
         self.next_direct_scene = 0

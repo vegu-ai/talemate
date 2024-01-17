@@ -1446,6 +1446,12 @@ export default {
                 this.contextDB = message.data;
                 this.contextDBCurrentQuery = this.contextDBQuery;
             }
+            else if(message.action === 'context_db_updated') {
+                this.requestPins();
+                if(this.selectedCharacter)
+                    this.requestCharacter(this.selectedCharacter);
+                this.$refs.world.requestWorld();
+            }
             else if(message.action === 'context_db_deleted') {
                 let entry_id = message.data.id;
                 for(let i = 0; i < this.contextDB.entries.length; i++) {

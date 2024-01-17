@@ -317,11 +317,18 @@ class WorldStateManager:
         """
         
         if meta.get("source") == "manual":
+            # manual context needs to be updated in the world state
             self.world_state.manual_context[entry_id] = ManualContext(
                 text=text,
                 meta=meta,
                 id=entry_id
             )
+        elif meta.get("typ") == "details":
+            # character detail needs to be mirrored to the 
+            # character object in the scene
+            character_name = meta.get("character")
+            character = self.scene.get_character(character_name)
+            character.details[meta.get("detail")] = text
         
         
         await self.memory_agent.add_many([

@@ -67,7 +67,11 @@ class DirectorAgent(Agent):
         """
         
         if not self.enabled:
-            return
+            if self.scene.game_state.has_scene_instructions:
+               self.is_enabled = True
+               log.warning("on_scene_init - enabling director", scene=self.scene)
+            else:
+                return
         
         if not self.scene.game_state.has_scene_instructions:
             return

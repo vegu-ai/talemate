@@ -335,84 +335,13 @@ def clean_message(message: str) -> str:
     message = message.replace("[", "*").replace("]", "*")
     return message
 
-def clean_dialogue_old(dialogue: str, main_name: str = None) -> str:
-    """
-    Cleans up generated dialogue by removing unnecessary whitespace and newlines.
-
-    Args:
-        dialogue (str): The input dialogue to be cleaned.
-
-    Returns:
-        str: The cleaned dialogue.
-    """
-
-
-
-    cleaned_lines = []
-    current_name = None
-
-    for line in dialogue.split("\n"):
-        if current_name is None and main_name is not None and ":" not in line:
-            line = f"{main_name}: {line}"
-
-        if ":" in line:
-            name, message = line.split(":", 1)
-            name = name.strip()
-            if name != main_name:
-                break
-            
-            message = clean_message(message)
-
-            if not message:
-                current_name = name
-            elif current_name is not None:
-                cleaned_lines.append(f"{current_name}: {message}")
-                current_name = None
-            else:
-                cleaned_lines.append(f"{name}: {message}")
-        elif current_name is not None:
-            message = clean_message(line)
-            if message:
-                cleaned_lines.append(f"{current_name}: {message}")
-                current_name = None
-
-    cleaned_dialogue = "\n".join(cleaned_lines)
-    return cleaned_dialogue
-
 def clean_dialogue(dialogue: str, main_name: str) -> str:
     
-    # keep spliting the dialogue by : with a max count of 1
-    # until the  left side is no longer the main name
-    
-    cleaned_dialogue = ""
-    
-    # find all occurances of : and then walk backwards
-    # and mark the first one that isnt preceded by the {main_name}
-    cutoff = -1
-    log.debug("clean_dialogue", dialogue=dialogue, main_name=main_name)
-    for match in re.finditer(r":", dialogue, re.MULTILINE):
-        index = match.start()
-        check = dialogue[index-len(main_name):index] 
-        log.debug("clean_dialogue", check=check, main_name=main_name)
-        if check != main_name:
-            cutoff = index
-            break
-        
-    # then split dialogue at the index and return on only
-    # the left side
-    
-    if cutoff > -1:
-        log.debug("clean_dialogue", index=index)
-        cleaned_dialogue = dialogue[:index]
-        cleaned_dialogue = strip_partial_sentences(cleaned_dialogue)
-        
-        # remove all occurances of "{main_name}: " and then prepend it once
-        
-        cleaned_dialogue = cleaned_dialogue.replace(f"{main_name}: ", "")
-        cleaned_dialogue = f"{main_name}: {cleaned_dialogue}"
-        
-        return clean_message(cleaned_dialogue)
+    # re split by \n{not main_name}: with a max count of 1
+    pattern = r"\n(?!{}:).*".format(re.escape(main_name))
 
+    # Splitting the text using the updated regex pattern
+    dialogue = re.split(pattern, dialogue)[0]
     dialogue = dialogue.replace(f"{main_name}: ", "")
     dialogue = f"{main_name}: {dialogue}"
 

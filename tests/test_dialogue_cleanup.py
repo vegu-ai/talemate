@@ -1,5 +1,5 @@
 import pytest
-from talemate.util import ensure_dialog_format
+from talemate.util import ensure_dialog_format, clean_dialogue
 
 @pytest.mark.parametrize("input, expected", [
     ('Hello how are you?', 'Hello how are you?'),
@@ -22,3 +22,16 @@ from talemate.util import ensure_dialog_format
 ])
 def test_dialogue_cleanup(input, expected):
     assert ensure_dialog_format(input) == expected
+    
+    
+@pytest.mark.parametrize("input, expected, main_name", [
+    ("bob: says a sentence", "bob: says a sentence", "bob"),
+    ("bob: says a sentence\nbob: says another sentence", "bob: says a sentence says another sentence", "bob"),
+    ("bob: says a sentence with a colon: to explain something", "bob: says a sentence with a colon: to explain something", "bob"),
+    ("bob: i have a riddle for you, alice: the riddle", "bob: i have a riddle for you, alice: the riddle", "bob"),
+    ("bob: says something\nalice: says something else", "bob: says something", "bob"),
+    ("bob: says a sentence. then a", "bob: says a sentence.", "bob"),
+])
+def test_clean_dialogue(input, expected, main_name):
+    others = ["alice", "charlie"]
+    assert clean_dialogue(input, main_name) == expected

@@ -28,7 +28,7 @@
             :min="1024"
             :max="128000"
             :step="512"
-            @update:modelValue="saveClient(client)"
+            @update:modelValue="saveClientDelayed(client)"
             @click.stop
             density="compact"
           ></v-slider>
@@ -77,6 +77,7 @@ export default {
   },
   data() {
     return {
+      saveDelayTimeout: null,
       clientStatusCheck: null,
       state: {
         clients: [],
@@ -86,7 +87,7 @@ export default {
           type: '',
           apiUrl: '',
           model_name: '',
-          max_token_length: 2048,
+          max_token_length: 4096,
           data: {
             has_prompt_template: false,
           }
@@ -141,6 +142,18 @@ export default {
     propagateError(error) {
       this.$emit('error', error);
     },
+
+    saveClientDelayed(client) {
+      client.dirty = true;
+      if (this.saveDelayTimeout) {
+        clearTimeout(this.saveDelayTimeout);
+      }
+      this.saveDelayTimeout = setTimeout(() => {
+        this.saveClient(client);
+        client.dirty = false;
+      }, 500);
+    },
+
     saveClient(client) {
       const index = this.state.clients.findIndex(c => c.name === client.name);
       if (index === -1) {
@@ -185,7 +198,7 @@ export default {
         // Find the client with the given name
         const client = this.state.clients.find(client => client.name === data.name);
 
-        if (client) {
+        if (client && !client.dirty) {
           // Update the model name of the client
           client.model_name = data.model_name;
           client.type = data.message;
@@ -193,8 +206,9 @@ export default {
           client.max_token_length = data.max_token_length;
           client.apiUrl = data.apiUrl;
           client.data = data.data;
-        } else {
+        } else if(!client) {
           console.log("Adding new client", data);
+
           this.state.clients.push({ 
             name: data.name, 
             model_name: data.model_name, 

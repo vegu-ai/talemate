@@ -343,6 +343,9 @@ export default {
     ],
     computed:{
     },
+    emits: [
+        'open-world-state-manager',
+    ],
     methods: {
 
 

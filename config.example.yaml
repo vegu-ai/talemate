@@ -2,11 +2,11 @@ agents: {}
 clients: {}
 creator:
   content_context:
-  - a fun and engaging slice of life story aimed at an adult audience.
-  - a terrifying horror story aimed at an adult audience.
-  - a thrilling action story aimed at an adult audience.
-  - a mysterious adventure aimed at an adult audience.
-  - an epic sci-fi adventure aimed at an adult audience.
+  - a fun and engaging slice of life story
+  - a terrifying horror story
+  - a thrilling action story
+  - a mysterious adventure
+  - an epic sci-fi adventure
 game:
   world_state:
     templates:
@@ -30,7 +30,17 @@ game:
           interval: 10
           name: Physical Health
           query: What is {character_name}'s current physical health status?
-          state_type: npc
+          state_type: character
+        Time of day:
+          auto_create: false
+          description: Track night / day cycle
+          favorite: true
+          insert: sequential
+          instructions: ''
+          interval: 10
+          name: Time of day
+          query: What is the current time of day?
+          state_type: world
 
 ## Long-term memory
 

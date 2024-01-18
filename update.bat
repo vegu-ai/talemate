@@ -7,7 +7,7 @@ git remote add origin https://github.com/vegu-ai/talemate
 )
 
 REM pull the latest changes from git repository
-git pull origin master
+git pull
 
 REM activate the virtual environment
 call talemate_env\Scripts\activate

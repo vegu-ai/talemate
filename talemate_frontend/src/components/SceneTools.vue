@@ -317,6 +317,7 @@ export default {
                 {"value" : "P3D", "title": "3 days"},
                 {"value" : "P2D", "title": "2 days"},
                 {"value" : "P1D", "title": "1 day"},
+                {"value" : "PT12H", "title": "12 hours"},
                 {"value" : "PT8H", "title": "8 hours"},
                 {"value" : "PT4H", "title": "4 hours"},
                 {"value" : "PT2H", "title": "2 hours"},

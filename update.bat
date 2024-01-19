@@ -16,4 +16,12 @@ REM use poetry to install dependencies
 python -m poetry install
 
 echo Virtual environment updated
+
+REM updating npm packages
+cd talemate_frontent
+npm install
+cd ..
+
+echo NPM packages updated
+
 pause

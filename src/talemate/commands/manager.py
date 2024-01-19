@@ -1,5 +1,7 @@
 from talemate.emit import Emitter, AbortCommand
+import structlog
 
+log = structlog.get_logger("talemate.commands.manager")
 
 class Manager(Emitter):
     """
@@ -55,7 +57,7 @@ class Manager(Emitter):
                     if command.sets_scene_unsaved:
                         self.scene.saved = False
                 except AbortCommand:
-                    self.system_message(f"Action `{command.verbose_name}` ended")
+                    log.debug("Command aborted")
                 except Exception:
                     raise
                 finally:

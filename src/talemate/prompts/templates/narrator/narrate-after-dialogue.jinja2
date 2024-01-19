@@ -1,18 +1,22 @@
-{% block rendered_context -%}
+{% block rendered_context %}
 <|SECTION:CONTEXT|>
-Content Context: This is a specific scene from {{ scene.context }}
-Scenario Premise: {{ scene.description }}
-{% for memory in query_memory(last_line, as_question_answer=False, iterate=10) -%}
-{{ memory }}
-
-{% endfor %}
-{% endblock -%}
+{%- with memory_query=last_line -%}
+    {% include "extra-context.jinja2" %}
+{% endwith -%}
 <|CLOSE_SECTION|>
+{% endblock %}
+<|SECTION:SCENE|>
 {% for scene_context in scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=25) -%}
 {{ scene_context }}
 {% endfor %}
+<|CLOSE_SECTION|>
+
 <|SECTION:TASK|>
-Based on the previous line '{{ last_line }}', create the next line of narration. This line should focus solely on describing sensory details (like sounds, sights, smells, tactile sensations) or external actions that move the story forward. Avoid including any character's internal thoughts, feelings, or dialogue. Your narration should directly respond to '{{ last_line }}', either by elaborating on the immediate scene or by subtly advancing the plot. Generate exactly one sentence of new narration. If the character is trying to determine some state, truth or situation, try to answer as part of the narration.
+In response to "{{ last_line}}"
+
+Generate a line of new narration that provides sensory details about the scene.
+
+This line should focus solely on describing sensory details (like sounds, sights, smells, tactile sensations) or external actions that move the story forward. Avoid including any character's internal thoughts, feelings, or dialogue. Your narration should directly response to the last line either by elaborating on the immediate scene or by subtly advancing the plot. Generate exactly one sentence of new narration. If the character is trying to determine some state, truth or situation, try to answer as part of the narration.
 
 Be creative and generate something new and interesting, but stay true to the setting and context of the story so far.
 
@@ -22,5 +26,6 @@ Narration style should be that of a 90s point and click adventure game. You are 
 
 Only generate new narration. {{ extra_instructions }}
 [$REPETITION|Narration is getting repetitive. Try to choose different words to break up the repetitive text.]
+
 <|CLOSE_SECTION|>
-{{ set_prepared_response('*') }}
+{{ bot_token }}New Narration:

@@ -27,7 +27,7 @@
                     </div>
                 </div>
             </div>
-            <v-alert v-else-if="message.type === 'system'" variant="tonal" closable :type="(message.status == 'error'?'error':'info')" class="system-message mb-3"
+            <v-alert v-else-if="message.type === 'system'" variant="tonal" closable :type="message.status || 'info'" class="system-message mb-3"
                 :text="message.text">
             </v-alert>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
@@ -75,9 +75,14 @@ export default {
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
+            createPin: this.createPin,
         }
     },
     methods: {
+
+        createPin(message_id){
+            this.getWebsocket().send(JSON.stringify({ type: 'interact', text:'!ws_sap:'+message_id}));
+        },
 
         requestDeleteMessage(message_id) {
             this.getWebsocket().send(JSON.stringify({ type: 'delete_message', id: message_id }));
@@ -175,7 +180,7 @@ export default {
                     const character = parts.shift();
                     const text = parts.join(':');
                     this.messages.push({ id: data.id, type: data.type, character: character.trim(), text: text.trim(), color: data.color }); // Add color property to the message
-                } else if (data.type != 'request_input' && data.type != 'client_status' && data.type != 'agent_status') {
+                } else if (data.type != 'request_input' && data.type != 'client_status' && data.type != 'agent_status' && data.type != 'status') {
                     this.messages.push({ id: data.id, type: data.type, text: data.message, color: data.color, character: data.character, status:data.status, ts:data.ts }); // Add color property to the message
                 }
             }

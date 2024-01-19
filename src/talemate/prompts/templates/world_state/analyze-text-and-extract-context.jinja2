@@ -1,16 +1,16 @@
-{% set questions = instruct_text("Ask the narrator three (3) questions to gather more context from the past for the continuation of this conversation. If a character is asking about a state, location or information about an item or another character, make sure to include question(s) that help gather context for this.", text) %}
+{% set questions = instruct_text("Ask the author 5 important questions to gather more context from the past for the continuation of this conversation. If a character is asking about a state, location or information about an item or another character, make sure to include question(s) that help gather context for this. You also have unlimited access to the world database and can just ask for information directly. If you don't know what something is just ask directly.", text) %}
 <|SECTION:CONTEXT|>
-{% for memory in query_memory(questions, as_question_answer=False, max_tokens=max_tokens-500, iterate=10) -%}
-{{ memory }}
-
-{% endfor -%}
+{%- with memory_query=questions -%}
+    {% include "extra-context.jinja2" %}
+{% endwith %}
+{{ text }}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
 Answer the following questions:
 
 {{ questions }}
 
-You answers should be precise, truthful and short. Pay close attention to timestamps when retrieving information from the context.
+Your answers should be truthful and contain relevant data. Pay close attention to timestamps when retrieving information from the context.
 
 <|CLOSE_SECTION|>
 <|SECTION:RELEVANT CONTEXT|>

@@ -1,14 +1,17 @@
 from __future__ import annotations
 import dataclasses
-
+import json
+import uuid
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import talemate.emit.async_signals
 import talemate.util as util
+from talemate.world_state import InsertionMode
 from talemate.prompts import Prompt
-from talemate.scene_message import DirectorMessage, TimePassageMessage
+from talemate.scene_message import DirectorMessage, TimePassageMessage, ReinforcementMessage
 from talemate.emit import emit
 from talemate.events import GameLoopEvent
+from talemate.instance import get_agent
 
 from .base import Agent, set_processing, AgentAction, AgentActionConfig, AgentEmission
 from .registry import register
@@ -36,6 +39,7 @@ class TimePassageEmission(WorldStateAgentEmission):
     """
     duration: str
     narrative: str
+    human_duration: str = None
     
 
 @register()
@@ -51,12 +55,17 @@ class WorldStateAgent(Agent):
         self.client = client
         self.is_enabled = True
         self.actions = {
-            "update_world_state": AgentAction(enabled=True, label="Update world state", description="Will attempt to update the world state based on the current scene. Runs automatically after AI dialogue (n turns).", config={
+            "update_world_state": AgentAction(enabled=True, label="Update world state", description="Will attempt to update the world state based on the current scene. Runs automatically every N turns.", config={
                 "turns": AgentActionConfig(type="number", label="Turns", description="Number of turns to wait before updating the world state.", value=5, min=1, max=100, step=1)
+            }),
+            "update_reinforcements": AgentAction(enabled=True, label="Update state reinforcements", description="Will attempt to update any due state reinforcements.", config={}),
+            "check_pin_conditions": AgentAction(enabled=True, label="Update conditional context pins", description="Will evaluate context pins conditions and toggle those pins accordingly. Runs automatically every N turns.", config={
+                "turns": AgentActionConfig(type="number", label="Turns", description="Number of turns to wait before checking conditions.", value=2, min=1, max=100, step=1)
             }),
         }
         
         self.next_update = 0
+        self.next_pin_check = 0
         
     @property
     def enabled(self):
@@ -80,8 +89,8 @@ class WorldStateAgent(Agent):
         """
         
         isodate.parse_duration(duration)
-        msg_text = narrative or util.iso8601_duration_to_human(duration, suffix=" later")
-        message = TimePassageMessage(ts=duration, message=msg_text)
+        human_duration = util.iso8601_duration_to_human(duration, suffix=" later")
+        message = TimePassageMessage(ts=duration, message=human_duration)
         
         log.debug("world_state.advance_time", message=message)
         self.scene.push_history(message)
@@ -90,7 +99,7 @@ class WorldStateAgent(Agent):
         emit("time", message)
         
         await talemate.emit.async_signals.get("agent.world_state.time").send(
-            TimePassageEmission(agent=self, duration=duration, narrative=msg_text)
+            TimePassageEmission(agent=self, duration=duration, narrative=narrative, human_duration=human_duration)
         )
         
 
@@ -103,7 +112,36 @@ class WorldStateAgent(Agent):
             return
         
         await self.update_world_state()
+        await self.auto_update_reinforcments()
+        await self.auto_check_pin_conditions()
             
+            
+    async def auto_update_reinforcments(self):
+        if not self.enabled:
+            return
+        
+        if not self.actions["update_reinforcements"].enabled:
+            return
+        
+        await self.update_reinforcements()
+        
+    async def auto_check_pin_conditions(self):
+        
+        if not self.enabled:
+            return
+        
+        if not self.actions["check_pin_conditions"].enabled:
+            return
+        
+        if self.next_pin_check % self.actions["check_pin_conditions"].config["turns"].value != 0 or self.next_pin_check == 0:
+            
+            self.next_pin_check += 1
+            return
+        
+        self.next_pin_check = 0
+        
+        await self.check_pin_conditions()
+        
 
     async def update_world_state(self):
         if not self.enabled:
@@ -220,6 +258,35 @@ class WorldStateAgent(Agent):
         return response
     
     @set_processing
+    async def analyze_text_and_extract_context_via_queries(
+        self,
+        text: str,
+        goal: str,
+    ) -> list[str]:
+        
+        response = await Prompt.request(
+            "world_state.analyze-text-and-generate-rag-queries",
+            self.client,
+            "analyze_freeform",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "text": text,
+                "goal": goal,
+            }
+        )
+        
+        queries = response.split("\n")
+        
+        memory_agent = get_agent("memory")
+        
+        context = await memory_agent.multi_query(queries, iterate=3)
+        
+        log.debug("analyze_text_and_extract_context_via_queries", goal=goal, text=text, queries=queries, context=context)
+        
+        return context
+    
+    @set_processing
     async def analyze_and_follow_instruction(
         self,
         text: str,
@@ -290,6 +357,19 @@ class WorldStateAgent(Agent):
         
         return data
     
+    def _parse_character_sheet(self, response):
+        
+        data = {}
+        for line in response.split("\n"):
+            if not line.strip():
+                continue
+            if not ":" in line:
+                break
+            name, value = line.split(":", 1)
+            data[name.strip()] = value.strip()
+        
+        return data
+    
     @set_processing
     async def extract_character_sheet(
         self,
@@ -304,7 +384,7 @@ class WorldStateAgent(Agent):
         response = await Prompt.request(
             "world_state.extract-character-sheet",
             self.client,
-            "analyze_creative",
+            "create",
             vars = {
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
@@ -318,17 +398,8 @@ class WorldStateAgent(Agent):
         #
         # break as soon as a non-empty line is found that doesn't contain a :
         
-        data = {}
-        for line in response.split("\n"):
-            if not line.strip():
-                continue
-            if not ":" in line:
-                break
-            name, value = line.split(":", 1)
-            data[name.strip()] = value.strip()
+        return self._parse_character_sheet(response)
         
-        return data
-    
     
     @set_processing
     async def match_character_names(self, names:list[str]):
@@ -351,3 +422,188 @@ class WorldStateAgent(Agent):
         log.debug("match_character_names", names=names, response=response)
         
         return response
+    
+    
+    @set_processing
+    async def update_reinforcements(self, force:bool=False):
+        
+        """
+        Queries due worldstate re-inforcements
+        """
+        
+        for reinforcement in self.scene.world_state.reinforce:
+            if reinforcement.due <= 0 or force:
+                await self.update_reinforcement(reinforcement.question, reinforcement.character)
+            else:
+                reinforcement.due -= 1
+                
+    
+    @set_processing
+    async def update_reinforcement(self, question:str, character:str=None):
+        
+        """
+        Queries a single re-inforcement
+        """
+        message = None
+        idx, reinforcement = await self.scene.world_state.find_reinforcement(question, character)
+        
+        if not reinforcement:
+            return
+        
+        answer = await Prompt.request(
+            "world_state.update-reinforcements",
+            self.client,
+            "analyze_freeform",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "question": reinforcement.question,
+                "instructions": reinforcement.instructions or "",
+                "character": self.scene.get_character(reinforcement.character) if reinforcement.character else None,
+                "answer": reinforcement.answer or "",
+                "reinforcement": reinforcement,
+            }
+        )
+        
+        reinforcement.answer = answer
+        reinforcement.due = reinforcement.interval
+        
+        source = f"{reinforcement.question}:{reinforcement.character if reinforcement.character else ''}"
+        
+        # remove any recent previous reinforcement message with same question
+        # to avoid overloading the near history with reinforcement messages
+        self.scene.pop_history(typ="reinforcement", source=source, max_iterations=10)
+        
+        if reinforcement.insert == "sequential":
+            # insert the reinforcement message at the current position
+            message = ReinforcementMessage(message=answer, source=source)
+            log.debug("update_reinforcement", message=message)
+            self.scene.push_history(message)
+        
+        # if reinforcement has a character name set, update the character detail
+        if reinforcement.character:
+            character = self.scene.get_character(reinforcement.character)
+            await character.set_detail(reinforcement.question, answer)
+            
+        else:
+            # set world entry
+            await self.scene.world_state_manager.save_world_entry(
+                reinforcement.question,
+                reinforcement.as_context_line,
+                {},
+            )
+            
+        self.scene.world_state.emit()
+        
+        return message  
+    
+    @set_processing
+    async def check_pin_conditions(
+        self,
+    ):
+        
+        """
+        Checks if any context pin conditions
+        """
+        
+        pins_with_condition = {
+            entry_id: {
+                "condition": pin.condition,
+                "state": pin.condition_state,
+            }
+            for entry_id, pin in self.scene.world_state.pins.items()
+            if pin.condition
+        }
+        
+        if not pins_with_condition:
+            return
+        
+        first_entry_id = list(pins_with_condition.keys())[0]
+        
+        _, answers = await Prompt.request(
+            "world_state.check-pin-conditions",
+            self.client,
+            "analyze",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "previous_states": json.dumps(pins_with_condition,indent=2),
+                "coercion": {first_entry_id:{ "condition": "" }},
+            }
+        )
+        
+        world_state = self.scene.world_state
+        state_change = False  
+        
+        for entry_id, answer in answers.items():
+            
+            if entry_id not in world_state.pins:
+                log.warning("check_pin_conditions", entry_id=entry_id, answer=answer, msg="entry_id not found in world_state.pins (LLM failed to produce a clean response)")
+                continue
+            
+            log.info("check_pin_conditions", entry_id=entry_id, answer=answer)
+            state = answer.get("state")
+            if state is True or (isinstance(state, str) and state.lower() in ["true", "yes", "y"]):
+                prev_state = world_state.pins[entry_id].condition_state
+                
+                world_state.pins[entry_id].condition_state = True
+                world_state.pins[entry_id].active = True
+                
+                if prev_state != world_state.pins[entry_id].condition_state:
+                    state_change = True
+            else:
+                if world_state.pins[entry_id].condition_state is not False:
+                    world_state.pins[entry_id].condition_state = False
+                    world_state.pins[entry_id].active = False
+                    state_change = True
+                
+        if state_change:
+            await self.scene.load_active_pins()
+            self.scene.emit_status()
+            
+    @set_processing
+    async def summarize_and_pin(self, message_id:int, num_messages:int=3) -> str:
+        
+        """
+        Will take a message index and then walk back N messages
+        summarizing the scene and pinning it to the context.
+        """
+        
+        creator = get_agent("creator")
+        summarizer = get_agent("summarizer")
+        
+        message_index = self.scene.message_index(message_id)
+        
+        text = self.scene.snapshot(lines=num_messages, start=message_index)
+        
+        summary = await summarizer.summarize(text, method="short")
+        
+        entry_id = util.clean_id(await creator.generate_title(summary))
+        
+        ts = self.scene.ts
+        
+        log.debug(
+            "summarize_and_pin",
+            message_id=message_id,
+            message_index=message_index,
+            num_messages=num_messages, 
+            summary=summary,
+            entry_id=entry_id,
+            ts=ts,
+        )
+        
+        await self.scene.world_state_manager.save_world_entry(
+            entry_id,
+            summary,
+            {
+                "ts": ts,
+            },
+        )
+        
+        await self.scene.world_state_manager.set_pin(
+            entry_id,
+            active=True,
+        )
+        
+        await self.scene.load_active_pins()
+        self.scene.emit_status()

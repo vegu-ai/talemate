@@ -1,0 +1,21 @@
+{# MEMORY #}
+{%- if memory_query %}
+{%- for memory in query_memory(memory_query, as_question_answer=False, iterate=5) -%}
+{{ memory|condensed }}
+
+{% endfor -%}
+{% endif -%}
+{# END MEMORY #}
+{# GENERAL REINFORCEMENTS #}
+{% set general_reinforcements = scene.world_state.filter_reinforcements(insert=['all-context']) %}
+{%- for reinforce in general_reinforcements %}
+{{ reinforce.as_context_line|condensed }}
+
+{% endfor %}
+{# END GENERAL REINFORCEMENTS #}
+{# ACTIVE PINS #}
+{%- for pin in scene.active_pins %}
+{{ pin.time_aware_text|condensed }}
+
+{% endfor %}
+{# END ACTIVE PINS #}

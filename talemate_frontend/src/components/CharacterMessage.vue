@@ -1,13 +1,7 @@
 <template>
-  <v-alert variant="text" closable type="info" icon="mdi-chat-outline" elevation="0" density="compact" @click:close="deleteMessage()">
+  <v-alert variant="text" closable type="info" icon="mdi-chat-outline" elevation="0" density="compact" @click:close="deleteMessage()"  @mouseover="hovered=true" @mouseleave="hovered=false">
     <v-alert-title :style="{ color: color }" class="text-subtitle-1">
         {{ character }}
-        <v-chip size="x-small" color="indigo-lighten-4" v-if="editing">
-          <v-icon class="mr-1">mdi-pencil</v-icon>
-          Editing - Press `enter` to submit. Click anywhere to cancel.</v-chip>
-        <v-chip size="x-small" color="grey-lighten-1" v-else-if="!editing && hovered" variant="outlined">
-          <v-icon class="mr-1">mdi-pencil</v-icon>
-          Double-click to edit.</v-chip>
     </v-alert-title>
     <div class="character-message">
       <div class="character-avatar">
@@ -15,11 +9,26 @@
       </div>
       <v-textarea ref="textarea" v-if="editing" v-model="editing_text" @keydown.enter.prevent="submitEdit()" @blur="cancelEdit()" @keydown.escape.prevent="cancelEdit()">
       </v-textarea>
-      <div v-else class="character-text" @dblclick="startEdit()"  @mouseover="hovered=true" @mouseout="hovered=false">
+      <div v-else class="character-text" @dblclick="startEdit()">
         <span v-for="(part, index) in parts" :key="index" :class="{ highlight: part.isNarrative }">
           <span>{{ part.text }}</span>
         </span>
       </div>
+    </div>
+    <v-sheet v-if="hovered" rounded="sm" color="transparent">
+      <v-chip size="x-small" color="indigo-lighten-4" v-if="editing">
+        <v-icon class="mr-1">mdi-pencil</v-icon>
+        Editing - Press `enter` to submit. Click anywhere to cancel.</v-chip>
+      <v-chip size="x-small" color="grey-lighten-1" v-else-if="!editing && hovered" variant="text" class="mr-1">
+        <v-icon>mdi-pencil</v-icon>
+        Double-click to edit.</v-chip>
+        <v-chip size="x-small" label color="success" v-if="!editing && hovered" variant="outlined" @click="createPin(message_id)">
+          <v-icon class="mr-1">mdi-pin</v-icon>
+          Create Pin
+        </v-chip>
+    </v-sheet>
+    <div v-else style="height:24px">
+
     </div>
   </v-alert>
 </template>
@@ -27,7 +36,7 @@
 <script>
 export default {
   props: ['character', 'text', 'color', 'message_id'],
-  inject: ['requestDeleteMessage', 'getWebsocket'],
+  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin'],
   computed: {
     parts() {
       const parts = [];

@@ -10,7 +10,9 @@ from talemate.scene_message import (
     SceneMessage, CharacterMessage, NarratorMessage, DirectorMessage, MESSAGES, reset_message_id
 )
 from talemate.world_state import WorldState
+from talemate.game_state import GameState
 from talemate.context import SceneIsLoading
+from talemate.emit import emit
 import talemate.instance as instance
 
 import structlog
@@ -27,6 +29,32 @@ __all__ = [
 log = structlog.get_logger("talemate.load")
 
 
+class set_loading:
+    
+    def __init__(self, message):
+        self.message = message
+        
+    def __call__(self, fn):
+        async def wrapper(*args, **kwargs):
+            emit("status", message=self.message, status="busy")
+            try:
+                return await fn(*args, **kwargs)
+            finally:
+                emit("status", message="", status="idle")
+                
+        return wrapper
+
+class LoadingStatus:
+    
+    def __init__(self, max_steps:int):
+        self.max_steps = max_steps
+        self.current_step = 0
+        
+    def __call__(self, message:str):
+        self.current_step += 1
+        emit("status", message=f"{message} [{self.current_step}/{self.max_steps}]", status="busy")
+
+@set_loading("Loading scene...")
 async def load_scene(scene, file_path, conv_client, reset: bool = False):
     """
     Load the scene data from the given file path.
@@ -55,6 +83,10 @@ async def load_scene_from_character_card(scene, file_path):
     """
     Load a character card (tavern etc.) from the given file path.
     """
+    
+    
+    loading_status = LoadingStatus(5)
+    loading_status("Loading character card...")
 
     file_ext = os.path.splitext(file_path)[1].lower()
     image_format = file_ext.lstrip(".")
@@ -76,12 +108,16 @@ async def load_scene_from_character_card(scene, file_path):
 
     scene.name = character.name
     
+    loading_status("Initializing long-term memory...")
+    
     await memory.set_db()
 
     await scene.add_actor(actor)
     
     
     log.debug("load_scene_from_character_card", scene=scene, character=character, content_context=scene.context)
+    
+    loading_status("Determine character context...")
     
     if not scene.context:
         try:
@@ -92,6 +128,9 @@ async def load_scene_from_character_card(scene, file_path):
     
     # attempt to convert to base attributes
     try:
+        
+        loading_status("Determine character attributes...")
+        
         _, character.base_attributes = await creator.determine_character_attributes(character)
         # lowercase keys
         character.base_attributes = {k.lower(): v for k, v in character.base_attributes.items()}
@@ -119,6 +158,7 @@ async def load_scene_from_character_card(scene, file_path):
         character.cover_image = scene.assets.cover_image
     
     try:
+        loading_status("Update world state ...")
         await scene.world_state.request_update(initial_only=True)  
     except Exception as e:
         log.error("world_state.request_update", error=e)
@@ -131,7 +171,7 @@ async def load_scene_from_character_card(scene, file_path):
 async def load_scene_from_data(
     scene, scene_data, conv_client, reset: bool = False, name=None
 ):
-    
+    loading_status = LoadingStatus(1)
     reset_message_id()
     
     memory = scene.get_helper("memory").agent
@@ -142,16 +182,21 @@ async def load_scene_from_data(
     scene.environment = scene_data.get("environment", "scene")
     scene.filename = None
     scene.goals = scene_data.get("goals", [])
+    scene.immutable_save = scene_data.get("immutable_save", False)
     
     #reset = True
     
     if not reset:
+        
         scene.goal = scene_data.get("goal", 0)
         scene.memory_id = scene_data.get("memory_id", scene.memory_id)
+        scene.saved_memory_session_id = scene_data.get("saved_memory_session_id", None)
+        scene.memory_session_id = scene_data.get("memory_session_id", None)
         scene.history = _load_history(scene_data["history"])
         scene.archived_history = scene_data["archived_history"]
         scene.character_states = scene_data.get("character_states", {})
         scene.world_state = WorldState(**scene_data.get("world_state", {}))
+        scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.context = scene_data.get("context", "")
         scene.filename = os.path.basename(
             name or scene.name.lower().replace(" ", "_") + ".json"
@@ -161,8 +206,16 @@ async def load_scene_from_data(
         
         scene.sync_time()
         log.debug("scene time", ts=scene.ts)
-        
+    
+    loading_status("Initializing long-term memory...")
+    
     await memory.set_db()
+    await memory.remove_unsaved_memory()
+    
+    await scene.world_state_manager.remove_all_empty_pins()
+    
+    if not scene.memory_session_id:
+        scene.set_new_memory_session_id()
         
     for ah in scene.archived_history:
         if reset:
@@ -188,12 +241,6 @@ async def load_scene_from_data(
             actor = Player(character, None)
         # Add the TestCharacter actor to the scene
         await scene.add_actor(actor)
-    
-    if scene.environment != "creative":
-        try:
-            await scene.world_state.request_update(initial_only=True)  
-        except Exception as e:
-            log.error("world_state.request_update", error=e)
             
     # the scene has been saved before (since we just loaded it), so we set the saved flag to True
     # as long as the scene has a memory_id.

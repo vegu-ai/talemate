@@ -44,7 +44,8 @@ def get_client(name: str, *create_args, **create_kwargs):
     client = CLIENTS.get(name)
 
     if client:
-        client.reconfigure(**create_kwargs)
+        if create_kwargs:
+            client.reconfigure(**create_kwargs)
         return client
 
     if "type" in create_kwargs:
@@ -111,10 +112,10 @@ def _sync_emit_clients_status(*args, **kwargs):
     loop.run_until_complete(emit_clients_status())     
 handlers["request_client_status"].connect(_sync_emit_clients_status)
 
-def emit_client_bootstraps():
+async def emit_client_bootstraps():
     emit(
         "client_bootstraps",
-        data=list(bootstrap.list_all())
+        data=list(await bootstrap.list_all())
     )
 
 
@@ -125,7 +126,7 @@ async def sync_client_bootstraps():
     """
     
     for service_name, func in bootstrap.LISTS.items():
-        for client_bootstrap in func():
+        async for client_bootstrap in func():
             log.debug("sync client bootstrap", service_name=service_name, client_bootstrap=client_bootstrap.dict())
             client = get_client(
                 client_bootstrap.name,

@@ -71,6 +71,7 @@ export default {
         'openai': {
           model: 'gpt-4-1106-preview',
           name_prefix: 'OpenAI',
+          max_token_length: 16384,
         },
         'lmstudio': {
           apiUrl: 'http://localhost:1234',

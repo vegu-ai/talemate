@@ -83,9 +83,10 @@ async def websocket_endpoint(websocket, path):
                     await message_queue.put(
                         {
                             "type": "system",
-                            "message": "Scene loaded ...",
+                            "message": "Scene file loaded ...",
                             "id": "scene.loaded",
                             "status": "success",
+                            "data": {"hidden":True}
                         }
                     )
                     

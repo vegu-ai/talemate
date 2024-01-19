@@ -1,23 +1,26 @@
-{% block extra_context -%}
+{% block rendered_context -%}
 <|SECTION:CONTEXT|>
-Scenario Premise: {{ scene.description }}
-
-{% for memory_line in memory -%}
-{{ memory_line }}
-{% endfor -%}
+{%- with memory_query=scene.snapshot() -%}
+    {% include "extra-context.jinja2" %}
+{% endwith %}
 
 NPCs: {{ npc_names }}
 Player Character: {{ player_character.name }}
-Content Context: {{ scene.context }}
 <|CLOSE_SECTION|>
 {% endblock -%}
-{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=20, sections=False) -%}
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context()), min_dialogue=20, sections=False) -%}
 {{ scene_context }}
 {% endfor %}
+<|CLOSE_SECTION|>
 <|SECTION:TASK|>
 Continue the current dialogue by narrating the progression of the scene.
 
 If the scene is over, narrate the beginning of the next scene.
+
+Consider the entire context and honor the sequentiality of the scene. Continue based on the final state of the dialogue.
+
+Progression of the scene is important. The last line is the most important, the first line is the least important.
 
 Be creative and generate something new and interesting, but stay true to the setting and context of the story so far.
 
@@ -26,14 +29,11 @@ Use an informal and colloquial register with a conversational tone. Overall, the
 Narration style should be that of a 90s point and click adventure game. You are omniscient and can describe the scene in detail.
 
 Only generate new narration. Avoid including any character's internal thoughts or dialogue.
+
+{% if narrative_direction %}
+Directions for new narration: {{ narrative_direction }}
+{% endif %}
+
 Write 2 to 4 sentences. {{ extra_instructions }}
 <|CLOSE_SECTION|>
-{{ 
-set_prepared_response_random(
-    npc_names.split(", ") + [
-        "They",
-        player_character.name,
-    ],
-    prefix="*",
-)
-}}
+{{ set_prepared_response("*") }}

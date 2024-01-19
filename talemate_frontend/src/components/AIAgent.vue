@@ -9,14 +9,22 @@
                     <v-icon v-else-if="agent.status === 'disabled'" color="grey-darken-2" size="14">mdi-checkbox-blank-circle</v-icon>
                     <v-icon v-else-if="agent.status === 'error'" color="red" size="14">mdi-checkbox-blank-circle</v-icon>
                     <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
+
                     <span class="ml-1" v-if="agent.label"> {{ agent.label }}</span>
                     <span class="ml-1" v-else> {{ agent.name }}</span>
+                    <v-tooltip v-if="agent.data.experimental" text="Experimental" density="compact">
+                        <template v-slot:activator="{ props }">
+                            <v-icon v-bind="props" color="warning" size="14" class="ml-1">mdi-flask-outline</v-icon>
+                        </template>
+                    </v-tooltip>
                 </v-list-item-title>
                 <v-list-item-subtitle class="text-caption">
                     {{ agent.client }}
                 </v-list-item-subtitle>
+                <!--
                 <v-chip class="mr-1" v-if="agent.status === 'disabled'" size="x-small">Disabled</v-chip>
                 <v-chip v-if="agent.data.experimental" color="warning" size="x-small">experimental</v-chip>
+                -->
             </v-list-item>
         </v-list>
         <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" @save="saveAgent" @update:dialog="updateDialog"></AgentModal>

@@ -1,0 +1,20 @@
+<|SECTION:CONTENT|>
+"""
+{{ content }}
+"""
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Analyze the content within the triple quotes and determine a fitting content context.
+
+The content context should be a single short phrase classification that describes the expected experience when reading this content, it should also be generic and overarching and excite the reader to keep reading.
+
+Choices:
+
+{% for content_context in config.get('creator', {}).get('content_context',[]) -%}
+- {{ content_context }}
+{% endfor -%}
+{% for content_context in extra_choices -%}
+- {{ content_context }}
+{% endfor -%}
+<|CLOSE_SECTION|>
+{{ bot_token }}Content context:

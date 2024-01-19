@@ -1,30 +1,35 @@
+{% block rendered_context -%}
 <|SECTION:CONTEXT|>
-Scenario Premise: {{ scene.description }}
-
-Last time we checked on {{ character.name }}: 
-
-{% for memory_line in memory -%}
-{{ memory_line }}
+{% include "extra-context.jinja2" %}
+<|CLOSE_SECTION|>
+{% endblock -%}
+<|SECTION:SCENE|>
+{% set scene_history=scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context()), min_dialogue=20) %}
+{% set final_line_number=len(scene_history) %}
+{% for scene_context in scene_history -%}
+{{ loop.index }}. {{ scene_context }}
 {% endfor %}
 <|CLOSE_SECTION|>
 
-{% for scene_context in scene.context_history(budget=max_tokens-300, min_dialogue=20) -%}
-{{ scene_context }}
-{% endfor %}
-
 <|SECTION:INFORMATION|>
 {{ query_memory("How old is {character.name}?") }}
+{{ query_memory("What does {character.name} look like?") }}
 {{ query_scene("Where is {character.name} and what is {character.name} doing?") }}
 {{ query_scene("what is {character.name} wearing? Be explicit.") }}
 <|CLOSE_SECTION|>
 
 <|SECTION:TASK|>
-Last line of dialogue: {{ scene.history[-1] }}
-Questions: Where is {{ character.name}} currently and what are they doing? What is {{ character.name }}'s appearance at the end of the dialogue? What is {{ character.pronoun_2 }} wearing? What position is {{ character.pronoun_2 }} in?
-Instruction: Answer the questions to describe {{ character.name }}'s appearance at the end of the dialogue and summarize into narrative description. Use the whole dialogue for context. You must fill in gaps using imagination as long as it fits the existing context. You will provide a confident and decisive answer to the question.
-Content Context: This is a specific scene from {{ scene.context }}
-Narration style: point and click adventure game from the 90s
-Expected Answer: A brief summarized visual description of {{ character.name }}'s appearance at the end of the dialogue. NEVER break the fourth wall. (2 to 3 sentences)
+Questions: Where is {{ character.name}} currently and what are they doing? What is {{ character.name }}'s appearance at the end of the dialogue? What are they wearing? What position are they in?
+
+Answer the questions to describe {{ character.name }}'s appearance at the end of the dialogue and summarize into narrative description. Use the whole dialogue for context. You must fill in gaps using imagination as long as it fits the existing context. You will provide a confident and decisive answer to the question.
+
+Your answer must be a brief summarized visual description of {{ character.name }}'s appearance at the end of the dialogue at {{ final_line_number }}. 
+
+Respect the scene progression and answer in the context of line {{ final_line_number }}.
+
+Use an informal and colloquial register with a conversational tone. Overall, the narrative is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
+
+Write 2 to 3 sentences.
 {{ extra_instructions }}
 <|CLOSE_SECTION|>
 {{ bot_token }}At the end of the dialogue, 

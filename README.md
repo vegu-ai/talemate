@@ -3,7 +3,9 @@
 Allows you to play roleplay scenarios with large language models. 
 
 
-|![Screenshot 1](docs/img/Screenshot_9.png)|![Screenshot 2](docs/img/Screenshot_2.png)|
+|![Screenshot 1](docs/img/0.17.0/ss-1.png)|![Screenshot 2](docs/img/0.17.0/ss-2.png)|
+|------------------------------------------|------------------------------------------|
+|![Screenshot 1](docs/img/0.17.0/ss-4.png)|![Screenshot 2](docs/img/0.17.0/ss-3.png)|
 |------------------------------------------|------------------------------------------|
 
 > :warning: **It does not run any large language models itself but relies on existing APIs. Currently supports OpenAI, text-generation-webui and LMStudio.**
@@ -31,10 +33,15 @@ This means you need to either have:
     - chromadb integration
     - passage of time
 - narrative world state
+    - Automatically keep track and reinforce selected character and world truths / states.
 - narrative tools
 - creative tools 
     - AI backed character creation with template support (jinja2)
     - AI backed scenario creation
+- context managegement
+    - Manage character details and attributes
+    - Manage world information / past events
+    - Pin important information to the context (Manually or conditionally through AI)
 - runpod integration
 - overridable templates for all prompts. (jinja2)
 
@@ -51,14 +58,14 @@ In no particular order:
 - Dynamic player choice generation
 - Better creative tools
     - node based scenario / character creation
-- Improved and consistent long term memory
+- Improved and consistent long term memory and accurate current state of the world
 - Improved director agent
     - Right now this doesn't really work well on anything but GPT-4 (and even there it's debatable). It tends to steer the story in a way that introduces pacing issues. It needs a model that is creative but also reasons really well i think.
 - Gameplay loop governed by AI
     - objectives
     - quests
     - win / lose conditions
-- Automatic1111 client for in place visual generation
+- stable-diffusion client for in place visual generation
 
 # Quickstart
 

@@ -1,0 +1,24 @@
+<|SECTION:PREMISE|>
+{{ scene.description }}
+
+{{ premise }}
+Elmer and Kaira are the only crew members of the Starlight Nomad, a small spaceship traveling through interstellar space.
+
+Kaira and Elmer are the main characters. Elmer is controlled by the player.
+<|CLOSE_SECTION|>
+<|SECTION:CHARACTERS|>
+{% for character in characters %}
+### {{ character.name }}
+{% if max_tokens > 6000 -%}
+{{ character.sheet }}
+{% else -%}
+{{ character.filtered_sheet(['age', 'gender']) }}
+{{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
+{% endif %}
+
+{{ character.description }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Your task is to define one overarching, SIMPLE win codition for the provided infinity quest scenario. What does it mean to win this scenario? This should be a single sentence that can be evalulated as true or false.
+<|CLOSE_SECTION|>

@@ -18,7 +18,7 @@ python -m poetry install
 echo Virtual environment updated
 
 REM updating npm packages
-cd talemate_frontent
+cd talemate_frontend
 npm install
 cd ..
 

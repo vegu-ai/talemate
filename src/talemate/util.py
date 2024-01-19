@@ -279,27 +279,6 @@ def replace_conditional(input_string: str, params) -> str:
     return modified_string
 
 
-def pronouns(gender: str) -> tuple[str, str]:
-    """
-    Returns the pronouns for gender
-    """
-
-    if gender == "female":
-        possessive_determiner = "her"
-        pronoun = "she"
-    elif gender == "male":
-        possessive_determiner = "his"
-        pronoun = "he"
-    elif gender == "fluid" or gender == "nonbinary" or not gender:
-        possessive_determiner = "their"
-        pronoun = "they"
-    else:
-        possessive_determiner = "its"
-        pronoun = "it"
-
-    return (pronoun, possessive_determiner)
-
-
 def strip_partial_sentences(text:str) -> str:
     # Sentence ending characters
     sentence_endings = ['.', '!', '?', '"', "*"]
@@ -356,141 +335,34 @@ def clean_message(message: str) -> str:
     message = message.replace("[", "*").replace("]", "*")
     return message
 
-def clean_dialogue_old(dialogue: str, main_name: str = None) -> str:
-    """
-    Cleans up generated dialogue by removing unnecessary whitespace and newlines.
-
-    Args:
-        dialogue (str): The input dialogue to be cleaned.
-
-    Returns:
-        str: The cleaned dialogue.
-    """
-
-
-
-    cleaned_lines = []
-    current_name = None
-
-    for line in dialogue.split("\n"):
-        if current_name is None and main_name is not None and ":" not in line:
-            line = f"{main_name}: {line}"
-
-        if ":" in line:
-            name, message = line.split(":", 1)
-            name = name.strip()
-            if name != main_name:
-                break
-            
-            message = clean_message(message)
-
-            if not message:
-                current_name = name
-            elif current_name is not None:
-                cleaned_lines.append(f"{current_name}: {message}")
-                current_name = None
-            else:
-                cleaned_lines.append(f"{name}: {message}")
-        elif current_name is not None:
-            message = clean_message(line)
-            if message:
-                cleaned_lines.append(f"{current_name}: {message}")
-                current_name = None
-
-    cleaned_dialogue = "\n".join(cleaned_lines)
-    return cleaned_dialogue
-
 def clean_dialogue(dialogue: str, main_name: str) -> str:
     
-    # keep spliting the dialogue by : with a max count of 1
-    # until the  left side is no longer the main name
-    
-    cleaned_dialogue = ""
-    
-    # find all occurances of : and then walk backwards
-    # and mark the first one that isnt preceded by the {main_name}
-    cutoff = -1
-    log.debug("clean_dialogue", dialogue=dialogue, main_name=main_name)
-    for match in re.finditer(r":", dialogue, re.MULTILINE):
-        index = match.start()
-        check = dialogue[index-len(main_name):index] 
-        log.debug("clean_dialogue", check=check, main_name=main_name)
-        if check != main_name:
-            cutoff = index
-            break
-        
-    # then split dialogue at the index and return on only
-    # the left side
-    
-    if cutoff > -1:
-        log.debug("clean_dialogue", index=index)
-        cleaned_dialogue = dialogue[:index]
-        cleaned_dialogue = strip_partial_sentences(cleaned_dialogue)
-        
-        # remove all occurances of "{main_name}: " and then prepend it once
-        
-        cleaned_dialogue = cleaned_dialogue.replace(f"{main_name}: ", "")
-        cleaned_dialogue = f"{main_name}: {cleaned_dialogue}"
-        
-        return clean_message(cleaned_dialogue)
+    # re split by \n{not main_name}: with a max count of 1
+    pattern = r"\n(?!{}:).*".format(re.escape(main_name))
 
+    # Splitting the text using the updated regex pattern
+    dialogue = re.split(pattern, dialogue)[0]
     dialogue = dialogue.replace(f"{main_name}: ", "")
     dialogue = f"{main_name}: {dialogue}"
 
     return clean_message(strip_partial_sentences(dialogue))
     
-
-def clean_attribute(attribute: str) -> str:
+def clean_id(name: str) -> str:
     """
-    Cleans up an attribute by removing unnecessary whitespace and newlines.
+    Cleans up a id name by removing all characters that aren't a-zA-Z0-9_- 
 
-    Also will remove any additional attributees.
+    Spaces are allowed.
 
     Args:
-        attribute (str): The input attribute to be cleaned.
+        name (str): The input id name to be cleaned.
 
     Returns:
-        str: The cleaned attribute.
+        str: The cleaned id name.
     """
-
-    special_chars = [
-        "#",
-        "`",
-        "!",
-        "@",
-        "$",
-        "%",
-        "^",
-        "&",
-        "*",
-        "(",
-        ")",
-        "-",
-        "_",
-        "=",
-        "+",
-        "[",
-        "{",
-        "]",
-        "}",
-        "|",
-        ";",
-        ":",
-        ",",
-        "<",
-        ".",
-        ">",
-        "/",
-        "?",
-    ]
-
-    for char in special_chars:
-        attribute = attribute.split(char)[0].strip()
-
-    return attribute.strip()
-
-
-
+    # Remove all characters that aren't a-zA-Z0-9_-
+    cleaned_name = re.sub(r"[^a-zA-Z0-9_\- ]", "", name)
+    
+    return cleaned_name
 
 def duration_to_timedelta(duration):
     """Convert an isodate.Duration object or a datetime.timedelta object to a datetime.timedelta object."""
@@ -813,7 +685,7 @@ def dedupe_sentences(line_a:str, line_b:str, similarity_threshold:int=95, debug:
             
     return " ".join(cleaned_line_a_sentences)
 
-def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False) -> str:
+def dedupe_string_old(s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False) -> str:
     
     """
     Removes duplicate lines from a string.
@@ -848,6 +720,42 @@ def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 95, 
             deduped.append(line)  # Allow shorter strings without dupe check
             
     return "\n".join(deduped)
+
+def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False) -> str:
+    
+    """
+    Removes duplicate lines from a string going from the bottom up.
+    
+    Arguments:
+        s (str): The input string.
+        min_length (int): The minimum length of a line to be checked for duplicates.
+        similarity_threshold (int): The similarity threshold to use when comparing lines.
+        debug (bool): Whether to log debug messages.
+        
+    Returns:
+        str: The deduplicated string.
+    """
+    
+    lines = s.split("\n")
+    deduped = []
+    
+    for line in reversed(lines):
+        stripped_line = line.strip()
+        if len(stripped_line) > min_length:
+            similar_found = False
+            for existing_line in deduped:
+                similarity = fuzz.ratio(stripped_line, existing_line.strip())
+                if similarity >= similarity_threshold:
+                    similar_found = True
+                    if debug:
+                        log.debug("DEDUPE", similarity=similarity, line=line, existing_line=existing_line)
+                    break
+            if not similar_found:
+                deduped.append(line)
+        else:
+            deduped.append(line)  # Allow shorter strings without dupe check
+            
+    return "\n".join(reversed(deduped))
 
 def remove_extra_linebreaks(s: str) -> str:
     """
@@ -917,6 +825,10 @@ def ensure_dialog_line_format(line:str):
     segments = []
     segment = None
     segment_open = None
+    
+    line = line.strip()
+    
+    line = line.replace('"*', '"').replace('*"', '"')
     
     for i in range(len(line)):
         
@@ -1014,7 +926,9 @@ def ensure_dialog_line_format(line:str):
         segments[i] = clean_uneven_markers(segments[i], '"')
         segments[i] = clean_uneven_markers(segments[i], '*')
             
-    return " ".join(segment for segment in segments if segment).strip()
+    final = " ".join(segment for segment in segments if segment).strip()
+    final = final.replace('","', '').replace('"."', '')
+    return final
 
 
 def clean_uneven_markers(chunk:str, marker:str):

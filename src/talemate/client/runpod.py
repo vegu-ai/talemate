@@ -7,6 +7,7 @@ import dotenv
 import runpod
 import os
 import json
+import asyncio
 
 from .bootstrap import ClientBootstrap, ClientType, register_list
 
@@ -29,7 +30,15 @@ def is_textgen_pod(pod):
     
     return False
 
-def get_textgen_pods():
+async def _async_get_pods():
+    """
+    asyncio wrapper around get_pods.
+    """
+    
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, runpod.get_pods)
+
+async def get_textgen_pods():
     """
     Return a list of text generation pods.
     """
@@ -37,14 +46,14 @@ def get_textgen_pods():
     if not runpod.api_key:
         return
     
-    for pod in runpod.get_pods():
+    for pod in await _async_get_pods():
         if not pod["desiredStatus"] == "RUNNING":
             continue
         if is_textgen_pod(pod):
             yield pod
             
 
-def get_automatic1111_pods():
+async def get_automatic1111_pods():
     """
     Return a list of automatic1111 pods.
     """
@@ -52,7 +61,7 @@ def get_automatic1111_pods():
     if not runpod.api_key:
         return
     
-    for pod in runpod.get_pods():
+    for pod in await _async_get_pods():
         if not pod["desiredStatus"] == "RUNNING":
             continue
         if "automatic1111" in pod["name"].lower():
@@ -81,12 +90,17 @@ def _client_bootstrap(client_type: ClientType, pod):
             
 
 @register_list("runpod")
-def client_bootstrap_list():
+async def client_bootstrap_list():
     """
     Return a list of client bootstrap options.
     """
-    textgen_pods = list(get_textgen_pods()) 
-    automatic1111_pods = list(get_automatic1111_pods())
+    textgen_pods = []
+    async for pod in get_textgen_pods():
+        textgen_pods.append(pod)
+        
+    automatic1111_pods = []
+    async for pod in get_automatic1111_pods():
+        automatic1111_pods.append(pod)
     
     for pod in textgen_pods:
         yield _client_bootstrap(ClientType.textgen, pod)

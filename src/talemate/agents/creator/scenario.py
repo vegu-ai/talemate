@@ -48,41 +48,43 @@ class ScenarioCreatorMixin:
             
     
     
+    @set_processing
     async def create_scene_name(
         self,
         prompt:str,
         content_context:str,
         description:str,
     ):
+        
+        """
+        Generates a scene name.
+        
+        Arguments:
+        
+            prompt (str): The prompt to use to generate the scene name.
             
-            """
-            Generates a scene name.
+            content_context (str): The content context to use for the scene.
             
-            Arguments:
-            
-                prompt (str): The prompt to use to generate the scene name.
-                
-                content_context (str): The content context to use for the scene.
-                
-                description (str): The description of the scene.
-            """
-            scene = self.scene
-            
-            name = await Prompt.request(
-                "creator.scenario-name",
-                self.client,
-                "create",
-                vars={
-                    "prompt": prompt,
-                    "content_context": content_context,
-                    "description": description,
-                    "scene": scene,
-                }
-            )
-            name = name.strip().strip('.!').replace('"','')
-            return name
+            description (str): The description of the scene.
+        """
+        scene = self.scene
+        
+        name = await Prompt.request(
+            "creator.scenario-name",
+            self.client,
+            "create",
+            vars={
+                "prompt": prompt,
+                "content_context": content_context,
+                "description": description,
+                "scene": scene,
+            }
+        )
+        name = name.strip().strip('.!').replace('"','')
+        return name
     
     
+    @set_processing
     async def create_scene_intro(
         self,
         prompt:str,

@@ -16,11 +16,13 @@ import asyncio
 import nest_asyncio
 import uuid
 import random
+from contextvars import ContextVar
 from typing import Any
 from talemate.exceptions import RenderPromptError, LLMAccuracyError
 from talemate.emit import emit
 from talemate.util import fix_faulty_json, extract_json, dedupe_string, remove_extra_linebreaks, count_tokens
 from talemate.config import load_config
+import talemate.thematic_generators as thematic_generators
 
 import talemate.instance as instance
 
@@ -34,6 +36,22 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate")
+
+prepended_template_dirs = ContextVar("prepended_template_dirs", default=[])
+
+class PrependTemplateDirectories:
+    def __init__(self, prepend_dir:list):
+        
+        if isinstance(prepend_dir, str):
+            prepend_dir = [prepend_dir]
+        
+        self.prepend_dir = prepend_dir
+        
+    def __enter__(self):
+        self.token = prepended_template_dirs.set(self.prepend_dir)
+        
+    def __exit__(self, *args):
+        prepended_template_dirs.reset(self.token)
 
 
 nest_asyncio.apply()
@@ -64,6 +82,13 @@ def validate_line(line):
         not line.strip().startswith("[end of") and
         not line.strip().startswith("</")
     )
+
+def condensed(s):
+    """Replace all line breaks in a string with spaces."""
+    r = s.replace('\n', ' ').replace('\r', '')
+
+    # also replace multiple spaces with a single space
+    return re.sub(r'\s+', ' ', r)
 
 def clean_response(response):
     
@@ -198,7 +223,12 @@ class Prompt:
         
         #split uid into agent_type and prompt_name
         
-        agent_type, prompt_name = uid.split(".")
+        try:
+            agent_type, prompt_name = uid.split(".")
+        except ValueError as exc:
+            log.warning("prompt.get", uid=uid, error=exc)
+            agent_type = ""
+            prompt_name = uid
         
         prompt = cls(
             uid = uid,
@@ -235,12 +265,18 @@ class Prompt:
         # Get the directory of this file
         dir_path = os.path.dirname(os.path.realpath(__file__))
         
+        _prepended_template_dirs = prepended_template_dirs.get() or []
+        
+        _fixed_template_dirs = [
+            os.path.join(dir_path, '..', '..', '..', 'templates', 'prompts', self.agent_type),
+            os.path.join(dir_path, 'templates', self.agent_type),
+        ]
+        
+        template_dirs = _prepended_template_dirs + _fixed_template_dirs
+        
         # Create a jinja2 environment with the appropriate template paths
         return jinja2.Environment(
-            loader=jinja2.FileSystemLoader([
-                os.path.join(dir_path, '..', '..', '..', 'templates', 'prompts', self.agent_type),
-                os.path.join(dir_path, 'templates', self.agent_type),
-            ])
+            loader=jinja2.FileSystemLoader(template_dirs),
         )
         
     def list_templates(self, search_pattern:str):
@@ -273,13 +309,15 @@ class Prompt:
         
         env = self.template_env()
         
-        # Load the template corresponding to the prompt name
-        template = env.get_template('{}.jinja2'.format(self.name))
         
         ctx = {
-            "bot_token": "<|BOT|>"
+            "bot_token": "<|BOT|>",
+            "thematic_generator": thematic_generators.ThematicGenerator(),
         }
         
+        env.globals["render_template"] = self.render_template
+        env.globals["render_and_request"] = self.render_and_request
+        env.globals["debug"] = lambda *a, **kw: log.debug(*a, **kw)
         env.globals["set_prepared_response"] = self.set_prepared_response
         env.globals["set_prepared_response_random"] = self.set_prepared_response_random
         env.globals["set_eval_response"] = self.set_eval_response
@@ -287,19 +325,29 @@ class Prompt:
         env.globals["set_question_eval"] = self.set_question_eval
         env.globals["disable_dedupe"] = self.disable_dedupe
         env.globals["random"] = self.random
+        env.globals["random_as_str"] = lambda x,y: str(random.randint(x,y))
+        env.globals["random_choice"] = lambda x: random.choice(x)
         env.globals["query_scene"] = self.query_scene
         env.globals["query_memory"] = self.query_memory
         env.globals["query_text"] = self.query_text
         env.globals["instruct_text"] = self.instruct_text
+        env.globals["agent_action"] = self.agent_action
         env.globals["retrieve_memories"] = self.retrieve_memories
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
         env.globals["config"] = self.config
         env.globals["len"] = lambda x: len(x)
+        env.globals["max"] = lambda x,y: max(x,y)
+        env.globals["min"] = lambda x,y: min(x,y)
         env.globals["count_tokens"] = lambda x: count_tokens(dedupe_string(x, debug=False))
         env.globals["print"] = lambda x: print(x)
-        
+        env.globals["emit_status"] = self.emit_status
+        env.globals["emit_system"] = lambda status, message: emit("system", status=status, message=message)
+        env.filters["condensed"] = condensed
         ctx.update(self.vars)
+        
+        # Load the template corresponding to the prompt name
+        template = env.get_template('{}.jinja2'.format(self.name))
         
         sectioning_handler = SECTIONING_HANDLERS.get(self.sectioning_hander)
         
@@ -348,7 +396,22 @@ class Prompt:
         parsed_text = remove_extra_linebreaks(parsed_text)
         
         return parsed_text
+    
+    
+    def render_template(self, uid, **kwargs) -> 'Prompt':
+        # copy self.vars and update with kwargs
+        vars = self.vars.copy()
+        vars.update(kwargs)
+        return Prompt.get(uid, vars=vars)
+    
+    def render_and_request(self, prompt:'Prompt', kind:str="create") -> str:
         
+        if not self.client:
+            raise ValueError("Prompt has no client set.")
+        
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(prompt.send(self.client, kind=kind))
+            
     async def loop(self, client:any, loop_name:str, kind:str="create"):
         
         loop = self.vars.get(loop_name)
@@ -357,10 +420,14 @@ class Prompt:
             result = await self.send(client, kind=kind)
             loop.update(result)
     
-    def query_scene(self, query:str, at_the_end:bool=True, as_narrative:bool=False):
+    def query_scene(self, query:str, at_the_end:bool=True, as_narrative:bool=False, as_question_answer:bool=True):
         loop = asyncio.get_event_loop()
         narrator = instance.get_agent("narrator")
         query = query.format(**self.vars)
+        
+        if not as_question_answer:
+            return loop.run_until_complete(narrator.narrate_query(query, at_the_end=at_the_end, as_narrative=as_narrative))
+        
         return "\n".join([
             f"Question: {query}",
             f"Answer: " + loop.run_until_complete(narrator.narrate_query(query, at_the_end=at_the_end, as_narrative=as_narrative)),
@@ -371,6 +438,9 @@ class Prompt:
         loop = asyncio.get_event_loop()
         summarizer = instance.get_agent("world_state")
         query = query.format(**self.vars)
+        
+        if isinstance(text, list):
+            text = "\n".join(text)
         
         if not as_question_answer:
             return loop.run_until_complete(summarizer.analyze_text_and_answer_question(text, query))
@@ -402,8 +472,11 @@ class Prompt:
         world_state = instance.get_agent("world_state")
         instruction = instruction.format(**self.vars)
         
-        return loop.run_until_complete(world_state.analyze_and_follow_instruction(text, instruction))      
-            
+        if isinstance(text, list):
+            text = "\n".join(text)
+        
+        return loop.run_until_complete(world_state.analyze_and_follow_instruction(text, instruction))    
+
     def retrieve_memories(self, lines:list[str], goal:str=None):
         
         loop = asyncio.get_event_loop()
@@ -413,6 +486,15 @@ class Prompt:
         
         return loop.run_until_complete(world_state.analyze_text_and_extract_context("\n".join(lines), goal=goal))
     
+    
+    def agent_action(self, agent_name:str, action_name:str, **kwargs):
+        loop = asyncio.get_event_loop()
+        agent = instance.get_agent(agent_name)
+        action = getattr(agent, action_name)
+        return loop.run_until_complete(action(**kwargs))
+    
+    def emit_status(self, status:str, message:str):
+        emit("status", status=status, message=message)
     
     def set_prepared_response(self, response:str, prepend:str=""):
         """

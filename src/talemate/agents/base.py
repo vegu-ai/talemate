@@ -62,8 +62,13 @@ def set_processing(fn):
                 await self.emit_status(processing=True)
                 return await fn(self, *args, **kwargs)
             finally:
-                await self.emit_status(processing=False)
-            
+                try:
+                    await self.emit_status(processing=False)
+                except RuntimeError as exc:
+                    # not sure why this happens
+                    # some concurrency error?
+                    log.error("error emitting agent status", exc=exc)
+                    
     wrapper.__name__ = fn.__name__
             
     return wrapper

@@ -86,17 +86,29 @@ class NarratorAgent(Agent):
                 label = "Auto Break Repetition",
                 description = "Will attempt to automatically break AI repetition.",
             ),
-            "narrate_time_passage": AgentAction(enabled=True, label="Narrate Time Passage", description="Whenever you indicate passage of time, narrate right after"),
-            "narrate_dialogue": AgentAction(
+            "narrate_time_passage": AgentAction(
                 enabled=True, 
-                label="Narrate Dialogue", 
+                label="Narrate Time Passage", 
+                description="Whenever you indicate passage of time, narrate right after",
+                config = {
+                    "ask_for_prompt": AgentActionConfig(
+                        type="bool",
+                        label="Guide time narration via prompt", 
+                        description="Ask the user for a prompt to generate the time passage narration",
+                        value=True,
+                    )
+                }
+            ),
+            "narrate_dialogue": AgentAction(
+                enabled=False, 
+                label="Narrate after Dialogue", 
                 description="Narrator will get a chance to narrate after every line of dialogue",
                 config = {
                     "ai_dialog": AgentActionConfig(
                         type="number",
                         label="AI Dialogue", 
                         description="Chance to narrate after every line of dialogue, 1 = always, 0 = never",
-                        value=0.3,
+                        value=0.0,
                         min=0.0,
                         max=1.0,
                         step=0.1,
@@ -105,7 +117,7 @@ class NarratorAgent(Agent):
                         type="number",
                         label="Player Dialogue", 
                         description="Chance to narrate after every line of dialogue, 1 = always, 0 = never",
-                        value=0.3,
+                        value=0.1,
                         min=0.0,
                         max=1.0,
                         step=0.1,
@@ -170,7 +182,7 @@ class NarratorAgent(Agent):
         if not self.actions["narrate_time_passage"].enabled:
             return
         
-        response = await self.narrate_time_passage(event.duration, event.narrative)
+        response = await self.narrate_time_passage(event.duration, event.human_duration, event.narrative)
         narrator_message = NarratorMessage(response, source=f"narrate_time_passage:{event.duration};{event.narrative}")
         emit("narrator", narrator_message)
         self.scene.push_history(narrator_message)
@@ -183,10 +195,17 @@ class NarratorAgent(Agent):
         
         if not self.actions["narrate_dialogue"].enabled:
             return
+        
+        
+        if event.game_loop.had_passive_narration:
+            log.debug("narrate on dialog", skip=True, had_passive_narration=event.game_loop.had_passive_narration)
+            return
+        
         narrate_on_ai_chance = self.actions["narrate_dialogue"].config["ai_dialog"].value
         narrate_on_player_chance = self.actions["narrate_dialogue"].config["player_dialog"].value
         narrate_on_ai = random.random() < narrate_on_ai_chance
         narrate_on_player = random.random() < narrate_on_player_chance
+
         log.debug(
             "narrate on dialog", 
             narrate_on_ai=narrate_on_ai, 
@@ -205,6 +224,8 @@ class NarratorAgent(Agent):
         narrator_message = NarratorMessage(response, source=f"narrate_dialogue:{event.actor.character.name}")
         emit("narrator", narrator_message)
         self.scene.push_history(narrator_message)
+        
+        event.game_loop.had_passive_narration = True
 
     @set_processing
     async def narrate_scene(self):
@@ -305,17 +326,6 @@ class NarratorAgent(Agent):
         Narrate a specific character
         """
 
-        budget = self.client.max_token_length - 300
-
-        memory_budget = min(int(budget * 0.05), 200)
-        memory = self.scene.get_helper("memory").agent
-        query = [
-            f"What does {character.name} currently look like?",
-            f"What is {character.name} currently wearing?",
-        ]
-        memory_context = await memory.multi_query(
-            query, iterate=1, max_tokens=memory_budget
-        )
         response = await Prompt.request(
             "narrator.narrate-character",
             self.client,
@@ -324,7 +334,6 @@ class NarratorAgent(Agent):
                 "scene": self.scene,
                 "character": character,
                 "max_tokens": self.client.max_token_length,
-                "memory": memory_context,
                 "extra_instructions": self.extra_instructions,
             }
         )
@@ -383,7 +392,7 @@ class NarratorAgent(Agent):
         return list(zip(questions, answers))
     
     @set_processing
-    async def narrate_time_passage(self, duration:str, narrative:str=None):
+    async def narrate_time_passage(self, duration:str, time_passed:str, narrative:str):
         """
         Narrate a specific character
         """
@@ -396,6 +405,7 @@ class NarratorAgent(Agent):
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "duration": duration,
+                "time_passed": time_passed,
                 "narrative": narrative,
                 "extra_instructions": self.extra_instructions,
             }

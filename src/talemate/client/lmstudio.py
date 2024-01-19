@@ -10,7 +10,7 @@ class LMStudioClient(ClientBase):
     client_type = "lmstudio"
     conversation_retries = 5
 
-    def set_client(self):
+    def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url+"/v1", api_key="sk-1111")
         
     def tune_prompt_parameters(self, parameters:dict, kind:str):

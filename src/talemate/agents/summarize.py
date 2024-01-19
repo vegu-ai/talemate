@@ -51,7 +51,18 @@ class SummarizeAgent(Agent):
                         max=8192,
                         step=256,
                         value=1536,
-                    )
+                    ),
+                    "method": AgentActionConfig(
+                        type="text",
+                        label="Summarization Method",
+                        description="Which method to use for summarization",
+                        value="balanced",
+                        choices=[
+                            {"label": "Short & Concise", "value": "short"},
+                            {"label": "Balanced", "value": "balanced"},
+                            {"label": "Lengthy & Detailed", "value": "long"},
+                        ],
+                    ),
                 }
             )
         }
@@ -205,9 +216,8 @@ class SummarizeAgent(Agent):
     async def summarize(
         self,
         text: str,
-        perspective: str = None,
-        pins: Union[List[str], None] = None,
         extra_context: str = None,
+        method: str = None,
     ):
         """
         Summarize the given text
@@ -217,30 +227,9 @@ class SummarizeAgent(Agent):
             "dialogue": text,
             "scene": self.scene,
             "max_tokens": self.client.max_token_length,
+            "summarization_method": self.actions["archive"].config["method"].value if method is None else method,
         })
         
         self.scene.log.info("summarize", dialogue_length=len(text), summarized_length=len(response))
 
         return self.clean_result(response)
-
-    @set_processing
-    async def simple_summary(
-        self, text: str, prompt_kind: str = "summarize", instructions: str = "Summarize"
-    ):
-        prompt = [
-            text,
-            "",
-            f"Instruction: {instructions}",
-            "<|BOT|>Short Summary: ",
-        ]
-
-        response = await self.client.send_prompt("\n".join(map(str, prompt)), kind=prompt_kind)
-        if ":" in response:
-            response = response.split(":")[1].strip()
-        return response
-
-
-            
-            
-    
-        

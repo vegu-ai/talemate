@@ -30,6 +30,16 @@ if not chromadb:
 
 from .base import Agent
 
+class MemoryDocument(str):
+    
+    def __new__(cls, text, meta, id, raw):
+        inst = super().__new__(cls, text)
+
+        inst.meta = meta
+        inst.id = id
+        inst.raw = raw
+        
+        return inst
 
 class MemoryAgent(Agent):
     """
@@ -61,6 +71,7 @@ class MemoryAgent(Agent):
         self.scene = scene
         self.memory_tracker = {}
         self.config = load_config()
+        self._ready_to_add = False
         
         handlers["config_saved"].connect(self.on_config_saved)
         
@@ -88,6 +99,11 @@ class MemoryAgent(Agent):
             log.debug("memory agent", status="readonly")
             return
         
+        while not self._ready_to_add:
+            await asyncio.sleep(0.1)
+            
+        log.debug("memory agent add", text=text[:50], character=character, uid=uid, ts=ts, **kwargs)
+         
         loop = asyncio.get_running_loop()
         
         await loop.run_in_executor(None, functools.partial(self._add, text, character, uid=uid, ts=ts, **kwargs))
@@ -100,7 +116,12 @@ class MemoryAgent(Agent):
         if self.readonly:
             log.debug("memory agent", status="readonly")
             return
-        
+
+        while not self._ready_to_add:
+            await asyncio.sleep(0.1)
+ 
+        log.debug("memory agent add many", len=len(objects)) 
+ 
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._add_many, objects)
     
@@ -109,6 +130,27 @@ class MemoryAgent(Agent):
         Add multiple objects to the memory
         """
         raise NotImplementedError()
+
+    def _delete(self, meta:dict):
+        """
+        Delete an object from the memory
+        """
+        raise NotImplementedError()
+    
+    @set_processing
+    async def delete(self, meta:dict):
+        """
+        Delete an object from the memory
+        """
+        if self.readonly:
+            log.debug("memory agent", status="readonly")
+            return
+        
+        while not self._ready_to_add:
+            await asyncio.sleep(0.1)
+        
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._delete, meta)
 
     @set_processing
     async def get(self, text, character=None, **query):
@@ -119,8 +161,13 @@ class MemoryAgent(Agent):
     def _get(self, text, character=None, **query):
         raise NotImplementedError()
 
-    def get_document(self, id):
-        return self.db.get(id)
+    @set_processing
+    async def get_document(self, id):
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_document, id)
+    
+    def _get_document(self, id):
+        raise NotImplementedError()
 
     def on_archive_add(self, event: events.ArchiveEvent):
         asyncio.ensure_future(self.add(event.text, uid=event.memory_id, ts=event.ts, typ="history"))
@@ -198,6 +245,7 @@ class MemoryAgent(Agent):
         max_tokens: int = 1000,
         filter: Callable = lambda x: True,
         formatter: Callable = lambda x: x,
+        limit: int = 10,
         **where
     ):
         """
@@ -211,7 +259,7 @@ class MemoryAgent(Agent):
                 continue
             
             i = 0
-            for memory in await self.get(formatter(query), limit=iterate, **where):
+            for memory in await self.get(formatter(query), limit=limit, **where):
                 if memory in memory_context:
                     continue
 
@@ -339,6 +387,9 @@ class ChromaDBMemoryAgent(MemoryAgent):
         await loop.run_in_executor(None, self._set_db)
 
     def _set_db(self):
+        
+        self._ready_to_add = False
+        
         if not getattr(self, "db_client", None):
             log.info("chromadb agent", status="setting up db client to persistent db")
             self.db_client = chromadb.PersistentClient(
@@ -391,6 +442,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         
         self.scene._memory_never_persisted = self.db.count() == 0
         log.info("chromadb agent", status="db ready")
+        self._ready_to_add = True
 
     def clear_db(self):
         if not self.db:
@@ -418,24 +470,28 @@ class ChromaDBMemoryAgent(MemoryAgent):
         
         log.info("chromadb agent", status="closing db", collection_name=self.collection_name)
         
-        if not scene.saved:
+        if not scene.saved and not scene.saved_memory_session_id:
             # scene was never saved so we can discard the memory
             collection_name = self.make_collection_name(scene)
             log.info("chromadb agent", status="discarding memory", collection_name=collection_name)
             try:
                 self.db_client.delete_collection(collection_name)
             except ValueError as exc:
-                if "Collection not found" not in str(exc):
-                    raise
+                log.error("chromadb agent", error="failed to delete collection", details=exc)
+        elif not scene.saved:
+            # scene was saved but memory was never persisted
+            # so we need to remove the memory from the db
+            self._remove_unsaved_memory()
         
         self.db = None
         
     def _add(self, text, character=None, uid=None, ts:str=None, **kwargs):
         metadatas = []
         ids = []
-
+        scene = self.scene
+        
         if character:
-            meta = {"character": character.name, "source": "talemate"}
+            meta = {"character": character.name, "source": "talemate", "session": scene.memory_session_id}
             if ts:
                 meta["ts"] = ts
             meta.update(kwargs)
@@ -445,7 +501,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             id = uid or f"{character.name}-{self.memory_tracker[character.name]}"
             ids = [id]
         else:
-            meta = {"character": "__narrator__", "source": "talemate"}
+            meta = {"character": "__narrator__", "source": "talemate", "session": scene.memory_session_id}
             if ts:
                 meta["ts"] = ts
             meta.update(kwargs)
@@ -464,21 +520,44 @@ class ChromaDBMemoryAgent(MemoryAgent):
         documents = []
         metadatas = []
         ids = []
+        scene = self.scene
+        
+        if not objects:
+            return
 
         for obj in objects:
             documents.append(obj["text"])
             meta = obj.get("meta", {})
+            source = meta.get("source", "talemate")
             character = meta.get("character", "__narrator__")
             self.memory_tracker.setdefault(character, 0)
             self.memory_tracker[character] += 1
-            meta["source"] = "talemate"
+            meta["source"] = source
+            if not meta.get("session"):
+                meta["session"] = scene.memory_session_id
             metadatas.append(meta)
             uid = obj.get("id", f"{character}-{self.memory_tracker[character]}")
             ids.append(uid)
         self.db.upsert(documents=documents, metadatas=metadatas, ids=ids)
 
+    def _delete(self, meta:dict):
+        
+        if "ids" in meta:
+            log.debug("chromadb agent delete", ids=meta["ids"])
+            self.db.delete(ids=meta["ids"])
+            return
+        
+        where = {"$and": [{k:v} for k,v in meta.items()]}
+        self.db.delete(where=where)
+        log.debug("chromadb agent delete", meta=meta, where=where)
+
     def _get(self, text, character=None, limit:int=15, **kwargs):
         where = {}
+        
+        # this doesn't work because chromadb currently doesn't match
+        # non existing fields with $ne (or so it seems)
+        # where.setdefault("$and", [{"pin_only": {"$ne": True}}])
+        
         where.setdefault("$and", [])
         
         character_filtered = False
@@ -506,6 +585,12 @@ class ChromaDBMemoryAgent(MemoryAgent):
         #print(json.dumps(_results["distances"], indent=2))
         
         results = []
+        
+        max_distance = 1.5
+        if self.USE_INSTRUCTOR:
+            max_distance = 1
+        elif self.USE_OPENAI:
+            max_distance = 1
 
         for i in range(len(_results["distances"][0])):
             distance = _results["distances"][0][i]
@@ -514,17 +599,19 @@ class ChromaDBMemoryAgent(MemoryAgent):
             meta = _results["metadatas"][0][i]
             ts = meta.get("ts")
             
-            if distance < 1:
+            # skip pin_only entries
+            if meta.get("pin_only", False):
+                continue
+            
+            if distance < max_distance:
+                date_prefix = self.convert_ts_to_date_prefix(ts)
+                raw = doc
                 
-                try:
-                    #log.debug("chromadb agent get", ts=ts, scene_ts=self.scene.ts)
-                    date_prefix = util.iso8601_diff_to_human(ts, self.scene.ts)
-                except Exception as e:
-                    log.error("chromadb agent", error="failed to get date prefix", details=e, ts=ts, scene_ts=self.scene.ts)
-                    date_prefix = None
-                    
                 if date_prefix:
                     doc = f"{date_prefix}: {doc}"
+                    
+                doc = MemoryDocument(doc, meta, _results["ids"][0][i], raw)
+                    
                 results.append(doc)
             else:
                 break
@@ -535,3 +622,46 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 break
 
         return results
+
+
+    def convert_ts_to_date_prefix(self, ts):
+        if not ts:
+            return None
+        try:
+            return util.iso8601_diff_to_human(ts, self.scene.ts)
+        except Exception as e:
+            log.error("chromadb agent", error="failed to get date prefix", details=e, ts=ts, scene_ts=self.scene.ts)
+            return None
+
+    def _get_document(self, id) -> dict:
+        result = self.db.get(ids=[id] if isinstance(id, str) else id)
+        documents = {}
+        
+        for idx, doc in enumerate(result["documents"]):
+            date_prefix = self.convert_ts_to_date_prefix(result["metadatas"][idx].get("ts"))
+            if date_prefix:
+                doc = f"{date_prefix}: {doc}"
+            documents[result["ids"][idx]] = MemoryDocument(doc, result["metadatas"][idx], result["ids"][idx], doc)
+            
+        return documents
+
+    @set_processing
+    async def remove_unsaved_memory(self):
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._remove_unsaved_memory)
+        
+    def _remove_unsaved_memory(self):
+    
+        scene = self.scene
+        
+        if not scene.memory_session_id:
+            return
+            
+        if scene.saved_memory_session_id == self.scene.memory_session_id:
+            return
+        
+        log.info("chromadb agent", status="removing unsaved memory", session_id=scene.memory_session_id)
+        
+        self._delete({"session": scene.memory_session_id, "source": "talemate"})
+        
+    

@@ -1,0 +1,19 @@
+<|SECTION:PREVIOUS CONDITION STATES|>
+{{ previous_states }}
+<|CLOSE_SECTION|>
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=min(2048, max_tokens-500)) -%}
+{{ scene_context }}
+{% endfor -%}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Analyze the scene progression and update the condition states according to the most recent update to the scene.
+
+Answer truthfully in the context of the end of the scene evaluating the scene progression to the end.
+
+Only update the existing condition states.
+Only include a JSON response.
+State must be a boolean.
+<|CLOSE_SECTION|>
+<|SECTION:UPDATED CONDITION STATES|>
+{{ set_json_response(coercion, cutoff=3) }}

@@ -1,0 +1,24 @@
+{% block rendered_context -%}
+<|SECTION:CONTEXT|>
+{% include "extra-context.jinja2" %}
+<|CLOSE_SECTION|>
+{% endblock -%}
+<|SECTION:SCENE|>
+{{ text }}
+<|SECTION:TASK|>
+You have access to a vector database to retrieve relevant data to gather more established context for the continuation of this conversation. If a character is asking about a state, location or information about an item or another character, make sure to include queries that help gather context for this.
+
+Please compile a list of up to 10 short queries to the database that will help us gather additional context for the actors to continue the ongoing conversation.
+
+Each query must be a short trigger keyword phrase and the database will match on semantic similarity.
+
+Each query must be on its own line as raw unformatted text.
+
+Your response should look like this and contain only the queries and nothing else:
+
+- <query 1>
+- <query 2>
+- ...
+- <query 10>
+<|CLOSE_SECTION|>
+{{ set_prepared_response('-') }}

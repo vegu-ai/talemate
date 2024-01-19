@@ -1,13 +1,31 @@
 <|SECTION:CONTENT|>
-{% if text -%}
-{{ text }}
-{% else -%}
 {% set scene_context_history = scene.context_history(budget=max_tokens-500, min_dialogue=25, sections=False, keep_director=True) -%}
 {% if scene.num_history_entries < 25 %}{{ scene.description.replace("\r\n","\n") }}{% endif -%}
 {% for scene_context in scene_context_history -%}
 {{ scene_context }}
 {% endfor %}
-{% endif %}
+{% for memory in query_memory("Who is "+name+"?", as_question_answer=False, iterate=3) %}
+{{ memory }}
+{% endfor %}
+{% if text -%}
+{{ text }}
+{% endif -%}
 <|SECTION:TASK|>
-Generate a real world character profile for {{ name }}, one attribute per line.
+Generate a real world character profile for {{ name }}, one attribute per line. You are a creative writer and are allowed to fill in any gaps in the profile with your own ideas.
+
+Expand on interesting details.
+
+Narration style should be that of a 90s point and click adventure game. You are omniscient and can describe the scene in detail.
+
+Use an informal and colloquial register with a conversational tone. Overall, the narrative is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
+
+Example:
+
+Name: <character name>
+Age: <age written out in text>
+Appearance: <description of appearance>
+<...>
+
+Format MUST be one attribute per line, with a colon after the attribute name.
+
 {{ set_prepared_response("Name: "+name+"\nAge:") }}

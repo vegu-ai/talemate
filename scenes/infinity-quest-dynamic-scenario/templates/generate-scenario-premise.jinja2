@@ -1,0 +1,36 @@
+<|SECTION:DESCRIPTION|>
+{{ scene.description }}
+
+Elmer and Kaira are the only crew members of the Starlight Nomad, a small spaceship traveling through interstellar space.
+<|CLOSE_SECTION|>
+<|SECTION:CHARACTERS|>
+{% for character in characters %}
+### {{ character.name }}
+{% if max_tokens > 6000 -%}
+{{ character.sheet }}
+{% else -%}
+{{ character.filtered_sheet(['age', 'gender']) }}
+{{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
+{% endif %}
+
+{{ character.description }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Your task is to write a scenario premise for a new infinity quest scenario. Think of it as a standalone episode that you are writing a preview for, setting the tone and main plot points.
+
+This is for an open ended roleplaying game, so the scenario should be open ended as well.
+
+Kaira and Elmer are the main characters. Elmer is controlled by the player.
+
+Generate 2 paragraphs of text.
+
+Use an informal and colloquial register with a conversational tone. Overall, the narrative is informal, conversational, natural, and spontaneous, with a sense of immediacy.
+
+The scenario MUST BE contained to the Starlight Nomad spaceship. The spaceship is a small spaceship with a crew of 2.
+The scope of the story should be small and personal.
+
+Thematic Tags: {{ thematic_tags }}
+Use the thematic tags to subtly guide your writing. The tags are not required to be used in the text, but should be used to guide your writing.
+<|CLOSE_SECTION|>
+{{ set_prepared_response('In this episode') }}

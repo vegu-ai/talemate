@@ -35,19 +35,27 @@ class CharacterStateEvent(Event):
     state: str
     character_name: str
 
-
 @dataclass
-class GameLoopEvent(Event):
+class SceneStateEvent(Event):
     pass
 
 @dataclass
-class GameLoopStartEvent(GameLoopEvent):
+class GameLoopBase(Event):
     pass
 
 @dataclass
-class GameLoopActorIterEvent(GameLoopEvent):
+class GameLoopEvent(GameLoopBase):
+    had_passive_narration: bool = False
+
+@dataclass
+class GameLoopStartEvent(GameLoopBase):
+    pass
+
+@dataclass
+class GameLoopActorIterEvent(GameLoopBase):
     actor: Actor
+    game_loop: GameLoopEvent
     
 @dataclass
-class GameLoopNewMessageEvent(GameLoopEvent):
+class GameLoopNewMessageEvent(GameLoopBase):
     message: SceneMessage

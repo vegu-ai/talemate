@@ -120,12 +120,19 @@
 
         <div style="flex-shrink: 0;" v-if="sceneActive">
 
-          <SceneTools />
+          <SceneTools @open-world-state-manager="onOpenWorldStateManager"/>
           <CharacterSheet ref="characterSheet" />
           <SceneHistory ref="sceneHistory" />
 
-          <v-text-field v-model="messageInput" :label="inputHint" outlined ref="messageInput" @keyup.enter="sendMessage"
-            :disabled="inputDisabled">
+          <v-text-field
+            v-model="messageInput" 
+            :label="inputHint" 
+            outlined 
+            ref="messageInput" 
+            @keyup.enter="sendMessage"
+            :disabled="isInputDisabled()" 
+            :prepend-inner-icon="messageInputIcon()"
+            :color="messageInputColor()">
             <template v-slot:append>
               <v-btn @click="sendMessage" color="primary" icon>
                 <v-icon v-if="messageInput">mdi-send</v-icon>
@@ -141,6 +148,7 @@
     <v-snackbar v-model="errorNotification" color="red" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
+    <StatusNotification />
   </v-app>
 </template>
   
@@ -159,6 +167,7 @@ import CreativeEditor from './CreativeEditor.vue';
 import AppConfig from './AppConfig.vue';
 import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
+import StatusNotification from './StatusNotification.vue';
 
 export default {
   components: {
@@ -176,6 +185,7 @@ export default {
     AppConfig,
     DebugTools,
     AudioQueue,
+    StatusNotification,
   },
   name: 'TalemateApp',
   data() {
@@ -195,6 +205,7 @@ export default {
       reconnect: true,
       errorMessage: null,
       errorNotification: false,
+      notificatioonBusy: false,
       inputHint: 'Enter your text...',
       messageInput: '',
       reconnectInterval: 3000,
@@ -218,7 +229,7 @@ export default {
     return {
       getWebsocket: () => this.websocket,
       registerMessageHandler: this.registerMessageHandler,
-      isInputDisabled: () => this.inputDisabled,
+      isInputDisabled: () => this.isInputDisabled(),
       setInputDisabled: (disabled) => this.inputDisabled = disabled,
       isWaitingForInput: () => this.waitingForInput,
       setWaitingForInput: (waiting) => this.waitingForInput = waiting,
@@ -233,6 +244,10 @@ export default {
       requestAppConfig: () => this.requestAppConfig(),
       appConfig: () => this.appConfig,
       configurationRequired: () => this.configurationRequired(),
+      getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
+      getTrackedWorldState: (question) => this.$refs.worldState.trackedWorldState(question),
+      getPlayerCharacterName: () => this.getPlayerCharacterName(),
+      formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
     };
   },
   methods: {
@@ -297,12 +312,17 @@ export default {
         }
       }
 
+      if(data.type == 'status') {
+        this.notificatioonBusy = (data.status == 'busy');
+      }
+
       if (data.type == "scene_status") {
         this.scene = {
           name: data.name,
           environment: data.data.environment,
           scene_time: data.data.scene_time,
           saved: data.data.saved,
+          player_character_name: data.data.player_character_name,
         }
         this.sceneActive = true;
         return;
@@ -440,6 +460,9 @@ export default {
     openSceneHistory() {
       this.$refs.sceneHistory.open();
     },
+    onOpenWorldStateManager(tab, sub1, sub2, sub3) {
+      this.$refs.worldState.openWorldStateManager(tab, sub1, sub2, sub3);
+    },
     openAppConfig() {
       this.$refs.appConfig.show();
     },
@@ -450,6 +473,59 @@ export default {
     sceneStartedLoading() {
       this.loading = true;
       this.sceneActive = false;
+    },
+
+    getPlayerCharacterName() {
+      if (!this.scene || !this.scene.player_character_name) {
+        return null;
+      }
+      return this.scene.player_character_name;
+    },
+
+    isInputDisabled() {
+
+      // if any client is active and busy, disable input
+      if (this.$refs.aiClient && this.$refs.aiClient.getActive()) {
+        return true;
+      } 
+
+      return this.inputDisabled || this.notificatioonBusy;
+    },
+
+    formatWorldStateTemplateString(templateString, chracterName) {
+      let playerCharacterName = this.getPlayerCharacterName();
+      // replace {character_name} and {player_name}
+
+      if (playerCharacterName) {
+        templateString = templateString.replace(/{character_name}/g, chracterName);
+        templateString = templateString.replace(/{player_name}/g, playerCharacterName);
+      } else {
+        templateString = templateString.replace(/{character_name}/g, chracterName);
+        templateString = templateString.replace(/{player_name}/g, chracterName);
+      }
+
+      return templateString;
+    },
+
+    messageInputIcon() {
+      if (this.waitingForInput) {
+        if (this.inputHint != this.scene.player_character_name+":") {
+          return 'mdi-information-outline';
+        } else {
+          return 'mdi-comment-outline';
+        }
+      }
+      return 'mdi-cancel';
+    },
+    messageInputColor() {
+      if (this.waitingForInput) {
+        if (this.inputHint != this.scene.player_character_name+":") {
+          return 'warning';
+        } else {
+          return 'purple-lighten-3';
+        }
+      }
+      return null;
     }
   }
 }

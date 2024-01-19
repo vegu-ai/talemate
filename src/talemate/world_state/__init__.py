@@ -212,12 +212,18 @@ class WorldState(BaseModel):
             log.debug("world_state", item=item)
         
         
-        await self.persist()
+        # deactivate persiting for now
+        # await self.persist()
         self.emit()
      
     async def persist(self):
         """
         Persists the world state snapshots of characters and items into the memory agent.
+
+        TODO: neeeds re-thinking.
+        
+        Its better to use state reinforcement to track states, persisting the small world
+        state snapshots most of the time does not have enough context to be useful.
 
         Arguments:
         - None

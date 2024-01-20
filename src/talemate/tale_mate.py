@@ -86,28 +86,6 @@ class Character:
         self.cover_image = kwargs.get("cover_image")
 
     @property
-    def pronoun(self):
-        if self.gender.lower() == "female":
-            return "her"
-        elif self.gender.lower() == "male":
-            return "his"
-        elif self.gender.lower() == "neutral":
-            return "their"
-        else:
-            return "its"
-
-    @property
-    def pronoun_2(self):
-        if self.gender.lower() == "female":
-            return "she"
-        if self.gender.lower() == "male":
-            return "he"
-        if self.gender.lower() == "neutral":
-            return "they"
-        else:
-            return "it"
-
-    @property
     def persona(self):
         return self.description
 

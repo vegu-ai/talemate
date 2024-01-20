@@ -123,7 +123,7 @@ class RecentScene(BaseModel):
     path: str
     filename: str
     date: str
-    cover_image: Asset = None
+    cover_image: Union[Asset, None] = None
     
 class RecentScenes(BaseModel):
     scenes: list[RecentScene] = pydantic.Field(default_factory=list)

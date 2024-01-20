@@ -216,6 +216,16 @@
                                         </v-btn>
                                     </span>
                                     <v-spacer></v-spacer>
+                                    <v-tooltip text="Removes all previously generated reinforcements for this state and then regenerates it">
+                                        <template v-slot:activator="{ props }">
+                                            <v-btn v-if="resetStateReinforcerConfirm === true" v-bind="props" rounded="sm" prepend-icon="mdi-backup-restore" @click.stop="runStateReinforcement(true)" color="warning" variant="text">
+                                                Confirm Reset State
+                                            </v-btn>
+                                            <v-btn v-else v-bind="props" rounded="sm" prepend-icon="mdi-backup-restore" @click.stop="resetStateReinforcerConfirm=true" color="warning" variant="text">
+                                                Reset State
+                                            </v-btn>
+                                        </template> 
+                                    </v-tooltip>
                                     <v-btn rounded="sm" prepend-icon="mdi-refresh" @click.stop="runStateReinforcement()" color="primary" variant="text">
                                         Refresh State
                                     </v-btn>
@@ -251,6 +261,7 @@ export default {
             saveEntryTimeout: null,
             deleteConfirm: false,
             deferedNavigation: null,
+            resetStateReinforcerConfirm: false,
             dirty: false,
             busy: false,
             baseEntry: {
@@ -487,13 +498,16 @@ export default {
             }));
         },
 
-        runStateReinforcement() {
+        runStateReinforcement(reset) {
             this.busy=true;
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'run_world_state_reinforcement',
-                question: this.state.question
+                question: this.state.question,
+                reset: reset || false,
             }));
+
+            this.resetStateReinforcerConfirm = false;
         },
 
         requestWorld: function () {

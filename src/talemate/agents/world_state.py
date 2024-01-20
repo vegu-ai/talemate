@@ -439,7 +439,7 @@ class WorldStateAgent(Agent):
                 
     
     @set_processing
-    async def update_reinforcement(self, question:str, character:str=None):
+    async def update_reinforcement(self, question:str, character:str=None, reset:bool=False):
         
         """
         Queries a single re-inforcement
@@ -449,6 +449,11 @@ class WorldStateAgent(Agent):
         
         if not reinforcement:
             return
+        
+        source = f"{reinforcement.question}:{reinforcement.character if reinforcement.character else ''}"
+        
+        if reset and reinforcement.insert == "sequential":
+            self.scene.pop_history(typ="reinforcement", source=source, all=True)
         
         answer = await Prompt.request(
             "world_state.update-reinforcements",
@@ -460,24 +465,23 @@ class WorldStateAgent(Agent):
                 "question": reinforcement.question,
                 "instructions": reinforcement.instructions or "",
                 "character": self.scene.get_character(reinforcement.character) if reinforcement.character else None,
-                "answer": reinforcement.answer or "",
+                "answer": (reinforcement.answer if not reset else None) or "",
                 "reinforcement": reinforcement,
             }
         )
         
         reinforcement.answer = answer
         reinforcement.due = reinforcement.interval
-        
-        source = f"{reinforcement.question}:{reinforcement.character if reinforcement.character else ''}"
-        
+            
         # remove any recent previous reinforcement message with same question
         # to avoid overloading the near history with reinforcement messages
-        self.scene.pop_history(typ="reinforcement", source=source, max_iterations=10)
+        if not reset:
+            self.scene.pop_history(typ="reinforcement", source=source, max_iterations=10)
         
         if reinforcement.insert == "sequential":
             # insert the reinforcement message at the current position
             message = ReinforcementMessage(message=answer, source=source)
-            log.debug("update_reinforcement", message=message)
+            log.debug("update_reinforcement", message=message, reset=reset)
             self.scene.push_history(message)
         
         # if reinforcement has a character name set, update the character detail

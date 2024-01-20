@@ -268,7 +268,7 @@ class WorldStateManager:
         
         return reinforcement
             
-    async def run_detail_reinforcement(self, character_name:str, question:str):
+    async def run_detail_reinforcement(self, character_name:str, question:str, reset:bool=False):
         """
         Executes the detail reinforcement for a specific character and question.
 
@@ -277,7 +277,7 @@ class WorldStateManager:
             question: The query/question that the reinforcement corresponds to.
         """
         world_state_agent = get_agent("world_state")
-        await world_state_agent.update_reinforcement(question, character_name)
+        await world_state_agent.update_reinforcement(question, character_name, reset=reset)
         
     async def delete_detail_reinforcement(self, character_name:str, question:str):
         """

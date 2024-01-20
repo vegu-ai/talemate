@@ -453,6 +453,31 @@ class NarratorAgent(Agent):
 
         return response
     
+    @set_processing
+    async def narrate_character_entry(self, cahracter:Character, direction:str=None):
+        """
+        Narrate a character entering the scene
+        """
+
+        response = await Prompt.request(
+            "narrator.narrate-character-entry",
+            self.client,
+            "narrate",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "character": cahracter,
+                "direction": direction,
+                "extra_instructions": self.extra_instructions,
+            }
+        )
+
+        response = self.clean_result(response.strip().strip("*"))
+        response = f"*{response}*"
+
+        return response
+        
+    
     # LLM client related methods. These are called during or after the client
     
     def inject_prompt_paramters(self, prompt_param: dict, kind: str, agent_function_name: str):
@@ -467,3 +492,4 @@ class NarratorAgent(Agent):
             return False
         
         return True
+    

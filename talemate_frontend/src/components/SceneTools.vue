@@ -230,6 +230,48 @@
                     </v-list>
                 </v-menu>
                 
+
+
+                <!-- creative / game mode toggle -->
+
+                <v-menu v-if="isEnvironment('scene')">
+                    <template v-slot:activator="{ props }">
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
+                            <v-icon>mdi-puzzle-edit</v-icon>
+                            <v-icon v-if="passiveCharacters.length > 0" class="btn-notification" color="warning">mdi-human-greeting</v-icon>
+                        </v-btn>
+                    </template>
+                    <v-list>
+                        <v-list-subheader>Creative Tools</v-list-subheader>
+
+                        <!-- persist passive characters -->
+                        <v-list-item v-for="(character, index) in passiveCharacters" :key="index"
+                            @click="sendHotButtonMessage('!persist_character:' + character)">
+                            <template v-slot:prepend>
+                                <v-icon color="warning">mdi-human-greeting</v-icon>
+                            </template>
+                            <v-list-item-title>Introduce {{ character }}</v-list-item-title>
+                            <v-list-item-subtitle>Make {{ character }} an active character</v-list-item-subtitle>
+                        </v-list-item>
+
+                        <!-- static tools -->
+                        <v-list-item v-for="(option, index) in creativeGameMenu" :key="index"
+                            @click="sendHotButtonMessage('!' + option.value)"
+                            :prepend-icon="option.icon">
+                            <v-list-item-title>{{ option.title }}</v-list-item-title>
+                            <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
+                <v-tooltip v-else-if="isEnvironment('creative')" :disabled="isInputDisabled()" location="top" text="Switch to game mode">
+                    <template v-slot:activator="{ props }">
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
+                            @click="sendHotButtonMessage('!setenv_scene')" color="primary" icon>
+                            <v-icon>mdi-gamepad-square</v-icon>
+                        </v-btn>
+                    </template>
+                </v-tooltip>
+
                 <!-- save menu -->
 
                 <v-menu>
@@ -249,26 +291,6 @@
                     </v-list>
                 </v-menu>
 
-                <!-- creative / game mode toggle -->
-
-                <v-tooltip v-if="isEnvironment('scene')" :disabled="isInputDisabled()" location="top" text="Switch to creative mode">
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!setenv_creative')" color="primary" icon>
-                            <v-icon>mdi-palette-outline</v-icon>
-                        </v-btn>
-                    </template>
-                </v-tooltip>
-
-                <v-tooltip v-else-if="isEnvironment('creative')" :disabled="isInputDisabled()" location="top" text="Switch to game mode">
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!setenv_scene')" color="primary" icon>
-                            <v-icon>mdi-gamepad-square</v-icon>
-                        </v-btn>
-                    </template>
-                </v-tooltip>
-
             </v-card-actions>
         </v-card>
 
@@ -282,6 +304,9 @@
 export default {
 
     name: 'SceneTools',
+    props: {
+        passiveCharacters: Array,
+    },
     data() {
         return {
             commandActive: false,
@@ -311,6 +336,11 @@ export default {
 
             actorActions: [
                 {"value": "ai_dialogue", "title": "Talk", "icon": "mdi-comment-text-outline", "description": "Generate dialogue"},
+            ],
+
+            creativeGameMenu: [
+                {"value": "create_character_from_prompt", "title": "Introduce new character (Directed)", "icon": "mdi-account-plus", "description": "Generate a new active character, based on prompt."},
+                {"value": "setenv_creative", "title": "Creative Mode", "icon": "mdi-puzzle-edit", "description": "Switch to creative mode (very early experimental version)"},
             ],
 
             advanceTimeOptions: [
@@ -351,6 +381,7 @@ export default {
         'getTrackedWorldState',
         'getPlayerCharacterName',
         'formatWorldStateTemplateString',
+        'characterSheet',
     ],
     computed:{
     },
@@ -565,5 +596,18 @@ export default {
 
 .pre-wrap {
     white-space: pre-wrap;
+}
+
+.btn-notification {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    font-size: 15px;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 </style>

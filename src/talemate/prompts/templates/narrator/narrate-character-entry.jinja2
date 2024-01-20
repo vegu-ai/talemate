@@ -1,0 +1,19 @@
+{% block rendered_context -%}
+{% include "extra-context.jinja2" %}
+<|SECTION:CONTEXT|>
+{{ character.sheet }}
+
+{{ character.description }}
+<|CLOSE_SECTION|>
+{% endblock -%}
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context())) -%}
+{{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Narrate the entrance of {{ character.name }} into the scene. If {{ character.name }} is already present, INSTEAD subtly narrate what happens next.
+{{ extra_instructions }}
+{% include "rerun-context.jinja2" -%}
+<|CLOSE_SECTION|>

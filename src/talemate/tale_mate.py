@@ -1338,6 +1338,9 @@ class Scene(Emitter):
         elif source == "narrate_dialogue":
             character = self.get_character(arg)
             new_message = await narrator.agent.narrate_after_dialogue(character)
+        elif source == "narrate_character_entry":
+            character = self.get_character(arg)
+            new_message = await narrator.agent.narrate_character_entry(character)
         elif source == "__director__":
             director = self.get_helper("director").agent
             await director.direct_scene(None, None)

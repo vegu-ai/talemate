@@ -13,6 +13,7 @@ from talemate.world_state import WorldState
 from talemate.game_state import GameState
 from talemate.context import SceneIsLoading
 from talemate.emit import emit
+from talemate.status import set_loading, LoadingStatus
 import talemate.instance as instance
 
 import structlog
@@ -27,32 +28,6 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.load")
-
-
-class set_loading:
-    
-    def __init__(self, message):
-        self.message = message
-        
-    def __call__(self, fn):
-        async def wrapper(*args, **kwargs):
-            emit("status", message=self.message, status="busy")
-            try:
-                return await fn(*args, **kwargs)
-            finally:
-                emit("status", message="", status="idle")
-                
-        return wrapper
-
-class LoadingStatus:
-    
-    def __init__(self, max_steps:int):
-        self.max_steps = max_steps
-        self.current_step = 0
-        
-    def __call__(self, message:str):
-        self.current_step += 1
-        emit("status", message=f"{message} [{self.current_step}/{self.max_steps}]", status="busy")
 
 @set_loading("Loading scene...")
 async def load_scene(scene, file_path, conv_client, reset: bool = False):

@@ -17,7 +17,7 @@
           <!-- <GameOptions v-if="sceneActive" ref="gameOptions" /> -->
           <v-divider></v-divider>
           <CoverImage v-if="sceneActive" ref="coverImage" />
-          <WorldState v-if="sceneActive" ref="worldState" />
+          <WorldState v-if="sceneActive" ref="worldState" @passive-characters="(characters) => { passiveCharacters = characters }" />
         </div>
 
         <CreativeEditor v-if="sceneActive" ref="creativeEditor" />
@@ -120,7 +120,7 @@
 
         <div style="flex-shrink: 0;" v-if="sceneActive">
 
-          <SceneTools @open-world-state-manager="onOpenWorldStateManager"/>
+          <SceneTools @open-world-state-manager="onOpenWorldStateManager" :passiveCharacters="passiveCharacters"/>
           <CharacterSheet ref="characterSheet" />
           <SceneHistory ref="sceneHistory" />
 
@@ -219,6 +219,7 @@ export default {
       inputHint: 'Enter your text...',
       messageInput: '',
       reconnectInterval: 3000,
+      passiveCharacters: [],
       messageHandlers: [],
       scene: {},
       appConfig: {},

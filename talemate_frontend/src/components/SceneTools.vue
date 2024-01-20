@@ -4,12 +4,17 @@
         <v-spacer></v-spacer>
         <!-- quick settings as v-chips -->
         <v-chip size="x-small" v-for="(option, index) in quickSettings" :key="index" @click="toggleQuickSetting(option.value)"
-            :color="option.status() ? 'success' : 'grey'"
+            :color="option.status() === true ? 'success' : 'grey'"
             :disabled="isInputDisabled()" class="ma-1">
             <v-icon class="mr-1">{{ option.icon }}</v-icon>
             {{ option.title }}
-            <v-icon class="ml-1" v-if="option.status()">mdi-check-circle-outline</v-icon>
-            <v-icon class="ml-1" v-else>mdi-circle-outline</v-icon>
+            <v-icon class="ml-1" v-if="option.status() === true">mdi-check-circle-outline</v-icon>
+            <v-icon class="ml-1" v-else-if="option.status() === false">mdi-circle-outline</v-icon>
+            <v-tooltip v-else :text="option.status()">
+                <template v-slot:activator="{ props }">
+                    <v-icon class="ml-1" v-bind="props" color="orange">mdi-alert-outline</v-icon>
+                </template>
+            </v-tooltip>
         </v-chip>
     </v-sheet>
 
@@ -279,10 +284,11 @@ export default {
             commandName: null,
             autoSave: true,
             autoProgress: true,
+            canAutoSave: false,
             npc_characters: [],
 
             quickSettings: [
-                {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.autoSave; }},
+                {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
             ],
 
@@ -475,6 +481,7 @@ export default {
                     this.commandName = null;
                 }
             } else if (data.type === "scene_status") {
+                this.canAutoSave = data.data.can_auto_save;
                 this.autoSave = data.data.auto_save;
                 this.autoProgress = data.data.auto_progress;
                 console.log({autoSave: this.autoSave, autoProgress: this.autoProgress});
@@ -492,7 +499,8 @@ export default {
             }
 
 
-        }
+        },
+
     },
     mounted() {
         console.log("Websocket", this.getWebsocket()); // Check if websocket is available

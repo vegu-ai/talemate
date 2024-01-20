@@ -63,7 +63,11 @@ class SceneAssets:
         """
         Returns the path to the asset with the given id.
         """
-        return os.path.join(self.asset_directory, f"{asset_id}.{self.assets[asset_id].file_type}")
+        try:
+            return os.path.join(self.asset_directory, f"{asset_id}.{self.assets[asset_id].file_type}")
+        except KeyError:
+            log.error("asset_path", asset_id=asset_id, assets=self.assets)
+            return None
         
     def dict(self, *args, **kwargs):
         return {

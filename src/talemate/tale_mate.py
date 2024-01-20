@@ -1433,6 +1433,14 @@ class Scene(Emitter):
                 
                 break
 
+    def can_auto_save(self):
+        """
+        A scene can be autosaved if it has a filename set and is not immutable_save
+        """
+        
+        return self.filename and not self.immutable_save
+        
+
     def emit_status(self):
         player_character = self.get_player_character()
         emit(
@@ -1450,6 +1458,7 @@ class Scene(Emitter):
                 "saved": self.saved,
                 "auto_save": self.auto_save,
                 "auto_progress": self.auto_progress,
+                "can_auto_save": self.can_auto_save(),
                 "game_state": self.game_state.model_dump(),
                 "active_pins": [pin.model_dump() for pin in self.active_pins],
             },

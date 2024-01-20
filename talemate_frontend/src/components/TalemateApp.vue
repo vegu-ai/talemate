@@ -141,6 +141,13 @@
             </template>
           </v-text-field>
         </div>
+
+        <IntroView v-else 
+        @request-scene-load="(path) => { $refs.loadScene.loadJsonSceneFromPath(path); }"
+        :version="version" 
+        :scene-loading-available="!configurationRequired() && connected"
+        :config="appConfig" />
+
       </v-container>
     </v-main>
 
@@ -169,6 +176,8 @@ import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 
+import IntroView from './IntroView.vue';
+
 export default {
   components: {
     AIClient,
@@ -186,6 +195,7 @@ export default {
     DebugTools,
     AudioQueue,
     StatusNotification,
+    IntroView,
   },
   name: 'TalemateApp',
   data() {
@@ -238,6 +248,7 @@ export default {
       getClients: () => this.getClients(),
       getAgents: () => this.getAgents(),
       requestSceneAssets: (asset_ids) => this.requestSceneAssets(asset_ids),
+      requestAssets: (assets) => this.requestAssets(assets),
       openCharacterSheet: (characterName) => this.openCharacterSheet(characterName),
       characterSheet: () => this.$refs.characterSheet,
       creativeEditor: () => this.$refs.creativeEditor,
@@ -399,6 +410,9 @@ export default {
     requestSceneAssets(asset_ids) {
       this.websocket.send(JSON.stringify({ type: 'request_scene_assets', asset_ids: asset_ids }));
     },
+    requestAssets(assets) {
+      this.websocket.send(JSON.stringify({ type: 'request_assets', assets: assets }));
+    },
     setNavigation(navigation) {
       if (navigation == "game")
         this.sceneDrawer = true;
@@ -522,7 +536,7 @@ export default {
         if (this.inputHint != this.scene.player_character_name+":") {
           return 'warning';
         } else {
-          return 'purple-lighten-3';
+          return 'deep-purple-lighten-2';
         }
       }
       return null;

@@ -12,7 +12,7 @@
     "core-js": "^3.8.3",
     "roboto-fontface": "*",
     "vue": "^3.2.13",
-    "vuetify": "^3.3.11",
+    "vuetify": "^3.5.0",
     "webfontloader": "^1.0.0"
   },
   "devDependencies": {

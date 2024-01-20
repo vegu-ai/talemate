@@ -60,23 +60,26 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
     Load the scene data from the given file path.
     """
 
-    with SceneIsLoading(scene):
-        if file_path == "environment:creative":
+    try:
+        with SceneIsLoading(scene):
+            if file_path == "environment:creative":
+                return await load_scene_from_data(
+                    scene, creative_environment(), conv_client, reset=True
+                )
+
+            ext = os.path.splitext(file_path)[1].lower()
+
+            if ext in [".jpg", ".png", ".jpeg", ".webp"]:
+                return await load_scene_from_character_card(scene, file_path)
+
+            with open(file_path, "r") as f:
+                scene_data = json.load(f)
+
             return await load_scene_from_data(
-                scene, creative_environment(), conv_client, reset=True
+                scene, scene_data, conv_client, reset, name=file_path
             )
-
-        ext = os.path.splitext(file_path)[1].lower()
-
-        if ext in [".jpg", ".png", ".jpeg", ".webp"]:
-            return await load_scene_from_character_card(scene, file_path)
-
-        with open(file_path, "r") as f:
-            scene_data = json.load(f)
-
-        return await load_scene_from_data(
-            scene, scene_data, conv_client, reset, name=file_path
-        )
+    finally:
+        await scene.add_to_recent_scenes()
 
 
 async def load_scene_from_character_card(scene, file_path):

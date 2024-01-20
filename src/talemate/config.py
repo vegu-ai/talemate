@@ -2,11 +2,16 @@ import yaml
 import pydantic
 import structlog
 import os
+import datetime
 
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Union, ClassVar
+from typing import Optional, Dict, Union, ClassVar, TYPE_CHECKING
 
 from talemate.emit import emit
+from talemate.scene_assets import Asset
+
+if TYPE_CHECKING:
+    from talemate.tale_mate import Scene
 
 log = structlog.get_logger("talemate.config")
 
@@ -113,6 +118,45 @@ class ChromaDB(BaseModel):
     instructor_model: str="default"
     embeddings: str="default"
 
+class RecentScene(BaseModel):
+    name: str
+    path: str
+    filename: str
+    date: str
+    cover_image: Asset = None
+    
+class RecentScenes(BaseModel):
+    scenes: list[RecentScene] = pydantic.Field(default_factory=list)
+    max_entries: int = 10
+
+    def push(self, scene:"Scene"):
+        """
+        adds a scene to the recent scenes list
+        """
+        
+        # if scene has not been saved, don't add it
+        if not scene.full_path:
+            return
+        
+        now = datetime.datetime.now()
+        
+        # remove any existing entries for this scene
+        self.scenes = [s for s in self.scenes if s.path != scene.full_path]
+        
+        # add the new entry
+        self.scenes.insert(0, 
+            RecentScene(
+                name=scene.name, 
+                path=scene.full_path, 
+                filename=scene.filename,
+                date=now.isoformat(), 
+                cover_image=scene.assets.assets[scene.assets.cover_image] if scene.assets.cover_image else None
+            ))
+        
+        # trim the list to max_entries
+        self.scenes = self.scenes[:self.max_entries]
+
+
 class Config(BaseModel):
     clients: Dict[str, Client] = {}
     game: Game
@@ -133,8 +177,13 @@ class Config(BaseModel):
     
     tts: TTSConfig = TTSConfig()
     
+    recent_scenes: RecentScenes = RecentScenes()
+    
     class Config:
         extra = "ignore"
+        
+    def save(self, file_path: str = "./config.yaml"):
+        save_config(self, file_path)
 
 class SceneConfig(BaseModel):
     automated_actions: dict[str, bool]
@@ -145,7 +194,7 @@ class SceneAssetUpload(BaseModel):
     content:str = None
     
 
-def load_config(file_path: str = "./config.yaml") -> dict:
+def load_config(file_path: str = "./config.yaml", as_model:bool=False) -> Union[dict, Config]:
     """
     Load the config file from the given path.
     
@@ -162,8 +211,10 @@ def load_config(file_path: str = "./config.yaml") -> dict:
         log.error("config validation", error=e)
         return None
 
-    return config.model_dump()
+    if as_model:
+        return config
 
+    return config.model_dump()
 
 def save_config(config, file_path: str = "./config.yaml"):
     """

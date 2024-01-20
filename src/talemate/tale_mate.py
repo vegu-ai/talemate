@@ -29,7 +29,7 @@ from talemate.exceptions import ExitScene, RestartSceneLoop, ResetScene, Talemat
 from talemate.world_state import WorldState
 from talemate.world_state.manager import WorldStateManager
 from talemate.game_state import GameState
-from talemate.config import SceneConfig, load_config
+from talemate.config import SceneConfig, load_config, Config
 from talemate.scene_assets import SceneAssets
 from talemate.client.context import ClientContext, ConversationContext
 import talemate.automated_action as automated_action
@@ -655,6 +655,16 @@ class Scene(Emitter):
 
     ExitScene = ExitScene
 
+    @classmethod
+    def scenes_dir(cls):
+        relative_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "..",
+            "..",
+            "scenes",
+        )
+        return os.path.abspath(relative_path)
+        
     def __init__(self):
         self.actors = []
         self.helpers = []
@@ -761,13 +771,11 @@ class Scene(Emitter):
             if isinstance(self.history[idx], CharacterMessage):
                 return self.history[idx].character_name
 
+
     @property
     def save_dir(self):
         saves_dir = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "..",
-            "..",
-            "scenes",
+            self.scenes_dir(),
             self.project_name,
         )
         
@@ -775,6 +783,13 @@ class Scene(Emitter):
             os.makedirs(saves_dir)
         
         return saves_dir
+    
+    @property
+    def full_path(self):
+        if not self.filename:
+            return None
+        
+        return os.path.join(self.save_dir, self.filename)
     
     @property
     def template_dir(self):
@@ -1805,7 +1820,16 @@ class Scene(Emitter):
         self.saved = True
         
         self.emit_status()
-
+        
+        # add this scene to recent scenes in config
+        await self.add_to_recent_scenes()
+        
+    async def add_to_recent_scenes(self):
+        log.debug("add_to_recent_scenes", filename=self.filename)
+        config = Config(**self.config)
+        config.recent_scenes.push(self)
+        config.save()
+        
     async def commit_to_memory(self):
         
         # will recommit scene to long term memory

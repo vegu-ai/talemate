@@ -175,11 +175,7 @@
 </template>
 
 <script>
-import { VStepper } from 'vuetify/labs/VStepper'
 export default {
-    components: {
-        VStepper,
-    },
     name: 'CharacterCreator',
     data() {
         return {

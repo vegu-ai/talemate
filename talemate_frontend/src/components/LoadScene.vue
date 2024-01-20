@@ -165,6 +165,13 @@ export default {
                 this.sceneInput = '';
             }
         },
+
+        loadJsonSceneFromPath(path) {
+            this.loading = true;
+            this.$emit("loading", true)
+            this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: path }));
+        },
+
         handleMessage(data) {
             // Handle app configuration
             if (data.type === 'app_config') {

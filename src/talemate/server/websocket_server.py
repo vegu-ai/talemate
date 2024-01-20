@@ -10,7 +10,7 @@ from talemate.config import load_config, save_config, SceneAssetUpload
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 from talemate.files import list_scenes_directory
 from talemate.load import load_scene, load_scene_from_data, load_scene_from_character_card
-
+from talemate.scene_assets import Asset
 
 from talemate.server import character_creator
 from talemate.server import character_importer
@@ -580,6 +580,44 @@ class WebsocketHandler(Receiver):
                     "media_type": scene_assets.get_asset(asset_id).media_type,
                 }
             )
+            
+    def request_assets(self, assets:list[dict]):
+        # way to request scene assets without loading the scene
+        #
+        # assets is a list of dicts with keys:
+        # path must be turned into absolute path
+        # path must begin with Scene.scenes_dir()
+        
+        _assets = {}
+        
+        for asset_dict in assets:
+            try:
+                asset_id, asset = self._asset(**asset_dict)
+            except Exception as exc:
+                log.error("request_assets", error=traceback.format_exc(), **asset_dict)
+                continue
+            _assets[asset_id] = asset
+            
+        self.queue_put(
+            {
+                "type": "assets",
+                "assets": _assets,
+            }
+        )    
+        
+    def _asset(self, path: str, **asset):
+        absolute_path = os.path.abspath(path)
+        
+        if not absolute_path.startswith(Scene.scenes_dir()):
+            log.error("_asset", error="Invalid path", path=absolute_path, scenes_dir=Scene.scenes_dir())
+            return
+        
+        asset_path = os.path.join(os.path.dirname(absolute_path), "assets")
+        asset = Asset(**asset)
+        return asset.id, {
+            "base64": asset.to_base64(asset_path),
+            "media_type": asset.media_type,
+        }
         
     def add_scene_asset(self, data:dict):
         asset_upload = SceneAssetUpload(**data)

@@ -109,6 +109,14 @@ class SummarizeAgent(Agent):
                 start = 0
             else:
                 start = recent_entry.get("end", 0)+1
+                
+        # if there is a recent entry we also collect the 3 most recentries
+        # as extra context
+        
+        if recent_entry:
+            extra_context = "\n\n".join([entry["text"] for entry in scene.archived_history[-3:]])
+        else:
+            extra_context = None
 
         tokens = 0
         dialogue_entries = []
@@ -156,10 +164,6 @@ class SummarizeAgent(Agent):
         
         log.debug("build_archive", start=start, end=end, ts=ts, time_passage_termination=time_passage_termination)
 
-        extra_context = None
-        if recent_entry:
-            extra_context = recent_entry["text"]
-            
         # in order to summarize coherently, we need to determine if there is a favorable
         # cutoff point (e.g., the scene naturally ends or shifts meaninfully in the middle
         # of the  dialogue)

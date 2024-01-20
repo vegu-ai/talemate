@@ -4,6 +4,7 @@
 {{ character.sheet }}
 
 {{ character.description }}
+
 <|CLOSE_SECTION|>
 {% endblock -%}
 <|SECTION:SCENE|>
@@ -13,7 +14,8 @@
 <|CLOSE_SECTION|>
 
 <|SECTION:TASK|>
-Narrate the entrance of {{ character.name }} into the scene. If {{ character.name }} is already present, INSTEAD subtly narrate what happens next.
+{{ direction }}
+Narrate the entrance of {{ character.name }} into the scene.
 {{ extra_instructions }}
 {% include "rerun-context.jinja2" -%}
 <|CLOSE_SECTION|>

@@ -339,7 +339,7 @@ export default {
             ],
 
             creativeGameMenu: [
-                {"value": "create_character_from_prompt", "title": "Introduce new character (Directed)", "icon": "mdi-account-plus", "description": "Generate a new active character, based on prompt."},
+                {"value": "pc:prompt", "title": "Introduce new character (Directed)", "icon": "mdi-account-plus", "description": "Generate a new active character, based on prompt."},
                 {"value": "setenv_creative", "title": "Creative Mode", "icon": "mdi-puzzle-edit", "description": "Switch to creative mode (very early experimental version)"},
             ],
 

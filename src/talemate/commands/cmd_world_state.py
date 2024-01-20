@@ -60,7 +60,7 @@ class CmdPersistCharacter(TalemateCommand):
     description = "Persist a character by name"
     aliases = ["pc"]
     
-    @set_loading("Generating character...")
+    @set_loading("Generating character...", set_busy=False)
     async def run(self):
         from talemate.tale_mate import Character, Actor
         
@@ -95,7 +95,7 @@ class CmdPersistCharacter(TalemateCommand):
                 
         is_present = await world_state.analyze_text_and_answer_question(
             text=self.scene.snapshot(lines=50),
-            query=f"Is {name} present in the current scene? Answert with 'yes' or 'no'.",
+            query=f"Is {name} present AND active in the current scene? Answert with 'yes' or 'no'.",
         )
         
         is_present = is_present.lower().startswith("y")
@@ -128,8 +128,8 @@ class CmdPersistCharacter(TalemateCommand):
         
         # write narrative for the character entering the scene
         if not is_present:
-            loading_status("Narrating character entry...")
-            entry_narration = await narrator.narrate_character_entry(character)
+            loading_status("Narrating character entrance...")
+            entry_narration = await narrator.narrate_character_entry(character, direction=extra_instructions)
             message = NarratorMessage(entry_narration, source=f"narrate_character_entry:{character.name}")
             self.narrator_message(message)
             self.scene.push_history(message)

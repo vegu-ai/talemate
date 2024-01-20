@@ -11,12 +11,14 @@ log = structlog.get_logger("talemate.status")
 
 class set_loading:
     
-    def __init__(self, message):
+    def __init__(self, message, set_busy:bool=True):
         self.message = message
+        self.set_busy = set_busy
         
     def __call__(self, fn):
         async def wrapper(*args, **kwargs):
-            emit("status", message=self.message, status="busy")
+            if self.set_busy:
+                emit("status", message=self.message, status="busy")
             try:
                 return await fn(*args, **kwargs)
             finally:

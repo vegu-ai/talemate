@@ -275,6 +275,6 @@ class CmdSummarizeAndPin(TalemateCommand):
             raise ValueError("No history to summarize.")
         
         message_id = int(self.args[0]) if len(self.args) else scene.history[-1].id
-        num_messages = int(self.args[1]) if len(self.args) > 1 else 3
+        num_messages = int(self.args[1]) if len(self.args) > 1 else 5
         
         await world_state.summarize_and_pin(message_id, num_messages=num_messages)

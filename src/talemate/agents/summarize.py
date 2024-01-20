@@ -218,6 +218,7 @@ class SummarizeAgent(Agent):
         text: str,
         extra_context: str = None,
         method: str = None,
+        extra_instructions: str = None,
     ):
         """
         Summarize the given text
@@ -228,6 +229,8 @@ class SummarizeAgent(Agent):
             "scene": self.scene,
             "max_tokens": self.client.max_token_length,
             "summarization_method": self.actions["archive"].config["method"].value if method is None else method,
+            "extra_context": extra_context or "",
+            "extra_instructions": extra_instructions or "",
         })
         
         self.scene.log.info("summarize", dialogue_length=len(text), summarized_length=len(response))

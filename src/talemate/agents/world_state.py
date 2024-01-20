@@ -576,7 +576,14 @@ class WorldStateAgent(Agent):
         
         text = self.scene.snapshot(lines=num_messages, start=message_index)
         
-        summary = await summarizer.summarize(text, method="short")
+        extra_context = self.scene.snapshot(lines=50, start=message_index-num_messages)
+        
+        summary = await summarizer.summarize(
+            text, 
+            extra_context=extra_context,
+            method="short",
+            extra_instructions="Pay particularly close attention to decisions, agreements or promises made.",
+        )
         
         entry_id = util.clean_id(await creator.generate_title(summary))
         

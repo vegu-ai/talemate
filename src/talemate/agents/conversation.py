@@ -471,12 +471,11 @@ class ConversationAgent(Agent):
                 set_client_context_attribute("nuke_repetition", nuke_repetition)
 
     @set_processing
-    async def converse(self, actor, editor=None):
+    async def converse(self, actor):
         """
         Have a conversation with the AI
         """
 
-        history = actor.history
         self.current_memory_context = None
 
         character = actor.character

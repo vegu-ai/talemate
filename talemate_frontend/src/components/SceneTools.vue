@@ -35,20 +35,24 @@
 
 
                 <v-tooltip v-if="isEnvironment('scene')" :disabled="isInputDisabled()" location="top"
-                    text="Redo most recent AI message">
+                    :text="'Redo most recent AI message.\n[Ctrl: Provide instructions, +Alt: Rewrite]'"
+                    class="pre-wrap"
+                    max-width="300px">
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!rerun')" color="primary" icon>
+                            @click="rerun" color="primary" icon>
                             <v-icon>mdi-refresh</v-icon>
                         </v-btn>
                     </template>
                 </v-tooltip>
 
                 <v-tooltip v-if="isEnvironment('scene')" :disabled="isInputDisabled()" location="top"
-                    text="Redo most recent AI message (Nuke Option - use this to attempt to break out of repetition)">
+                    :text="'Redo most recent AI message (Nuke Option - use this to attempt to break out of repetition) \n[Ctrl: Provide instructions, +Alt: Rewrite]'"
+                    class="pre-wrap"
+                    max-width="300px">
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!rerun:0.5')" color="primary" icon>
+                            @click="rerunNuke" color="primary" icon>
                             <v-icon>mdi-nuke</v-icon>
                         </v-btn>
                     </template>
@@ -470,6 +474,38 @@ export default {
             this.getWebsocket().send(JSON.stringify({ type: 'interact', text: '!ws' }));
         },
 
+        rerun(event) {
+            console.log("EVENT", event)
+            // if ctrl is pressed use directed rerun
+            let withDirection = event.ctrlKey;
+            let method = event.altKey || event.metaKey ? "edit" : "replace";
+            let command = "!rerun";
+
+            if(withDirection)
+                command += "_directed";
+
+            command += ":0.0:"+method;
+
+            // if alt is pressed 
+
+            this.sendHotButtonMessage(command)
+        },
+
+        rerunNuke(event) {
+            // if ctrl is pressed use directed rerun
+            let withDirection = event.ctrlKey;
+            let method = event.altKey || event.metaKey ? "edit" : "replace";
+            let command = "!rerun";
+
+            if(withDirection)
+                command += "_directed";
+
+            // 0.5 nuke adjustment
+            command += ":0.5:"+method;
+
+            this.sendHotButtonMessage(command)
+        },
+
         handleMessage(data) {
 
             if (data.type === "command_status") {
@@ -525,5 +561,9 @@ export default {
     display: flex;
     align-items: center;
     margin-right: 20px;
+}
+
+.pre-wrap {
+    white-space: pre-wrap;
 }
 </style>

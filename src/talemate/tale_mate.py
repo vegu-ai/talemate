@@ -32,6 +32,7 @@ from talemate.game_state import GameState
 from talemate.config import SceneConfig, load_config, Config
 from talemate.scene_assets import SceneAssets
 from talemate.client.context import ClientContext, ConversationContext
+from talemate.context import rerun_context
 import talemate.automated_action as automated_action
 
 
@@ -576,7 +577,7 @@ class Actor:
     def history(self):
         return self.scene.history
 
-    async def talk(self, editor: Optional[Helper] = None):
+    async def talk(self):
         """
         Set the message to be sent to the AI
         """
@@ -592,7 +593,7 @@ class Actor:
         )
         
         with ClientContext(conversation=conversation_context):
-            messages = await self.agent.converse(self, editor=editor)
+            messages = await self.agent.converse(self)
             
         return messages
 
@@ -603,7 +604,7 @@ class Player(Actor):
     ai_controlled = 0
     
     async def talk(
-        self, message: Union[str, None] = None, editor: Optional[Helper] = None
+        self, message: Union[str, None] = None
     ):
         """
         Set the message to be sent to the AI
@@ -619,7 +620,7 @@ class Player(Actor):
             if not self.agent:
                 self.agent = self.scene.get_helper("conversation").agent
             
-            return await super().talk(editor=editor)
+            return await super().talk()
         
         if not message:
             # Display scene history length before the player character name
@@ -1265,7 +1266,7 @@ class Scene(Emitter):
                 
         return list(map(str, parts_context)) +  list(map(str, parts_dialogue))
 
-    async def rerun(self, editor: Optional[Helper] = None):
+    async def rerun(self):
         """
         Rerun the most recent AI response, remove their previous message from the history,
         and call talk() for the most recent AI Character.
@@ -1295,9 +1296,14 @@ class Scene(Emitter):
         if message.source == "player":
             return
         
+        
+        current_rerun_context = rerun_context.get()
+        if current_rerun_context:
+            current_rerun_context.message = message.message
+        
         if isinstance(message, CharacterMessage):
             self.history.pop()
-            await self._rerun_character_message(message, editor=editor)
+            await self._rerun_character_message(message)
         elif isinstance(message, NarratorMessage):
             self.history.pop()
             await self._rerun_narrator_message(message)
@@ -1383,7 +1389,7 @@ class Scene(Emitter):
         self.push_history(new_message)
         emit("director", new_message, character=character) 
         
-    async def _rerun_character_message(self, message, editor=None):
+    async def _rerun_character_message(self, message):
 
         character_name = message.split(":")[0]
 
@@ -1395,8 +1401,8 @@ class Scene(Emitter):
 
         emit("remove_message", "", id=message.id)
 
-        # Call talk() for the most recent AI Actor with the same editor parameter
-        new_messages = await self.most_recent_ai_actor.talk(editor=editor)
+        # Call talk() for the most recent AI Actor 
+        new_messages = await self.most_recent_ai_actor.talk()
 
         # Print the new messages
         for item in new_messages:

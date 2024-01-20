@@ -12,7 +12,7 @@ from .cmd_memset import CmdMemset
 from .cmd_narrate import *
 from .cmd_rebuild_archive import CmdRebuildArchive
 from .cmd_rename import CmdRename
-from .cmd_rerun import CmdRerun
+from .cmd_rerun import *
 from .cmd_reset import CmdReset
 from .cmd_rm import CmdRm
 from .cmd_remove_character import CmdRemoveCharacter

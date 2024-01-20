@@ -1,0 +1,8 @@
+{% if rerun_context and rerun_context.direction -%}
+{% if rerun_context.method == 'replace' -%}
+Final instructions: {{ rerun_context.direction }}
+{% elif rerun_context.method == 'edit' and rerun_context.message -%}
+Edit and respond with your changed version of the following narration: {{ rerun_context.message }}
+Requested changes: {{ rerun_context.direction }}
+{% endif -%}
+{% endif -%}

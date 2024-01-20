@@ -19,7 +19,7 @@
                             </v-row>
                             <v-combobox :items="content_context
             " label="Content Context" v-model="scenario_context"></v-combobox>
-                            <v-textarea label="Character prompt" v-model="character_prompt"></v-textarea>
+                            <v-textarea label="Character prompt" v-model="character_prompt" :placeholder="character_prompt_placeholder"></v-textarea>
                         </v-card-text>
                     </v-card>
                 </template>
@@ -190,9 +190,9 @@ export default {
                 'Add to World',
             ],
             content_context: [
-                "a fun and engaging slice of life story aimed at an adult audience.",
+                "a fun and engaging slice of life story",
             ],
-            scenario_context: "a fun and engaging slice of life story aimed at an adult audience.",
+            scenario_context: "a fun and engaging slice of life story",
             templates: ["human"],
             selected_template: "human",
             base_attributes: {},
@@ -206,7 +206,8 @@ export default {
             notification_text: '',
             is_player_character: false,
             use_spice: 0.1,
-            character_prompt: 'A 19-year-old boy who just did something embarrassing in front of his crush.',
+            character_prompt: '',
+            character_prompt_placeholder: 'A short description of the character you want to generate.',
             character: null,
             description: "",
             generating: false,

@@ -258,7 +258,7 @@
                         <v-list-item v-for="(character, index) in inactiveCharacters" :key="index"
                             @click="sendHotButtonMessage('!char_a:' + character)">
                             <template v-slot:prepend>
-                                <v-icon color="grey">mdi-human-greeting</v-icon>
+                                <v-icon color="secondary">mdi-human-greeting</v-icon>
                             </template>
                             <v-list-item-title>Call into scene: {{ character }}</v-list-item-title>
                             <v-list-item-subtitle>Make {{ character }} an active character</v-list-item-subtitle>

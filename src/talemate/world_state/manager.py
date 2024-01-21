@@ -93,6 +93,9 @@ class WorldStateManager:
         for character in self.scene.get_characters():
             characters.characters[character.name] = CharacterSelect(name=character.name, active=True, is_player=character.is_player)
             
+        for character in self.scene.inactive_characters.values():
+            characters.characters[character.name] = CharacterSelect(name=character.name, active=False, is_player=character.is_player)
+            
         return characters
     
     async def get_character_details(self, character_name:str) -> CharacterDetails:

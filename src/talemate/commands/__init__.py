@@ -1,4 +1,5 @@
 from .base import TalemateCommand
+from .cmd_characters import *
 from .cmd_debug_tools import *
 from .cmd_dialogue import *
 from .cmd_director import CmdDirectorDirect, CmdDirectorDirectWithOverride

@@ -14,7 +14,7 @@
 <|CLOSE_SECTION|>
 
 <|SECTION:TASK|>
-Narrate the entrance of {{ character.name }} into the scene: {% if direction %} {{ direction }}{% else %}Make a creative decision on how {{ character.name }} enters the scene. It must be in line with the content so far.{% endif %}
+Narrate the exit of {{ character.name }} from the scene:{% if direction %} {{ direction }}{% else %}Make a creative decision on how {{ character.name }} leaves the scene. It must be in line with the content so far.{% endif %}
 {{ extra_instructions }}
 {% include "rerun-context.jinja2" -%}
 <|CLOSE_SECTION|>

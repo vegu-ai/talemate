@@ -207,11 +207,18 @@ async def load_scene_from_data(
             events.ArchiveEvent(scene=scene, event_type="archive_add", text=ah["text"], ts=ts)
         )
 
+    for character_name, character_data in scene_data.get("inactive_characters", {}).items():
+        scene.inactive_characters[character_name] = Character(**character_data)
+
     for character_name, cs in scene.character_states.items():
         scene.set_character_state(character_name, cs)
 
     for character_data in scene_data["characters"]:
         character = Character(**character_data)
+        
+        if character.name in scene.inactive_characters:
+            scene.inactive_characters.pop(character.name)
+        
         if not character.is_player:
             agent = instance.get_agent("conversation", client=conv_client)
             actor = Actor(character, agent)

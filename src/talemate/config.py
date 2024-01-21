@@ -155,6 +155,13 @@ class RecentScenes(BaseModel):
         
         # trim the list to max_entries
         self.scenes = self.scenes[:self.max_entries]
+        
+    def clean(self):
+        """
+        removes any entries that no longer exist
+        """
+        
+        self.scenes = [s for s in self.scenes if os.path.exists(s.path)]
 
 
 class Config(BaseModel):
@@ -207,6 +214,7 @@ def load_config(file_path: str = "./config.yaml", as_model:bool=False) -> Union[
 
     try:
         config = Config(**config_data)
+        config.recent_scenes.clean()
     except pydantic.ValidationError as e:
         log.error("config validation", error=e)
         return None

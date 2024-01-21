@@ -454,7 +454,7 @@ class NarratorAgent(Agent):
         return response
     
     @set_processing
-    async def narrate_character_entry(self, cahracter:Character, direction:str=None):
+    async def narrate_character_entry(self, character:Character, direction:str=None):
         """
         Narrate a character entering the scene
         """
@@ -466,7 +466,7 @@ class NarratorAgent(Agent):
             vars = {
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
-                "character": cahracter,
+                "character": character,
                 "direction": direction,
                 "extra_instructions": self.extra_instructions,
             }
@@ -476,7 +476,45 @@ class NarratorAgent(Agent):
         response = f"*{response}*"
 
         return response
+    
+    @set_processing
+    async def narrate_character_exit(self, character:Character, direction:str=None):
+        """
+        Narrate a character exiting the scene
+        """
+
+        response = await Prompt.request(
+            "narrator.narrate-character-exit",
+            self.client,
+            "narrate",
+            vars = {
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "character": character,
+                "direction": direction,
+                "extra_instructions": self.extra_instructions,
+            }
+        )
+
+        response = self.clean_result(response.strip().strip("*"))
+        response = f"*{response}*"
+
+        return response
+    
+    async def action_to_narration(
+        self,
+        action_name: str,
+        *args,
+        **kwargs,
+    ):
+        # calls self[action_name] and returns the result as a NarratorMessage
+        # that is pushed to the history
         
+        fn = getattr(self, action_name)
+        narration = await fn(*args, **kwargs)
+        narrator_message = NarratorMessage(narration, source=f"{action_name}:{args[0] if args else ''}".rstrip(":"))
+        self.scene.push_history(narrator_message)
+        return narrator_message
     
     # LLM client related methods. These are called during or after the client
     

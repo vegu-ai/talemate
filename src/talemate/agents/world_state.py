@@ -618,3 +618,37 @@ class WorldStateAgent(Agent):
         
         await self.scene.load_active_pins()
         self.scene.emit_status()
+        
+    @set_processing
+    async def is_character_present(self, character:str) -> bool:
+        """
+        Check if a character is present in the scene
+        
+        Arguments:
+        
+        - `character`: The character to check.
+        """
+        
+        is_present = await self.analyze_text_and_answer_question(
+            text=self.scene.snapshot(lines=50),
+            query=f"Is {character} present AND active in the current scene? Answert with 'yes' or 'no'.",
+        )
+        
+        return is_present.lower().startswith("y")
+    
+    @set_processing
+    async def is_character_leaving(self, character:str) -> bool:
+        """
+        Check if a character is leaving the scene
+        
+        Arguments:
+        
+        - `character`: The character to check.
+        """
+        
+        is_present = await self.analyze_text_and_answer_question(
+            text=self.scene.snapshot(lines=50),
+            query=f"Is {character} leaving the current scene? Answert with 'yes' or 'no'.",
+        )
+        
+        return is_present.lower().startswith("y")

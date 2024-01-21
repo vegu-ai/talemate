@@ -120,7 +120,12 @@
 
         <div style="flex-shrink: 0;" v-if="sceneActive">
 
-          <SceneTools @open-world-state-manager="onOpenWorldStateManager" :passiveCharacters="passiveCharacters"/>
+          <SceneTools 
+            @open-world-state-manager="onOpenWorldStateManager"
+            :playerCharacterName="getPlayerCharacterName()"
+            :passiveCharacters="passiveCharacters"
+            :inactiveCharacters="inactiveCharacters"
+            :activeCharacters="activeCharacters" />
           <CharacterSheet ref="characterSheet" />
           <SceneHistory ref="sceneHistory" />
 
@@ -220,6 +225,8 @@ export default {
       messageInput: '',
       reconnectInterval: 3000,
       passiveCharacters: [],
+      inactiveCharacters: [],
+      activeCharacters: [],
       messageHandlers: [],
       scene: {},
       appConfig: {},
@@ -337,6 +344,10 @@ export default {
           player_character_name: data.data.player_character_name,
         }
         this.sceneActive = true;
+        this.inactiveCharacters = data.data.inactive_characters;
+        // data.data.characters is a list of all active characters in the scene
+        // collect character.name into list of active characters
+        this.activeCharacters = data.data.characters.map((character) => character.name);
         return;
       }
 

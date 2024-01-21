@@ -651,6 +651,7 @@ class Scene(Emitter):
         self.archived_history = []
         self.goals = []
         self.character_states = {}
+        self.inactive_characters = {}
         self.assets = SceneAssets(scene=self)
         self.description = ""
         self.intro  = ""
@@ -1073,6 +1074,9 @@ class Scene(Emitter):
         """
         Returns the character with the given name if it exists
         """
+        
+        if character_name in self.inactive_characters:
+            return self.inactive_characters[character_name]
 
         for actor in self.actors:
             if not partial and actor.character.name.lower() == character_name.lower():
@@ -1438,6 +1442,7 @@ class Scene(Emitter):
                 "environment": self.environment,
                 "scene_config": self.scene_config,
                 "player_character_name": player_character.name if player_character else None,
+                "inactive_characters": list(self.inactive_characters.keys()),
                 "context": self.context,
                 "assets": self.assets.dict(),
                 "characters": [actor.character.serialize for actor in self.actors],
@@ -1794,6 +1799,7 @@ class Scene(Emitter):
             "archived_history": scene.archived_history,
             "character_states": scene.character_states,
             "characters": [actor.character.serialize for actor in scene.actors],
+            "inactive_characters": {name: character.serialize for name, character in scene.inactive_characters.items()},
             "goal": scene.goal,
             "goals": scene.goals,
             "context": scene.context,

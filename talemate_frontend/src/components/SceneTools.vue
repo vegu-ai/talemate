@@ -238,14 +238,34 @@
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
                             <v-icon>mdi-puzzle-edit</v-icon>
-                            <v-icon v-if="passiveCharacters.length > 0" class="btn-notification" color="warning">mdi-human-greeting</v-icon>
+                            <v-icon v-if="potentialNewCharactersExist()" class="btn-notification" color="warning">mdi-human-greeting</v-icon>
                         </v-btn>
                     </template>
                     <v-list>
                         <v-list-subheader>Creative Tools</v-list-subheader>
 
+                        <!-- deactivate active characters -->
+                        <v-list-item v-for="(character, index) in deactivatableCharacters" :key="index"
+                            @click="sendHotButtonMessage('!char_d:' + character)">
+                            <template v-slot:prepend>
+                                <v-icon color="secondary">mdi-exit-run</v-icon>
+                            </template>
+                            <v-list-item-title>Take out of scene: {{ character }}</v-list-item-title>
+                            <v-list-item-subtitle>Make {{ character }} a passive character</v-list-item-subtitle>
+                        </v-list-item>
+
+                        <!-- reactivate inactive characters -->
+                        <v-list-item v-for="(character, index) in inactiveCharacters" :key="index"
+                            @click="sendHotButtonMessage('!char_a:' + character)">
+                            <template v-slot:prepend>
+                                <v-icon color="grey">mdi-human-greeting</v-icon>
+                            </template>
+                            <v-list-item-title>Call into scene: {{ character }}</v-list-item-title>
+                            <v-list-item-subtitle>Make {{ character }} an active character</v-list-item-subtitle>
+                        </v-list-item>
+
                         <!-- persist passive characters -->
-                        <v-list-item v-for="(character, index) in passiveCharacters" :key="index"
+                        <v-list-item v-for="(character, index) in potentialNewCharacters()" :key="index"
                             @click="sendHotButtonMessage('!persist_character:' + character)">
                             <template v-slot:prepend>
                                 <v-icon color="warning">mdi-human-greeting</v-icon>
@@ -306,6 +326,21 @@ export default {
     name: 'SceneTools',
     props: {
         passiveCharacters: Array,
+        inactiveCharacters: Array,
+        activeCharacters: Array,
+        playerCharacterName: String,
+    },
+    computed: {
+        deactivatableCharacters: function() {
+            // this.activeCharacters without playerCharacterName
+            let characters = [];
+            for (let character of this.activeCharacters) {
+                if (character !== this.playerCharacterName) {
+                    characters.push(character);
+                }
+            }
+            return characters;
+        }
     },
     data() {
         return {
@@ -383,13 +418,34 @@ export default {
         'formatWorldStateTemplateString',
         'characterSheet',
     ],
-    computed:{
-    },
     emits: [
         'open-world-state-manager',
     ],
     methods: {
 
+        potentialNewCharacters() {
+            // return all entries in passiveCharacters that dont exist in
+            // inactiveCharacters
+            let newCharacters = [];
+            for (let character of this.passiveCharacters) {
+                if (!this.inactiveCharacters.includes(character)) {
+                    newCharacters.push(character);
+                }
+            }
+            return newCharacters;
+        },
+
+        potentialNewCharactersExist() {
+            return this.potentialNewCharacters().length > 0;
+        },
+
+        passiveCharactersExist() {
+            return this.passiveCharacters.length > 0;
+        },
+        
+        passiveCharacterExists(name) {
+            return this.passiveCharacters.includes(name);
+        },
 
         isEnvironment(typ) {
             return this.scene().environment == typ;

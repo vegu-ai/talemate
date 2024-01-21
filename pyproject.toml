@@ -38,6 +38,7 @@ isodate = ">=0.6.1"
 thefuzz = ">=0.20.0"
 tiktoken = ">=0.5.1"
 nltk = ">=3.8.1"
+huggingface-hub = ">=0.20.2"
 
 # ChromaDB
 chromadb = ">=0.4.17,<1"

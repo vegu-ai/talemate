@@ -2,6 +2,8 @@ from jinja2 import Environment, FileSystemLoader
 import os
 import structlog
 import shutil
+import huggingface_hub
+import tempfile
 
 __all__ = ["model_prompt"]
 
@@ -17,6 +19,12 @@ TALEMATE_TEMPLATE_PATH = os.path.join(BASE_TEMPLATE_PATH, "talemate")
 
 # user overrides
 USER_TEMPLATE_PATH = os.path.join(BASE_TEMPLATE_PATH, "user")
+
+TEMPLATE_IDENTIFIERS = []
+
+def register_template_identifier(cls):
+    TEMPLATE_IDENTIFIERS.append(cls)
+    return cls
 
 log = structlog.get_logger("talemate.model_prompts")
 
@@ -124,6 +132,174 @@ class ModelPrompt:
         
         return os.path.join(USER_TEMPLATE_PATH, model_name + ".jinja2")
     
+    def query_hf_for_prompt_template_suggestion(self, model_name:str):
+        print("query_hf_for_prompt_template_suggestion", model_name)
+        api = huggingface_hub.HfApi()
+        
+        try:
+            author, model_name = model_name.split("_", 1)
+        except ValueError:
+            return None
+        
+        models = list(api.list_models(
+            filter=huggingface_hub.ModelFilter(model_name=model_name, author=author)
+        ))
+        
+        if not models:
+            return None
+        
+        model = models[0]
+        
+        repo_id = f"{author}/{model_name}"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            readme_path = huggingface_hub.hf_hub_download(repo_id=repo_id, filename="README.md", cache_dir=tmpdir)
+            if not readme_path:
+                return None
+            with open(readme_path) as f:
+                readme = f.read()
+                for identifer_cls in TEMPLATE_IDENTIFIERS:
+                    identifier = identifer_cls()
+                    if identifier(readme):
+                        return f"{identifier.template_str}.jinja2"
 
-    
+
+        
 model_prompt = ModelPrompt()
+
+
+class TemplateIdentifier:
+    def __call__(self, content:str):
+        return False
+    
+@register_template_identifier
+class Llama2Identifier(TemplateIdentifier):
+    template_str = "Llama2"
+    def __call__(self, content:str):
+        return "[INST]" in content and "[/INST]" in content
+
+@register_template_identifier
+class ChatMLIdentifier(TemplateIdentifier):
+    template_str = "ChatML"
+    def __call__(self, content:str):
+        """
+        <|im_start|>system
+        {{ system_message }}<|im_end|>
+        <|im_start|>user
+        {{ user_message }}<|im_end|>
+        <|im_start|>assistant
+        {{ coercion_message }}
+        """
+        
+        return (
+            "<|im_start|>system" in content
+            and "<|im_end|>" in content
+            and "<|im_start|>user" in content
+            and "<|im_start|>assistant" in content
+        )
+
+@register_template_identifier
+class InstructionInputResponseIdentifier(TemplateIdentifier):
+    template_str = "InstructionInputResponse"
+    def __call__(self, content:str):
+        return (
+            "### Instruction:" in content
+            and "### Input:" in content
+            and "### Response:" in content
+        )
+
+@register_template_identifier
+class AlpacaIdentifier(TemplateIdentifier):
+    template_str = "Alpaca"
+    def __call__(self, content:str):
+        """
+        {{ system_message }}
+
+        ### Instruction:
+        {{ user_message }}
+
+        ### Response:
+        {{ coercion_message }}
+        """
+        
+        return (
+            "### Instruction:" in content
+            and "### Response:" in content
+        )
+        
+@register_template_identifier
+class OpenChatIdentifier(TemplateIdentifier):
+    template_str = "OpenChat"
+    def __call__(self, content:str):
+        """
+        GPT4 Correct System: {{ system_message }}<|end_of_turn|>GPT4 Correct User: {{ user_message }}<|end_of_turn|>GPT4 Correct Assistant: {{ coercion_message }}
+        """
+        
+        return (
+            "<|end_of_turn|>" in content
+            and "GPT4 Correct System:" in content
+            and "GPT4 Correct User:" in content
+            and "GPT4 Correct Assistant:" in content
+        )
+
+@register_template_identifier
+class VicunaIdentifier(TemplateIdentifier):
+    template_str = "Vicuna"
+    def __call__(self, content:str):
+        """
+        SYSTEM: {{ system_message }}
+        USER: {{ user_message }}
+        ASSISTANT: {{ coercion_message }}
+        """
+        
+        return (
+            "SYSTEM:" in content
+            and "USER:" in content
+            and "ASSISTANT:" in content
+        )
+        
+@register_template_identifier
+class USER_ASSISTANTIdentifier(TemplateIdentifier):
+    template_str = "USER_ASSISTANT"
+    def __call__(self, content:str):
+        """
+        USER: {{ system_message }} {{ user_message }} ASSISTANT: {{ coercion_message }}
+        """
+        
+        return (
+            "USER:" in content
+            and "ASSISTANT:" in content
+        )
+        
+@register_template_identifier
+class UserAssistantIdentifier(TemplateIdentifier):
+    template_str = "UserAssistant"
+    def __call__(self, content:str):
+        """
+        User: {{ system_message }} {{ user_message }}
+        Assistant: {{ coercion_message }}
+        """
+        
+        return (
+            "User:" in content
+            and "Assistant:" in content
+        )
+
+
+@register_template_identifier
+class ZephyrIdentifier(TemplateIdentifier):
+    template_str = "Zephyr"
+    def __call__(self, content:str):
+        """
+        <|system|>
+        {{ system_message }}</s>
+        <|user|>
+        {{ user_message }}</s>
+        <|assistant|>
+        {{ coercion_message }}
+        """
+        
+        return (
+            "<|system|>" in content
+            and "<|user|>" in content
+            and "<|assistant|>" in content
+        )

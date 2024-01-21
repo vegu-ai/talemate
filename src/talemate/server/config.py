@@ -21,6 +21,9 @@ class SetLLMTemplatePayload(pydantic.BaseModel):
     template_file: str
     model_name: str
     
+class DetermineLLMTemplatePayload(pydantic.BaseModel):
+    model_name: str
+    
 class ConfigPlugin:
     
     router = "config"
@@ -98,8 +101,6 @@ class ConfigPlugin:
     
     async def handle_set_llm_template(self, data):
         
-        print(data)
-        
         payload = SetLLMTemplatePayload(**data["data"])
         
         copied_to = model_prompt.create_user_override(payload.template_file, payload.model_name)
@@ -115,5 +116,30 @@ class ConfigPlugin:
                 "prompt_template_example": prompt_template_example,
                 "has_prompt_template": True if prompt_template_example else False,
                 "template_file": prompt_template_file,
+            }
+        })
+
+    async def handle_determine_llm_template(self, data):
+        
+        payload = DetermineLLMTemplatePayload(**data["data"])
+        
+        log.info("Determining LLM template", model_name=payload.model_name)
+        
+        template = model_prompt.query_hf_for_prompt_template_suggestion(payload.model_name)
+        
+        log.info("Template suggestion", template=template)
+        
+        await self.handle_set_llm_template({
+            "data": {
+                "template_file": template,
+                "model_name": payload.model_name,
+            }
+        })
+        
+        self.websocket_handler.queue_put({
+            "type": "config",
+            "action": "determine_llm_template_complete",
+            "data": {
+                "template": template,
             }
         })

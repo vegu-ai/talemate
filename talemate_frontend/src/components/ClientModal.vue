@@ -34,6 +34,9 @@
                       <div class="text-caption" v-if="!client.data.has_prompt_template">No matching LLM prompt template found. Using default.</div>
                       <pre>{{ client.data.prompt_template_example }}</pre>
                     </v-card-text>
+                    <v-card-actions>
+                      <v-btn @click.stop="determineBestTemplate" prepend-icon="mdi-web-box">Determine via HuggingFace</v-btn>
+                    </v-card-actions>
                   </v-card>
                   
                 </v-col>
@@ -162,6 +165,16 @@ export default {
         type: 'config',
         action: 'request_std_llm_templates',
         data: {}
+      }));
+    },
+
+    determineBestTemplate() {
+      this.getWebsocket().send(JSON.stringify({
+        type: 'config',
+        action: 'determine_llm_template',
+        data: {
+          model_name: this.client.model_name,
+        }
       }));
     },
 

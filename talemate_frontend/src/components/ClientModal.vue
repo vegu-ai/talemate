@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="localDialog" persistent max-width="600px">
+    <v-dialog v-model="localDialog" max-width="800px">
         <v-card>
         <v-card-title>
             <v-icon>mdi-network-outline</v-icon>
@@ -27,8 +27,8 @@
                   <v-text-field v-model="client.max_token_length" v-if="isLocalApiClient(client)" type="number" label="Context Length"></v-text-field> 
                 </v-col>
                 <v-col cols="8" v-if="!typeEditable() && client.data && client.data.prompt_template_example !== null">
+                  <v-combobox ref="promptTemplateComboBox" label="Prompt Template" v-model="client.data.template_file" @update:model-value="setPromptTemplate" :items="promptTemplates"></v-combobox>
                   <v-card elevation="3" :color="(client.data.has_prompt_template ? 'primary' : 'warning')" variant="tonal">
-                    <v-card-title>Prompt Template</v-card-title>
 
                     <v-card-text>
                       <div class="text-caption" v-if="!client.data.has_prompt_template">No matching LLM prompt template found. Using default.</div>
@@ -55,9 +55,15 @@ export default {
     dialog: Boolean,
     formTitle: String
   },
-  inject: ['state'],
+  inject: [
+    'state', 
+    'getWebsocket', 
+    'registerMessageHandler',
+  ],
   data() {
     return {
+      promptTemplates: [
+      ],
       localDialog: this.state.dialog,
       client: { ...this.state.currentClient },
       defaultValuesByCLientType: {
@@ -86,6 +92,9 @@ export default {
       immediate: true,
       handler(newVal) {
         this.localDialog = newVal;
+        if (newVal) {
+          this.requestStdTemplates();
+        }
       }
     },
     'state.currentClient': {
@@ -146,7 +155,41 @@ export default {
     },
     isLocalApiClient(client) {
       return client.type === 'textgenwebui' || client.type === 'lmstudio';
+    },
+
+    requestStdTemplates() {
+      this.getWebsocket().send(JSON.stringify({
+        type: 'config',
+        action: 'request_std_llm_templates',
+        data: {}
+      }));
+    },
+
+    setPromptTemplate() {
+      this.getWebsocket().send(JSON.stringify({
+        type: 'config',
+        action: 'set_llm_template',
+        data: {
+          template_file: this.client.data.template_file,
+          model_name: this.client.model_name,
+        }
+      }));
+      this.$refs.promptTemplateComboBox.blur();
+    },
+
+    handleMessage(data) {
+      if (data.type === 'config' && data.action === 'set_llm_template_complete') {
+        this.client.data.has_prompt_template = data.data.has_prompt_template;
+        this.client.data.prompt_template_example = data.data.prompt_template_example;
+        this.client.data.template_file = data.data.template_file;
+      } else if (data.type === 'config' && data.action === 'std_llm_templates') {
+        console.log("Got std templates", data.data.templates);
+        this.promptTemplates = data.data.templates;
+      }
     }
-  }
+  },
+  created() {
+    this.registerMessageHandler(this.handleMessage);
+  },
 }
 </script>

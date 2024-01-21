@@ -74,19 +74,14 @@ class ClientBase:
             self.log.warning("prompt template not applied", reason="no model loaded")
             return f"{sys_msg}\n{prompt}"
         
-        return model_prompt(self.model_name, sys_msg, prompt)   
-    
-    def has_prompt_template(self):
-        if not self.model_name:
-            return False
+        return model_prompt(self.model_name, sys_msg, prompt)[0]   
         
-        return model_prompt.exists(self.model_name)
-    
     def prompt_template_example(self):
-        if not self.model_name:
-            return None
+        if not getattr(self, "model_name", None):
+            return None, None
         return model_prompt(self.model_name, "sysmsg", "prompt<|BOT|>{LLM coercion}")
-    
+
+        
     def reconfigure(self, **kwargs):
         
         """
@@ -192,6 +187,8 @@ class ClientBase:
         status_change = status != self.current_status
         self.current_status = status
         
+        prompt_template_example, prompt_template_file = self.prompt_template_example()
+        
         emit(
             "client_status",
             message=self.client_type,
@@ -199,8 +196,9 @@ class ClientBase:
             details=model_name,
             status=status,
             data={
-                "prompt_template_example": self.prompt_template_example(),
-                "has_prompt_template": self.has_prompt_template(),
+                "prompt_template_example": prompt_template_example,
+                "has_prompt_template": (prompt_template_file and prompt_template_file != "default.jinja2"),
+                "template_file": prompt_template_file,
             }
         )
 

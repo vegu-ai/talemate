@@ -36,6 +36,7 @@ class AgentActionConfig(pydantic.BaseModel):
     step: Union[int, float, None] = None
     scope: str = "global"
     choices: Union[list[dict[str, str]], None] = None
+    note: Union[str, None] = None
         
     class Config:
         arbitrary_types_allowed = True

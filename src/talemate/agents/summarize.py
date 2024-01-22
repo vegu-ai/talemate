@@ -63,6 +63,16 @@ class SummarizeAgent(Agent):
                             {"label": "Lengthy & Detailed", "value": "long"},
                         ],
                     ),
+                    "include_previous": AgentActionConfig(
+                        type="number",
+                        label="Use preceeding summaries to strengthen context",
+                        description="Number of entries",
+                        note="Help the AI summarize by including the last few summaries as additional context. Some models may incorporate this context into the new summary directly, so if you find yourself with a bunch of similar history entries, try setting this to 0.", 
+                        value=3,
+                        min=0,
+                        max=10,
+                        step=1,
+                    ),
                 }
             )
         }
@@ -113,8 +123,9 @@ class SummarizeAgent(Agent):
         # if there is a recent entry we also collect the 3 most recentries
         # as extra context
         
-        if recent_entry:
-            extra_context = "\n\n".join([entry["text"] for entry in scene.archived_history[-3:]])
+        num_previous = self.actions["archive"].config["include_previous"].value
+        if recent_entry and num_previous > 0:
+            extra_context = "\n\n".join([entry["text"] for entry in scene.archived_history[-num_previous:]])
         else:
             extra_context = None
 

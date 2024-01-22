@@ -27,7 +27,7 @@
             v-model="client.max_token_length"
             :min="1024"
             :max="128000"
-            :step="512"
+            :step="1024"
             @update:modelValue="saveClientDelayed(client)"
             @click.stop
             density="compact"

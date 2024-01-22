@@ -89,10 +89,6 @@ class ClientBase:
             self.log.warning("prompt template not applied", reason="no model loaded")
             return f"{sys_msg}\n{prompt}"
     
-        print()
-        print("TEMPLATE", model_prompt(self.model_name, sys_msg, prompt))
-        print()
-        
         return model_prompt(self.model_name, sys_msg, prompt)[0]   
         
     def prompt_template_example(self):

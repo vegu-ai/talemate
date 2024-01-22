@@ -1,5 +1,10 @@
 <template>
-  <v-alert variant="text" closable type="info" icon="mdi-chat-outline" elevation="0" density="compact" @click:close="deleteMessage()"  @mouseover="hovered=true" @mouseleave="hovered=false">
+  <v-alert variant="text" type="info" icon="mdi-chat-outline" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
+    <template v-slot:close>
+      <v-btn size="x-small" icon @click="deleteMessage">
+        <v-icon>mdi-close</v-icon>
+      </v-btn>
+    </template>
     <v-alert-title :style="{ color: color }" class="text-subtitle-1">
         {{ character }}
     </v-alert-title>

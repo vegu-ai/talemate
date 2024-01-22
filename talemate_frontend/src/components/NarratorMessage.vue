@@ -1,6 +1,10 @@
 <template>
-  <v-alert variant="text" :closable="message_id !== null" type="info" icon="mdi-script-text-outline" elevation="0" density="compact" @click:close="deleteMessage()" @mouseover="hovered=true" @mouseleave="hovered=false">
-    
+  <v-alert variant="text" type="info" icon="mdi-script-text-outline" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
+    <template v-slot:close>
+      <v-btn size="x-small" icon @click="deleteMessage">
+        <v-icon>mdi-close</v-icon>
+      </v-btn>
+    </template>
     <div class="narrator-message">
       <v-textarea ref="textarea" v-if="editing" v-model="editing_text" @keydown.enter.prevent="submitEdit()" @blur="cancelEdit()" @keydown.escape.prevent="cancelEdit()">
       </v-textarea>

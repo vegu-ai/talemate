@@ -144,13 +144,13 @@ export default {
 
                 // find message where type == "character" and id == data.id
                 // remove that message from the array
-
+                let newMessages = [];
                 for (i = 0; i < this.messages.length; i++) {
-                    if (this.messages[i].id == data.id) {
-                        this.messages.splice(i, 1);
-                        break;
+                    if (this.messages[i].id != data.id) {
+                        newMessages.push(this.messages[i]);
                     }
                 }
+                this.messages = newMessages;
 
                 return
             }

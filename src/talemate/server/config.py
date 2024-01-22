@@ -1,7 +1,7 @@
 import pydantic
 import structlog
 from talemate import VERSION
-
+from talemate.client.registry import CLIENT_CLASSES
 from talemate.config import Config as AppConfigData, load_config, save_config
 from talemate.client.model_prompts import model_prompt
 
@@ -109,6 +109,8 @@ class ConfigPlugin:
         
         prompt_template_example, prompt_template_file = model_prompt(payload.model_name, "sysmsg", "prompt<|BOT|>{LLM coercion}")
         
+        log.info("Prompt template example", prompt_template_example=prompt_template_example, prompt_template_file=prompt_template_file)
+        
         self.websocket_handler.queue_put({
             "type": "config",
             "action": "set_llm_template_complete",
@@ -142,4 +144,18 @@ class ConfigPlugin:
             "data": {
                 "template": template,
             }
+        })
+        
+    async def handle_request_client_types(self, data):
+        
+        log.info("Requesting client types")
+        
+        clients = {
+            client_type: CLIENT_CLASSES[client_type].Meta().model_dump() for client_type in CLIENT_CLASSES
+        }
+    
+        self.websocket_handler.queue_put({
+            "type": "config",
+            "action": "client_types",
+            "data": clients,
         })

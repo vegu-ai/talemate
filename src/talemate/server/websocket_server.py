@@ -12,6 +12,8 @@ from talemate.files import list_scenes_directory
 from talemate.load import load_scene, load_scene_from_data, load_scene_from_character_card
 from talemate.scene_assets import Asset
 
+from talemate.client.registry import CLIENT_CLASSES
+
 from talemate.server import character_creator
 from talemate.server import character_importer
 from talemate.server import scene_creator
@@ -79,6 +81,7 @@ class WebsocketHandler(Receiver):
                     **client_config
                 )
             except TypeError as e:
+                raise
                 log.error("Error connecting to client", client_name=client_name, e=e)
                 continue
 
@@ -100,6 +103,7 @@ class WebsocketHandler(Receiver):
                 
             if not client:
                 # select first client
+                print("selecting first client", self.llm_clients)
                 client = list(self.llm_clients.values())[0]["client"]
                 agent_config["client"] = client.name
             
@@ -174,32 +178,18 @@ class WebsocketHandler(Receiver):
         for client in clients:
             
             client.pop("status", None)
+            client_cls = CLIENT_CLASSES.get(client["type"])
             
-            if client["type"] in ["textgenwebui", "lmstudio"]:
-                try:
-                    max_token_length = int(client.get("max_token_length", 2048))
-                except ValueError:
-                    continue
-                
-                client.pop("model", None)
-
-                self.llm_clients[client["name"]] = {
-                    "type": client["type"],
-                    "api_url": client["apiUrl"],
-                    "name": client["name"],
-                    "max_token_length": max_token_length,
-                }
-            elif client["type"] == "openai":
-                
-                client.pop("model_name", None)
-                client.pop("apiUrl", None)
-                
-                self.llm_clients[client["name"]] = {
-                    "type": "openai",
-                    "name": client["name"],
-                    "model": client.get("model", client.get("model_name")),
-                    "max_token_length": client.get("max_token_length"),
-                }
+            if not client_cls:
+                log.error("Client type not found", client=client)
+                continue
+            
+            client_config = self.llm_clients[client["name"]] = {
+                "name": client["name"],
+                "type": client["type"],
+            }
+            for dfl_key in client_cls.Meta().defaults.dict().keys():
+                client_config[dfl_key] = client.get(dfl_key)
 
         # find clients that have been removed
         removed = existing - set(self.llm_clients.keys())
@@ -223,6 +213,8 @@ class WebsocketHandler(Receiver):
 
         self.connect_llm_clients()
         save_config(self.config)
+        
+        instance.emit_clients_status()
 
     def configure_agents(self, agents):
         self.agents = {typ: {} for typ in instance.agent_types()}
@@ -427,7 +419,9 @@ class WebsocketHandler(Receiver):
                 "status": emission.status,
                 "data": emission.data,
                 "max_token_length": client.max_token_length if client else 4096,
-                "apiUrl": getattr(client, "api_url", None) if client else None,
+                "api_url": getattr(client, "api_url", None) if client else None,
+                "api_url": getattr(client, "api_url", None) if client else None,
+                "api_key": getattr(client, "api_key", None) if client else None,
             }
         )
 

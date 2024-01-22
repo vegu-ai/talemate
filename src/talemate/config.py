@@ -20,6 +20,7 @@ class Client(BaseModel):
     name: str
     model: Union[str,None] = None
     api_url: Union[str,None] = None
+    api_key: Union[str,None] = None
     max_token_length: Union[int,None] = None
     
     class Config:

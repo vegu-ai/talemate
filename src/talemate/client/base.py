@@ -1,14 +1,14 @@
 """
 A unified client base, based on the openai API
 """
-import copy
 import random
 import time
-from typing import Callable
+import pydantic
+from typing import Callable, Union
 
 import structlog
 import logging
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, PermissionDeniedError
 
 from talemate.emit import emit
 import talemate.instance as instance
@@ -29,10 +29,15 @@ REMOTE_SERVICES = [
 
 STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 
+class Defaults(pydantic.BaseModel):
+    api_url:str = "http://localhost:5000"
+    max_token_length:int = 4096
+
 class ClientBase:
     
     api_url: str
     model_name: str
+    api_key: str = None
     name:str = None
     enabled: bool = True
     current_status: str = None
@@ -43,8 +48,14 @@ class ClientBase:
     auto_break_repetition_enabled: bool = True
 
     client_type = "base"
-
     
+    class Meta(pydantic.BaseModel):
+        experimental:Union[None,str] = None
+        defaults:Defaults = Defaults()
+        title:str = "Client"
+        name_prefix:str = "Client"
+        enable_api_auth: bool = False
+
     def __init__(
         self,
         api_url: str = None,
@@ -60,6 +71,10 @@ class ClientBase:
         
     def __str__(self):
         return f"{self.client_type}Client[{self.api_url}][{self.model_name or ''}]"
+       
+    @property
+    def experimental(self):
+        return False
         
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
@@ -73,6 +88,10 @@ class ClientBase:
         if not self.model_name:
             self.log.warning("prompt template not applied", reason="no model loaded")
             return f"{sys_msg}\n{prompt}"
+    
+        print()
+        print("TEMPLATE", model_prompt(self.model_name, sys_msg, prompt))
+        print()
         
         return model_prompt(self.model_name, sys_msg, prompt)[0]   
         
@@ -196,9 +215,11 @@ class ClientBase:
             details=model_name,
             status=status,
             data={
+                "api_key": self.api_key,
                 "prompt_template_example": prompt_template_example,
                 "has_prompt_template": (prompt_template_file and prompt_template_file != "default.jinja2"),
                 "template_file": prompt_template_file,
+                "meta": self.Meta().model_dump(),
             }
         )
 
@@ -293,8 +314,13 @@ class ClientBase:
         try:
             response = await self.client.completions.create(prompt=prompt.strip(" "), **parameters)
             return response.get("choices", [{}])[0].get("text", "")
+        except PermissionDeniedError as e:
+            self.log.error("generate error", e=e)
+            emit("status", message="Client API: Permission Denied", status="error")
+            return ""
         except Exception as e:
             self.log.error("generate error", e=e)
+            emit("status", message="Error during generation (check logs)", status="error")
             return ""
         
     async def send_prompt(

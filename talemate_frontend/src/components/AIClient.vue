@@ -85,7 +85,7 @@ export default {
         currentClient: {
           name: '',
           type: '',
-          apiUrl: '',
+          api_url: '',
           model_name: '',
           max_token_length: 4096,
           data: {
@@ -129,7 +129,7 @@ export default {
       this.state.currentClient = {
         name: 'TextGenWebUI',
         type: 'textgenwebui',
-        apiUrl: 'http://localhost:5000',
+        api_url: 'http://localhost:5000',
         model_name: '',
         max_token_length: 4096,
         data: {
@@ -204,7 +204,8 @@ export default {
           client.type = data.message;
           client.status = data.status;
           client.max_token_length = data.max_token_length;
-          client.apiUrl = data.apiUrl;
+          client.api_url = data.api_url;
+          client.api_key = data.api_key;
           client.data = data.data;
         } else if(!client) {
           console.log("Adding new client", data);
@@ -215,7 +216,8 @@ export default {
             type: data.message, 
             status: data.status,
             max_token_length: data.max_token_length,
-            apiUrl: data.apiUrl,
+            api_url: data.api_url,
+            api_key: data.api_key,
             data: data.data,
           });
           // sort the clients by name

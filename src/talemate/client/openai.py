@@ -1,17 +1,12 @@
-import os
 import json
-import traceback
-from openai import AsyncOpenAI
-
+import pydantic
+from openai import AsyncOpenAI, PermissionDeniedError
 
 from talemate.client.base import ClientBase
 from talemate.client.registry import register
 from talemate.emit import emit
 from talemate.emit.signals import handlers
-import talemate.emit.async_signals as async_signals
 from talemate.config import load_config
-import talemate.instance as instance
-import talemate.client.system_prompts as system_prompts
 import structlog
 import tiktoken
 
@@ -71,6 +66,10 @@ def num_tokens_from_messages(messages:list[dict], model:str="gpt-3.5-turbo-0613"
     num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
     return num_tokens
 
+class Defaults(pydantic.BaseModel):
+    max_token_length:int = 16384
+    model:str = "gpt-4-1106-preview"
+
 @register()
 class OpenAIClient(ClientBase):
     """
@@ -80,6 +79,13 @@ class OpenAIClient(ClientBase):
     client_type = "openai"
     conversation_retries = 0
     auto_break_repetition_enabled = False
+    
+    class Meta(ClientBase.Meta):
+        name_prefix:str = "OpenAI"
+        title:str = "OpenAI"
+        manual_model:bool = True
+        manual_model_choices:list[str] = ["gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4", "gpt-4-1106-preview"]
+        defaults:Defaults = Defaults()
 
     def __init__(self, model="gpt-4-1106-preview", **kwargs):
         
@@ -235,6 +241,9 @@ class OpenAIClient(ClientBase):
                 response = response[len(right):].strip()
                 
             return response
-                
+        except PermissionDeniedError as e:
+            self.log.error("generate error", e=e)
+            emit("status", message="OpenAI API: Permission Denied", status="error")
+            return ""
         except Exception as e:
             raise

@@ -15,14 +15,11 @@
                     <v-text-field v-model="client.name" label="Client Name"></v-text-field>
                   </v-col> 
               </v-row>
-
-              !!
               <v-row v-if="clientMeta().experimental">
                 <v-col cols="12">
                   <v-alert type="warning" variant="text" density="compact" icon="mdi-flask" outlined>{{ clientMeta().experimental }}</v-alert>
                 </v-col>
               </v-row>
-              !!
               <v-row>
                 <v-col cols="12">
                   <v-row>
@@ -162,13 +159,13 @@ export default {
 
     clientMeta() {
       if(!Object.keys(this.clientTypes).length)
-        return {};  
+        return {defaults:{}};  
       if(!this.clientTypes[this.client.type])
-        return {};
+        return {defaults:{}};
       return this.clientTypes[this.client.type];
     },
 
-    requiresAPIUrl(client) {
+    requiresAPIUrl() {
       return this.clientMeta().defaults.api_url != null;
     },
 

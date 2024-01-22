@@ -201,6 +201,7 @@ export default {
         if (client && !client.dirty) {
           // Update the model name of the client
           client.model_name = data.model_name;
+          client.model = client.model_name;
           client.type = data.message;
           client.status = data.status;
           client.max_token_length = data.max_token_length;
@@ -213,6 +214,7 @@ export default {
           this.state.clients.push({ 
             name: data.name, 
             model_name: data.model_name, 
+            model: data.model_name,
             type: data.message, 
             status: data.status,
             max_token_length: data.max_token_length,

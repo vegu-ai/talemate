@@ -687,8 +687,9 @@ class Scene(Emitter):
         self.Actor = Actor
         self.Character = Character
         
+        # TODO: deprecate
         self.automated_actions = {}
-
+        
         self.active_pins = []
         # Add an attribute to store the most recent AI Actor
         self.most_recent_ai_actor = None
@@ -1226,9 +1227,9 @@ class Scene(Emitter):
         # collect context, ignore where end > len(history) - count
         
         for i in range(len(self.archived_history) - 1, -1, -1):
-            
-            end = self.archived_history[i].get("end")
-            start = self.archived_history[i].get("start")
+            archive_history_entry = self.archived_history[i]
+            end =  archive_history_entry.get("end")
+            start =  archive_history_entry.get("start")
             
             if end is None:
                 continue
@@ -1236,10 +1237,17 @@ class Scene(Emitter):
             if start > len(self.history) - count:
                 continue
             
-            if count_tokens(parts_context) + count_tokens(self.archived_history[i]["text"]) > budget_context:
+            try:
+                time_message = util.iso8601_diff_to_human(archive_history_entry["ts"], self.ts)
+                text = f"{time_message}: {archive_history_entry['text']}"
+            except Exception as e:
+                log.error("context_history", error=e, traceback=traceback.format_exc())
+                text = archive_history_entry["text"]
+            
+            if count_tokens(parts_context) + count_tokens(text) > budget_context:
                 break
             
-            parts_context.insert(0, self.archived_history[i]["text"])
+            parts_context.insert(0,  text)
                   
         if count_tokens(parts_context + parts_dialogue) < 1024:
             intro = self.get_intro()

@@ -246,32 +246,32 @@
 
                         <!-- deactivate active characters -->
                         <v-list-item v-for="(character, index) in deactivatableCharacters" :key="index"
-                            @click="sendHotButtonMessage('!char_d:' + character)">
+                            @click="deactivateCharacter($event, character)">
                             <template v-slot:prepend>
                                 <v-icon color="secondary">mdi-exit-run</v-icon>
                             </template>
-                            <v-list-item-title>Take out of scene: {{ character }}</v-list-item-title>
-                            <v-list-item-subtitle>Make {{ character }} a passive character</v-list-item-subtitle>
+                            <v-list-item-title>Take out of scene: {{ character }}<v-chip variant="text" color="info" class="ml-1" size="x-small">Ctrl: no narration</v-chip></v-list-item-title>
+                            <v-list-item-subtitle>Make {{ character }} a passive character.</v-list-item-subtitle>
                         </v-list-item>
 
                         <!-- reactivate inactive characters -->
                         <v-list-item v-for="(character, index) in inactiveCharacters" :key="index"
-                            @click="sendHotButtonMessage('!char_a:' + character)">
+                            @click="activateCharacter($event, character)">
                             <template v-slot:prepend>
                                 <v-icon color="secondary">mdi-human-greeting</v-icon>
                             </template>
-                            <v-list-item-title>Call into scene: {{ character }}</v-list-item-title>
-                            <v-list-item-subtitle>Make {{ character }} an active character</v-list-item-subtitle>
+                            <v-list-item-title>Call into scene: {{ character }}<v-chip variant="text" color="info" class="ml-1" size="x-small">Ctrl: no narration</v-chip></v-list-item-title>
+                            <v-list-item-subtitle>Make {{ character }} an active character.</v-list-item-subtitle>
                         </v-list-item>
 
                         <!-- persist passive characters -->
                         <v-list-item v-for="(character, index) in potentialNewCharacters()" :key="index"
-                            @click="sendHotButtonMessage('!persist_character:' + character)">
+                            @click="introduceCharacter($event, character)">
                             <template v-slot:prepend>
                                 <v-icon color="warning">mdi-human-greeting</v-icon>
                             </template>
-                            <v-list-item-title>Introduce {{ character }}</v-list-item-title>
-                            <v-list-item-subtitle>Make {{ character }} an active character</v-list-item-subtitle>
+                            <v-list-item-title>Introduce {{ character }}<v-chip variant="text" color="info" class="ml-1" size="x-small">Ctrl: no narration</v-chip></v-list-item-title>
+                            <v-list-item-subtitle>Make {{ character }} an active character.</v-list-item-subtitle>
                         </v-list-item>
 
                         <!-- static tools -->
@@ -433,6 +433,33 @@ export default {
                 }
             }
             return newCharacters;
+        },
+
+        activateCharacter(ev, name) {
+            let modifyNoNarration = ev.ctrlKey;
+            if(!modifyNoNarration) {
+                this.sendHotButtonMessage('!char_a:' + name);
+            } else {
+                this.sendHotButtonMessage('!char_a:' + name + ':no');
+            }
+        },
+
+        deactivateCharacter(ev, name) {
+            let modifyNoNarration = ev.ctrlKey;
+            if(!modifyNoNarration) {
+                this.sendHotButtonMessage('!char_d:' + name);
+            } else {
+                this.sendHotButtonMessage('!char_d:' + name + ':no');
+            }
+        },
+
+        introduceCharacter(ev, name) {
+            let modifyNoNarration = ev.ctrlKey;
+            if(!modifyNoNarration) {
+                this.sendHotButtonMessage('!persist_character:' + name);
+            } else {
+                this.sendHotButtonMessage('!persist_character:' + name + ':no');
+            }
         },
 
         potentialNewCharactersExist() {

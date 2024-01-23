@@ -93,15 +93,16 @@ class CmdPersistCharacter(TalemateCommand):
             if description.strip():
                 extra_instructions = f"Name: {name}\nBrief Description: {description}"
                 
-        is_present = await world_state.analyze_text_and_answer_question(
-            text=self.scene.snapshot(lines=50),
-            query=f"Is {name} present AND active in the current scene? Answert with 'yes' or 'no'.",
-        )
         
-        is_present = is_present.lower().startswith("y")
-            
-        scene.log.debug("persist_character", name=name)
+        never_narrate = len(self.args) > 1 and self.args[1] == "no"
         
+        if not never_narrate:
+            is_present = await world_state.is_character_present(name)
+            log.debug("persist_character", name=name, is_present=is_present, never_narrate=never_narrate)
+        else:
+            is_present = False
+            log.debug("persist_character", name=name, never_narrate=never_narrate)
+
         character = Character(name=name)
         character.color = random.choice(['#F08080', '#FFD700', '#90EE90', '#ADD8E6', '#DDA0DD', '#FFB6C1', '#FAFAD2', '#D3D3D3', '#B0E0E6', '#FFDEAD'])
         
@@ -125,9 +126,9 @@ class CmdPersistCharacter(TalemateCommand):
         await scene.add_actor(actor)
         
         emit("status", message=f"Added character {name} to the scene.", status="success")
-        
+
         # write narrative for the character entering the scene
-        if not is_present:
+        if not is_present and not never_narrate:
             loading_status("Narrating character entrance...")
             entry_narration = await narrator.narrate_character_entry(character, direction=extra_instructions)
             message = NarratorMessage(entry_narration, source=f"narrate_character_entry:{character.name}")

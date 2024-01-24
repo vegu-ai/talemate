@@ -106,7 +106,19 @@ class MemoryAgent(Agent):
          
         loop = asyncio.get_running_loop()
         
-        await loop.run_in_executor(None, functools.partial(self._add, text, character, uid=uid, ts=ts, **kwargs))
+        try:
+            await loop.run_in_executor(None, functools.partial(self._add, text, character, uid=uid, ts=ts, **kwargs))
+        except AttributeError as e:
+            # not sure how this sometimes happens.
+            # chromadb model None
+            # race condition because we are forcing async context onto it?
+            
+            log.error("memory agent", error="failed to add memory", details=e, text=text[:50], character=character, uid=uid, ts=ts, **kwargs)
+            await asyncio.sleep(1.0)
+            try:
+                await loop.run_in_executor(None, functools.partial(self._add, text, character, uid=uid, ts=ts, **kwargs))
+            except Exception as e:
+                log.error("memory agent", error="failed to add memory (retried)", details=e, text=text[:50], character=character, uid=uid, ts=ts, **kwargs)
 
     def _add(self, text, character=None, ts:str=None, **kwargs):
         raise NotImplementedError()

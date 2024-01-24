@@ -358,6 +358,7 @@ class Character:
         for key, detail in self.details.items():
             items.append({
                 "text": f"{self.name} - {key}: {detail}",
+                "id": f"{self.name}.{key}",
                 "meta": {
                     "character": self.name,
                     "typ": "details",
@@ -427,6 +428,7 @@ class Character:
         
         items.append({
             "text": f"{self.name} - {detail}: {value}",
+            "id": f"{self.name}.{detail}",
             "meta": {
                 "character": self.name,
                 "typ": "details",

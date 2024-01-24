@@ -223,6 +223,7 @@ class ClientBase:
                 "has_prompt_template": (prompt_template_file and prompt_template_file != "default.jinja2"),
                 "template_file": prompt_template_file,
                 "meta": self.Meta().model_dump(),
+                "error_action": None,
             }
         )
 

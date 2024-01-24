@@ -118,6 +118,13 @@ async def emit_client_bootstraps():
         data=list(await bootstrap.list_all())
     )
 
+def sync_emit_clients_status():
+    """
+    Will emit status of all clients
+    in synchronous mode
+    """
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(emit_clients_status())
 
 async def sync_client_bootstraps():
     """

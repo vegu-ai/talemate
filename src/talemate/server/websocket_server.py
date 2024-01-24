@@ -214,7 +214,7 @@ class WebsocketHandler(Receiver):
         self.connect_llm_clients()
         save_config(self.config)
         
-        instance.emit_clients_status()
+        instance.sync_emit_clients_status()
 
     def configure_agents(self, agents):
         self.agents = {typ: {} for typ in instance.agent_types()}
@@ -557,7 +557,7 @@ class WebsocketHandler(Receiver):
         )
 
     async def request_client_status(self):
-        instance.emit_clients_status()
+        await instance.emit_clients_status()
         
     def request_scene_assets(self, asset_ids:list[str]):
         scene_assets = self.scene.assets

@@ -19,10 +19,10 @@ class DefaultCharacterPayload(pydantic.BaseModel):
 
 class SetLLMTemplatePayload(pydantic.BaseModel):
     template_file: str
-    model_name: str
+    model: str
     
 class DetermineLLMTemplatePayload(pydantic.BaseModel):
-    model_name: str
+    model: str
     
 class ConfigPlugin:
     
@@ -103,11 +103,11 @@ class ConfigPlugin:
         
         payload = SetLLMTemplatePayload(**data["data"])
         
-        copied_to = model_prompt.create_user_override(payload.template_file, payload.model_name)
+        copied_to = model_prompt.create_user_override(payload.template_file, payload.model)
         
-        log.info("Copied template", copied_to=copied_to, template=payload.template_file, model_name=payload.model_name)
+        log.info("Copied template", copied_to=copied_to, template=payload.template_file, model=payload.model)
         
-        prompt_template_example, prompt_template_file = model_prompt(payload.model_name, "sysmsg", "prompt<|BOT|>{LLM coercion}")
+        prompt_template_example, prompt_template_file = model_prompt(payload.model, "sysmsg", "prompt<|BOT|>{LLM coercion}")
         
         log.info("Prompt template example", prompt_template_example=prompt_template_example, prompt_template_file=prompt_template_file)
         
@@ -125,16 +125,16 @@ class ConfigPlugin:
         
         payload = DetermineLLMTemplatePayload(**data["data"])
         
-        log.info("Determining LLM template", model_name=payload.model_name)
+        log.info("Determining LLM template", model=payload.model)
         
-        template = model_prompt.query_hf_for_prompt_template_suggestion(payload.model_name)
+        template = model_prompt.query_hf_for_prompt_template_suggestion(payload.model)
         
         log.info("Template suggestion", template=template)
         
         await self.handle_set_llm_template({
             "data": {
                 "template_file": template,
-                "model_name": payload.model_name,
+                "model": payload.model,
             }
         })
         

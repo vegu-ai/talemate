@@ -190,7 +190,7 @@ export default {
         type: 'config',
         action: 'determine_llm_template',
         data: {
-          model_name: this.client.model_name,
+          model: this.client.model_name,
         }
       }));
     },
@@ -201,7 +201,7 @@ export default {
         action: 'set_llm_template',
         data: {
           template_file: this.client.data.template_file,
-          model_name: this.client.model_name,
+          model: this.client.model_name,
         }
       }));
       this.$refs.promptTemplateComboBox.blur();

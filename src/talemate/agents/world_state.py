@@ -629,8 +629,13 @@ class WorldStateAgent(Agent):
         - `character`: The character to check.
         """
         
+        if len(self.scene.history) < 10:
+            text = self.scene.intro+"\n\n"+self.scene.snapshot(lines=50)
+        else:
+            text = self.scene.snapshot(lines=50)
+        
         is_present = await self.analyze_text_and_answer_question(
-            text=self.scene.snapshot(lines=50),
+            text=text,
             query=f"Is {character} present AND active in the current scene? Answert with 'yes' or 'no'.",
         )
         
@@ -645,10 +650,15 @@ class WorldStateAgent(Agent):
         
         - `character`: The character to check.
         """
-        
-        is_present = await self.analyze_text_and_answer_question(
-            text=self.scene.snapshot(lines=50),
+
+        if len(self.scene.history) < 10:
+            text = self.scene.intro+"\n\n"+self.scene.snapshot(lines=50)
+        else:
+            text = self.scene.snapshot(lines=50)
+
+        is_leaving = await self.analyze_text_and_answer_question(
+            text=text,
             query=f"Is {character} leaving the current scene? Answert with 'yes' or 'no'.",
         )
         
-        return is_present.lower().startswith("y")
+        return is_leaving.lower().startswith("y")

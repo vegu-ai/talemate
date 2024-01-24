@@ -29,6 +29,12 @@ REMOTE_SERVICES = [
 
 STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 
+class ErrorAction(pydantic.BaseModel):
+    title:str
+    action_name:str
+    icon:str = "mdi-error"
+    arguments:list = []
+
 class Defaults(pydantic.BaseModel):
     api_url:str = "http://localhost:5000"
     max_token_length:int = 4096
@@ -55,6 +61,7 @@ class ClientBase:
         title:str = "Client"
         name_prefix:str = "Client"
         enable_api_auth: bool = False
+        requires_prompt_template: bool = True
 
     def __init__(
         self,

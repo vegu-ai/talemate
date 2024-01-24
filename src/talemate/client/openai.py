@@ -2,7 +2,7 @@ import json
 import pydantic
 from openai import AsyncOpenAI, PermissionDeniedError
 
-from talemate.client.base import ClientBase
+from talemate.client.base import ClientBase, ErrorAction
 from talemate.client.registry import register
 from talemate.emit import emit
 from talemate.emit.signals import handlers
@@ -85,6 +85,7 @@ class OpenAIClient(ClientBase):
         title:str = "OpenAI"
         manual_model:bool = True
         manual_model_choices:list[str] = ["gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4", "gpt-4-1106-preview"]
+        requires_prompt_template: bool = False
         defaults:Defaults = Defaults()
 
     def __init__(self, model="gpt-4-1106-preview", **kwargs):
@@ -102,6 +103,7 @@ class OpenAIClient(ClientBase):
 
 
     def emit_status(self, processing: bool = None):
+        error_action = None
         if processing is not None:
             self.processing = processing
 
@@ -111,6 +113,15 @@ class OpenAIClient(ClientBase):
         else:
             status = "error"
             model_name = "No API key set"
+            error_action = ErrorAction(
+                title="Set API Key",
+                action_name="openAppConfig",
+                icon="mdi-key-variant",
+                arguments=[
+                    "application",
+                    "openai_api",
+                ]
+            )
             
         if not self.model_name:
             status = "error"
@@ -124,6 +135,10 @@ class OpenAIClient(ClientBase):
             id=self.name,
             details=model_name,
             status=status,
+            data={
+                "error_action": error_action.model_dump() if error_action else None,
+                "meta": self.Meta().model_dump(),
+            }
         )
 
     def set_client(self, max_token_length:int=None):

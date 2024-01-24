@@ -1,5 +1,5 @@
 <template>
-    <v-card flat variant="text">
+    <v-card flat variant="text" v-if="hasRecentScenes()">
         <v-card-title>
             Recent Saves
         </v-card-title>
@@ -62,6 +62,10 @@ export default {
         }
     },
     methods: {
+
+        hasRecentScenes() {
+            return this.config != null && this.config.recent_scenes != null && this.config.recent_scenes.scenes != null && this.config.recent_scenes.scenes.length > 0;
+        },
 
         prettyDate(date) {
             // 2024-01-20T03:35:00.109492

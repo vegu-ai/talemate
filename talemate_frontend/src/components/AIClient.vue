@@ -14,6 +14,11 @@
           <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
           {{ client.name }}          
         </v-list-item-title>
+        <v-list-item-subtitle class="text-caption" v-if="client.data.error_action != null">
+          <v-btn class="mt-1 mb-1" variant="tonal" :prepend-icon="client.data.error_action.icon" size="x-small" color="warning" @click.stop="callErrorAction(client, client.data.error_action)">
+            {{ client.data.error_action.title }}
+          </v-btn>
+        </v-list-item-subtitle> 
         <v-list-item-subtitle class="text-caption">
           {{ client.model_name }}
         </v-list-item-subtitle>
@@ -35,7 +40,7 @@
         </div>
         <v-list-item-subtitle class="text-center">
 
-          <v-tooltip text="No LLM prompt template for this model. Using default. Templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template" max-width="200">
+          <v-tooltip text="No LLM prompt template for this model. Using default. Templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template" max-width="200">
             <template v-slot:activator="{ props }">
               <v-icon x-size="14" class="mr-1" v-bind="props" color="orange">mdi-alert</v-icon>
             </template>
@@ -64,7 +69,7 @@
     </v-list>
     <ClientModal :dialog="state.dialog" :formTitle="state.formTitle" @save="saveClient" @error="propagateError" @update:dialog="updateDialog"></ClientModal>
     <v-alert type="warning" variant="tonal" v-if="state.clients.length === 0">You have no LLM clients configured. Add one.</v-alert>
-    <v-btn @click="openModal" prepend-icon="mdi-plus-box">Add client</v-btn>
+    <v-btn @click="openModal" elevation="0" prepend-icon="mdi-plus-box">Add client</v-btn>
   </div>
 </template>
   
@@ -107,7 +112,19 @@ export default {
       state: this.state
     };
   },
+  emits: [
+    'clients-updated',
+    'client-assigned',
+    'open-app-config',
+  ],
   methods: {
+
+    callErrorAction(client, action) {
+      if(action.action_name === 'openAppConfig') {
+        this.$emit('open-app-config', ...action.arguments);
+      }
+    },
+
     configurationRequired() {
       if(this.state.clients.length === 0) {
         return true;

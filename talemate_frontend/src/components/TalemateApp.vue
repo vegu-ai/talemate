@@ -37,7 +37,7 @@
         <v-list-subheader class="text-uppercase"><v-icon>mdi-network-outline</v-icon>
           Clients</v-list-subheader>
         <v-list-item>
-          <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents"></AIClient>
+          <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig"></AIClient>
         </v-list-item>
         <v-divider></v-divider>
         <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
@@ -323,6 +323,7 @@ export default {
         if (data.id === 'scene.loaded') {
           this.loading = false;
           this.sceneActive = true;
+          this.requestAppConfig();
         }
         if(data.status == 'error') {
           this.errorNotification = true;
@@ -488,8 +489,8 @@ export default {
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
       this.$refs.worldState.openWorldStateManager(tab, sub1, sub2, sub3);
     },
-    openAppConfig() {
-      this.$refs.appConfig.show();
+    openAppConfig(tab, page) {
+      this.$refs.appConfig.show(tab, page);
     },
     uxErrorHandler(error) {
       this.errorNotification = true;

@@ -264,10 +264,15 @@ export default {
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'requestSceneAssets', 'requestAppConfig'],
 
     methods: {
-        show() {
+        show(tab, page) {
             this.requestAppConfig();
             this.dialog = true;
-
+            if(tab) {
+                this.tab = tab;
+                if(page) {
+                    this[tab + 'PageSelected'] = page;
+                }
+            }
         },
         exit() {
             this.dialog = false

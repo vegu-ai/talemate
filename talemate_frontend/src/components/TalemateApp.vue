@@ -19,8 +19,7 @@
           <CoverImage v-if="sceneActive" ref="coverImage" />
           <WorldState v-if="sceneActive" ref="worldState" @passive-characters="(characters) => { passiveCharacters = characters }" />
         </div>
-
-        <CreativeEditor v-if="sceneActive" ref="creativeEditor" />
+            <CreativeEditor v-if="sceneActive" ref="creativeEditor" @open-world-state-manager="onOpenWorldStateManager"  />
       </v-list>
 
     </v-navigation-drawer>

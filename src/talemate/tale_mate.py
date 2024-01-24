@@ -1720,7 +1720,8 @@ class Scene(Emitter):
         
     async def _run_creative_loop(self, init: bool = True):
 
-        self.system_message("Creative mode")
+        emit("status", message="Switched to scene editor", status="info")
+
         if init:
             emit("clear_screen", "")
             self.narrator_message(self.description)

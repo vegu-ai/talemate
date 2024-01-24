@@ -261,6 +261,7 @@ export default {
             }
         },
         openWorldStateManager(tab, sub1, sub2, sub3) {
+            console.log("OPENING WORLDSTATE MANAGER", tab, sub1, sub2, sub3)
             this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
         },
         passiveCharacters() {

@@ -1,5 +1,5 @@
 <template>
-    <CreativeMenu ref="menu"/>
+    <CreativeMenu ref="menu" @open-world-state-manager="onOpenWorldStateManager"/>
     <CharacterCreator ref="characterCreator"/>
     <CharacterImporter ref="characterImporter"/>
     <SceneCreator ref="sceneCreator"/>
@@ -40,7 +40,14 @@ export default {
         'setWaitingForInput',
     ],
 
+    emits: [
+        'open-world-state-manager',
+    ],
+
     methods: {
+        onOpenWorldStateManager(tab, sub1, sub2, sub3) {
+            this.$emit('open-world-state-manager', tab, sub1, sub2, sub3);
+        },
         handleMessage(data) {
             if(data.type === 'world_state') {
                 console.log("world_state");

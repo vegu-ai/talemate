@@ -4,6 +4,7 @@ from talemate import VERSION
 from talemate.client.registry import CLIENT_CLASSES
 from talemate.config import Config as AppConfigData, load_config, save_config
 from talemate.client.model_prompts import model_prompt
+from talemate.emit import emit
 
 log = structlog.get_logger("talemate.server.config")
 
@@ -131,12 +132,15 @@ class ConfigPlugin:
         
         log.info("Template suggestion", template=template)
         
-        await self.handle_set_llm_template({
-            "data": {
-                "template_file": template,
-                "model": payload.model,
-            }
-        })
+        if not template:
+            emit("status", message="No template found for model", status="warning")
+        else:
+            await self.handle_set_llm_template({
+                "data": {
+                    "template_file": template,
+                    "model": payload.model,
+                }
+            })
         
         self.websocket_handler.queue_put({
             "type": "config",

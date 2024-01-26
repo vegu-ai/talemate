@@ -7,13 +7,16 @@ Allows you to play roleplay scenarios with large language models.
 |------------------------------------------|------------------------------------------|
 |![Screenshot 1](docs/img/0.17.0/ss-4.png)|![Screenshot 2](docs/img/0.17.0/ss-3.png)|
 
-> :warning: **It does not run any large language models itself but relies on existing APIs. Currently supports OpenAI, text-generation-webui and LMStudio.**
+> :warning: **It does not run any large language models itself but relies on existing APIs. Currently supports OpenAI, text-generation-webui and LMStudio. 0.18.0 also adds support for generic OpenAI api implementations, but generation quality on that will vary.**
 
 This means you need to either have:
 - an [OpenAI](https://platform.openai.com/overview) api key
-- OR setup local (or remote via runpod) LLM inference via one of these options:
+- setup local (or remote via runpod) LLM inference via:
     - [oobabooga/text-generation-webui](https://github.com/oobabooga/text-generation-webui)
     - [LMStudio](https://lmstudio.ai/)
+- Any other OpenAI api implementation that implements the v1/completions endpoint
+    - tested llamacpp with the `api_like_OAI.py` wrapper
+    - let me know if you have tested any other implementations and they failed / worked or landed somewhere in between
 
 ## Current features
 
@@ -35,6 +38,7 @@ This means you need to either have:
     - Automatically keep track and reinforce selected character and world truths / states.
 - narrative tools
 - creative tools 
+    - manage multiple NPCs
     - AI backed character creation with template support (jinja2)
     - AI backed scenario creation
 - context managegement
@@ -93,18 +97,7 @@ There is also a [troubleshooting guide](docs/troubleshoot.md) that might help.
 1. Start the backend: `python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050`.
 1. Open a new terminal, navigate to the `talemate_frontend` directory, and start the frontend server by running `npm run serve`.
 
-## Configuration
-
-### OpenAI
-
-To set your openai api key, open `config.yaml` in any text editor and uncomment / add
-
-```yaml
-openai:
-    api_key: sk-my-api-key-goes-here
-```
-
-You will need to restart the backend for this change to take effect.
+## Other Configuration
 
 ### RunPod
 
@@ -121,10 +114,10 @@ Once the api key is set Pods loaded from text-generation-webui templates (or the
 **ATTENTION**: Talemate is not a suitable for way for you to determine whether your pod is currently running or not. **Always** check the runpod dashboard to see if your pod is running or not.
 
 ## Recommended Models 
-(as of2023.10.25)
 
-Any of the top models in any of the size classes here should work well:
-https://www.reddit.com/r/LocalLLaMA/comments/17fhp9k/huge_llm_comparisontest_39_models_tested_7b70b/
+Any of the top models in any of the size classes here should work well (i wouldn't recommend going lower than 7B):
+
+https://www.reddit.com/r/LocalLLaMA/comments/18yp9u4/llm_comparisontest_api_edition_gpt4_vs_gemini_vs/
 
 ## Connecting to an LLM
 
@@ -146,7 +139,19 @@ If you want to add an OpenAI client, just change the client type and select the 
 
 ![Add client modal](docs/img/add-client-modal-openai.png)
 
-### Ready to go
+If you are setting this up for the first time, you should now see the client, but it will have a red dot next to it, stating that it requires an API key.
+
+![OpenAI API Key missing](docs/img/0.18.0/openai-api-key-1.png)
+
+Click the `SET API KEY` button. This will open a modal where you can enter your API key.
+
+![OpenAI API Key missing](docs/img/0.18.0/openai-api-key-2.png)
+
+Click `Save` and after a moment the client should have a green dot next to it, indicating that it is ready to go.
+
+![OpenAI API Key set](docs/img/0.18.0/openai-api-key-3.png)
+
+## Ready to go
 
 You will know you are good to go when the client and all the agents have a green dot next to them.
 

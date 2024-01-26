@@ -228,6 +228,10 @@ export default {
         'formatWorldStateTemplateString',
     ],
 
+    emits: [
+        'passive-characters',
+    ],
+
     methods: {
         onResize() {
             this.worldStateMaxHeight = this.availableHeight();
@@ -257,7 +261,17 @@ export default {
             }
         },
         openWorldStateManager(tab, sub1, sub2, sub3) {
+            console.log("OPENING WORLDSTATE MANAGER", tab, sub1, sub2, sub3)
             this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
+        },
+        passiveCharacters() {
+            let characters = [];
+            for(let character in this.characters) {
+                if(!this.characterSheet().characterExists(character)) {
+                    characters.push(character);
+                }
+            }
+            this.$emit('passive-characters', characters);
         },
         lookAtCharacter(name) {
             this.getWebsocket().send(JSON.stringify({
@@ -355,6 +369,8 @@ export default {
                         break;
                     }
                 }
+
+                this.passiveCharacters();
 
                 //this.onResize()
             } else if (data.type == "scene_status") {

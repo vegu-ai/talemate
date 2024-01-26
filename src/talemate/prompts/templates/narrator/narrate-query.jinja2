@@ -31,5 +31,6 @@ Question: {{ query }}
 Content Context: This is a specific scene from {{ scene.context }}
 Your answer should be in the style of short, concise narration that fits the context of the scene. (1 to 2 sentences)
 {{ extra_instructions }}
+{% include "rerun-context.jinja2" -%}
 <|CLOSE_SECTION|>
 {% if query.endswith("?") -%}Answer: {% endif -%}

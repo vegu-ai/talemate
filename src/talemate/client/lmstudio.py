@@ -1,14 +1,23 @@
+import pydantic
+
 from talemate.client.base import ClientBase
 from talemate.client.registry import register
 
 from openai import AsyncOpenAI
 
+class Defaults(pydantic.BaseModel):
+    api_url:str = "http://localhost:1234"
 
 @register()
 class LMStudioClient(ClientBase):
     
     client_type = "lmstudio"
     conversation_retries = 5
+    
+    class Meta(ClientBase.Meta):
+        name_prefix:str = "LMStudio"
+        title:str = "LMStudio"
+        defaults:Defaults = Defaults()
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url+"/v1", api_key="sk-1111")

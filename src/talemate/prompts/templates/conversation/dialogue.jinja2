@@ -91,4 +91,12 @@ Always contain dialogue in quotation marks. For example, {{ talking_character.na
 <|CLOSE_SECTION|>
 {% if scene.count_character_messages(talking_character) < 5 %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy. Flesh out additional details by describing {{ talking_character.name }}'s actions and mannerisms within asterisks, e.g. *{{ talking_character.name }} smiles*.
 {% endif -%}
+{% if rerun_context and rerun_context.direction -%}
+{% if rerun_context.method == 'replace' -%}
+Final instructions for generating the next line of dialogue: {{ rerun_context.direction }}
+{% elif rerun_context.method == 'edit' and rerun_context.message -%}
+Edit and respond with your changed version of the following line of dialogue: {{ rerun_context.message }}
+Requested changes: {{ rerun_context.direction }}
+{% endif -%}
+{% endif -%}
 {{ bot_token}}{{ talking_character.name }}:{{ partial_message }}

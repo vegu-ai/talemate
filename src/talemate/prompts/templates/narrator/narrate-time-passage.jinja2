@@ -19,7 +19,7 @@ Directions for new narration: {{ narrative }}
 {% endif %}
 
 {{ extra_instructions }}
-
+{% include "rerun-context.jinja2" -%}
 Write 1 to 3 sentences.
 <|CLOSE_SECTION|>
 {{ bot_token }}{{ time_passed }}:

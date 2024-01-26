@@ -29,6 +29,7 @@ class SetCharacterDetailReinforcementPayload(pydantic.BaseModel):
 class CharacterDetailReinforcementPayload(pydantic.BaseModel):
     name: str
     question: str
+    reset: bool = False
     
 class SaveWorldEntryPayload(pydantic.BaseModel):
     id:str
@@ -48,6 +49,7 @@ class SetWorldEntryReinforcementPayload(pydantic.BaseModel):
     
 class WorldEntryReinforcementPayload(pydantic.BaseModel):
     question: str
+    reset: bool = False
     
 class QueryContextDBPayload(pydantic.BaseModel):
     query: str
@@ -230,7 +232,13 @@ class WorldStateManagerPlugin:
         
         payload = CharacterDetailReinforcementPayload(**data)
         
-        await self.world_state_manager.run_detail_reinforcement(payload.name, payload.question)
+        log.debug("Run character detail reinforcement", name=payload.name, question=payload.question, reset=payload.reset)
+        
+        await self.world_state_manager.run_detail_reinforcement(
+            payload.name, 
+            payload.question,
+            reset=payload.reset
+        )
         
         self.websocket_handler.queue_put({
             "type": "world_state_manager",
@@ -328,7 +336,7 @@ class WorldStateManagerPlugin:
     async def handle_run_world_state_reinforcement(self, data):
         payload = WorldEntryReinforcementPayload(**data)
         
-        await self.world_state_manager.run_detail_reinforcement(None, payload.question)
+        await self.world_state_manager.run_detail_reinforcement(None, payload.question, payload.reset)
         
         self.websocket_handler.queue_put({
             "type": "world_state_manager",

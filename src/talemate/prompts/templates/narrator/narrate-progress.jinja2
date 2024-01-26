@@ -35,5 +35,6 @@ Directions for new narration: {{ narrative_direction }}
 {% endif %}
 
 Write 2 to 4 sentences. {{ extra_instructions }}
+{% include "rerun-context.jinja2" -%}
 <|CLOSE_SECTION|>
 {{ set_prepared_response("*") }}

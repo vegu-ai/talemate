@@ -29,9 +29,10 @@ from talemate.exceptions import ExitScene, RestartSceneLoop, ResetScene, Talemat
 from talemate.world_state import WorldState
 from talemate.world_state.manager import WorldStateManager
 from talemate.game_state import GameState
-from talemate.config import SceneConfig, load_config
+from talemate.config import SceneConfig, load_config, Config
 from talemate.scene_assets import SceneAssets
 from talemate.client.context import ClientContext, ConversationContext
+from talemate.context import rerun_context
 import talemate.automated_action as automated_action
 
 
@@ -83,28 +84,6 @@ class Character:
         self.base_attributes = base_attributes or {}
         self.details = details or {}
         self.cover_image = kwargs.get("cover_image")
-
-    @property
-    def pronoun(self):
-        if self.gender.lower() == "female":
-            return "her"
-        elif self.gender.lower() == "male":
-            return "his"
-        elif self.gender.lower() == "neutral":
-            return "their"
-        else:
-            return "its"
-
-    @property
-    def pronoun_2(self):
-        if self.gender.lower() == "female":
-            return "she"
-        if self.gender.lower() == "male":
-            return "he"
-        if self.gender.lower() == "neutral":
-            return "they"
-        else:
-            return "it"
 
     @property
     def persona(self):
@@ -379,6 +358,7 @@ class Character:
         for key, detail in self.details.items():
             items.append({
                 "text": f"{self.name} - {key}: {detail}",
+                "id": f"{self.name}.{key}",
                 "meta": {
                     "character": self.name,
                     "typ": "details",
@@ -448,6 +428,7 @@ class Character:
         
         items.append({
             "text": f"{self.name} - {detail}: {value}",
+            "id": f"{self.name}.{detail}",
             "meta": {
                 "character": self.name,
                 "typ": "details",
@@ -576,7 +557,7 @@ class Actor:
     def history(self):
         return self.scene.history
 
-    async def talk(self, editor: Optional[Helper] = None):
+    async def talk(self):
         """
         Set the message to be sent to the AI
         """
@@ -592,7 +573,7 @@ class Actor:
         )
         
         with ClientContext(conversation=conversation_context):
-            messages = await self.agent.converse(self, editor=editor)
+            messages = await self.agent.converse(self)
             
         return messages
 
@@ -603,7 +584,7 @@ class Player(Actor):
     ai_controlled = 0
     
     async def talk(
-        self, message: Union[str, None] = None, editor: Optional[Helper] = None
+        self, message: Union[str, None] = None
     ):
         """
         Set the message to be sent to the AI
@@ -619,7 +600,7 @@ class Player(Actor):
             if not self.agent:
                 self.agent = self.scene.get_helper("conversation").agent
             
-            return await super().talk(editor=editor)
+            return await super().talk()
         
         if not message:
             # Display scene history length before the player character name
@@ -655,6 +636,16 @@ class Scene(Emitter):
 
     ExitScene = ExitScene
 
+    @classmethod
+    def scenes_dir(cls):
+        relative_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            "..",
+            "..",
+            "scenes",
+        )
+        return os.path.abspath(relative_path)
+        
     def __init__(self):
         self.actors = []
         self.helpers = []
@@ -662,6 +653,7 @@ class Scene(Emitter):
         self.archived_history = []
         self.goals = []
         self.character_states = {}
+        self.inactive_characters = {}
         self.assets = SceneAssets(scene=self)
         self.description = ""
         self.intro  = ""
@@ -697,8 +689,9 @@ class Scene(Emitter):
         self.Actor = Actor
         self.Character = Character
         
+        # TODO: deprecate
         self.automated_actions = {}
-
+        
         self.active_pins = []
         # Add an attribute to store the most recent AI Actor
         self.most_recent_ai_actor = None
@@ -761,13 +754,11 @@ class Scene(Emitter):
             if isinstance(self.history[idx], CharacterMessage):
                 return self.history[idx].character_name
 
+
     @property
     def save_dir(self):
         saves_dir = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            "..",
-            "..",
-            "scenes",
+            self.scenes_dir(),
             self.project_name,
         )
         
@@ -775,6 +766,13 @@ class Scene(Emitter):
             os.makedirs(saves_dir)
         
         return saves_dir
+    
+    @property
+    def full_path(self):
+        if not self.filename:
+            return None
+        
+        return os.path.join(self.save_dir, self.filename)
     
     @property
     def template_dir(self):
@@ -1079,6 +1077,9 @@ class Scene(Emitter):
         """
         Returns the character with the given name if it exists
         """
+        
+        if character_name in self.inactive_characters:
+            return self.inactive_characters[character_name]
 
         for actor in self.actors:
             if not partial and actor.character.name.lower() == character_name.lower():
@@ -1228,9 +1229,9 @@ class Scene(Emitter):
         # collect context, ignore where end > len(history) - count
         
         for i in range(len(self.archived_history) - 1, -1, -1):
-            
-            end = self.archived_history[i].get("end")
-            start = self.archived_history[i].get("start")
+            archive_history_entry = self.archived_history[i]
+            end =  archive_history_entry.get("end")
+            start =  archive_history_entry.get("start")
             
             if end is None:
                 continue
@@ -1238,10 +1239,17 @@ class Scene(Emitter):
             if start > len(self.history) - count:
                 continue
             
-            if count_tokens(parts_context) + count_tokens(self.archived_history[i]["text"]) > budget_context:
+            try:
+                time_message = util.iso8601_diff_to_human(archive_history_entry["ts"], self.ts)
+                text = f"{time_message}: {archive_history_entry['text']}"
+            except Exception as e:
+                log.error("context_history", error=e, traceback=traceback.format_exc())
+                text = archive_history_entry["text"]
+            
+            if count_tokens(parts_context) + count_tokens(text) > budget_context:
                 break
             
-            parts_context.insert(0, self.archived_history[i]["text"])
+            parts_context.insert(0,  text)
                   
         if count_tokens(parts_context + parts_dialogue) < 1024:
             intro = self.get_intro()
@@ -1250,7 +1258,7 @@ class Scene(Emitter):
                 
         return list(map(str, parts_context)) +  list(map(str, parts_dialogue))
 
-    async def rerun(self, editor: Optional[Helper] = None):
+    async def rerun(self):
         """
         Rerun the most recent AI response, remove their previous message from the history,
         and call talk() for the most recent AI Character.
@@ -1280,9 +1288,14 @@ class Scene(Emitter):
         if message.source == "player":
             return
         
+        
+        current_rerun_context = rerun_context.get()
+        if current_rerun_context:
+            current_rerun_context.message = message.message
+        
         if isinstance(message, CharacterMessage):
             self.history.pop()
-            await self._rerun_character_message(message, editor=editor)
+            await self._rerun_character_message(message)
         elif isinstance(message, NarratorMessage):
             self.history.pop()
             await self._rerun_narrator_message(message)
@@ -1317,6 +1330,9 @@ class Scene(Emitter):
         elif source == "narrate_dialogue":
             character = self.get_character(arg)
             new_message = await narrator.agent.narrate_after_dialogue(character)
+        elif source == "narrate_character_entry":
+            character = self.get_character(arg)
+            new_message = await narrator.agent.narrate_character_entry(character)
         elif source == "__director__":
             director = self.get_helper("director").agent
             await director.direct_scene(None, None)
@@ -1368,25 +1384,25 @@ class Scene(Emitter):
         self.push_history(new_message)
         emit("director", new_message, character=character) 
         
-    async def _rerun_character_message(self, message, editor=None):
+    async def _rerun_character_message(self, message):
 
         character_name = message.split(":")[0]
 
         character = self.get_character(character_name)
-
+        
         if character.is_player:
             emit("system", "Cannot rerun player's message")
             return
 
         emit("remove_message", "", id=message.id)
 
-        # Call talk() for the most recent AI Actor with the same editor parameter
-        new_messages = await self.most_recent_ai_actor.talk(editor=editor)
+        # Call talk() for the most recent AI Actor 
+        actor = character.actor
+        
+        new_messages = await actor.talk()
 
         # Print the new messages
         for item in new_messages:
-            character = self.most_recent_ai_actor.agent.character
-
             emit("character", item, character=character)
 
         await asyncio.sleep(0)
@@ -1418,6 +1434,14 @@ class Scene(Emitter):
                 
                 break
 
+    def can_auto_save(self):
+        """
+        A scene can be autosaved if it has a filename set and is not immutable_save
+        """
+        
+        return self.filename and not self.immutable_save
+        
+
     def emit_status(self):
         player_character = self.get_player_character()
         emit(
@@ -1428,6 +1452,7 @@ class Scene(Emitter):
                 "environment": self.environment,
                 "scene_config": self.scene_config,
                 "player_character_name": player_character.name if player_character else None,
+                "inactive_characters": list(self.inactive_characters.keys()),
                 "context": self.context,
                 "assets": self.assets.dict(),
                 "characters": [actor.character.serialize for actor in self.actors],
@@ -1435,6 +1460,7 @@ class Scene(Emitter):
                 "saved": self.saved,
                 "auto_save": self.auto_save,
                 "auto_progress": self.auto_progress,
+                "can_auto_save": self.can_auto_save(),
                 "game_state": self.game_state.model_dump(),
                 "active_pins": [pin.model_dump() for pin in self.active_pins],
             },
@@ -1694,7 +1720,8 @@ class Scene(Emitter):
         
     async def _run_creative_loop(self, init: bool = True):
 
-        self.system_message("Creative mode")
+        emit("status", message="Switched to scene editor", status="info")
+
         if init:
             emit("clear_screen", "")
             self.narrator_message(self.description)
@@ -1783,6 +1810,7 @@ class Scene(Emitter):
             "archived_history": scene.archived_history,
             "character_states": scene.character_states,
             "characters": [actor.character.serialize for actor in scene.actors],
+            "inactive_characters": {name: character.serialize for name, character in scene.inactive_characters.items()},
             "goal": scene.goal,
             "goals": scene.goals,
             "context": scene.context,
@@ -1805,7 +1833,16 @@ class Scene(Emitter):
         self.saved = True
         
         self.emit_status()
-
+        
+        # add this scene to recent scenes in config
+        await self.add_to_recent_scenes()
+        
+    async def add_to_recent_scenes(self):
+        log.debug("add_to_recent_scenes", filename=self.filename)
+        config = Config(**self.config)
+        config.recent_scenes.push(self)
+        config.save()
+        
     async def commit_to_memory(self):
         
         # will recommit scene to long term memory

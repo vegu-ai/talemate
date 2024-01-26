@@ -1,17 +1,28 @@
-<|SECTION:DIALOGUE|>
-{{ dialogue }}
+{% if extra_context -%}
+<|SECTION:PREVIOUS CONTEXT|>
+{{ extra_context }}
 <|CLOSE_SECTION|>
-
+{% endif -%}
 <|SECTION:TASK|>
-Question: What happens within the dialogue? Summarize into narrative description.
+Question: What happens explicitly within the dialogue section alpha below? Summarize into narrative description.
 Content Context: This is a specific scene from {{ scene.context }}
 Use an informal and colloquial register with a conversational tone. Overall, the narrative is informal, conversational, natural, and spontaneous, with a sense of immediacy.
 
 {% if summarization_method == "long" -%}
 This should be a detailed summary of the dialogue, including all the juicy details.
 {% elif summarization_method == "short" -%}
-This should be a short and concise summary of the dialogue, including only the most important details. 1 - 3 sentences.
+This should be a short and specific summary of the dialogue, including the most important details. 2 - 3 sentences.
 {% endif -%}
 
-Expected Answer: A summarized narrative description of the dialogue that can be inserted into the ongoing story in place of the dialogue.
+YOU MUST ONLY SUMMARIZE THE CONTENT IN DIALOGUE SECTION ALPHA.
+
+Expected Answer: A summarized narrative description of the dialogue section alpha, that can be inserted into the ongoing story in place of the dialogue.
+{% if extra_instructions -%}
+{{ extra_instructions }}
+{% endif -%}
 <|CLOSE_SECTION|>
+<|SECTION:DIALOGUE SECTION ALPHA|>
+{{ dialogue }}
+<|CLOSE_SECTION|>
+<|SECTION:SUMMARIZATION OF DIALOGUE SECTION ALPHA|>
+{{ bot_token }}

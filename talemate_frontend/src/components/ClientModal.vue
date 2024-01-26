@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="localDialog" persistent max-width="600px">
+    <v-dialog v-model="localDialog" max-width="800px">
         <v-card>
         <v-card-title>
             <v-icon>mdi-network-outline</v-icon>
@@ -9,31 +9,46 @@
             <v-container>
               <v-row>
                   <v-col cols="6">
-                    <v-select v-model="client.type" :disabled="!typeEditable()" :items="['openai', 'textgenwebui', 'lmstudio']" label="Client Type" @update:model-value="resetToDefaults"></v-select>
+                    <v-select v-model="client.type" :disabled="!typeEditable()" :items="clientChoices" label="Client Type" @update:model-value="resetToDefaults"></v-select>
                   </v-col>
                   <v-col cols="6">
                     <v-text-field v-model="client.name" label="Client Name"></v-text-field>
                   </v-col> 
-
+              </v-row>
+              <v-row v-if="clientMeta().experimental">
+                <v-col cols="12">
+                  <v-alert type="warning" variant="text" density="compact" icon="mdi-flask" outlined>{{ clientMeta().experimental }}</v-alert>
+                </v-col>
               </v-row>
               <v-row>
                 <v-col cols="12">
-                  <v-text-field v-model="client.apiUrl" v-if="isLocalApiClient(client)" label="API URL"></v-text-field>
-                  <v-select v-model="client.model" v-if="client.type === 'openai'" :items="['gpt-4-1106-preview', 'gpt-4', 'gpt-3.5-turbo', 'gpt-3.5-turbo-16k']" label="Model"></v-select>
+                  <v-row>
+                    <v-col :cols="clientMeta().enable_api_auth ? 7 : 12">
+                      <v-text-field v-model="client.api_url" v-if="requiresAPIUrl(client)" label="API URL"></v-text-field>
+                    </v-col>
+                    <v-col cols="5">
+                      <v-text-field type="password" v-model="client.api_key" v-if="requiresAPIUrl(client) && clientMeta().enable_api_auth" label="API Key"></v-text-field>
+                    </v-col>  
+                  </v-row>
+                  <v-select v-model="client.model" v-if="clientMeta().manual_model && clientMeta().manual_model_choices" :items="clientMeta().manual_model_choices" label="Model"></v-select>
+                  <v-text-field v-model="client.model_name" v-else-if="clientMeta().manual_model" label="Manually specify model name" hint="It looks like we're unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you're locally serving a model."></v-text-field>
                 </v-col>
               </v-row>  
               <v-row>
                 <v-col cols="4">
-                  <v-text-field v-model="client.max_token_length" v-if="isLocalApiClient(client)" type="number" label="Context Length"></v-text-field> 
+                  <v-text-field v-model="client.max_token_length" v-if="requiresAPIUrl(client)" type="number" label="Context Length"></v-text-field> 
                 </v-col>
-                <v-col cols="8" v-if="!typeEditable() && client.data && client.data.prompt_template_example !== null">
+                <v-col cols="8" v-if="!typeEditable() && client.data && client.data.prompt_template_example !== null && client.model_name && clientMeta().requires_prompt_template">
+                  <v-combobox ref="promptTemplateComboBox" label="Prompt Template" v-model="client.data.template_file" @update:model-value="setPromptTemplate" :items="promptTemplates"></v-combobox>
                   <v-card elevation="3" :color="(client.data.has_prompt_template ? 'primary' : 'warning')" variant="tonal">
-                    <v-card-title>Prompt Template</v-card-title>
 
                     <v-card-text>
                       <div class="text-caption" v-if="!client.data.has_prompt_template">No matching LLM prompt template found. Using default.</div>
                       <pre>{{ client.data.prompt_template_example }}</pre>
                     </v-card-text>
+                    <v-card-actions>
+                      <v-btn @click.stop="determineBestTemplate" prepend-icon="mdi-web-box">Determine via HuggingFace</v-btn>
+                    </v-card-actions>
                   </v-card>
                   
                 </v-col>
@@ -55,30 +70,19 @@ export default {
     dialog: Boolean,
     formTitle: String
   },
-  inject: ['state'],
+  inject: [
+    'state', 
+    'getWebsocket', 
+    'registerMessageHandler',
+  ],
   data() {
     return {
+      promptTemplates: [],
+      clientTypes: [],
+      clientChoices: [],
       localDialog: this.state.dialog,
       client: { ...this.state.currentClient },
-      defaultValuesByCLientType: {
-        // when client type is changed in the modal, these values will be used
-        // to populate the form
-        'textgenwebui': {
-          apiUrl: 'http://localhost:5000',
-          max_token_length: 4096,
-          name_prefix: 'TextGenWebUI',
-        },
-        'openai': {
-          model: 'gpt-4-1106-preview',
-          name_prefix: 'OpenAI',
-          max_token_length: 16384,
-        },
-        'lmstudio': {
-          apiUrl: 'http://localhost:1234',
-          max_token_length: 4096,
-          name_prefix: 'LMStudio',
-        }
-      }
+      defaultValuesByCLientType: {}
     };
   },
   watch: {
@@ -86,6 +90,10 @@ export default {
       immediate: true,
       handler(newVal) {
         this.localDialog = newVal;
+        if (newVal) {
+          this.requestClientTypes();
+          this.requestStdTemplates();
+        }
       }
     },
     'state.currentClient': {
@@ -103,13 +111,13 @@ export default {
       const defaults = this.defaultValuesByCLientType[this.client.type];
       if (defaults) {
         this.client.model = defaults.model || '';
-        this.client.apiUrl = defaults.apiUrl || '';
+        this.client.api_url = defaults.api_url || '';
         this.client.max_token_length = defaults.max_token_length || 4096;
         // loop and build name from prefix, checking against current clients
-        let name = defaults.name_prefix;
+        let name = this.clientTypes[this.client.type].name_prefix;
         let i = 2;
         while (this.state.clients.find(c => c.name === name)) {
-          name = `${defaults.name_prefix} ${i}`;
+          name = `${name} ${i}`;
           i++;
         }
         this.client.name = name;
@@ -141,12 +149,90 @@ export default {
         return;
       }
 
+      if(this.clientMeta().manual_model && !this.clientMeta().manual_model_choices) {
+        this.client.model = this.client.model_name;
+      }
+
       this.$emit('save', this.client); // Emit save event with client object
       this.close();
     },
-    isLocalApiClient(client) {
-      return client.type === 'textgenwebui' || client.type === 'lmstudio';
+
+    clientMeta() {
+      if(!Object.keys(this.clientTypes).length)
+        return {defaults:{}};  
+      if(!this.clientTypes[this.client.type])
+        return {defaults:{}};
+      return this.clientTypes[this.client.type];
+    },
+
+    requiresAPIUrl() {
+      return this.clientMeta().defaults.api_url != null;
+    },
+
+    requestStdTemplates() {
+      this.getWebsocket().send(JSON.stringify({
+        type: 'config',
+        action: 'request_std_llm_templates',
+        data: {}
+      }));
+    },
+
+    requestClientTypes() {
+      this.getWebsocket().send(JSON.stringify({
+        type: 'config',
+        action: 'request_client_types',
+        data: {}
+      }));
+    },
+
+    determineBestTemplate() {
+      this.getWebsocket().send(JSON.stringify({
+        type: 'config',
+        action: 'determine_llm_template',
+        data: {
+          model: this.client.model_name,
+        }
+      }));
+    },
+
+    setPromptTemplate() {
+      this.getWebsocket().send(JSON.stringify({
+        type: 'config',
+        action: 'set_llm_template',
+        data: {
+          template_file: this.client.data.template_file,
+          model: this.client.model_name,
+        }
+      }));
+      this.$refs.promptTemplateComboBox.blur();
+    },
+
+    handleMessage(data) {
+      if (data.type === 'config' && data.action === 'set_llm_template_complete') {
+        this.client.data.has_prompt_template = data.data.has_prompt_template;
+        this.client.data.prompt_template_example = data.data.prompt_template_example;
+        this.client.data.template_file = data.data.template_file;
+      } else if (data.type === 'config' && data.action === 'std_llm_templates') {
+        console.log("Got std templates", data.data.templates);
+        this.promptTemplates = data.data.templates;
+      } else if (data.type === 'config' && data.action === 'client_types') {
+        console.log("Got client types", data.data);
+        this.clientTypes = data.data;
+        // build clientChoices from clientTypes
+        // build defaults from clientTypes[type].defaults
+        this.clientChoices = [];
+        for (let client_type in this.clientTypes) {
+          this.clientChoices.push({
+            title: this.clientTypes[client_type].title,
+            value: client_type,
+          });
+          this.defaultValuesByCLientType[client_type] = this.clientTypes[client_type].defaults;
+        }
+      }
     }
-  }
+  },
+  created() {
+    this.registerMessageHandler(this.handleMessage);
+  },
 }
 </script>

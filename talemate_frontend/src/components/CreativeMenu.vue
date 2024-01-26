@@ -5,35 +5,77 @@
         </v-list-subheader>
 
         <div ref="charactersContainer">
-            <v-list>
+            <v-list density="compact">
+                <!-- active characters -->
                 <v-list-item density="compact" v-for="(character,index) in scene.characters" :key="index">
                     <v-list-item-title>
                         {{ character.name }}
                     </v-list-item-title>
                     <div class="text-center mt-1 mb-1">
 
-                        <v-tooltip text="Remove">
+                        <v-tooltip text="Permanently Delete">
                             <template v-slot:activator="{ props }">
                                 <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" color="red" icon="mdi-account-cancel" @click.stop="removeCharacterFromScene(character.name)"></v-btn>
 
                             </template>
                         </v-tooltip>
-                        <v-tooltip text="Edit character">
+
+                        <v-tooltip text="Deactivate">
                             <template v-slot:activator="{ props }">
-                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" icon="mdi-account-edit" @click.stop="openCharacterCreatorForCharacter(character.name)"></v-btn>
+                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" color="secondary" icon="mdi-exit-run" @click.stop="getWebsocket().send(JSON.stringify({type: 'interact', text: '!char_d:'+character.name+':no'}))"></v-btn>
 
                             </template>
                         </v-tooltip>
 
-                        <v-tooltip v-if="false" text="Character sheet">
+                        <v-tooltip text="Edit character">
                             <template v-slot:activator="{ props }">
-                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" icon="mdi-account-details"></v-btn>
+                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" icon="mdi-account-edit" @click.stop="openWorldStateManager('characters',character.name, 'description')"></v-btn>
+                            </template>
+                        </v-tooltip>
 
+                        <v-tooltip text="Open character template in character creator" v-if="character.base_attributes._template">
+                            <template v-slot:activator="{ props }">
+                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" icon="mdi-badge-account-outline" @click.stop="openCharacterCreatorForCharacter(character.name)"></v-btn>
+                            </template>
+                        </v-tooltip>
+
+                    </div>
+                    <v-divider></v-divider>
+                </v-list-item>
+                
+                <!-- inactive characters -->
+
+                <v-list-item v-for="(character_name, index) in scene.inactive_characters" density="compact" :key="index">
+                    <v-list-item-title class="text-grey-darken-1">
+                        {{ character_name }}
+                    </v-list-item-title>
+                    <div class="text-center mt-1 mb-1">
+
+                        <v-tooltip text="Permanently Delete">
+                            <template v-slot:activator="{ props }">
+                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" color="red" icon="mdi-account-cancel" @click.stop="removeCharacterFromScene(character_name)"></v-btn>
+
+                            </template>
+                        </v-tooltip>
+
+                        <v-tooltip text="Activate (call to scene)">
+                            <template v-slot:activator="{ props }">
+                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" color="secondary" icon="mdi-human-greeting" @click.stop="getWebsocket().send(JSON.stringify({type: 'interact', text: '!char_a:'+character_name+':no'}))"></v-btn>
+
+                            </template>
+                        </v-tooltip>
+                        <v-tooltip text="Edit character">
+                            <template v-slot:activator="{ props }">
+                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" icon="mdi-account-edit" @click.stop="openWorldStateManager('characters',character_name, 'description')"></v-btn>
                             </template>
                         </v-tooltip>
                     </div>
                     <v-divider></v-divider>
                 </v-list-item>
+
+
+                <!-- add / import character -->
+
                 <v-list-item>
                     <v-tooltip text="Add character">
                         <template v-slot:activator="{ props }">
@@ -92,6 +134,9 @@ export default {
         'openCharacterImporter',
         'openSceneCreator',
     ],
+    emits: [
+        'open-world-state-manager',
+    ],
     methods: {
         toggle() {
             this.expanded = !this.expanded;
@@ -99,7 +144,7 @@ export default {
 
         removeCharacterFromScene(character) {
 
-            let confirm = window.confirm(`Are you sure you want to remove ${character} from the scene?`);
+            let confirm = window.confirm(`Are you sure you want to remove ${character} from the game?`);
 
             if(!confirm) {
                 return;
@@ -109,6 +154,10 @@ export default {
                 type: 'interact',
                 text: `!remove_character:${character}`,
             }));
+        },
+
+        openWorldStateManager(tab, sub1, sub2, sub3) {
+            this.$emit('open-world-state-manager', tab, sub1, sub2, sub3);
         },
 
         handleMessage(data) {

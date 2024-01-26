@@ -23,6 +23,7 @@ from talemate.emit import emit
 from talemate.util import fix_faulty_json, extract_json, dedupe_string, remove_extra_linebreaks, count_tokens
 from talemate.config import load_config
 import talemate.thematic_generators as thematic_generators
+from talemate.context import rerun_context
 
 import talemate.instance as instance
 
@@ -313,6 +314,7 @@ class Prompt:
         ctx = {
             "bot_token": "<|BOT|>",
             "thematic_generator": thematic_generators.ThematicGenerator(),
+            "rerun_context": rerun_context.get(),
         }
         
         env.globals["render_template"] = self.render_template
@@ -577,6 +579,11 @@ class Prompt:
         
         # strip comments
         try:
+            
+            # if response starts with ```json and ends with ```
+            # then remove those
+            if response.startswith("```json") and response.endswith("```"):
+                response = response[7:-3]
             
             try:
                 response = json.loads(response)

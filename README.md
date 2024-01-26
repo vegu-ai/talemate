@@ -97,28 +97,6 @@ There is also a [troubleshooting guide](docs/troubleshoot.md) that might help.
 1. Start the backend: `python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050`.
 1. Open a new terminal, navigate to the `talemate_frontend` directory, and start the frontend server by running `npm run serve`.
 
-## Other Configuration
-
-### RunPod
-
-To set your runpod api key, open `config.yaml` in any text editor and uncomment / add
-
-```yaml
-runpod:
-    api_key: my-api-key-goes-here
-```
-You will need to restart the backend for this change to take effect.
-
-Once the api key is set Pods loaded from text-generation-webui templates (or the bloke's runpod llm template) will be autoamtically added to your client list in talemate. 
-
-**ATTENTION**: Talemate is not a suitable for way for you to determine whether your pod is currently running or not. **Always** check the runpod dashboard to see if your pod is running or not.
-
-## Recommended Models 
-
-Any of the top models in any of the size classes here should work well (i wouldn't recommend going lower than 7B):
-
-https://www.reddit.com/r/LocalLLaMA/comments/18yp9u4/llm_comparisontest_api_edition_gpt4_vs_gemini_vs/
-
 ## Connecting to an LLM
 
 On the right hand side click the "Add Client" button. If there is no button, you may need to toggle the client options by clicking this button:
@@ -132,6 +110,14 @@ On the right hand side click the "Add Client" button. If there is no button, you
 In the modal if you're planning to connect to text-generation-webui, you can likely leave everything as is and just click Save.
 
 ![Add client modal](docs/img/client-setup-0.13.png)
+
+
+#### Recommended Models 
+
+Any of the top models in any of the size classes here should work well (i wouldn't recommend going lower than 7B):
+
+https://www.reddit.com/r/LocalLLaMA/comments/18yp9u4/llm_comparisontest_api_edition_gpt4_vs_gemini_vs/
+
 
 ### OpenAI
 

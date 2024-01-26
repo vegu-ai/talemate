@@ -84,11 +84,18 @@ class OpenAIClient(ClientBase):
         name_prefix:str = "OpenAI"
         title:str = "OpenAI"
         manual_model:bool = True
-        manual_model_choices:list[str] = ["gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4", "gpt-4-1106-preview"]
+        manual_model_choices:list[str] = [
+            "gpt-3.5-turbo", 
+            "gpt-3.5-turbo-16k",
+            "gpt-4",
+            "gpt-4-1106-preview",
+            "gpt-4-0125-preview",
+            "gpt-4-turbo-preview",
+        ]
         requires_prompt_template: bool = False
         defaults:Defaults = Defaults()
 
-    def __init__(self, model="gpt-4-1106-preview", **kwargs):
+    def __init__(self, model="gpt-4-turbo-preview", **kwargs):
         
         self.model_name = model
         self.api_key_status = None
@@ -229,8 +236,8 @@ class OpenAIClient(ClientBase):
         if not self.openai_api_key:
             raise Exception("No OpenAI API key set")
         
-        # only gpt-4-1106-preview supports json_object response coersion
-        supports_json_object = self.model_name in ["gpt-4-1106-preview"]
+        # only gpt-4-* supports enforcing json object
+        supports_json_object = self.model_name.startswith("gpt-4-")
         right = None
         try:
             _, right = prompt.split("\nContinue this response: ")

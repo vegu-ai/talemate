@@ -580,6 +580,11 @@ class Prompt:
         # strip comments
         try:
             
+            # if response starts with ```json and ends with ```
+            # then remove those
+            if response.startswith("```json") and response.endswith("```"):
+                response = response[7:-3]
+            
             try:
                 response = json.loads(response)
                 return response

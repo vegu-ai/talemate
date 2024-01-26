@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Scene, Actor, SceneMessage
+    from talemate.tale_mate import Actor, Scene, SceneMessage
 
 __all__ = [
     "Event",
@@ -35,27 +35,33 @@ class CharacterStateEvent(Event):
     state: str
     character_name: str
 
+
 @dataclass
 class SceneStateEvent(Event):
     pass
+
 
 @dataclass
 class GameLoopBase(Event):
     pass
 
+
 @dataclass
 class GameLoopEvent(GameLoopBase):
     had_passive_narration: bool = False
+
 
 @dataclass
 class GameLoopStartEvent(GameLoopBase):
     pass
 
+
 @dataclass
 class GameLoopActorIterEvent(GameLoopBase):
     actor: Actor
     game_loop: GameLoopEvent
-    
+
+
 @dataclass
 class GameLoopNewMessageEvent(GameLoopBase):
     message: SceneMessage

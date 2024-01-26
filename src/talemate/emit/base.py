@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-import structlog
 from typing import TYPE_CHECKING, Any
 
-from .signals import handlers
+import structlog
 
 from talemate.scene_message import SceneMessage
+
+from .signals import handlers
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -20,6 +21,7 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.emit.base")
+
 
 class AbortCommand(IOError):
     pass
@@ -39,12 +41,15 @@ class Emission:
 
 
 def emit(
-    typ: str, message: str = None, character: Character = None, scene: Scene = None, **kwargs
+    typ: str,
+    message: str = None,
+    character: Character = None,
+    scene: Scene = None,
+    **kwargs,
 ):
     if typ not in handlers:
         raise ValueError(f"Unknown message type: {typ}")
-    
-    
+
     if isinstance(message, SceneMessage):
         kwargs["id"] = message.id
         message_object = message
@@ -53,7 +58,14 @@ def emit(
         message_object = None
 
     handlers[typ].send(
-        Emission(typ=typ, message=message, character=character, scene=scene, message_object=message_object, **kwargs)
+        Emission(
+            typ=typ,
+            message=message,
+            character=character,
+            scene=scene,
+            message_object=message_object,
+            **kwargs,
+        )
     )
 
 
@@ -80,7 +92,6 @@ async def wait_for_input(
     def input_receiver(emission: Emission):
         input_received["message"] = emission.message
 
-            
     handlers["receive_input"].connect(input_receiver)
 
     handlers["request_input"].send(
@@ -97,7 +108,7 @@ async def wait_for_input(
         await asyncio.sleep(0.1)
 
     handlers["receive_input"].disconnect(input_receiver)
-    
+
     if input_received["message"] == "!abort":
         raise AbortCommand()
 

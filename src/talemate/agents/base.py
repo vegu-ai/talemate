@@ -1,21 +1,21 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import re
 from abc import ABC
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
+import pydantic
+import structlog
 from blinker import signal
 
+import talemate.emit.async_signals
 import talemate.instance as instance
 import talemate.util as util
 from talemate.agents.context import ActiveAgent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
-import talemate.emit.async_signals
-import dataclasses
-import pydantic
-import structlog
 
 __all__ = [
     "Agent",
@@ -37,26 +37,27 @@ class AgentActionConfig(pydantic.BaseModel):
     scope: str = "global"
     choices: Union[list[dict[str, str]], None] = None
     note: Union[str, None] = None
-        
+
     class Config:
         arbitrary_types_allowed = True
-        
+
 
 class AgentAction(pydantic.BaseModel):
     enabled: bool = True
     label: str
     description: str = ""
     config: Union[dict[str, AgentActionConfig], None] = None
-    
+
+
 def set_processing(fn):
     """
     decorator that emits the agent status as processing while the function
     is running.
-    
+
     Done via a try - final block to ensure the status is reset even if
     the function fails.
     """
-    
+
     async def wrapper(self, *args, **kwargs):
         with ActiveAgent(self, fn):
             try:
@@ -69,9 +70,9 @@ def set_processing(fn):
                     # not sure why this happens
                     # some concurrency error?
                     log.error("error emitting agent status", exc=exc)
-                    
+
     wrapper.__name__ = fn.__name__
-            
+
     return wrapper
 
 
@@ -97,16 +98,14 @@ class Agent(ABC):
     def verbose_name(self):
         return self.agent_type.capitalize()
 
-
-
     @property
     def ready(self):
         if not getattr(self.client, "enabled", True):
             return False
-        
+
         if self.client and self.client.current_status in ["error", "warning"]:
             return False
-        
+
         return self.client is not None
 
     @property
@@ -123,20 +122,20 @@ class Agent(ABC):
         # by default, agents are enabled, an agent class that
         # is disableable should override this property
         return True
-    
+
     @property
     def disable(self):
         # by default, agents are enabled, an agent class that
-        # is disableable should override this property to 
+        # is disableable should override this property to
         # disable the agent
         pass
-    
+
     @property
     def has_toggle(self):
         # by default, agents do not have toggles to enable / disable
         # an agent class that is disableable should override this property
         return False
-    
+
     @property
     def experimental(self):
         # by default, agents are not experimental, an agent class that
@@ -153,85 +152,92 @@ class Agent(ABC):
             "requires_llm_client": cls.requires_llm_client,
         }
         actions = getattr(agent, "actions", None)
-        
+
         if actions:
             config_options["actions"] = {k: v.model_dump() for k, v in actions.items()}
         else:
             config_options["actions"] = {}
-            
+
         return config_options
 
     def apply_config(self, *args, **kwargs):
         if self.has_toggle and "enabled" in kwargs:
             self.is_enabled = kwargs.get("enabled", False)
-            
+
         if not getattr(self, "actions", None):
             return
-            
+
         for action_key, action in self.actions.items():
-            
             if not kwargs.get("actions"):
                 continue
-            
-            action.enabled = kwargs.get("actions", {}).get(action_key, {}).get("enabled", False)
-            
+
+            action.enabled = (
+                kwargs.get("actions", {}).get(action_key, {}).get("enabled", False)
+            )
+
             if not action.config:
                 continue
-            
+
             for config_key, config in action.config.items():
                 try:
-                    config.value = kwargs.get("actions", {}).get(action_key, {}).get("config", {}).get(config_key, {}).get("value", config.value)
+                    config.value = (
+                        kwargs.get("actions", {})
+                        .get(action_key, {})
+                        .get("config", {})
+                        .get(config_key, {})
+                        .get("value", config.value)
+                    )
                 except AttributeError:
                     pass
-    
-    async def on_game_loop_start(self, event:GameLoopStartEvent):
-        
+
+    async def on_game_loop_start(self, event: GameLoopStartEvent):
         """
         Finds all ActionConfigs that have a scope of "scene" and resets them to their default values
         """
-        
+
         if not getattr(self, "actions", None):
             return
-        
+
         for _, action in self.actions.items():
             if not action.config:
                 continue
-            
+
             for _, config in action.config.items():
                 if config.scope == "scene":
-                    # if default_value is None, just use the `type` of the current 
+                    # if default_value is None, just use the `type` of the current
                     # value
                     if config.default_value is None:
                         default_value = type(config.value)()
                     else:
                         default_value = config.default_value
-                    
-                    log.debug("resetting config", config=config, default_value=default_value)
+
+                    log.debug(
+                        "resetting config", config=config, default_value=default_value
+                    )
                     config.value = default_value
-        
+
         await self.emit_status()
-              
+
     async def emit_status(self, processing: bool = None):
-        
         # should keep a count of processing requests, and when the
         # number is 0 status is "idle", if the number is greater than 0
         # status is "busy"
         #
         # increase / decrease based on value of `processing`
-        
+
         if getattr(self, "processing", None) is None:
             self.processing = 0
-            
+
         if not processing:
             self.processing -= 1
             self.processing = max(0, self.processing)
         else:
             self.processing += 1
-            
+
         status = "busy" if self.processing > 0 else "idle"
         if not self.enabled:
             status = "disabled"
-        
+
         emit(
             "agent_status",
             message=self.verbose_name or "",
@@ -245,8 +251,9 @@ class Agent(ABC):
 
     def connect(self, scene):
         self.scene = scene
-        talemate.emit.async_signals.get("game_loop_start").connect(self.on_game_loop_start)
-
+        talemate.emit.async_signals.get("game_loop_start").connect(
+            self.on_game_loop_start
+        )
 
     def clean_result(self, result):
         if "#" in result:
@@ -291,22 +298,27 @@ class Agent(ABC):
 
                 current_memory_context.append(memory)
         return current_memory_context
-    
+
     # LLM client related methods. These are called during or after the client
     # sends the prompt to the API.
 
-    def inject_prompt_paramters(self, prompt_param:dict, kind:str, agent_function_name:str):
+    def inject_prompt_paramters(
+        self, prompt_param: dict, kind: str, agent_function_name: str
+    ):
         """
         Injects prompt parameters before the client sends off the prompt
         Override as needed.
         """
         pass
 
-    def allow_repetition_break(self, kind:str, agent_function_name:str, auto:bool=False):
+    def allow_repetition_break(
+        self, kind: str, agent_function_name: str, auto: bool = False
+    ):
         """
         Returns True if repetition breaking is allowed, False otherwise.
         """
         return False
+
 
 @dataclasses.dataclass
 class AgentEmission:

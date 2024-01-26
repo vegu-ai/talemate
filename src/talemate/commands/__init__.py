@@ -12,17 +12,17 @@ from .cmd_memget import CmdMemget
 from .cmd_memset import CmdMemset
 from .cmd_narrate import *
 from .cmd_rebuild_archive import CmdRebuildArchive
+from .cmd_remove_character import CmdRemoveCharacter
 from .cmd_rename import CmdRename
 from .cmd_rerun import *
 from .cmd_reset import CmdReset
 from .cmd_rm import CmdRm
-from .cmd_remove_character import CmdRemoveCharacter
+from .cmd_run_helios_test import CmdHeliosTest
 from .cmd_save import CmdSave
 from .cmd_save_as import CmdSaveAs
 from .cmd_save_characters import CmdSaveCharacters
-from .cmd_setenv import CmdSetEnvironmentToScene, CmdSetEnvironmentToCreative
+from .cmd_setenv import CmdSetEnvironmentToCreative, CmdSetEnvironmentToScene
 from .cmd_time_util import *
 from .cmd_tts import *
 from .cmd_world_state import *
-from .cmd_run_helios_test import CmdHeliosTest
 from .manager import Manager

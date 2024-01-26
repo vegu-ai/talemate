@@ -1,56 +1,62 @@
-
+import asyncio
 import os
 from typing import TYPE_CHECKING, Any
+
+import nest_asyncio
 import pydantic
 import structlog
-import asyncio
-import nest_asyncio
-from talemate.prompts.base import Prompt, PrependTemplateDirectories
-from talemate.instance import get_agent
+
 from talemate.agents.director import DirectorAgent
 from talemate.agents.memory import MemoryAgent
+from talemate.instance import get_agent
+from talemate.prompts.base import PrependTemplateDirectories, Prompt
+
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 log = structlog.get_logger("game_state")
 
+
 class Goal(pydantic.BaseModel):
     description: str
     id: int
     status: bool = False
-    
+
+
 class Instructions(pydantic.BaseModel):
     character: dict[str, str] = pydantic.Field(default_factory=dict)
-    
+
+
 class Ops(pydantic.BaseModel):
     run_on_start: bool = False
-    
+
+
 class GameState(pydantic.BaseModel):
     ops: Ops = Ops()
-    variables: dict[str,Any] = pydantic.Field(default_factory=dict)
+    variables: dict[str, Any] = pydantic.Field(default_factory=dict)
     goals: list[Goal] = pydantic.Field(default_factory=list)
     instructions: Instructions = pydantic.Field(default_factory=Instructions)
-    
+
     @property
     def director(self) -> DirectorAgent:
-        return get_agent('director')
-    
+        return get_agent("director")
+
     @property
     def memory(self) -> MemoryAgent:
-        return get_agent('memory')
-    
+        return get_agent("memory")
+
     @property
-    def scene(self) -> 'Scene':
+    def scene(self) -> "Scene":
         return self.director.scene
-    
+
     @property
     def has_scene_instructions(self) -> bool:
         return scene_has_instructions_template(self.scene)
-    
+
     @property
     def game_won(self) -> bool:
         return self.variables.get("__game_won__") == True
-    
+
     @property
     def scene_instructions(self) -> str:
         scene = self.scene
@@ -59,43 +65,52 @@ class GameState(pydantic.BaseModel):
         game_state = self
         if scene_has_instructions_template(self.scene):
             with PrependTemplateDirectories([scene.template_dir]):
-                prompt = Prompt.get('instructions', {
-                    'scene': scene,
-                    'max_tokens': client.max_token_length,
-                    'game_state': game_state
-                })
-                
+                prompt = Prompt.get(
+                    "instructions",
+                    {
+                        "scene": scene,
+                        "max_tokens": client.max_token_length,
+                        "game_state": game_state,
+                    },
+                )
+
                 prompt.client = client
                 instructions = prompt.render().strip()
-                log.info("Initialized game state instructions", scene=scene, instructions=instructions)
+                log.info(
+                    "Initialized game state instructions",
+                    scene=scene,
+                    instructions=instructions,
+                )
                 return instructions
-    
-    def init(self, scene: 'Scene') -> 'GameState':
+
+    def init(self, scene: "Scene") -> "GameState":
         return self
-    
+
     def set_var(self, key: str, value: Any, commit: bool = False):
         self.variables[key] = value
         if commit:
             loop = asyncio.get_event_loop()
             loop.run_until_complete(self.memory.add(value, uid=f"game_state.{key}"))
-        
+
     def has_var(self, key: str) -> bool:
         return key in self.variables
-    
+
     def get_var(self, key: str) -> Any:
         return self.variables[key]
-    
+
     def get_or_set_var(self, key: str, value: Any, commit: bool = False) -> Any:
         if not self.has_var(key):
             self.set_var(key, value, commit=commit)
         return self.get_var(key)
 
-def scene_has_game_template(scene: 'Scene') -> bool:
+
+def scene_has_game_template(scene: "Scene") -> bool:
     """Returns True if the scene has a game template."""
-    game_template_path = os.path.join(scene.template_dir, 'game.jinja2')
+    game_template_path = os.path.join(scene.template_dir, "game.jinja2")
     return os.path.exists(game_template_path)
 
-def scene_has_instructions_template(scene: 'Scene') -> bool:
+
+def scene_has_instructions_template(scene: "Scene") -> bool:
     """Returns True if the scene has an instructions template."""
-    instructions_template_path = os.path.join(scene.template_dir, 'instructions.jinja2')
+    instructions_template_path = os.path.join(scene.template_dir, "instructions.jinja2")
     return os.path.exists(instructions_template_path)

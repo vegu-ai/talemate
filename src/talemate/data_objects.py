@@ -4,6 +4,7 @@ __all__ = [
     "ArchiveEntry",
 ]
 
+
 @dataclass
 class ArchiveEntry:
     text: str

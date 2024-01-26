@@ -3,18 +3,19 @@ Context managers for various client-side operations.
 """
 
 from contextvars import ContextVar
-from pydantic import BaseModel, Field
 from copy import deepcopy
 
 import structlog
+from pydantic import BaseModel, Field
 
 __all__ = [
-    'context_data',
-    'client_context_attribute',
-    'ContextModel',
+    "context_data",
+    "client_context_attribute",
+    "ContextModel",
 ]
 
 log = structlog.get_logger()
+
 
 def model_to_dict_without_defaults(model_instance):
     model_dict = model_instance.dict()
@@ -23,20 +24,25 @@ def model_to_dict_without_defaults(model_instance):
             del model_dict[field_name]
     return model_dict
 
+
 class ConversationContext(BaseModel):
     talking_character: str = None
     other_characters: list[str] = Field(default_factory=list)
+
 
 class ContextModel(BaseModel):
     """
     Pydantic model for the context data.
     """
+
     nuke_repetition: float = Field(0.0, ge=0.0, le=3.0)
     conversation: ConversationContext = Field(default_factory=ConversationContext)
     length: int = 96
 
+
 # Define the context variable as an empty dictionary
-context_data = ContextVar('context_data', default=ContextModel().model_dump())
+context_data = ContextVar("context_data", default=ContextModel().model_dump())
+
 
 def client_context_attribute(name, default=None):
     """
@@ -47,6 +53,7 @@ def client_context_attribute(name, default=None):
     # Return the value of the key if it exists, otherwise return the default value
     return data.get(name, default)
 
+
 def set_client_context_attribute(name, value):
     """
     Set the value of the context variable `context_data` for the given key.
@@ -55,7 +62,8 @@ def set_client_context_attribute(name, value):
     data = context_data.get()
     # Set the value of the key
     data[name] = value
-    
+
+
 def set_conversation_context_attribute(name, value):
     """
     Set the value of the context variable `context_data.conversation` for the given key.
@@ -64,6 +72,7 @@ def set_conversation_context_attribute(name, value):
     data = context_data.get()
     # Set the value of the key
     data["conversation"][name] = value
+
 
 class ClientContext:
     """
@@ -82,10 +91,10 @@ class ClientContext:
         Set the key-value pairs to the context variable `context_data` when entering the context.
         """
         # Get the current context data
-        
+
         data = deepcopy(context_data.get()) if context_data.get() else {}
         data.update(self.values)
-        
+
         # Update the context data
         self.token = context_data.set(data)
 
@@ -93,5 +102,5 @@ class ClientContext:
         """
         Reset the context variable `context_data` to its previous values when exiting the context.
         """
-        
+
         context_data.reset(self.token)

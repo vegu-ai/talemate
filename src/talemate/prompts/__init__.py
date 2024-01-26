@@ -1,1 +1,1 @@
-from .base import Prompt, LoopedPrompt
+from .base import LoopedPrompt, Prompt

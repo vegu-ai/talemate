@@ -1,7 +1,9 @@
-from talemate.emit import Emitter, AbortCommand
 import structlog
 
+from talemate.emit import AbortCommand, Emitter
+
 log = structlog.get_logger("talemate.commands.manager")
+
 
 class Manager(Emitter):
     """
@@ -38,7 +40,7 @@ class Manager(Emitter):
         cmd_args = ""
         if not self.is_command(cmd):
             return False
-        
+
         if ":" in cmd:
             # split command name and args which are separated by a colon
             cmd_name, cmd_args = cmd[1:].split(":", 1)
@@ -46,7 +48,7 @@ class Manager(Emitter):
         else:
             cmd_name = cmd[1:]
             cmd_args = []
-            
+
         for command_cls in self.command_classes:
             if command_cls.is_command(cmd_name):
                 command = command_cls(self, *cmd_args)

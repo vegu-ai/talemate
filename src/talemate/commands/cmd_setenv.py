@@ -2,9 +2,8 @@ import asyncio
 
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
-from talemate.exceptions import RestartSceneLoop
-
 from talemate.emit import emit
+from talemate.exceptions import RestartSceneLoop
 
 
 @register
@@ -19,21 +18,20 @@ class CmdSetEnvironmentToScene(TalemateCommand):
 
     async def run(self):
         await asyncio.sleep(0)
-        
+
         player_character = self.scene.get_player_character()
-        
+
         if not player_character:
             self.system_message("No player character found")
             return True
-        
+
         self.scene.set_environment("scene")
-        
+
         emit("status", message="Switched to gameplay", status="info")
-        
+
         raise RestartSceneLoop()
-    
-        
-        
+
+
 @register
 class CmdSetEnvironmentToCreative(TalemateCommand):
     """
@@ -45,8 +43,7 @@ class CmdSetEnvironmentToCreative(TalemateCommand):
     aliases = [""]
 
     async def run(self):
-        
         await asyncio.sleep(0)
         self.scene.set_environment("creative")
-        
+
         raise RestartSceneLoop()

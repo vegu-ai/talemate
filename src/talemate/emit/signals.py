@@ -18,7 +18,7 @@ ClientStatus = signal("client_status")
 RequestClientStatus = signal("request_client_status")
 AgentStatus = signal("agent_status")
 RequestAgentStatus = signal("request_agent_status")
-ClientBootstraps = signal("client_bootstraps") 
+ClientBootstraps = signal("client_bootstraps")
 PromptSent = signal("prompt_sent")
 
 RemoveMessage = signal("remove_message")

@@ -1,40 +1,38 @@
 import asyncio
 import json
 import os
-
-import starlette.websockets
-import websockets
-import structlog
 import traceback
 
+import starlette.websockets
+import structlog
+import websockets
+
 import talemate.instance as instance
-from talemate import Scene
+from talemate import VERSION, Scene
+from talemate.config import load_config
 from talemate.load import load_scene
 from talemate.server.websocket_server import WebsocketHandler
-from talemate.config import load_config
-
-from talemate import VERSION
 
 log = structlog.get_logger("talemate")
+
 
 async def websocket_endpoint(websocket, path):
     # Create a queue for outgoing messages
     message_queue = asyncio.Queue()
     handler = WebsocketHandler(websocket, message_queue)
     scene_task = None
-    
+
     log.info("frontend connected")
 
     try:
         # Create a task to send messages from the queue
         async def send_messages():
             while True:
-                
                 # check if there are messages in the queue
                 if message_queue.empty():
                     await asyncio.sleep(0.01)
                     continue
-                
+
                 message = await message_queue.get()
                 await websocket.send(json.dumps(message))
 
@@ -49,15 +47,19 @@ async def websocket_endpoint(websocket, path):
         send_status_task = asyncio.create_task(send_status())
 
         # create a task that will retriece client boostrap information
-        
+
         async def send_client_bootstraps():
             while True:
                 try:
                     await instance.sync_client_bootstraps()
                 except Exception as e:
-                    log.error("send_client_bootstraps", error=e, traceback=traceback.format_exc())
+                    log.error(
+                        "send_client_bootstraps",
+                        error=e,
+                        traceback=traceback.format_exc(),
+                    )
                 await asyncio.sleep(15)
-                
+
         send_client_bootstraps_task = asyncio.create_task(send_client_bootstraps())
 
         while True:
@@ -66,7 +68,7 @@ async def websocket_endpoint(websocket, path):
             action_type = data.get("type")
 
             scene_data = None
-            
+
             log.debug("frontend message", action_type=action_type)
 
             if action_type == "load_scene":
@@ -86,16 +88,18 @@ async def websocket_endpoint(websocket, path):
                             "message": "Scene file loaded ...",
                             "id": "scene.loaded",
                             "status": "success",
-                            "data": {"hidden":True}
+                            "data": {"hidden": True},
                         }
                     )
-                    
+
                 if scene_data and filename:
-                    file_path = handler.handle_character_card_upload(scene_data, filename)
-                    
+                    file_path = handler.handle_character_card_upload(
+                        scene_data, filename
+                    )
+
                 log.info("load_scene", file_path=file_path, reset=reset)
 
-                # Create a task to load the scene in the background                
+                # Create a task to load the scene in the background
                 scene_task = asyncio.create_task(
                     handler.load_scene(
                         file_path, reset=reset, callback=scene_loading_done
@@ -140,11 +144,7 @@ async def websocket_endpoint(websocket, path):
             elif action_type == "request_app_config":
                 log.info("request_app_config")
                 await message_queue.put(
-                    {
-                        "type": "app_config",
-                        "data": load_config(),
-                        "version": VERSION
-                    }
+                    {"type": "app_config", "data": load_config(), "version": VERSION}
                 )
             else:
                 log.info("Routing to sub-handler", action_type=action_type)

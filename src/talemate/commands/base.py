@@ -41,7 +41,7 @@ class TalemateCommand(Emitter, ABC):
         raise NotImplementedError(
             "TalemateCommand.run() must be implemented by subclass"
         )
-        
+
     @property
     def verbose_name(self):
         if self.label:
@@ -50,6 +50,6 @@ class TalemateCommand(Emitter, ABC):
 
     def command_start(self):
         emit("command_status", self.verbose_name, status="started")
-        
+
     def command_end(self):
         emit("command_status", self.verbose_name, status="ended")

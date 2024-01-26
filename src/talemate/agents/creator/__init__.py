@@ -3,22 +3,23 @@ from __future__ import annotations
 import json
 import os
 
+import talemate.client as client
 from talemate.agents.base import Agent, set_processing
 from talemate.agents.registry import register
 from talemate.emit import emit
 from talemate.prompts import Prompt
-import talemate.client as client
 
 from .character import CharacterCreatorMixin
 from .scenario import ScenarioCreatorMixin
 
+
 @register()
 class CreatorAgent(CharacterCreatorMixin, ScenarioCreatorMixin, Agent):
-    
+
     """
     Creates characters and scenarios and other fun stuff!
     """
-    
+
     agent_type = "creator"
     verbose_name = "Creator"
 
@@ -78,12 +79,14 @@ class CreatorAgent(CharacterCreatorMixin, ScenarioCreatorMixin, Agent):
         # Remove duplicates while preserving the order for list type keys
         for key, value in merged_data.items():
             if isinstance(value, list):
-                merged_data[key] = [x for i, x in enumerate(value) if x not in value[:i]]
+                merged_data[key] = [
+                    x for i, x in enumerate(value) if x not in value[:i]
+                ]
 
         merged_data["context"] = context
 
         return merged_data
-    
+
     def load_templates_old(self, names: list, template_type: str = "character") -> dict:
         """
         Loads multiple character creation templates from ./templates/character and merges them in order.
@@ -128,8 +131,10 @@ class CreatorAgent(CharacterCreatorMixin, ScenarioCreatorMixin, Agent):
 
                 if "context" in template_data["instructions"]:
                     context = template_data["instructions"]["context"]
-                    
-                merged_instructions[name]["questions"] = [q[0] for q in template_data.get("questions", [])]
+
+                merged_instructions[name]["questions"] = [
+                    q[0] for q in template_data.get("questions", [])
+                ]
 
         # Remove duplicates while preserving the order
         merged_template = [
@@ -158,24 +163,33 @@ class CreatorAgent(CharacterCreatorMixin, ScenarioCreatorMixin, Agent):
 
         return rv
 
-
     @set_processing
     async def generate_json_list(
         self,
-        text:str,
-        count:int=20,
-        first_item:str=None,
+        text: str,
+        count: int = 20,
+        first_item: str = None,
     ):
-        _, json_list = await Prompt.request(f"creator.generate-json-list", self.client, "create", vars={
-            "text": text,
-            "first_item": first_item,
-            "count": count,
-        })
-        return json_list.get("items",[])
-    
+        _, json_list = await Prompt.request(
+            f"creator.generate-json-list",
+            self.client,
+            "create",
+            vars={
+                "text": text,
+                "first_item": first_item,
+                "count": count,
+            },
+        )
+        return json_list.get("items", [])
+
     @set_processing
-    async def generate_title(self, text:str):
-        title = await Prompt.request(f"creator.generate-title", self.client, "create_short", vars={
-            "text": text,
-        })
+    async def generate_title(self, text: str):
+        title = await Prompt.request(
+            f"creator.generate-title",
+            self.client,
+            "create_short",
+            vars={
+                "text": text,
+            },
+        )
         return title

@@ -41,7 +41,7 @@ class CharacterHub:
 
         if not os.path.exists("scenes/characters"):
             os.makedirs("scenes/characters")
-            
+
         with open(f"scenes/characters/{filename}.png", "wb") as f:
             f.write(result.content)
 

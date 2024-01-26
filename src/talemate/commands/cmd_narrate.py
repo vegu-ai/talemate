@@ -2,9 +2,9 @@ import asyncio
 
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
-from talemate.util import colored_text, wrap_text
-from talemate.scene_message import NarratorMessage
 from talemate.emit import wait_for_input
+from talemate.scene_message import NarratorMessage
+from talemate.util import colored_text, wrap_text
 
 __all__ = [
     "CmdNarrate",
@@ -13,6 +13,7 @@ __all__ = [
     "CmdNarrateProgressDirected",
     "CmdNarrateC",
 ]
+
 
 @register
 class CmdNarrate(TalemateCommand):
@@ -33,7 +34,7 @@ class CmdNarrate(TalemateCommand):
 
         narration = await narrator.agent.narrate_scene()
         message = NarratorMessage(narration, source="narrate_scene")
-        
+
         self.narrator_message(message)
         self.scene.push_history(message)
 
@@ -58,17 +59,22 @@ class CmdNarrateQ(TalemateCommand):
 
         if self.args:
             query = self.args[0]
-            at_the_end = (self.args[1].lower() == "true") if len(self.args) > 1 else False
+            at_the_end = (
+                (self.args[1].lower() == "true") if len(self.args) > 1 else False
+            )
         else:
             query = await wait_for_input("Enter query: ")
             at_the_end = False
 
         narration = await narrator.agent.narrate_query(query, at_the_end=at_the_end)
-        message = NarratorMessage(narration, source=f"narrate_query:{query.replace(':', '-')}")
-        
+        message = NarratorMessage(
+            narration, source=f"narrate_query:{query.replace(':', '-')}"
+        )
+
         self.narrator_message(message)
         self.scene.push_history(message)
-        
+
+
 @register
 class CmdNarrateProgress(TalemateCommand):
     """
@@ -89,9 +95,10 @@ class CmdNarrateProgress(TalemateCommand):
         narration = await narrator.agent.progress_story()
 
         message = NarratorMessage(narration, source="progress_story")
-        
+
         self.narrator_message(message)
         self.scene.push_history(message)
+
 
 @register
 class CmdNarrateProgressDirected(TalemateCommand):
@@ -105,15 +112,16 @@ class CmdNarrateProgressDirected(TalemateCommand):
 
     async def run(self):
         narrator = self.scene.get_helper("narrator")
-        
+
         direction = await wait_for_input("Enter direction for the narrator: ")
 
         narration = await narrator.agent.progress_story(narrative_direction=direction)
 
         message = NarratorMessage(narration, source=f"progress_story:{direction}")
-        
+
         self.narrator_message(message)
         self.scene.push_history(message)
+
 
 @register
 class CmdNarrateC(TalemateCommand):
@@ -149,7 +157,8 @@ class CmdNarrateC(TalemateCommand):
 
         self.narrator_message(message)
         self.scene.push_history(message)
-        
+
+
 @register
 class CmdNarrateDialogue(TalemateCommand):
     """
@@ -165,23 +174,25 @@ class CmdNarrateDialogue(TalemateCommand):
         narrator = self.scene.get_helper("narrator")
 
         character_messages = self.scene.collect_messages("character", max_iterations=5)
-        
+
         if not character_messages:
             self.system_message("No recent dialogue message found")
             return True
-        
+
         character_message = character_messages[0]
-        
+
         character_name = character_message.character_name
-        
+
         character = self.scene.get_character(character_name)
-        
+
         if not character:
             self.system_message(f"Character not found: {character_name}")
             return True
-        
+
         narration = await narrator.agent.narrate_after_dialogue(character)
-        message = NarratorMessage(narration, source=f"narrate_dialogue:{character.name}")
+        message = NarratorMessage(
+            narration, source=f"narrate_dialogue:{character.name}"
+        )
 
         self.narrator_message(message)
         self.scene.push_history(message)

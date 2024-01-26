@@ -2,24 +2,29 @@ import asyncio
 import base64
 import os
 import traceback
+
 import structlog
 
 import talemate.instance as instance
 from talemate import Helper, Scene
-from talemate.config import load_config, save_config, SceneAssetUpload
+from talemate.client.registry import CLIENT_CLASSES
+from talemate.config import SceneAssetUpload, load_config, save_config
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 from talemate.files import list_scenes_directory
-from talemate.load import load_scene, load_scene_from_data, load_scene_from_character_card
+from talemate.load import (
+    load_scene,
+    load_scene_from_character_card,
+    load_scene_from_data,
+)
 from talemate.scene_assets import Asset
-
-from talemate.client.registry import CLIENT_CLASSES
-
-from talemate.server import character_creator
-from talemate.server import character_importer
-from talemate.server import scene_creator
-from talemate.server import config
-from talemate.server import world_state_manager
-from talemate.server import quick_settings
+from talemate.server import (
+    character_creator,
+    character_importer,
+    config,
+    quick_settings,
+    scene_creator,
+    world_state_manager,
+)
 
 log = structlog.get_logger("talemate.server.websocket_server")
 
@@ -27,8 +32,6 @@ AGENT_INSTANCES = {}
 
 
 class WebsocketHandler(Receiver):
-    
-    
     def __init__(self, socket, out_queue, llm_clients=dict()):
         self.agents = {typ: {"name": typ} for typ in instance.agent_types()}
         self.socket = socket
@@ -40,7 +43,7 @@ class WebsocketHandler(Receiver):
 
         for name, agent_config in self.config.get("agents", {}).items():
             self.agents[name] = agent_config
-            
+
         self.llm_clients = self.config.get("clients", llm_clients)
 
         instance.get_agent("memory", self.scene)
@@ -48,16 +51,26 @@ class WebsocketHandler(Receiver):
         # unconveniently named function, this `connect` method is called
         # to connect signals handlers to the websocket handler
         self.connect()
-        
+
         self.connect_llm_clients()
 
-        self.routes = {    
-            character_creator.CharacterCreatorServerPlugin.router: character_creator.CharacterCreatorServerPlugin(self),
-            character_importer.CharacterImporterServerPlugin.router: character_importer.CharacterImporterServerPlugin(self),
-            scene_creator.SceneCreatorServerPlugin.router: scene_creator.SceneCreatorServerPlugin(self),
+        self.routes = {
+            character_creator.CharacterCreatorServerPlugin.router: character_creator.CharacterCreatorServerPlugin(
+                self
+            ),
+            character_importer.CharacterImporterServerPlugin.router: character_importer.CharacterImporterServerPlugin(
+                self
+            ),
+            scene_creator.SceneCreatorServerPlugin.router: scene_creator.SceneCreatorServerPlugin(
+                self
+            ),
             config.ConfigPlugin.router: config.ConfigPlugin(self),
-            world_state_manager.WorldStateManagerPlugin.router: world_state_manager.WorldStateManagerPlugin(self),
-            quick_settings.QuickSettingsPlugin.router: quick_settings.QuickSettingsPlugin(self),
+            world_state_manager.WorldStateManagerPlugin.router: world_state_manager.WorldStateManagerPlugin(
+                self
+            ),
+            quick_settings.QuickSettingsPlugin.router: quick_settings.QuickSettingsPlugin(
+                self
+            ),
         }
 
         # self.request_scenes_list()
@@ -85,34 +98,36 @@ class WebsocketHandler(Receiver):
                 log.error("Error connecting to client", client_name=client_name, e=e)
                 continue
 
-            log.info("Configured client", client_name=client_name, client_type=client.client_type)
+            log.info(
+                "Configured client",
+                client_name=client_name,
+                client_type=client.client_type,
+            )
 
         self.connect_agents()
-        
+
     def connect_agents(self):
-        
         if not self.llm_clients:
             instance.emit_agents_status()
             return
-        
+
         for agent_typ, agent_config in self.agents.items():
             try:
                 client = self.llm_clients.get(agent_config.get("client"))["client"]
             except TypeError as e:
                 client = None
-                
+
             if not client:
                 # select first client
                 print("selecting first client", self.llm_clients)
                 client = list(self.llm_clients.values())[0]["client"]
                 agent_config["client"] = client.name
-            
+
             log.debug("Linked agent", agent_typ=agent_typ, client=client.name)
             agent = instance.get_agent(agent_typ, client=client)
             agent.client = client
             agent.apply_config(**agent_config)
-            
-            
+
         instance.emit_agents_status()
 
     def init_scene(self):
@@ -127,20 +142,21 @@ class WebsocketHandler(Receiver):
             log.debug("init agent", agent_typ=agent_typ, agent_config=agent_config)
             agent = instance.get_agent(agent_typ, **agent_config)
 
-            #if getattr(agent, "client", None):
+            # if getattr(agent, "client", None):
             #    self.llm_clients[agent.client.name] = agent.client
 
             scene.add_helper(Helper(agent))
 
         return scene
 
-    async def load_scene(self, path_or_data, reset=False, callback=None, file_name=None):
+    async def load_scene(
+        self, path_or_data, reset=False, callback=None, file_name=None
+    ):
         try:
-            
             if self.scene:
                 instance.get_agent("memory").close_db(self.scene)
                 self.scene.disconnect()
-            
+
             scene = self.init_scene()
 
             if not scene:
@@ -172,18 +188,17 @@ class WebsocketHandler(Receiver):
         existing = set(self.llm_clients.keys())
 
         self.llm_clients = {}
-        
+
         log.info("Configuring clients", clients=clients)
-        
+
         for client in clients:
-            
             client.pop("status", None)
             client_cls = CLIENT_CLASSES.get(client["type"])
-            
+
             if not client_cls:
                 log.error("Client type not found", client=client)
                 continue
-            
+
             client_config = self.llm_clients[client["name"]] = {
                 "name": client["name"],
                 "type": client["type"],
@@ -208,17 +223,17 @@ class WebsocketHandler(Receiver):
             for name in removed:
                 log.debug("Destroying client", name=name)
                 instance.destroy_client(name)
-                
+
         self.config["clients"] = self.llm_clients
 
         self.connect_llm_clients()
         save_config(self.config)
-        
+
         instance.sync_emit_clients_status()
 
     def configure_agents(self, agents):
         self.agents = {typ: {} for typ in instance.agent_types()}
-        
+
         log.debug("Configuring agents")
 
         for agent in agents:
@@ -235,7 +250,7 @@ class WebsocketHandler(Receiver):
 
                 if getattr(agent_instance, "actions", None):
                     self.agents[name]["actions"] = agent.get("actions", {})
-                    
+
                 agent_instance.apply_config(**self.agents[name])
                 log.debug("Configured agent", name=name)
                 continue
@@ -253,16 +268,21 @@ class WebsocketHandler(Receiver):
 
             agent_instance = instance.get_agent(name, **self.agents[name])
             agent_instance.client = self.llm_clients[agent["client"]]["client"]
-            
+
             if agent_instance.has_toggle:
                 self.agents[name]["enabled"] = agent["enabled"]
 
             if getattr(agent_instance, "actions", None):
                 self.agents[name]["actions"] = agent.get("actions", {})
-                
+
             agent_instance.apply_config(**self.agents[name])
-            
-            log.debug("Configured agent", name=name, client_name=self.llm_clients[agent["client"]]["name"], client=self.llm_clients[agent["client"]]["client"])
+
+            log.debug(
+                "Configured agent",
+                name=name,
+                client_name=self.llm_clients[agent["client"]]["name"],
+                client=self.llm_clients[agent["client"]]["client"],
+            )
 
         self.config["agents"] = self.agents
         save_config(self.config)
@@ -300,16 +320,15 @@ class WebsocketHandler(Receiver):
                 "character": emission.character.name if emission.character else "",
             }
         )
-        
+
     def handle_director(self, emission: Emission):
-        
         if emission.character:
             character = emission.character.name
         elif emission.message_object.source:
             character = emission.message_object.source
         else:
             character = ""
-        
+
         self.queue_put(
             {
                 "type": "director",
@@ -381,7 +400,7 @@ class WebsocketHandler(Receiver):
                 "status": emission.status,
             }
         )
-        
+
     def handle_config_saved(self, emission: Emission):
         self.queue_put(
             {
@@ -389,7 +408,7 @@ class WebsocketHandler(Receiver):
                 "data": emission.data,
             }
         )
-    
+
     def handle_archived_history(self, emission: Emission):
         self.queue_put(
             {
@@ -523,7 +542,6 @@ class WebsocketHandler(Receiver):
 
     def request_scenes_list(self, query: str = ""):
         scenes_list = list_scenes_directory()
-        
 
         if query:
             filtered_list = [
@@ -547,8 +565,10 @@ class WebsocketHandler(Receiver):
         )
 
     def request_scene_history(self):
-        history = [archived_history["text"] for archived_history in self.scene.archived_history]
-        
+        history = [
+            archived_history["text"] for archived_history in self.scene.archived_history
+        ]
+
         self.queue_put(
             {
                 "type": "scene_history",
@@ -558,14 +578,13 @@ class WebsocketHandler(Receiver):
 
     async def request_client_status(self):
         await instance.emit_clients_status()
-        
-    def request_scene_assets(self, asset_ids:list[str]):
+
+    def request_scene_assets(self, asset_ids: list[str]):
         scene_assets = self.scene.assets
-        
+
         for asset_id in asset_ids:
-        
             asset = scene_assets.get_asset_bytes_as_base64(asset_id)
-            
+
             self.queue_put(
                 {
                     "type": "scene_asset",
@@ -574,16 +593,16 @@ class WebsocketHandler(Receiver):
                     "media_type": scene_assets.get_asset(asset_id).media_type,
                 }
             )
-            
-    def request_assets(self, assets:list[dict]):
+
+    def request_assets(self, assets: list[dict]):
         # way to request scene assets without loading the scene
         #
         # assets is a list of dicts with keys:
         # path must be turned into absolute path
         # path must begin with Scene.scenes_dir()
-        
+
         _assets = {}
-        
+
         for asset_dict in assets:
             try:
                 asset_id, asset = self._asset(**asset_dict)
@@ -591,32 +610,37 @@ class WebsocketHandler(Receiver):
                 log.error("request_assets", error=traceback.format_exc(), **asset_dict)
                 continue
             _assets[asset_id] = asset
-            
+
         self.queue_put(
             {
                 "type": "assets",
                 "assets": _assets,
             }
-        )    
-        
+        )
+
     def _asset(self, path: str, **asset):
         absolute_path = os.path.abspath(path)
-        
+
         if not absolute_path.startswith(Scene.scenes_dir()):
-            log.error("_asset", error="Invalid path", path=absolute_path, scenes_dir=Scene.scenes_dir())
+            log.error(
+                "_asset",
+                error="Invalid path",
+                path=absolute_path,
+                scenes_dir=Scene.scenes_dir(),
+            )
             return
-        
+
         asset_path = os.path.join(os.path.dirname(absolute_path), "assets")
         asset = Asset(**asset)
         return asset.id, {
             "base64": asset.to_base64(asset_path),
             "media_type": asset.media_type,
         }
-        
-    def add_scene_asset(self, data:dict):
+
+    def add_scene_asset(self, data: dict):
         asset_upload = SceneAssetUpload(**data)
         asset = self.scene.assets.add_asset_from_image_data(asset_upload.content)
-        
+
         if asset_upload.scene_cover_image:
             self.scene.assets.cover_image = asset.id
             self.scene.emit_status()
@@ -624,9 +648,12 @@ class WebsocketHandler(Receiver):
             character = self.scene.get_character(asset_upload.character_cover_image)
             old_cover_image = character.cover_image
             character.cover_image = asset.id
-            if not self.scene.assets.cover_image or old_cover_image == self.scene.assets.cover_image:
+            if (
+                not self.scene.assets.cover_image
+                or old_cover_image == self.scene.assets.cover_image
+            ):
                 self.scene.assets.cover_image = asset.id
-            self.scene.emit_status()   
+            self.scene.emit_status()
             self.request_scene_assets([character.cover_image])
             self.queue_put(
                 {
@@ -637,16 +664,14 @@ class WebsocketHandler(Receiver):
                     "character": character.name,
                 }
             )
-    
-    
-        
+
     def delete_message(self, message_id):
         self.scene.delete_message(message_id)
 
     def edit_message(self, message_id, new_text):
         self.scene.edit_message(message_id, new_text)
 
-    def apply_scene_config(self, scene_config:dict):
+    def apply_scene_config(self, scene_config: dict):
         self.scene.apply_scene_config(scene_config)
         self.queue_put(
             {
@@ -654,28 +679,25 @@ class WebsocketHandler(Receiver):
                 "data": self.scene.scene_config,
             }
         )
-        
-    def handle_character_card_upload(self, image_data_url:str, filename:str) -> str:
-            
+
+    def handle_character_card_upload(self, image_data_url: str, filename: str) -> str:
         image_type = image_data_url.split(";")[0].split(":")[1]
         image_data = base64.b64decode(image_data_url.split(",")[1])
         characters_path = os.path.join("./scenes", "characters")
-        
+
         filepath = os.path.join(characters_path, filename)
-        
+
         with open(filepath, "wb") as f:
             f.write(image_data)
-            
+
         return filepath
-        
-        
-    async def route(self, data:dict):
-        
+
+    async def route(self, data: dict):
         route = data["type"]
-        
+
         if route not in self.routes:
             return
-        
+
         plugin = self.routes[route]
         try:
             await plugin.handle(data)

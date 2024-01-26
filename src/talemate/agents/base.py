@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+from functools import wraps
 import re
 from abc import ABC
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
@@ -58,6 +59,7 @@ def set_processing(fn):
     the function fails.
     """
 
+    @wraps(fn)
     async def wrapper(self, *args, **kwargs):
         with ActiveAgent(self, fn):
             try:
@@ -70,8 +72,6 @@ def set_processing(fn):
                     # not sure why this happens
                     # some concurrency error?
                     log.error("error emitting agent status", exc=exc)
-
-    wrapper.__name__ = fn.__name__
 
     return wrapper
 

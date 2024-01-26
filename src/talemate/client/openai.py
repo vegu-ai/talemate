@@ -225,7 +225,7 @@ class OpenAIClient(ClientBase):
 
         keys = list(parameters.keys())
 
-        valid_keys = ["temperature", "top_p"]
+        valid_keys = ["temperature", "top_p", "max_tokens"]
 
         for key in keys:
             if key not in valid_keys:

@@ -167,6 +167,7 @@ export default {
 .tile {
     flex: 0 0 275px;
     margin: 10px;
+    max-width: 275px;
 }
 
 </style>

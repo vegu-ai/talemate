@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import wraps
 import dataclasses
 import random
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
@@ -40,7 +41,8 @@ def set_processing(fn):
     """
 
     @_set_processing
-    async def wrapper(self, *args, **kwargs):
+    @wraps(fn)
+    async def narration_wrapper(self, *args, **kwargs):
         response = await fn(self, *args, **kwargs)
         emission = NarratorAgentEmission(
             agent=self,
@@ -49,8 +51,7 @@ def set_processing(fn):
         await talemate.emit.async_signals.get("agent.narrator.generated").send(emission)
         return emission.generation[0]
 
-    wrapper.__name__ = fn.__name__
-    return wrapper
+    return narration_wrapper
 
 
 @register()

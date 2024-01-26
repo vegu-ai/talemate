@@ -21,6 +21,7 @@ from talemate.server import (
     character_creator,
     character_importer,
     config,
+    devtools,
     quick_settings,
     scene_creator,
     world_state_manager,
@@ -71,6 +72,7 @@ class WebsocketHandler(Receiver):
             quick_settings.QuickSettingsPlugin.router: quick_settings.QuickSettingsPlugin(
                 self
             ),
+            devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
         }
 
         # self.request_scenes_list()

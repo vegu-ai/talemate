@@ -1389,7 +1389,7 @@ class Scene(Emitter):
         character_name = message.split(":")[0]
 
         character = self.get_character(character_name)
-
+        
         if character.is_player:
             emit("system", "Cannot rerun player's message")
             return
@@ -1397,12 +1397,12 @@ class Scene(Emitter):
         emit("remove_message", "", id=message.id)
 
         # Call talk() for the most recent AI Actor 
-        new_messages = await self.most_recent_ai_actor.talk()
+        actor = character.actor
+        
+        new_messages = await actor.talk()
 
         # Print the new messages
         for item in new_messages:
-            character = self.most_recent_ai_actor.agent.character
-
             emit("character", item, character=character)
 
         await asyncio.sleep(0)

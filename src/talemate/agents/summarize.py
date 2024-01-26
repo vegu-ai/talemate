@@ -63,6 +63,16 @@ class SummarizeAgent(Agent):
                             {"label": "Lengthy & Detailed", "value": "long"},
                         ],
                     ),
+                    "include_previous": AgentActionConfig(
+                        type="number",
+                        label="Use preceeding summaries to strengthen context",
+                        description="Number of entries",
+                        note="Help the AI summarize by including the last few summaries as additional context. Some models may incorporate this context into the new summary directly, so if you find yourself with a bunch of similar history entries, try setting this to 0.", 
+                        value=3,
+                        min=0,
+                        max=10,
+                        step=1,
+                    ),
                 }
             )
         }
@@ -109,6 +119,15 @@ class SummarizeAgent(Agent):
                 start = 0
             else:
                 start = recent_entry.get("end", 0)+1
+                
+        # if there is a recent entry we also collect the 3 most recentries
+        # as extra context
+        
+        num_previous = self.actions["archive"].config["include_previous"].value
+        if recent_entry and num_previous > 0:
+            extra_context = "\n\n".join([entry["text"] for entry in scene.archived_history[-num_previous:]])
+        else:
+            extra_context = None
 
         tokens = 0
         dialogue_entries = []
@@ -156,10 +175,6 @@ class SummarizeAgent(Agent):
         
         log.debug("build_archive", start=start, end=end, ts=ts, time_passage_termination=time_passage_termination)
 
-        extra_context = None
-        if recent_entry:
-            extra_context = recent_entry["text"]
-            
         # in order to summarize coherently, we need to determine if there is a favorable
         # cutoff point (e.g., the scene naturally ends or shifts meaninfully in the middle
         # of the  dialogue)
@@ -218,6 +233,7 @@ class SummarizeAgent(Agent):
         text: str,
         extra_context: str = None,
         method: str = None,
+        extra_instructions: str = None,
     ):
         """
         Summarize the given text
@@ -228,8 +244,135 @@ class SummarizeAgent(Agent):
             "scene": self.scene,
             "max_tokens": self.client.max_token_length,
             "summarization_method": self.actions["archive"].config["method"].value if method is None else method,
+            "extra_context": extra_context or "",
+            "extra_instructions": extra_instructions or "",
         })
         
         self.scene.log.info("summarize", dialogue_length=len(text), summarized_length=len(response))
 
         return self.clean_result(response)
+    
+    
+    async def build_stepped_archive_for_level(self, level:int):
+        
+        """
+        WIP - not yet used
+        
+        This will iterate over existing archived_history entries
+        and stepped_archived_history entries and summarize based on time duration
+        indicated between the entries.
+        
+        The lowest level of summarization (based on token threshold and any time passage)
+        happens in build_archive. This method is for summarizing furhter levels based on
+        long time pasages.
+        
+        Level 0: small timestap summarize (summarizes all token summarizations when time advances +1 day)
+        Level 1: medium timestap summarize (summarizes all small timestep summarizations when time advances +1 week)
+        Level 2: large timestap summarize (summarizes all medium timestep summarizations when time advances +1 month)
+        Level 3: huge timestap summarize (summarizes all large timestep summarizations when time advances +1 year)
+        Level 4: massive timestap summarize (summarizes all huge timestep summarizations when time advances +10 years)
+        Level 5: epic timestap summarize (summarizes all massive timestep summarizations when time advances +100 years)
+        and so on (increasing by a factor of 10 each time)
+        
+        ```
+        @dataclass
+        class ArchiveEntry:
+            text: str
+            start: int = None
+            end: int = None
+            ts: str = None
+        ```
+        
+        Like token summarization this will use ArchiveEntry and start and end will refer to the entries in the
+        lower level of summarization.
+        
+        Ts is the iso8601 timestamp of the start of the summarized period.
+        """
+        
+        # select the list to use for the entries
+        
+        if level == 0:
+            entries = self.scene.archived_history
+        else:
+            entries = self.scene.stepped_archived_history[level-1]
+            
+        # select the list to summarize new entries to
+        
+        target = self.scene.stepped_archived_history[level]
+        
+        if not target:
+            raise ValueError(f"Invalid level {level}")
+            
+        # determine the start and end of the period to summarize
+        
+        if not entries:
+            return
+        
+        
+        # determine the time threshold for this level
+        
+        # first calculate all possible thresholds in iso8601 format, starting with 1 day
+        thresholds = [
+            "P1D",
+            "P1W",
+            "P1M",
+            "P1Y",
+        ]
+        
+        # TODO: auto extend?
+        
+        time_threshold_in_seconds = util.iso8601_to_seconds(thresholds[level])
+        
+        if not time_threshold_in_seconds:
+            raise ValueError(f"Invalid level {level}")
+        
+        # determine the most recent summarized entry time, and then find entries
+        # that are newer than that in the lower list
+        
+        ts = target[-1].ts if target else entries[0].ts
+        
+        # determine the most recent entry at the lower level, if its not newer or
+        # the difference is less than the threshold, then we don't need to summarize
+        
+        recent_entry = entries[-1]
+        
+        if util.iso8601_diff(recent_entry.ts, ts) < time_threshold_in_seconds:
+            return
+        
+        log.debug("build_stepped_archive", level=level, ts=ts)
+        
+        # if target is empty, start is 0
+        # otherwise start is the end of the last entry
+        
+        start = 0 if not target else target[-1].end
+        
+        # collect entries starting at start until the combined time duration
+        # exceeds the threshold
+        
+        entries_to_summarize = []
+        
+        for entry in entries[start:]:
+            entries_to_summarize.append(entry)
+            if util.iso8601_diff(entry.ts, ts) > time_threshold_in_seconds:
+                break
+            
+        # summarize the entries
+        # we also collect N entries of previous summaries to use as context
+        
+        num_previous = self.actions["archive"].config["include_previous"].value
+        if num_previous > 0:
+            extra_context = "\n\n".join([entry["text"] for entry in target[-num_previous:]])
+        else:
+            extra_context = None
+            
+        summarized = await self.summarize(
+            "\n".join(map(str, entries_to_summarize)), extra_context=extra_context
+        )
+    
+        # push summarized entry to target
+        
+        ts = entries_to_summarize[-1].ts
+        
+        target.append(data_objects.ArchiveEntry(summarized, start, len(entries_to_summarize)-1, ts=ts))
+        
+        

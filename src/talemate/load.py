@@ -13,6 +13,7 @@ from talemate.world_state import WorldState
 from talemate.game_state import GameState
 from talemate.context import SceneIsLoading
 from talemate.emit import emit
+from talemate.status import set_loading, LoadingStatus
 import talemate.instance as instance
 
 import structlog
@@ -28,55 +29,32 @@ __all__ = [
 
 log = structlog.get_logger("talemate.load")
 
-
-class set_loading:
-    
-    def __init__(self, message):
-        self.message = message
-        
-    def __call__(self, fn):
-        async def wrapper(*args, **kwargs):
-            emit("status", message=self.message, status="busy")
-            try:
-                return await fn(*args, **kwargs)
-            finally:
-                emit("status", message="", status="idle")
-                
-        return wrapper
-
-class LoadingStatus:
-    
-    def __init__(self, max_steps:int):
-        self.max_steps = max_steps
-        self.current_step = 0
-        
-    def __call__(self, message:str):
-        self.current_step += 1
-        emit("status", message=f"{message} [{self.current_step}/{self.max_steps}]", status="busy")
-
 @set_loading("Loading scene...")
 async def load_scene(scene, file_path, conv_client, reset: bool = False):
     """
     Load the scene data from the given file path.
     """
 
-    with SceneIsLoading(scene):
-        if file_path == "environment:creative":
+    try:
+        with SceneIsLoading(scene):
+            if file_path == "environment:creative":
+                return await load_scene_from_data(
+                    scene, creative_environment(), conv_client, reset=True
+                )
+
+            ext = os.path.splitext(file_path)[1].lower()
+
+            if ext in [".jpg", ".png", ".jpeg", ".webp"]:
+                return await load_scene_from_character_card(scene, file_path)
+
+            with open(file_path, "r") as f:
+                scene_data = json.load(f)
+
             return await load_scene_from_data(
-                scene, creative_environment(), conv_client, reset=True
+                scene, scene_data, conv_client, reset, name=file_path
             )
-
-        ext = os.path.splitext(file_path)[1].lower()
-
-        if ext in [".jpg", ".png", ".jpeg", ".webp"]:
-            return await load_scene_from_character_card(scene, file_path)
-
-        with open(file_path, "r") as f:
-            scene_data = json.load(f)
-
-        return await load_scene_from_data(
-            scene, scene_data, conv_client, reset, name=file_path
-        )
+    finally:
+        await scene.add_to_recent_scenes()
 
 
 async def load_scene_from_character_card(scene, file_path):
@@ -229,11 +207,18 @@ async def load_scene_from_data(
             events.ArchiveEvent(scene=scene, event_type="archive_add", text=ah["text"], ts=ts)
         )
 
+    for character_name, character_data in scene_data.get("inactive_characters", {}).items():
+        scene.inactive_characters[character_name] = Character(**character_data)
+
     for character_name, cs in scene.character_states.items():
         scene.set_character_state(character_name, cs)
 
     for character_data in scene_data["characters"]:
         character = Character(**character_data)
+        
+        if character.name in scene.inactive_characters:
+            scene.inactive_characters.pop(character.name)
+        
         if not character.is_player:
             agent = instance.get_agent("conversation", client=conv_client)
             actor = Actor(character, agent)

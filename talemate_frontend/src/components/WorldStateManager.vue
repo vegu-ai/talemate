@@ -266,7 +266,7 @@
                                                 </v-col>
                                                 <v-col cols="8">
                                                     <div v-if="selectedCharacterStateReinforcer">
-                                                        <v-textarea rows="3" auto-grow max-rows="15" :label="selectedCharacterStateReinforcer" v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].answer"  @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)" :color="characterStateReinforcerDirty ? 'info' : ''"></v-textarea>
+                                                        <v-textarea rows="5" auto-grow max-rows="15" :label="selectedCharacterStateReinforcer" v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].answer"  @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)" :color="characterStateReinforcerDirty ? 'info' : ''"></v-textarea>
 
                                                         <v-row>
                                                             <v-col cols="6">
@@ -303,10 +303,20 @@
                                                                     </v-btn>
                                                                 </div>
                                                             </v-col>
-                                                            <v-col cols="6" class="text-right">
+                                                            <v-col cols="6" class="text-right flex">
                                                                 <v-btn rounded="sm" prepend-icon="mdi-refresh" @click.stop="runCharacterStateReinforcement(selectedCharacterStateReinforcer)" color="primary" variant="text">
                                                                     Refresh State
                                                                 </v-btn>
+                                                                <v-tooltip text="Removes all previously generated reinforcements for this state and then regenerates it">
+                                                                    <template v-slot:activator="{ props }">
+                                                                        <v-btn v-if="resetCharacterStateReinforcerConfirm === true" v-bind="props" rounded="sm" prepend-icon="mdi-backup-restore" @click.stop="runCharacterStateReinforcement(selectedCharacterStateReinforcer, true)" color="warning" variant="text">
+                                                                            Confirm Reset State
+                                                                        </v-btn>
+                                                                        <v-btn v-else v-bind="props" rounded="sm" prepend-icon="mdi-backup-restore" @click.stop="resetCharacterStateReinforcerConfirm=true" color="warning" variant="text">
+                                                                            Reset State
+                                                                        </v-btn>
+                                                                    </template> 
+                                                                </v-tooltip>
                                                             </v-col>
                                                         </v-row>
                                                     </div>
@@ -655,6 +665,7 @@ export default {
             removeCharacterAttributeConfirm: false,
             removeCharacterDetailConfirm: false,
             removeCharacterStateReinforcerConfirm: false,
+            resetCharacterStateReinforcerConfirm: false,
 
             characterAttributeSearch: null,
             characterDetailSearch: null,
@@ -833,6 +844,7 @@ export default {
             this.newCharacterDetailValue = null;
             this.removeCharacterAttributeConfirm = false;
             this.removeCharacterDetailConfirm = false;
+            this.resetCharacterStateReinforcerConfirm = false;
             this.characterAttributeSearch = null;
             this.characterDetailSearch = null;
             this.newCharacterStateReinforcerInterval = 10;
@@ -1141,14 +1153,18 @@ export default {
                 this.selectedCharacterStateReinforcer = Object.keys(this.characterDetails.reinforcements)[0];
         },
 
-        runCharacterStateReinforcement(name) {
+        runCharacterStateReinforcement(name, reset) {
             this.isBusy = true;
+
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'run_character_detail_reinforcement',
                 name: this.selectedCharacter,
                 question: name,
+                reset: reset || false,
             }));
+
+            this.resetCharacterStateReinforcerConfirm = false;
         },
 
         // character description

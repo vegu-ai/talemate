@@ -439,7 +439,7 @@ class WorldStateAgent(Agent):
                 
     
     @set_processing
-    async def update_reinforcement(self, question:str, character:str=None):
+    async def update_reinforcement(self, question:str, character:str=None, reset:bool=False):
         
         """
         Queries a single re-inforcement
@@ -449,6 +449,11 @@ class WorldStateAgent(Agent):
         
         if not reinforcement:
             return
+        
+        source = f"{reinforcement.question}:{reinforcement.character if reinforcement.character else ''}"
+        
+        if reset and reinforcement.insert == "sequential":
+            self.scene.pop_history(typ="reinforcement", source=source, all=True)
         
         answer = await Prompt.request(
             "world_state.update-reinforcements",
@@ -460,24 +465,23 @@ class WorldStateAgent(Agent):
                 "question": reinforcement.question,
                 "instructions": reinforcement.instructions or "",
                 "character": self.scene.get_character(reinforcement.character) if reinforcement.character else None,
-                "answer": reinforcement.answer or "",
+                "answer": (reinforcement.answer if not reset else None) or "",
                 "reinforcement": reinforcement,
             }
         )
         
         reinforcement.answer = answer
         reinforcement.due = reinforcement.interval
-        
-        source = f"{reinforcement.question}:{reinforcement.character if reinforcement.character else ''}"
-        
+            
         # remove any recent previous reinforcement message with same question
         # to avoid overloading the near history with reinforcement messages
-        self.scene.pop_history(typ="reinforcement", source=source, max_iterations=10)
+        if not reset:
+            self.scene.pop_history(typ="reinforcement", source=source, max_iterations=10)
         
         if reinforcement.insert == "sequential":
             # insert the reinforcement message at the current position
             message = ReinforcementMessage(message=answer, source=source)
-            log.debug("update_reinforcement", message=message)
+            log.debug("update_reinforcement", message=message, reset=reset)
             self.scene.push_history(message)
         
         # if reinforcement has a character name set, update the character detail
@@ -576,7 +580,14 @@ class WorldStateAgent(Agent):
         
         text = self.scene.snapshot(lines=num_messages, start=message_index)
         
-        summary = await summarizer.summarize(text, method="short")
+        extra_context = self.scene.snapshot(lines=50, start=message_index-num_messages)
+        
+        summary = await summarizer.summarize(
+            text, 
+            extra_context=extra_context,
+            method="short",
+            extra_instructions="Pay particularly close attention to decisions, agreements or promises made.",
+        )
         
         entry_id = util.clean_id(await creator.generate_title(summary))
         
@@ -607,3 +618,47 @@ class WorldStateAgent(Agent):
         
         await self.scene.load_active_pins()
         self.scene.emit_status()
+        
+    @set_processing
+    async def is_character_present(self, character:str) -> bool:
+        """
+        Check if a character is present in the scene
+        
+        Arguments:
+        
+        - `character`: The character to check.
+        """
+        
+        if len(self.scene.history) < 10:
+            text = self.scene.intro+"\n\n"+self.scene.snapshot(lines=50)
+        else:
+            text = self.scene.snapshot(lines=50)
+        
+        is_present = await self.analyze_text_and_answer_question(
+            text=text,
+            query=f"Is {character} present AND active in the current scene? Answert with 'yes' or 'no'.",
+        )
+        
+        return is_present.lower().startswith("y")
+    
+    @set_processing
+    async def is_character_leaving(self, character:str) -> bool:
+        """
+        Check if a character is leaving the scene
+        
+        Arguments:
+        
+        - `character`: The character to check.
+        """
+
+        if len(self.scene.history) < 10:
+            text = self.scene.intro+"\n\n"+self.scene.snapshot(lines=50)
+        else:
+            text = self.scene.snapshot(lines=50)
+
+        is_leaving = await self.analyze_text_and_answer_question(
+            text=text,
+            query=f"Is {character} leaving the current scene? Answert with 'yes' or 'no'.",
+        )
+        
+        return is_leaving.lower().startswith("y")

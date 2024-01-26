@@ -93,6 +93,9 @@ class WorldStateManager:
         for character in self.scene.get_characters():
             characters.characters[character.name] = CharacterSelect(name=character.name, active=True, is_player=character.is_player)
             
+        for character in self.scene.inactive_characters.values():
+            characters.characters[character.name] = CharacterSelect(name=character.name, active=False, is_player=character.is_player)
+            
         return characters
     
     async def get_character_details(self, character_name:str) -> CharacterDetails:
@@ -268,7 +271,7 @@ class WorldStateManager:
         
         return reinforcement
             
-    async def run_detail_reinforcement(self, character_name:str, question:str):
+    async def run_detail_reinforcement(self, character_name:str, question:str, reset:bool=False):
         """
         Executes the detail reinforcement for a specific character and question.
 
@@ -277,7 +280,7 @@ class WorldStateManager:
             question: The query/question that the reinforcement corresponds to.
         """
         world_state_agent = get_agent("world_state")
-        await world_state_agent.update_reinforcement(question, character_name)
+        await world_state_agent.update_reinforcement(question, character_name, reset=reset)
         
     async def delete_detail_reinforcement(self, character_name:str, question:str):
         """

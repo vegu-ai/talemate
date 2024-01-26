@@ -4,6 +4,8 @@ from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
 from talemate.exceptions import RestartSceneLoop
 
+from talemate.emit import emit
+
 
 @register
 class CmdSetEnvironmentToScene(TalemateCommand):
@@ -26,7 +28,7 @@ class CmdSetEnvironmentToScene(TalemateCommand):
         
         self.scene.set_environment("scene")
         
-        self.system_message(f"Game mode")
+        emit("status", message="Switched to gameplay", status="info")
         
         raise RestartSceneLoop()
     

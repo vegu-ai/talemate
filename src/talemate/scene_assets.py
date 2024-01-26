@@ -22,6 +22,17 @@ class Asset(pydantic.BaseModel):
     file_type: str
     media_type: str
     
+    def to_base64(self, asset_directory:str) -> str:
+        
+        """
+        Returns the asset as a base64 encoded string.
+        """
+        
+        asset_path = os.path.join(asset_directory, f"{self.id}.{self.file_type}")
+        
+        with open(asset_path, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+    
 class SceneAssets:
 
     def __init__(self, scene:Scene):
@@ -52,7 +63,11 @@ class SceneAssets:
         """
         Returns the path to the asset with the given id.
         """
-        return os.path.join(self.asset_directory, f"{asset_id}.{self.assets[asset_id].file_type}")
+        try:
+            return os.path.join(self.asset_directory, f"{asset_id}.{self.assets[asset_id].file_type}")
+        except KeyError:
+            log.error("asset_path", asset_id=asset_id, assets=self.assets)
+            return None
         
     def dict(self, *args, **kwargs):
         return {

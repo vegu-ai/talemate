@@ -10,7 +10,9 @@ from talemate.config import load_config, save_config, SceneAssetUpload
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 from talemate.files import list_scenes_directory
 from talemate.load import load_scene, load_scene_from_data, load_scene_from_character_card
+from talemate.scene_assets import Asset
 
+from talemate.client.registry import CLIENT_CLASSES
 
 from talemate.server import character_creator
 from talemate.server import character_importer
@@ -79,6 +81,7 @@ class WebsocketHandler(Receiver):
                     **client_config
                 )
             except TypeError as e:
+                raise
                 log.error("Error connecting to client", client_name=client_name, e=e)
                 continue
 
@@ -100,6 +103,7 @@ class WebsocketHandler(Receiver):
                 
             if not client:
                 # select first client
+                print("selecting first client", self.llm_clients)
                 client = list(self.llm_clients.values())[0]["client"]
                 agent_config["client"] = client.name
             
@@ -174,32 +178,18 @@ class WebsocketHandler(Receiver):
         for client in clients:
             
             client.pop("status", None)
+            client_cls = CLIENT_CLASSES.get(client["type"])
             
-            if client["type"] in ["textgenwebui", "lmstudio"]:
-                try:
-                    max_token_length = int(client.get("max_token_length", 2048))
-                except ValueError:
-                    continue
-                
-                client.pop("model", None)
-
-                self.llm_clients[client["name"]] = {
-                    "type": client["type"],
-                    "api_url": client["apiUrl"],
-                    "name": client["name"],
-                    "max_token_length": max_token_length,
-                }
-            elif client["type"] == "openai":
-                
-                client.pop("model_name", None)
-                client.pop("apiUrl", None)
-                
-                self.llm_clients[client["name"]] = {
-                    "type": "openai",
-                    "name": client["name"],
-                    "model": client.get("model", client.get("model_name")),
-                    "max_token_length": client.get("max_token_length"),
-                }
+            if not client_cls:
+                log.error("Client type not found", client=client)
+                continue
+            
+            client_config = self.llm_clients[client["name"]] = {
+                "name": client["name"],
+                "type": client["type"],
+            }
+            for dfl_key in client_cls.Meta().defaults.dict().keys():
+                client_config[dfl_key] = client.get(dfl_key)
 
         # find clients that have been removed
         removed = existing - set(self.llm_clients.keys())
@@ -223,6 +213,8 @@ class WebsocketHandler(Receiver):
 
         self.connect_llm_clients()
         save_config(self.config)
+        
+        instance.sync_emit_clients_status()
 
     def configure_agents(self, agents):
         self.agents = {typ: {} for typ in instance.agent_types()}
@@ -427,7 +419,9 @@ class WebsocketHandler(Receiver):
                 "status": emission.status,
                 "data": emission.data,
                 "max_token_length": client.max_token_length if client else 4096,
-                "apiUrl": getattr(client, "api_url", None) if client else None,
+                "api_url": getattr(client, "api_url", None) if client else None,
+                "api_url": getattr(client, "api_url", None) if client else None,
+                "api_key": getattr(client, "api_key", None) if client else None,
             }
         )
 
@@ -563,7 +557,7 @@ class WebsocketHandler(Receiver):
         )
 
     async def request_client_status(self):
-        instance.emit_clients_status()
+        await instance.emit_clients_status()
         
     def request_scene_assets(self, asset_ids:list[str]):
         scene_assets = self.scene.assets
@@ -580,6 +574,44 @@ class WebsocketHandler(Receiver):
                     "media_type": scene_assets.get_asset(asset_id).media_type,
                 }
             )
+            
+    def request_assets(self, assets:list[dict]):
+        # way to request scene assets without loading the scene
+        #
+        # assets is a list of dicts with keys:
+        # path must be turned into absolute path
+        # path must begin with Scene.scenes_dir()
+        
+        _assets = {}
+        
+        for asset_dict in assets:
+            try:
+                asset_id, asset = self._asset(**asset_dict)
+            except Exception as exc:
+                log.error("request_assets", error=traceback.format_exc(), **asset_dict)
+                continue
+            _assets[asset_id] = asset
+            
+        self.queue_put(
+            {
+                "type": "assets",
+                "assets": _assets,
+            }
+        )    
+        
+    def _asset(self, path: str, **asset):
+        absolute_path = os.path.abspath(path)
+        
+        if not absolute_path.startswith(Scene.scenes_dir()):
+            log.error("_asset", error="Invalid path", path=absolute_path, scenes_dir=Scene.scenes_dir())
+            return
+        
+        asset_path = os.path.join(os.path.dirname(absolute_path), "assets")
+        asset = Asset(**asset)
+        return asset.id, {
+            "base64": asset.to_base64(asset_path),
+            "media_type": asset.media_type,
+        }
         
     def add_scene_asset(self, data:dict):
         asset_upload = SceneAssetUpload(**data)

@@ -4,12 +4,17 @@
         <v-spacer></v-spacer>
         <!-- quick settings as v-chips -->
         <v-chip size="x-small" v-for="(option, index) in quickSettings" :key="index" @click="toggleQuickSetting(option.value)"
-            :color="option.status() ? 'success' : 'grey'"
+            :color="option.status() === true ? 'success' : 'grey'"
             :disabled="isInputDisabled()" class="ma-1">
             <v-icon class="mr-1">{{ option.icon }}</v-icon>
             {{ option.title }}
-            <v-icon class="ml-1" v-if="option.status()">mdi-check-circle-outline</v-icon>
-            <v-icon class="ml-1" v-else>mdi-circle-outline</v-icon>
+            <v-icon class="ml-1" v-if="option.status() === true">mdi-check-circle-outline</v-icon>
+            <v-icon class="ml-1" v-else-if="option.status() === false">mdi-circle-outline</v-icon>
+            <v-tooltip v-else :text="option.status()">
+                <template v-slot:activator="{ props }">
+                    <v-icon class="ml-1" v-bind="props" color="orange">mdi-alert-outline</v-icon>
+                </template>
+            </v-tooltip>
         </v-chip>
     </v-sheet>
 
@@ -30,20 +35,24 @@
 
 
                 <v-tooltip v-if="isEnvironment('scene')" :disabled="isInputDisabled()" location="top"
-                    text="Redo most recent AI message">
+                    :text="'Redo most recent AI message.\n[Ctrl: Provide instructions, +Alt: Rewrite]'"
+                    class="pre-wrap"
+                    max-width="300px">
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!rerun')" color="primary" icon>
+                            @click="rerun" color="primary" icon>
                             <v-icon>mdi-refresh</v-icon>
                         </v-btn>
                     </template>
                 </v-tooltip>
 
                 <v-tooltip v-if="isEnvironment('scene')" :disabled="isInputDisabled()" location="top"
-                    text="Redo most recent AI message (Nuke Option - use this to attempt to break out of repetition)">
+                    :text="'Redo most recent AI message (Nuke Option - use this to attempt to break out of repetition) \n[Ctrl: Provide instructions, +Alt: Rewrite]'"
+                    class="pre-wrap"
+                    max-width="300px">
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!rerun:0.5')" color="primary" icon>
+                            @click="rerunNuke" color="primary" icon>
                             <v-icon>mdi-nuke</v-icon>
                         </v-btn>
                     </template>
@@ -221,6 +230,68 @@
                     </v-list>
                 </v-menu>
                 
+
+
+                <!-- creative / game mode toggle -->
+
+                <v-menu v-if="isEnvironment('scene')">
+                    <template v-slot:activator="{ props }">
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
+                            <v-icon>mdi-puzzle-edit</v-icon>
+                            <v-icon v-if="potentialNewCharactersExist()" class="btn-notification" color="warning">mdi-human-greeting</v-icon>
+                        </v-btn>
+                    </template>
+                    <v-list>
+                        <v-list-subheader>Creative Tools</v-list-subheader>
+
+                        <!-- deactivate active characters -->
+                        <v-list-item v-for="(character, index) in deactivatableCharacters" :key="index"
+                            @click="deactivateCharacter($event, character)">
+                            <template v-slot:prepend>
+                                <v-icon color="secondary">mdi-exit-run</v-icon>
+                            </template>
+                            <v-list-item-title>Take out of scene: {{ character }}<v-chip variant="text" color="info" class="ml-1" size="x-small">Ctrl: no narration</v-chip></v-list-item-title>
+                            <v-list-item-subtitle>Make {{ character }} a passive character.</v-list-item-subtitle>
+                        </v-list-item>
+
+                        <!-- reactivate inactive characters -->
+                        <v-list-item v-for="(character, index) in inactiveCharacters" :key="index"
+                            @click="activateCharacter($event, character)">
+                            <template v-slot:prepend>
+                                <v-icon color="secondary">mdi-human-greeting</v-icon>
+                            </template>
+                            <v-list-item-title>Call into scene: {{ character }}<v-chip variant="text" color="info" class="ml-1" size="x-small">Ctrl: no narration</v-chip></v-list-item-title>
+                            <v-list-item-subtitle>Make {{ character }} an active character.</v-list-item-subtitle>
+                        </v-list-item>
+
+                        <!-- persist passive characters -->
+                        <v-list-item v-for="(character, index) in potentialNewCharacters()" :key="index"
+                            @click="introduceCharacter($event, character)">
+                            <template v-slot:prepend>
+                                <v-icon color="warning">mdi-human-greeting</v-icon>
+                            </template>
+                            <v-list-item-title>Introduce {{ character }}<v-chip variant="text" color="info" class="ml-1" size="x-small">Ctrl: no narration</v-chip></v-list-item-title>
+                            <v-list-item-subtitle>Make {{ character }} an active character.</v-list-item-subtitle>
+                        </v-list-item>
+
+                        <!-- static tools -->
+                        <v-list-item v-for="(option, index) in creativeGameMenu" :key="index"
+                            @click="sendHotButtonMessage('!' + option.value)"
+                            :prepend-icon="option.icon">
+                            <v-list-item-title>{{ option.title }}</v-list-item-title>
+                            <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
+                <v-tooltip v-else-if="isEnvironment('creative')" :disabled="isInputDisabled()" location="top" text="Switch to game mode">
+                    <template v-slot:activator="{ props }">
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
+                            @click="sendHotButtonMessage('!setenv_scene')" color="primary" icon>
+                            <v-icon>mdi-gamepad-square</v-icon>
+                        </v-btn>
+                    </template>
+                </v-tooltip>
+
                 <!-- save menu -->
 
                 <v-menu>
@@ -240,26 +311,6 @@
                     </v-list>
                 </v-menu>
 
-                <!-- creative / game mode toggle -->
-
-                <v-tooltip v-if="isEnvironment('scene')" :disabled="isInputDisabled()" location="top" text="Switch to creative mode">
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!setenv_creative')" color="primary" icon>
-                            <v-icon>mdi-palette-outline</v-icon>
-                        </v-btn>
-                    </template>
-                </v-tooltip>
-
-                <v-tooltip v-else-if="isEnvironment('creative')" :disabled="isInputDisabled()" location="top" text="Switch to game mode">
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
-                            @click="sendHotButtonMessage('!setenv_scene')" color="primary" icon>
-                            <v-icon>mdi-gamepad-square</v-icon>
-                        </v-btn>
-                    </template>
-                </v-tooltip>
-
             </v-card-actions>
         </v-card>
 
@@ -273,16 +324,35 @@
 export default {
 
     name: 'SceneTools',
+    props: {
+        passiveCharacters: Array,
+        inactiveCharacters: Array,
+        activeCharacters: Array,
+        playerCharacterName: String,
+    },
+    computed: {
+        deactivatableCharacters: function() {
+            // this.activeCharacters without playerCharacterName
+            let characters = [];
+            for (let character of this.activeCharacters) {
+                if (character !== this.playerCharacterName) {
+                    characters.push(character);
+                }
+            }
+            return characters;
+        }
+    },
     data() {
         return {
             commandActive: false,
             commandName: null,
             autoSave: true,
             autoProgress: true,
+            canAutoSave: false,
             npc_characters: [],
 
             quickSettings: [
-                {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.autoSave; }},
+                {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
             ],
 
@@ -301,6 +371,11 @@ export default {
 
             actorActions: [
                 {"value": "ai_dialogue", "title": "Talk", "icon": "mdi-comment-text-outline", "description": "Generate dialogue"},
+            ],
+
+            creativeGameMenu: [
+                {"value": "pc:prompt", "title": "Introduce new character (Directed)", "icon": "mdi-account-plus", "description": "Generate a new active character, based on prompt."},
+                {"value": "setenv_creative", "title": "Creative Mode", "icon": "mdi-puzzle-edit", "description": "Switch to creative mode (very early experimental version)"},
             ],
 
             advanceTimeOptions: [
@@ -341,14 +416,63 @@ export default {
         'getTrackedWorldState',
         'getPlayerCharacterName',
         'formatWorldStateTemplateString',
+        'characterSheet',
     ],
-    computed:{
-    },
     emits: [
         'open-world-state-manager',
     ],
     methods: {
 
+        potentialNewCharacters() {
+            // return all entries in passiveCharacters that dont exist in
+            // inactiveCharacters
+            let newCharacters = [];
+            for (let character of this.passiveCharacters) {
+                if (!this.inactiveCharacters.includes(character)) {
+                    newCharacters.push(character);
+                }
+            }
+            return newCharacters;
+        },
+
+        activateCharacter(ev, name) {
+            let modifyNoNarration = ev.ctrlKey;
+            if(!modifyNoNarration) {
+                this.sendHotButtonMessage('!char_a:' + name);
+            } else {
+                this.sendHotButtonMessage('!char_a:' + name + ':no');
+            }
+        },
+
+        deactivateCharacter(ev, name) {
+            let modifyNoNarration = ev.ctrlKey;
+            if(!modifyNoNarration) {
+                this.sendHotButtonMessage('!char_d:' + name);
+            } else {
+                this.sendHotButtonMessage('!char_d:' + name + ':no');
+            }
+        },
+
+        introduceCharacter(ev, name) {
+            let modifyNoNarration = ev.ctrlKey;
+            if(!modifyNoNarration) {
+                this.sendHotButtonMessage('!persist_character:' + name);
+            } else {
+                this.sendHotButtonMessage('!persist_character:' + name + ':no');
+            }
+        },
+
+        potentialNewCharactersExist() {
+            return this.potentialNewCharacters().length > 0;
+        },
+
+        passiveCharactersExist() {
+            return this.passiveCharacters.length > 0;
+        },
+        
+        passiveCharacterExists(name) {
+            return this.passiveCharacters.includes(name);
+        },
 
         isEnvironment(typ) {
             return this.scene().environment == typ;
@@ -464,6 +588,38 @@ export default {
             this.getWebsocket().send(JSON.stringify({ type: 'interact', text: '!ws' }));
         },
 
+        rerun(event) {
+            console.log("EVENT", event)
+            // if ctrl is pressed use directed rerun
+            let withDirection = event.ctrlKey;
+            let method = event.altKey || event.metaKey ? "edit" : "replace";
+            let command = "!rerun";
+
+            if(withDirection)
+                command += "_directed";
+
+            command += ":0.0:"+method;
+
+            // if alt is pressed 
+
+            this.sendHotButtonMessage(command)
+        },
+
+        rerunNuke(event) {
+            // if ctrl is pressed use directed rerun
+            let withDirection = event.ctrlKey;
+            let method = event.altKey || event.metaKey ? "edit" : "replace";
+            let command = "!rerun";
+
+            if(withDirection)
+                command += "_directed";
+
+            // 0.5 nuke adjustment
+            command += ":0.5:"+method;
+
+            this.sendHotButtonMessage(command)
+        },
+
         handleMessage(data) {
 
             if (data.type === "command_status") {
@@ -475,6 +631,7 @@ export default {
                     this.commandName = null;
                 }
             } else if (data.type === "scene_status") {
+                this.canAutoSave = data.data.can_auto_save;
                 this.autoSave = data.data.auto_save;
                 this.autoProgress = data.data.auto_progress;
                 console.log({autoSave: this.autoSave, autoProgress: this.autoProgress});
@@ -492,7 +649,8 @@ export default {
             }
 
 
-        }
+        },
+
     },
     mounted() {
         console.log("Websocket", this.getWebsocket()); // Check if websocket is available
@@ -517,5 +675,22 @@ export default {
     display: flex;
     align-items: center;
     margin-right: 20px;
+}
+
+.pre-wrap {
+    white-space: pre-wrap;
+}
+
+.btn-notification {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    font-size: 15px;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 </style>

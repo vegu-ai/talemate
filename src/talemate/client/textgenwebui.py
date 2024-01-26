@@ -2,7 +2,6 @@ from talemate.client.base import ClientBase, STOPPING_STRINGS
 from talemate.client.registry import register
 from openai import AsyncOpenAI
 import httpx
-import copy
 import random
 import structlog
 
@@ -12,6 +11,10 @@ log = structlog.get_logger("talemate.client.textgenwebui")
 class TextGeneratorWebuiClient(ClientBase):
     
     client_type = "textgenwebui"
+    
+    class Meta(ClientBase.Meta):
+        name_prefix:str = "TextGenWebUI"
+        title:str = "Text-Generation-WebUI (ooba)"
     
     def tune_prompt_parameters(self, parameters:dict, kind:str):
         super().tune_prompt_parameters(parameters, kind)

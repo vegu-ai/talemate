@@ -68,7 +68,7 @@ def num_tokens_from_messages(messages:list[dict], model:str="gpt-3.5-turbo-0613"
 
 class Defaults(pydantic.BaseModel):
     max_token_length:int = 16384
-    model:str = "gpt-4-1106-preview"
+    model:str = "gpt-4-turbo-preview"
 
 @register()
 class OpenAIClient(ClientBase):

@@ -2,15 +2,13 @@ import argparse
 import asyncio
 import glob
 import os
-import structlog
 
+import structlog
 from dotenv import load_dotenv
 
 import talemate.instance as instance
 from talemate import Actor, Character, Helper, Player, Scene
-from talemate.agents import (
-    ConversationAgent,
-)
+from talemate.agents import ConversationAgent
 from talemate.client import OpenAIClient, TextGeneratorWebuiClient
 from talemate.emit.console import Console
 from talemate.load import (
@@ -129,7 +127,6 @@ async def run_console_session(parser, args):
     default_client = None
 
     if "textgenwebui" in clients.values() or args.client == "textgenwebui":
-
         # Init the TextGeneratorWebuiClient with ConversationAgent and create an actor
         textgenwebui_api_url = args.textgenwebui_url
 
@@ -145,7 +142,6 @@ async def run_console_session(parser, args):
                 clients[client_name] = text_generator_webui_client
 
     if "openai" in clients.values() or args.client == "openai":
-
         openai_client = OpenAIClient()
 
         for client_name, client_typ in clients.items():

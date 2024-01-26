@@ -28,18 +28,18 @@ PRESET_TALEMATE_CREATOR = {
 }
 
 PRESET_LLAMA_PRECISE = {
-    'temperature': 0.7,
-    'top_p': 0.1,
-    'top_k': 40,
-    'repetition_penalty': 1.18,
+    "temperature": 0.7,
+    "top_p": 0.1,
+    "top_k": 40,
+    "repetition_penalty": 1.18,
 }
 
 PRESET_DIVINE_INTELLECT = {
-    'temperature': 1.31,
-    'top_p': 0.14,
-    'top_k': 49,
+    "temperature": 1.31,
+    "top_p": 0.14,
+    "top_k": 49,
     "repetition_penalty_range": 1024,
-    'repetition_penalty': 1.17,
+    "repetition_penalty": 1.17,
 }
 
 PRESET_SIMPLE_1 = {
@@ -49,7 +49,8 @@ PRESET_SIMPLE_1 = {
     "repetition_penalty": 1.15,
 }
 
-def configure(config:dict, kind:str, total_budget:int):
+
+def configure(config: dict, kind: str, total_budget: int):
     """
     Sets the config based on the kind of text to generate.
     """
@@ -57,18 +58,21 @@ def configure(config:dict, kind:str, total_budget:int):
     set_max_tokens(config, kind, total_budget)
     return config
 
-def set_max_tokens(config:dict, kind:str, total_budget:int):
+
+def set_max_tokens(config: dict, kind: str, total_budget: int):
     """
     Sets the max_tokens in the config based on the kind of text to generate.
     """
     config["max_tokens"] = max_tokens_for_kind(kind, total_budget)
     return config
 
-def set_preset(config:dict, kind:str):
+
+def set_preset(config: dict, kind: str):
     """
     Sets the preset in the config based on the kind of text to generate.
     """
     config.update(preset_for_kind(kind))
+
 
 def preset_for_kind(kind: str):
     if kind == "conversation":
@@ -104,9 +108,13 @@ def preset_for_kind(kind: str):
     elif kind == "director":
         return PRESET_SIMPLE_1
     elif kind == "director_short":
-        return PRESET_SIMPLE_1  # Assuming short direction uses the same preset as simple
+        return (
+            PRESET_SIMPLE_1  # Assuming short direction uses the same preset as simple
+        )
     elif kind == "director_yesno":
-        return PRESET_SIMPLE_1  # Assuming yes/no direction uses the same preset as simple
+        return (
+            PRESET_SIMPLE_1  # Assuming yes/no direction uses the same preset as simple
+        )
     elif kind == "edit_dialogue":
         return PRESET_DIVINE_INTELLECT
     elif kind == "edit_add_detail":
@@ -115,6 +123,7 @@ def preset_for_kind(kind: str):
         return PRESET_DIVINE_INTELLECT  # Assuming fixing exposition uses the same preset as divine intellect
     else:
         return PRESET_SIMPLE_1  # Default preset if none of the kinds match
+
 
 def max_tokens_for_kind(kind: str, total_budget: int):
     if kind == "conversation":
@@ -142,15 +151,23 @@ def max_tokens_for_kind(kind: str, total_budget: int):
     elif kind == "story":
         return 300  # Example value, adjust as needed
     elif kind == "create":
-        return min(1024, int(total_budget * 0.35))  # Example calculation, adjust as needed
+        return min(
+            1024, int(total_budget * 0.35)
+        )  # Example calculation, adjust as needed
     elif kind == "create_concise":
-        return min(400, int(total_budget * 0.25))  # Example calculation, adjust as needed
+        return min(
+            400, int(total_budget * 0.25)
+        )  # Example calculation, adjust as needed
     elif kind == "create_precise":
-        return min(400, int(total_budget * 0.25))  # Example calculation, adjust as needed
+        return min(
+            400, int(total_budget * 0.25)
+        )  # Example calculation, adjust as needed
     elif kind == "create_short":
         return 25
     elif kind == "director":
-        return min(192, int(total_budget * 0.25))  # Example calculation, adjust as needed
+        return min(
+            192, int(total_budget * 0.25)
+        )  # Example calculation, adjust as needed
     elif kind == "director_short":
         return 25  # Example value, adjust as needed
     elif kind == "director_yesno":

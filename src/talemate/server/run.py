@@ -1,8 +1,8 @@
-import os
-
 import argparse
 import asyncio
+import os
 import sys
+
 import structlog
 import websockets
 
@@ -10,13 +10,16 @@ from talemate.server.api import websocket_endpoint
 
 log = structlog.get_logger("talemate.server.run")
 
+
 def run_server(args):
     """
     Run the talemate web server using the provided arguments.
 
     :param args: command line arguments parsed by argparse
     """
-    start_server = websockets.serve(websocket_endpoint, args.host, args.port, max_size=2 ** 23)
+    start_server = websockets.serve(
+        websocket_endpoint, args.host, args.port, max_size=2**23
+    )
     asyncio.get_event_loop().run_until_complete(start_server)
     log.info("talemate backend started", host=args.host, port=args.port)
     asyncio.get_event_loop().run_forever()

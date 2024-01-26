@@ -1,6 +1,7 @@
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
 
+
 @register
 class CmdMemget(TalemateCommand):
     """

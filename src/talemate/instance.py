@@ -2,19 +2,19 @@
 Keep track of clients and agents
 """
 import asyncio
-import talemate.agents as agents
-import talemate.client as clients
-from talemate.emit import emit
-from talemate.emit.signals import handlers
-import talemate.client.bootstrap as bootstrap
 
 import structlog
+
+import talemate.agents as agents
+import talemate.client as clients
+import talemate.client.bootstrap as bootstrap
+from talemate.emit import emit
+from talemate.emit.signals import handlers
+
 log = structlog.get_logger("talemate")
 
 AGENTS = {}
 CLIENTS = {}
-
-
 
 
 def get_agent(typ: str, *create_args, **create_kwargs):
@@ -75,33 +75,35 @@ def client_instances():
 def agent_instances():
     return AGENTS.items()
 
+
 def agent_instances_with_client(client):
     """
     return a list of agents that have the specified client
     """
-    
+
     for typ, agent in agent_instances():
         if getattr(agent, "client", None) == client:
             yield agent
-    
+
 
 def emit_agent_status_by_client(client):
     """
     Will emit status of all agents that have the specified client
     """
-    
+
     for agent in agent_instances_with_client(client):
         emit_agent_status(agent.__class__, agent)
-    
+
 
 async def emit_clients_status():
     """
     Will emit status of all clients
     """
-    #log.debug("emit", type="client status")
+    # log.debug("emit", type="client status")
     for client in CLIENTS.values():
         if client:
             await client.status()
+
 
 def _sync_emit_clients_status(*args, **kwargs):
     """
@@ -109,14 +111,15 @@ def _sync_emit_clients_status(*args, **kwargs):
     in synchronous mode
     """
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(emit_clients_status())     
+    loop.run_until_complete(emit_clients_status())
+
+
 handlers["request_client_status"].connect(_sync_emit_clients_status)
 
+
 async def emit_client_bootstraps():
-    emit(
-        "client_bootstraps",
-        data=list(await bootstrap.list_all())
-    )
+    emit("client_bootstraps", data=list(await bootstrap.list_all()))
+
 
 def sync_emit_clients_status():
     """
@@ -126,15 +129,20 @@ def sync_emit_clients_status():
     loop = asyncio.get_event_loop()
     loop.run_until_complete(emit_clients_status())
 
+
 async def sync_client_bootstraps():
     """
-    Will loop through all registered client bootstrap lists and spawn / update 
+    Will loop through all registered client bootstrap lists and spawn / update
     client instances from them.
     """
-    
+
     for service_name, func in bootstrap.LISTS.items():
         async for client_bootstrap in func():
-            log.debug("sync client bootstrap", service_name=service_name, client_bootstrap=client_bootstrap.dict())
+            log.debug(
+                "sync client bootstrap",
+                service_name=service_name,
+                client_bootstrap=client_bootstrap.dict(),
+            )
             client = get_client(
                 client_bootstrap.name,
                 type=client_bootstrap.client_type.value,
@@ -142,6 +150,7 @@ async def sync_client_bootstraps():
                 enabled=True,
             )
             await client.status()
+
 
 def emit_agent_status(cls, agent=None):
     if not agent:
@@ -167,9 +176,10 @@ def emit_agents_status(*args, **kwargs):
     """
     Will emit status of all agents
     """
-    #log.debug("emit", type="agent status")
+    # log.debug("emit", type="agent status")
     for typ, cls in agents.AGENT_CLASSES.items():
         agent = AGENTS.get(typ)
         emit_agent_status(cls, agent)
-        
+
+
 handlers["request_agent_status"].connect(emit_agents_status)

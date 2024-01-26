@@ -1,22 +1,25 @@
 import base64
+import datetime
 import io
 import json
 import re
 import textwrap
-import structlog
-import isodate
-import datetime
 from typing import List, Union
-from thefuzz import fuzz
+
+import isodate
+import structlog
 from colorama import Back, Fore, Style, init
-from PIL import Image
 from nltk.tokenize import sent_tokenize
+from PIL import Image
+from thefuzz import fuzz
 
 from talemate.scene_message import SceneMessage
+
 log = structlog.get_logger("talemate.util")
 
 # Initialize colorama
 init(autoreset=True)
+
 
 def fix_unquoted_keys(s):
     unquoted_key_pattern = r"(?<!\\)(?:(?<=\{)|(?<=,))\s*(\w+)\s*:"
@@ -279,25 +282,25 @@ def replace_conditional(input_string: str, params) -> str:
     return modified_string
 
 
-def strip_partial_sentences(text:str) -> str:
+def strip_partial_sentences(text: str) -> str:
     # Sentence ending characters
-    sentence_endings = ['.', '!', '?', '"', "*"]
-    
+    sentence_endings = [".", "!", "?", '"', "*"]
+
     if not text:
         return text
-    
+
     # Check if the last character is already a sentence ending
     if text[-1] in sentence_endings:
         return text
-    
+
     # Split the text into words
     words = text.split()
-    
+
     # Iterate over the words in reverse order until a sentence ending is found
     for i in range(len(words) - 1, -1, -1):
         if words[i][-1] in sentence_endings:
-            return ' '.join(words[:i+1])
-    
+            return " ".join(words[: i + 1])
+
     # If no sentence ending is found, return the original text
     return text
 
@@ -335,8 +338,8 @@ def clean_message(message: str) -> str:
     message = message.replace("[", "*").replace("]", "*")
     return message
 
+
 def clean_dialogue(dialogue: str, main_name: str) -> str:
-    
     # re split by \n{not main_name}: with a max count of 1
     pattern = r"\n(?!{}:).*".format(re.escape(main_name))
 
@@ -346,10 +349,11 @@ def clean_dialogue(dialogue: str, main_name: str) -> str:
     dialogue = f"{main_name}: {dialogue}"
 
     return clean_message(strip_partial_sentences(dialogue))
-    
+
+
 def clean_id(name: str) -> str:
     """
-    Cleans up a id name by removing all characters that aren't a-zA-Z0-9_- 
+    Cleans up a id name by removing all characters that aren't a-zA-Z0-9_-
 
     Spaces are allowed.
 
@@ -361,8 +365,9 @@ def clean_id(name: str) -> str:
     """
     # Remove all characters that aren't a-zA-Z0-9_-
     cleaned_name = re.sub(r"[^a-zA-Z0-9_\- ]", "", name)
-    
+
     return cleaned_name
+
 
 def duration_to_timedelta(duration):
     """Convert an isodate.Duration object or a datetime.timedelta object to a datetime.timedelta object."""
@@ -374,6 +379,7 @@ def duration_to_timedelta(duration):
     days = int(duration.years) * 365 + int(duration.months) * 30 + int(duration.days)
     seconds = duration.tdelta.seconds
     return datetime.timedelta(days=days, seconds=seconds)
+
 
 def timedelta_to_duration(delta):
     """Convert a datetime.timedelta object to an isodate.Duration object."""
@@ -389,7 +395,15 @@ def timedelta_to_duration(delta):
     seconds %= 3600
     minutes = seconds // 60
     seconds %= 60
-    return isodate.Duration(years=years, months=months, days=days, hours=hours, minutes=minutes, seconds=seconds)
+    return isodate.Duration(
+        years=years,
+        months=months,
+        days=days,
+        hours=hours,
+        minutes=minutes,
+        seconds=seconds,
+    )
+
 
 def parse_duration_to_isodate_duration(duration_str):
     """Parse ISO 8601 duration string and ensure the result is an isodate.Duration."""
@@ -397,6 +411,7 @@ def parse_duration_to_isodate_duration(duration_str):
     if isinstance(parsed_duration, datetime.timedelta):
         return timedelta_to_duration(parsed_duration)
     return parsed_duration
+
 
 def iso8601_diff(duration_str1, duration_str2):
     # Parse the ISO 8601 duration strings ensuring they are isodate.Duration objects
@@ -409,14 +424,14 @@ def iso8601_diff(duration_str1, duration_str2):
 
     # Calculate the difference
     difference_timedelta = abs(timedelta1 - timedelta2)
-    
+
     # Convert back to Duration for further processing
     difference = timedelta_to_duration(difference_timedelta)
 
     return difference
 
+
 def iso8601_duration_to_human(iso_duration, suffix: str = " ago"):
-    
     # Parse the ISO8601 duration string into an isodate duration object
     if not isinstance(iso_duration, isodate.Duration):
         duration = isodate.parse_duration(iso_duration)
@@ -463,7 +478,7 @@ def iso8601_duration_to_human(iso_duration, suffix: str = " ago"):
     # Construct the human-readable string
     if len(components) > 1:
         last = components.pop()
-        human_str = ', '.join(components) + ' and ' + last
+        human_str = ", ".join(components) + " and " + last
     elif components:
         human_str = components[0]
     else:
@@ -471,16 +486,17 @@ def iso8601_duration_to_human(iso_duration, suffix: str = " ago"):
 
     return f"{human_str}{suffix}"
 
+
 def iso8601_diff_to_human(start, end):
     if not start or not end:
         return ""
-    
+
     diff = iso8601_diff(start, end)
-    
+
     return iso8601_duration_to_human(diff)
 
 
-def iso8601_add(date_a:str, date_b:str) -> str:
+def iso8601_add(date_a: str, date_b: str) -> str:
     """
     Adds two ISO 8601 durations together.
     """
@@ -488,80 +504,84 @@ def iso8601_add(date_a:str, date_b:str) -> str:
     if not date_a or not date_b:
         return "PT0S"
 
-    new_ts = isodate.parse_duration(date_a.strip()) + isodate.parse_duration(date_b.strip())
+    new_ts = isodate.parse_duration(date_a.strip()) + isodate.parse_duration(
+        date_b.strip()
+    )
     return isodate.duration_isoformat(new_ts)
+
 
 def iso8601_correct_duration(duration: str) -> str:
     # Split the string into date and time components using 'T' as the delimiter
     parts = duration.split("T")
-    
+
     # Handle the date component
     date_component = parts[0]
     time_component = ""
-    
+
     # If there's a time component, process it
     if len(parts) > 1:
         time_component = parts[1]
-        
+
         # Check if the time component has any date values (Y, M, D) and move them to the date component
         for char in "YD":  # Removed 'M' from this loop
             if char in time_component:
                 index = time_component.index(char)
-                date_component += time_component[:index+1]
-                time_component = time_component[index+1:]
-    
+                date_component += time_component[: index + 1]
+                time_component = time_component[index + 1 :]
+
     # If the date component contains any time values (H, M, S), move them to the time component
     for char in "HMS":
         if char in date_component:
             index = date_component.index(char)
             time_component = date_component[index:] + time_component
             date_component = date_component[:index]
-    
+
     # Combine the corrected date and time components
     corrected_duration = date_component
     if time_component:
         corrected_duration += "T" + time_component
-    
+
     return corrected_duration
 
 
 def fix_faulty_json(data: str) -> str:
     # Fix missing commas
-    data = re.sub(r'}\s*{', '},{', data)
-    data = re.sub(r']\s*{', '],{', data)
-    data = re.sub(r'}\s*\[', '},{', data)
-    data = re.sub(r']\s*\[', '],[', data)
-    
+    data = re.sub(r"}\s*{", "},{", data)
+    data = re.sub(r"]\s*{", "],{", data)
+    data = re.sub(r"}\s*\[", "},{", data)
+    data = re.sub(r"]\s*\[", "],[", data)
+
     # Fix trailing commas
-    data = re.sub(r',\s*}', '}', data)
-    data = re.sub(r',\s*]', ']', data)
-    
+    data = re.sub(r",\s*}", "}", data)
+    data = re.sub(r",\s*]", "]", data)
+
     try:
         json.loads(data)
     except json.JSONDecodeError:
         try:
-            json.loads(data+"}")
-            return data+"}"
-        except json.JSONDecodeError:    
+            json.loads(data + "}")
+            return data + "}"
+        except json.JSONDecodeError:
             try:
-                json.loads(data+"]")
-                return data+"]"
+                json.loads(data + "]")
+                return data + "]"
             except json.JSONDecodeError:
                 return data
-    
+
     return data
+
 
 def extract_json(s):
     """
     Extracts a JSON string from the beginning of the input string `s`.
-    
+
     Parameters:
         s (str): The input string containing a JSON string at the beginning.
-        
+
     Returns:
         str: The extracted JSON string.
         dict: The parsed JSON object.
-        
+
     Raises:
         ValueError: If a valid JSON string is not found.
     """
@@ -571,138 +591,154 @@ def extract_json(s):
     json_string_start = None
     s = s.lstrip()  # Strip white spaces and line breaks from the beginning
     i = 0
-    
+
     log.debug("extract_json", s=s)
-    
+
     # Iterate through the string.
     while i < len(s):
         # Count the opening and closing curly brackets.
-        if s[i] == '{' or s[i] == '[':
+        if s[i] == "{" or s[i] == "[":
             bracket_stack.append(s[i])
             open_brackets += 1
             if json_string_start is None:
                 json_string_start = i
-        elif s[i] == '}' or s[i] == ']':
+        elif s[i] == "}" or s[i] == "]":
             bracket_stack
             close_brackets += 1
             # Check if the brackets match, indicating a complete JSON string.
             if open_brackets == close_brackets:
-                json_string = s[json_string_start:i+1]
+                json_string = s[json_string_start : i + 1]
                 # Try to parse the JSON string.
                 return json_string, json.loads(json_string)
         i += 1
-        
+
     if json_string_start is None:
         raise ValueError("No JSON string found.")
-    
+
     json_string = s[json_string_start:]
     while bracket_stack:
         char = bracket_stack.pop()
-        if char == '{':
-            json_string += '}'
-        elif char == '[':
-            json_string += ']'
-    
+        if char == "{":
+            json_string += "}"
+        elif char == "[":
+            json_string += "]"
+
     json_object = json.loads(json_string)
     return json_string, json_object
 
-def similarity_score(line: str, lines: list[str], similarity_threshold: int = 95) -> tuple[bool, int, str]:
+
+def similarity_score(
+    line: str, lines: list[str], similarity_threshold: int = 95
+) -> tuple[bool, int, str]:
     """
     Checks if a line is similar to any of the lines in the list of lines.
-    
+
     Arguments:
         line (str): The line to check.
         lines (list): The list of lines to check against.
         threshold (int): The similarity threshold to use when comparing lines.
-        
+
     Returns:
         bool: Whether a similar line was found.
         int: The similarity score of the line. If no similar line was found, the highest similarity score is returned.
         str: The similar line that was found. If no similar line was found, None is returned.
     """
-    
+
     highest_similarity = 0
-    
+
     for existing_line in lines:
         similarity = fuzz.ratio(line, existing_line)
         highest_similarity = max(highest_similarity, similarity)
-        #print("SIMILARITY", similarity, existing_line[:32]+"...")
+        # print("SIMILARITY", similarity, existing_line[:32]+"...")
         if similarity >= similarity_threshold:
             return True, similarity, existing_line
-        
+
     return False, highest_similarity, None
 
-def dedupe_sentences(line_a:str, line_b:str, similarity_threshold:int=95, debug:bool=False, split_on_comma:bool=True) -> str:
+
+def dedupe_sentences(
+    line_a: str,
+    line_b: str,
+    similarity_threshold: int = 95,
+    debug: bool = False,
+    split_on_comma: bool = True,
+) -> str:
     """
     Will split both lines into sentences and then compare each sentence in line_a
     against similar sentences in line_b. If a similar sentence is found, it will be
     removed from line_a.
-    
+
     The similarity threshold is used to determine if two sentences are similar.
-    
+
     Arguments:
         line_a (str): The first line.
         line_b (str): The second line.
         similarity_threshold (int): The similarity threshold to use when comparing sentences.
         debug (bool): Whether to log debug messages.
         split_on_comma (bool): Whether to split line_b sentences on commas as well.
-    
+
     Returns:
         str: the cleaned line_a.
     """
-    
+
     line_a_sentences = sent_tokenize(line_a)
     line_b_sentences = sent_tokenize(line_b)
-    
+
     cleaned_line_a_sentences = []
-    
+
     if split_on_comma:
         # collect all sentences from line_b that contain a comma
         line_b_sentences_with_comma = []
         for line_b_sentence in line_b_sentences:
             if "," in line_b_sentence:
                 line_b_sentences_with_comma.append(line_b_sentence)
-                
+
         # then split all sentences in line_b_sentences_with_comma on the comma
         # and extend line_b_sentences with the split sentences, making sure
         # to strip whitespace from the beginning and end of each sentence
-        
+
         for line_b_sentence in line_b_sentences_with_comma:
             line_b_sentences.extend([s.strip() for s in line_b_sentence.split(",")])
-            
-    
+
     for line_a_sentence in line_a_sentences:
         similar_found = False
         for line_b_sentence in line_b_sentences:
             similarity = fuzz.ratio(line_a_sentence, line_b_sentence)
             if similarity >= similarity_threshold:
                 if debug:
-                    log.debug("DEDUPE SENTENCE", similarity=similarity, line_a_sentence=line_a_sentence, line_b_sentence=line_b_sentence)
+                    log.debug(
+                        "DEDUPE SENTENCE",
+                        similarity=similarity,
+                        line_a_sentence=line_a_sentence,
+                        line_b_sentence=line_b_sentence,
+                    )
                 similar_found = True
                 break
         if not similar_found:
             cleaned_line_a_sentences.append(line_a_sentence)
-            
+
     return " ".join(cleaned_line_a_sentences)
 
-def dedupe_string_old(s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False) -> str:
-    
+
+def dedupe_string_old(
+    s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False
+) -> str:
     """
     Removes duplicate lines from a string.
-    
+
     Arguments:
         s (str): The input string.
         min_length (int): The minimum length of a line to be checked for duplicates.
         similarity_threshold (int): The similarity threshold to use when comparing lines.
         debug (bool): Whether to log debug messages.
-        
+
     Returns:
         str: The deduplicated string.
     """
-    
+
     lines = s.split("\n")
     deduped = []
-    
+
     for line in lines:
         stripped_line = line.strip()
         if len(stripped_line) > min_length:
@@ -712,33 +748,40 @@ def dedupe_string_old(s: str, min_length: int = 32, similarity_threshold: int = 
                 if similarity >= similarity_threshold:
                     similar_found = True
                     if debug:
-                        log.debug("DEDUPE", similarity=similarity, line=line, existing_line=existing_line)
+                        log.debug(
+                            "DEDUPE",
+                            similarity=similarity,
+                            line=line,
+                            existing_line=existing_line,
+                        )
                     break
             if not similar_found:
                 deduped.append(line)
         else:
             deduped.append(line)  # Allow shorter strings without dupe check
-            
+
     return "\n".join(deduped)
 
-def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False) -> str:
-    
+
+def dedupe_string(
+    s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False
+) -> str:
     """
     Removes duplicate lines from a string going from the bottom up.
-    
+
     Arguments:
         s (str): The input string.
         min_length (int): The minimum length of a line to be checked for duplicates.
         similarity_threshold (int): The similarity threshold to use when comparing lines.
         debug (bool): Whether to log debug messages.
-        
+
     Returns:
         str: The deduplicated string.
     """
-    
+
     lines = s.split("\n")
     deduped = []
-    
+
     for line in reversed(lines):
         stripped_line = line.strip()
         if len(stripped_line) > min_length:
@@ -748,36 +791,42 @@ def dedupe_string(s: str, min_length: int = 32, similarity_threshold: int = 95, 
                 if similarity >= similarity_threshold:
                     similar_found = True
                     if debug:
-                        log.debug("DEDUPE", similarity=similarity, line=line, existing_line=existing_line)
+                        log.debug(
+                            "DEDUPE",
+                            similarity=similarity,
+                            line=line,
+                            existing_line=existing_line,
+                        )
                     break
             if not similar_found:
                 deduped.append(line)
         else:
             deduped.append(line)  # Allow shorter strings without dupe check
-            
+
     return "\n".join(reversed(deduped))
+
 
 def remove_extra_linebreaks(s: str) -> str:
     """
     Removes extra line breaks from a string.
-    
+
     Parameters:
         s (str): The input string.
-        
+
     Returns:
         str: The string with extra line breaks removed.
     """
     return re.sub(r"\n{3,}", "\n\n", s)
 
-def replace_exposition_markers(s:str) -> str:
+
+def replace_exposition_markers(s: str) -> str:
     s = s.replace("(", "*").replace(")", "*")
     s = s.replace("[", "*").replace("]", "*")
-    return s 
+    return s
 
 
-def ensure_dialog_format(line:str, talking_character:str=None) -> str:
-    
-    #if "*" not in line and '"' not in line:
+def ensure_dialog_format(line: str, talking_character: str = None) -> str:
+    # if "*" not in line and '"' not in line:
     #    if talking_character:
     #        line = line[len(talking_character)+1:].lstrip()
     #        return f"{talking_character}: \"{line}\""
@@ -785,7 +834,7 @@ def ensure_dialog_format(line:str, talking_character:str=None) -> str:
     #
 
     if talking_character:
-        line = line[len(talking_character)+1:].lstrip()
+        line = line[len(talking_character) + 1 :].lstrip()
 
     lines = []
 
@@ -793,52 +842,53 @@ def ensure_dialog_format(line:str, talking_character:str=None) -> str:
         try:
             _line = ensure_dialog_line_format(_line)
         except Exception as exc:
-            log.error("ensure_dialog_format", msg="Error ensuring dialog line format", line=_line, exc_info=exc)
+            log.error(
+                "ensure_dialog_format",
+                msg="Error ensuring dialog line format",
+                line=_line,
+                exc_info=exc,
+            )
             pass
-    
+
         lines.append(_line)
-        
+
     if len(lines) > 1:
         line = "\n".join(lines)
     else:
         line = lines[0]
-    
+
     if talking_character:
         line = f"{talking_character}: {line}"
-    
-    return line
-    
 
-def ensure_dialog_line_format(line:str):
-    
+    return line
+
+
+def ensure_dialog_line_format(line: str):
     """
-    a Python function that standardizes the formatting of dialogue and action/thought 
-    descriptions in text strings. This function is intended for use in a text-based 
+    a Python function that standardizes the formatting of dialogue and action/thought
+    descriptions in text strings. This function is intended for use in a text-based
     game where spoken dialogue is encased in double quotes (" ") and actions/thoughts are
     encased in asterisks (* *). The function must correctly format strings, ensuring that
     each spoken sentence and action/thought is properly encased
     """
-        
-    
+
     i = 0
-    
+
     segments = []
     segment = None
     segment_open = None
-    
+
     line = line.strip()
-    
+
     line = line.replace('"*', '"').replace('*"', '"')
-    
+
     for i in range(len(line)):
-        
-        
         c = line[i]
-        
-        #print("segment_open", segment_open)
-        #print("segment", segment)
-        
-        if c in ['"', '*']:
+
+        # print("segment_open", segment_open)
+        # print("segment", segment)
+
+        if c in ['"', "*"]:
             if segment_open == c:
                 # open segment is the same as the current character
                 # closing
@@ -849,15 +899,15 @@ def ensure_dialog_line_format(line:str):
             elif segment_open is not None and segment_open != c:
                 # open segment is not the same as the current character
                 # opening - close the current segment and open a new one
-                
+
                 # if we are at the last character we append the segment
-                if i == len(line)-1 and segment.strip():
+                if i == len(line) - 1 and segment.strip():
                     segment += c
                     segments += [segment.strip()]
                     segment_open = None
                     segment = None
                     continue
-        
+
                 segments += [segment.strip()]
                 segment_open = c
                 segment = c
@@ -871,27 +921,27 @@ def ensure_dialog_line_format(line:str):
                 segment = c
             else:
                 segment += c
-                
+
     if segment is not None:
         if segment.strip().strip("*").strip('"'):
             segments += [segment.strip()]
-        
+
     for i in range(len(segments)):
         segment = segments[i]
-        if segment in ['"', '*']:
+        if segment in ['"', "*"]:
             if i > 0:
-                prev_segment = segments[i-1]
-                if prev_segment and prev_segment[-1] not in ['"', '*']:
-                    segments[i-1] = f"{prev_segment}{segment}"
+                prev_segment = segments[i - 1]
+                if prev_segment and prev_segment[-1] not in ['"', "*"]:
+                    segments[i - 1] = f"{prev_segment}{segment}"
                     segments[i] = ""
                     continue
-    
+
     for i in range(len(segments)):
         segment = segments[i]
-        
+
         if not segment:
             continue
-                
+
         if segment[0] == "*" and segment[-1] != "*":
             segment += "*"
         elif segment[-1] == "*" and segment[0] != "*":
@@ -900,43 +950,42 @@ def ensure_dialog_line_format(line:str):
             segment += '"'
         elif segment[-1] == '"' and segment[0] != '"':
             segment = '"' + segment
-        elif segment[0] in ['"', '*'] and segment[-1] == segment[0]:
+        elif segment[0] in ['"', "*"] and segment[-1] == segment[0]:
             continue
-        
+
         segments[i] = segment
-        
+
     for i in range(len(segments)):
         segment = segments[i]
-        if not segment or segment[0] in ['"', '*']:
+        if not segment or segment[0] in ['"', "*"]:
             continue
-        
-        prev_segment = segments[i-1] if i > 0 else None
-        next_segment = segments[i+1] if i < len(segments)-1 else None
-        
+
+        prev_segment = segments[i - 1] if i > 0 else None
+        next_segment = segments[i + 1] if i < len(segments) - 1 else None
+
         if prev_segment and prev_segment[-1] == '"':
             segments[i] = f"*{segment}*"
-        elif prev_segment and prev_segment[-1] == '*':
-            segments[i] = f"\"{segment}\""
+        elif prev_segment and prev_segment[-1] == "*":
+            segments[i] = f'"{segment}"'
         elif next_segment and next_segment[0] == '"':
             segments[i] = f"*{segment}*"
-        elif next_segment and next_segment[0] == '*':
-            segments[i] = f"\"{segment}\""
-            
+        elif next_segment and next_segment[0] == "*":
+            segments[i] = f'"{segment}"'
+
     for i in range(len(segments)):
         segments[i] = clean_uneven_markers(segments[i], '"')
-        segments[i] = clean_uneven_markers(segments[i], '*')
-            
+        segments[i] = clean_uneven_markers(segments[i], "*")
+
     final = " ".join(segment for segment in segments if segment).strip()
-    final = final.replace('","', '').replace('"."', '')
+    final = final.replace('","', "").replace('"."', "")
     return final
 
 
-def clean_uneven_markers(chunk:str, marker:str):
-    
+def clean_uneven_markers(chunk: str, marker: str):
     # if there is an uneven number of quotes, remove the last one if its
     # at the end of the chunk. If its in the middle, add a quote to the endc
     count = chunk.count(marker)
-    
+
     if count % 2 == 1:
         if chunk.endswith(marker):
             chunk = chunk[:-1]
@@ -946,5 +995,5 @@ def clean_uneven_markers(chunk:str, marker:str):
             chunk = chunk.replace(marker, "")
         else:
             chunk += marker
-    
+
     return chunk

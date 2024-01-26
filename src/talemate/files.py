@@ -1,5 +1,5 @@
-import os
 import fnmatch
+import os
 
 from talemate.config import load_config
 
@@ -27,7 +27,7 @@ def _list_files_and_directories(root: str, path: str) -> list:
     :return: List of files and directories in the given root directory.
     """
     # Define the file patterns to match
-    patterns = ['characters/*.png', 'characters/*.webp', '*/*.json']
+    patterns = ["characters/*.png", "characters/*.webp", "*/*.json"]
 
     items = []
 

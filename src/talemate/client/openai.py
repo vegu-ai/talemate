@@ -16,6 +16,16 @@ __all__ = [
 ]
 log = structlog.get_logger("talemate")
 
+# Edit this to add new models / remove old models
+SUPPORTED_MODELS = [
+    "gpt-3.5-turbo",
+    "gpt-3.5-turbo-16k",
+    "gpt-4",
+    "gpt-4-1106-preview",
+    "gpt-4-0125-preview",
+    "gpt-4-turbo-preview",
+]
+
 
 def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0613"):
     """Return the number of tokens used by a list of messages."""
@@ -88,14 +98,7 @@ class OpenAIClient(ClientBase):
         name_prefix: str = "OpenAI"
         title: str = "OpenAI"
         manual_model: bool = True
-        manual_model_choices: list[str] = [
-            "gpt-3.5-turbo",
-            "gpt-3.5-turbo-16k",
-            "gpt-4",
-            "gpt-4-1106-preview",
-            "gpt-4-0125-preview",
-            "gpt-4-turbo-preview",
-        ]
+        manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
 
@@ -225,7 +228,16 @@ class OpenAIClient(ClientBase):
 
         keys = list(parameters.keys())
 
-        valid_keys = ["temperature", "top_p", "max_tokens"]
+        valid_keys = ["temperature", "top_p"]
+        
+        # GPT-3.5 models tend to run away with the generated
+        # response size so we allow talemate to set the max_tokens
+        #
+        # GPT-4 on the other hand seems to benefit from letting it
+        # decide the generation length naturally and it will generally
+        # produce reasonably sized responses
+        if self.model_name.startswith("gpt-3.5-"):
+            valid_keys.append("max_tokens")
 
         for key in keys:
             if key not in valid_keys:

@@ -138,6 +138,7 @@ class TTSConfig(BaseModel):
 class ChromaDB(BaseModel):
     instructor_device: str = "cpu"
     instructor_model: str = "default"
+    openai_model: str = "text-embedding-3-small"
     embeddings: str = "default"
 
 

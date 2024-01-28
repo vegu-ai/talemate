@@ -26,6 +26,8 @@ class CmdRebuildArchive(TalemateCommand):
             ah for ah in self.scene.archived_history if ah.get("end") is None
         ]
 
+        self.scene.ts = self.scene.archived_history[-1].ts if self.scene.archived_history else "PT0S"
+        
         while True:
             more = await summarizer.agent.build_archive(self.scene)
 

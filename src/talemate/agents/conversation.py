@@ -660,4 +660,4 @@ class ConversationAgent(Agent):
     ):
         if prompt_param.get("extra_stopping_strings") is None:
             prompt_param["extra_stopping_strings"] = []
-        prompt_param["extra_stopping_strings"] += ["["]
+        prompt_param["extra_stopping_strings"] += ["#"]

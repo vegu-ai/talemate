@@ -98,5 +98,8 @@ Final instructions for generating the next line of dialogue: {{ rerun_context.di
 Edit and respond with your changed version of the following line of dialogue: {{ rerun_context.message }}
 Requested changes: {{ rerun_context.direction }}
 {% endif -%}
+{%- endif -%}
+{%- if talking_character.dialogue_instructions -%}
+[Dialogue instructions: {{ talking_character.dialogue_instructions }}]
 {% endif -%}
 {{ bot_token}}{{ talking_character.name }}:{{ partial_message }}

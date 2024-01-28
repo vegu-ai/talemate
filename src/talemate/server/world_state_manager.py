@@ -41,6 +41,11 @@ class CharacterDetailReinforcementPayload(pydantic.BaseModel):
     reset: bool = False
 
 
+class CharacterActorPayload(pydantic.BaseModel):
+    name: str
+    dialogue_instructions: str
+    dialogue_examples: list[str] = pydantic.Field(default_factory=list)
+
 class SaveWorldEntryPayload(pydantic.BaseModel):
     id: str
     text: str
@@ -304,6 +309,27 @@ class WorldStateManagerPlugin:
             {
                 "type": "world_state_manager",
                 "action": "character_detail_reinforcement_deleted",
+                "data": payload.model_dump(),
+            }
+        )
+
+        # resend character details
+        await self.handle_get_character_details({"name": payload.name})
+        await self.signal_operation_done()
+
+    async def handle_update_character_actor(self, data):
+        payload = CharacterActorPayload(**data)
+
+        await self.world_state_manager.update_character_actor(
+            payload.name,
+            payload.dialogue_instructions,
+            payload.dialogue_examples,
+        )
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "character_actor_updated",
                 "data": payload.model_dump(),
             }
         )

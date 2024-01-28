@@ -89,7 +89,7 @@
                                                     <v-icon size="small">mdi-image-auto-adjust</v-icon>
                                                     States
                                                 </v-tab>
-                                                <v-tab value="actor_instructions">
+                                                <v-tab value="actor">
                                                     <v-icon size="small">mdi-bullhorn</v-icon>
                                                     Actor
                                                 </v-tab>
@@ -436,6 +436,12 @@
                                                         </v-col>
                                                     </v-row>
                                                 </div>
+
+                                                <!-- CHARACTER ACTOR -->
+
+                                                <div v-else-if="selectedCharacterPage === 'actor'">
+                                                    <WorldStateManagerCharacterActor ref="actor" :character="characterDetails" />
+                                                </div>
                                             </v-card-text>
                                         </v-card>
 
@@ -775,12 +781,14 @@
 <script>
 import WorldStateManagerTemplates from './WorldStateManagerTemplates.vue';
 import WorldStateManagerWorld from './WorldStateManagerWorld.vue';
+import WorldStateManagerCharacterActor from './WorldStateManagerCharacterActor.vue';
 
 export default {
     name: 'WorldStateManager',
     components: {
         WorldStateManagerTemplates,
         WorldStateManagerWorld,
+        WorldStateManagerCharacterActor,
     },
     computed: {
         characterStateReinforcementsList() {

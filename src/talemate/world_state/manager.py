@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Union
 
 import pydantic
 import structlog
@@ -29,6 +29,10 @@ class ContextDB(pydantic.BaseModel):
     entries: list[ContextDBEntry] = []
 
 
+class CharacterActor(pydantic.BaseModel):
+    dialogue_examples: list[str] = pydantic.Field(default_factory=list)
+    dialogue_instructions: Union[str, None] = None
+
 class CharacterDetails(pydantic.BaseModel):
     name: str
     active: bool = True
@@ -37,6 +41,7 @@ class CharacterDetails(pydantic.BaseModel):
     base_attributes: dict[str, str] = {}
     details: dict[str, str] = {}
     reinforcements: dict[str, Reinforcement] = {}
+    actor: CharacterActor = pydantic.Field(default_factory=CharacterActor)
 
 
 class World(pydantic.BaseModel):
@@ -130,6 +135,10 @@ class WorldStateManager:
             active=True,
             description=character.description,
             is_player=character.is_player,
+            actor=CharacterActor(
+                dialogue_examples=character.example_dialogue,
+                dialogue_instructions=character.dialogue_instructions,
+            ),
         )
 
         for key, value in character.base_attributes.items():
@@ -262,6 +271,21 @@ class WorldStateManager:
         """
         character = self.scene.get_character(character_name)
         await character.set_description(description)
+
+
+    async def update_character_actor(self, character_name: str, dialogue_instructions:str=None, example_dialogue:list[str]=None):
+        """
+        Sets the actor for a character.
+
+        Arguments:
+            character_name: The name of the character whose actor is to be set.
+            dialogue_instructions: The dialogue instructions for the character.
+            example_dialogue: A list of example dialogue for the character.
+        """
+        log.debug("update_character_actor", character_name=character_name, dialogue_instructions=dialogue_instructions, example_dialogue=example_dialogue)
+        character = self.scene.get_character(character_name)
+        character.dialogue_instructions = dialogue_instructions
+        #character.example_dialogue  = example_dialogue
 
     async def add_detail_reinforcement(
         self,

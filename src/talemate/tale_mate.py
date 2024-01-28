@@ -3,10 +3,10 @@ import json
 import os
 import random
 import re
-import time
 import traceback
 import uuid
-from typing import Dict, List, Optional, Union
+import pydantic
+from typing import Dict, List, Union, Generator
 
 import isodate
 import structlog
@@ -98,6 +98,7 @@ class Character:
         self.base_attributes = base_attributes or {}
         self.details = details or {}
         self.cover_image = kwargs.get("cover_image")
+        self.dialogue_instructions = kwargs.get("dialogue_instructions")
 
     @property
     def persona(self):
@@ -117,6 +118,7 @@ class Character:
             "history_events": self.history_events,
             "is_player": self.is_player,
             "cover_image": self.cover_image,
+            "dialogue_instructions": self.dialogue_instructions,
         }
 
     @property
@@ -1154,10 +1156,10 @@ class Scene(Emitter):
             if not isinstance(actor, Player):
                 yield actor.character
 
-    def num_npc_characters(self):
+    def num_npc_characters(self) -> int:
         return len(list(self.get_npc_characters()))
 
-    def get_characters(self):
+    def get_characters(self) -> Generator[Character, None, None]:
         """
         Returns a list of all characters in the scene
         """

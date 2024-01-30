@@ -90,6 +90,7 @@ There is also a [troubleshooting guide](docs/troubleshoot.md) that might help.
 ### Linux
 
 `python 3.10` or `python 3.11` is required. :warning: `python 3.12` not supported yet. 
+
 `nodejs v19 or v20` :warning: `v21` not supported yet.
 
 1. `git clone git@github.com:vegu-ai/talemate`

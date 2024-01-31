@@ -118,7 +118,7 @@ class ClientBase:
         if "api_url" in kwargs:
             self.api_url = kwargs["api_url"]
 
-        if "max_token_length" in kwargs:
+        if kwargs.get("max_token_length"):
             self.max_token_length = kwargs["max_token_length"]
 
         if "enabled" in kwargs:

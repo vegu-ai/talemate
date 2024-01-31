@@ -6,13 +6,14 @@
             <span class="headline">{{ title() }}</span>
         </v-card-title>
         <v-card-text>
+          <v-form ref="form" v-model="formIsValid">
             <v-container>
               <v-row>
                   <v-col cols="6">
                     <v-select v-model="client.type" :disabled="!typeEditable()" :items="clientChoices" label="Client Type" @update:model-value="resetToDefaults"></v-select>
                   </v-col>
                   <v-col cols="6">
-                    <v-text-field v-model="client.name" label="Client Name"></v-text-field>
+                    <v-text-field v-model="client.name" label="Client Name" :rules="[rules.required]"></v-text-field>
                   </v-col> 
               </v-row>
               <v-row v-if="clientMeta().experimental">
@@ -24,7 +25,7 @@
                 <v-col cols="12">
                   <v-row>
                     <v-col :cols="clientMeta().enable_api_auth ? 7 : 12">
-                      <v-text-field v-model="client.api_url" v-if="requiresAPIUrl(client)" label="API URL"></v-text-field>
+                      <v-text-field v-model="client.api_url" v-if="requiresAPIUrl(client)"  :rules="[rules.required]" label="API URL"></v-text-field>
                     </v-col>
                     <v-col cols="5">
                       <v-text-field type="password" v-model="client.api_key" v-if="requiresAPIUrl(client) && clientMeta().enable_api_auth" label="API Key"></v-text-field>
@@ -36,7 +37,7 @@
               </v-row>  
               <v-row>
                 <v-col cols="4">
-                  <v-text-field v-model="client.max_token_length" v-if="requiresAPIUrl(client)" type="number" label="Context Length"></v-text-field> 
+                  <v-text-field v-model="client.max_token_length" v-if="requiresAPIUrl(client)" type="number" label="Context Length" :rules="[rules.required]"></v-text-field> 
                 </v-col>
                 <v-col cols="8" v-if="!typeEditable() && client.data && client.data.prompt_template_example !== null && client.model_name && clientMeta().requires_prompt_template">
                   <v-combobox ref="promptTemplateComboBox" label="Prompt Template" v-model="client.data.template_file" @update:model-value="setPromptTemplate" :items="promptTemplates"></v-combobox>
@@ -54,11 +55,12 @@
                 </v-col>
               </v-row>
             </v-container>
+          </v-form>
         </v-card-text>
         <v-card-actions>
             <v-spacer></v-spacer>
             <v-btn color="primary" text @click="close" prepend-icon="mdi-cancel">Cancel</v-btn>
-            <v-btn color="primary" text @click="save" prepend-icon="mdi-check-circle-outline">Save</v-btn>
+            <v-btn color="primary" text @click="save" prepend-icon="mdi-check-circle-outline" :disabled="!formIsValid">Save</v-btn>
         </v-card-actions>
         </v-card>
     </v-dialog>
@@ -77,12 +79,19 @@ export default {
   ],
   data() {
     return {
+      formIsValid: false,
       promptTemplates: [],
       clientTypes: [],
       clientChoices: [],
       localDialog: this.state.dialog,
       client: { ...this.state.currentClient },
-      defaultValuesByCLientType: {}
+      defaultValuesByCLientType: {},
+      rules: {
+        required: value => !!value || 'Field is required.',
+      },
+      rulesMaxTokenLength: [
+        v => !!v || 'Context length is required',
+      ],
     };
   },
   watch: {

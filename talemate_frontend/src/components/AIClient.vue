@@ -84,6 +84,7 @@ export default {
     return {
       saveDelayTimeout: null,
       clientStatusCheck: null,
+      clientDeleted: false,
       state: {
         clients: [],
         dialog: false,
@@ -191,6 +192,7 @@ export default {
       if (window.confirm('Are you sure you want to delete this client?')) {
         this.state.clients.splice(index, 1);
         this.$emit('clients-updated', this.state.clients);
+        this.clientDeleted = true;
       }
     },
     assignClientToAllAgents(index) {
@@ -212,6 +214,15 @@ export default {
 
       // Handle client_status message type
       if (data.type === 'client_status') {
+
+        if(this.clientDeleted) {
+          
+          // If we have just deleted a client, we need to wait for the next client_status message
+
+          this.clientDeleted = false;
+          return;
+        }
+
         // Find the client with the given name
         const client = this.state.clients.find(client => client.name === data.name);
 

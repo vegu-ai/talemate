@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field
 
 from talemate.emit import emit
 from talemate.scene_assets import Asset
+from talemate.agents.registry import get_agent_class
+from talemate.client.registry import get_client_class
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -280,3 +282,46 @@ def save_config(config, file_path: str = "./config.yaml"):
         yaml.dump(config, file)
 
     emit("config_saved", data=config)
+
+
+def cleanup():
+    
+    log.info("cleaning up config")
+    
+    config = load_config(as_model=True)
+    
+    cleanup_removed_clients(config)
+    cleanup_removed_agents(config)
+    
+    save_config(config)
+
+def cleanup_removed_clients(config: Config):
+    
+    """
+    Will remove any clients that are no longer present
+    """
+    
+    if not config:
+        return
+    
+    for client_in_config in list(config.clients.keys()):
+        client_config = config.clients[client_in_config]
+        if not get_client_class(client_config.type):
+            log.info("removing client from config", client=client_in_config)
+            del config.clients[client_in_config]    
+
+def cleanup_removed_agents(config: Config):
+    
+    """
+    Will remove any agents that are no longer present
+    """
+    
+    
+    if not config:
+        return
+    
+    for agent_in_config in list(config.agents.keys()):
+        if not get_agent_class(agent_in_config):
+            log.info("removing agent from config", agent=agent_in_config)
+            del config.agents[agent_in_config]
+            

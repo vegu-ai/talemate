@@ -226,7 +226,7 @@
                 <span class="headline">Configuration</span>
             </v-card-title>
             <v-card-text>
-                <v-progress-circular indeterminate color="primary" size="20"></v-progress-circular>
+                <v-progress-circular indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular>
             </v-card-text>
         </v-card>
     </v-dialog>

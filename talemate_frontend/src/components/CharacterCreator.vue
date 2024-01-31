@@ -75,7 +75,7 @@
 
                         </v-card-text>
                         <v-card-actions>
-                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate color="primary"></v-progress-circular>          
+                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate="disable-shrink" color="primary"></v-progress-circular>          
                             <v-btn color="primary" @click="submitStep(2)" :disabled="generating" prepend-icon="mdi-memory">Generate</v-btn>
                             <v-btn color="primary" @click="resetStep(2)" :disabled="generating" prepend-icon="mdi-restart">Reset</v-btn>
                         </v-card-actions>
@@ -88,7 +88,7 @@
                             <v-textarea rows="10" auto-grow v-model="description"></v-textarea>
                         </v-card-text>
                         <v-card-actions>
-                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate
+                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate="disable-shrink"
                     color="primary"></v-progress-circular>          
                             <v-btn color="primary" @click="submitStep(3)" :disabled="generating" prepend-icon="mdi-memory">Generate</v-btn>
                         </v-card-actions>
@@ -121,7 +121,7 @@
 
                         </v-card-text>
                         <v-card-actions>
-                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate
+                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate="disable-shrink"
                     color="primary"></v-progress-circular>          
                             <v-btn color="primary" @click="submitStep(4)" :disabled="generating" prepend-icon="mdi-memory">Generate</v-btn>
                         </v-card-actions>
@@ -144,7 +144,7 @@
                             </v-list>
                         </v-card-text>
                         <v-card-actions>
-                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate color="primary"></v-progress-circular>          
+                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate="disable-shrink" color="primary"></v-progress-circular>          
                             <v-btn color="primary" @click="submitStep(5)" :disabled="generating" prepend-icon="mdi-memory">Generate</v-btn>
                         </v-card-actions>
                     </v-card>
@@ -158,7 +158,7 @@
                             </v-alert>
                         </v-card-text>
                         <v-card-actions>
-                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate color="primary"></v-progress-circular>          
+                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate="disable-shrink" color="primary"></v-progress-circular>          
                             <v-btn color="primary" @click="submitStep(6)" :disabled="generating">Add to world</v-btn>
                         </v-card-actions>
                     </v-card>

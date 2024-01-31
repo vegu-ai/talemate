@@ -3,7 +3,7 @@
         <v-list v-for="(agent, index) in state.agents" :key="index">
             <v-list-item @click="editAgent(index)">
                 <v-list-item-title>
-                    <v-progress-circular v-if="agent.status === 'busy'" indeterminate color="primary"
+                    <v-progress-circular v-if="agent.status === 'busy'" indeterminate="disable-shrink" color="primary"
                         size="14"></v-progress-circular>
                     <v-icon v-else-if="agent.status === 'uninitialized'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>
                     <v-icon v-else-if="agent.status === 'disabled'" color="grey-darken-2" size="14">mdi-checkbox-blank-circle</v-icon>

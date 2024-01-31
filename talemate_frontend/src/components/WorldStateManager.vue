@@ -3,7 +3,7 @@
         <v-overlay contained v-model="isBusy"></v-overlay>
         <v-card>
             <v-card-title><v-icon class="mr-1">mdi-earth</v-icon>World State Manager
-                <v-progress-circular v-if="isBusy" indeterminate color="primary" size="11"></v-progress-circular>
+                <v-progress-circular v-if="isBusy" indeterminate="disable-shrink" color="primary" size="11"></v-progress-circular>
             </v-card-title>
             <v-tabs color="primary" v-model="tab">
                 <v-tab value="characters">
@@ -309,7 +309,7 @@
                                                                         <v-list-item-title>
                                                                             Templates
                                                                             <v-progress-circular class="ml-1 mr-3" size="14"
-                                                                                indeterminate color="primary"
+                                                                                indeterminate="disable-shrink" color="primary"
                                                                                 v-if="characterStateTemplateBusy"></v-progress-circular>
                                                                         </v-list-item-title>
                                                                     </v-list-item>

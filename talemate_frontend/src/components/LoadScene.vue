@@ -1,11 +1,11 @@
 <template>
     <v-list-subheader v-if="appConfig !== null" @click="toggle()" class="text-uppercase"><v-icon>mdi-script-text-outline</v-icon> Load
-        <v-progress-circular v-if="loading" indeterminate color="primary" size="20"></v-progress-circular>
+        <v-progress-circular v-if="loading" indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular>
         <v-icon v-if="expanded" icon="mdi-chevron-down"></v-icon>
         <v-icon v-else icon="mdi-chevron-up"></v-icon>
     </v-list-subheader>
     <v-list-subheader class="text-uppercase" v-else>
-        <v-progress-circular indeterminate color="primary" size="20"></v-progress-circular> Waiting for config...
+        <v-progress-circular indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular> Waiting for config...
     </v-list-subheader>
     <div v-if="!loading && isConnected() && expanded && !configurationRequired() && appConfig !== null">
         <v-list-item>

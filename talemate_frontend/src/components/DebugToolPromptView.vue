@@ -50,7 +50,7 @@
                     <v-col :cols="details ? 5 : 6">
                         <v-card elevation="10" color="grey-darken-3">
                             <v-card-title>Response
-                                <v-progress-circular class="ml-1 mr-3" size="20" v-if="busy" indeterminate
+                                <v-progress-circular class="ml-1 mr-3" size="20" v-if="busy" indeterminate="disable-shrink"
                                 color="primary"></v-progress-circular>    
                             </v-card-title>
                             <v-card-text style="max-height:600px; overflow-y:auto;" :class="busy ? 'text-grey' : 'text-white'">

@@ -5,7 +5,7 @@
 
         <v-divider v-if="index !== 0" class="mb-3"></v-divider>
         <v-list-item-title>
-          <v-progress-circular v-if="client.status === 'busy'" indeterminate color="primary"
+          <v-progress-circular v-if="client.status === 'busy'" indeterminate="disable-shrink" color="primary"
             size="14"></v-progress-circular>
           
           <v-icon v-else-if="client.status == 'warning'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>

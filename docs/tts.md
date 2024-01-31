@@ -17,21 +17,6 @@ elevenlabs:
   api_key: <YOUR_ELEVENLABS_API_KEY>
 ```
 
-## Configuring Coqui TTS
-
-To use Coqui TTS with Talemate, follow these steps:
-
-1. Visit [Coqui](https://app.coqui.ai) and sign up for an account.
-2. Go to the [account page](https://app.coqui.ai/account) and scroll to the bottom to find your API key.
-3. In the `config.yaml` file, under the `coqui` section, set the `api_key` field with your Coqui API key.
-
-Example configuration snippet:
-
-```yaml
-coqui:
-  api_key: <YOUR_COQUI_API_KEY>
-```
-
 ## Configuring Local TTS API
 
 For running a local TTS API, Talemate requires specific dependencies to be installed.

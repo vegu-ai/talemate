@@ -7,12 +7,11 @@ from talemate.client.registry import register
 
 class Defaults(pydantic.BaseModel):
     api_url: str = "http://localhost:1234"
-
+    max_token_length: int = 4096
 
 @register()
 class LMStudioClient(ClientBase):
     client_type = "lmstudio"
-    conversation_retries = 5
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "LMStudio"

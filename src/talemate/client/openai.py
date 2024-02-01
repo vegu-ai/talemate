@@ -93,6 +93,8 @@ class OpenAIClient(ClientBase):
     client_type = "openai"
     conversation_retries = 0
     auto_break_repetition_enabled = False
+    # TODO: make this configurable?
+    decensor_enabled = False
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "OpenAI"
@@ -265,8 +267,8 @@ class OpenAIClient(ClientBase):
         human_message = {"role": "user", "content": prompt.strip()}
         system_message = {"role": "system", "content": self.get_system_message(kind)}
 
-        self.log.debug("generate", prompt=prompt[:128] + " ...", parameters=parameters)
-
+        self.log.debug("generate", prompt=prompt[:128] + " ...", parameters=parameters, system_message=system_message)
+        
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,

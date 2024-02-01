@@ -6,7 +6,7 @@
                 <v-tab value="instructions" class="text-caption">
                     Dialogue Instructions
                 </v-tab>
-                <v-tab value="examples" class="text-caption" disabled>
+                <v-tab value="examples" class="text-caption">
                     Dialogue Examples
                 </v-tab>
             </v-tabs>
@@ -38,6 +38,19 @@
             </div>
 
             <div v-else-if="tab == 'examples'">
+                <v-text-field v-model="dialogueExample" label="Add Dialogue Example" @keyup.enter="dialogueExamples.push(dialogueExample); dialogueExample = ''; queueUpdateCharacterActor();" dense></v-text-field>
+                <v-list density="compact" nav>
+                    <v-list-item v-for="(example, index) in dialogueExamplesWithNameStripped" :key="index">
+                        <template v-slot:prepend>
+                            <v-btn  color="red-darken-2" rounded="sm" size="x-small" icon variant="text" @click="dialogueExamples.splice(index, 1); queueUpdateCharacterActor()">
+                                <v-icon>mdi-close-box-outline</v-icon>
+                            </v-btn>
+                        </template>
+                        <div class="text-caption text-grey">
+                            {{ example }}
+                        </div>
+                    </v-list-item>
+                </v-list>
             </div>
 
         </v-col>
@@ -51,9 +64,18 @@ export default {
     data() {
         return {
             tab: "instructions",
+            dialogueExamples: [],
+            dialogueExample: "",
             dialogueInstructions: null,
             dialogueInstructionsDirty: false,
             updateCharacterActorTimeout: null,
+        }
+    },
+    computed: {
+        dialogueExamplesWithNameStripped() {
+            return this.dialogueExamples.map((example) => {
+                return example.replace(this.character.name + ': ', '');
+            });
         }
     },
     props: {
@@ -76,7 +98,7 @@ export default {
                 action: "update_character_actor",
                 name: this.character.name,
                 dialogue_instructions: this.dialogueInstructions,
-                dialogue_examples: this.character.example_dialogue,
+                dialogue_examples: this.dialogueExamples,
             }));
         },
         
@@ -92,7 +114,9 @@ export default {
         this.registerMessageHandler(this.handleMessage);
     },
     mounted() {
+        console.log("MOUNTED", this.character)
         this.dialogueInstructions = this.character.actor.dialogue_instructions;
+        this.dialogueExamples = this.character.actor.dialogue_examples;
     },
 }
 

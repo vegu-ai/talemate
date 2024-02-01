@@ -285,7 +285,15 @@ class WorldStateManager:
         log.debug("update_character_actor", character_name=character_name, dialogue_instructions=dialogue_instructions, example_dialogue=example_dialogue)
         character = self.scene.get_character(character_name)
         character.dialogue_instructions = dialogue_instructions
-        #character.example_dialogue  = example_dialogue
+        
+        # make sure every example dialogue starts with {character_name}:
+        
+        if example_dialogue:
+            for idx, example in enumerate(example_dialogue):
+                if not example.startswith(f"{character_name}:"):
+                    example_dialogue[idx] = f"{character_name}: {example}"
+        
+        character.example_dialogue = example_dialogue
 
     async def add_detail_reinforcement(
         self,

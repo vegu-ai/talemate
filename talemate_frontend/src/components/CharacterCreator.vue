@@ -105,7 +105,7 @@
                             <v-list>
                                 <v-list-item v-for="(question, index) in detail_questions" :key="index">
                                     <div>
-                                        <v-icon color="red" @click="detail_questions.splice(index, 1)">mdi-delete</v-icon>
+                                        <v-icon color="red-darken-1" @click="detail_questions.splice(index, 1)">mdi-close-box-outline</v-icon>
                                         {{ question }}
                                     </div>
                                 </v-list-item>
@@ -136,7 +136,7 @@
                             <v-list>
                                     <v-list-item v-for="(example, index) in dialogue_examples" :key="index">
                                         <div>
-                                            <v-icon color="red" @click="dialogue_examples.splice(index, 1)">mdi-delete</v-icon>
+                                            <v-icon color="red-darken-1" @click="dialogue_examples.splice(index, 1)">mdi-close-box-outline</v-icon>
                                             {{ example }}
                                         </div>
                                     </v-list-item>
@@ -169,7 +169,7 @@
         </v-window>
     </v-dialog> 
 
-    <v-snackbar v-model="notification" color="red" :timeout="3000">
+    <v-snackbar v-model="notification" color="red-darken-1" :timeout="3000">
         {{ notification_text }}
     </v-snackbar>
 </template>

@@ -87,12 +87,12 @@
                             </v-card-text>
                             <v-card-actions>
                                 <span v-if="deleteConfirm===false">
-                                    <v-btn rounded="sm" prepend-icon="mdi-delete" color="error" variant="text" @click.stop="deleteConfirm=true" >
+                                    <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" color="error" variant="text" @click.stop="deleteConfirm=true" >
                                         Remove entry
                                     </v-btn>
                                 </span>
                                 <span v-else>
-                                    <v-btn rounded="sm" prepend-icon="mdi-delete" @click.stop="removeEntry"  color="error" variant="text">
+                                    <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" @click.stop="removeEntry"  color="error" variant="text">
                                         Confirm removal
                                     </v-btn>
                                     <v-btn class="ml-1" rounded="sm" prepend-icon="mdi-cancel" @click.stop="deleteConfirm=false" color="info" variant="text">
@@ -203,12 +203,12 @@
                                 </v-card-text>
                                 <v-card-actions>
                                     <span v-if="deleteConfirm===false">
-                                        <v-btn rounded="sm" prepend-icon="mdi-delete" color="error" variant="text" @click.stop="deleteConfirm=true" >
+                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" color="error" variant="text" @click.stop="deleteConfirm=true" >
                                             Remove state
                                         </v-btn>
                                     </span>
                                     <span v-else>
-                                        <v-btn rounded="sm" prepend-icon="mdi-delete" @click.stop="removeState"  color="error" variant="text">
+                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" @click.stop="removeState"  color="error" variant="text">
                                             Confirm removal
                                         </v-btn>
                                         <v-btn class="ml-1" rounded="sm" prepend-icon="mdi-cancel" @click.stop="deleteConfirm=false" color="info" variant="text">

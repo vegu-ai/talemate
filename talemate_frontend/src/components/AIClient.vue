@@ -9,7 +9,7 @@
             size="14"></v-progress-circular>
           
           <v-icon v-else-if="client.status == 'warning'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>
-          <v-icon v-else-if="client.status == 'error'" color="red" size="14">mdi-checkbox-blank-circle</v-icon>
+          <v-icon v-else-if="client.status == 'error'" color="red-darken-1" size="14">mdi-checkbox-blank-circle</v-icon>
           <v-icon v-else-if="client.status == 'disabled'" color="grey-darken-2" size="14">mdi-checkbox-blank-circle</v-icon>
           <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
           {{ client.name }}          

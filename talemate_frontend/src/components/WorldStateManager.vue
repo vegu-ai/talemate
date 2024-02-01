@@ -153,13 +153,13 @@
                                                             <v-row v-if="selectedCharacterAttribute !== null">
                                                                 <v-col cols="12">
                                                                     <v-btn v-if="removeCharacterAttributeConfirm === false"
-                                                                        rounded="sm" prepend-icon="mdi-delete" color="error"
+                                                                        rounded="sm" prepend-icon="mdi-close-box-outline" color="error"
                                                                         variant="text"
                                                                         @click.stop="removeCharacterAttributeConfirm = true">
                                                                         Remove attribute
                                                                     </v-btn>
                                                                     <div v-else>
-                                                                        <v-btn rounded="sm" prepend-icon="mdi-delete"
+                                                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
                                                                             @click.stop="deleteCharacterAttribute(selectedCharacterAttribute)"
                                                                             color="error" variant="text">
                                                                             Confirm removal
@@ -228,13 +228,13 @@
                                                             <v-row v-if="selectedCharacterDetail">
                                                                 <v-col cols="6">
                                                                     <v-btn v-if="removeCharacterDetailConfirm === false"
-                                                                        rounded="sm" prepend-icon="mdi-delete" color="error"
+                                                                        rounded="sm" prepend-icon="mdi-close-box-outline" color="error"
                                                                         variant="text"
                                                                         @click.stop="removeCharacterDetailConfirm = true">
                                                                         Remove detail
                                                                     </v-btn>
                                                                     <div v-else>
-                                                                        <v-btn rounded="sm" prepend-icon="mdi-delete"
+                                                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
                                                                             @click.stop="deleteCharacterDetail(selectedCharacterDetail)"
                                                                             color="error" variant="text">
                                                                             Confirm removal
@@ -385,14 +385,14 @@
                                                                     <v-col cols="6">
                                                                         <div
                                                                             v-if="removeCharacterStateReinforcerConfirm === false">
-                                                                            <v-btn rounded="sm" prepend-icon="mdi-delete"
+                                                                            <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
                                                                                 color="error" variant="text"
                                                                                 @click.stop="removeCharacterStateReinforcerConfirm = true">
                                                                                 Remove state
                                                                             </v-btn>
                                                                         </div>
                                                                         <div v-else>
-                                                                            <v-btn rounded="sm" prepend-icon="mdi-delete"
+                                                                            <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
                                                                                 @click.stop="deleteCharacterStateReinforcement(selectedCharacterStateReinforcer)"
                                                                                 color="error" variant="text">
                                                                                 Confirm removal
@@ -602,9 +602,9 @@
                                                 <v-tooltip text="Delete entry">
                                                     <template v-slot:activator="{ props }">
                                                         <v-btn icon size="x-small" v-bind="props" rounded="sm"
-                                                            variant="text" color="red"
+                                                            variant="text" color="red-darken-1"
                                                             @click.stop="deleteContextDBEntry(entry.id)">
-                                                            <v-icon>mdi-delete</v-icon>
+                                                            <v-icon>mdi-close-box-outline</v-icon>
                                                         </v-btn>
                                                     </template>
                                                 </v-tooltip>
@@ -692,12 +692,12 @@
                                                 </v-alert>
                                                 <v-card-actions>
                                                     <v-btn v-if="removePinConfirm === false" rounded="sm"
-                                                        prepend-icon="mdi-delete" color="error" variant="text"
+                                                        prepend-icon="mdi-close-box-outline" color="error" variant="text"
                                                         @click.stop="removePinConfirm = true">
                                                         Remove Pin
                                                     </v-btn>
                                                     <span v-else>
-                                                        <v-btn rounded="sm" prepend-icon="mdi-delete"
+                                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
                                                             @click.stop="removePin(selectedPin.pin.entry_id)" color="error"
                                                             variant="text">
                                                             Confirm removal

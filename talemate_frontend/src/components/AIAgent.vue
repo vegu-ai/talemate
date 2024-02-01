@@ -7,7 +7,7 @@
                         size="14"></v-progress-circular>
                     <v-icon v-else-if="agent.status === 'uninitialized'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>
                     <v-icon v-else-if="agent.status === 'disabled'" color="grey-darken-2" size="14">mdi-checkbox-blank-circle</v-icon>
-                    <v-icon v-else-if="agent.status === 'error'" color="red" size="14">mdi-checkbox-blank-circle</v-icon>
+                    <v-icon v-else-if="agent.status === 'error'" color="red-darken-1" size="14">mdi-checkbox-blank-circle</v-icon>
                     <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
 
                     <span class="ml-1" v-if="agent.label"> {{ agent.label }}</span>

@@ -107,7 +107,7 @@
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="configurationRequired()"
-        color="red"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
+        color="red-darken-1"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="toggleNavigation('settings')"
         v-else><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
 
@@ -156,7 +156,7 @@
     </v-main>
 
     <AppConfig ref="appConfig" />
-    <v-snackbar v-model="errorNotification" color="red" :timeout="3000">
+    <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
     <StatusNotification />

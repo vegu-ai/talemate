@@ -22,6 +22,8 @@ from talemate.emit import emit
 # Set up logging level for httpx to WARNING to suppress debug logs.
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
+log = structlog.get_logger("client.base")
+
 REMOTE_SERVICES = [
     # TODO: runpod.py should add this to the list
     ".runpod.net"
@@ -54,7 +56,7 @@ class ClientBase:
     connected: bool = False
     conversation_retries: int = 2
     auto_break_repetition_enabled: bool = True
-
+    decensor_enabled: bool = True
     client_type = "base"
 
     class Meta(pydantic.BaseModel):
@@ -151,33 +153,60 @@ class ClientBase:
         - kind: the kind of generation
         """
 
-        # TODO: make extensible
-
-        if "narrate" in kind:
-            return system_prompts.NARRATOR
-        if "story" in kind:
-            return system_prompts.NARRATOR
-        if "director" in kind:
-            return system_prompts.DIRECTOR
-        if "create" in kind:
-            return system_prompts.CREATOR
-        if "roleplay" in kind:
-            return system_prompts.ROLEPLAY
-        if "conversation" in kind:
-            return system_prompts.ROLEPLAY
-        if "editor" in kind:
-            return system_prompts.EDITOR
-        if "world_state" in kind:
-            return system_prompts.WORLD_STATE
-        if "analyze_freeform" in kind:
-            return system_prompts.ANALYST_FREEFORM
-        if "analyst" in kind:
-            return system_prompts.ANALYST
-        if "analyze" in kind:
-            return system_prompts.ANALYST
-        if "summarize" in kind:
-            return system_prompts.SUMMARIZE
-
+        if self.decensor_enabled:
+            
+            if "narrate" in kind:
+                return system_prompts.NARRATOR
+            if "story" in kind:
+                return system_prompts.NARRATOR
+            if "director" in kind:
+                return system_prompts.DIRECTOR
+            if "create" in kind:
+                return system_prompts.CREATOR
+            if "roleplay" in kind:
+                return system_prompts.ROLEPLAY
+            if "conversation" in kind:
+                return system_prompts.ROLEPLAY
+            if "editor" in kind:
+                return system_prompts.EDITOR
+            if "world_state" in kind:
+                return system_prompts.WORLD_STATE
+            if "analyze_freeform" in kind:
+                return system_prompts.ANALYST_FREEFORM
+            if "analyst" in kind:
+                return system_prompts.ANALYST
+            if "analyze" in kind:
+                return system_prompts.ANALYST
+            if "summarize" in kind:
+                return system_prompts.SUMMARIZE
+            
+        else:
+            
+            if "narrate" in kind:
+                return system_prompts.NARRATOR_NO_DECENSOR
+            if "story" in kind:
+                return system_prompts.NARRATOR_NO_DECENSOR
+            if "director" in kind:
+                return system_prompts.DIRECTOR_NO_DECENSOR
+            if "create" in kind:
+                return system_prompts.CREATOR_NO_DECENSOR
+            if "roleplay" in kind:
+                return system_prompts.ROLEPLAY_NO_DECENSOR
+            if "conversation" in kind:
+                return system_prompts.ROLEPLAY_NO_DECENSOR
+            if "editor" in kind:
+                return system_prompts.EDITOR_NO_DECENSOR
+            if "world_state" in kind:
+                return system_prompts.WORLD_STATE_NO_DECENSOR
+            if "analyze_freeform" in kind:
+                return system_prompts.ANALYST_FREEFORM_NO_DECENSOR
+            if "analyst" in kind:
+                return system_prompts.ANALYST_NO_DECENSOR
+            if "analyze" in kind:
+                return system_prompts.ANALYST_NO_DECENSOR
+            if "summarize" in kind:
+                return system_prompts.SUMMARIZE_NO_DECENSOR
+            
         return system_prompts.BASIC
 
     def emit_status(self, processing: bool = None):

@@ -141,11 +141,15 @@ class WorldStateManager:
             ),
         )
 
-        for key, value in character.base_attributes.items():
-            details.base_attributes[key] = value
+        # sorted base attributes
+        for key in sorted(character.base_attributes.keys()):
+            if key.startswith("_"):
+                continue
+            details.base_attributes[key] = character.base_attributes[key]
 
-        for key, value in character.details.items():
-            details.details[key] = value
+        # sorted details
+        for key in sorted(character.details.keys()):
+            details.details[key] = character.details[key]
 
         details.reinforcements = self.world_state.reinforcements_for_character(
             character_name

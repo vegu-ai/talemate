@@ -11,10 +11,11 @@ from talemate.prompts import Prompt
 
 from .character import CharacterCreatorMixin
 from .scenario import ScenarioCreatorMixin
+from .assistant import AssistantMixin
 
 
 @register()
-class CreatorAgent(CharacterCreatorMixin, ScenarioCreatorMixin, Agent):
+class CreatorAgent(CharacterCreatorMixin, ScenarioCreatorMixin, AssistantMixin, Agent):
 
     """
     Creates characters and scenarios and other fun stuff!

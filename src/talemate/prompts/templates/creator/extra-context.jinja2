@@ -1,0 +1,29 @@
+Scenario Premise:
+{{ scene.description }}
+
+Content Context: This is a specific scene from {{ scene.context }}
+
+{% block rendered_context_static %}
+{# GENERAL REINFORCEMENTS #}
+{% set general_reinforcements = scene.world_state.filter_reinforcements(insert=['all-context']) %}
+{%- for reinforce in general_reinforcements %}
+{{ reinforce.as_context_line|condensed }}
+
+{% endfor %}
+{# END GENERAL REINFORCEMENTS #}
+{# ACTIVE PINS #}
+{%- for pin in scene.active_pins %}
+{{ pin.time_aware_text|condensed }}
+
+{% endfor %}
+{# END ACTIVE PINS #}
+{% endblock %}
+
+{# MEMORY #}
+{%- if memory_query %}
+{%- for memory in query_memory(memory_query, as_question_answer=False, max_tokens=max_tokens-500-count_tokens(self.rendered_context_static()), iterate=10) -%}
+{{ memory|condensed }}
+
+{% endfor -%}
+{% endif -%}
+{# END MEMORY #}

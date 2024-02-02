@@ -143,12 +143,28 @@
                                                         </v-col>
                                                         <v-col cols="8">
                                                             <div v-if="selectedCharacterAttribute !== null">
+
+                                                                <ContextualGenerate 
+                                                                    :context="'character attribute:'+selectedCharacterAttribute" 
+
+                                                                    :original="characterDetails.base_attributes[selectedCharacterAttribute]"
+
+                                                                    :character="characterDetails.name"
+
+                                                                    @generate="content => setAndUpdateCharacterAttribute(selectedCharacterAttribute, content)"
+                                                                />
+
                                                                 <v-textarea ref="characterAttribute" rows="5" auto-grow
                                                                     :label="selectedCharacterAttribute"
                                                                     :color="characterAttributeDirty ? 'info' : ''"
+
                                                                     @update:modelValue="queueUpdateCharacterAttribute(selectedCharacterAttribute)"
+
                                                                     v-model="characterDetails.base_attributes[selectedCharacterAttribute]">
+                                                                    
+
                                                                 </v-textarea>
+
                                                             </div>
                                                             <v-row v-if="selectedCharacterAttribute !== null">
                                                                 <v-col cols="12">
@@ -214,6 +230,18 @@
                                                         </v-col>
                                                         <v-col cols="8">
                                                             <div v-if="selectedCharacterDetail">
+
+                                                                <ContextualGenerate 
+                                                                    :context="'character detail:'+selectedCharacterDetail" 
+
+                                                                    :original="characterDetails.details[selectedCharacterDetail]"
+
+                                                                    :character="characterDetails.name"
+
+                                                                    @generate="content => setAndUpdateCharacterDetail(selectedCharacterDetail, content)"
+                                                                />
+
+
                                                                 <v-textarea rows="5" max-rows="10" auto-grow
                                                                     ref="characterDetail"
                                                                     :color="characterDetailDirty ? 'info' : ''"
@@ -782,6 +810,7 @@
 import WorldStateManagerTemplates from './WorldStateManagerTemplates.vue';
 import WorldStateManagerWorld from './WorldStateManagerWorld.vue';
 import WorldStateManagerCharacterActor from './WorldStateManagerCharacterActor.vue';
+import ContextualGenerate from './ContextualGenerate.vue';
 
 export default {
     name: 'WorldStateManager',
@@ -789,6 +818,7 @@ export default {
         WorldStateManagerTemplates,
         WorldStateManagerWorld,
         WorldStateManagerCharacterActor,
+        ContextualGenerate,
     },
     computed: {
         characterStateReinforcementsList() {
@@ -1124,6 +1154,11 @@ export default {
             }));
         },
 
+        setAndUpdateCharacterAttribute(name, value) {
+            this.characterDetails.base_attributes[name] = value;
+            this.updateCharacterAttribute(name);
+        },
+
         handleNewCharacterAttribute() {
             this.characterDetails.base_attributes[this.newCharacterAttributeName] = "";
             this.selectedCharacterAttribute = this.newCharacterAttributeName;
@@ -1186,6 +1221,11 @@ export default {
                 detail: name,
                 value: this.characterDetails.details[name],
             }));
+        },
+
+        setAndUpdateCharacterDetail(name, value) {
+            this.characterDetails.details[name] = value;
+            this.updateCharacterDetail(name);
         },
 
         handleNewCharacterDetail() {

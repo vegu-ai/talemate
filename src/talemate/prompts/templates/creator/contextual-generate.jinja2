@@ -1,0 +1,43 @@
+{% block rendered_context %}
+{% include "extra-context.jinja2" %}
+{% if character %}
+<|SECTION:CHARACTER|>
+{% if context_typ == 'character attribute' -%}
+{{ character.sheet_filtered(context_name) }}
+{% else -%}
+{{ character.sheet }}
+{% endif -%}
+<|CLOSE_SECTION|>
+{% endif %}
+{% endblock %}
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=max_tokens-1024-count_tokens(self.rendered_context())) -%}
+{{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+{% if not generation_context.original %}
+  {%- set action_task = "Generate the" -%}
+{% else %}
+  {%- set action_task = "Rewrite the existing" -%}
+  Original {{ context_name }}: {{ generation_context.original }}
+{% endif %}
+{% if context_typ == "character attribute" %}
+{{ action_task }} "{{ context_name }}" attribute for {{ character.name }}. This must be a general description and not a continuation of the current narrative.
+{% elif context_typ == "character detail" %}
+    {% if context_name.endswith("?") -%}
+    {{ action_task }} answer to "{{ context_name }}" for {{ character.name }}. This must be a general description and not a continuation of the current narrative.
+    {% else -%}
+    {{ action_task }} "{{ context_name }}" detail for {{ character.name }}. This must be a general description and not a continuation of the current narrative.
+    {% endif %}
+{% else %}
+{{ action_task }} new narrative content for {{ context_name }}
+{% endif %}
+{% if generation_context.instructions %}Additional instructions: {{ generation_context.instructions }}{% endif %}
+<|CLOSE_SECTION|>
+{{ bot_token }}
+{%- if context_typ == 'character attribute' -%}
+{{ character.name }}'s {{ context_name }}:
+{%- else -%}
+{{ context_name }}:
+{%- endif -%}

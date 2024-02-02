@@ -18,6 +18,7 @@ from talemate.load import (
 )
 from talemate.scene_assets import Asset
 from talemate.server import (
+    assistant,
     character_creator,
     character_importer,
     config,
@@ -56,6 +57,7 @@ class WebsocketHandler(Receiver):
         self.connect_llm_clients()
 
         self.routes = {
+            assistant.AssistantPlugin.router: assistant.AssistantPlugin(self),
             character_creator.CharacterCreatorServerPlugin.router: character_creator.CharacterCreatorServerPlugin(
                 self
             ),

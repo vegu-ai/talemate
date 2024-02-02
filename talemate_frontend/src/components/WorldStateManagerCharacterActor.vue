@@ -15,8 +15,8 @@
 
             <div v-if="tab == 'instructions'">
                 <v-textarea 
-                placeholder="speak less formally, sitcom type dialogue" 
-                v-model="dialogueInstructions" label="Dialogue Instructions" 
+                placeholder="speak less formally, use more contractions, and be more casual." 
+                v-model="dialogueInstructions" label="Acting Instructions" 
                 :color="dialogueInstructionsDirty ? 'primary' : null"
                 @update:model-value="queueUpdateCharacterActor"
                 rows="3" 
@@ -24,15 +24,14 @@
                 <v-alert icon="mdi-bullhorn" density="compact" variant="text" color="grey">
                     <p>
                         Any instructions you enter here will be inserted into the context right before
-                        <span class="text-primary">{{ character.name }}</span> speaks their next line. It can have a strong effect on the style
+                        <span class="text-primary">{{ character.name }}</span> speaks the next line. It can have a strong effect on the style
                         of the dialogue. Use this when a character has trouble sticking to their
                         personality / type of speech. Try to keep it short and write them as if giving 
                         instructions to an actor.
                     </p>
                     <v-divider class="mt-2 mb-2"></v-divider>
                     <p>
-                        <v-icon size="small" color="warning" class="mr-1">mdi-alert</v-icon>Giving long instructions here may degrade the quality of the dialogue, especially
-                        in the beginning of the conversation. 
+                        <v-icon size="small" color="orange" class="mr-1">mdi-flask</v-icon><span class="text-orange">Experimental feature</span> - whether or not this improves or degrades generations strongly depends on LLM  used. Giving too long instructions here may degrade the quality of the dialogue, especially in the beginning of the scene. 
                     </p>
                 </v-alert>
             </div>

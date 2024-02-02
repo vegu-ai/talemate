@@ -122,7 +122,7 @@ class Character:
         }
 
     @property
-    def sheet(self):
+    def sheet(self) -> str:
         sheet = self.base_attributes or {
             "name": self.name,
             "gender": self.gender,
@@ -148,6 +148,23 @@ class Character:
             return ""
 
         return random.choice(self.example_dialogue)
+
+    def sheet_filtered(self, *exclude):
+        
+        sheet = self.base_attributes or {
+            "name": self.name,
+            "gender": self.gender,
+            "description": self.description,
+        }
+
+        sheet_list = []
+
+        for key, value in sheet.items():
+            if key not in exclude:
+                sheet_list.append(f"{key}: {value}")
+
+        return "\n".join(sheet_list)
+        
 
     def random_dialogue_examples(self, num: int = 3):
         """

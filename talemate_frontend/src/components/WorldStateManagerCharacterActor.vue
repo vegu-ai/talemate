@@ -37,6 +37,12 @@
             </div>
 
             <div v-else-if="tab == 'examples'">
+                <ContextualGenerate 
+                    :context="'character dialogue:'" 
+                    :character="character.name"
+                    :rewrite-enabled="false"
+                    @generate="content => { dialogueExamples.push(content); queueUpdateCharacterActor(); }"
+                />
                 <v-text-field v-model="dialogueExample" label="Add Dialogue Example" @keyup.enter="dialogueExamples.push(dialogueExample); dialogueExample = ''; queueUpdateCharacterActor();" dense></v-text-field>
                 <v-list density="compact" nav>
                     <v-list-item v-for="(example, index) in dialogueExamplesWithNameStripped" :key="index">
@@ -58,8 +64,13 @@
 
 <script>
 
+import ContextualGenerate from './ContextualGenerate.vue';
+
 export default {
     name: 'WorldStateManagerCharacterActor',
+    components: {
+        ContextualGenerate,
+    },
     data() {
         return {
             tab: "instructions",

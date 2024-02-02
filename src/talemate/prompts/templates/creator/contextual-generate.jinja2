@@ -30,15 +30,33 @@
     {%- else -%}
     {{ action_task }} "{{ context_name }}" detail for {{ character.name }}. This must be a general description and not a continuation of the current narrative. Use paragraphs to separate different details.
     {%- endif -%}
+Use a simple, easy to read writing format.
+{% elif context_typ == "character dialogue" %}
+Generate a new line of example dialogue for {{ character.name }}.
+
+Exisiting Dialogue Examples:
+{% for line in character.example_dialogue %}
+{{ line }}
+{% endfor %}
+
+You must only respond with the generated dialogue example.
+Always contain actions in asterisks. For example, *{{ character.name}} smiles*.
+Always contain dialogue in quotation marks. For example, {{ character.name}}: "Hello!"
+
+{%- if character.dialogue_instructions -%}
+Dialogue instructions for {{ character.name }}: {{ character.dialogue_instructions }}
+{% endif -%}
 {% else -%}
 {{ action_task }} new narrative content for {{ context_name }}
-{% endif -%}
 Use a simple, easy to read writing format.
+{% endif -%}
 {% if generation_context.instructions %}Additional instructions: {{ generation_context.instructions }}{% endif %}
 <|CLOSE_SECTION|>
 {{ bot_token }}
 {%- if context_typ == 'character attribute' -%}
 {{ character.name }}'s {{ context_name }}:
+{%- elif context_typ == 'character dialogue' -%}
+{{ character.name }}:
 {%- else -%}
 {{ context_name }}:
 {%- endif -%}

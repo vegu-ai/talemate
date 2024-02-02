@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="dialog" max-width="750">
+    <v-dialog v-model="dialog" max-width="750" :persistent="busy">
         <v-card>
             <v-card-title>
                 Generate Context
@@ -38,7 +38,7 @@
 
     <v-sheet class="text-right">
         <v-spacer></v-spacer>
-        <v-tooltip class="pre-wrap" :text="'Generate '+context+'\n[+ctrl to provide instructions]\n[+alt to rewrite existing content]'" >
+        <v-tooltip class="pre-wrap" :text="tooltipText" >
             <template v-slot:activator="{ props }">
                 <v-btn v-bind="props" color="primary" @click.stop="open" variant="text" size="x-small" prepend-icon="mdi-auto-fix">Generate</v-btn>
             </template>
@@ -66,6 +66,11 @@ export default {
             type: Number,
             required: false,
             default: 255
+        },
+        rewriteEnabled: {
+            type: Boolean,
+            required: false,
+            default: true
         }
     },
     data() {
@@ -79,6 +84,14 @@ export default {
     },
     emits: ["generate"],
     inject: ["getWebsocket", "registerMessageHandler"],
+    computed: {
+        tooltipText() {
+            if(this.rewriteEnabled)
+                return "Generate "+this.context+"\n[+ctrl to provide instructions]\n[+alt to rewrite existing content]";
+            else
+                return "Generate "+this.context+"\n[+ctrl to provide instructions]";
+        }
+    },
     methods: {
 
 
@@ -90,7 +103,7 @@ export default {
             this.withInstructions = event.ctrlKey;
             
             // if alt key is pressed, open with original
-            this.withOriginal = event.altKey;
+            this.withOriginal = event.altKey && this.rewriteEnabled;
             
             if (!this.withInstructions) {
 

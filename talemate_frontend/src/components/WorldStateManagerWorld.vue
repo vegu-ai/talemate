@@ -64,6 +64,11 @@
                             <v-card-text>
                                 <v-row>
                                     <v-col cols="12">
+                                        <ContextualGenerate 
+                                            :context="'world context:'+entry.id" 
+                                            :original="entry.text"
+                                            @generate="content => { entry.text=content; queueSaveEntry(); }"
+                                        />
                                         <v-textarea 
                                             v-model="entry.text"
                                             label="World information"
@@ -245,8 +250,14 @@
 </template>
 
 <script>
+
+import ContextualGenerate from './ContextualGenerate.vue';
+
 export default {
     name: 'WorldStateManagerWorld',
+    components: {
+        ContextualGenerate,
+    },
     data() {
         return {
             entries: {},

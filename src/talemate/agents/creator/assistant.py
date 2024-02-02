@@ -14,9 +14,9 @@ class ContentGenerationContext(pydantic.BaseModel):
     """
     
     context: str
-    character: str
     instructions: str
     length: int
+    character: Union[str, None] = None
     original: Union[str, None] = None
 
     @property

@@ -16,21 +16,25 @@
 {% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
+{#- SET TASK ACTION -#}
 {% if not generation_context.original %}
   {%- set action_task = "Generate the" -%}
 {% else %}
   {%- set action_task = "Rewrite the existing" -%}
   Original {{ context_name }}: {{ generation_context.original }}
 {% endif %}
+{#- CHARACTER ATTRIBUTE -#}
 {% if context_typ == "character attribute" %}
 {{ action_task }} "{{ context_name }}" attribute for {{ character.name }}. This must be a general description and not a continuation of the current narrative.
+{#- CHARACTER DETAIL -#}
 {% elif context_typ == "character detail" %}
-    {%- if context_name.endswith("?") -%}
-    {{ action_task }} answer to "{{ context_name }}" for {{ character.name }}. This must be a general description and not a continuation of the current narrative.
-    {%- else -%}
-    {{ action_task }} "{{ context_name }}" detail for {{ character.name }}. This must be a general description and not a continuation of the current narrative. Use paragraphs to separate different details.
-    {%- endif -%}
+{% if context_name.endswith("?") -%}
+{{ action_task }} answer to "{{ context_name }}" for {{ character.name }}. This must be a general description and not a continuation of the current narrative.
+{% else -%}
+{{ action_task }} "{{ context_name }}" detail for {{ character.name }}. This must be a general description and not a continuation of the current narrative. Use paragraphs to separate different details.
+{% endif -%}
 Use a simple, easy to read writing format.
+{#- CHARACTER EXAMPLE DIALOGUE -#}
 {% elif context_typ == "character dialogue" %}
 Generate a new line of example dialogue for {{ character.name }}.
 
@@ -46,10 +50,15 @@ Always contain dialogue in quotation marks. For example, {{ character.name}}: "H
 {%- if character.dialogue_instructions -%}
 Dialogue instructions for {{ character.name }}: {{ character.dialogue_instructions }}
 {% endif -%}
-{% else -%}
+{#- GENERAL CONTEXT -#}
+{% else %}
+{% if context_name.endswith("?") -%}
+{{ action_task }} answer to the question "{{ context_name }}". This must be a general description and not a continuation of the current narrative.
+{%- else -%}
 {{ action_task }} new narrative content for {{ context_name }}
 Use a simple, easy to read writing format.
-{% endif -%}
+{%- endif -%}
+{% endif %}
 {% if generation_context.instructions %}Additional instructions: {{ generation_context.instructions }}{% endif %}
 <|CLOSE_SECTION|>
 {{ bot_token }}

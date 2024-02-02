@@ -25,14 +25,15 @@
 {% if context_typ == "character attribute" %}
 {{ action_task }} "{{ context_name }}" attribute for {{ character.name }}. This must be a general description and not a continuation of the current narrative.
 {% elif context_typ == "character detail" %}
-    {% if context_name.endswith("?") -%}
+    {%- if context_name.endswith("?") -%}
     {{ action_task }} answer to "{{ context_name }}" for {{ character.name }}. This must be a general description and not a continuation of the current narrative.
-    {% else -%}
-    {{ action_task }} "{{ context_name }}" detail for {{ character.name }}. This must be a general description and not a continuation of the current narrative.
-    {% endif %}
-{% else %}
+    {%- else -%}
+    {{ action_task }} "{{ context_name }}" detail for {{ character.name }}. This must be a general description and not a continuation of the current narrative. Use paragraphs to separate different details.
+    {%- endif -%}
+{% else -%}
 {{ action_task }} new narrative content for {{ context_name }}
-{% endif %}
+{% endif -%}
+Use a simple, easy to read writing format.
 {% if generation_context.instructions %}Additional instructions: {{ generation_context.instructions }}{% endif %}
 <|CLOSE_SECTION|>
 {{ bot_token }}

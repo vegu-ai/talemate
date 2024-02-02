@@ -2,7 +2,7 @@ import pydantic
 from typing import TYPE_CHECKING, Union
 from talemate.agents.base import set_processing
 from talemate.prompts import Prompt
-
+import talemate.util as util
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -43,10 +43,17 @@ class AssistantMixin:
         
         context_typ, context_name = generation_context.computed_context
         
+        if generation_context.length < 100:
+            kind = "create_short"
+        elif generation_context.length < 500:
+            kind = "create_concise"
+        else:
+            kind = "create"
+        
         content = await Prompt.request(
             f"creator.contextual-generate",
             self.client,
-            "create",
+            kind,
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
@@ -56,4 +63,7 @@ class AssistantMixin:
                 "character": self.scene.get_character(generation_context.character) if generation_context.character else None,
             }
         )
+        
+        content = util.strip_partial_sentences(content)
+        
         return content.strip()

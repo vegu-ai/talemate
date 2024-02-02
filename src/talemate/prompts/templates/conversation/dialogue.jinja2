@@ -100,6 +100,7 @@ Always contain dialogue in quotation marks. For example, {{ talking_character.na
 {% endif -%}
 {%- endif -%}
 {%- if talking_character.dialogue_instructions -%}
-# Dialogue instructions for {{ talking_character.name }}: {{ talking_character.dialogue_instructions }}
+# Director instructs {{ talking_character.name }}: {{ talking_character.dialogue_instructions }}
+
 {% endif -%}
 {{ bot_token}}{{ talking_character.name }}:{{ partial_message }}

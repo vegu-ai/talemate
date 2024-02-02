@@ -99,6 +99,14 @@
                                                 <!-- CHARACTER DESCRIPTION -->
 
                                                 <div v-if="selectedCharacterPage === 'description'">
+
+                                                    <ContextualGenerate 
+                                                        :context="'character detail:description'" 
+                                                        :original="characterDetails.description"
+                                                        :character="characterDetails.name"
+                                                        @generate="content => setAndUpdateCharacterDescription(content)"
+                                                    />
+
                                                     <v-textarea rows="5" auto-grow v-model="characterDetails.description"
                                                         :color="characterDescriptionDirty ? 'info' : ''"
                                                         @update:model-value="queueUpdateCharacterDescription"
@@ -1403,6 +1411,11 @@ export default {
                 attribute: 'description',
                 value: this.characterDetails.description,
             }));
+        },
+
+        setAndUpdateCharacterDescription(value) {
+            this.characterDetails.description = value;
+            this.updateCharacterDescription();
         },
 
         // contextdb

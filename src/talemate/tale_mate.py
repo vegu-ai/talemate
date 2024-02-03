@@ -732,6 +732,9 @@ class Scene(Emitter):
         self.static_tokens = 0
         self.max_tokens = 2048
         self.next_actor = None
+        
+        self.experimental = False
+        self.help = ""
 
         self.name = ""
         self.filename = ""
@@ -1570,6 +1573,8 @@ class Scene(Emitter):
                 "can_auto_save": self.can_auto_save(),
                 "game_state": self.game_state.model_dump(),
                 "active_pins": [pin.model_dump() for pin in self.active_pins],
+                "experimental": self.experimental,
+                "help": self.help,
             },
         )
 
@@ -1980,6 +1985,8 @@ class Scene(Emitter):
             "saved_memory_session_id": scene.saved_memory_session_id,
             "immutable_save": scene.immutable_save,
             "ts": scene.ts,
+            "help": scene.help,
+            "experimental": scene.experimental,
         }
 
         if not auto:

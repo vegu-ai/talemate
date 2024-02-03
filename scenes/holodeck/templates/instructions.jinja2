@@ -63,6 +63,10 @@
     {# no player message yet, start of scenario #}
         {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="Narrate the computer asking the user to state the nature of their desired simulation.", emit_message=True) %}
         {% set _ = agent_action("narrator", "action_to_narration", action_name="paraphrase", narration="Please state your commands by addressing the computer by stating 'Computer,' followed by an instruction.") %}
+    {% elif player_message and not scene.npc_character_names %}
+    {# player message exists, is not instruction to computer, but no npc characters in scene #}
+        {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="Narrate the progression of the simulation following the player's last message", emit_message=True) %}
+        {% set _ = player_message.hide() %}
     {% endif %}
 
 {% else %}

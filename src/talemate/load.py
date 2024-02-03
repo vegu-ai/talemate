@@ -174,6 +174,8 @@ async def load_scene_from_data(
     scene.filename = None
     scene.goals = scene_data.get("goals", [])
     scene.immutable_save = scene_data.get("immutable_save", False)
+    scene.experimental = scene_data.get("experimental", False)
+    scene.help = scene_data.get("help", "")
 
     # reset = True
 

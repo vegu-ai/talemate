@@ -16,6 +16,25 @@
                 </template>
             </v-tooltip>
         </v-chip>
+
+        <v-tooltip v-if="sceneHelp" :text="sceneHelp" class="pre-wrap">
+            <template v-slot:activator="{ props }">
+                <v-chip size="x-small" v-bind="props" color="primary" variant="text" class="ma-1">
+                    <v-icon class="mr-1">mdi-help-circle-outline</v-icon>
+                    {{ sceneName }} instructions
+                </v-chip>
+            </template>
+        </v-tooltip>
+
+        <v-tooltip v-if="sceneExperimental" text="This scenario is classified as experimental, likely requiring usage of a strong LLM to produce a decent experience." class="pre-wrap">
+            <template v-slot:activator="{ props }">
+                <v-chip size="x-small" v-bind="props" variant="text" color="warning" class="ma-1">
+                    <v-icon class="mr-1">mdi-flask</v-icon>
+                    Experimental
+                </v-chip>
+            </template>
+        </v-tooltip>
+
     </v-sheet>
 
     <!-- Hotbuttons Section -->
@@ -348,6 +367,9 @@ export default {
             commandName: null,
             autoSave: true,
             autoProgress: true,
+            sceneName: "Scene",
+            sceneHelp: "",
+            sceneExperimental: false,
             canAutoSave: false,
             npc_characters: [],
 
@@ -634,6 +656,9 @@ export default {
                 this.canAutoSave = data.data.can_auto_save;
                 this.autoSave = data.data.auto_save;
                 this.autoProgress = data.data.auto_progress;
+                this.sceneHelp = data.data.help;
+                this.sceneExperimental = data.data.experimental;
+                this.sceneName = data.name;
                 console.log({autoSave: this.autoSave, autoProgress: this.autoProgress});
 
                 // collect npc characters

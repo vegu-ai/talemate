@@ -197,7 +197,7 @@ def gnerate_intro_scenes():
             filename="infinity-quest.json",
             date=datetime.datetime.now().isoformat(),
             cover_image=Asset(
-                id="52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df",
+                id="e7c712a0b276342d5767ba23806b03912d10c7c4b82dd1eec0056611e2cd5404",
                 file_type="png",
                 media_type="image/png",
             )

@@ -18,6 +18,12 @@
 
     <v-sheet ref="worldStateContainer">
 
+        <!-- empty (no characters or objects) -->
+
+        <v-card elevation="7" v-if="Object.keys(characters).length === 0 && Object.keys(items).length === 0" class="text-center text-caption mx-3" density="compact" variant="tonal" color="grey">
+            World state has not been updated yet.
+        </v-card>
+
         <div ref="charactersContainer">   
 
             <!-- CHARACTERS -->

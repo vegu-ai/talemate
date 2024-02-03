@@ -257,15 +257,22 @@ class DirectorAgent(Agent):
             self.scene.game_state.scene_instructions
 
     @set_processing
-    async def persist_characters_from_worldstate(self):
+    async def persist_characters_from_worldstate(self) -> List[Character]:
         log.warning("persist_characters_from_worldstate", world_state_characters=self.scene.world_state.characters, scene_characters=self.scene.character_names)
+        
+        created_characters = []
+        
         for character_name in self.scene.world_state.characters.keys():
             if character_name in self.scene.character_names:
                 continue
             
-            await self.persist_character(name=character_name)
+            character = await self.persist_character(name=character_name)
+            
+            created_characters.append(character)
         
         self.scene.emit_status()
+        
+        return created_characters
             
 
     @set_processing
@@ -277,7 +284,10 @@ class DirectorAgent(Agent):
     ):
         world_state = instance.get_agent("world_state")
         creator = instance.get_agent("creator")
+        
         self.scene.log.debug("persist_character", name=name)
+        name = await creator.determine_character_name(name)
+        self.scene.log.debug("persist_character", adjusted_name=name)
 
         character = self.scene.Character(name=name)
         character.color = random.choice(

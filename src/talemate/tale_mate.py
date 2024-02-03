@@ -520,6 +520,10 @@ class Character:
             self.details[name] = value
             await self.commit_single_detail_to_memory(memory_agent, name, value)
 
+    def set_detail_defer(self, name: str, value):
+        self.details[name] = value
+        self.memory_dirty = True
+
     def get_detail(self, name: str):
         return self.details.get(name)
 
@@ -537,6 +541,10 @@ class Character:
         else:
             self.base_attributes[name] = value
             await self.commit_single_attribute_to_memory(memory_agent, name, value)
+
+    def set_base_attribute_defer(self, name: str, value):
+        self.base_attributes[name] = value
+        self.memory_dirty = True
 
     def get_base_attribute(self, name: str):
         return self.base_attributes.get(name)
@@ -1176,6 +1184,9 @@ class Scene(Emitter):
         """
         Returns the character with the given name if it exists
         """
+
+        if not character_name:
+            return
 
         if character_name in self.inactive_characters:
             return self.inactive_characters[character_name]

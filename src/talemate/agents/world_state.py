@@ -350,11 +350,15 @@ class WorldStateAgent(Agent):
         self,
         text: str,
         instruction: str,
+        short:bool = False,
     ):
+        
+        kind = "analyze_freeform_short" if short else "analyze_freeform"
+        
         response = await Prompt.request(
             "world_state.analyze-text-and-follow-instruction",
             self.client,
-            "analyze_freeform",
+            kind,
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,

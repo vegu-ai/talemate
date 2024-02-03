@@ -1,0 +1,14 @@
+{% block rendered_context %}
+{% include "extra-context.jinja2" %}
+{% endblock %}
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=max_tokens-1024-count_tokens(self.rendered_context())) -%}
+{{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Character name: {{ character_name }}
+
+If the character already has a distinct name, respond with the character's name. If the name is currently a description, give the character a fitting name. YOU MUST ONLY RESPOND WITH THE CHARACTER NAME, NOTHING ELSE.
+<|CLOSE_SECTION|>
+{{ bot_token }}The character's name is "

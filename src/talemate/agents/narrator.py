@@ -534,7 +534,7 @@ class NarratorAgent(Agent):
         response = await Prompt.request(
             "narrator.paraphrase",
             self.client,
-            "paraphrase",
+            "narrate",
             vars={
                 "narration": narration,
                 "scene": self.scene,

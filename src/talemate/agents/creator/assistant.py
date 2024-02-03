@@ -31,6 +31,29 @@ class AssistantMixin:
     Creator mixin that allows quick contextual generation of content.
     """
     
+    async def contextual_generate_from_args(
+        self,
+        context: str,
+        instructions: str,
+        length: int = 100,
+        character: Union[str, None] = None,
+        original: Union[str, None] = None,
+    ):
+        
+        """
+        Request content from the assistant.
+        """
+        
+        generation_context = ContentGenerationContext(
+            context=context,
+            instructions=instructions,
+            length=length,
+            character=character,
+            original=original,
+        )
+        
+        return await self.contextual_generate(generation_context)
+    
     @set_processing
     async def contextual_generate(
         self,

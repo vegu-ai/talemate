@@ -592,7 +592,7 @@ class WorldStateManager:
 
     async def apply_template_state_reinforcement(
         self,
-        template: StateReinforcementTemplate,
+        template: Union[str,StateReinforcementTemplate],
         character_name: str = None,
         run_immediately: bool = False,
     ) -> Reinforcement:
@@ -600,7 +600,7 @@ class WorldStateManager:
         Applies a state reinforcement template to a specific character, if provided.
 
         Arguments:
-            template: The StateReinforcementTemplate object defining the reinforcement details.
+            template: The StateReinforcementTemplate object defining the reinforcement details. Can also be a string representing the template name.
             character_name: Optional; the name of the character to apply the template to.
             run_immediately: Whether to run the reinforcement immediately after applying.
 
@@ -610,6 +610,11 @@ class WorldStateManager:
         Raises:
             ValueError: If a character name is required but not provided.
         """
+        
+        if isinstance(template, str):
+            template = (await self.get_templates()).get_template(template)
+            if not template:
+                return
 
         if not character_name and template.state_type in ["npc", "character", "player"]:
             raise ValueError("Character name required for this template type.")

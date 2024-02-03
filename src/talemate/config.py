@@ -96,6 +96,9 @@ class WorldStateTemplates(BaseModel):
     state_reinforcement: dict[str, StateReinforcementTemplate] = pydantic.Field(
         default_factory=dict
     )
+    
+    def get_template(self, name: str) -> Union[StateReinforcementTemplate, None]:
+        return self.state_reinforcement.get(name)
 
 
 class WorldState(BaseModel):

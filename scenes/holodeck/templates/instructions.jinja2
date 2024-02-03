@@ -1,0 +1,78 @@
+{% set update_world_state = False %}
+{% set _ = debug("HOLODECK SIMULATION") -%}
+{% set player_character = scene.get_player_character() %}
+{% if not game_state.has_var('instr.simulation_stopped') %}
+{# simulation NOT started #}
+
+    {# get last player instruction #}
+    {% set player_message = scene.last_player_message() %}
+    {% if player_message and player_message.raw.lower().startswith("computer") and not player_message.hidden %}
+    {# player message exists #}
+
+
+        {# check if player is asking to set the environment #}
+        {% set player_ask_to_set_env = query_text_eval("Is the player asking to set the scenario of the simulation?", player_message) %}
+        {# check if player is asking to be transformed #}
+        {% set player_ask_to_transform = query_text_eval("Is the player asking to be transformed into a new persona?", player_message) %}
+        {# check if player is asking for a non player character to be added #}
+        {% set player_ask_to_add_npc = query_text_eval("Is the player asking to add an active non player character (npc) to the simulation for them to interact with?", player_message) %}
+
+        {% set _ = debug("HOLODECK inputs", set_env=player_ask_to_set_env, ask_player_persona=player_ask_to_transform, player_ask_to_add_npc=player_ask_to_add_npc) %}
+
+        {% if player_ask_to_set_env %}
+        {# player is asking to set the environment #}
+            {% set update_world_state = True %}
+            {%- set _ = game_state.set_var("instr.simulation_started", "yes", commit=True) -%}
+            {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The simulation adjusts the environment according to the user's wishes.", emit_message=True) %}
+        {% endif %}
+
+        {% if player_ask_to_transform %}
+        {# player is asking to be transformed #}
+            {%- set _ = game_state.set_var("instr.simulation_started", "yes", commit=True) -%}
+            {% if not player_ask_to_set_env %}
+                {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The simulation transforms the user into a new persona.", emit_message=True) %}
+            {% endif %}
+
+            {% set character_attributes = agent_action("world_state", "extract_character_sheet", name="You", text=player_message.raw)%}
+
+            {% set _ = player_character.update(base_attributes=character_attributes) %}
+
+            {% set character_description = agent_action("creator", "determine_character_description", character=player_character) %}
+
+            {% set _ = player_character.update(description=character_description) %}
+
+            {% set _ = debug("HOLODECK transform player", attributes=character_attributes, description=character_description) %}
+        {% endif %}
+
+        {% if player_ask_to_add_npc %}
+        {# player is asking to add npc #}
+
+            {%- set _ = game_state.set_var("instr.simulation_started", "yes", commit=True) -%}
+            {% set character_name = query_text("What is the name of the character to be added to the scene? If no name can extracted from the text, extract a short descriptive name instead. Respond only with the name.", scene.snapshot(5), as_question_answer=False) %}
+
+            {% set _ = debug("HOLODECK add npc", name=character_name)%}
+            {% set npc = agent_action("director", "persist_character", name=character_name, content=player_message.raw )%}
+            {% set _ = debug("HOLODECK added npc", npc=npc) %}
+
+        {% endif %}
+
+        {# hide player message to the computer, so its not included in the scene context #}
+        {% set _ = player_message.hide() %}
+
+    {% elif not game_state.has_var("instr.simulation_started") %}
+    {# no player message yet, start of scenario #}
+        {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="Narrate the computer asking the user to state the nature of their desired simulation.", emit_message=True) %}
+        {% set _ = agent_action("narrator", "action_to_narration", action_name="paraphrase", narration="Please state your commands by addressing the computer by stating 'Computer,' followed by an instruction.") %}
+    {% endif %}
+
+{% else %}
+{# simulation ongoing #}
+
+{% endif %}
+
+{% if update_world_state %}
+    {% set _ = agent_action("world_state", "update_world_state", force=True) %}
+    {% if not scene.npc_character_names %}
+        {% set _ = agent_action("director", "persist_characters_from_worldstate") %}
+    {% endif %}
+{% endif %}

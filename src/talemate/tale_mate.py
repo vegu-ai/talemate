@@ -99,6 +99,8 @@ class Character:
         self.details = details or {}
         self.cover_image = kwargs.get("cover_image")
         self.dialogue_instructions = kwargs.get("dialogue_instructions")
+        
+        self.memory_dirty = False
 
     @property
     def persona(self):
@@ -344,6 +346,15 @@ class Character:
 
         for i, dialogue in enumerate(self.example_dialogue):
             self.example_dialogue[i] = pattern.sub(character.name, dialogue)
+            
+            
+    def update(self, **kwargs):
+        """
+        Update character properties with given key-value pairs.
+        """
+
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     async def commit_to_memory(self, memory_agent):
         """
@@ -426,6 +437,8 @@ class Character:
 
         if items:
             await memory_agent.add_many(items)
+            
+        self.memory_dirty = False
 
     async def commit_single_attribute_to_memory(
         self, memory_agent, attribute: str, value: str
@@ -1003,6 +1016,15 @@ class Scene(Emitter):
                 return idx
         return -1
 
+    def last_player_message(self) ->str:
+        """
+        Returns the last message from the player
+        """
+        for idx in range(len(self.history) - 1, -1, -1):
+            if isinstance(self.history[idx], CharacterMessage):
+                if self.history[idx].source == "player":
+                    return self.history[idx]
+
     def collect_messages(
         self, typ: str = None, source: str = None, max_iterations: int = 100
     ):
@@ -1285,23 +1307,28 @@ class Scene(Emitter):
 
         for i in range(len(self.history) - 1, -1, -1):
             count += 1
+            
+            message = self.history[i]
+            
+            if message.hidden:
+                continue
 
-            if isinstance(self.history[i], DirectorMessage):
+            if isinstance(message, DirectorMessage):
                 if not keep_director:
                     continue
                 elif (
                     isinstance(keep_director, str)
-                    and self.history[i].source != keep_director
+                    and message.source != keep_director
                 ):
                     continue
 
             if (
-                count_tokens(parts_dialogue) + count_tokens(self.history[i])
+                count_tokens(parts_dialogue) + count_tokens(message)
                 > budget_dialogue
             ):
                 break
 
-            parts_dialogue.insert(0, self.history[i])
+            parts_dialogue.insert(0, message)
 
         # collect context, ignore where end > len(history) - count
 
@@ -1750,6 +1777,12 @@ class Scene(Emitter):
                 signal_game_loop = True
 
                 for actor in self.actors:
+                    
+                    if actor.character.memory_dirty:
+                        await actor.character.commit_to_memory(
+                            self.get_helper("memory").agent
+                        )
+                    
                     if not self.auto_progress and not actor.character.is_player:
                         # auto progress is disabled, so NPCs don't get automatic turns
                         continue

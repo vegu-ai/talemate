@@ -1,0 +1,37 @@
+{
+    "name": "Holodeck",
+    "environment": "scene",
+    "immutable_save": true,
+    "description": "",
+    "intro": "*You have entered the simulation suite. No simulation is currently active and you are in a non-descript space with paneled walls surrounding you. The control panel next to you is pulsating with a green light, indicating readiness to receive a prompt to start the simulation.*",
+    "archived_history": [],
+    "history": [],
+    "ts": "PT1S",
+    "characters": [
+        {
+            "name": "You",
+            "gender": "unknown",
+            "color": "cornflowerblue",
+            "base_attributes": {},
+            "is_player": true
+        }
+    ],
+    "context": "a simulated experience",
+    "game_state": {
+        "ops":{
+          "run_on_start": true,
+          "always_direct": true
+        },
+        "variables": {}
+    },
+    "assets": {
+        "cover_image": "4b157dccac2ba71adb078a9d591f9900d6d62f3e86168a5e0e5e1e9faf6dc103",
+        "assets": {
+          "4b157dccac2ba71adb078a9d591f9900d6d62f3e86168a5e0e5e1e9faf6dc103": {
+            "id": "4b157dccac2ba71adb078a9d591f9900d6d62f3e86168a5e0e5e1e9faf6dc103",
+            "file_type": "png",
+            "media_type": "image/png"
+          }
+        }
+    }
+}

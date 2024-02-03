@@ -17,6 +17,14 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger("talemate.config")
 
+def scenes_dir():
+    relative_path = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        "..",
+        "..",
+        "scenes",
+    )
+    return os.path.abspath(relative_path)
 
 class Client(BaseModel):
     type: str
@@ -152,8 +160,56 @@ class RecentScene(BaseModel):
     cover_image: Union[Asset, None] = None
 
 
+def gnerate_intro_scenes():
+    """
+    When there are no recent scenes, generate from a set of introdutory scenes
+    """
+    
+    
+    scenes = [
+        RecentScene(
+            name="Holodeck",
+            path=os.path.join(scenes_dir(), "holodeck", "holodeck.json"),
+            filename="holodeck.json",
+            date=datetime.datetime.now().isoformat(),
+            cover_image=Asset(
+                id="4b157dccac2ba71adb078a9d591f9900d6d62f3e86168a5e0e5e1e9faf6dc103",
+                file_type="png",
+                media_type="image/png",
+            )
+        ),
+        RecentScene(
+            name="Infinity Quest",
+            path=os.path.join(scenes_dir(), "infinity-quest", "infinity-quest.json"),
+            filename="infinity-quest.json",
+            date=datetime.datetime.now().isoformat(),
+            cover_image=Asset(
+                id="52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df",
+                file_type="png",
+                media_type="image/png",
+            )
+        ),
+        RecentScene(
+            name="Infinity Quest Dynamic Scenario",
+            path=os.path.join(
+                scenes_dir(), "infinity-quest-dynamic-scenario", "infinity-quest.json"
+            ),
+            filename="infinity-quest.json",
+            date=datetime.datetime.now().isoformat(),
+            cover_image=Asset(
+                id="52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df",
+                file_type="png",
+                media_type="image/png",
+            )
+        ),
+    ]
+    
+    return scenes
+    
+ 
+
 class RecentScenes(BaseModel):
-    scenes: list[RecentScene] = pydantic.Field(default_factory=list)
+    scenes: list[RecentScene] = pydantic.Field(default_factory=gnerate_intro_scenes)
     max_entries: int = 10
 
     def push(self, scene: "Scene"):

@@ -187,7 +187,7 @@ class WorldStateAgent(Agent):
 
         await self.check_pin_conditions()
 
-    async def update_world_state(self):
+    async def update_world_state(self, force:bool=False):
         if not self.enabled:
             return
 
@@ -203,9 +203,10 @@ class WorldStateAgent(Agent):
         scene = self.scene
 
         if (
-            self.next_update % self.actions["update_world_state"].config["turns"].value
+            (self.next_update % self.actions["update_world_state"].config["turns"].value
             != 0
             or self.next_update == 0
+            ) and not force
         ):
             self.next_update += 1
             return

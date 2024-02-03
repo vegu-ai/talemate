@@ -1,0 +1,20 @@
+{% block rendered_context -%}
+<|SECTION:CONTEXT|>
+{% include "extra-context.jinja2" %}
+<|CLOSE_SECTION|>
+{% endblock -%}
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context())) -%}
+{{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Paraphrase the following text to make it fit the narrative tone. Keep the information and the meaning the same, but change the wording and sentence structure.
+
+Text to paraphrase: 
+
+"{{ narration}}"
+
+{{ extra_instructions }}
+{% include "rerun-context.jinja2" -%}
+<|CLOSE_SECTION|>

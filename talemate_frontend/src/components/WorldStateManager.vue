@@ -89,7 +89,7 @@
                                                     <v-icon size="small">mdi-image-auto-adjust</v-icon>
                                                     States
                                                 </v-tab>
-                                                <v-tab value="actor">
+                                                <v-tab value="actor" :disabled="characterDetails.is_player">
                                                     <v-icon size="small">mdi-bullhorn</v-icon>
                                                     Actor
                                                 </v-tab>

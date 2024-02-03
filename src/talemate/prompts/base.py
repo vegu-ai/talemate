@@ -355,6 +355,7 @@ class Prompt:
         env.globals["query_scene"] = self.query_scene
         env.globals["query_memory"] = self.query_memory
         env.globals["query_text"] = self.query_text
+        env.globals["query_text_eval"] = self.query_text_eval
         env.globals["instruct_text"] = self.instruct_text
         env.globals["agent_action"] = self.agent_action
         env.globals["retrieve_memories"] = self.retrieve_memories
@@ -372,6 +373,7 @@ class Prompt:
         env.globals["emit_system"] = lambda status, message: emit(
             "system", status=status, message=message
         )
+        env.globals["emit_narrator"] = lambda message: emit("system", message=message)
         env.filters["condensed"] = condensed
         ctx.update(self.vars)
 
@@ -505,6 +507,15 @@ class Prompt:
                 ),
             ]
         )
+        
+    def query_text_eval(self, query: str, text: str):
+        query = f"{query} Answer with a yes or no."
+        response = self.query_text(query, text,as_question_answer=False)
+        
+        if response.strip().lower().startswith("y"):
+            return True
+        return False
+        
 
     def query_memory(self, query: str, as_question_answer: bool = True, **kwargs):
         loop = asyncio.get_event_loop()
@@ -551,10 +562,10 @@ class Prompt:
             world_state.analyze_text_and_extract_context("\n".join(lines), goal=goal)
         )
 
-    def agent_action(self, agent_name: str, action_name: str, **kwargs):
+    def agent_action(self, agent_name: str, _action_name: str, **kwargs):
         loop = asyncio.get_event_loop()
         agent = instance.get_agent(agent_name)
-        action = getattr(agent, action_name)
+        action = getattr(agent, _action_name)
         return loop.run_until_complete(action(**kwargs))
 
     def emit_status(self, status: str, message: str):

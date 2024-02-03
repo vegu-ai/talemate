@@ -29,6 +29,7 @@ class Instructions(pydantic.BaseModel):
 
 class Ops(pydantic.BaseModel):
     run_on_start: bool = False
+    always_direct: bool = False
 
 
 class GameState(pydantic.BaseModel):

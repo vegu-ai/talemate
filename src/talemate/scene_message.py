@@ -31,6 +31,8 @@ class SceneMessage:
 
     # the source of the message (e.g. "ai", "progress_story", "director")
     source: str = ""
+    
+    hidden: bool = False
 
     typ = "scene"
 
@@ -72,7 +74,17 @@ class SceneMessage:
     @property
     def secondary_source(self):
         return self.source
+    
+    @property
+    def raw(self):
+        return str(self.message)
 
+
+    def hide(self):
+        self.hidden = True
+        
+    def unhide(self):
+        self.hidden = False
 
 @dataclass
 class CharacterMessage(SceneMessage):
@@ -89,6 +101,10 @@ class CharacterMessage(SceneMessage):
     @property
     def secondary_source(self):
         return self.character_name
+
+    @property
+    def raw(self):
+        return self.message.split(":", 1)[1].replace('"', "").replace("*", "").strip()
 
 
 @dataclass

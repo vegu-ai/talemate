@@ -157,7 +157,7 @@
 
                 <!-- world tools -->
 
-                <v-menu max-width="500px">
+                <v-menu max-width="500px" v-if="isEnvironment('scene')">
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
                             <v-icon>mdi-earth</v-icon>

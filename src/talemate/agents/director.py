@@ -182,7 +182,10 @@ class DirectorAgent(Agent):
 
             # no character, see if there are NPC characters at all
             # if not we always want to direct narration
-            always_direct = not self.scene.npc_character_names
+            always_direct = (
+                not self.scene.npc_character_names or 
+                self.scene.game_state.ops.always_direct
+            )
 
             next_direct = self.next_direct_scene
 
@@ -252,6 +255,18 @@ class DirectorAgent(Agent):
         else:
             # run scene instructions
             self.scene.game_state.scene_instructions
+
+    @set_processing
+    async def persist_characters_from_worldstate(self):
+        log.warning("persist_characters_from_worldstate", world_state_characters=self.scene.world_state.characters, scene_characters=self.scene.character_names)
+        for character_name in self.scene.world_state.characters.keys():
+            if character_name in self.scene.character_names:
+                continue
+            
+            await self.persist_character(name=character_name)
+        
+        self.scene.emit_status()
+            
 
     @set_processing
     async def persist_character(

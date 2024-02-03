@@ -240,8 +240,13 @@ async def load_scene_from_data(
             actor = Actor(character, agent)
         else:
             actor = Player(character, None)
-        # Add the TestCharacter actor to the scene
         await scene.add_actor(actor)
+
+
+    # if there is nio player character, add the default player character
+    
+    if not scene.get_player_character():
+        await scene.add_actor(default_player_character())
 
     # the scene has been saved before (since we just loaded it), so we set the saved flag to True
     # as long as the scene has a memory_id.

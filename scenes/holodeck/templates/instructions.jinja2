@@ -1,17 +1,18 @@
 {% set update_world_state = False %}
 {% set _ = debug("HOLODECK SIMULATION") -%}
 {% set player_character = scene.get_player_character() %}
+{% set player_message = scene.last_player_message() %}
+{% set player_message_is_instruction = (player_message and player_message.raw.lower().startswith("computer") and not player_message.hidden) %}
 {% if not game_state.has_var('instr.simulation_stopped') %}
 {# simulation NOT started #}
 
     {# get last player instruction #}
-    {% set player_message = scene.last_player_message() %}
-    {% if player_message and player_message.raw.lower().startswith("computer") and not player_message.hidden %}
+    {% if player_message_is_instruction %}
     {# player message exists #}
 
 
         {# check if player is asking to set the environment #}
-        {% set player_ask_to_set_env = query_text_eval("Is the player asking to set the scenario of the simulation?", player_message) %}
+        {% set player_ask_to_set_env = query_text_eval("Is the player asking to set the scenario or environment of the simulation?", player_message) %}
         {# check if player is asking to be transformed #}
         {% set player_ask_to_transform = query_text_eval("Is the player asking to be transformed into a new persona?", player_message) %}
         {# check if player is asking for a non player character to be added #}
@@ -52,12 +53,11 @@
 
             {% set _ = debug("HOLODECK add npc", name=character_name)%}
             {% set npc = agent_action("director", "persist_character", name=character_name, content=player_message.raw )%}
+            {% set goal = agent_action("creator", "contextual_generate_from_args", context="character details:goal", instructions="Generate a goal for the character, based on the user's chosen simulation", character=npc.name) %}
+            {% set _ = npc.set_detail_defer("goal", goal)%}
             {% set _ = debug("HOLODECK added npc", npc=npc) %}
 
         {% endif %}
-
-        {# hide player message to the computer, so its not included in the scene context #}
-        {% set _ = player_message.hide() %}
 
     {% elif not game_state.has_var("instr.simulation_started") %}
     {# no player message yet, start of scenario #}
@@ -65,7 +65,7 @@
         {% set _ = agent_action("narrator", "action_to_narration", action_name="paraphrase", narration="Please state your commands by addressing the computer by stating 'Computer,' followed by an instruction.") %}
     {% elif player_message and not scene.npc_character_names %}
     {# player message exists, is not instruction to computer, but no npc characters in scene #}
-        {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="Narrate the progression of the simulation following the player's last message", emit_message=True) %}
+        {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="Narrate the progression of the simulation following the player's last message. You act only as the environment.", emit_message=True) %}
         {% set _ = player_message.hide() %}
     {% endif %}
 
@@ -77,6 +77,18 @@
 {% if update_world_state %}
     {% set _ = agent_action("world_state", "update_world_state", force=True) %}
     {% if not scene.npc_character_names %}
-        {% set _ = agent_action("director", "persist_characters_from_worldstate") %}
+        {% set created_characters = agent_action("director", "persist_characters_from_worldstate") %}
+        {% for created_character in created_characters %}
+            {% set goal = agent_action("creator", "contextual_generate_from_args", context="character details:goal", instructions="Generate a goal for the character, based on the user's chosen simulation", character=created_character.name) %}
+            {% set _ = character.set_detail_defer("goal", goal)%}
+        {% endfor %}
+        {# if created_characters %}
+            {% set _ = agent_action("world_state", "update_world_state", force=True) %}
+        {% endif #}
     {% endif %}
+{% endif %}
+
+{% if player_message_is_instruction %}
+    {# hide player message to the computer, so its not included in the scene context #}
+    {% set _ = player_message.hide() %}
 {% endif %}

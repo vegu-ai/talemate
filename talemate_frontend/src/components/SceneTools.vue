@@ -101,7 +101,7 @@
 
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled() || npc_characters.length === 0" color="primary" icon>
                             <v-icon>mdi-account-voice</v-icon>
                         </v-btn>
                     </template>

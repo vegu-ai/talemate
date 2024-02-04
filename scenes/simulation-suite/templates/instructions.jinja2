@@ -95,6 +95,10 @@
         {% set _ = game_state.set_var("instr.simulation_started", "yes", commit=True) %}
         {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="Narrate the computer asking the user to state the nature of their desired simulation.", emit_message=False) %}
         {% set _ = agent_action("narrator", "action_to_narration", action_name="paraphrase", narration="Please state your commands by addressing the computer by stating \"Computer,\" followed by an instruction.") %}
+
+        {# pin to make sure characters don't try to interact with the simulation #}
+        {% set _ = agent_action("world_state", "manager", action_name="save_world_entry", entry_id="sim.quarantined", text="Characters in the simulation ARE NOT AWARE OF THE COMPUTER.", meta=make_dict(), pin=True) %}
+        
         {% set _ = emit_status("success", "Simulation suite ready", as_scene_message=True) %}
     {% endif %}
 

@@ -381,11 +381,13 @@ class WorldStateAgent(Agent):
         self,
         text: str,
         query: str,
+        short:bool = False,
     ):
+        kind = "analyze_freeform_short" if short else "analyze_freeform"
         response = await Prompt.request(
             "world_state.analyze-text-and-answer-question",
             self.client,
-            "analyze_freeform",
+            kind,
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
@@ -740,3 +742,28 @@ class WorldStateAgent(Agent):
         )
 
         return is_leaving.lower().startswith("y")
+
+    @set_processing
+    async def manager(
+        self,
+        action_name:str,
+        *args,
+        **kwargs
+    ):
+        
+        """
+        Executes a world state manager action through self.scene.world_state_manager
+        """
+        
+        manager = self.scene.world_state_manager
+        
+        try:
+            fn = getattr(manager, action_name, None)
+            
+            if not fn:
+                raise ValueError(f"Unknown action: {action_name}")
+            
+            return await fn(*args, **kwargs)
+        except Exception as e:
+            log.error("worldstate.manager", action_name=action_name, args=args, kwargs=kwargs, error=e)
+            raise

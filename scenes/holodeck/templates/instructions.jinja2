@@ -10,63 +10,81 @@
     {% if player_message_is_instruction %}
     {# player message exists #}
 
+        {% set _ = agent_action("narrator", "action_to_narration", action_name="paraphrase", narration="The computer is processing the request, please wait a moment.", emit_message=True) %}
 
-        {# check if player is asking to set the environment #}
-        {% set player_ask_to_set_env = query_text_eval("Is the player asking to set the scenario or environment of the simulation?", player_message) %}
-        {# check if player is asking to be transformed #}
-        {% set player_ask_to_transform = query_text_eval("Is the player asking to be transformed into a new persona?", player_message) %}
-        {# check if player is asking for a non player character to be added #}
-        {% set player_ask_to_add_npc = query_text_eval("Is the player asking to add an active non player character (npc) to the simulation for them to interact with?", player_message) %}
+        {% set calls = render_and_request(render_template("computer", player_instruction=player_message.raw), dedupe_enabled=False) %}
+        {% set _ = debug("HOLODECK simulation calls", calls=calls ) %}
+        {% set processed = make_list() %}
 
-        {% set _ = debug("HOLODECK inputs", set_env=player_ask_to_set_env, ask_player_persona=player_ask_to_transform, player_ask_to_add_npc=player_ask_to_add_npc) %}
+        {% for call in calls.split("\n") %}
+            {% set _ = debug("CALL", call=call, processed=processed) %}
+            {% set inject = "The computer executes the function `"+call+"`" %}
+            {% if call.strip().startswith('change_environment') %}
+                {# change environment #}
+                {% set _ = processed.append(call) %}
+            
+            {% elif call.strip().startswith("set_player_persona") %}
+                {# treansform player #}
+                {% set character_attributes = agent_action("world_state", "extract_character_sheet", name="You", text=player_message.raw)%}
 
-        {% if player_ask_to_set_env %}
-        {# player is asking to set the environment #}
-            {% set update_world_state = True %}
-            {%- set _ = game_state.set_var("instr.simulation_started", "yes", commit=True) -%}
-            {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The simulation adjusts the environment according to the user's wishes.", emit_message=True) %}
-        {% endif %}
+                {% set _ = player_character.update(base_attributes=character_attributes) %}
 
-        {% if player_ask_to_transform %}
-        {# player is asking to be transformed #}
-            {%- set _ = game_state.set_var("instr.simulation_started", "yes", commit=True) -%}
-            {% if not player_ask_to_set_env %}
-                {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The simulation transforms the user into a new persona.", emit_message=True) %}
+                {% set character_description = agent_action("creator", "determine_character_description", character=player_character) %}
+
+                {% set _ = player_character.update(description=character_description) %}
+
+                {% set _ = debug("HOLODECK transform player", attributes=character_attributes, description=character_description) %}
+                {% set _ = processed.append(call) %}
+            {% elif call.strip().startswith("add_ai_character") %}
+                {# add new npc #}
+
+                {% set character_name = agent_action("creator", "determine_character_name", character_name=inject+" - what is the name of the character to be added to the scene? If no name can extracted from the text, extract a short descriptive name instead. Respond only with the name.") %}
+
+                {% set _ = debug("HOLODECK add npc", name=character_name)%}
+                {% set npc = agent_action("director", "persist_character", name=character_name, content=player_message.raw )%}
+                {% set _ = agent_action("world_state", "manager", action_name="add_detail_reinforcement", character_name=npc.name, question="Goal", instructions="Generate a goal for the character, based on the user's chosen simulation", interval=25, run_immediately=True) %}
+                {% set _ = debug("HOLODECK added npc", npc=npc) %}
+                {% set _ = processed.append(call) %}
+            {% elif call.strip().startswith("remove_ai_character") %}
+                {# remove npc #}
+
+                {% set character_name = agent_action("creator", "determine_character_name", character_name=inject+" - what is the name of the character being removed?") %}
+
+                {% set npc = scene.get_character(character_name) %}
+
+                {% if npc %}
+                    {% set _ = debug("HOLODECK remove npc", npc=npc.name) %}
+                    {% set _ = agent_action("world_state", "manager", action_name="deactivate_character", character_name=npc.name) %}
+                    {% set _ = processed.append(call) %}
+                {% endif %}
+            {% elif call.strip().startswith("change_ai_character") %}
+                {# change existing npc #}
+                {% set character_name = agent_action("creator", "determine_character_name", character_name=inject+" - what is the name of the character receiving the changes?\n\nCharacters in scene: "+", ".join(scene.npc_character_names)) %}
+
+                {% set npc = scene.get_character(character_name) %}
+
+                {% if npc %}
+                    {% set _ = debug("HOLODECK transform npc", npc=npc) %}
+                    {% set character_attributes = agent_action("world_state", "extract_character_sheet", name=npc.name, text=player_message.raw)%}
+                    {% set _ = npc.update(base_attributes=character_attributes) %}
+                    {% set character_description = agent_action("creator", "determine_character_description", character=npc) %}
+                    {% set _ = npc.update(description=character_description) %}
+                    {% set _ = debug("HOLODECK transform npc", attributes=character_attributes, description=character_description) %}
+                    {% set _ = processed.append(call) %}
+                {% endif %}
             {% endif %}
+        {% endfor %}
 
-            {% set character_attributes = agent_action("world_state", "extract_character_sheet", name="You", text=player_message.raw)%}
-
-            {% set _ = player_character.update(base_attributes=character_attributes) %}
-
-            {% set character_description = agent_action("creator", "determine_character_description", character=player_character) %}
-
-            {% set _ = player_character.update(description=character_description) %}
-
-            {% set _ = debug("HOLODECK transform player", attributes=character_attributes, description=character_description) %}
-        {% endif %}
-
-        {% if player_ask_to_add_npc %}
-        {# player is asking to add npc #}
-
-            {%- set _ = game_state.set_var("instr.simulation_started", "yes", commit=True) -%}
-            {% set character_name = query_text("What is the name of the character to be added to the scene? If no name can extracted from the text, extract a short descriptive name instead. Respond only with the name.", scene.snapshot(5), as_question_answer=False) %}
-
-            {% set _ = debug("HOLODECK add npc", name=character_name)%}
-            {% set npc = agent_action("director", "persist_character", name=character_name, content=player_message.raw )%}
-            {% set goal = agent_action("creator", "contextual_generate_from_args", context="character details:goal", instructions="Generate a goal for the character, based on the user's chosen simulation", character=npc.name) %}
-            {% set _ = npc.set_detail_defer("goal", goal)%}
-            {% set _ = debug("HOLODECK added npc", npc=npc) %}
-
+        {% if processed %}
+            {% set update_world_state = True %}
+            {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer calls the following functions:\n"+processed.join("\n")+"\nand the simulation adjusts the environment according to the user's wishes.", emit_message=True) %}
         {% endif %}
 
     {% elif not game_state.has_var("instr.simulation_started") %}
     {# no player message yet, start of scenario #}
+        {%- set _ = game_state.set_var("instr.simulation_started", "yes", commit=True) -%}
         {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="Narrate the computer asking the user to state the nature of their desired simulation.", emit_message=True) %}
         {% set _ = agent_action("narrator", "action_to_narration", action_name="paraphrase", narration="Please state your commands by addressing the computer by stating 'Computer,' followed by an instruction.") %}
-    {% elif player_message and not scene.npc_character_names %}
-    {# player message exists, is not instruction to computer, but no npc characters in scene #}
-        {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="Narrate the progression of the simulation following the player's last message. You act only as the environment.", emit_message=True) %}
-        {% set _ = player_message.hide() %}
     {% endif %}
 
 {% else %}
@@ -77,14 +95,13 @@
 {% if update_world_state %}
     {% set _ = agent_action("world_state", "update_world_state", force=True) %}
     {% if not scene.npc_character_names %}
-        {% set created_characters = agent_action("director", "persist_characters_from_worldstate") %}
-        {% for created_character in created_characters %}
-            {% set goal = agent_action("creator", "contextual_generate_from_args", context="character details:goal", instructions="Generate a goal for the character, based on the user's chosen simulation", character=created_character.name) %}
-            {% set _ = character.set_detail_defer("goal", goal)%}
+        {% set npcs = agent_action("director", "persist_characters_from_worldstate") %}
+        {% for npc in npcs %}
+            {% set _ = agent_action("world_state", "manager", action_name="add_detail_reinforcement", character_name=npc.name, question="Goal", instructions="Generate a goal for the character, based on the user's chosen simulation", interval=25, run_immediately=True) %}
         {% endfor %}
-        {# if created_characters %}
+        {% if npcs %}
             {% set _ = agent_action("world_state", "update_world_state", force=True) %}
-        {% endif #}
+        {% endif %}
     {% endif %}
 {% endif %}
 

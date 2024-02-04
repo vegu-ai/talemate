@@ -6,6 +6,7 @@ import structlog
 from talemate.config import StateReinforcementTemplate, WorldStateTemplates, save_config
 from talemate.instance import get_agent
 from talemate.world_state import ContextPin, InsertionMode, ManualContext, Reinforcement
+from talemate.character import deactivate_character, activate_character
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -370,7 +371,7 @@ class WorldStateManager:
             await self.world_state.remove_reinforcement(idx)
         self.world_state.emit()
 
-    async def save_world_entry(self, entry_id: str, text: str, meta: dict):
+    async def save_world_entry(self, entry_id: str, text: str, meta: dict, pin: bool = False):
         """
         Saves a manual world entry with specified text and metadata.
 
@@ -382,6 +383,9 @@ class WorldStateManager:
         meta["source"] = "manual"
         meta["typ"] = "world_state"
         await self.update_context_db_entry(entry_id, text, meta)
+        
+        if pin:
+            await self.set_pin(entry_id, active=True)
 
     async def update_context_db_entry(self, entry_id: str, text: str, meta: dict):
         """
@@ -647,3 +651,22 @@ class WorldStateManager:
             insert=template.insert,
             run_immediately=run_immediately,
         )
+
+
+    async def activate_character(self, character_name: str):
+        """
+        Activates a character in the scene.
+
+        Arguments:
+            character_name: The name of the character to activate.
+        """
+        await activate_character(self.scene, character_name)
+        
+    async def deactivate_character(self, character_name: str):
+        """
+        Deactivates a character in the scene.
+        
+        Arguments:
+            character_name: The name of the character to deactivate.
+        """
+        await deactivate_character(self.scene, character_name)

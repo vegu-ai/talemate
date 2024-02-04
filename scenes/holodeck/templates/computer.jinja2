@@ -1,0 +1,66 @@
+<|SECTION:INSTRUCTIONS|>
+The player has instructed the computer to alter the current simulation. 
+
+You have access to the following function, you can call as many as you want to fulfill the player's requests.
+
+- change_environment
+- add_ai_character
+- change_ai_character
+- remove_ai_character
+- set_player_persona
+<|CLOSE_SECTION|>
+<|SECTION:EXAMPLES|>
+Request: Computer, I want to be on a mountain top
+```simulation-stack
+change_environment("mountain top")
+set_player_persona("mountain climber")
+```
+Request: Computer, I want to experience a rollercoaster ride with a friend
+```simulation-stack
+change_environment("theme park, riding a rollercoaster")
+set_player_persona("young female experiencing rollercoaster ride")
+add_ai_character("a female friend of player")
+```
+
+Request: Computer, I want to experience the international space station
+```simulation-stack
+change_environment("international space station")
+set_player_persona("astronaut experiencing first trip to ISS")
+add_ai_character("astronaut")
+```
+
+Request: Computer, remove the goblin and add an elven woman instead
+```simulation-stack
+remove_ai_character("goblin")
+add_ai_character("elven woman named Elune")
+```
+
+Request: Computer, change the skiing instructor to be older.
+```simulation-stack
+change_ai_character("make skiing instructor older")
+```
+
+Request: Computer, change my grandma to my grandpa
+```simulation-stack
+remove_ai_character("grandma")
+add_ai_character("grandpa")
+```
+
+Request: Computer, remove the skiing instructor and add my friend instead.
+```simulation-stack
+remove_ai_character("skiing instructor")
+add_ai_character("player's friend")
+```
+
+Request: Computer, replace the skiing instructor with my friend.
+```simulation-stack
+remove_ai_character("skiing instructor")
+add_ai_character("player's friend")
+```
+
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Respond with the simulation stack for the following request:
+
+Request: {{ player_instruction }}
+{{ bot_token }}```simulation-stack

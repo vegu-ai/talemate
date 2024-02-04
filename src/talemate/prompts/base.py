@@ -205,6 +205,11 @@ class LoopedPrompt:
         self._current_item = None
 
 
+class JoinableList(list):
+    
+    def join(self, separator: str = "\n"):
+        return separator.join(self)
+    
 @dataclasses.dataclass
 class Prompt:
 
@@ -365,6 +370,8 @@ class Prompt:
         env.globals["len"] = lambda x: len(x)
         env.globals["max"] = lambda x, y: max(x, y)
         env.globals["min"] = lambda x, y: min(x, y)
+        env.globals["make_list"] = lambda: JoinableList()
+        env.globals["make_dict"] = lambda: {}
         env.globals["count_tokens"] = lambda x: count_tokens(
             dedupe_string(x, debug=False)
         )
@@ -441,10 +448,12 @@ class Prompt:
         vars.update(kwargs)
         return Prompt.get(uid, vars=vars)
 
-    def render_and_request(self, prompt: "Prompt", kind: str = "create") -> str:
+    def render_and_request(self, prompt: "Prompt", kind: str = "create", dedupe_enabled:bool=True) -> str:
         if not self.client:
             raise ValueError("Prompt has no client set.")
 
+        prompt.dedupe_enabled = dedupe_enabled
+        
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(prompt.send(self.client, kind=kind))
 
@@ -485,9 +494,9 @@ class Prompt:
             ]
         )
 
-    def query_text(self, query: str, text: str, as_question_answer: bool = True):
+    def query_text(self, query: str, text: str, as_question_answer: bool = True, short:bool=False):
         loop = asyncio.get_event_loop()
-        summarizer = instance.get_agent("world_state")
+        world_state = instance.get_agent("world_state")
         query = query.format(**self.vars)
 
         if isinstance(text, list):
@@ -495,7 +504,7 @@ class Prompt:
 
         if not as_question_answer:
             return loop.run_until_complete(
-                summarizer.analyze_text_and_answer_question(text, query)
+                world_state.analyze_text_and_answer_question(text, query, short=short)
             )
 
         return "\n".join(
@@ -503,20 +512,16 @@ class Prompt:
                 f"Question: {query}",
                 f"Answer: "
                 + loop.run_until_complete(
-                    summarizer.analyze_text_and_answer_question(text, query)
+                    world_state.analyze_text_and_answer_question(text, query, short=short)
                 ),
             ]
         )
         
     def query_text_eval(self, query: str, text: str):
         query = f"{query} Answer with a yes or no."
-        response = self.query_text(query, text,as_question_answer=False)
+        response = self.query_text(query, text,as_question_answer=False, short=True)
+        return response.strip().lower().startswith("y")
         
-        if response.strip().lower().startswith("y"):
-            return True
-        return False
-        
-
     def query_memory(self, query: str, as_question_answer: bool = True, **kwargs):
         loop = asyncio.get_event_loop()
         memory = instance.get_agent("memory")

@@ -573,8 +573,11 @@ class Prompt:
         action = getattr(agent, _action_name)
         return loop.run_until_complete(action(**kwargs))
 
-    def emit_status(self, status: str, message: str):
-        emit("status", status=status, message=message)
+    def emit_status(self, status: str, message: str, **kwargs):
+        if kwargs:
+            emit("status", status=status, message=message, data=kwargs)
+        else:
+            emit("status", status=status, message=message)
 
     def set_prepared_response(self, response: str, prepend: str = ""):
         """

@@ -1719,14 +1719,15 @@ class Scene(Emitter):
 
     async def _run_game_loop(self, init: bool = True):
         if init:
+            emit("clear_screen", "")
+            
             self.game_state.init(self)
+
             await self.signals["scene_init"].send(
                 events.SceneStateEvent(scene=self, event_type="scene_init")
             )
-
-            emit("clear_screen", "")
             self.narrator_message(self.get_intro())
-
+            
             for actor in self.actors:
                 if (
                     not isinstance(actor, Player)

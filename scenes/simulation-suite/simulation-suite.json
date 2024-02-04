@@ -26,6 +26,18 @@
         },
         "variables": {}
     },
+    "world_state": {
+      "character_name_mappings": {
+        "You": [
+          "user",
+          "player",
+          "player character",
+          "user character",
+          "the user",
+          "the player"
+        ]
+      }
+    },
     "assets": {
         "cover_image": "4b157dccac2ba71adb078a9d591f9900d6d62f3e86168a5e0e5e1e9faf6dc103",
         "assets": {

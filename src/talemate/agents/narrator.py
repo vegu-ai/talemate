@@ -536,11 +536,13 @@ class NarratorAgent(Agent):
             self.client,
             "narrate",
             vars={
-                "narration": narration,
+                "text": narration,
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
             },
         )
+        
+        log.info("paraphrase", narration=narration, response=response)
         
         response = self.clean_result(response.strip().strip("*"))
         response = f"*{response}*"

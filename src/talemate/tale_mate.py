@@ -695,6 +695,9 @@ class Player(Actor):
             return
 
         if not commands.Manager.is_command(message):
+            if '"' not in message and "*" not in message:
+                message = f"\"{message}\""
+                
             message = util.ensure_dialog_format(message)
 
             self.message = message

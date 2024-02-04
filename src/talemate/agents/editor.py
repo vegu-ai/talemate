@@ -133,7 +133,7 @@ class EditorAgent(Agent):
                 content = util.strip_partial_sentences(content)
                 character_prefix = f"{character.name}: "
                 message = content.split(character_prefix)[1]
-                content = f"{character_prefix}*{message.strip('*')}*"
+                content = f"{character_prefix}\"{message.strip()}\""
                 return content
             elif '"' in content:
                 # silly hack to clean up some LLMs that always start with a quote

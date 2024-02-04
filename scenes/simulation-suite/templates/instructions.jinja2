@@ -26,7 +26,8 @@
             {% elif call.strip().startswith("set_player_persona") %}
                 {# treansform player #}
                 {% set _ = emit_status("busy", "Simulation suite altering user persona.", as_scene_message=True) %}
-                {% set character_attributes = agent_action("world_state", "extract_character_sheet", name="You", text=player_message.raw)%}
+
+                {% set character_attributes = agent_action("world_state", "extract_character_sheet", name=player_character.name, text=player_message.raw)%}
 
                 {% set _ = player_character.update(base_attributes=character_attributes) %}
 
@@ -36,6 +37,17 @@
 
                 {% set _ = debug("HOLODECK transform player", attributes=character_attributes, description=character_description) %}
                 {% set _ = processed.append(call) %}
+            {% elif call.strip().startswith("set_player_name") %}
+                {# change player name #}
+                {% set _ = emit_status("busy", "Simulation suite adjusting user idenity.", as_scene_message=True) %}
+                {% set character_name = agent_action("creator", "determine_character_name", character_name=inject+" - What is a fitting name for the player persona? Respond with the current name if it still fits.") %}
+
+                {% set _ = debug("HOLODECK player name", character_name=character_name) %}
+
+                {% if character_name != player_character.name %}
+                    {% set _ = processed.append(call) %}
+                    {% set _ = player_character.rename(character_name) %}
+                {% endif %}
             {% elif call.strip().startswith("add_ai_character") %}
                 {# add new npc #}
 
@@ -52,7 +64,7 @@
                 {# remove npc #}
 
                 {% set _ = emit_status("busy", "Simulation suite removing character.", as_scene_message=True) %}
-                {% set character_name = agent_action("creator", "determine_character_name", character_name=inject+" - what is the name of the character being removed?") %}
+                {% set character_name = agent_action("creator", "determine_character_name", character_name=inject+" - what is the name of the character being removed?", allowed_names=scene.npc_character_names) %}
 
                 {% set npc = scene.get_character(character_name) %}
 

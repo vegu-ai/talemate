@@ -8,17 +8,26 @@ You have access to the following function, you can call as many as you want to f
 - change_ai_character
 - remove_ai_character
 - set_player_persona
+- set_player_name
 <|CLOSE_SECTION|>
 <|SECTION:EXAMPLES|>
 Request: Computer, I want to be on a mountain top
 ```simulation-stack
 change_environment("mountain top")
 set_player_persona("mountain climber")
+set_player_name("Hank")
 ```
+
+Request: Computer, I want to be more muscular and taller
+```simulation-stack
+set_player_persona("make player more muscular and taller")
+```
+
 Request: Computer, I want to experience a rollercoaster ride with a friend
 ```simulation-stack
 change_environment("theme park, riding a rollercoaster")
 set_player_persona("young female experiencing rollercoaster ride")
+set_player_name("Susanne")
 add_ai_character("a female friend of player")
 ```
 
@@ -26,6 +35,7 @@ Request: Computer, I want to experience the international space station
 ```simulation-stack
 change_environment("international space station")
 set_player_persona("astronaut experiencing first trip to ISS")
+set_player_name("George")
 add_ai_character("astronaut")
 ```
 

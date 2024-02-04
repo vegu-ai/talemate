@@ -190,7 +190,7 @@ export default {
                     this.messages.push({ id: data.id, type: data.type, character: character.trim(), text: text.trim(), color: data.color }); // Add color property to the message
                 } else if (data.type != 'request_input' && data.type != 'client_status' && data.type != 'agent_status' && data.type != 'status') {
                     this.messages.push({ id: data.id, type: data.type, text: data.message, color: data.color, character: data.character, status:data.status, ts:data.ts }); // Add color property to the message
-                } else if (data.type === 'status' && data.data.as_scene_message === true) {
+                } else if (data.type === 'status' && data.data && data.data.as_scene_message === true) {
 
                     // status message can only exist once, remove the most recent one (if within the last 100 messages)
                     // by walking the array backwards then removing the first one found

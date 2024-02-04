@@ -63,7 +63,7 @@ export default {
         handleMessage(data) {
             if(data.type === 'status') {
 
-                if(data.data.as_scene_message)
+                if(data.data && data.data.as_scene_message)
                     return;
 
                 if(data.status === 'idle' && this.statusMessageType === 'busy') {

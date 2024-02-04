@@ -2,7 +2,7 @@
 {% set _ = debug("HOLODECK SIMULATION") -%}
 {% set player_character = scene.get_player_character() %}
 {% set player_message = scene.last_player_message() %}
-{% set player_message_is_instruction = (player_message and player_message.raw.lower().startswith("computer") and not player_message.hidden) %}
+{% set player_message_is_instruction = (player_message and player_message.raw.lower().startswith("computer") and not player_message.hidden) and not player_message.raw.lower().strip() == "computer" %}
 {% if not game_state.has_var('instr.simulation_stopped') %}
 {# simulation NOT started #}
 
@@ -83,6 +83,7 @@
         {% endfor %}
 
         {% if processed %}
+            {% set _ = game_state.set_var("instr.has_issued_instructions", "yes", commit=True) %}
             {% set _ = emit_status("busy", "Simulation suite altering environment.", as_scene_message=True) %}
             {% set update_world_state = True %}
             {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer calls the following functions:\n"+processed.join("\n")+"\nand the simulation adjusts the environment according to the user's wishes.", emit_message=True) %}
@@ -106,7 +107,7 @@
     {% set _ = emit_status("busy", "Simulation suite updating world state.", as_scene_message=True) %}
     {% set _ = agent_action("world_state", "update_world_state", force=True) %}
     {% if not scene.npc_character_names %}
-        {% set npcs = agent_action("director", "persist_characters_from_worldstate") %}
+        {% set npcs = agent_action("director", "persist_characters_from_worldstate", exclude=["computer", "user", "player", "you"]) %}
         {% for npc in npcs %}
             {% set _ = agent_action("world_state", "manager", action_name="add_detail_reinforcement", character_name=npc.name, question="Goal", instructions="Generate a goal for the character, based on the user's chosen simulation", interval=25, run_immediately=True) %}
         {% endfor %}
@@ -120,4 +121,7 @@
     {# hide player message to the computer, so its not included in the scene context #}
     {% set _ = player_message.hide() %}
     {% set _ = emit_status("success", "Simulation suite processed instructions", as_scene_message=True) %}
+{% elif player_message and not game_state.has_var("instr.has_issued_instructions") %}
+    {# simulation not started, but player message is not an instruction #}
+    {% set _ = agent_action("narrator", "action_to_narration", action_name="paraphrase", narration="Instructions to the simulation computer are only process if the computer is addressed at the beginning of the instruction. Please state your commands by addressing the computer by stating \"Computer,\" followed by an instruction. For example ... \"Computer, i want to experience being on a derelict spaceship.\"", emit_message=True) %}
 {% endif %}

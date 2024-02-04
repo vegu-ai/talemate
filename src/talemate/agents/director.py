@@ -264,7 +264,7 @@ class DirectorAgent(Agent):
         
         for character_name in self.scene.world_state.characters.keys():
             
-            if exclude and character_name in exclude:
+            if exclude and character_name.lower() in exclude:
                 continue
             
             if character_name in self.scene.character_names:

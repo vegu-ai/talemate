@@ -171,9 +171,9 @@ def gnerate_intro_scenes():
     
     scenes = [
         RecentScene(
-            name="Holodeck",
-            path=os.path.join(scenes_dir(), "holodeck", "holodeck.json"),
-            filename="holodeck.json",
+            name="Simulation Suite",
+            path=os.path.join(scenes_dir(), "simulation-suite", "simulation-suite.json"),
+            filename="simulation-suite.json",
             date=datetime.datetime.now().isoformat(),
             cover_image=Asset(
                 id="4b157dccac2ba71adb078a9d591f9900d6d62f3e86168a5e0e5e1e9faf6dc103",

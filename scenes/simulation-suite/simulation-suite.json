@@ -1,5 +1,5 @@
 {
-    "name": "Holodeck",
+    "name": "Simulation Suite",
     "environment": "scene",
     "immutable_save": true,
     "experimental": true,

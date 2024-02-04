@@ -3,9 +3,8 @@ from enum import Enum
 from typing import Any, Union
 
 import structlog
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel
 
-import talemate.automated_action as automated_action
 import talemate.instance as instance
 from talemate.emit import emit
 from talemate.prompts import Prompt
@@ -221,8 +220,15 @@ class WorldState(BaseModel):
                 )
                 if character_name in previous_characters:
                     character["emotion"] = previous_characters[character_name].emotion
-
-            self.characters[character_name] = CharacterState(**character)
+            try:
+                self.characters[character_name] = CharacterState(**character)
+            except Exception as e:
+                log.error(
+                    "world_state.request_update",
+                    error=e,
+                    traceback=traceback.format_exc(),
+                )
+                
             log.debug("world_state", character=character)
 
         for item_name, item in world_state.get("items", {}).items():

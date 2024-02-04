@@ -5,7 +5,7 @@
         class="text-center text-caption">
         {{ text }}
         <p v-if="status == 'busy'">
-            <v-progress-linear :color="notificationColor()" indeterminate></v-progress-linear>
+            <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
         </p>
     </v-alert>
 </template>

@@ -234,7 +234,14 @@ class WorldState(BaseModel):
         for item_name, item in world_state.get("items", {}).items():
             if not item:
                 continue
-            self.items[item_name] = ObjectState(**item)
+            try:
+                self.items[item_name] = ObjectState(**item)
+            except Exception as e:
+                log.error(
+                    "world_state.request_update",
+                    error=e,
+                    traceback=traceback.format_exc(),
+                )
             log.debug("world_state", item=item)
 
         # deactivate persiting for now

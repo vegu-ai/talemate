@@ -1460,6 +1460,8 @@ class Scene(Emitter):
             director = self.get_helper("director").agent
             await director.direct_scene(None, None)
             return
+        elif source == "paraphrase":
+            new_message = await narrator.agent.paraphrase(arg)
         else:
             fn = getattr(narrator.agent, source, None)
             if not fn:

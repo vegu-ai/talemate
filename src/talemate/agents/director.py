@@ -257,12 +257,16 @@ class DirectorAgent(Agent):
             self.scene.game_state.scene_instructions
 
     @set_processing
-    async def persist_characters_from_worldstate(self) -> List[Character]:
+    async def persist_characters_from_worldstate(self, exclude:list[str]=None) -> List[Character]:
         log.warning("persist_characters_from_worldstate", world_state_characters=self.scene.world_state.characters, scene_characters=self.scene.character_names)
         
         created_characters = []
         
         for character_name in self.scene.world_state.characters.keys():
+            
+            if exclude and character_name in exclude:
+                continue
+            
             if character_name in self.scene.character_names:
                 continue
             

@@ -9,13 +9,13 @@ from talemate.agents.registry import register
 from talemate.emit import emit
 from talemate.prompts import Prompt
 
+from .assistant import AssistantMixin
 from .character import CharacterCreatorMixin
 from .scenario import ScenarioCreatorMixin
 
 
 @register()
-class CreatorAgent(CharacterCreatorMixin, ScenarioCreatorMixin, Agent):
-
+class CreatorAgent(CharacterCreatorMixin, ScenarioCreatorMixin, AssistantMixin, Agent):
     """
     Creates characters and scenarios and other fun stuff!
     """

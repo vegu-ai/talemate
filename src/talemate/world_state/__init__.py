@@ -3,9 +3,8 @@ from enum import Enum
 from typing import Any, Union
 
 import structlog
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel
 
-import talemate.automated_action as automated_action
 import talemate.instance as instance
 from talemate.emit import emit
 from talemate.prompts import Prompt
@@ -86,6 +85,8 @@ class WorldState(BaseModel):
     # manual context
     manual_context: dict[str, ManualContext] = {}
 
+    character_name_mappings: dict[str, list[str]] = {}
+
     @property
     def agent(self):
         return instance.get_agent("world_state")
@@ -101,6 +102,9 @@ class WorldState(BaseModel):
     @property
     def as_list(self):
         return self.render().as_list
+
+    def add_character_name_mappings(self, *names):
+        self.character_name_mappings.extend([name.lower() for name in names])
 
     def filter_reinforcements(
         self, character: str = ANY_CHARACTER, insert: list[str] = None
@@ -188,6 +192,20 @@ class WorldState(BaseModel):
         self.items = {}
 
         for character_name, character in world_state.get("characters", {}).items():
+
+            # if character name is an alias, we need to convert it to the main name
+            # if it exists in the mappings
+
+            for main_name, synonyms in self.character_name_mappings.items():
+                if character_name.lower() in synonyms:
+                    log.debug(
+                        "world_state adjusting character name (via mapping)",
+                        from_name=character_name,
+                        to_name=main_name,
+                    )
+                    character_name = main_name
+                    break
+
             # character name may not always come back exactly as we have
             # it defined in the scene. We assign the correct name by checking occurences
             # of both names in each other.
@@ -221,14 +239,28 @@ class WorldState(BaseModel):
                 )
                 if character_name in previous_characters:
                     character["emotion"] = previous_characters[character_name].emotion
+            try:
+                self.characters[character_name] = CharacterState(**character)
+            except Exception as e:
+                log.error(
+                    "world_state.request_update",
+                    error=e,
+                    traceback=traceback.format_exc(),
+                )
 
-            self.characters[character_name] = CharacterState(**character)
             log.debug("world_state", character=character)
 
         for item_name, item in world_state.get("items", {}).items():
             if not item:
                 continue
-            self.items[item_name] = ObjectState(**item)
+            try:
+                self.items[item_name] = ObjectState(**item)
+            except Exception as e:
+                log.error(
+                    "world_state.request_update",
+                    error=e,
+                    traceback=traceback.format_exc(),
+                )
             log.debug("world_state", item=item)
 
         # deactivate persiting for now

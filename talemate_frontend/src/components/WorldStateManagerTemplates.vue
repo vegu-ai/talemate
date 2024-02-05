@@ -136,12 +136,12 @@
                         </v-card-text>
                         <v-card-actions>
                             <div v-if="templateDeleteConfirm===false">
-                                <v-btn rounded="sm" prepend-icon="mdi-delete" color="error" variant="text" @click.stop="templateDeleteConfirm=true" >
+                                <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" color="error" variant="text" @click.stop="templateDeleteConfirm=true" >
                                     Remove template
                                 </v-btn>
                             </div>
                             <div v-else>
-                                <v-btn rounded="sm" prepend-icon="mdi-delete" @click.stop="removeTemplate"  color="error" variant="text">
+                                <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" @click.stop="removeTemplate"  color="error" variant="text">
                                     Confirm removal
                                 </v-btn>
                                 <v-btn class="ml-1" rounded="sm" prepend-icon="mdi-cancel" @click.stop="templateDeleteConfirm=false" color="info" variant="text">

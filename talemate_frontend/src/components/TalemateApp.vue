@@ -59,11 +59,11 @@
     <!-- system bar -->
     <v-system-bar>
       <v-icon icon="mdi-network-outline"></v-icon>
-      <v-progress-circular v-if="activeAgentName() !== null" indeterminate color="primary" size="11"
+      <v-progress-circular v-if="activeAgentName() !== null" indeterminate="disable-shrink" color="primary" size="11"
         class="mr-1 ml-1"></v-progress-circular>
       <span class="mr-1">{{ activeAgentName() }}</span>
       <v-icon icon="mdi-transit-connection-variant"></v-icon>
-      <v-progress-circular v-if="activeClientName() !== null" indeterminate color="primary" size="11"
+      <v-progress-circular v-if="activeClientName() !== null" indeterminate="disable-shrink" color="primary" size="11"
         class="mr-1 ml-1"></v-progress-circular>
       <span class="mr-1">{{ activeClientName() }}</span>
       <v-divider vertical></v-divider>
@@ -107,7 +107,7 @@
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="configurationRequired()"
-        color="red"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
+        color="red-darken-1"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="toggleNavigation('settings')"
         v-else><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
 
@@ -156,7 +156,7 @@
     </v-main>
 
     <AppConfig ref="appConfig" />
-    <v-snackbar v-model="errorNotification" color="red" :timeout="3000">
+    <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
     <StatusNotification />

@@ -1,5 +1,8 @@
 import asyncio
+import json
 import logging
+
+import structlog
 
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
@@ -11,6 +14,8 @@ __all__ = [
     "CmdPromptChangeSectioning",
     "CmdRunAutomatic",
 ]
+
+log = structlog.get_logger("talemate.commands.cmd_debug_tools")
 
 
 @register
@@ -144,3 +149,32 @@ class CmdSetContentContext(TalemateCommand):
         self.scene.context = context
 
         self.emit("system", f"Content context set to {context}")
+
+
+@register
+class CmdDumpHistory(TalemateCommand):
+    """
+    Command class for the 'dump_history' command
+    """
+
+    name = "dump_history"
+    description = "Dump the history of the scene"
+    aliases = []
+
+    async def run(self):
+        for entry in self.scene.history:
+            log.debug("dump_history", entry=entry)
+
+
+@register
+class CmdDumpSceneSerialization(TalemateCommand):
+    """
+    Command class for the 'dump_scene_serialization' command
+    """
+
+    name = "dump_scene_serialization"
+    description = "Dump the scene serialization"
+    aliases = []
+
+    async def run(self):
+        log.debug("dump_scene_serialization", serialization=self.scene.json)

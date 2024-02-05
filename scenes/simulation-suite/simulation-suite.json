@@ -1,0 +1,52 @@
+{
+    "name": "Simulation Suite",
+    "environment": "scene",
+    "immutable_save": true,
+    "restore_from": "simulation-suite.json",
+    "experimental": true,
+    "help": "Address the computer by starting your statements with 'Computer, ' followed by an instruction.\n\nExamples:\n'Computer, i would like to experience an adventure on a derelict space station'\n'Computer, add a horrific alien creature that is chasing me.'",
+    "description": "",
+    "intro": "*You have entered the simulation suite. No simulation is currently active and you are in a non-descript space with paneled walls surrounding you. The control panel next to you is pulsating with a green light, indicating readiness to receive a prompt to start the simulation.*",
+    "archived_history": [],
+    "history": [],
+    "ts": "PT1S",
+    "characters": [
+        {
+            "name": "You",
+            "gender": "unknown",
+            "color": "cornflowerblue",
+            "base_attributes": {},
+            "is_player": true
+        }
+    ],
+    "context": "a simulated experience",
+    "game_state": {
+        "ops":{
+          "run_on_start": true,
+          "always_direct": true
+        },
+        "variables": {}
+    },
+    "world_state": {
+      "character_name_mappings": {
+        "You": [
+          "user",
+          "player",
+          "player character",
+          "user character",
+          "the user",
+          "the player"
+        ]
+      }
+    },
+    "assets": {
+        "cover_image": "4b157dccac2ba71adb078a9d591f9900d6d62f3e86168a5e0e5e1e9faf6dc103",
+        "assets": {
+          "4b157dccac2ba71adb078a9d591f9900d6d62f3e86168a5e0e5e1e9faf6dc103": {
+            "id": "4b157dccac2ba71adb078a9d591f9900d6d62f3e86168a5e0e5e1e9faf6dc103",
+            "file_type": "png",
+            "media_type": "image/png"
+          }
+        }
+    }
+}

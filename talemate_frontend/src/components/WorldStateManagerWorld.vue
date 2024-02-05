@@ -64,6 +64,11 @@
                             <v-card-text>
                                 <v-row>
                                     <v-col cols="12">
+                                        <ContextualGenerate 
+                                            :context="'world context:'+entry.id" 
+                                            :original="entry.text"
+                                            @generate="content => { entry.text=content; queueSaveEntry(); }"
+                                        />
                                         <v-textarea 
                                             v-model="entry.text"
                                             label="World information"
@@ -87,12 +92,12 @@
                             </v-card-text>
                             <v-card-actions>
                                 <span v-if="deleteConfirm===false">
-                                    <v-btn rounded="sm" prepend-icon="mdi-delete" color="error" variant="text" @click.stop="deleteConfirm=true" >
+                                    <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" color="error" variant="text" @click.stop="deleteConfirm=true" >
                                         Remove entry
                                     </v-btn>
                                 </span>
                                 <span v-else>
-                                    <v-btn rounded="sm" prepend-icon="mdi-delete" @click.stop="removeEntry"  color="error" variant="text">
+                                    <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" @click.stop="removeEntry"  color="error" variant="text">
                                         Confirm removal
                                     </v-btn>
                                     <v-btn class="ml-1" rounded="sm" prepend-icon="mdi-cancel" @click.stop="deleteConfirm=false" color="info" variant="text">
@@ -203,12 +208,12 @@
                                 </v-card-text>
                                 <v-card-actions>
                                     <span v-if="deleteConfirm===false">
-                                        <v-btn rounded="sm" prepend-icon="mdi-delete" color="error" variant="text" @click.stop="deleteConfirm=true" >
+                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" color="error" variant="text" @click.stop="deleteConfirm=true" >
                                             Remove state
                                         </v-btn>
                                     </span>
                                     <span v-else>
-                                        <v-btn rounded="sm" prepend-icon="mdi-delete" @click.stop="removeState"  color="error" variant="text">
+                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" @click.stop="removeState"  color="error" variant="text">
                                             Confirm removal
                                         </v-btn>
                                         <v-btn class="ml-1" rounded="sm" prepend-icon="mdi-cancel" @click.stop="deleteConfirm=false" color="info" variant="text">
@@ -245,8 +250,14 @@
 </template>
 
 <script>
+
+import ContextualGenerate from './ContextualGenerate.vue';
+
 export default {
     name: 'WorldStateManagerWorld',
+    components: {
+        ContextualGenerate,
+    },
     data() {
         return {
             entries: {},

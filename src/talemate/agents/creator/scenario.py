@@ -7,7 +7,6 @@ from talemate.prompts import Prompt
 
 
 class ScenarioCreatorMixin:
-
     """
     Adds scenario creation functionality to the creator agent
     """

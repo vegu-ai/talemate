@@ -85,7 +85,7 @@ class ConversationAgent(Agent):
                         type="number",
                         label="Generation Length (tokens)",
                         description="Maximum number of tokens to generate for a conversation response.",
-                        value=96,
+                        value=128,
                         min=32,
                         max=512,
                         step=32,
@@ -660,4 +660,4 @@ class ConversationAgent(Agent):
     ):
         if prompt_param.get("extra_stopping_strings") is None:
             prompt_param["extra_stopping_strings"] = []
-        prompt_param["extra_stopping_strings"] += ["["]
+        prompt_param["extra_stopping_strings"] += ["#"]

@@ -56,6 +56,7 @@ Then add the following to `config.yaml` for chromadb:
 ```yaml
 chromadb:
     embeddings: openai
+    openai_model: text-embedding-3-small
 ```
 
 **Note**: As with everything openai, using this isn't free. It's way cheaper than their text completion though. ALSO - if you send super explicit content they may flag / ban your key, so keep that in mind (i hear they usually send warnings first though), and always monitor your usage on their dashboard.

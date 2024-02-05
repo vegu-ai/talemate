@@ -1,0 +1,110 @@
+<|SECTION:CONTEXT|>
+{% set scene_history=scene.context_history(budget=1024)  %}
+{% for scene_context in scene_history -%}
+{{ loop.index }}. {{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:FUNCTIONS|>
+The player has instructed the computer to alter the current simulation. 
+
+You have access to the following functions, you can call as many as you want to fulfill the player's requests.
+
+You must at least call one of the following functions:
+
+- change_environment
+- add_ai_character 
+- change_ai_character
+- remove_ai_character
+- set_player_persona
+- set_player_name
+- end_simulation
+
+Set the player persona at the beginning of a new simulation or if the player requests a change.
+
+Only end the simulation if the player requests it explicitly.
+<|CLOSE_SECTION|>
+<|SECTION:EXAMPLES|>
+Request: Computer, I want to be on a mountain top
+```simulation-stack
+change_environment("mountain top")
+set_player_persona("mountain climber")
+set_player_name("Hank")
+```
+
+Request: Computer, I want to be more muscular and taller
+```simulation-stack
+set_player_persona("make player more muscular and taller")
+```
+
+Request: Computer, the building should be on fire
+```simulation-stack
+change_environment("building on fire")
+```
+
+Request: Computer, a rocket hits the building and George is now injured
+```simulation-stack
+change_environment("building on fire")
+change_ai_character("George is injured")
+```
+
+Request: Computer, I want to experience a rollercoaster ride with a friend
+```simulation-stack
+change_environment("theme park, riding a rollercoaster")
+set_player_persona("young female experiencing rollercoaster ride")
+set_player_name("Susanne")
+add_ai_character("a female friend of player")
+```
+
+Request: Computer, I want to experience the international space station
+```simulation-stack
+change_environment("international space station")
+set_player_persona("astronaut experiencing first trip to ISS")
+set_player_name("George")
+add_ai_character("astronaut")
+```
+
+Request: Computer, remove the goblin and add an elven woman instead
+```simulation-stack
+remove_ai_character("goblin")
+add_ai_character("elven woman named Elune")
+```
+
+Request: Computer, change the skiing instructor to be older.
+```simulation-stack
+change_ai_character("make skiing instructor older")
+```
+
+Request: Computer, change my grandma to my grandpa
+```simulation-stack
+remove_ai_character("grandma")
+add_ai_character("grandpa")
+```
+
+Request: Computer, remove the skiing instructor and add my friend instead.
+```simulation-stack
+remove_ai_character("skiing instructor")
+add_ai_character("player's friend")
+```
+
+Request: Computer, replace the skiing instructor with my friend.
+```simulation-stack
+remove_ai_character("skiing instructor")
+add_ai_character("player's friend")
+```
+
+Request: Computer, I want to end the simulation
+```simulation-stack
+end_simulation("simulation ended")
+```
+
+Request: Computer, shut down the simulation
+```simulation-stack
+end_simulation("simulation ended")
+```
+
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Respond with the simulation stack for the following request:
+
+Request: {{ player_instruction }}
+{{ bot_token }}```simulation-stack

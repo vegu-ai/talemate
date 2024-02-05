@@ -187,7 +187,7 @@ class WorldStateAgent(Agent):
 
         await self.check_pin_conditions()
 
-    async def update_world_state(self):
+    async def update_world_state(self, force: bool = False):
         if not self.enabled:
             return
 
@@ -206,7 +206,7 @@ class WorldStateAgent(Agent):
             self.next_update % self.actions["update_world_state"].config["turns"].value
             != 0
             or self.next_update == 0
-        ):
+        ) and not force:
             self.next_update += 1
             return
 
@@ -349,11 +349,15 @@ class WorldStateAgent(Agent):
         self,
         text: str,
         instruction: str,
+        short: bool = False,
     ):
+
+        kind = "analyze_freeform_short" if short else "analyze_freeform"
+
         response = await Prompt.request(
             "world_state.analyze-text-and-follow-instruction",
             self.client,
-            "analyze_freeform",
+            kind,
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
@@ -376,11 +380,13 @@ class WorldStateAgent(Agent):
         self,
         text: str,
         query: str,
+        short: bool = False,
     ):
+        kind = "analyze_freeform_short" if short else "analyze_freeform"
         response = await Prompt.request(
             "world_state.analyze-text-and-answer-question",
             self.client,
-            "analyze_freeform",
+            kind,
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
@@ -439,6 +445,7 @@ class WorldStateAgent(Agent):
         self,
         name: str,
         text: str = None,
+        alteration_instructions: str = None,
     ):
         """
         Attempts to extract a character sheet from the given text.
@@ -453,6 +460,8 @@ class WorldStateAgent(Agent):
                 "max_tokens": self.client.max_token_length,
                 "text": text,
                 "name": name,
+                "character": self.scene.get_character(name),
+                "alteration_instructions": alteration_instructions or "",
             },
         )
 
@@ -527,9 +536,11 @@ class WorldStateAgent(Agent):
                 "max_tokens": self.client.max_token_length,
                 "question": reinforcement.question,
                 "instructions": reinforcement.instructions or "",
-                "character": self.scene.get_character(reinforcement.character)
-                if reinforcement.character
-                else None,
+                "character": (
+                    self.scene.get_character(reinforcement.character)
+                    if reinforcement.character
+                    else None
+                ),
                 "answer": (reinforcement.answer if not reset else None) or "",
                 "reinforcement": reinforcement,
             },
@@ -735,3 +746,28 @@ class WorldStateAgent(Agent):
         )
 
         return is_leaving.lower().startswith("y")
+
+    @set_processing
+    async def manager(self, action_name: str, *args, **kwargs):
+        """
+        Executes a world state manager action through self.scene.world_state_manager
+        """
+
+        manager = self.scene.world_state_manager
+
+        try:
+            fn = getattr(manager, action_name, None)
+
+            if not fn:
+                raise ValueError(f"Unknown action: {action_name}")
+
+            return await fn(*args, **kwargs)
+        except Exception as e:
+            log.error(
+                "worldstate.manager",
+                action_name=action_name,
+                args=args,
+                kwargs=kwargs,
+                error=e,
+            )
+            raise

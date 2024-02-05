@@ -1,7 +1,7 @@
 <template>
     <v-list-subheader class="text-uppercase">
         <v-icon class="mr-1">mdi-earth</v-icon>World
-        <v-progress-circular class="ml-1 mr-3" size="14" v-if="requesting" indeterminate color="primary"></v-progress-circular>   
+        <v-progress-circular class="ml-1 mr-3" size="14" v-if="requesting" indeterminate="disable-shrink" color="primary"></v-progress-circular>   
         <v-tooltip v-else  text="Update Worldstate">
             <template v-slot:activator="{ props }">
                 <v-btn :disabled="isInputDisabled()"  size="x-small" icon="mdi-refresh" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh()"></v-btn>
@@ -17,6 +17,12 @@
     </v-list-subheader>
 
     <v-sheet ref="worldStateContainer">
+
+        <!-- empty (no characters or objects) -->
+
+        <v-card elevation="7" v-if="Object.keys(characters).length === 0 && Object.keys(items).length === 0" class="text-center text-caption mx-3" density="compact" variant="tonal" color="grey">
+            World state has not been updated yet.
+        </v-card>
 
         <div ref="charactersContainer">   
 
@@ -43,14 +49,13 @@
                         <!-- ACTIONS: LOOK AT, CHARACTER SHEET, PERSIST -->
 
                         <div class="text-center mt-1">
-                            <v-tooltip text="Look at">
+                            <v-tooltip :text="'Look at '+name">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="lookAtCharacter(name)" icon="mdi-eye"></v-btn>
 
                                 </template>
                             </v-tooltip>
-
-                            <v-tooltip v-if="characterSheet().characterExists(name)" text="Character details">
+                            <v-tooltip v-if="characterSheet().characterExists(name)" text="Character sheet">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openCharacterSheet(name)" icon="mdi-account-details"></v-btn>
 
@@ -59,6 +64,12 @@
                             <v-tooltip v-else text="Make this character real, adding it to the scene as an actor.">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(name)" icon="mdi-chat-plus-outline"></v-btn>
+
+                                </template>
+                            </v-tooltip>
+                            <v-tooltip v-if="characterSheet().characterExists(name)" text="Manage character">
+                                <template v-slot:activator="{ props }">
+                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openWorldStateManager('characters', name, 'description')" icon="mdi-book-open-page-variant"></v-btn>
 
                                 </template>
                             </v-tooltip>

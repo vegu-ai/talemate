@@ -209,6 +209,25 @@ class CharacterCreatorMixin:
         return attributes
 
     @set_processing
+    async def determine_character_name(
+        self,
+        character_name: str,
+        allowed_names: list[str] = None,
+    ) -> str:
+        name = await Prompt.request(
+            f"creator.determine-character-name",
+            self.client,
+            "analyze_freeform_short",
+            vars={
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "character_name": character_name,
+                "allowed_names": allowed_names or [],
+            },
+        )
+        return name.split('"', 1)[0].strip().strip(".").strip()
+
+    @set_processing
     async def determine_character_description(
         self, character: Character, text: str = ""
     ):

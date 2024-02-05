@@ -5,11 +5,11 @@
 
         <v-divider v-if="index !== 0" class="mb-3"></v-divider>
         <v-list-item-title>
-          <v-progress-circular v-if="client.status === 'busy'" indeterminate color="primary"
+          <v-progress-circular v-if="client.status === 'busy'" indeterminate="disable-shrink" color="primary"
             size="14"></v-progress-circular>
           
           <v-icon v-else-if="client.status == 'warning'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>
-          <v-icon v-else-if="client.status == 'error'" color="red" size="14">mdi-checkbox-blank-circle</v-icon>
+          <v-icon v-else-if="client.status == 'error'" color="red-darken-1" size="14">mdi-checkbox-blank-circle</v-icon>
           <v-icon v-else-if="client.status == 'disabled'" color="grey-darken-2" size="14">mdi-checkbox-blank-circle</v-icon>
           <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
           {{ client.name }}          
@@ -84,6 +84,7 @@ export default {
     return {
       saveDelayTimeout: null,
       clientStatusCheck: null,
+      clientDeleted: false,
       state: {
         clients: [],
         dialog: false,
@@ -191,6 +192,7 @@ export default {
       if (window.confirm('Are you sure you want to delete this client?')) {
         this.state.clients.splice(index, 1);
         this.$emit('clients-updated', this.state.clients);
+        this.clientDeleted = true;
       }
     },
     assignClientToAllAgents(index) {
@@ -212,6 +214,15 @@ export default {
 
       // Handle client_status message type
       if (data.type === 'client_status') {
+
+        if(this.clientDeleted) {
+          
+          // If we have just deleted a client, we need to wait for the next client_status message
+
+          this.clientDeleted = false;
+          return;
+        }
+
         // Find the client with the given name
         const client = this.state.clients.find(client => client.name === data.name);
 

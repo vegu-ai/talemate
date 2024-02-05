@@ -425,7 +425,13 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
     def make_collection_name(self, scene):
         if self.USE_OPENAI:
-            suffix = "-openai"
+            model_name = self.config.get("chromadb").get(
+                "openai_model", "text-embedding-3-small"
+            )
+            if model_name == "text-embedding-ada-002":
+                suffix = "-openai"
+            else:
+                suffix = f"-openai-{model_name}"
         elif self.USE_INSTRUCTOR:
             suffix = "-instructor"
             model = self.config.get("chromadb").get(
@@ -472,12 +478,19 @@ class ChromaDBMemoryAgent(MemoryAgent):
                     "You must provide an the openai ai key in the config if you want to use it for chromadb embeddings"
                 )
 
+            model_name = self.config.get("chromadb").get(
+                "openai_model", "text-embedding-3-small"
+            )
+
             log.info(
-                "crhomadb", status="using openai", openai_key=openai_key[:5] + "..."
+                "crhomadb",
+                status="using openai",
+                openai_key=openai_key[:5] + "...",
+                model=model_name,
             )
             openai_ef = embedding_functions.OpenAIEmbeddingFunction(
                 api_key=openai_key,
-                model_name="text-embedding-ada-002",
+                model_name=model_name,
             )
             self.db = self.db_client.get_or_create_collection(
                 collection_name, embedding_function=openai_ef

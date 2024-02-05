@@ -75,7 +75,7 @@
 
                         </v-card-text>
                         <v-card-actions>
-                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate color="primary"></v-progress-circular>          
+                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate="disable-shrink" color="primary"></v-progress-circular>          
                             <v-btn color="primary" @click="submitStep(2)" :disabled="generating" prepend-icon="mdi-memory">Generate</v-btn>
                             <v-btn color="primary" @click="resetStep(2)" :disabled="generating" prepend-icon="mdi-restart">Reset</v-btn>
                         </v-card-actions>
@@ -88,7 +88,7 @@
                             <v-textarea rows="10" auto-grow v-model="description"></v-textarea>
                         </v-card-text>
                         <v-card-actions>
-                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate
+                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate="disable-shrink"
                     color="primary"></v-progress-circular>          
                             <v-btn color="primary" @click="submitStep(3)" :disabled="generating" prepend-icon="mdi-memory">Generate</v-btn>
                         </v-card-actions>
@@ -105,7 +105,7 @@
                             <v-list>
                                 <v-list-item v-for="(question, index) in detail_questions" :key="index">
                                     <div>
-                                        <v-icon color="red" @click="detail_questions.splice(index, 1)">mdi-delete</v-icon>
+                                        <v-icon color="red-darken-1" @click="detail_questions.splice(index, 1)">mdi-close-box-outline</v-icon>
                                         {{ question }}
                                     </div>
                                 </v-list-item>
@@ -121,7 +121,7 @@
 
                         </v-card-text>
                         <v-card-actions>
-                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate
+                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate="disable-shrink"
                     color="primary"></v-progress-circular>          
                             <v-btn color="primary" @click="submitStep(4)" :disabled="generating" prepend-icon="mdi-memory">Generate</v-btn>
                         </v-card-actions>
@@ -136,7 +136,7 @@
                             <v-list>
                                     <v-list-item v-for="(example, index) in dialogue_examples" :key="index">
                                         <div>
-                                            <v-icon color="red" @click="dialogue_examples.splice(index, 1)">mdi-delete</v-icon>
+                                            <v-icon color="red-darken-1" @click="dialogue_examples.splice(index, 1)">mdi-close-box-outline</v-icon>
                                             {{ example }}
                                         </div>
                                     </v-list-item>
@@ -144,7 +144,7 @@
                             </v-list>
                         </v-card-text>
                         <v-card-actions>
-                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate color="primary"></v-progress-circular>          
+                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate="disable-shrink" color="primary"></v-progress-circular>          
                             <v-btn color="primary" @click="submitStep(5)" :disabled="generating" prepend-icon="mdi-memory">Generate</v-btn>
                         </v-card-actions>
                     </v-card>
@@ -158,7 +158,7 @@
                             </v-alert>
                         </v-card-text>
                         <v-card-actions>
-                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate color="primary"></v-progress-circular>          
+                            <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate="disable-shrink" color="primary"></v-progress-circular>          
                             <v-btn color="primary" @click="submitStep(6)" :disabled="generating">Add to world</v-btn>
                         </v-card-actions>
                     </v-card>
@@ -169,7 +169,7 @@
         </v-window>
     </v-dialog> 
 
-    <v-snackbar v-model="notification" color="red" :timeout="3000">
+    <v-snackbar v-model="notification" color="red-darken-1" :timeout="3000">
         {{ notification_text }}
     </v-snackbar>
 </template>

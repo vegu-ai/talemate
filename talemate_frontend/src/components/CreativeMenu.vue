@@ -15,7 +15,7 @@
 
                         <v-tooltip text="Permanently Delete">
                             <template v-slot:activator="{ props }">
-                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" color="red" icon="mdi-account-cancel" @click.stop="removeCharacterFromScene(character.name)"></v-btn>
+                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" color="red-darken-1" icon="mdi-account-cancel" @click.stop="removeCharacterFromScene(character.name)"></v-btn>
 
                             </template>
                         </v-tooltip>
@@ -53,7 +53,7 @@
 
                         <v-tooltip text="Permanently Delete">
                             <template v-slot:activator="{ props }">
-                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" color="red" icon="mdi-account-cancel" @click.stop="removeCharacterFromScene(character_name)"></v-btn>
+                                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" color="red-darken-1" icon="mdi-account-cancel" @click.stop="removeCharacterFromScene(character_name)"></v-btn>
 
                             </template>
                         </v-tooltip>

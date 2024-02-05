@@ -6,6 +6,7 @@ import sys
 import structlog
 import websockets
 
+import talemate.config
 from talemate.server.api import websocket_endpoint
 
 log = structlog.get_logger("talemate.server.run")
@@ -17,6 +18,12 @@ def run_server(args):
 
     :param args: command line arguments parsed by argparse
     """
+
+    import talemate.agents.custom
+    import talemate.client.custom
+
+    talemate.config.cleanup()
+
     start_server = websockets.serve(
         websocket_endpoint, args.host, args.port, max_size=2**23
     )

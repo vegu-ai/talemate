@@ -1,6 +1,6 @@
 # Talemate
 
-Roleplay with AI with a focus on strong narration, consistent world and game state tracking.
+Roleplay with AI with a focus on strong narration and consistent world and game state tracking.
 
 |||
 |------------------------------------------|------------------------------------------|

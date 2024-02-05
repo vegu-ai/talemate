@@ -4,6 +4,7 @@
 {% set player_message = scene.last_player_message() %}
 {% set last_processed = game_state.get_var('instr.last_processed', -1) %}
 {% set player_message_is_instruction = (player_message and player_message.raw.lower().startswith("computer") and not player_message.hidden) and not player_message.raw.lower().strip() == "computer" and not last_processed >= player_message.id %}
+{% set simulation_reset = False %}
 {% if not game_state.has_var('instr.simulation_stopped') %}
 {# simulation NOT started #}
 
@@ -14,6 +15,7 @@
         {#% set _ = agent_action("narrator", "action_to_narration", action_name="paraphrase", narration="The computer is processing the request, please wait a moment.", emit_message=True) %#}
 
         {% set calls = render_and_request(render_template("computer", player_instruction=player_message.raw), dedupe_enabled=False) %}
+
         {% set _ = debug("HOLODECK simulation calls", calls=calls ) %}
         {% set processed = make_list() %}
 
@@ -92,14 +94,27 @@
                     {% set _ = debug("HOLODECK transform npc", attributes=character_attributes, description=character_description) %}
                     {% set _ = processed.append(call) %}
                 {% endif %}
+            {% elif call.strip().startswith("end_simulation") %}
+                {# end simulation #}
+                {% set explicit_command = query_text_eval("has the player explicitly asked to end the simulation?", player_message.raw) %}
+                {% if explicit_command %}
+                    {% set _ = emit_status("busy", "Simulation suite ending current simulation.", as_scene_message=True) %}
+                    {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer ends the simulation, disolving the environment and all artifical characters, erasing all memory of it and finally returning the player to the inactive simulation suite.", emit_message=True) %}
+                    {% set _ = scene.sync_restore() %}
+                    {% set update_world_state = True %}
+                    {% set simulation_reset = True %}
+                {% endif %}
+            {% elif "(" in call.strip() %}
+                {# unknown function call, still add it to processed stack so it can be incoorporated in the narration #}
+                {% set _ = processed.append(call) %}
             {% endif %}
         {% endfor %}
 
-        {% if processed %}
+        {% if processed and not simulation_reset %}
             {% set _ = game_state.set_var("instr.has_issued_instructions", "yes", commit=False) %}
             {% set _ = emit_status("busy", "Simulation suite altering environment.", as_scene_message=True) %}
             {% set update_world_state = True %}
-            {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer calls the following functions:\n"+processed.join("\n")+"\nand the simulation adjusts the environment according to the user's wishes.", emit_message=True) %}
+            {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer calls the following functions:\n"+processed.join("\n")+"\nand the simulation adjusts the environment according to the user's wishes. Write the narrative that describes the changes.", emit_message=True) %}
         {% endif %}
 
     {% elif not game_state.has_var("instr.simulation_started") %}
@@ -125,7 +140,7 @@
     {% set _ = agent_action("world_state", "update_world_state", force=True) %}
 {% endif %}
 
-{% if not scene.npc_character_names %}
+{% if not scene.npc_character_names and not simulation_reset %}
     {# no characters in the scene, see if there are any to add #}
     {% set npcs = agent_action("director", "persist_characters_from_worldstate", exclude=["computer", "user", "player", "you"]) %}
     {% for npc in npcs %}

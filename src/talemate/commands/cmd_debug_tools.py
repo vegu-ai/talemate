@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import structlog
+import json
 
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
@@ -160,3 +161,17 @@ class CmdDumpHistory(TalemateCommand):
     async def run(self):
         for entry in self.scene.history:
             log.debug("dump_history", entry=entry)
+            
+        
+@register
+class CmdDumpSceneSerialization(TalemateCommand):
+    """
+    Command class for the 'dump_scene_serialization' command
+    """
+
+    name = "dump_scene_serialization"
+    description = "Dump the scene serialization"
+    aliases = []
+
+    async def run(self):
+        log.debug("dump_scene_serialization", serialization=self.scene.json)

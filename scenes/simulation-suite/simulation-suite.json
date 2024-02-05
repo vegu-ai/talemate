@@ -2,6 +2,7 @@
     "name": "Simulation Suite",
     "environment": "scene",
     "immutable_save": true,
+    "restore_from": "simulation-suite.json",
     "experimental": true,
     "help": "Address the computer by starting your statements with 'Computer, ' followed by an instruction.\n\nExamples:\n'Computer, i would like to experience an adventure on a derelict space station'\n'Computer, add a horrific alien creature that is chasing me.'",
     "description": "",

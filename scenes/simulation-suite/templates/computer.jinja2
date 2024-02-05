@@ -9,14 +9,19 @@ The player has instructed the computer to alter the current simulation.
 
 You have access to the following functions, you can call as many as you want to fulfill the player's requests.
 
+You must at least call one of the following functions:
+
 - change_environment
 - add_ai_character 
 - change_ai_character
 - remove_ai_character
 - set_player_persona
 - set_player_name
+- end_simulation
 
 Set the player persona at the beginning of a new simulation or if the player requests a change.
+
+Only end the simulation if the player requests it explicitly.
 <|CLOSE_SECTION|>
 <|SECTION:EXAMPLES|>
 Request: Computer, I want to be on a mountain top
@@ -86,6 +91,17 @@ Request: Computer, replace the skiing instructor with my friend.
 remove_ai_character("skiing instructor")
 add_ai_character("player's friend")
 ```
+
+Request: Computer, I want to end the simulation
+```simulation-stack
+end_simulation("simulation ended")
+```
+
+Request: Computer, shut down the simulation
+```simulation-stack
+end_simulation("simulation ended")
+```
+
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
 Respond with the simulation stack for the following request:

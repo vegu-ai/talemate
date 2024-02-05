@@ -752,6 +752,7 @@ class Scene(Emitter):
         self.memory_id = str(uuid.uuid4())[:10]
         self.saved_memory_session_id = None
         self.memory_session_id = str(uuid.uuid4())[:10]
+        self.restore_from = None
 
         # has scene been saved before?
         self.saved = False
@@ -1166,6 +1167,8 @@ class Scene(Emitter):
         for _actor in self.actors:
             if _actor == actor:
                 self.actors.remove(_actor)
+            
+        actor.character = None
 
     def add_helper(self, helper: Helper):
         """
@@ -1800,6 +1803,10 @@ class Scene(Emitter):
 
                 for actor in self.actors:
                     
+                    if not actor.character:
+                        self.log.warning("Actor has no character", actor=actor)
+                        continue
+                    
                     if actor.character.memory_dirty:
                         await actor.character.commit_to_memory(
                             self.get_helper("memory").agent
@@ -2058,3 +2065,72 @@ class Scene(Emitter):
         self.archived_history = []
         self.filename = ""
         self.goal = None
+
+    async def remove_all_actors(self):
+        for actor in self.actors:
+            actor.character = None
+            
+        self.actors = []
+
+    async def restore(self):
+        try:
+            self.log.info("Restoring", source=self.restore_from)
+            
+            if not self.restore_from:
+                self.log.error("No restore_from set")
+                return
+            
+            self.reset()
+            self.inactive_characters = {}
+            await self.remove_all_actors()
+            
+            from talemate.load import load_scene
+            
+            await load_scene(
+                self, 
+                os.path.join(self.save_dir, self.restore_from), 
+                self.get_helper("conversation").agent.client, 
+            )
+
+            self.emit_status()
+        except Exception as e:
+            self.log.error("restore", error=e, traceback=traceback.format_exc())
+        
+    def sync_restore(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.restore())
+    
+    @property
+    def serialize(self):
+        scene = self
+        return {
+            "description": scene.description,
+            "intro": scene.intro,
+            "name": scene.name,
+            "history": scene.history,
+            "environment": scene.environment,
+            "archived_history": scene.archived_history,
+            "character_states": scene.character_states,
+            "characters": [actor.character.serialize for actor in scene.actors],
+            "inactive_characters": {
+                name: character.serialize
+                for name, character in scene.inactive_characters.items()
+            },
+            "goal": scene.goal,
+            "goals": scene.goals,
+            "context": scene.context,
+            "world_state": scene.world_state.model_dump(),
+            "game_state": scene.game_state.model_dump(),
+            "assets": scene.assets.dict(),
+            "memory_id": scene.memory_id,
+            "memory_session_id": scene.memory_session_id,
+            "saved_memory_session_id": scene.saved_memory_session_id,
+            "immutable_save": scene.immutable_save,
+            "ts": scene.ts,
+            "help": scene.help,
+            "experimental": scene.experimental,
+        }
+    
+    @property
+    def json(self):
+        return json.dumps(self.serialize, indent=2, cls=save.SceneEncoder)

@@ -96,8 +96,8 @@ class GameState(pydantic.BaseModel):
     def has_var(self, key: str) -> bool:
         return key in self.variables
 
-    def get_var(self, key: str) -> Any:
-        return self.variables[key]
+    def get_var(self, key: str, default: Any = None) -> Any:
+        return self.variables.get(key, default)
 
     def get_or_set_var(self, key: str, value: Any, commit: bool = False) -> Any:
         if not self.has_var(key):

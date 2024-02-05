@@ -11,9 +11,10 @@
 {{ text }}
 {% endif -%}
 <|SECTION:TASK|>
+{% if not character %}
 Generate a real world character profile for {{ name }}, one attribute per line. You are a creative writer and are allowed to fill in any gaps in the profile with your own ideas.
-
 Expand on interesting details.
+
 
 Narration style should be that of a 90s point and click adventure game. You are omniscient and can describe the scene in detail.
 
@@ -27,5 +28,12 @@ Appearance: <description of appearance>
 <...>
 
 Format MUST be one attribute per line, with a colon after the attribute name.
+{% else %}
+{{ character.sheet }}
 
+Update the character sheet with any realtime changes for {{ name }} based on the context and the following information. Add one attribute per line. You are a creative writer and are allowed to fill in any gaps in the profile with your own ideas.
+
+Alteration instructions: {{ alteration_instructions }}
+
+{% endif %}
 {{ set_prepared_response("Name: "+name+"\nAge:") }}

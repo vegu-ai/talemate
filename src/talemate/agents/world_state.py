@@ -446,6 +446,7 @@ class WorldStateAgent(Agent):
         self,
         name: str,
         text: str = None,
+        alteration_instructions: str = None,
     ):
         """
         Attempts to extract a character sheet from the given text.
@@ -460,6 +461,8 @@ class WorldStateAgent(Agent):
                 "max_tokens": self.client.max_token_length,
                 "text": text,
                 "name": name,
+                "character": self.scene.get_character(name),
+                "alteration_instructions": alteration_instructions or "",
             },
         )
 

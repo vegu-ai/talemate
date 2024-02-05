@@ -1,14 +1,22 @@
-<|SECTION:INSTRUCTIONS|>
+<|SECTION:CONTEXT|>
+{% set scene_history=scene.context_history(budget=1024)  %}
+{% for scene_context in scene_history -%}
+{{ loop.index }}. {{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:FUNCTIONS|>
 The player has instructed the computer to alter the current simulation. 
 
-You have access to the following function, you can call as many as you want to fulfill the player's requests.
+You have access to the following functions, you can call as many as you want to fulfill the player's requests.
 
 - change_environment
-- add_ai_character
+- add_ai_character 
 - change_ai_character
 - remove_ai_character
 - set_player_persona
 - set_player_name
+
+Set the player persona at the beginning of a new simulation or if the player requests a change.
 <|CLOSE_SECTION|>
 <|SECTION:EXAMPLES|>
 Request: Computer, I want to be on a mountain top
@@ -21,6 +29,17 @@ set_player_name("Hank")
 Request: Computer, I want to be more muscular and taller
 ```simulation-stack
 set_player_persona("make player more muscular and taller")
+```
+
+Request: Computer, the building should be on fire
+```simulation-stack
+change_environment("building on fire")
+```
+
+Request: Computer, a rocket hits the building and George is now injured
+```simulation-stack
+change_environment("building on fire")
+change_ai_character("George is injured")
 ```
 
 Request: Computer, I want to experience a rollercoaster ride with a friend
@@ -67,7 +86,6 @@ Request: Computer, replace the skiing instructor with my friend.
 remove_ai_character("skiing instructor")
 add_ai_character("player's friend")
 ```
-
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
 Respond with the simulation stack for the following request:

@@ -100,6 +100,7 @@ Always contain dialogue in quotation marks. For example, {{ talking_character.na
 # Final instructions for generating the next line of dialogue: {{ rerun_context.direction }}
 {% elif rerun_context.method == 'edit' and rerun_context.message -%}
 # Edit and respond with your changed version of the following line of dialogue: {{ rerun_context.message|condensed }}
+
 # Requested changes: {{ rerun_context.direction }}
 {% endif -%}
 {% endif -%}

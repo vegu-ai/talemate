@@ -123,14 +123,16 @@
 {% if update_world_state %}
     {% set _ = emit_status("busy", "Simulation suite updating world state.", as_scene_message=True) %}
     {% set _ = agent_action("world_state", "update_world_state", force=True) %}
-    {% if not scene.npc_character_names %}
-        {% set npcs = agent_action("director", "persist_characters_from_worldstate", exclude=["computer", "user", "player", "you"]) %}
-        {% for npc in npcs %}
-            {% set _ = agent_action("world_state", "manager", action_name="add_detail_reinforcement", character_name=npc.name, question="Goal", instructions="Generate a goal for the character, based on the user's chosen simulation", interval=25, run_immediately=True) %}
-        {% endfor %}
-        {% if npcs %}
-            {% set _ = agent_action("world_state", "update_world_state", force=True) %}
-        {% endif %}
+{% endif %}
+
+{% if not scene.npc_character_names %}
+    {# no characters in the scene, see if there are any to add #}
+    {% set npcs = agent_action("director", "persist_characters_from_worldstate", exclude=["computer", "user", "player", "you"]) %}
+    {% for npc in npcs %}
+        {% set _ = agent_action("world_state", "manager", action_name="add_detail_reinforcement", character_name=npc.name, question="Goal", instructions="Generate a goal for the character, based on the user's chosen simulation", interval=25, run_immediately=True) %}
+    {% endfor %}
+    {% if npcs %}
+        {% set _ = agent_action("world_state", "update_world_state", force=True) %}
     {% endif %}
 {% endif %}
 
@@ -142,4 +144,7 @@
 {% elif player_message and not game_state.has_var("instr.has_issued_instructions") %}
     {# simulation not started, but player message is not an instruction #}
     {% set _ = agent_action("narrator", "action_to_narration", action_name="paraphrase", narration="Instructions to the simulation computer are only process if the computer is addressed at the beginning of the instruction. Please state your commands by addressing the computer by stating \"Computer,\" followed by an instruction. For example ... \"Computer, i want to experience being on a derelict spaceship.\"", emit_message=True) %}
+{% elif player_message and not scene.npc_character_names %}
+    {# simulation started, player message is NOT an instruction, but there are no npcs to interact with #}
+    {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The environment reacts to the player's actions. YOU MUST NOT ACT ON BEHALF OF THE PLAYER. YOU MUST NOT INTERACT WITH THE COMPUTER.", emit_message=True) %}
 {% endif %}

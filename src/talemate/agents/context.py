@@ -9,6 +9,7 @@ __all__ = [
 
 active_agent = contextvars.ContextVar("active_agent", default=None)
 
+
 class ActiveAgentContext(pydantic.BaseModel):
     agent: object
     fn: Callable
@@ -20,7 +21,7 @@ class ActiveAgentContext(pydantic.BaseModel):
     @property
     def action(self):
         return self.fn.__name__
-    
+
     def __str__(self):
         return f"{self.agent.verbose_name}.{self.action}"
 
@@ -30,14 +31,14 @@ class ActiveAgent:
         self.agent = ActiveAgentContext(agent=agent, fn=fn)
 
     def __enter__(self):
-        
+
         previous_agent = active_agent.get()
-        
+
         if previous_agent:
             self.agent.agent_stack = previous_agent.agent_stack + [str(self.agent)]
         else:
             self.agent.agent_stack = [str(self.agent)]
-        
+
         self.token = active_agent.set(self.agent)
 
     def __exit__(self, *args, **kwargs):

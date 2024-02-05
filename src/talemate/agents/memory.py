@@ -477,13 +477,16 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 raise ValueError(
                     "You must provide an the openai ai key in the config if you want to use it for chromadb embeddings"
                 )
-                
+
             model_name = self.config.get("chromadb").get(
                 "openai_model", "text-embedding-3-small"
             )
 
             log.info(
-                "crhomadb", status="using openai", openai_key=openai_key[:5] + "...", model=model_name
+                "crhomadb",
+                status="using openai",
+                openai_key=openai_key[:5] + "...",
+                model=model_name,
             )
             openai_ef = embedding_functions.OpenAIEmbeddingFunction(
                 api_key=openai_key,

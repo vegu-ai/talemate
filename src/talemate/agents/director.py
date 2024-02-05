@@ -183,8 +183,8 @@ class DirectorAgent(Agent):
             # no character, see if there are NPC characters at all
             # if not we always want to direct narration
             always_direct = (
-                not self.scene.npc_character_names or 
-                self.scene.game_state.ops.always_direct
+                not self.scene.npc_character_names
+                or self.scene.game_state.ops.always_direct
             )
 
             next_direct = self.next_direct_scene
@@ -257,27 +257,32 @@ class DirectorAgent(Agent):
             self.scene.game_state.scene_instructions
 
     @set_processing
-    async def persist_characters_from_worldstate(self, exclude:list[str]=None) -> List[Character]:
-        log.warning("persist_characters_from_worldstate", world_state_characters=self.scene.world_state.characters, scene_characters=self.scene.character_names)
-        
+    async def persist_characters_from_worldstate(
+        self, exclude: list[str] = None
+    ) -> List[Character]:
+        log.warning(
+            "persist_characters_from_worldstate",
+            world_state_characters=self.scene.world_state.characters,
+            scene_characters=self.scene.character_names,
+        )
+
         created_characters = []
-        
+
         for character_name in self.scene.world_state.characters.keys():
-            
+
             if exclude and character_name.lower() in exclude:
                 continue
-            
+
             if character_name in self.scene.character_names:
                 continue
-            
+
             character = await self.persist_character(name=character_name)
-            
+
             created_characters.append(character)
-        
+
         self.scene.emit_status()
-        
+
         return created_characters
-            
 
     @set_processing
     async def persist_character(
@@ -288,7 +293,7 @@ class DirectorAgent(Agent):
     ):
         world_state = instance.get_agent("world_state")
         creator = instance.get_agent("creator")
-        
+
         self.scene.log.debug("persist_character", name=name)
         name = await creator.determine_character_name(name)
         self.scene.log.debug("persist_character", adjusted_name=name)

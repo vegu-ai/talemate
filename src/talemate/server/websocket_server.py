@@ -601,7 +601,6 @@ class WebsocketHandler(Receiver):
         except Exception as exc:
             log.error("request_scene_assets", error=traceback.format_exc())
 
-
     def request_assets(self, assets: list[dict]):
         # way to request scene assets without loading the scene
         #

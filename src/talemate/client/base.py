@@ -1,6 +1,7 @@
 """
 A unified client base, based on the openai API
 """
+
 import logging
 import random
 import time
@@ -33,16 +34,17 @@ STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 
 
 class PromptData(pydantic.BaseModel):
-    kind:str
-    prompt:str
-    response:str
-    prompt_tokens:int
-    response_tokens:int
-    client_name:str
-    client_type:str
-    time:Union[float,int]
-    agent_stack:list[str] = pydantic.Field(default_factory=list)
-    generation_parameters:dict = pydantic.Field(default_factory=dict)
+    kind: str
+    prompt: str
+    response: str
+    prompt_tokens: int
+    response_tokens: int
+    client_name: str
+    client_type: str
+    time: Union[float, int]
+    agent_stack: list[str] = pydantic.Field(default_factory=list)
+    generation_parameters: dict = pydantic.Field(default_factory=dict)
+
 
 class ErrorAction(pydantic.BaseModel):
     title: str
@@ -166,7 +168,7 @@ class ClientBase:
         """
 
         if self.decensor_enabled:
-            
+
             if "narrate" in kind:
                 return system_prompts.NARRATOR
             if "story" in kind:
@@ -191,9 +193,9 @@ class ClientBase:
                 return system_prompts.ANALYST
             if "summarize" in kind:
                 return system_prompts.SUMMARIZE
-            
+
         else:
-            
+
             if "narrate" in kind:
                 return system_prompts.NARRATOR_NO_DECENSOR
             if "story" in kind:
@@ -218,7 +220,7 @@ class ClientBase:
                 return system_prompts.ANALYST_NO_DECENSOR
             if "summarize" in kind:
                 return system_prompts.SUMMARIZE_NO_DECENSOR
-            
+
         return system_prompts.BASIC
 
     def emit_status(self, processing: bool = None):

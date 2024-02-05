@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from functools import wraps
 import dataclasses
 import random
+from functools import wraps
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import structlog
@@ -56,7 +56,6 @@ def set_processing(fn):
 
 @register()
 class NarratorAgent(Agent):
-
     """
     Handles narration of the story
     """
@@ -526,11 +525,11 @@ class NarratorAgent(Agent):
         return response
 
     @set_processing
-    async def paraphrase(self, narration:str):
+    async def paraphrase(self, narration: str):
         """
         Paraphrase a narration
         """
-        
+
         response = await Prompt.request(
             "narrator.paraphrase",
             self.client,
@@ -541,9 +540,9 @@ class NarratorAgent(Agent):
                 "max_tokens": self.client.max_token_length,
             },
         )
-        
+
         log.info("paraphrase", narration=narration, response=response)
-        
+
         response = self.clean_result(response.strip().strip("*"))
         response = f"*{response}*"
 
@@ -565,10 +564,10 @@ class NarratorAgent(Agent):
             narration, source=f"{action_name}:{args[0] if args else ''}".rstrip(":")
         )
         self.scene.push_history(narrator_message)
-        
+
         if emit_message:
             emit("narrator", narrator_message)
-        
+
         return narrator_message
 
     # LLM client related methods. These are called during or after the client

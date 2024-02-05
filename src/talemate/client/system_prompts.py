@@ -32,7 +32,9 @@ DIRECTOR_NO_DECENSOR = str(Prompt.get("director.system-no-decensor"))
 
 ANALYST_NO_DECENSOR = str(Prompt.get("world_state.system-analyst-no-decensor"))
 
-ANALYST_FREEFORM_NO_DECENSOR = str(Prompt.get("world_state.system-analyst-freeform-no-decensor"))
+ANALYST_FREEFORM_NO_DECENSOR = str(
+    Prompt.get("world_state.system-analyst-freeform-no-decensor")
+)
 
 EDITOR_NO_DECENSOR = str(Prompt.get("editor.system-no-decensor"))
 

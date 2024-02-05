@@ -84,7 +84,7 @@ class WorldState(BaseModel):
 
     # manual context
     manual_context: dict[str, ManualContext] = {}
-    
+
     character_name_mappings: dict[str, list[str]] = {}
 
     @property
@@ -198,7 +198,11 @@ class WorldState(BaseModel):
 
             for main_name, synonyms in self.character_name_mappings.items():
                 if character_name.lower() in synonyms:
-                    log.debug("world_state adjusting character name (via mapping)", from_name=character_name, to_name=main_name)
+                    log.debug(
+                        "world_state adjusting character name (via mapping)",
+                        from_name=character_name,
+                        to_name=main_name,
+                    )
                     character_name = main_name
                     break
 
@@ -243,7 +247,7 @@ class WorldState(BaseModel):
                     error=e,
                     traceback=traceback.format_exc(),
                 )
-                
+
             log.debug("world_state", character=character)
 
         for item_name, item in world_state.get("items", {}).items():

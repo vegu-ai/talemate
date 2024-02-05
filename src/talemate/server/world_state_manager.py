@@ -46,6 +46,7 @@ class CharacterActorPayload(pydantic.BaseModel):
     dialogue_instructions: str
     dialogue_examples: list[str] = pydantic.Field(default_factory=list)
 
+
 class SaveWorldEntryPayload(pydantic.BaseModel):
     id: str
     text: str

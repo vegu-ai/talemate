@@ -35,6 +35,7 @@ JSON_OBJECT_RESPONSE_MODELS = [
     "gpt-3.5-turbo-0125",
 ]
 
+
 def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0613"):
     """Return the number of tokens used by a list of messages."""
     try:
@@ -239,7 +240,7 @@ class OpenAIClient(ClientBase):
         keys = list(parameters.keys())
 
         valid_keys = ["temperature", "top_p"]
-        
+
         # GPT-3.5 models tend to run away with the generated
         # response size so we allow talemate to set the max_tokens
         #
@@ -262,7 +263,10 @@ class OpenAIClient(ClientBase):
             raise Exception("No OpenAI API key set")
 
         # only gpt-4-* supports enforcing json object
-        supports_json_object = self.model_name.startswith("gpt-4-") or self.model_name in JSON_OBJECT_RESPONSE_MODELS
+        supports_json_object = (
+            self.model_name.startswith("gpt-4-")
+            or self.model_name in JSON_OBJECT_RESPONSE_MODELS
+        )
         right = None
         expected_response = None
         try:
@@ -276,8 +280,13 @@ class OpenAIClient(ClientBase):
         human_message = {"role": "user", "content": prompt.strip()}
         system_message = {"role": "system", "content": self.get_system_message(kind)}
 
-        self.log.debug("generate", prompt=prompt[:128] + " ...", parameters=parameters, system_message=system_message)
-        
+        self.log.debug(
+            "generate",
+            prompt=prompt[:128] + " ...",
+            parameters=parameters,
+            system_message=system_message,
+        )
+
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,
@@ -286,11 +295,15 @@ class OpenAIClient(ClientBase):
             )
 
             response = response.choices[0].message.content
-            
+
             # older models don't support json_object response coersion
             # and often like to return the response wrapped in ```json
             # so we strip that out if the expected response is a json object
-            if not supports_json_object and expected_response and expected_response.startswith("{"):
+            if (
+                not supports_json_object
+                and expected_response
+                and expected_response.startswith("{")
+            ):
                 if response.startswith("```json") and response.endswith("```"):
                     response = response[7:-3].strip()
 

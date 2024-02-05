@@ -1,5 +1,6 @@
 import importlib
 import os
+
 import structlog
 
 log = structlog.get_logger("talemate.client.custom")
@@ -23,10 +24,10 @@ subdirectories = [
 for subdirectory in subdirectories:
     # get the name of the submodule
     submodule_name = os.path.basename(subdirectory)
-    
+
     if submodule_name.startswith("__"):
         continue
-    
+
     log.info("activating custom client", module=submodule_name)
 
     # import the submodule

@@ -211,7 +211,7 @@ class CharacterCreatorMixin:
     @set_processing
     async def determine_character_name(
         self,
-        character_name:str,
+        character_name: str,
         allowed_names: list[str] = None,
     ) -> str:
         name = await Prompt.request(

@@ -245,9 +245,8 @@ async def load_scene_from_data(
             actor = Player(character, None)
         await scene.add_actor(actor)
 
-
     # if there is nio player character, add the default player character
-    
+
     if not scene.get_player_character():
         await scene.add_actor(default_player_character())
 

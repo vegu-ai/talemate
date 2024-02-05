@@ -3,13 +3,14 @@ import structlog
 
 log = structlog.get_logger("talemate.server.devtools")
 
+
 class TestPromptPayload(pydantic.BaseModel):
-    prompt:str
-    generation_parameters:dict
-    client_name:str
-    kind:str
-    
-    
+    prompt: str
+    generation_parameters: dict
+    client_name: str
+    kind: str
+
+
 class DevToolsPlugin:
     router = "devtools"
 
@@ -25,7 +26,7 @@ class DevToolsPlugin:
             return
 
         await fn(data)
-        
+
     async def handle_test_prompt(self, data):
         payload = TestPromptPayload(**data)
         client = self.websocket_handler.llm_clients[payload.client_name]["client"]
@@ -34,7 +35,7 @@ class DevToolsPlugin:
             payload.generation_parameters,
             payload.kind,
         )
-        
+
         self.websocket_handler.queue_put(
             {
                 "type": "devtools",

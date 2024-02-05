@@ -7,15 +7,16 @@ import structlog
 import yaml
 from pydantic import BaseModel, Field
 
-from talemate.emit import emit
-from talemate.scene_assets import Asset
 from talemate.agents.registry import get_agent_class
 from talemate.client.registry import get_client_class
+from talemate.emit import emit
+from talemate.scene_assets import Asset
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 log = structlog.get_logger("talemate.config")
+
 
 def scenes_dir():
     relative_path = os.path.join(
@@ -25,6 +26,7 @@ def scenes_dir():
         "scenes",
     )
     return os.path.abspath(relative_path)
+
 
 class Client(BaseModel):
     type: str
@@ -96,7 +98,7 @@ class WorldStateTemplates(BaseModel):
     state_reinforcement: dict[str, StateReinforcementTemplate] = pydantic.Field(
         default_factory=dict
     )
-    
+
     def get_template(self, name: str) -> Union[StateReinforcementTemplate, None]:
         return self.state_reinforcement.get(name)
 
@@ -167,19 +169,20 @@ def gnerate_intro_scenes():
     """
     When there are no recent scenes, generate from a set of introdutory scenes
     """
-    
-    
+
     scenes = [
         RecentScene(
             name="Simulation Suite",
-            path=os.path.join(scenes_dir(), "simulation-suite", "simulation-suite.json"),
+            path=os.path.join(
+                scenes_dir(), "simulation-suite", "simulation-suite.json"
+            ),
             filename="simulation-suite.json",
             date=datetime.datetime.now().isoformat(),
             cover_image=Asset(
                 id="4b157dccac2ba71adb078a9d591f9900d6d62f3e86168a5e0e5e1e9faf6dc103",
                 file_type="png",
                 media_type="image/png",
-            )
+            ),
         ),
         RecentScene(
             name="Infinity Quest",
@@ -190,7 +193,7 @@ def gnerate_intro_scenes():
                 id="52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df",
                 file_type="png",
                 media_type="image/png",
-            )
+            ),
         ),
         RecentScene(
             name="Infinity Quest Dynamic Scenario",
@@ -203,13 +206,12 @@ def gnerate_intro_scenes():
                 id="e7c712a0b276342d5767ba23806b03912d10c7c4b82dd1eec0056611e2cd5404",
                 file_type="png",
                 media_type="image/png",
-            )
+            ),
         ),
     ]
-    
+
     return scenes
-    
- 
+
 
 class RecentScenes(BaseModel):
     scenes: list[RecentScene] = pydantic.Field(default_factory=gnerate_intro_scenes)
@@ -237,9 +239,11 @@ class RecentScenes(BaseModel):
                 path=scene.full_path,
                 filename=scene.filename,
                 date=now.isoformat(),
-                cover_image=scene.assets.assets[scene.assets.cover_image]
-                if scene.assets.cover_image
-                else None,
+                cover_image=(
+                    scene.assets.assets[scene.assets.cover_image]
+                    if scene.assets.cover_image
+                    else None
+                ),
             ),
         )
 
@@ -344,43 +348,41 @@ def save_config(config, file_path: str = "./config.yaml"):
 
 
 def cleanup():
-    
+
     log.info("cleaning up config")
-    
+
     config = load_config(as_model=True)
-    
+
     cleanup_removed_clients(config)
     cleanup_removed_agents(config)
-    
+
     save_config(config)
 
+
 def cleanup_removed_clients(config: Config):
-    
     """
     Will remove any clients that are no longer present
     """
-    
+
     if not config:
         return
-    
+
     for client_in_config in list(config.clients.keys()):
         client_config = config.clients[client_in_config]
         if not get_client_class(client_config.type):
             log.info("removing client from config", client=client_in_config)
-            del config.clients[client_in_config]    
+            del config.clients[client_in_config]
+
 
 def cleanup_removed_agents(config: Config):
-    
     """
     Will remove any agents that are no longer present
     """
-    
-    
+
     if not config:
         return
-    
+
     for agent_in_config in list(config.agents.keys()):
         if not get_agent_class(agent_in_config):
             log.info("removing agent from config", agent=agent_in_config)
             del config.agents[agent_in_config]
-            

@@ -1,7 +1,8 @@
 import asyncio
-import logging
-import structlog
 import json
+import logging
+
+import structlog
 
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
@@ -15,6 +16,7 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.commands.cmd_debug_tools")
+
 
 @register
 class CmdDebugOn(TalemateCommand):
@@ -148,6 +150,7 @@ class CmdSetContentContext(TalemateCommand):
 
         self.emit("system", f"Content context set to {context}")
 
+
 @register
 class CmdDumpHistory(TalemateCommand):
     """
@@ -161,8 +164,8 @@ class CmdDumpHistory(TalemateCommand):
     async def run(self):
         for entry in self.scene.history:
             log.debug("dump_history", entry=entry)
-            
-        
+
+
 @register
 class CmdDumpSceneSerialization(TalemateCommand):
     """

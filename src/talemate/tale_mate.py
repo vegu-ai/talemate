@@ -5,10 +5,10 @@ import random
 import re
 import traceback
 import uuid
-import pydantic
-from typing import Dict, List, Union, Generator
+from typing import Dict, Generator, List, Union
 
 import isodate
+import pydantic
 import structlog
 from blinker import signal
 
@@ -99,7 +99,7 @@ class Character:
         self.details = details or {}
         self.cover_image = kwargs.get("cover_image")
         self.dialogue_instructions = kwargs.get("dialogue_instructions")
-        
+
         self.memory_dirty = False
 
     @property
@@ -152,7 +152,7 @@ class Character:
         return random.choice(self.example_dialogue)
 
     def sheet_filtered(self, *exclude):
-        
+
         sheet = self.base_attributes or {
             "name": self.name,
             "gender": self.gender,
@@ -166,7 +166,6 @@ class Character:
                 sheet_list.append(f"{key}: {value}")
 
         return "\n".join(sheet_list)
-        
 
     def random_dialogue_examples(self, num: int = 3):
         """
@@ -346,8 +345,7 @@ class Character:
 
         for i, dialogue in enumerate(self.example_dialogue):
             self.example_dialogue[i] = pattern.sub(character.name, dialogue)
-            
-            
+
     def update(self, **kwargs):
         """
         Update character properties with given key-value pairs.
@@ -437,7 +435,7 @@ class Character:
 
         if items:
             await memory_agent.add_many(items)
-            
+
         self.memory_dirty = False
 
     async def commit_single_attribute_to_memory(
@@ -696,8 +694,8 @@ class Player(Actor):
 
         if not commands.Manager.is_command(message):
             if '"' not in message and "*" not in message:
-                message = f"\"{message}\""
-                
+                message = f'"{message}"'
+
             message = util.ensure_dialog_format(message)
 
             self.message = message
@@ -743,7 +741,7 @@ class Scene(Emitter):
         self.static_tokens = 0
         self.max_tokens = 2048
         self.next_actor = None
-        
+
         self.experimental = False
         self.help = ""
 
@@ -1031,7 +1029,7 @@ class Scene(Emitter):
                 return idx
         return -1
 
-    def last_player_message(self) ->str:
+    def last_player_message(self) -> str:
         """
         Returns the last message from the player
         """
@@ -1167,7 +1165,7 @@ class Scene(Emitter):
         for _actor in self.actors:
             if _actor == actor:
                 self.actors.remove(_actor)
-            
+
         actor.character = None
 
     def add_helper(self, helper: Helper):
@@ -1327,25 +1325,19 @@ class Scene(Emitter):
 
         for i in range(len(self.history) - 1, -1, -1):
             count += 1
-            
+
             message = self.history[i]
-            
+
             if message.hidden:
                 continue
 
             if isinstance(message, DirectorMessage):
                 if not keep_director:
                     continue
-                elif (
-                    isinstance(keep_director, str)
-                    and message.source != keep_director
-                ):
+                elif isinstance(keep_director, str) and message.source != keep_director:
                     continue
 
-            if (
-                count_tokens(parts_dialogue) + count_tokens(message)
-                > budget_dialogue
-            ):
+            if count_tokens(parts_dialogue) + count_tokens(message) > budget_dialogue:
                 break
 
             parts_dialogue.insert(0, message)
@@ -1576,16 +1568,18 @@ class Scene(Emitter):
             data={
                 "environment": self.environment,
                 "scene_config": self.scene_config,
-                "player_character_name": player_character.name
-                if player_character
-                else None,
+                "player_character_name": (
+                    player_character.name if player_character else None
+                ),
                 "inactive_characters": list(self.inactive_characters.keys()),
                 "context": self.context,
                 "assets": self.assets.dict(),
                 "characters": [actor.character.serialize for actor in self.actors],
-                "scene_time": util.iso8601_duration_to_human(self.ts, suffix="")
-                if self.ts
-                else None,
+                "scene_time": (
+                    util.iso8601_duration_to_human(self.ts, suffix="")
+                    if self.ts
+                    else None
+                ),
                 "saved": self.saved,
                 "auto_save": self.auto_save,
                 "auto_progress": self.auto_progress,
@@ -1728,14 +1722,14 @@ class Scene(Emitter):
     async def _run_game_loop(self, init: bool = True):
         if init:
             emit("clear_screen", "")
-            
+
             self.game_state.init(self)
 
             await self.signals["scene_init"].send(
                 events.SceneStateEvent(scene=self, event_type="scene_init")
             )
             self.narrator_message(self.get_intro())
-            
+
             for actor in self.actors:
                 if (
                     not isinstance(actor, Player)
@@ -1802,16 +1796,16 @@ class Scene(Emitter):
                 signal_game_loop = True
 
                 for actor in self.actors:
-                    
+
                     if not actor.character:
                         self.log.warning("Actor has no character", actor=actor)
                         continue
-                    
+
                     if actor.character.memory_dirty:
                         await actor.character.commit_to_memory(
                             self.get_helper("memory").agent
                         )
-                    
+
                     if not self.auto_progress and not actor.character.is_player:
                         # auto progress is disabled, so NPCs don't get automatic turns
                         continue
@@ -2069,37 +2063,37 @@ class Scene(Emitter):
     async def remove_all_actors(self):
         for actor in self.actors:
             actor.character = None
-            
+
         self.actors = []
 
     async def restore(self):
         try:
             self.log.info("Restoring", source=self.restore_from)
-            
+
             if not self.restore_from:
                 self.log.error("No restore_from set")
                 return
-            
+
             self.reset()
             self.inactive_characters = {}
             await self.remove_all_actors()
-            
+
             from talemate.load import load_scene
-            
+
             await load_scene(
-                self, 
-                os.path.join(self.save_dir, self.restore_from), 
-                self.get_helper("conversation").agent.client, 
+                self,
+                os.path.join(self.save_dir, self.restore_from),
+                self.get_helper("conversation").agent.client,
             )
 
             self.emit_status()
         except Exception as e:
             self.log.error("restore", error=e, traceback=traceback.format_exc())
-        
+
     def sync_restore(self):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.restore())
-    
+
     @property
     def serialize(self):
         scene = self
@@ -2130,7 +2124,7 @@ class Scene(Emitter):
             "help": scene.help,
             "experimental": scene.experimental,
         }
-    
+
     @property
     def json(self):
         return json.dumps(self.serialize, indent=2, cls=save.SceneEncoder)

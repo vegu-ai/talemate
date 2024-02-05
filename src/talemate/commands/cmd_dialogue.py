@@ -40,7 +40,7 @@ class CmdAIDialogue(TalemateCommand):
                     actor = self.scene.get_character(character_name).actor
                 except AttributeError:
                     return
-                
+
                 if actor.character.is_player:
                     actor = random.choice(list(self.scene.get_npc_characters())).actor
             else:

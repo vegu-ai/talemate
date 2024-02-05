@@ -281,27 +281,29 @@ def replace_conditional(input_string: str, params) -> str:
     modified_string = re.sub(pattern, replace_match, input_string)
     return modified_string
 
+
 def strip_partial_sentences(text: str) -> str:
     """
     Removes any unfinished sentences from the end of the input text.
-    
+
     This new version works backwards and doesnt destroy string formatting (newlines etc.)
 
     Args:
         text (str): The input text to be cleaned.
-    
+
     Returns:
         str: The cleaned text.
     """
     sentence_endings = [".", "!", "?", '"', "*"]
-    
+
     # loop backwards through `text` until a sentence ending is found
-    
+
     for i in range(len(text) - 1, -1, -1):
         if text[i] in sentence_endings:
-            return text[:i + 1]
-        
+            return text[: i + 1]
+
     return text
+
 
 def strip_partial_sentences_old(text: str) -> str:
     # Sentence ending characters

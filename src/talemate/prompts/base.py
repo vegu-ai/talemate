@@ -206,13 +206,13 @@ class LoopedPrompt:
 
 
 class JoinableList(list):
-    
+
     def join(self, separator: str = "\n"):
         return separator.join(self)
-    
+
+
 @dataclasses.dataclass
 class Prompt:
-
     """
     Base prompt class.
     """
@@ -448,12 +448,14 @@ class Prompt:
         vars.update(kwargs)
         return Prompt.get(uid, vars=vars)
 
-    def render_and_request(self, prompt: "Prompt", kind: str = "create", dedupe_enabled:bool=True) -> str:
+    def render_and_request(
+        self, prompt: "Prompt", kind: str = "create", dedupe_enabled: bool = True
+    ) -> str:
         if not self.client:
             raise ValueError("Prompt has no client set.")
 
         prompt.dedupe_enabled = dedupe_enabled
-        
+
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(prompt.send(self.client, kind=kind))
 
@@ -494,7 +496,13 @@ class Prompt:
             ]
         )
 
-    def query_text(self, query: str, text: str, as_question_answer: bool = True, short:bool=False):
+    def query_text(
+        self,
+        query: str,
+        text: str,
+        as_question_answer: bool = True,
+        short: bool = False,
+    ):
         loop = asyncio.get_event_loop()
         world_state = instance.get_agent("world_state")
         query = query.format(**self.vars)
@@ -512,16 +520,18 @@ class Prompt:
                 f"Question: {query}",
                 f"Answer: "
                 + loop.run_until_complete(
-                    world_state.analyze_text_and_answer_question(text, query, short=short)
+                    world_state.analyze_text_and_answer_question(
+                        text, query, short=short
+                    )
                 ),
             ]
         )
-        
+
     def query_text_eval(self, query: str, text: str):
         query = f"{query} Answer with a yes or no."
-        response = self.query_text(query, text,as_question_answer=False, short=True)
+        response = self.query_text(query, text, as_question_answer=False, short=True)
         return response.strip().lower().startswith("y")
-        
+
     def query_memory(self, query: str, as_question_answer: bool = True, **kwargs):
         loop = asyncio.get_event_loop()
         memory = instance.get_agent("memory")

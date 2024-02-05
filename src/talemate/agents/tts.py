@@ -109,7 +109,6 @@ class VoiceLibrary(pydantic.BaseModel):
 
 @register()
 class TTSAgent(Agent):
-
     """
     Text to speech agent
     """

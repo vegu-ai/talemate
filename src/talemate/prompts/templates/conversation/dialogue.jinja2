@@ -84,8 +84,12 @@ Always contain dialogue in quotation marks. For example, {{ talking_character.na
 <|SECTION:SCENE|>
 {% endblock -%}
 {% block scene_history -%}
-{% for scene_context in scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=talking_character.name) -%}
-{{ scene_context }}
+{% set scene_context = scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=talking_character.name) -%}
+{%- if talking_character.dialogue_instructions -%}
+{% set _ = scene_context.insert(-1, "# Internal acting instructions for "+talking_character.name+": "+talking_character.dialogue_instructions) %}
+{% endif -%}
+{% for scene_line in scene_context -%}
+{{ scene_line }}
 {% endfor %}
 {% endblock -%}
 <|CLOSE_SECTION|>
@@ -98,9 +102,5 @@ Always contain dialogue in quotation marks. For example, {{ talking_character.na
 # Edit and respond with your changed version of the following line of dialogue: {{ rerun_context.message|condensed }}
 # Requested changes: {{ rerun_context.direction }}
 {% endif -%}
-{%- endif -%}
-{%- if talking_character.dialogue_instructions -%}
-# Director instructs {{ talking_character.name }}: {{ talking_character.dialogue_instructions }}
-
 {% endif -%}
 {{ bot_token}}{{ talking_character.name }}:{{ partial_message }}

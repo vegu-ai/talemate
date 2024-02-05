@@ -151,7 +151,7 @@ class ReinforcementMessage(SceneMessage):
 
     def __str__(self):
         question, _ = self.source.split(":", 1)
-        return f"# Context: {question}: {self.message}"
+        return f"# Internal notes: {question}: {self.message}"
 
 
 MESSAGES = {

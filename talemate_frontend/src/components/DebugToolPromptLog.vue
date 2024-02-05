@@ -13,16 +13,20 @@
 
             <v-row>
                 <v-col cols="2" class="text-info">#{{ prompt.num }}</v-col>
-                <v-col cols="10" class="text-right">{{ prompt.kind }}</v-col>
+                <v-col cols="10" class="text-right">
+
+                    <v-chip size="x-small" class="mr-1" color="primary" variant="text" label>{{ prompt.prompt_tokens }}<v-icon size="14"
+                        class="ml-1">mdi-arrow-down-bold</v-icon></v-chip>
+                        <v-chip size="x-small" class="mr-1" color="secondary" variant="text" label>{{ prompt.response_tokens }}<v-icon size="14"
+                        class="ml-1">mdi-arrow-up-bold</v-icon></v-chip>
+                        <v-chip size="x-small" variant="text" label color="grey-darken-1">{{ prompt.time }}s<v-icon size="14" class="ml-1">mdi-clock</v-icon></v-chip>
+                </v-col>
             </v-row>
 
         </v-list-item-title>
-        <v-list-item-subtitle>
-            <v-chip size="x-small" class="mr-1" color="primary">{{ prompt.prompt_tokens }}<v-icon size="14"
-            class="ml-1">mdi-arrow-down-bold</v-icon></v-chip>
-            <v-chip size="x-small" class="mr-1" color="secondary">{{ prompt.response_tokens }}<v-icon size="14"
-            class="ml-1">mdi-arrow-up-bold</v-icon></v-chip>
-            <v-chip size="x-small">{{ prompt.time }}s<v-icon size="14" class="ml-1">mdi-clock</v-icon></v-chip>
+        <v-list-item-subtitle class="text-caption">
+            <v-chip size="x-small" color="grey-lightne-1" variant="text">{{ prompt.agent_name }}</v-chip>
+            <v-chip size="x-small" color="grey" variant="text">{{ prompt.agent_action }}</v-chip> 
         </v-list-item-subtitle>
         <v-divider class="mt-1"></v-divider>
     </v-list-item>
@@ -66,14 +70,35 @@ export default {
 
             if(data.type === "prompt_sent") {
                 // add to prompts array, and truncate if necessary (max 50)
+
+                // get active agent (last in agent_stack if agent_stack is not empty)
+                let agent = null;
+                let agentName = null;
+                let agentAction = null;
+
+                if(data.data.agent_stack.length > 0) {
+                    agent = data.data.agent_stack[data.data.agent_stack.length - 1];
+                    // split by . to get agent name and action
+                    let agentParts = agent.split('.');
+                    agentName = agentParts[0];
+                    agentAction = agentParts[1];
+                }
+
                 this.prompts.unshift({
                     prompt: data.data.prompt,
                     response: data.data.response,
                     kind: data.data.kind,
                     response_tokens: data.data.response_tokens,
                     prompt_tokens: data.data.prompt_tokens,
+                    agent_stack: data.data.agent_stack,
+                    agent: agent,
+                    agent_name: agentName,
+                    agent_action: agentAction,
+                    client_name: data.data.client_name,
+                    client_type: data.data.client_type,
                     time: parseInt(data.data.time),
                     num: this.total++,
+                    generation_parameters: data.data.generation_parameters,
                 })
 
                 while(this.prompts.length > this.max_prompts) {
@@ -83,7 +108,7 @@ export default {
         },
 
         openPromptView(prompt) {
-            this.$refs.promptView.open(prompt);
+            this.$refs.promptView.open(prompt, this.prompts);
         }
     },
 

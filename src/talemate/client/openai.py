@@ -16,6 +16,25 @@ __all__ = [
 ]
 log = structlog.get_logger("talemate")
 
+# Edit this to add new models / remove old models
+SUPPORTED_MODELS = [
+    "gpt-3.5-turbo-0613",
+    "gpt-3.5-turbo-0125",
+    "gpt-3.5-turbo-16k",
+    "gpt-3.5-turbo",
+    "gpt-4",
+    "gpt-4-1106-preview",
+    "gpt-4-0125-preview",
+    "gpt-4-turbo-preview",
+]
+
+JSON_OBJECT_RESPONSE_MODELS = [
+    "gpt-4-1106-preview",
+    "gpt-4-0125-preview",
+    "gpt-4-turbo-preview",
+    "gpt-3.5-turbo-0125",
+]
+
 
 def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0613"):
     """Return the number of tokens used by a list of messages."""
@@ -90,14 +109,7 @@ class OpenAIClient(ClientBase):
         name_prefix: str = "OpenAI"
         title: str = "OpenAI"
         manual_model: bool = True
-        manual_model_choices: list[str] = [
-            "gpt-3.5-turbo",
-            "gpt-3.5-turbo-16k",
-            "gpt-4",
-            "gpt-4-1106-preview",
-            "gpt-4-0125-preview",
-            "gpt-4-turbo-preview",
-        ]
+        manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
 
@@ -216,7 +228,7 @@ class OpenAIClient(ClientBase):
         if "<|BOT|>" in prompt:
             _, right = prompt.split("<|BOT|>", 1)
             if right:
-                prompt = prompt.replace("<|BOT|>", "\nContinue this response: ")
+                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
             else:
                 prompt = prompt.replace("<|BOT|>", "")
 
@@ -228,6 +240,15 @@ class OpenAIClient(ClientBase):
         keys = list(parameters.keys())
 
         valid_keys = ["temperature", "top_p"]
+
+        # GPT-3.5 models tend to run away with the generated
+        # response size so we allow talemate to set the max_tokens
+        #
+        # GPT-4 on the other hand seems to benefit from letting it
+        # decide the generation length naturally and it will generally
+        # produce reasonably sized responses
+        if self.model_name.startswith("gpt-3.5-"):
+            valid_keys.append("max_tokens")
 
         for key in keys:
             if key not in valid_keys:
@@ -242,10 +263,14 @@ class OpenAIClient(ClientBase):
             raise Exception("No OpenAI API key set")
 
         # only gpt-4-* supports enforcing json object
-        supports_json_object = self.model_name.startswith("gpt-4-")
+        supports_json_object = (
+            self.model_name.startswith("gpt-4-")
+            or self.model_name in JSON_OBJECT_RESPONSE_MODELS
+        )
         right = None
+        expected_response = None
         try:
-            _, right = prompt.split("\nContinue this response: ")
+            _, right = prompt.split("\nStart your response with: ")
             expected_response = right.strip()
             if expected_response.startswith("{") and supports_json_object:
                 parameters["response_format"] = {"type": "json_object"}
@@ -255,8 +280,13 @@ class OpenAIClient(ClientBase):
         human_message = {"role": "user", "content": prompt.strip()}
         system_message = {"role": "system", "content": self.get_system_message(kind)}
 
-        self.log.debug("generate", prompt=prompt[:128] + " ...", parameters=parameters, system_message=system_message)
-        
+        self.log.debug(
+            "generate",
+            prompt=prompt[:128] + " ...",
+            parameters=parameters,
+            system_message=system_message,
+        )
+
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,
@@ -265,6 +295,17 @@ class OpenAIClient(ClientBase):
             )
 
             response = response.choices[0].message.content
+
+            # older models don't support json_object response coersion
+            # and often like to return the response wrapped in ```json
+            # so we strip that out if the expected response is a json object
+            if (
+                not supports_json_object
+                and expected_response
+                and expected_response.startswith("{")
+            ):
+                if response.startswith("```json") and response.endswith("```"):
+                    response = response[7:-3].strip()
 
             if right and response.startswith(right):
                 response = response[len(right) :].strip()

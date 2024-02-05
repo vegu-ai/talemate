@@ -1,6 +1,7 @@
 """
 A unified client base, based on the openai API
 """
+
 import logging
 import random
 import time
@@ -30,6 +31,19 @@ REMOTE_SERVICES = [
 ]
 
 STOPPING_STRINGS = ["<|im_end|>", "</s>"]
+
+
+class PromptData(pydantic.BaseModel):
+    kind: str
+    prompt: str
+    response: str
+    prompt_tokens: int
+    response_tokens: int
+    client_name: str
+    client_type: str
+    time: Union[float, int]
+    agent_stack: list[str] = pydantic.Field(default_factory=list)
+    generation_parameters: dict = pydantic.Field(default_factory=dict)
 
 
 class ErrorAction(pydantic.BaseModel):
@@ -154,7 +168,7 @@ class ClientBase:
         """
 
         if self.decensor_enabled:
-            
+
             if "narrate" in kind:
                 return system_prompts.NARRATOR
             if "story" in kind:
@@ -179,9 +193,9 @@ class ClientBase:
                 return system_prompts.ANALYST
             if "summarize" in kind:
                 return system_prompts.SUMMARIZE
-            
+
         else:
-            
+
             if "narrate" in kind:
                 return system_prompts.NARRATOR_NO_DECENSOR
             if "story" in kind:
@@ -206,7 +220,7 @@ class ClientBase:
                 return system_prompts.ANALYST_NO_DECENSOR
             if "summarize" in kind:
                 return system_prompts.SUMMARIZE_NO_DECENSOR
-            
+
         return system_prompts.BASIC
 
     def emit_status(self, processing: bool = None):
@@ -411,16 +425,22 @@ class ClientBase:
                     response = response.split(stopping_string)[0]
                     break
 
+            agent_context = active_agent.get()
+
             emit(
                 "prompt_sent",
-                data={
-                    "kind": kind,
-                    "prompt": finalized_prompt,
-                    "response": response,
-                    "prompt_tokens": token_length,
-                    "response_tokens": self.count_tokens(response),
-                    "time": time_end - time_start,
-                },
+                data=PromptData(
+                    kind=kind,
+                    prompt=finalized_prompt,
+                    response=response,
+                    prompt_tokens=token_length,
+                    response_tokens=self.count_tokens(response),
+                    agent_stack=agent_context.agent_stack if agent_context else [],
+                    client_name=self.name,
+                    client_type=self.client_type,
+                    time=time_end - time_start,
+                    generation_parameters=prompt_param,
+                ).model_dump(),
             )
 
             return response

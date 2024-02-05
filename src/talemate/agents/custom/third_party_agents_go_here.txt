@@ -1,0 +1,5 @@
+Each agent should be in its own subdirectory.
+
+The subdirectory itself must be a valid python module.
+
+Check out docs/dev/agents/example/test for a very simplistic custom agent example.

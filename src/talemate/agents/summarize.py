@@ -262,9 +262,11 @@ class SummarizeAgent(Agent):
                 "dialogue": text,
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
-                "summarization_method": self.actions["archive"].config["method"].value
-                if method is None
-                else method,
+                "summarization_method": (
+                    self.actions["archive"].config["method"].value
+                    if method is None
+                    else method
+                ),
                 "extra_context": extra_context or "",
                 "extra_instructions": extra_instructions or "",
             },

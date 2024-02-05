@@ -50,7 +50,6 @@ class CmdWorldState(TalemateCommand):
 
 @register
 class CmdPersistCharacter(TalemateCommand):
-
     """
     Will attempt to create an actual character from a currently non
     tracked character in the scene, by name.
@@ -177,7 +176,6 @@ class CmdPersistCharacter(TalemateCommand):
 
 @register
 class CmdAddReinforcement(TalemateCommand):
-
     """
     Will attempt to create an actual character from a currently non
     tracked character in the scene, by name.
@@ -204,7 +202,6 @@ class CmdAddReinforcement(TalemateCommand):
 
 @register
 class CmdRemoveReinforcement(TalemateCommand):
-
     """
     Will attempt to create an actual character from a currently non
     tracked character in the scene, by name.
@@ -236,7 +233,6 @@ class CmdRemoveReinforcement(TalemateCommand):
 
 @register
 class CmdUpdateReinforcements(TalemateCommand):
-
     """
     Will attempt to create an actual character from a currently non
     tracked character in the scene, by name.
@@ -258,7 +254,6 @@ class CmdUpdateReinforcements(TalemateCommand):
 
 @register
 class CmdCheckPinConditions(TalemateCommand):
-
     """
     Will attempt to create an actual character from a currently non
     tracked character in the scene, by name.
@@ -277,7 +272,6 @@ class CmdCheckPinConditions(TalemateCommand):
 
 @register
 class CmdApplyWorldStateTemplate(TalemateCommand):
-
     """
     Will apply a world state template setting up
     automatic state tracking.
@@ -337,7 +331,6 @@ class CmdApplyWorldStateTemplate(TalemateCommand):
 
 @register
 class CmdSummarizeAndPin(TalemateCommand):
-
     """
     Will take a message index and then walk back N messages
     summarizing the scene and pinning it to the context.

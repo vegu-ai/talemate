@@ -2,10 +2,13 @@
 
 Allows you to play roleplay scenarios with large language models. 
 
-
-|![Screenshot 1](docs/img/0.17.0/ss-1.png)|![Screenshot 2](docs/img/0.17.0/ss-2.png)|
+|||
 |------------------------------------------|------------------------------------------|
-|![Screenshot 1](docs/img/0.17.0/ss-4.png)|![Screenshot 2](docs/img/0.17.0/ss-3.png)|
+|![Screenshot 1](docs/img/0.19.0/Screenshot_15.png)|![Screenshot 2](docs/img/0.19.0/Screenshot_16.png)|
+|![Screenshot 3](docs/img/0.19.0/Screenshot_17.png)|![Screenshot 3](docs/img/0.17.0/ss-1.png)|
+|![Screenshot 3](docs/img/0.17.0/ss-2.png)|![Screenshot 4](docs/img/0.17.0/ss-4.png)|
+|||
+
 
 > :warning: **It does not run any large language models itself but relies on existing APIs. Currently supports OpenAI, text-generation-webui and LMStudio. 0.18.0 also adds support for generic OpenAI api implementations, but generation quality on that will vary.**
 

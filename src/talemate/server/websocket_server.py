@@ -18,9 +18,11 @@ from talemate.load import (
 )
 from talemate.scene_assets import Asset
 from talemate.server import (
+    assistant,
     character_creator,
     character_importer,
     config,
+    devtools,
     quick_settings,
     scene_creator,
     world_state_manager,
@@ -55,6 +57,7 @@ class WebsocketHandler(Receiver):
         self.connect_llm_clients()
 
         self.routes = {
+            assistant.AssistantPlugin.router: assistant.AssistantPlugin(self),
             character_creator.CharacterCreatorServerPlugin.router: character_creator.CharacterCreatorServerPlugin(
                 self
             ),
@@ -71,6 +74,7 @@ class WebsocketHandler(Receiver):
             quick_settings.QuickSettingsPlugin.router: quick_settings.QuickSettingsPlugin(
                 self
             ),
+            devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
         }
 
         # self.request_scenes_list()
@@ -582,17 +586,20 @@ class WebsocketHandler(Receiver):
     def request_scene_assets(self, asset_ids: list[str]):
         scene_assets = self.scene.assets
 
-        for asset_id in asset_ids:
-            asset = scene_assets.get_asset_bytes_as_base64(asset_id)
+        try:
+            for asset_id in asset_ids:
+                asset = scene_assets.get_asset_bytes_as_base64(asset_id)
 
-            self.queue_put(
-                {
-                    "type": "scene_asset",
-                    "asset_id": asset_id,
-                    "asset": asset,
-                    "media_type": scene_assets.get_asset(asset_id).media_type,
-                }
-            )
+                self.queue_put(
+                    {
+                        "type": "scene_asset",
+                        "asset_id": asset_id,
+                        "asset": asset,
+                        "media_type": scene_assets.get_asset(asset_id).media_type,
+                    }
+                )
+        except Exception as exc:
+            log.error("request_scene_assets", error=traceback.format_exc())
 
     def request_assets(self, assets: list[dict]):
         # way to request scene assets without loading the scene

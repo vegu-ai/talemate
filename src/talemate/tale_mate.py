@@ -3,12 +3,12 @@ import json
 import os
 import random
 import re
-import time
 import traceback
 import uuid
-from typing import Dict, List, Optional, Union
+from typing import Dict, Generator, List, Union
 
 import isodate
+import pydantic
 import structlog
 from blinker import signal
 
@@ -98,6 +98,9 @@ class Character:
         self.base_attributes = base_attributes or {}
         self.details = details or {}
         self.cover_image = kwargs.get("cover_image")
+        self.dialogue_instructions = kwargs.get("dialogue_instructions")
+
+        self.memory_dirty = False
 
     @property
     def persona(self):
@@ -117,10 +120,11 @@ class Character:
             "history_events": self.history_events,
             "is_player": self.is_player,
             "cover_image": self.cover_image,
+            "dialogue_instructions": self.dialogue_instructions,
         }
 
     @property
-    def sheet(self):
+    def sheet(self) -> str:
         sheet = self.base_attributes or {
             "name": self.name,
             "gender": self.gender,
@@ -146,6 +150,22 @@ class Character:
             return ""
 
         return random.choice(self.example_dialogue)
+
+    def sheet_filtered(self, *exclude):
+
+        sheet = self.base_attributes or {
+            "name": self.name,
+            "gender": self.gender,
+            "description": self.description,
+        }
+
+        sheet_list = []
+
+        for key, value in sheet.items():
+            if key not in exclude:
+                sheet_list.append(f"{key}: {value}")
+
+        return "\n".join(sheet_list)
 
     def random_dialogue_examples(self, num: int = 3):
         """
@@ -326,6 +346,14 @@ class Character:
         for i, dialogue in enumerate(self.example_dialogue):
             self.example_dialogue[i] = pattern.sub(character.name, dialogue)
 
+    def update(self, **kwargs):
+        """
+        Update character properties with given key-value pairs.
+        """
+
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
     async def commit_to_memory(self, memory_agent):
         """
         Commits this character's details to the memory agent. (vectordb)
@@ -408,6 +436,8 @@ class Character:
         if items:
             await memory_agent.add_many(items)
 
+        self.memory_dirty = False
+
     async def commit_single_attribute_to_memory(
         self, memory_agent, attribute: str, value: str
     ):
@@ -488,6 +518,10 @@ class Character:
             self.details[name] = value
             await self.commit_single_detail_to_memory(memory_agent, name, value)
 
+    def set_detail_defer(self, name: str, value):
+        self.details[name] = value
+        self.memory_dirty = True
+
     def get_detail(self, name: str):
         return self.details.get(name)
 
@@ -505,6 +539,10 @@ class Character:
         else:
             self.base_attributes[name] = value
             await self.commit_single_attribute_to_memory(memory_agent, name, value)
+
+    def set_base_attribute_defer(self, name: str, value):
+        self.base_attributes[name] = value
+        self.memory_dirty = True
 
     def get_base_attribute(self, name: str):
         return self.base_attributes.get(name)
@@ -655,6 +693,9 @@ class Player(Actor):
             return
 
         if not commands.Manager.is_command(message):
+            if '"' not in message and "*" not in message:
+                message = f'"{message}"'
+
             message = util.ensure_dialog_format(message)
 
             self.message = message
@@ -701,11 +742,15 @@ class Scene(Emitter):
         self.max_tokens = 2048
         self.next_actor = None
 
+        self.experimental = False
+        self.help = ""
+
         self.name = ""
         self.filename = ""
         self.memory_id = str(uuid.uuid4())[:10]
         self.saved_memory_session_id = None
         self.memory_session_id = str(uuid.uuid4())[:10]
+        self.restore_from = None
 
         # has scene been saved before?
         self.saved = False
@@ -984,6 +1029,15 @@ class Scene(Emitter):
                 return idx
         return -1
 
+    def last_player_message(self) -> str:
+        """
+        Returns the last message from the player
+        """
+        for idx in range(len(self.history) - 1, -1, -1):
+            if isinstance(self.history[idx], CharacterMessage):
+                if self.history[idx].source == "player":
+                    return self.history[idx]
+
     def collect_messages(
         self, typ: str = None, source: str = None, max_iterations: int = 100
     ):
@@ -1112,6 +1166,8 @@ class Scene(Emitter):
             if _actor == actor:
                 self.actors.remove(_actor)
 
+        actor.character = None
+
     def add_helper(self, helper: Helper):
         """
         Add a helper to the scene
@@ -1132,6 +1188,9 @@ class Scene(Emitter):
         """
         Returns the character with the given name if it exists
         """
+
+        if not character_name:
+            return
 
         if character_name in self.inactive_characters:
             return self.inactive_characters[character_name]
@@ -1154,10 +1213,10 @@ class Scene(Emitter):
             if not isinstance(actor, Player):
                 yield actor.character
 
-    def num_npc_characters(self):
+    def num_npc_characters(self) -> int:
         return len(list(self.get_npc_characters()))
 
-    def get_characters(self):
+    def get_characters(self) -> Generator[Character, None, None]:
         """
         Returns a list of all characters in the scene
         """
@@ -1267,22 +1326,21 @@ class Scene(Emitter):
         for i in range(len(self.history) - 1, -1, -1):
             count += 1
 
-            if isinstance(self.history[i], DirectorMessage):
+            message = self.history[i]
+
+            if message.hidden:
+                continue
+
+            if isinstance(message, DirectorMessage):
                 if not keep_director:
                     continue
-                elif (
-                    isinstance(keep_director, str)
-                    and self.history[i].source != keep_director
-                ):
+                elif isinstance(keep_director, str) and message.source != keep_director:
                     continue
 
-            if (
-                count_tokens(parts_dialogue) + count_tokens(self.history[i])
-                > budget_dialogue
-            ):
+            if count_tokens(parts_dialogue) + count_tokens(message) > budget_dialogue:
                 break
 
-            parts_dialogue.insert(0, self.history[i])
+            parts_dialogue.insert(0, message)
 
         # collect context, ignore where end > len(history) - count
 
@@ -1397,6 +1455,8 @@ class Scene(Emitter):
             director = self.get_helper("director").agent
             await director.direct_scene(None, None)
             return
+        elif source == "paraphrase":
+            new_message = await narrator.agent.paraphrase(arg)
         else:
             fn = getattr(narrator.agent, source, None)
             if not fn:
@@ -1508,22 +1568,26 @@ class Scene(Emitter):
             data={
                 "environment": self.environment,
                 "scene_config": self.scene_config,
-                "player_character_name": player_character.name
-                if player_character
-                else None,
+                "player_character_name": (
+                    player_character.name if player_character else None
+                ),
                 "inactive_characters": list(self.inactive_characters.keys()),
                 "context": self.context,
                 "assets": self.assets.dict(),
                 "characters": [actor.character.serialize for actor in self.actors],
-                "scene_time": util.iso8601_duration_to_human(self.ts, suffix="")
-                if self.ts
-                else None,
+                "scene_time": (
+                    util.iso8601_duration_to_human(self.ts, suffix="")
+                    if self.ts
+                    else None
+                ),
                 "saved": self.saved,
                 "auto_save": self.auto_save,
                 "auto_progress": self.auto_progress,
                 "can_auto_save": self.can_auto_save(),
                 "game_state": self.game_state.model_dump(),
                 "active_pins": [pin.model_dump() for pin in self.active_pins],
+                "experimental": self.experimental,
+                "help": self.help,
             },
         )
 
@@ -1657,12 +1721,13 @@ class Scene(Emitter):
 
     async def _run_game_loop(self, init: bool = True):
         if init:
+            emit("clear_screen", "")
+
             self.game_state.init(self)
+
             await self.signals["scene_init"].send(
                 events.SceneStateEvent(scene=self, event_type="scene_init")
             )
-
-            emit("clear_screen", "")
             self.narrator_message(self.get_intro())
 
             for actor in self.actors:
@@ -1731,6 +1796,16 @@ class Scene(Emitter):
                 signal_game_loop = True
 
                 for actor in self.actors:
+
+                    if not actor.character:
+                        self.log.warning("Actor has no character", actor=actor)
+                        continue
+
+                    if actor.character.memory_dirty:
+                        await actor.character.commit_to_memory(
+                            self.get_helper("memory").agent
+                        )
+
                     if not self.auto_progress and not actor.character.is_player:
                         # auto progress is disabled, so NPCs don't get automatic turns
                         continue
@@ -1928,6 +2003,8 @@ class Scene(Emitter):
             "saved_memory_session_id": scene.saved_memory_session_id,
             "immutable_save": scene.immutable_save,
             "ts": scene.ts,
+            "help": scene.help,
+            "experimental": scene.experimental,
         }
 
         if not auto:
@@ -1982,3 +2059,72 @@ class Scene(Emitter):
         self.archived_history = []
         self.filename = ""
         self.goal = None
+
+    async def remove_all_actors(self):
+        for actor in self.actors:
+            actor.character = None
+
+        self.actors = []
+
+    async def restore(self):
+        try:
+            self.log.info("Restoring", source=self.restore_from)
+
+            if not self.restore_from:
+                self.log.error("No restore_from set")
+                return
+
+            self.reset()
+            self.inactive_characters = {}
+            await self.remove_all_actors()
+
+            from talemate.load import load_scene
+
+            await load_scene(
+                self,
+                os.path.join(self.save_dir, self.restore_from),
+                self.get_helper("conversation").agent.client,
+            )
+
+            self.emit_status()
+        except Exception as e:
+            self.log.error("restore", error=e, traceback=traceback.format_exc())
+
+    def sync_restore(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.restore())
+
+    @property
+    def serialize(self):
+        scene = self
+        return {
+            "description": scene.description,
+            "intro": scene.intro,
+            "name": scene.name,
+            "history": scene.history,
+            "environment": scene.environment,
+            "archived_history": scene.archived_history,
+            "character_states": scene.character_states,
+            "characters": [actor.character.serialize for actor in scene.actors],
+            "inactive_characters": {
+                name: character.serialize
+                for name, character in scene.inactive_characters.items()
+            },
+            "goal": scene.goal,
+            "goals": scene.goals,
+            "context": scene.context,
+            "world_state": scene.world_state.model_dump(),
+            "game_state": scene.game_state.model_dump(),
+            "assets": scene.assets.dict(),
+            "memory_id": scene.memory_id,
+            "memory_session_id": scene.memory_session_id,
+            "saved_memory_session_id": scene.saved_memory_session_id,
+            "immutable_save": scene.immutable_save,
+            "ts": scene.ts,
+            "help": scene.help,
+            "experimental": scene.experimental,
+        }
+
+    @property
+    def json(self):
+        return json.dumps(self.serialize, indent=2, cls=save.SceneEncoder)

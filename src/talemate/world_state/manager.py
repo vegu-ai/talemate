@@ -1,8 +1,9 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Union
 
 import pydantic
 import structlog
 
+from talemate.character import activate_character, deactivate_character
 from talemate.config import StateReinforcementTemplate, WorldStateTemplates, save_config
 from talemate.instance import get_agent
 from talemate.world_state import ContextPin, InsertionMode, ManualContext, Reinforcement
@@ -29,6 +30,11 @@ class ContextDB(pydantic.BaseModel):
     entries: list[ContextDBEntry] = []
 
 
+class CharacterActor(pydantic.BaseModel):
+    dialogue_examples: list[str] = pydantic.Field(default_factory=list)
+    dialogue_instructions: Union[str, None] = None
+
+
 class CharacterDetails(pydantic.BaseModel):
     name: str
     active: bool = True
@@ -37,6 +43,7 @@ class CharacterDetails(pydantic.BaseModel):
     base_attributes: dict[str, str] = {}
     details: dict[str, str] = {}
     reinforcements: dict[str, Reinforcement] = {}
+    actor: CharacterActor = pydantic.Field(default_factory=CharacterActor)
 
 
 class World(pydantic.BaseModel):
@@ -130,13 +137,21 @@ class WorldStateManager:
             active=True,
             description=character.description,
             is_player=character.is_player,
+            actor=CharacterActor(
+                dialogue_examples=character.example_dialogue,
+                dialogue_instructions=character.dialogue_instructions,
+            ),
         )
 
-        for key, value in character.base_attributes.items():
-            details.base_attributes[key] = value
+        # sorted base attributes
+        for key in sorted(character.base_attributes.keys()):
+            if key.startswith("_"):
+                continue
+            details.base_attributes[key] = character.base_attributes[key]
 
-        for key, value in character.details.items():
-            details.details[key] = value
+        # sorted details
+        for key in sorted(character.details.keys()):
+            details.details[key] = character.details[key]
 
         details.reinforcements = self.world_state.reinforcements_for_character(
             character_name
@@ -263,6 +278,38 @@ class WorldStateManager:
         character = self.scene.get_character(character_name)
         await character.set_description(description)
 
+    async def update_character_actor(
+        self,
+        character_name: str,
+        dialogue_instructions: str = None,
+        example_dialogue: list[str] = None,
+    ):
+        """
+        Sets the actor for a character.
+
+        Arguments:
+            character_name: The name of the character whose actor is to be set.
+            dialogue_instructions: The dialogue instructions for the character.
+            example_dialogue: A list of example dialogue for the character.
+        """
+        log.debug(
+            "update_character_actor",
+            character_name=character_name,
+            dialogue_instructions=dialogue_instructions,
+            example_dialogue=example_dialogue,
+        )
+        character = self.scene.get_character(character_name)
+        character.dialogue_instructions = dialogue_instructions
+
+        # make sure every example dialogue starts with {character_name}:
+
+        if example_dialogue:
+            for idx, example in enumerate(example_dialogue):
+                if not example.startswith(f"{character_name}:"):
+                    example_dialogue[idx] = f"{character_name}: {example}"
+
+        character.example_dialogue = example_dialogue
+
     async def add_detail_reinforcement(
         self,
         character_name: str,
@@ -334,7 +381,9 @@ class WorldStateManager:
             await self.world_state.remove_reinforcement(idx)
         self.world_state.emit()
 
-    async def save_world_entry(self, entry_id: str, text: str, meta: dict):
+    async def save_world_entry(
+        self, entry_id: str, text: str, meta: dict, pin: bool = False
+    ):
         """
         Saves a manual world entry with specified text and metadata.
 
@@ -346,6 +395,9 @@ class WorldStateManager:
         meta["source"] = "manual"
         meta["typ"] = "world_state"
         await self.update_context_db_entry(entry_id, text, meta)
+
+        if pin:
+            await self.set_pin(entry_id, active=True)
 
     async def update_context_db_entry(self, entry_id: str, text: str, meta: dict):
         """
@@ -556,7 +608,7 @@ class WorldStateManager:
 
     async def apply_template_state_reinforcement(
         self,
-        template: StateReinforcementTemplate,
+        template: Union[str, StateReinforcementTemplate],
         character_name: str = None,
         run_immediately: bool = False,
     ) -> Reinforcement:
@@ -564,7 +616,7 @@ class WorldStateManager:
         Applies a state reinforcement template to a specific character, if provided.
 
         Arguments:
-            template: The StateReinforcementTemplate object defining the reinforcement details.
+            template: The StateReinforcementTemplate object defining the reinforcement details. Can also be a string representing the template name.
             character_name: Optional; the name of the character to apply the template to.
             run_immediately: Whether to run the reinforcement immediately after applying.
 
@@ -574,6 +626,11 @@ class WorldStateManager:
         Raises:
             ValueError: If a character name is required but not provided.
         """
+
+        if isinstance(template, str):
+            template = (await self.get_templates()).get_template(template)
+            if not template:
+                return
 
         if not character_name and template.state_type in ["npc", "character", "player"]:
             raise ValueError("Character name required for this template type.")
@@ -606,3 +663,21 @@ class WorldStateManager:
             insert=template.insert,
             run_immediately=run_immediately,
         )
+
+    async def activate_character(self, character_name: str):
+        """
+        Activates a character in the scene.
+
+        Arguments:
+            character_name: The name of the character to activate.
+        """
+        await activate_character(self.scene, character_name)
+
+    async def deactivate_character(self, character_name: str):
+        """
+        Deactivates a character in the scene.
+
+        Arguments:
+            character_name: The name of the character to deactivate.
+        """
+        await deactivate_character(self.scene, character_name)

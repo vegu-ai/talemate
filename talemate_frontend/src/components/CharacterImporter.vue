@@ -16,7 +16,7 @@
                     <v-spacer></v-spacer>
                     <v-btn color="secondary" text @click="dialog = false" :disabled="importing">Close</v-btn>
                     <v-btn color="primary" text @click="importCharacter" :disabled="importing || !selectedCharacter">Import</v-btn>
-                    <v-progress-circular v-if="importing" indeterminate color="primary" size="20"></v-progress-circular>
+                    <v-progress-circular v-if="importing" indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular>
 
                 </v-card-actions>
             </v-card>

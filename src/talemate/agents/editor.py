@@ -40,11 +40,6 @@ class EditorAgent(Agent):
         self.client = client
         self.is_enabled = True
         self.actions = {
-            "edit_dialogue": AgentAction(
-                enabled=False,
-                label="Edit dialogue",
-                description="Will attempt to improve the quality of dialogue based on the character and scene. Runs automatically after each AI dialogue.",
-            ),
             "fix_exposition": AgentAction(
                 enabled=True,
                 label="Fix exposition",
@@ -100,8 +95,6 @@ class EditorAgent(Agent):
         for text in emission.generation:
             edit = await self.add_detail(text, emission.character)
 
-            edit = await self.edit_conversation(edit, emission.character)
-
             edit = await self.fix_exposition(edit, emission.character)
 
             edited.append(edit)
@@ -127,35 +120,6 @@ class EditorAgent(Agent):
         emission.generation = edited
 
     @set_processing
-    async def edit_conversation(self, content: str, character: Character):
-        """
-        Edits a conversation
-        """
-
-        if not self.actions["edit_dialogue"].enabled:
-            return content
-
-        response = await Prompt.request(
-            "editor.edit-dialogue",
-            self.client,
-            "edit_dialogue",
-            vars={
-                "content": content,
-                "character": character,
-                "scene": self.scene,
-                "max_length": self.client.max_token_length,
-            },
-        )
-
-        response = response.split("[end]")[0]
-
-        response = util.replace_exposition_markers(response)
-        response = util.clean_dialogue(response, main_name=character.name)
-        response = util.strip_partial_sentences(response)
-
-        return response
-
-    @set_processing
     async def fix_exposition(self, content: str, character: Character):
         """
         Edits a text to make sure all narrative exposition and emotes is encased in *
@@ -169,7 +133,7 @@ class EditorAgent(Agent):
                 content = util.strip_partial_sentences(content)
                 character_prefix = f"{character.name}: "
                 message = content.split(character_prefix)[1]
-                content = f"{character_prefix}*{message.strip('*')}*"
+                content = f'{character_prefix}"{message.strip()}"'
                 return content
             elif '"' in content:
                 # silly hack to clean up some LLMs that always start with a quote

@@ -205,9 +205,14 @@ class LoopedPrompt:
         self._current_item = None
 
 
+class JoinableList(list):
+
+    def join(self, separator: str = "\n"):
+        return separator.join(self)
+
+
 @dataclasses.dataclass
 class Prompt:
-
     """
     Base prompt class.
     """
@@ -355,6 +360,7 @@ class Prompt:
         env.globals["query_scene"] = self.query_scene
         env.globals["query_memory"] = self.query_memory
         env.globals["query_text"] = self.query_text
+        env.globals["query_text_eval"] = self.query_text_eval
         env.globals["instruct_text"] = self.instruct_text
         env.globals["agent_action"] = self.agent_action
         env.globals["retrieve_memories"] = self.retrieve_memories
@@ -364,6 +370,8 @@ class Prompt:
         env.globals["len"] = lambda x: len(x)
         env.globals["max"] = lambda x, y: max(x, y)
         env.globals["min"] = lambda x, y: min(x, y)
+        env.globals["make_list"] = lambda: JoinableList()
+        env.globals["make_dict"] = lambda: {}
         env.globals["count_tokens"] = lambda x: count_tokens(
             dedupe_string(x, debug=False)
         )
@@ -372,6 +380,7 @@ class Prompt:
         env.globals["emit_system"] = lambda status, message: emit(
             "system", status=status, message=message
         )
+        env.globals["emit_narrator"] = lambda message: emit("system", message=message)
         env.filters["condensed"] = condensed
         ctx.update(self.vars)
 
@@ -439,9 +448,13 @@ class Prompt:
         vars.update(kwargs)
         return Prompt.get(uid, vars=vars)
 
-    def render_and_request(self, prompt: "Prompt", kind: str = "create") -> str:
+    def render_and_request(
+        self, prompt: "Prompt", kind: str = "create", dedupe_enabled: bool = True
+    ) -> str:
         if not self.client:
             raise ValueError("Prompt has no client set.")
+
+        prompt.dedupe_enabled = dedupe_enabled
 
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(prompt.send(self.client, kind=kind))
@@ -483,9 +496,15 @@ class Prompt:
             ]
         )
 
-    def query_text(self, query: str, text: str, as_question_answer: bool = True):
+    def query_text(
+        self,
+        query: str,
+        text: str,
+        as_question_answer: bool = True,
+        short: bool = False,
+    ):
         loop = asyncio.get_event_loop()
-        summarizer = instance.get_agent("world_state")
+        world_state = instance.get_agent("world_state")
         query = query.format(**self.vars)
 
         if isinstance(text, list):
@@ -493,7 +512,7 @@ class Prompt:
 
         if not as_question_answer:
             return loop.run_until_complete(
-                summarizer.analyze_text_and_answer_question(text, query)
+                world_state.analyze_text_and_answer_question(text, query, short=short)
             )
 
         return "\n".join(
@@ -501,10 +520,17 @@ class Prompt:
                 f"Question: {query}",
                 f"Answer: "
                 + loop.run_until_complete(
-                    summarizer.analyze_text_and_answer_question(text, query)
+                    world_state.analyze_text_and_answer_question(
+                        text, query, short=short
+                    )
                 ),
             ]
         )
+
+    def query_text_eval(self, query: str, text: str):
+        query = f"{query} Answer with a yes or no."
+        response = self.query_text(query, text, as_question_answer=False, short=True)
+        return response.strip().lower().startswith("y")
 
     def query_memory(self, query: str, as_question_answer: bool = True, **kwargs):
         loop = asyncio.get_event_loop()
@@ -551,14 +577,17 @@ class Prompt:
             world_state.analyze_text_and_extract_context("\n".join(lines), goal=goal)
         )
 
-    def agent_action(self, agent_name: str, action_name: str, **kwargs):
+    def agent_action(self, agent_name: str, _action_name: str, **kwargs):
         loop = asyncio.get_event_loop()
         agent = instance.get_agent(agent_name)
-        action = getattr(agent, action_name)
+        action = getattr(agent, _action_name)
         return loop.run_until_complete(action(**kwargs))
 
-    def emit_status(self, status: str, message: str):
-        emit("status", status=status, message=message)
+    def emit_status(self, status: str, message: str, **kwargs):
+        if kwargs:
+            emit("status", status=status, message=message, data=kwargs)
+        else:
+            emit("status", status=status, message=message)
 
     def set_prepared_response(self, response: str, prepend: str = ""):
         """

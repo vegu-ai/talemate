@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import random
+from functools import wraps
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import structlog
@@ -40,7 +41,8 @@ def set_processing(fn):
     """
 
     @_set_processing
-    async def wrapper(self, *args, **kwargs):
+    @wraps(fn)
+    async def narration_wrapper(self, *args, **kwargs):
         response = await fn(self, *args, **kwargs)
         emission = NarratorAgentEmission(
             agent=self,
@@ -49,13 +51,11 @@ def set_processing(fn):
         await talemate.emit.async_signals.get("agent.narrator.generated").send(emission)
         return emission.generation[0]
 
-    wrapper.__name__ = fn.__name__
-    return wrapper
+    return narration_wrapper
 
 
 @register()
 class NarratorAgent(Agent):
-
     """
     Handles narration of the story
     """
@@ -524,9 +524,34 @@ class NarratorAgent(Agent):
 
         return response
 
+    @set_processing
+    async def paraphrase(self, narration: str):
+        """
+        Paraphrase a narration
+        """
+
+        response = await Prompt.request(
+            "narrator.paraphrase",
+            self.client,
+            "narrate",
+            vars={
+                "text": narration,
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+            },
+        )
+
+        log.info("paraphrase", narration=narration, response=response)
+
+        response = self.clean_result(response.strip().strip("*"))
+        response = f"*{response}*"
+
+        return response
+
     async def action_to_narration(
         self,
         action_name: str,
+        emit_message: bool = False,
         *args,
         **kwargs,
     ):
@@ -539,6 +564,10 @@ class NarratorAgent(Agent):
             narration, source=f"{action_name}:{args[0] if args else ''}".rstrip(":")
         )
         self.scene.push_history(narrator_message)
+
+        if emit_message:
+            emit("narrator", narrator_message)
+
         return narrator_message
 
     # LLM client related methods. These are called during or after the client

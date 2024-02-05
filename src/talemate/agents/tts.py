@@ -109,7 +109,6 @@ class VoiceLibrary(pydantic.BaseModel):
 
 @register()
 class TTSAgent(Agent):
-
     """
     Text to speech agent
     """
@@ -135,7 +134,6 @@ class TTSAgent(Agent):
 
         self.voices = {
             "elevenlabs": VoiceLibrary(api="elevenlabs"),
-            "coqui": VoiceLibrary(api="coqui"),
             "tts": VoiceLibrary(api="tts"),
         }
         self.config = config.load_config()
@@ -149,10 +147,8 @@ class TTSAgent(Agent):
                     "api": AgentActionConfig(
                         type="text",
                         choices=[
-                            # TODO at local TTS support
                             {"value": "tts", "label": "TTS (Local)"},
                             {"value": "elevenlabs", "label": "Eleven Labs"},
-                            {"value": "coqui", "label": "Coqui Studio"},
                         ],
                         value="tts",
                         label="API",
@@ -544,100 +540,6 @@ class TTSAgent(Agent):
                 [
                     Voice(value=speaker["voice_id"], label=speaker["name"])
                     for speaker in speakers
-                ]
-            )
-
-        # sort by name
-        voices.sort(key=lambda x: x.label)
-
-        return voices
-
-    # COQUI STUDIO
-
-    async def _generate_coqui(self, text: str) -> Union[bytes, None]:
-        api_key = self.token
-        if not api_key:
-            return
-
-        async with httpx.AsyncClient() as client:
-            url = "https://app.coqui.ai/api/v2/samples/xtts/render/"
-            headers = {
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}",
-            }
-            data = {
-                "voice_id": self.default_voice_id,
-                "text": text,
-                "language": "en",  # Assuming English language for simplicity; this could be parameterized
-            }
-
-            # Make the POST request to Coqui API
-            response = await client.post(url, json=data, headers=headers, timeout=300)
-            if response.status_code in [200, 201]:
-                # Parse the JSON response to get the audio URL
-                response_data = response.json()
-                audio_url = response_data.get("audio_url")
-                if audio_url:
-                    # Make a GET request to download the audio file
-                    audio_response = await client.get(audio_url)
-                    if audio_response.status_code == 200:
-                        # delete the sample from Coqui Studio
-                        # await self._cleanup_coqui(response_data.get('id'))
-                        return audio_response.content
-                    else:
-                        log.error(f"Error downloading audio: {audio_response.text}")
-                else:
-                    log.error("No audio URL in response")
-            else:
-                log.error(f"Error generating audio: {response.text}")
-
-    async def _cleanup_coqui(self, sample_id: str):
-        api_key = self.token
-        if not api_key or not sample_id:
-            return
-
-        async with httpx.AsyncClient() as client:
-            url = f"https://app.coqui.ai/api/v2/samples/xtts/{sample_id}"
-            headers = {"Authorization": f"Bearer {api_key}"}
-
-            # Make the DELETE request to Coqui API
-            response = await client.delete(url, headers=headers)
-
-            if response.status_code == 204:
-                log.info(f"Successfully deleted sample with ID: {sample_id}")
-            else:
-                log.error(
-                    f"Error deleting sample with ID: {sample_id}: {response.text}"
-                )
-
-    async def _list_voices_coqui(self) -> dict[str, str]:
-        url_speakers = "https://app.coqui.ai/api/v2/speakers"
-        url_custom_voices = "https://app.coqui.ai/api/v2/voices"
-
-        voices = []
-
-        async with httpx.AsyncClient() as client:
-            headers = {"Authorization": f"Bearer {self.token}"}
-            response = await client.get(
-                url_speakers, headers=headers, params={"per_page": 1000}
-            )
-            speakers = response.json()["result"]
-            voices.extend(
-                [
-                    Voice(value=speaker["id"], label=speaker["name"])
-                    for speaker in speakers
-                ]
-            )
-
-            response = await client.get(
-                url_custom_voices, headers=headers, params={"per_page": 1000}
-            )
-            custom_voices = response.json()["result"]
-            voices.extend(
-                [
-                    Voice(value=voice["id"], label=voice["name"])
-                    for voice in custom_voices
                 ]
             )
 

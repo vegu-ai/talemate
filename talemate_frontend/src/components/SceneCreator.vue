@@ -16,7 +16,7 @@
 
                 </v-card-text>
                 <v-card-actions>
-                    <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate color="primary"></v-progress-circular>          
+                    <v-progress-circular class="ml-1 mr-3" size="24" v-if="generating" indeterminate="disable-shrink" color="primary"></v-progress-circular>          
                     <v-btn color="primary" @click="submit('generate')" :disabled="generating" prepend-icon="mdi-memory">Generate</v-btn>
                 </v-card-actions>
             </v-card>

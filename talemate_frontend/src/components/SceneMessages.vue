@@ -27,9 +27,14 @@
                     </div>
                 </div>
             </div>
-            <v-alert v-else-if="message.type === 'system'" variant="tonal" closable :type="message.status || 'info'" class="system-message mb-3"
+            <v-alert v-else-if="message.type === 'system'" variant="text" closable :type="message.status || 'info'" class="system-message mb-3 text-caption"
                 :text="message.text">
             </v-alert>
+            <div v-else-if="message.type === 'status'" :class="`message ${message.type}`">
+                <div class="narrator-message">
+                    <StatusMessage :text="message.text" :status="message.status" />
+                </div>
+            </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`">
                     <NarratorMessage :text="message.text" :message_id="message.id" />
@@ -45,6 +50,7 @@
                     <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" />
                 </div>
             </div>
+
             <div v-else :class="`message ${message.type}`">
                 {{ message.text }}
             </div>
@@ -57,6 +63,7 @@ import CharacterMessage from './CharacterMessage.vue';
 import NarratorMessage from './NarratorMessage.vue';
 import DirectorMessage from './DirectorMessage.vue';
 import TimePassageMessage from './TimePassageMessage.vue';
+import StatusMessage from './StatusMessage.vue';
 
 export default {
     name: 'SceneMessages',
@@ -65,6 +72,7 @@ export default {
         NarratorMessage,
         DirectorMessage,
         TimePassageMessage,
+        StatusMessage,
     },
     data() {
         return {
@@ -182,6 +190,31 @@ export default {
                     this.messages.push({ id: data.id, type: data.type, character: character.trim(), text: text.trim(), color: data.color }); // Add color property to the message
                 } else if (data.type != 'request_input' && data.type != 'client_status' && data.type != 'agent_status' && data.type != 'status') {
                     this.messages.push({ id: data.id, type: data.type, text: data.message, color: data.color, character: data.character, status:data.status, ts:data.ts }); // Add color property to the message
+                } else if (data.type === 'status' && data.data && data.data.as_scene_message === true) {
+
+                    // status message can only exist once, remove the most recent one (if within the last 100 messages)
+                    // by walking the array backwards then removing the first one found
+                    // then add the new status message
+                    let max = 100;
+                    let iter = 0;
+                    for (i = this.messages.length - 1; i >= 0; i--) {
+                        if (this.messages[i].type == 'status') {
+                            this.messages.splice(i, 1);
+                            break;
+                        }
+                        iter++;
+                        if(iter > max) {
+                            break;
+                        }
+                    }
+
+                    this.messages.push({
+                         id: data.id, 
+                         type: data.type,
+                         text: data.message, 
+                         status: data.status, 
+                         ts: data.ts
+                    });
                 }
             }
 

@@ -36,7 +36,11 @@ class CmdAIDialogue(TalemateCommand):
             if conversation_agent.actions["natural_flow"].enabled:
                 await conversation_agent.apply_natural_flow(force=True, npcs_only=True)
                 character_name = self.scene.next_actor
-                actor = self.scene.get_character(character_name).actor
+                try:
+                    actor = self.scene.get_character(character_name).actor
+                except AttributeError:
+                    return
+
                 if actor.character.is_player:
                     actor = random.choice(list(self.scene.get_npc_characters())).actor
             else:

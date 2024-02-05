@@ -14,6 +14,8 @@ Player Character: {{ player_character.name }}
 {% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
+YOU MUST WRITE FROM THE PERSPECTIVE OF THE NARRATOR.
+
 Continue the current dialogue by narrating the progression of the scene.
 
 If the scene is over, narrate the beginning of the next scene.
@@ -28,6 +30,8 @@ Use an informal and colloquial register with a conversational tone. Overall, the
 
 Narration style should be that of a 90s point and click adventure game. You are omniscient and can describe the scene in detail.
 
+YOU MUST WRITE FROM THE PERSPECTIVE OF THE NARRATOR.
+
 Only generate new narration. Avoid including any character's internal thoughts or dialogue.
 
 {% if narrative_direction %}
@@ -37,4 +41,3 @@ Directions for new narration: {{ narrative_direction }}
 Write 2 to 4 sentences. {{ extra_instructions }}
 {% include "rerun-context.jinja2" -%}
 <|CLOSE_SECTION|>
-{{ set_prepared_response("*") }}

@@ -38,7 +38,6 @@ log = structlog.get_logger("talemate.model_prompts")
 
 
 class ModelPrompt:
-
     """
     Will attempt to load an LLM prompt template based on the model name
 

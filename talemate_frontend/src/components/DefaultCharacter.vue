@@ -25,7 +25,7 @@
       <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn color="primary" v-if="!saving" text @click="cancel" prepend-icon="mdi-cancel">Cancel</v-btn>
-        <v-progress-circular v-else indeterminate color="primary" size="20"></v-progress-circular>
+        <v-progress-circular v-else indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular>
         <v-btn color="primary" text :disabled="saving" @click="saveDefaultCharacter" prepend-icon="mdi-check-circle-outline">Continue</v-btn>
       </v-card-actions>
     </v-card>

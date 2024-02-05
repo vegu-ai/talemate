@@ -199,7 +199,7 @@
                                             <v-col cols="12">
                                                 <v-list density="compact">
                                                     <v-list-item v-for="(value, index) in app_config.creator.content_context" :key="index">
-                                                        <v-list-item-title><v-icon color="red" class="mr-2" @click="contentContextRemove(index)">mdi-delete</v-icon>{{ value }}</v-list-item-title>
+                                                        <v-list-item-title><v-icon color="red-darken-1" class="mr-2" @click="contentContextRemove(index)">mdi-close-box-outline</v-icon>{{ value }}</v-list-item-title>
                                                     </v-list-item>
                                                 </v-list>
                                                 <v-divider></v-divider>
@@ -226,7 +226,7 @@
                 <span class="headline">Configuration</span>
             </v-card-title>
             <v-card-text>
-                <v-progress-circular indeterminate color="primary" size="20"></v-progress-circular>
+                <v-progress-circular indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular>
             </v-card-text>
         </v-card>
     </v-dialog>

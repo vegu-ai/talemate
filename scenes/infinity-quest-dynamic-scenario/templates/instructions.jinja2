@@ -5,7 +5,7 @@
     {%- set _ = emit_system("warning", "This is a dynamic scenario generation experiment for Infinity Quest. It will likely require a strong LLM to generate something coherent. GPT-4 or 34B+ if local. Temper your expectations.") -%}
 
     {#- emit status update to the UX -#}
-    {%- set _ = emit_status("busy", "Generating scenario ... [1/3]") -%}
+    {%- set _ = emit_status("busy", "Generating scenario ... [1/3]", as_scene_message=True) -%}
 
     {#- thematic tags will be used to randomize generation -#}
     {%- set tags = thematic_generator.generate("color", "state_of_matter", "scifi_trope") -%}
@@ -17,17 +17,17 @@
 
 
     {#- generate introductory text -#}
-    {%- set _ = emit_status("busy", "Generating scenario ... [2/3]") -%}
+    {%- set _ = emit_status("busy", "Generating scenario ... [2/3]", as_scene_message=True) -%}
     {%- set tmpl__scenario_intro = render_template('generate-scenario-intro', premise=instr__premise) %}
     {%- set instr__intro = "*"+render_and_request(tmpl__scenario_intro)+"*" -%}
 
     {#- generate win conditions -#}
-    {%- set _ = emit_status("busy", "Generating scenario ... [3/3]") -%}
+    {%- set _ = emit_status("busy", "Generating scenario ... [3/3]", as_scene_message=True) -%}
     {%- set tmpl__win_conditions = render_template('generate-win-conditions', premise=instr__premise) %}
     {%- set instr__win_conditions = render_and_request(tmpl__win_conditions) -%}
 
     {#- emit status update to the UX -#}
-    {%- set status = emit_status("info", "Scenario ready.") -%}
+    {%- set status = emit_status("success", "Scenario ready.", as_scene_message=True) -%}
 
     {# set gamestate variables #}
     {%- set _ = game_state.set_var("instr.premise", instr__premise, commit=True) -%}

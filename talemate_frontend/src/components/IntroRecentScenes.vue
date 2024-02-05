@@ -1,11 +1,8 @@
 <template>
     <v-card flat variant="text" v-if="hasRecentScenes()">
         <v-card-title>
-            Recent Saves
+            Quick load
         </v-card-title>
-        <v-card-subtitle>
-            Continue your story
-        </v-card-subtitle>
         <!-- 
         horizontal scroll from config.recent_scenes.scenes
         if sceneLoadingAvailable, clicking the scene should load it
@@ -167,6 +164,7 @@ export default {
 .tile {
     flex: 0 0 275px;
     margin: 10px;
+    max-width: 275px;
 }
 
 </style>

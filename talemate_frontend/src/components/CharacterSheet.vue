@@ -3,7 +3,7 @@
       <v-card>
         <v-tabs v-model="tab">
           <v-tab value="overview">Overview</v-tab>
-          <v-tab value="details">Details</v-tab>
+          <v-tab value="details">Attributes</v-tab>
         </v-tabs>
         <v-window v-model="tab">
           <v-window-item value="overview">
@@ -27,16 +27,14 @@
                         </div>
                     </v-col>
                     <v-col cols="8">
-                        <v-row>
-                            <v-col cols="12">
-                                <span class="text-h5">{{ name }}</span>
-                            </v-col>
-                            <v-col cols="12">
-                                <p>
+                        <v-card color="grey-darken-3">
+                            <v-card-title>{{ name }}</v-card-title>
+                            <v-card-text>
+                                <p class="pre-wrap">
                                     {{ description }}
                                 </p>
-                            </v-col>
-                        </v-row>
+                            </v-card-text>
+                        </v-card>
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -168,5 +166,11 @@ export default {
 }
 </script>
 
-<style scoped></style>
+<style scoped>
+
+.pre-wrap {
+    white-space: pre-wrap;
+}
+
+</style>
 ```

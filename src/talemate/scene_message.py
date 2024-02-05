@@ -18,7 +18,6 @@ def reset_message_id():
 
 @dataclass
 class SceneMessage:
-
     """
     Base class for all messages that are sent to the scene.
     """
@@ -31,6 +30,8 @@ class SceneMessage:
 
     # the source of the message (e.g. "ai", "progress_story", "director")
     source: str = ""
+
+    hidden: bool = False
 
     typ = "scene"
 
@@ -73,6 +74,16 @@ class SceneMessage:
     def secondary_source(self):
         return self.source
 
+    @property
+    def raw(self):
+        return str(self.message)
+
+    def hide(self):
+        self.hidden = True
+
+    def unhide(self):
+        self.hidden = False
+
 
 @dataclass
 class CharacterMessage(SceneMessage):
@@ -89,6 +100,10 @@ class CharacterMessage(SceneMessage):
     @property
     def secondary_source(self):
         return self.character_name
+
+    @property
+    def raw(self):
+        return self.message.split(":", 1)[1].replace('"', "").replace("*", "").strip()
 
 
 @dataclass
@@ -110,7 +125,7 @@ class DirectorMessage(SceneMessage):
         transformed_message = self.message.replace("Director instructs ", "")
         char_name, message = transformed_message.split(":", 1)
 
-        return f"[Story progression instructions for {char_name}: {message}]"
+        return f"# Story progression instructions for {char_name}: {message}"
 
 
 @dataclass
@@ -135,7 +150,7 @@ class ReinforcementMessage(SceneMessage):
 
     def __str__(self):
         question, _ = self.source.split(":", 1)
-        return f"[Context state: {question}: {self.message}]"
+        return f"# Internal notes: {question}: {self.message}"
 
 
 MESSAGES = {

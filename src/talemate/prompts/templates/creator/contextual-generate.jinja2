@@ -1,0 +1,71 @@
+{% block rendered_context %}
+{% include "extra-context.jinja2" %}
+{% if character %}
+<|SECTION:CHARACTER|>
+{% if context_typ == 'character attribute' -%}
+{{ character.sheet_filtered(context_name) }}
+{% else -%}
+{{ character.sheet }}
+{% endif -%}
+<|CLOSE_SECTION|>
+{% endif %}
+{% endblock %}
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=max_tokens-1024-count_tokens(self.rendered_context())) -%}
+{{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+{#- SET TASK ACTION -#}
+{% if not generation_context.original %}
+  {%- set action_task = "Generate the" -%}
+{% else %}
+  {%- set action_task = "Rewrite the existing" -%}
+  Original {{ context_name }}: {{ generation_context.original }}
+{% endif %}
+{#- CHARACTER ATTRIBUTE -#}
+{% if context_typ == "character attribute" %}
+{{ action_task }} "{{ context_name }}" attribute for {{ character.name }}. This must be a general description and not a continuation of the current narrative.
+{#- CHARACTER DETAIL -#}
+{% elif context_typ == "character detail" %}
+{% if context_name.endswith("?") -%}
+{{ action_task }} answer to "{{ context_name }}" for {{ character.name }}. This must be a general description and not a continuation of the current narrative.
+{% else -%}
+{{ action_task }} "{{ context_name }}" detail for {{ character.name }}. This must be a general description and not a continuation of the current narrative. Use paragraphs to separate different details.
+{% endif -%}
+Use a simple, easy to read writing format.
+{#- CHARACTER EXAMPLE DIALOGUE -#}
+{% elif context_typ == "character dialogue" %}
+Generate a new line of example dialogue for {{ character.name }}.
+
+Exisiting Dialogue Examples:
+{% for line in character.example_dialogue %}
+{{ line }}
+{% endfor %}
+
+You must only respond with the generated dialogue example.
+Always contain actions in asterisks. For example, *{{ character.name}} smiles*.
+Always contain dialogue in quotation marks. For example, {{ character.name}}: "Hello!"
+
+{%- if character.dialogue_instructions -%}
+Dialogue instructions for {{ character.name }}: {{ character.dialogue_instructions }}
+{% endif -%}
+{#- GENERAL CONTEXT -#}
+{% else %}
+{% if context_name.endswith("?") -%}
+{{ action_task }} answer to the question "{{ context_name }}". This must be a general description and not a continuation of the current narrative.
+{%- else -%}
+{{ action_task }} new narrative content for {{ context_name }}
+Use a simple, easy to read writing format.
+{%- endif -%}
+{% endif %}
+{% if generation_context.instructions %}Additional instructions: {{ generation_context.instructions }}{% endif %}
+<|CLOSE_SECTION|>
+{{ bot_token }}
+{%- if context_typ == 'character attribute' -%}
+{{ character.name }}'s {{ context_name }}:
+{%- elif context_typ == 'character dialogue' -%}
+{{ character.name }}:
+{%- else -%}
+{{ context_name }}:
+{%- endif -%}

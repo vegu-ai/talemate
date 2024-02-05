@@ -1,6 +1,6 @@
 # Talemate
 
-Allows you to play roleplay scenarios with large language models. 
+Roleplay with AI with a focus on strong narration, consistent world and game state tracking.
 
 |||
 |------------------------------------------|------------------------------------------|

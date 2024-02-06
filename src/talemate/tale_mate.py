@@ -264,8 +264,9 @@ class Character:
         for k, v in self.base_attributes.items():
             if isinstance(v, str):
                 self.base_attributes[k] = v.replace(f"{orig_name}", self.name)
-        for i, v in enumerate(self.details):
+        for i, v in list(self.details.items()):
             self.details[i] = v.replace(f"{orig_name}", self.name)
+        self.memory_dirty = True
 
     def load_from_image_metadata(self, image_path: str, file_format: str):
         """

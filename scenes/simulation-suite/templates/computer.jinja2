@@ -18,6 +18,7 @@ You must at least call one of the following functions:
 - set_player_persona
 - set_player_name
 - end_simulation
+- answer_question
 
 Set the player persona at the beginning of a new simulation or if the player requests a change.
 
@@ -100,6 +101,11 @@ end_simulation("simulation ended")
 Request: Computer, shut down the simulation
 ```simulation-stack
 end_simulation("simulation ended")
+```
+
+Request: Computer, what do you know about the game of thrones?
+```simulation-stack
+answer_question("what do you know about the game of thrones?")
 ```
 
 <|CLOSE_SECTION|>

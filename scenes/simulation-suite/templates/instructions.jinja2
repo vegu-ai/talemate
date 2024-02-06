@@ -26,6 +26,12 @@
                 {# change environment #}
                 {% set _ = processed.append(call) %}
             
+            {% elif call.strip().startswith("answer_question") %}
+                {# answert a query #}
+
+                {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer calls the following function:\n"+call+"\nand answers the player's question.", emit_message=True) %}
+
+
             {% elif call.strip().startswith("set_player_persona") %}
                 {# treansform player #}
                 {% set _ = emit_status("busy", "Simulation suite altering user persona.", as_scene_message=True) %}
@@ -99,7 +105,7 @@
                 {% set explicit_command = query_text_eval("has the player explicitly asked to end the simulation?", player_message.raw) %}
                 {% if explicit_command %}
                     {% set _ = emit_status("busy", "Simulation suite ending current simulation.", as_scene_message=True) %}
-                    {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer ends the simulation, disolving the environment and all artifical characters, erasing all memory of it and finally returning the player to the inactive simulation suite.", emit_message=True) %}
+                    {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer ends the simulation, disolving the environment and all artifical characters, erasing all memory of it and finally returning the player to the inactive simulation suite.List of artificial characters: "+(",".join(scene.npc_character_names)), emit_message=True) %}
                     {% set _ = scene.sync_restore() %}
                     {% set update_world_state = True %}
                     {% set simulation_reset = True %}

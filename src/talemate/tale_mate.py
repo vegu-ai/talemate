@@ -1428,7 +1428,7 @@ class Scene(Emitter):
     async def _rerun_narrator_message(self, message):
         emit("remove_message", "", id=message.id)
         source, arg = (
-            message.source.split(":")
+            message.source.split(":", 1)
             if message.source and ":" in message.source
             else (message.source, None)
         )

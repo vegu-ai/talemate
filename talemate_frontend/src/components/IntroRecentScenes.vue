@@ -56,7 +56,7 @@ export default {
             if(newVal != null) {
                 this.requestCoverImages();
             }
-        }
+        },
     },
     methods: {
 
@@ -120,7 +120,6 @@ export default {
 
         handleMessage(data) {
             if(data.type === 'assets') {
-                console.log("ASSEsTS", data.assets)
                 for(let id in data.assets) {
                     let asset = data.assets[id];
                     this.coverImages[id] = {
@@ -128,9 +127,11 @@ export default {
                         mediaType: asset.mediaType,
                     };
                 }
-                console.log("assets", this.coverImages, data)
             }
         },
+    },
+    mounted() {
+        this.requestCoverImages();
     },
     created() {
         this.registerMessageHandler(this.handleMessage);

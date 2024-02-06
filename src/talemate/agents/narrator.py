@@ -548,20 +548,62 @@ class NarratorAgent(Agent):
 
         return response
 
+    def action_to_source(
+        self,
+        action_name: str,
+        parameters: dict,
+    ) -> str:
+        
+        """
+        Generate a source string for a given action and parameters
+        
+        The source string is used to identify the source of a NarratorMessage
+        and will also help regenerate the action and parameters from the source string
+        later on
+        """
+        
+        args = []
+        
+        if action_name == "paraphrase":
+            args.append(parameters.get("narration"))
+        elif action_name == "narrate_character_entry":
+            args.append(parameters.get("character").name)
+            #args.append(parameters.get("direction"))
+        elif action_name == "narrate_character_exit":
+            args.append(parameters.get("character").name)
+            #args.append(parameters.get("direction"))
+        elif action_name == "narrate_character":
+            args.append(parameters.get("character").name)
+        elif action_name == "narrate_query":
+            args.append(parameters.get("query"))
+        elif action_name == "narrate_time_passage":
+            args.append(parameters.get("duration"))
+            args.append(parameters.get("time_passed"))
+            args.append(parameters.get("narrative"))
+        elif action_name == "progress_story":
+            args.append(parameters.get("narrative_direction"))
+        elif action_name == "narrate_after_dialogue":
+            args.append(parameters.get("character"))
+            
+        arg_str = ";".join(args) if args else ''
+    
+        return f"{action_name}:{arg_str}".rstrip(":")
+        
     async def action_to_narration(
         self,
         action_name: str,
         emit_message: bool = False,
-        *args,
         **kwargs,
     ):
         # calls self[action_name] and returns the result as a NarratorMessage
         # that is pushed to the history
 
         fn = getattr(self, action_name)
-        narration = await fn(*args, **kwargs)
+        narration = await fn(**kwargs)        
+        source = self.action_to_source(action_name, kwargs)
+        
         narrator_message = NarratorMessage(
-            narration, source=f"{action_name}:{args[0] if args else ''}".rstrip(":")
+            narration, source=source
         )
         self.scene.push_history(narrator_message)
 

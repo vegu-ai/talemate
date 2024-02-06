@@ -1,0 +1,31 @@
+
+{{ query_scene("What is "+character.name+" age, race and physique?") }}
+{{ query_scene("What is "+character.name+" hair and skin color?") }}
+{{ query_scene("What clothes is "+character.name+" currently wearing?") }}
+{{ query_scene("What is "+character.name+" currently doing?") }}
+{{ query_scene("Where is "+character.name+" currently at? Briefly describe the environment.") }}
+
+
+{% set character_vis = agent_action("narrator", "narrate_character", character=character) %}
+{{ character_vis }}
+
+<|SECTION:TASK|>
+Describe the scene to the painter to ensure he will capture all the important details when drawing a dynamic and truthful image of {{ character.name }}.
+
+When evaluating both story and context, story is more important. You can fill in gaps using imagination as long as it is based on the existing context. 
+
+Progression of the dialogue is important. The last line is the most important, the first line is the least important.
+
+Include details about the {{ character.name }}'s appearance exactly as they are, and {{ character.name }}'s current pose.
+Include a description of the environment.
+
+Include details about: name, age, race, gender, physique, expression, pose, clothes/equipment, hair, skin, eyes, scars, tattoos, piercings, and any other relevant details.
+
+THE IMAGE MUST ONLY INCLUDE {{ character.name }} EXCLUDE ALL OTHER CHARACTERS.
+YOU MUST NOT INCLUDE REMOVED OR DISCARDED ITEMS.
+The image will be used as a real time portrait of {{ character.name }} in the game.
+Use only comma separated keywords.
+Keywords should be ordered from most impactful to least.
+
+<|CLOSE_SECTION|>
+{{ set_prepared_response("solo, ") }}

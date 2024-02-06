@@ -20,6 +20,8 @@ WORLD_STATE = str(Prompt.get("world_state.system-analyst"))
 
 SUMMARIZE = str(Prompt.get("summarizer.system"))
 
+VISUALIZE = str(Prompt.get("visual.system"))
+
 # CAREBEAR PROMPTS
 
 ROLEPLAY_NO_DECENSOR = str(Prompt.get("conversation.system-no-decensor"))
@@ -41,3 +43,5 @@ EDITOR_NO_DECENSOR = str(Prompt.get("editor.system-no-decensor"))
 WORLD_STATE_NO_DECENSOR = str(Prompt.get("world_state.system-analyst-no-decensor"))
 
 SUMMARIZE_NO_DECENSOR = str(Prompt.get("summarizer.system-no-decensor"))
+
+VISUALIZE_NO_DECENSOR = str(Prompt.get("visual.system-no-decensor"))

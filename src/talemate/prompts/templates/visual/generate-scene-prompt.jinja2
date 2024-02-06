@@ -1,0 +1,14 @@
+{% block rendered_context -%}
+<|SECTION:CONTEXT|>
+{% include "extra-context.jinja2" %}
+<|CLOSE_SECTION|>
+{% endblock -%}
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=max_tokens-512-count_tokens(self.rendered_context())) -%}
+{{ loop.index }}. {{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Describe the scene to the painter to ensure he will capture all the important details.
+Use short phrases and comma separated keywords.
+<|CLOSE_SECTION|>

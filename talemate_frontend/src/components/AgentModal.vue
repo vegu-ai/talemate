@@ -18,7 +18,7 @@
 
       </v-card-title>
       <v-card-text class="scrollable-content">
-        <v-select v-if="agent.data.requires_llm_client" v-model="agent.client" :items="agent.data.client" label="Client"  @update:modelValue="save(false)"></v-select>
+        <v-select v-if="agent.data.requires_llm_client" v-model="selectedClient" :items="agent.data.client" label="Client"  @update:modelValue="save(false)"></v-select>
 
         <v-alert type="warning" variant="tonal" density="compact" v-if="agent.data.experimental">
           This agent is currently experimental and may significantly decrease performance and / or require
@@ -65,6 +65,7 @@ export default {
     return {
       saveTimeout: null,
       localDialog: this.state.dialog,
+      selectedClient: null,
       agent: { ...this.state.currentAgent }
     };
   },
@@ -73,6 +74,9 @@ export default {
       immediate: true,
       handler(newVal) {
         this.localDialog = newVal;
+        if(newVal) {
+          this.selectedClient = typeof(this.agent.client) === 'object' ? this.agent.client.client.value : this.agent.client;
+        }
       }
     },
     'state.currentAgent': {
@@ -106,6 +110,15 @@ export default {
     },
     save(delayed = false) {
       console.log("save", delayed);
+
+      if(this.selectedClient != null) {
+        if(typeof(this.agent.client) === 'object') {
+          this.agent.client.client.value = this.selectedClient;
+        } else {
+          this.agent.client = this.selectedClient;
+        }
+      }
+
       if(!delayed) {
         this.$emit('save', this.agent);
         return;

@@ -178,7 +178,7 @@ def emit_agents_status(*args, **kwargs):
     Will emit status of all agents
     """
     # log.debug("emit", type="agent status")
-    for typ, cls in agents.AGENT_CLASSES.items():
+    for typ, cls in sorted(agents.AGENT_CLASSES.items(), key=lambda x: x[1].verbose_name):
         agent = AGENTS.get(typ)
         emit_agent_status(cls, agent)
 

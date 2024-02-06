@@ -1,6 +1,6 @@
 <template>
     <div v-if="isConnected()">
-        <v-list v-for="(agent, index) in state.agents" :key="index">
+        <v-list v-for="(agent, index) in state.agents" :key="index" density="compact">
             <v-list-item @click="editAgent(index)">
                 <v-list-item-title>
                     <v-progress-circular v-if="agent.status === 'busy'" indeterminate="disable-shrink" color="primary"
@@ -18,9 +18,42 @@
                         </template>
                     </v-tooltip>
                 </v-list-item-title>
-                <v-list-item-subtitle class="text-caption">
-                    {{ agent.client }}
-                </v-list-item-subtitle>
+                <div v-if="typeof(agent.client) === 'string'">
+                    <v-chip prepend-icon="mdi-network-outline" class="mr-1" size="x-small" color="grey" variant="tonal" label>{{ agent.client }}</v-chip>
+                    <!--
+                    <v-icon color="grey" size="x-small" v-bind="props">mdi-network-outline</v-icon>
+                    <span class="ml-1 text-caption text-bold text-grey-lighten-1">{{ agent.client }}</span>
+                    -->
+
+                </div>
+                <div v-else-if="typeof(agent.client) === 'object'">
+                    <v-tooltip v-for="(detail, key) in agent.client" :key="key" :text="detail.description" >
+                        <template v-slot:activator="{ props }">
+                            <v-chip 
+                            class="mr-1" 
+                            size="x-small" 
+                            v-bind="props"
+                            :prepend-icon="detail.icon"
+                            label
+                            :color="detail.color || 'grey'"
+                            variant="tonal"
+                            >
+                               {{ detail.value }}
+                           </v-chip>
+                        </template>
+                    </v-tooltip>
+
+                    <!--
+                    <div v-for="(detail, key) in agent.client" :key="key">
+                        <v-tooltip :text="detail.description" v-if="detail.icon != null">
+                            <template v-slot:activator="{ props }">
+                                <v-icon color="grey" size="x-small" v-bind="props">{{ detail.icon }}</v-icon>
+                            </template>
+                        </v-tooltip>
+                        <span class="ml-1 text-caption text-bold text-grey-lighten-1">{{ detail.value }}</span>
+                    </div>
+                    -->
+                </div>
                 <!--
                 <v-chip class="mr-1" v-if="agent.status === 'disabled'" size="x-small">Disabled</v-chip>
                 <v-chip v-if="agent.data.experimental" color="warning" size="x-small">experimental</v-chip>

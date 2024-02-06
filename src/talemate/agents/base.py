@@ -20,6 +20,9 @@ from talemate.events import GameLoopStartEvent
 
 __all__ = [
     "Agent",
+    "AgentAction",
+    "AgentActionConfig",
+    "AgentDetail",
     "set_processing",
 ]
 
@@ -49,6 +52,12 @@ class AgentAction(pydantic.BaseModel):
     description: str = ""
     config: Union[dict[str, AgentActionConfig], None] = None
 
+
+class AgentDetail(pydantic.BaseModel):
+    value: Union[str, None] = None
+    description: Union[str, None] = None
+    icon: Union[str, None] = None
+    color: str = "grey"
 
 def set_processing(fn):
     """

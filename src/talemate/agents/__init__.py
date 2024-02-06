@@ -9,3 +9,4 @@ from .registry import AGENT_CLASSES, get_agent_class, register
 from .summarize import SummarizeAgent
 from .tts import TTSAgent
 from .world_state import WorldStateAgent
+from .visual import VisualAgent

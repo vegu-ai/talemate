@@ -24,7 +24,7 @@ from talemate.emit.signals import handlers
 from talemate.events import GameLoopNewMessageEvent
 from talemate.scene_message import CharacterMessage, NarratorMessage
 
-from .base import Agent, AgentAction, AgentActionConfig, set_processing
+from .base import Agent, AgentAction, AgentActionConfig, AgentDetail, set_processing
 from .registry import register
 
 try:
@@ -226,6 +226,33 @@ class TTSAgent(Agent):
 
     @property
     def agent_details(self):
+        
+        details = {
+            "api": AgentDetail(
+                icon="mdi-server-outline",
+                value=self.api_label,
+                description="The backend to use for TTS",
+            ).model_dump(),
+        }
+        
+        if self.ready and self.enabled:
+            details["voice"] = AgentDetail(
+                icon="mdi-account-voice",
+                value=self.voice_id_to_label(self.default_voice_id) or "",
+                description="The voice to use for TTS",
+                color="info"
+            ).model_dump()
+        elif self.enabled:
+            details["error"] = AgentDetail(
+                icon="mdi-alert",
+                value=self.not_ready_reason,
+                description=self.not_ready_reason,
+                color="error"
+            ).model_dump()
+            
+        return details
+        
+        
         suffix = ""
 
         if not self.ready:
@@ -246,6 +273,15 @@ class TTSAgent(Agent):
     @property
     def api(self):
         return self.actions["_config"].config["api"].value
+
+    @property
+    def api_label(self):
+        choices = self.actions["_config"].config["api"].choices
+        api = self.api
+        for choice in choices:
+            if choice["value"] == api:
+                return choice["label"]
+        return api
 
     @property
     def token(self):

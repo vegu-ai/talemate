@@ -261,17 +261,25 @@ class WebsocketHandler(Receiver):
 
             if name not in self.agents:
                 continue
-
-            if agent["client"] not in self.llm_clients:
+            
+            if isinstance(agent["client"], dict):
+                try:
+                    client_name = agent["client"]["client"]["value"]
+                except KeyError:
+                    continue
+            else:
+                client_name = agent["client"]
+            
+            if client_name not in self.llm_clients:
                 continue
 
             self.agents[name] = {
-                "client": self.llm_clients[agent["client"]]["name"],
+                "client": self.llm_clients[client_name]["name"],
                 "name": name,
             }
 
             agent_instance = instance.get_agent(name, **self.agents[name])
-            agent_instance.client = self.llm_clients[agent["client"]]["client"]
+            agent_instance.client = self.llm_clients[client_name]["client"]
 
             if agent_instance.has_toggle:
                 self.agents[name]["enabled"] = agent["enabled"]
@@ -284,8 +292,8 @@ class WebsocketHandler(Receiver):
             log.debug(
                 "Configured agent",
                 name=name,
-                client_name=self.llm_clients[agent["client"]]["name"],
-                client=self.llm_clients[agent["client"]]["client"],
+                client_name=self.llm_clients[client_name]["name"],
+                client=self.llm_clients[client_name]["client"],
             )
 
         self.config["agents"] = self.agents

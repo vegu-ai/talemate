@@ -116,10 +116,19 @@ In the modal if you're planning to connect to text-generation-webui, you can lik
 
 #### Recommended Models 
 
-Any of the top models in any of the size classes here should work well (i wouldn't recommend going lower than 7B):
+As of 2024.02.06 my personal regular drivers (the ones i test with) are:
+
+- Kunoichi-7B
+- sparsetral-16x7B
+- Fimbulvetr-10.7B
+- dolphin-2.7-mixtral-8x7b
+- Mixtral-8x7B-instruct
+- GPT-3.5-turbo 0125
+- GPT-4-turbo 0116
+
+That said, any of the top models in any of the size classes here should work well (i wouldn't recommend going lower than 7B):
 
 https://www.reddit.com/r/LocalLLaMA/comments/18yp9u4/llm_comparisontest_api_edition_gpt4_vs_gemini_vs/
-
 
 ### OpenAI
 

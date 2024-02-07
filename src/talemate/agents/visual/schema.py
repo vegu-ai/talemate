@@ -10,7 +10,7 @@ RESOLUTION_MAP = {}
 
 class RenderSettings(pydantic.BaseModel):
     type_model: str = "sdxl"
-    steps: int = 25
+    steps: int = 40
     
 
 class Resolution(pydantic.BaseModel):
@@ -29,3 +29,4 @@ RESOLUTION_MAP["sd15"] = {
     "landscape": Resolution(width=768, height=512),
     "square": Resolution(width=768, height=768),
 }
+

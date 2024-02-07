@@ -105,7 +105,7 @@ class VisualBase(Agent):
 
     @property
     def experimental(self):
-        return False
+        return True
     
     @property
     def backend(self):
@@ -158,7 +158,7 @@ class VisualBase(Agent):
     
     @property
     def style(self):
-        return combine_styles(STYLE_MAP["concept_art"], STYLE_MAP["anime"])
+        return combine_styles(STYLE_MAP["concept_art"])
         
     def resolution_from_format(self, format:str):
         if self.model_type == "sdxl":
@@ -202,7 +202,11 @@ class VisualBase(Agent):
         return response.strip()
     
     @set_processing
-    async def generate_character_prompt(self, character_name:str):
+    async def generate_character_prompt(
+        self, 
+        character_name:str,
+        instructions:str=None
+    ):
         
         character = self.scene.get_character(character_name)
         
@@ -215,6 +219,7 @@ class VisualBase(Agent):
                 "character_name": character_name,
                 "character": character,
                 "max_tokens": self.client.max_token_length,
+                "instructions": instructions or "",
             }
         )
         

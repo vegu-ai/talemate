@@ -58,6 +58,7 @@ class CmdVisualizeCharacter(TalemateCommand):
     async def run(self):
         visual = get_agent("visual")
         character_name = self.args[0]
-        prompt = await visual.generate_character_prompt(character_name)
+        instructions = self.args[1] if len(self.args) > 1 else None
+        prompt = await visual.generate_character_prompt(character_name, instructions=instructions)
         await visual.generate(prompt, format="portrait")
         return True

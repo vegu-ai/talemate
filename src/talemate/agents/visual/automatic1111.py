@@ -6,6 +6,7 @@ import structlog
 
 from .handlers import register
 from .schema import Resolution
+from .style import STYLE_MAP
 
 log = structlog.get_logger("talemate.agents.visual.automatic1111")
 
@@ -17,9 +18,10 @@ class Automatic1111Mixin:
         url = self.api_url
         render_settings = self.render_settings
         style = self.style
-        prompt = f"{prompt}, {', '.join(style.keywords)}"
+        prompt = f"{style}, {prompt}"
         payload = {
             "prompt": prompt,
+            "negative_prompt": str(STYLE_MAP["negative_prompt_1"]),
             "steps": render_settings.steps,
             "width": resolution.width,
             "height": resolution.height,

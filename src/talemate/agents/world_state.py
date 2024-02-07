@@ -526,11 +526,17 @@ class WorldStateAgent(Agent):
 
         if reset and reinforcement.insert == "sequential":
             self.scene.pop_history(typ="reinforcement", source=source, all=True)
+        
+        if reinforcement.insert == "sequential":
+            kind = "analyze_freeform_medium_short"
+        else:
+            kind = "analyze_freeform"
+
 
         answer = await Prompt.request(
             "world_state.update-reinforcements",
             self.client,
-            "analyze_freeform",
+            kind,
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,

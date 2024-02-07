@@ -354,6 +354,8 @@ class Character:
 
         for key, value in kwargs.items():
             setattr(self, key, value)
+            
+        self.memory_dirty = True
 
     async def commit_to_memory(self, memory_agent):
         """

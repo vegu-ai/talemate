@@ -1,12 +1,12 @@
 
-{{ query_scene("What is "+character.name+" age, race and physique?") }}
-{{ query_scene("What is "+character.name+" hair and skin color?") }}
-{{ query_scene("What clothes is "+character.name+" currently wearing?") }}
-{{ query_scene("What is "+character.name+" currently doing?") }}
+{{ query_scene("What is "+character.name+" age, race, and physical appearance?") }}
+{{ query_scene("What clothes is "+character.name+" currently wearing and doing?") }}
 {{ query_scene("Where is "+character.name+" currently at? Briefly describe the environment.") }}
 
 
 <|SECTION:TASK|>
+{% if instructions %}Requested Image: {{ instructions }}{% endif %}
+
 Describe the scene to the painter to ensure he will capture all the important details when drawing a dynamic and truthful image of {{ character.name }}.
 
 Include details about the {{ character.name }}'s appearance exactly as they are, and {{ character.name }}'s current pose.
@@ -21,5 +21,7 @@ The image will be used as a real time portrait of {{ character.name }} in the ga
 Use only comma separated keywords.
 Keywords should be ordered from most impactful to least.
 
+if {{ character.name }} is female add the keyword "1girl"
+if {{ character.name }} is male add the keyword "1boy"
 <|CLOSE_SECTION|>
-{{ set_prepared_response("solo, ") }}
+{{ set_prepared_response(character.name+", solo,")}}

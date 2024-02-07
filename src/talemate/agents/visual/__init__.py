@@ -105,7 +105,7 @@ class VisualBase(Agent):
 
     @property
     def experimental(self):
-        return True
+        return False
     
     @property
     def backend(self):

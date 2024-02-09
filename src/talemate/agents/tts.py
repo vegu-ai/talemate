@@ -138,6 +138,7 @@ class TTSAgent(Agent):
         }
         self.config = config.load_config()
         self.playback_done_event = asyncio.Event()
+        self.preselect_voice = None
         self.actions = {
             "_config": AgentAction(
                 enabled=True,
@@ -251,24 +252,6 @@ class TTSAgent(Agent):
             ).model_dump()
             
         return details
-        
-        
-        suffix = ""
-
-        if not self.ready:
-            suffix = f"  - {self.not_ready_reason}"
-        else:
-            suffix = f"  - {self.voice_id_to_label(self.default_voice_id)}"
-
-        api = self.api
-        choices = self.actions["_config"].config["api"].choices
-        api_label = api
-        for choice in choices:
-            if choice["value"] == api:
-                api_label = choice["label"]
-                break
-
-        return f"{api_label}{suffix}"
 
     @property
     def api(self):
@@ -338,8 +321,13 @@ class TTSAgent(Agent):
         api_changed = api != self.api
 
         log.debug(
-            "apply_config", api=api, api_changed=api != self.api, current_api=self.api
+            "apply_config", api=api, api_changed=api != self.api, current_api=self.api, args=args, kwargs=kwargs
         )
+        
+        try:
+            self.preselect_voice = kwargs["actions"]["_config"]["config"]["voice_id"]["value"]
+        except KeyError:
+            self.preselect_voice = self.default_voice_id
 
         super().apply_config(*args, **kwargs)
 
@@ -433,6 +421,11 @@ class TTSAgent(Agent):
 
         library.voices = await list_fn()
         library.last_synced = time.time()
+        
+        if self.preselect_voice:
+            if self.voice(self.preselect_voice):
+                self.actions["_config"].config["voice_id"].value = self.preselect_voice
+                self.preselect_voice = None
 
         # if the current voice cannot be found, reset it
         if not self.voice(self.default_voice_id):

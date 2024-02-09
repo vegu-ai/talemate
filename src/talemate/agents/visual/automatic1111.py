@@ -31,7 +31,7 @@ class Automatic1111Mixin:
         log.info("automatic1111_generate", payload=payload, url=url)
         
         async with httpx.AsyncClient() as client:
-            response = await client.post(url=f'{url}/sdapi/v1/txt2img', json=payload, timeout=300)
+            response = await client.post(url=f'{url}/sdapi/v1/txt2img', json=payload, timeout=90)
             
         r = response.json()
         

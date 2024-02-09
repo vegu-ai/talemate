@@ -180,14 +180,14 @@ export default {
                     agent.label = data.message;
                     agent.actions = {}
                     for(let i in data.data.actions) {
-                        agent.actions[i] = {enabled: data.data.actions[i].enabled, config: data.data.actions[i].config};
+                        agent.actions[i] = {enabled: data.data.actions[i].enabled, config: data.data.actions[i].config, condition: data.data.actions[i].condition};
                     }
                     agent.enabled = data.data.enabled;
                 } else {
                     // Add the agent to the list of agents
                     let actions = {}
                     for(let i in data.data.actions) {
-                        actions[i] = {enabled: data.data.actions[i].enabled, config: data.data.actions[i].config};
+                        actions[i] = {enabled: data.data.actions[i].enabled, config: data.data.actions[i].config, condition: data.data.actions[i].condition};
                     }
                     this.state.agents.push({
                         name: data.name,

@@ -21,8 +21,10 @@ from talemate.events import GameLoopStartEvent
 __all__ = [
     "Agent",
     "AgentAction",
+    "AgentActionConditional",
     "AgentActionConfig",
     "AgentDetail",
+    "AgentEmission",
     "set_processing",
 ]
 
@@ -46,11 +48,16 @@ class AgentActionConfig(pydantic.BaseModel):
         arbitrary_types_allowed = True
 
 
+class AgentActionConditional(pydantic.BaseModel):
+    attribute: str
+    value: Union[int, float, str, bool, None] = None
+
 class AgentAction(pydantic.BaseModel):
     enabled: bool = True
     label: str
     description: str = ""
     config: Union[dict[str, AgentActionConfig], None] = None
+    condition: Union[AgentActionConditional, None] = None
 
 
 class AgentDetail(pydantic.BaseModel):

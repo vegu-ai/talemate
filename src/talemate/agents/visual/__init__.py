@@ -4,6 +4,7 @@ from talemate.client.base import ClientBase
 from talemate.agents.base import (
     Agent,
     AgentAction,
+    AgentActionConditional,
     AgentActionConfig,
     AgentDetail,
     set_processing,
@@ -40,7 +41,7 @@ class VisualBase(Agent):
     verbose_name = "Visualizer"
     concurrent = True
     
-    default_render_settings = RenderSettings()
+    ACTIONS = {}
     
     def __init__(self, client: ClientBase, *kwargs):
         self.client = client
@@ -64,42 +65,23 @@ class VisualBase(Agent):
                         label="API URL",
                         description="The URL of the backend API",
                     ),
+                    "api_key": AgentActionConfig(
+                        type="text",
+                        value="",
+                        label="API Key",
+                        description="The API key for the backend",
+                    ),
                 }
             ),
-            "advanced_render_settings": AgentAction(
+            "process_in_background": AgentAction(
                 enabled=False,
-                label="Advanced Render Settings",
-                description="Advanced render settings",
-                config={
-                    "process_in_background": AgentActionConfig(
-                        type="bool",
-                        value=False,
-                        label="Process in Background",
-                        description="Process the render in the background - works best if either the text generation or the render are on separate hosts",
-                    ),
-                    "steps": AgentActionConfig(
-                        type="number",
-                        value=25,
-                        label="Steps",
-                        min=5,
-                        max=150,
-                        step=1,
-                        description="number of render steps",
-                    ),
-                    "model_type": AgentActionConfig(
-                        type="text",
-                        value="sdxl",
-                        choices=[
-                            {"value": "sdxl", "label": "SDXL"},
-                            {"value": "sd15", "label": "SD1.5"},
-                        ],
-                        label="Model Type",
-                        description="Right now just differentiates between sdxl and sd15 - affect generation resolution",
-                    ),
-                }
-            )
-                
+                label="Process in Background",
+                description="Process the render in the background - make sure you have enough VRAM to load both the LLM and the stable diffusion model",
+            ),                
         }
+        
+        for action_name, action in self.ACTIONS.items():
+            self.actions[action_name] = action
 
     @property
     def enabled(self):
@@ -134,16 +116,6 @@ class VisualBase(Agent):
         return self.actions["_config"].config["api_url"].value
 
     @property
-    def render_settings(self):
-        if self.actions["advanced_render_settings"].enabled:
-            return RenderSettings(
-                steps=self.actions["advanced_render_settings"].config["steps"].value,
-                type_model=self.actions["advanced_render_settings"].config["model_type"].value,
-            )
-        else:
-            return self.default_render_settings
-
-    @property
     def agent_details(self):
         return {
             "backend": AgentDetail(
@@ -168,7 +140,7 @@ class VisualBase(Agent):
     
     @property
     def process_in_background(self):
-        return self.actions["advanced_render_settings"].config["process_in_background"].value
+        return self.actions["process_in_background"].enabled
         
     def resolution_from_format(self, format:str):
         if self.model_type == "sdxl":
@@ -247,7 +219,13 @@ class VisualBase(Agent):
 # apply mixins to the agent (from HANDLERS dict[str, cls])
 
 for mixin_backend, mixin in HANDLERS.items():
-    VisualBase = type("VisualAgent", (mixin["cls"], VisualBase), {})
+    mixin_cls = mixin["cls"]
+    VisualBase = type("VisualAgent", (mixin_cls, VisualBase), {})
+    
+    extend_actions = getattr(mixin_cls, "EXTEND_ACTIONS", {})
+    
+    for action_name, action in extend_actions.items():
+        VisualBase.ACTIONS[action_name] = action
     
 
 @register()

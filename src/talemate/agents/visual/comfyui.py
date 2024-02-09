@@ -1,4 +1,5 @@
 import io
+import random
 import os
 import base64
 import time
@@ -21,119 +22,6 @@ from .schema import Resolution, RenderSettings
 from .style import STYLE_MAP
 
 log = structlog.get_logger("talemate.agents.visual.comfyui")
-
-"""
-{
-    "1": {
-      "inputs": {
-        "ckpt_name": "protovisionXLHighFidelity3D_release0630Bakedvae.safetensors"
-      },
-      "class_type": "CheckpointLoaderSimple",
-      "_meta": {
-        "title": "Load Checkpoint"
-      }
-    },
-    "3": {
-      "inputs": {
-        "width": 1024,
-        "height": 1024,
-        "batch_size": 1
-      },
-      "class_type": "EmptyLatentImage",
-      "_meta": {
-        "title": "Talemate Resolution"
-      }
-    },
-    "4": {
-      "inputs": {
-        "text": "a puppy",
-        "clip": [
-          "1",
-          1
-        ]
-      },
-      "class_type": "CLIPTextEncode",
-      "_meta": {
-        "title": "Talemate Positive Prompt"
-      }
-    },
-    "5": {
-      "inputs": {
-        "text": "",
-        "clip": [
-          "1",
-          1
-        ]
-      },
-      "class_type": "CLIPTextEncode",
-      "_meta": {
-        "title": "Talemate Negative Prompt"
-      }
-    },
-    "10": {
-      "inputs": {
-        "add_noise": "enable",
-        "noise_seed": 131938123826302,
-        "steps": 20,
-        "cfg": 8,
-        "sampler_name": "euler",
-        "scheduler": "normal",
-        "start_at_step": 0,
-        "end_at_step": 10000,
-        "return_with_leftover_noise": "disable",
-        "model": [
-          "1",
-          0
-        ],
-        "positive": [
-          "4",
-          0
-        ],
-        "negative": [
-          "5",
-          0
-        ],
-        "latent_image": [
-          "3",
-          0
-        ]
-      },
-      "class_type": "KSamplerAdvanced",
-      "_meta": {
-        "title": "KSampler (Advanced)"
-      }
-    },
-    "13": {
-      "inputs": {
-        "samples": [
-          "10",
-          0
-        ],
-        "vae": [
-          "1",
-          2
-        ]
-      },
-      "class_type": "VAEDecode",
-      "_meta": {
-        "title": "VAE Decode"
-      }
-    },
-    "14": {
-      "inputs": {
-        "filename_prefix": "ComfyUI",
-        "images": [
-          "13",
-          0
-        ]
-      },
-      "class_type": "SaveImage",
-      "_meta": {
-        "title": "Save Image"
-      }
-    }
-  }
-"""
 
 class Workflow(pydantic.BaseModel):
     nodes:dict 
@@ -217,59 +105,12 @@ class Workflow(pydantic.BaseModel):
         if negative_prompt:
             negative_prompt_node["inputs"]["text"] = negative_prompt        
 
-"""
-def queue_prompt(prompt):
-    p = {"prompt": prompt}
-    data = json.dumps(p).encode('utf-8')
-    req =  request.Request("http://127.0.0.1:8188/prompt", data=data)
-    request.urlopen(req)
-    
-prompt = json.loads(prompt_text)
-#set the text prompt for our positive CLIPTextEncode
-prompt["6"]["inputs"]["text"] = "masterpiece best quality man"
-
-#set the seed for our KSampler node
-prompt["3"]["inputs"]["seed"] = 5
-
-def get_image(filename, subfolder, folder_type):
-    data = {"filename": filename, "subfolder": subfolder, "type": folder_type}
-    url_values = urllib.parse.urlencode(data)
-    with urllib.request.urlopen("http://{}/view?{}".format(server_address, url_values)) as response:
-        return response.read()
-
-def get_history(prompt_id):
-    with urllib.request.urlopen("http://{}/history/{}".format(server_address, prompt_id)) as response:
-        return json.loads(response.read())
-
-def get_images(ws, prompt):
-    prompt_id = queue_prompt(prompt)['prompt_id']
-    output_images = {}
-    while True:
-        out = ws.recv()
-        if isinstance(out, str):
-            message = json.loads(out)
-            if message['type'] == 'executing':
-                data = message['data']
-                if data['node'] is None and data['prompt_id'] == prompt_id:
-                    break #Execution is done
-        else:
-            continue #previews are binary data
-
-    history = get_history(prompt_id)[prompt_id]
-    for o in history['outputs']:
-        for node_id in history['outputs']:
-            node_output = history['outputs'][node_id]
-            if 'images' in node_output:
-                images_output = []
-                for image in node_output['images']:
-                    image_data = get_image(image['filename'], image['subfolder'], image['type'])
-                    images_output.append(image_data)
-            output_images[node_id] = images_output
-
-    return output_images
-
-"""
-
+    def set_seeds(self):
+        for node in self.nodes.values():
+            for field in node.get("inputs", {}).keys():
+                if field == "noise_seed":
+                    node["inputs"]["noise_seed"] = random.randint(0, 999999999999999)
+                    
 @register(backend_name="comfyui", label="ComfyUI")
 class ComfyUIMixin:
     
@@ -369,6 +210,7 @@ class ComfyUIMixin:
         
         workflow.set_resolution(resolution)
         workflow.set_prompt(prompt, STYLE_MAP["negative_prompt_1"])
+        workflow.set_seeds()
         
         payload = {"prompt": workflow.model_dump().get("nodes")}
         
@@ -384,8 +226,8 @@ class ComfyUIMixin:
         prompt_id = r["prompt_id"]
         
         images = await self.comfyui_get_images(prompt_id)
-        
         for node_id, node_images in images.items():
             for i, image in enumerate(node_images):
-                image = Image.open(io.BytesIO(image))
-                image.save(f'comfyui-test.png')
+                await self.emit_image(base64.b64encode(image).decode("utf-8"))
+                #image = Image.open(io.BytesIO(image))
+                #image.save(f'comfyui-test.png')

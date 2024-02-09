@@ -49,9 +49,9 @@
       "inputs": {
         "add_noise": "enable",
         "noise_seed": 131938123826302,
-        "steps": 20,
-        "cfg": 8,
-        "sampler_name": "euler",
+        "steps": 50,
+        "cfg": 7,
+        "sampler_name": "euler_ancestral",
         "scheduler": "normal",
         "start_at_step": 0,
         "end_at_step": 10000,

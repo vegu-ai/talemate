@@ -28,10 +28,13 @@ from talemate.server import (
     world_state_manager,
 )
 
+__all__ = [
+    "WebsocketHandler",
+]
+
 log = structlog.get_logger("talemate.server.websocket_server")
 
 AGENT_INSTANCES = {}
-
 
 class WebsocketHandler(Receiver):
     def __init__(self, socket, out_queue, llm_clients=dict()):
@@ -300,6 +303,21 @@ class WebsocketHandler(Receiver):
         save_config(self.config)
 
         instance.emit_agents_status()
+
+    def handle(self, emission: Emission):
+        called = super().handle(emission)
+        
+        if called is False and emission.websocket_passthrough:
+            log.debug("emission passthrough", emission=emission.message, typ=emission.typ)
+            try:
+                self.queue_put({
+                    "type": emission.typ,
+                    "message": emission.message,
+                    "data": emission.data,
+                })
+            except Exception as e:
+                log.error("emission passthrough", error=traceback.format_exc())
+        
 
     def handle_system(self, emission: Emission):
         self.queue_put(

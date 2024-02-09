@@ -1,8 +1,12 @@
+{% set scene_context = scene.context_history(budget=max_tokens-2048)|join("\n") %}
+{% set full_context = character.sheet + scene_context %}
+{{ query_text("What is "+character.name+" age, race, and physical appearance?", full_context) }}
 
-{{ query_scene("What is "+character.name+" age, race, and physical appearance?") }}
-{{ query_scene("What clothes is "+character.name+" currently wearing and doing?") }}
-{{ query_scene("Where is "+character.name+" currently at? Briefly describe the environment.") }}
+{{ query_text("What clothes is "+character.name+" currently wearing? Provide a detailed description.", full_context) }}
 
+{{ query_text("What is "+character.name+" current scene description?", full_context) }}
+
+{{ query_text("Where is "+character.name+" currently at? Briefly describe the environment and provide genre context.", full_context) }}
 
 <|SECTION:TASK|>
 {% if instructions %}Requested Image: {{ instructions }}{% endif %}
@@ -12,7 +16,7 @@ Describe the scene to the painter to ensure he will capture all the important de
 Include details about the {{ character.name }}'s appearance exactly as they are, and {{ character.name }}'s current pose.
 Include a description of the environment.
 
-Include details about: name, age, race, gender, physique, expression, pose, clothes/equipment, hair, skin, eyes, scars, tattoos, piercings, and any other relevant details.
+Include details about: name, age, race, gender, physique, expression, pose, clothes/equipment, hair style, hair color, skin color, eyes, scars, tattoos, piercings, and any other relevant details.
 
 THE IMAGE MUST ONLY INCLUDE {{ character.name }} EXCLUDE ALL OTHER CHARACTERS.
 YOU MUST ONLY DESCRIBE WHAT IS CURRENTLY VISIBLE IN THE SCENE.
@@ -21,7 +25,7 @@ The image will be used as a real time portrait of {{ character.name }} in the ga
 Use only comma separated keywords.
 Keywords should be ordered from most impactful to least.
 
-if {{ character.name }} is female add the keyword "1girl"
-if {{ character.name }} is male add the keyword "1boy"
+if {{ character.name }} is female add the keyword "1girl" to the beginning of the list.
+if {{ character.name }} is male add the keyword "1boy" to the beginning of the list.
 <|CLOSE_SECTION|>
 {{ set_prepared_response(character.name+", solo,")}}

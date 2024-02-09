@@ -49,7 +49,7 @@
     </v-navigation-drawer>
 
     <!-- debug tools navigation drawer -->
-    <v-navigation-drawer v-model="debugDrawer" app location="right">
+    <v-navigation-drawer v-model="debugDrawer" app location="right" width="300">
       <v-list>
         <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
         <DebugTools ref="debugTools"></DebugTools>
@@ -104,6 +104,7 @@
         Talemate
       </v-toolbar-title>
       <v-spacer></v-spacer>
+      <VisualQueue ref="visualQueue" />
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="configurationRequired()"
@@ -179,6 +180,7 @@ import AppConfig from './AppConfig.vue';
 import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
+import VisualQueue from './VisualQueue.vue';
 
 import IntroView from './IntroView.vue';
 
@@ -200,6 +202,7 @@ export default {
     AudioQueue,
     StatusNotification,
     IntroView,
+    VisualQueue,
   },
   name: 'TalemateApp',
   data() {
@@ -558,10 +561,6 @@ export default {
 </script>
 
 <style scoped>
-.message.request_input {
-
-}
-
 .backdrop {
   background-image: url('/src/assets/logo-13.1-backdrop.png');
   background-repeat: no-repeat;

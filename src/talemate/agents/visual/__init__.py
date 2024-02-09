@@ -1,5 +1,7 @@
 import structlog
 import asyncio
+
+from talemate.emit import emit
 from talemate.client.base import ClientBase
 from talemate.agents.base import (
     Agent,
@@ -13,7 +15,8 @@ from talemate.agents.base import (
 from .handlers import HANDLERS
 from .schema import RenderSettings, RESOLUTION_MAP
 from .commands import * # noqa
-from .style import STYLE_MAP, combine_styles
+from .style import STYLE_MAP, combine_styles, Style
+from .context import visual_context, VIS_TYPES
 
 import talemate.agents.visual.automatic1111
 import talemate.agents.visual.comfyui
@@ -144,13 +147,80 @@ class VisualBase(Agent):
             raise ValueError(f"Model type {model_type} not found in resolution map")
         return RESOLUTION_MAP[model_type].get(format, RESOLUTION_MAP[model_type]["portrait"])
     
+    def augment_prompt(self, prompt:str, styles:list[Style]=None):
+        if styles:
+            
+            prompt_style = Style()
+            prompt_style.load(prompt)
+            prompt_style.prepend(*styles)
+            prompt = str(prompt_style)
+            
+        return prompt
+    
+    def vis_type_styles(self, vis_type:str):
+        if vis_type == VIS_TYPES.CHARACTER:
+            return STYLE_MAP["character_portrait"]
+        return Style()
+    
+    async def emit_image(self, image:str):
+        context = visual_context.get()
+        emit(
+            "image_generated",
+            websocket_passthrough=True,
+            data={
+                "base64": image,
+                "context": context.model_dump() if context else None,
+            }
+        )
+    
     @set_processing
-    async def generate(self, prompt:str, format:str="portrait"):
+    async def generate(self, format:str="portrait", prompt:str=None):
+        
+        context = visual_context.get()
+        
+        if not context and not prompt:
+            log.error("generate", error="No context or prompt provided")
+            return
+        
+        # Handle prompt generation based on context
+        
+        if not prompt and context.prompt:
+            prompt = context.prompt
+        
+        if context.vis_type == VIS_TYPES.ENVIRONMENT and not prompt:
+            prompt = await self.generate_environment_prompt(instructions=context.instructions)
+        elif context.vis_type == VIS_TYPES.CHARACTER and not prompt:
+            prompt = await self.generate_character_prompt(context.character_name, instructions=context.instructions)
+        else:
+            prompt = prompt or context.prompt   
+        
+        # Augment the prompt with styles based on context
+        
+        thematic_style = self.style
+        vis_type_styles = self.vis_type_styles(context.vis_type)
+        prompt = self.augment_prompt(prompt, [thematic_style, vis_type_styles])        
+            
+        if not prompt:
+            log.error("generate", error="No prompt provided and no context to generate from")
+            return 
+        
+        context.prompt = prompt
+        
+        # Handle format (can either come from context or be passed in)
+        
+        if not format and context.format:
+            format = context.format
+        elif not format:
+            format = "portrait"
+        
+        context.format = format
+        
+        # Call the backend specific generate function
         
         backend = self.backend
         fn = f"{backend.lower()}_generate"
         
-        log.info("generate", backend=backend, prompt=prompt, format=format)
+        log.info("generate", backend=backend, prompt=prompt, format=format, context=context)
         
         if not hasattr(self, fn):
             log.error("generate", error=f"Backend {backend} does not support generate")
@@ -165,7 +235,7 @@ class VisualBase(Agent):
         
     
     @set_processing
-    async def generate_environment_prompt(self):
+    async def generate_environment_prompt(self, instructions:str=None):
         
         response = await Prompt.request(
             "visual.generate-environment-prompt",

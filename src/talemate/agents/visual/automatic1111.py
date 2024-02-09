@@ -73,8 +73,6 @@ class Automatic1111Mixin:
         url = self.api_url
         resolution = self.resolution_from_format(format, self.automatic1111_render_settings.type_model)
         render_settings = self.automatic1111_render_settings
-        style = self.style
-        prompt = f"{style}, {prompt}"
         payload = {
             "prompt": prompt,
             "negative_prompt": str(STYLE_MAP["negative_prompt_1"]),
@@ -90,9 +88,11 @@ class Automatic1111Mixin:
             response = await client.post(url=f'{url}/sdapi/v1/txt2img', json=payload, timeout=90)
             
         r = response.json()
+
+        #image = Image.open(io.BytesIO(base64.b64decode(r['images'][0])))
+        #image.save('a1111-test.png')
         
-        image = Image.open(io.BytesIO(base64.b64decode(r['images'][0])))
-        image.save('a1111-test.png')
-        
-        log.info("automatic1111_generate", saved_to="a1111-test.png")
-            
+        #'log.info("automatic1111_generate", saved_to="a1111-test.png")
+                    
+        for i in r['images']:
+            await self.emit_image(r['images'][i])

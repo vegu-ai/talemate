@@ -19,8 +19,8 @@ class Resolution(pydantic.BaseModel):
     
     
 RESOLUTION_MAP["sdxl"] = {
-    "portrait": Resolution(width=768, height=1280),
-    "landscape": Resolution(width=1280, height=768),
+    "portrait": Resolution(width=832, height=1216),
+    "landscape": Resolution(width=1216, height=832),
     "square": Resolution(width=1024, height=1024),
 }
 

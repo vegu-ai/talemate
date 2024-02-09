@@ -59,7 +59,6 @@ class Automatic1111Mixin:
         )
     }
     
-
     @property
     def automatic1111_render_settings(self):
         if self.actions["automatic1111"].enabled:
@@ -70,8 +69,9 @@ class Automatic1111Mixin:
         else:
             return self.automatic1111_default_render_settings
     
-    async def automatic1111_generate(self, prompt:str, resolution:Resolution):
+    async def automatic1111_generate(self, prompt:str, format:str):
         url = self.api_url
+        resolution = self.resolution_from_format(format, self.automatic1111_render_settings.type_model)
         render_settings = self.automatic1111_render_settings
         style = self.style
         prompt = f"{style}, {prompt}"

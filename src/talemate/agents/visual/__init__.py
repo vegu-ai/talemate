@@ -16,6 +16,7 @@ from .commands import * # noqa
 from .style import STYLE_MAP, combine_styles
 
 import talemate.agents.visual.automatic1111
+import talemate.agents.visual.comfyui
 
 from talemate.agents.registry import register
 from talemate.prompts.base import Prompt
@@ -131,10 +132,6 @@ class VisualBase(Agent):
         }
         
     @property
-    def model_type(self):
-        return self.render_settings.type_model
-    
-    @property
     def style(self):
         return combine_styles(STYLE_MAP["concept_art"])
     
@@ -142,15 +139,10 @@ class VisualBase(Agent):
     def process_in_background(self):
         return self.actions["process_in_background"].enabled
         
-    def resolution_from_format(self, format:str):
-        if self.model_type == "sdxl":
-            resmap = RESOLUTION_MAP["sdxl"]        
-        elif self.model_type == "sd15":
-            resmap = RESOLUTION_MAP["sd15"]
-        else:
-            resmap = RESOLUTION_MAP["sdxl"]
-            
-        return resmap.get(format, resmap["portrait"])
+    def resolution_from_format(self, format:str, model_type:str="sdxl"):
+        if model_type not in RESOLUTION_MAP:
+            raise ValueError(f"Model type {model_type} not found in resolution map")
+        return RESOLUTION_MAP[model_type].get(format, RESOLUTION_MAP[model_type]["portrait"])
     
     @set_processing
     async def generate(self, prompt:str, format:str="portrait"):
@@ -158,9 +150,7 @@ class VisualBase(Agent):
         backend = self.backend
         fn = f"{backend.lower()}_generate"
         
-        resolution = self.resolution_from_format(format)
-        
-        log.info("generate", backend=backend, prompt=prompt, format=format, resolution=resolution)
+        log.info("generate", backend=backend, prompt=prompt, format=format)
         
         if not hasattr(self, fn):
             log.error("generate", error=f"Backend {backend} does not support generate")
@@ -168,10 +158,10 @@ class VisualBase(Agent):
         # add the function call to the asyncio task queue
         
         if self.process_in_background:
-            task = asyncio.create_task(getattr(self, fn)(prompt=prompt, resolution=resolution))
+            task = asyncio.create_task(getattr(self, fn)(prompt=prompt, format=format))
             await self.set_background_processing(task)
         else:
-            await getattr(self, fn)(prompt=prompt, resolution=resolution)
+            await getattr(self, fn)(prompt=prompt, format=format)
         
     
     @set_processing

@@ -75,7 +75,7 @@ export default {
       handler(newVal) {
         this.localDialog = newVal;
         if(newVal) {
-          this.selectedClient = typeof(this.agent.client) === 'object' ? this.agent.client.client.value : this.agent.client;
+          this.selectedClient = typeof(this.agent.client) === 'object' && this.agent.client.client ? this.agent.client.client.value : this.agent.client;
         }
       }
     },
@@ -113,7 +113,8 @@ export default {
 
       if(this.selectedClient != null) {
         if(typeof(this.agent.client) === 'object') {
-          this.agent.client.client.value = this.selectedClient;
+          if(this.agent.client.client != null)
+            this.agent.client.client.value = this.selectedClient;
         } else {
           this.agent.client = this.selectedClient;
         }

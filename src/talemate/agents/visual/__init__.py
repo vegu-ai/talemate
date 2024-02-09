@@ -1,5 +1,5 @@
 import structlog
-
+import asyncio
 from talemate.client.base import ClientBase
 from talemate.agents.base import (
     Agent,
@@ -71,6 +71,12 @@ class VisualBase(Agent):
                 label="Advanced Render Settings",
                 description="Advanced render settings",
                 config={
+                    "process_in_background": AgentActionConfig(
+                        type="bool",
+                        value=False,
+                        label="Process in Background",
+                        description="Process the render in the background - works best if either the text generation or the render are on separate hosts",
+                    ),
                     "steps": AgentActionConfig(
                         type="number",
                         value=25,
@@ -159,6 +165,10 @@ class VisualBase(Agent):
     @property
     def style(self):
         return combine_styles(STYLE_MAP["concept_art"])
+    
+    @property
+    def process_in_background(self):
+        return self.actions["advanced_render_settings"].config["process_in_background"].value
         
     def resolution_from_format(self, format:str):
         if self.model_type == "sdxl":
@@ -183,7 +193,13 @@ class VisualBase(Agent):
         if not hasattr(self, fn):
             log.error("generate", error=f"Backend {backend} does not support generate")
         
-        await getattr(self, fn)(prompt=prompt, resolution=resolution)
+        # add the function call to the asyncio task queue
+        
+        if self.process_in_background:
+            task = asyncio.create_task(getattr(self, fn)(prompt=prompt, resolution=resolution))
+            await self.set_background_processing(task)
+        else:
+            await getattr(self, fn)(prompt=prompt, resolution=resolution)
         
     
     @set_processing

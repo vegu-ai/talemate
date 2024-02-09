@@ -310,6 +310,8 @@ class TTSAgent(Agent):
         if not self.enabled:
             return "disabled"
         if self.ready:
+            if getattr(self, "processing_bg", 0) > 0:
+                return "busy_bg" if not getattr(self, "processing", False) else "busy"
             return "active" if not getattr(self, "processing", False) else "busy"
         if self.requires_token and not self.token:
             return "error"
@@ -457,9 +459,10 @@ class TTSAgent(Agent):
 
         # Start generating audio chunks in the background
         generation_task = asyncio.create_task(self.generate_chunks(generate_fn, chunks))
+        await self.set_background_processing(generation_task)
 
         # Wait for both tasks to complete
-        await asyncio.gather(generation_task)
+        #await asyncio.gather(generation_task)
 
     async def generate_chunks(self, generate_fn, chunks):
         for chunk in chunks:

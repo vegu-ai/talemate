@@ -5,6 +5,8 @@
                 <v-list-item-title>
                     <v-progress-circular v-if="agent.status === 'busy'" indeterminate="disable-shrink" color="primary"
                         size="14"></v-progress-circular>
+                    <v-progress-circular v-else-if="agent.status === 'busy_bg'" indeterminate="disable-shrink" color="secondary"
+                        size="14"></v-progress-circular>
                     <v-icon v-else-if="agent.status === 'uninitialized'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>
                     <v-icon v-else-if="agent.status === 'disabled'" color="grey-darken-2" size="14">mdi-checkbox-blank-circle</v-icon>
                     <v-icon v-else-if="agent.status === 'error'" color="red-darken-1" size="14">mdi-checkbox-blank-circle</v-icon>
@@ -166,6 +168,11 @@ export default {
                 // Find the client with the given name
                 const agent = this.state.agents.find(agent => agent.name === data.name);
                 if (agent) {
+
+                    if(agent.name == 'tts') {
+                        console.log("agents: agent_status TTS", data)
+                    }
+
                     // Update the model name of the client
                     agent.client = data.client;
                     agent.data = data.data;

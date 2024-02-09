@@ -59,6 +59,7 @@ class AgentDetail(pydantic.BaseModel):
     icon: Union[str, None] = None
     color: str = "grey"
 
+
 def set_processing(fn):
     """
     decorator that emits the agent status as processing while the function
@@ -242,10 +243,18 @@ class Agent(ABC):
             self.processing = max(0, self.processing)
         else:
             self.processing += 1
+            
 
         status = "busy" if self.processing > 0 else "idle"
+        
+        if status == "idle" and getattr(self, "processing_bg", 0) > 0:
+            status = "busy_bg"
+                
         if not self.enabled:
             status = "disabled"
+
+        if self.agent_type == "tts":
+            log.warning("emit_status", agent=self.agent_type, status=status, processing=self.processing, processing_bg=getattr(self, "processing_bg", None))
 
         emit(
             "agent_status",
@@ -258,6 +267,31 @@ class Agent(ABC):
 
         await asyncio.sleep(0.01)
 
+    async def _handle_background_processing(self, fut: asyncio.Future):
+        try:
+            if fut.cancelled():
+                return
+            
+            if fut.exception():
+                log.error("background processing error", exc=fut.exception())
+                await self.emit_status()
+                return
+            
+            log.info("background processing done", agent=self.agent_type)
+        finally:
+            self.processing_bg -= 1
+            await self.emit_status()
+
+    async def set_background_processing(self, task: asyncio.Task):
+        log.info("set_background_processing", agent=self.agent_type)
+        if not hasattr(self, "processing_bg"):
+            self.processing_bg = 0
+            
+        self.processing_bg += 1
+        
+        await self.emit_status()
+        task.add_done_callback(lambda fut: asyncio.create_task(self._handle_background_processing(fut)))
+        
     def connect(self, scene):
         self.scene = scene
         talemate.emit.async_signals.get("game_loop_start").connect(

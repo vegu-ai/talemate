@@ -120,12 +120,20 @@ class Agent(ABC):
 
     @property
     def status(self):
-        if self.ready:
-            if not self.enabled:
-                return "disabled"
-            return "idle" if getattr(self, "processing", 0) == 0 else "busy"
-        else:
+        if not self.enabled:
+            return "disabled"
+        
+        if not self.ready:
             return "uninitialized"
+        
+        if getattr(self, "processing", 0) > 0:
+            return "busy"
+        
+        if getattr(self, "processing_bg", 0) > 0:
+            return "busy_bg"
+        
+        return "idle"
+        
 
     @property
     def enabled(self):
@@ -243,24 +251,12 @@ class Agent(ABC):
             self.processing = max(0, self.processing)
         else:
             self.processing += 1
-            
-
-        status = "busy" if self.processing > 0 else "idle"
-        
-        if status == "idle" and getattr(self, "processing_bg", 0) > 0:
-            status = "busy_bg"
-                
-        if not self.enabled:
-            status = "disabled"
-
-        if self.agent_type == "tts":
-            log.warning("emit_status", agent=self.agent_type, status=status, processing=self.processing, processing_bg=getattr(self, "processing_bg", None))
 
         emit(
             "agent_status",
             message=self.verbose_name or "",
             id=self.agent_type,
-            status=status,
+            status=self.status,
             details=self.agent_details,
             data=self.config_options(agent=self),
         )
@@ -273,7 +269,7 @@ class Agent(ABC):
                 return
             
             if fut.exception():
-                log.error("background processing error", exc=fut.exception())
+                log.error("background processing error", agent=self.agent_type, exc=fut.exception())
                 await self.emit_status()
                 return
             

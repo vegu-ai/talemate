@@ -1,5 +1,6 @@
 import structlog
 import asyncio
+import traceback
 
 from talemate.emit import emit
 from talemate.client.base import ClientBase
@@ -44,14 +45,15 @@ class VisualBase(Agent):
 
     agent_type = "visual"
     verbose_name = "Visualizer"
-    concurrent = True
+    essential = False
     websocket_handler = VisualWebsocketHandler
     
     ACTIONS = {}
     
     def __init__(self, client: ClientBase, *kwargs):
         self.client = client
-        self.is_enabled = True
+        self.is_enabled = False
+        self.backend_ready = False
         self.actions = {
             "_config": AgentAction(
                 enabled=True,
@@ -131,7 +133,7 @@ class VisualBase(Agent):
     
     @property
     def ready(self):
-        return True
+        return self.backend_ready
     
     @property
     def api_url(self):
@@ -139,7 +141,7 @@ class VisualBase(Agent):
 
     @property
     def agent_details(self):
-        return {
+        details = {
             "backend": AgentDetail(
                 icon="mdi-server-outline",
                 value=self.backend_name,
@@ -152,11 +154,38 @@ class VisualBase(Agent):
             ).model_dump(),
         }
         
+        if not self.ready and self.enabled:
+            details["status"] = AgentDetail(
+                icon="mdi-alert",
+                value=f"{self.backend_name} not ready",
+                color="error",
+                description=self.ready_check_error or f"{self.backend_name} is not ready for processing",
+            ).model_dump()
+        
+        return details
+        
     @property
     def process_in_background(self):
         return self.actions["process_in_background"].enabled
+    
+    async def on_ready_check_success(self):
+        self.backend_ready = True
+        await self.emit_status()
+        
+    async def on_ready_check_failure(self, error):
+        self.backend_ready = False
+        self.ready_check_error = str(error)
+        await self.emit_status()
+    
+    async def ready_check(self):
+        if not self.enabled:
+            return
+        backend = self.backend
+        fn = getattr(self, f"{backend.lower()}_ready", None)
+        task = asyncio.create_task(fn())
+        await super().ready_check(task)
 
-    def apply_config(self, *args, **kwargs):
+    async def apply_config(self, *args, **kwargs):
         
         try:
             backend = kwargs["actions"]["_config"]["config"]["backend"]["value"]
@@ -165,13 +194,19 @@ class VisualBase(Agent):
             
         backend_changed = backend != self.backend
         
+        if backend_changed:
+            self.backend_ready = False
+        
         log.info("apply_config", backend=backend, backend_changed=backend_changed, old_backend=self.backend)
         
-        super().apply_config(*args, **kwargs)
+        await super().apply_config(*args, **kwargs)
         backend_fn = getattr(self, f"{self.backend.lower()}_apply_config", None)
         if backend_fn:
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(backend_fn(backend_changed=backend_changed, *args, **kwargs))
+            task = asyncio.create_task(backend_fn(backend_changed=backend_changed, *args, **kwargs))
+            await self.set_background_processing(task)
+            
+        if not self.backend_ready:
+            await self.ready_check()
         
     def resolution_from_format(self, format:str, model_type:str="sdxl"):
         if model_type not in RESOLUTION_MAP:
@@ -200,6 +235,9 @@ class VisualBase(Agent):
     
     async def apply_image(self, image:str):
         context = visual_context.get()
+        
+        log.debug("apply_image", image=image[:100], context=context)
+        
         if context.vis_type == VIS_TYPES.CHARACTER:
             await self.apply_image_character(image, context.character_name)
     

@@ -39,6 +39,7 @@ class Emission:
     details: str = None
     data: dict = None
     websocket_passthrough: bool = False
+    meta: dict = dataclasses.field(default_factory=dict)
 
 
 def emit(

@@ -104,6 +104,8 @@ class Agent(ABC):
     requires_llm_client = True
     auto_break_repetition = False
     websocket_handler = None
+    essential = True
+    ready_check_error = None
 
     @property
     def agent_details(self):
@@ -186,7 +188,33 @@ class Agent(ABC):
 
         return config_options
 
-    def apply_config(self, *args, **kwargs):
+    async def _handle_ready_check(self, fut: asyncio.Future):
+        callback_failure = getattr(self, "on_ready_check_failure", None)
+        if fut.cancelled():
+            if callback_failure:
+                await callback_failure()
+            return
+
+        if fut.exception():
+            exc = fut.exception()
+            self.ready_check_error = exc
+            log.error("agent ready check error", agent=self.agent_type, exc=exc)
+            if callback_failure:
+                await callback_failure(exc)
+            return
+        
+        callback = getattr(self, "on_ready_check_success", None)
+        if callback:
+            await callback()
+
+    async def ready_check(self, task: asyncio.Task=None):
+        self.ready_check_error = None
+        if task:
+            task.add_done_callback(lambda fut: asyncio.create_task(self._handle_ready_check(fut)))
+            return
+        return True
+
+    async def apply_config(self, *args, **kwargs):
         if self.has_toggle and "enabled" in kwargs:
             self.is_enabled = kwargs.get("enabled", False)
 
@@ -254,10 +282,10 @@ class Agent(ABC):
         if getattr(self, "processing", None) is None:
             self.processing = 0
 
-        if not processing:
+        if processing is False:
             self.processing -= 1
             self.processing = max(0, self.processing)
-        else:
+        elif processing is True:
             self.processing += 1
 
         emit(
@@ -266,6 +294,9 @@ class Agent(ABC):
             id=self.agent_type,
             status=self.status,
             details=self.agent_details,
+            meta={
+                "essential": self.essential,
+            },
             data=self.config_options(agent=self),
         )
 

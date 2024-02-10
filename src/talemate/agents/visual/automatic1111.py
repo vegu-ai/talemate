@@ -94,5 +94,14 @@ class Automatic1111Mixin:
         
         #'log.info("automatic1111_generate", saved_to="a1111-test.png")
                     
-        for i in r['images']:
-            await self.emit_image(r['images'][i])
+        for image in r['images']:
+            await self.emit_image(image)
+            
+    async def automatic1111_ready(self) -> bool:
+        """
+        Will send a GET to /sdapi/v1/memory and on 200 will return True
+        """
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url=f'{self.api_url}/sdapi/v1/memory', timeout=2)
+            return response.status_code == 200

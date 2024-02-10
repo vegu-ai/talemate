@@ -289,8 +289,17 @@ class ComfyUIMixin:
 
     async def comfyui_apply_config(self, backend_changed:bool=False, *args, **kwargs):
         log.debug("comfyui_apply_config", backend_changed=backend_changed)
-        if backend_changed:
+        if backend_changed and self.enabled:
             checkpoints = await self.comfyui_checkpoints
             selected_checkpoint = self.actions["comfyui"].config["checkpoint"].value
             self.actions["comfyui"].config["checkpoint"].choices = checkpoints
             self.actions["comfyui"].config["checkpoint"].value = selected_checkpoint
+            
+    async def comfyui_ready(self) -> bool:
+        """
+        Will send a GET to /system_stats and on 200 will return True
+        """
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url=f'{self.api_url}/system_stats', timeout=2)
+            return response.status_code == 200

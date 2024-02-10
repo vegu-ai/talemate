@@ -9,7 +9,7 @@
             <v-card-title>
                 Visual queue
                 <span v-if="generating">
-                    <v-progress-circular class="ml-1 mr-3" size="14" indeterminate="disable-shrink" color="secondary">
+                    <v-progress-circular class="ml-1 mr-3" size="14" indeterminate="disable-shrink" color="primary">
                     </v-progress-circular>
                     <span class="text-caption text-primary">Generating...</span>
                 </span>
@@ -161,7 +161,7 @@ export default {
                 }
                 console.log("Received image", image);
             } else if(message.type === "agent_status" && message.name === "visual") {
-                this.generating = message.status === "busy_bg";
+                this.generating = message.status === "busy_bg" || message.status === "busy";
             }
         },
     },

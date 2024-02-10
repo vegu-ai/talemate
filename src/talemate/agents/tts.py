@@ -116,6 +116,7 @@ class TTSAgent(Agent):
     agent_type = "tts"
     verbose_name = "Voice"
     requires_llm_client = False
+    essential = False
 
     @classmethod
     def config_options(cls, agent=None):
@@ -312,7 +313,7 @@ class TTSAgent(Agent):
 
         return 250
 
-    def apply_config(self, *args, **kwargs):
+    async def apply_config(self, *args, **kwargs):
         try:
             api = kwargs["actions"]["_config"]["config"]["api"]["value"]
         except KeyError:
@@ -329,7 +330,7 @@ class TTSAgent(Agent):
         except KeyError:
             self.preselect_voice = self.default_voice_id
 
-        super().apply_config(*args, **kwargs)
+        await super().apply_config(*args, **kwargs)
 
         if api_changed:
             try:

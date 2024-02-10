@@ -184,3 +184,8 @@ def emit_agents_status(*args, **kwargs):
 
 
 handlers["request_agent_status"].connect(emit_agents_status)
+
+async def agent_ready_checks():
+    for agent in AGENTS.values():
+        if agent and agent.enabled:
+            await agent.ready_check()

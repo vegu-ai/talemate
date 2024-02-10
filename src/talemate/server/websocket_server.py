@@ -45,7 +45,7 @@ class WebsocketHandler(Receiver):
         self.scene = Scene()
         self.out_queue = out_queue
         self.config = load_config()
-
+        
         for name, agent_config in self.config.get("agents", {}).items():
             self.agents[name] = agent_config
 
@@ -56,9 +56,11 @@ class WebsocketHandler(Receiver):
         # unconveniently named function, this `connect` method is called
         # to connect signals handlers to the websocket handler
         self.connect()
-
-        self.connect_llm_clients()
-
+        
+        # connect LLM clients
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.connect_llm_clients())
+        
         self.routes = {
             assistant.AssistantPlugin.router: assistant.AssistantPlugin(self),
             character_creator.CharacterCreatorServerPlugin.router: character_creator.CharacterCreatorServerPlugin(
@@ -105,7 +107,7 @@ class WebsocketHandler(Receiver):
         if memory_agent and self.scene:
             memory_agent.close_db(self.scene)
 
-    def connect_llm_clients(self):
+    async def connect_llm_clients(self):
         client = None
 
         for client_name, client_config in self.llm_clients.items():
@@ -124,9 +126,9 @@ class WebsocketHandler(Receiver):
                 client_type=client.client_type,
             )
 
-        self.connect_agents()
+        await self.connect_agents()
 
-    def connect_agents(self):
+    async def connect_agents(self):
         if not self.llm_clients:
             instance.emit_agents_status()
             return
@@ -146,7 +148,7 @@ class WebsocketHandler(Receiver):
             log.debug("Linked agent", agent_typ=agent_typ, client=client.name)
             agent = instance.get_agent(agent_typ, client=client)
             agent.client = client
-            agent.apply_config(**agent_config)
+            await agent.apply_config(**agent_config)
 
         instance.emit_agents_status()
 
@@ -204,7 +206,7 @@ class WebsocketHandler(Receiver):
         # Schedule the put coroutine to run as soon as possible
         loop.call_soon_threadsafe(lambda: self.out_queue.put_nowait(data))
 
-    def configure_clients(self, clients):
+    async def configure_clients(self, clients):
         existing = set(self.llm_clients.keys())
 
         self.llm_clients = {}
@@ -246,12 +248,12 @@ class WebsocketHandler(Receiver):
 
         self.config["clients"] = self.llm_clients
 
-        self.connect_llm_clients()
+        await self.connect_llm_clients()
         save_config(self.config)
 
         instance.sync_emit_clients_status()
 
-    def configure_agents(self, agents):
+    async def configure_agents(self, agents):
         self.agents = {typ: {} for typ in instance.agent_types()}
 
         log.debug("Configuring agents")
@@ -271,7 +273,7 @@ class WebsocketHandler(Receiver):
                 if getattr(agent_instance, "actions", None):
                     self.agents[name]["actions"] = agent.get("actions", {})
 
-                agent_instance.apply_config(**self.agents[name])
+                await agent_instance.apply_config(**self.agents[name])
                 log.debug("Configured agent", name=name)
                 continue
 
@@ -303,7 +305,7 @@ class WebsocketHandler(Receiver):
             if getattr(agent_instance, "actions", None):
                 self.agents[name]["actions"] = agent.get("actions", {})
 
-            agent_instance.apply_config(**self.agents[name])
+            await agent_instance.apply_config(**self.agents[name])
 
             log.debug(
                 "Configured agent",
@@ -496,6 +498,7 @@ class WebsocketHandler(Receiver):
                 "name": emission.id,
                 "status": emission.status,
                 "data": emission.data,
+                "meta": emission.meta,
             }
         )
 

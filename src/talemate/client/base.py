@@ -193,6 +193,8 @@ class ClientBase:
                 return system_prompts.ANALYST
             if "summarize" in kind:
                 return system_prompts.SUMMARIZE
+            if "visualize" in kind:
+                return system_prompts.VISUALIZE
 
         else:
 
@@ -220,6 +222,8 @@ class ClientBase:
                 return system_prompts.ANALYST_NO_DECENSOR
             if "summarize" in kind:
                 return system_prompts.SUMMARIZE_NO_DECENSOR
+            if "visualize" in kind:
+                return system_prompts.VISUALIZE_NO_DECENSOR
 
         return system_prompts.BASIC
 

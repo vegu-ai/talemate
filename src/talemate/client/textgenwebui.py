@@ -1,5 +1,5 @@
 import random
-
+import re
 import httpx
 import structlog
 from openai import AsyncOpenAI
@@ -30,17 +30,23 @@ class TextGeneratorWebuiClient(ClientBase):
         # Half temperature on -Yi- models
         if (
             self.model_name
-            and "-yi-" in self.model_name.lower()
-            and parameters["temperature"] > 0.1
+            and self.is_yi_model()
         ):
-            parameters["temperature"] = parameters["temperature"] / 2
+            parameters["smoothing_factor"] = 0.3
+            # also half the temperature
+            parameters["temperature"] = max(0.1, parameters["temperature"] / 2)
             log.debug(
-                "halfing temperature for -yi- model",
-                temperature=parameters["temperature"],
+                "applying temperature smoothing for Yi model",
             )
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
+
+    def is_yi_model(self):
+        model_name = self.model_name.lower()
+        # regex match for yi encased by non-word characters
+        
+        return bool(re.search(r"[\-_]yi[\-_]", model_name))
 
     async def get_model_name(self):
         async with httpx.AsyncClient() as client:

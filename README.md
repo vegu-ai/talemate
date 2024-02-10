@@ -120,7 +120,8 @@ As of 2024.02.06 my personal regular drivers (the ones i test with) are:
 
 - Kunoichi-7B
 - sparsetral-16x7B
-- Fimbulvetr-10.7B
+- Nous-Hermes-2-SOLAR-10.7B
+- brucethemoose_Yi-34B-200K-RPMerge
 - dolphin-2.7-mixtral-8x7b
 - Mixtral-8x7B-instruct
 - GPT-3.5-turbo 0125

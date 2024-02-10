@@ -25,7 +25,7 @@
     </v-navigation-drawer>
 
     <!-- settings navigation drawer -->
-    <v-navigation-drawer v-model="drawer" app location="right">
+    <v-navigation-drawer v-model="drawer" app location="right" width="300">
       <v-alert v-if="!connected" type="error" variant="tonal">
         Not connected to Talemate backend
         <p class="text-body-2" color="white">

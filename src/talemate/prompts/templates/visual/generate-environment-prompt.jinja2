@@ -1,18 +1,18 @@
-{% block rendered_context -%}
-<|SECTION:CONTEXT|>
-{% include "extra-context.jinja2" %}
-<|CLOSE_SECTION|>
-{% endblock -%}
-<|SECTION:SCENE|>
-{% for scene_context in scene.context_history(budget=max_tokens-512-count_tokens(self.rendered_context())) -%}
-{{ loop.index }}. {{ scene_context }}
-{% endfor %}
-{{ query_scene("Provide a detailed description of the current environment, excluding persons.", as_question_answer=False) }}
-<|CLOSE_SECTION|>
+{% set scene_context = scene.context_history(budget=max_tokens-2048)|join("\n") %}
+{{ query_text("What does the current environmemt look like? Include details about appearance, theme and vibes.", scene_context) }}
 <|SECTION:TASK|>
-Describe the scene to the painter to ensure he will capture all the important details of the environment WITHOUT including any of the characters.
+{% if instructions %}Requested Image: {{ instructions }}{% endif %}
 
-The image will be used as a background for a game, so it should be as detailed as possible.
+Describe the scene to the painter to ensure he will capture all the important details when drawing a dynamic and truthful image of the environment.
 
-Use short phrases and comma separated keywords.
+THE IMAGE MUST ONLY BE OF THE ENVIRONMENT WITHOUT ANY CHARACTERS OR ANIMALS.
+YOU MUST ONLY DESCRIBE WHAT IS CURRENTLY VISIBLE IN THE SCENE.
+
+Required information: appearance, theme, vibes, important objects and any other relevant details.
+
+You must provide your answer as a comma delimited list of keywords.
+Keywords should be ordered: appearance, theme, vibes, important objects, other relevant details.
+You must provide enough keywords to adequately describe the environment to a stranger.
+Your answer must be suitable as a stable-diffusion image generation prompt.
 <|CLOSE_SECTION|>
+{{ set_prepared_response("environment,")}}

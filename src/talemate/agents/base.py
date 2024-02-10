@@ -103,6 +103,7 @@ class Agent(ABC):
     set_processing = set_processing
     requires_llm_client = True
     auto_break_repetition = False
+    websocket_handler = None
 
     @property
     def agent_details(self):

@@ -65,26 +65,30 @@ class Style(pydantic.BaseModel):
 
 STYLE_MAP["digital_art"] = Style(
     keywords="digital artwork, masterpiece, best quality, high detail".split(", "),
-    negative_keywords="text, watermark, low quality, blurry, photo, censored".split(", ")    
+    negative_keywords="text, watermark, low quality, blurry, photo".split(", ")    
 )
 
 STYLE_MAP["concept_art"] = Style(
     keywords="concept art, conceptual sketch, masterpiece, best quality, high detail".split(", "),
-    negative_keywords="text, watermark, low quality, blurry, photo, censored".split(", ")    
+    negative_keywords="text, watermark, low quality, blurry, photo".split(", ")    
 )
 
 STYLE_MAP["ink_illustration"] = Style(
-    keywords="ink illustration, in the style of marvel comics, painting, masterpiece, best quality".split(", "),
-    negative_keywords="text, watermark, low quality, blurry, photo, censored".split(", ")
+    keywords="ink illustration, painting, masterpiece, best quality".split(", "),
+    negative_keywords="text, watermark, low quality, blurry, photo".split(", ")
 )
 
 STYLE_MAP["anime"] = Style(
     keywords="anime, masterpiece, best quality, illustration".split(", "),
-    negative_keywords="text, watermark, low quality, blurry, photo, censored, 3d".split(", ")    
+    negative_keywords="text, watermark, low quality, blurry, photo, 3d".split(", ")    
 )
 
 STYLE_MAP["character_portrait"] = Style(
     keywords="solo, looking at viewer".split(", ")
+)
+
+STYLE_MAP["environment"] = Style(
+    keywords="scenery, environment, background, postcard".split(", ")
 )
 
 MAJOR_STYLES = [

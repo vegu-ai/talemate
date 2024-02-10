@@ -79,10 +79,23 @@ class WebsocketHandler(Receiver):
             ),
             devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
         }
+        
+        self.set_agent_routers()
 
         # self.request_scenes_list()
 
         # instance.emit_clients_status()
+
+    def set_agent_routers(self):
+        
+        for agent_type, agent in instance.AGENTS.items():
+            handler_cls = getattr(agent, "websocket_handler", None)
+            if not handler_cls:
+                continue
+            
+            log.info("Setting agent router", agent_type=agent_type, router=handler_cls.router)
+            self.routes[handler_cls.router] = handler_cls(self)
+            
 
     def disconnect(self):
         super().disconnect()

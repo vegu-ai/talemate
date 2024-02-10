@@ -4,23 +4,31 @@
         <v-icon v-if="newImages" class="btn-notification" color="info">mdi-alert-circle</v-icon>
     </v-app-bar-nav-icon>
 
-    <v-dialog v-model="dialog" max-width="920" >
+    <v-dialog v-model="dialog" max-width="920" height="920">
         <v-card>
-            <v-card-title>Visual queue</v-card-title>
+            <v-card-title>
+                Visual queue
+                <span v-if="generating">
+                    <v-progress-circular class="ml-1 mr-3" size="14" indeterminate="disable-shrink" color="secondary">
+                    </v-progress-circular>
+                    <span class="text-caption text-primary">Generating...</span>
+                </span>
+            </v-card-title>
             <v-toolbar density="compact" color="grey-darken-4">
                 <v-btn rounded="sm" @click="deleteAll()" prepend-icon="mdi-close-box-outline">Discard All</v-btn>
                 <v-spacer></v-spacer>
                 <span v-if="selectedImage != null">
+                    <v-btn :disabled="generating" rounded="sm" @click="regenerateImage()" prepend-icon="mdi-refresh">Regenerate</v-btn>
                     <v-btn rounded="sm" @click="deleteImage()" prepend-icon="mdi-close-box-outline">Discard</v-btn>
                 </span>
             </v-toolbar>
             <v-divider></v-divider>
-            <v-card-text class="overflow-content">
+            <v-card-text>
                 <v-row>
-                    <v-col cols="2">
+                    <v-col cols="2" class="overflow-content">
                         <v-img v-for="(image, idx) in images" elevation="7" :src="imageSource(image.base64)" :key="idx" @click.stop="selectImage(idx)" class="img-thumb"></v-img>
                     </v-col>
-                    <v-col cols="10">
+                    <v-col cols="10" class="overflow-content">
                         <v-row v-if="selectedImage != null">
                             <v-col :cols="selectedImage.context.format === 'portrait' ? 7 : 12">
                                 <v-img :src="imageSource(selectedImage.base64)" :class="imagePreviewClass()"></v-img>
@@ -31,12 +39,23 @@
                                         <v-alert density="compact" v-if="selectedImage.context.vis_type" icon="mdi-panorama-variant-outline" variant="text" color="grey">
                                             {{ selectedImage.context.vis_type }}
                                         </v-alert>
-                                        <v-alert density="compact" v-if="selectedImage.context.prompt" icon="mdi-script-text-outline" variant="text" color="grey">
-                                            <v-tooltip :text="selectedImage.context.prompt" class="pre-wrap" max-width="400">
-                                                <template v-slot:activator="{ props }">
-                                                    <span class="text-underline text-info" v-bind="props">Show Prompt</span>
-                                                </template>
-                                            </v-tooltip>
+                                        <v-alert density="compact" v-if="selectedImage.context.prepared_prompt" icon="mdi-script-text-outline" variant="text" color="grey">
+                                            <v-row>
+                                                <v-col :cols="selectedImage.context.format === 'portrait' ? 12 : 4">
+                                                    <v-tooltip :text="selectedImage.context.prompt" class="pre-wrap" max-width="400">
+                                                        <template v-slot:activator="{ props }">
+                                                            <span class="text-underline text-info" v-bind="props">Initial prompt</span>
+                                                        </template>
+                                                    </v-tooltip>
+                                                </v-col>
+                                                <v-col :cols="selectedImage.context.format === 'portrait' ? 12 : 4">
+                                                    <v-tooltip :text="selectedImage.context.prepared_prompt" class="pre-wrap" max-width="400">
+                                                        <template v-slot:activator="{ props }">
+                                                            <span class="text-underline text-info" v-bind="props">Prepared prompt</span>
+                                                        </template>
+                                                    </v-tooltip>
+                                                </v-col>
+                                            </v-row>
                                         </v-alert>
                                         <v-alert density="compact" v-if="selectedImage.context.character_name" icon="mdi-account" variant="text" color="grey">
                                             {{ selectedImage.context.character_name }}    
@@ -47,7 +66,7 @@
 
                                         <div v-if="selectedImage.context.vis_type === 'CHARACTER'">
                                             <!-- character actions -->
-                                            <v-btn color="primary" variant="text" prepend-icon="mdi-image-frame">
+                                            <v-btn color="primary" variant="text" prepend-icon="mdi-image-frame" @click.stop="setCharacterCoverImage()">
                                                 Set as cover image
                                             </v-btn>
                                         </div>
@@ -77,6 +96,8 @@ export default {
             dialog: false,
             images: [],
             newImages: false,
+            selectOnGenerate: false,
+            generating: false,
         }
     },
     emits: [],
@@ -96,6 +117,22 @@ export default {
             this.selectedImage = null;
             this.dialog = false;
 
+        },
+        setCharacterCoverImage() {
+            this.getWebsocket().send(JSON.stringify({
+                "type": "visual",
+                "action": "cover_image",
+                "base64": "data:image/png;base64,"+this.selectedImage.base64,
+                "context": this.selectedImage.context,
+            }));
+        },
+        regenerateImage() {
+            this.getWebsocket().send(JSON.stringify({
+                "type": "visual",
+                "action": "regenerate",
+                "context": this.selectedImage.context,
+            }));
+            this.selectOnGenerate = true;
         },
         imagePreviewClass() {
             return this.selectedImage.context.format === 'portrait' ? 'img-preview-portrait' : 'img-preview-wide';
@@ -118,10 +155,13 @@ export default {
                 }
                 this.images.unshift(image);
                 this.newImages = true;
-                if(this.selectedImage == null) {
+                if(this.selectedImage == null || this.selectOnGenerate) {
                     this.selectedImage = image;
+                    this.selectOnGenerate = false;
                 }
                 console.log("Received image", image);
+            } else if(message.type === "agent_status" && message.name === "visual") {
+                this.generating = message.status === "busy_bg";
             }
         },
     },
@@ -153,7 +193,8 @@ export default {
 }
 
 .overflow-content {
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     height: 700px;
 }
 

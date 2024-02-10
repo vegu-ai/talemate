@@ -23,6 +23,7 @@ class VisualContextState(pydantic.BaseModel):
     instructions: Union[str, None] = None
     vis_type: VIS_TYPES = VIS_TYPES.ENVIRONMENT
     prompt: Union[str, None] = None
+    prepared_prompt: Union[str, None] = None
     format: Union[str, None] = None
     
 class VisualContext:

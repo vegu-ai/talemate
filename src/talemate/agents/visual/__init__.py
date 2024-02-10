@@ -17,6 +17,7 @@ from .schema import RenderSettings, RESOLUTION_MAP
 from .commands import * # noqa
 from .style import STYLE_MAP, combine_styles, Style, MAJOR_STYLES
 from .context import visual_context, VIS_TYPES
+from .websocket_handler import VisualWebsocketHandler
 
 import talemate.agents.visual.automatic1111
 import talemate.agents.visual.comfyui
@@ -44,6 +45,7 @@ class VisualBase(Agent):
     agent_type = "visual"
     verbose_name = "Visualizer"
     concurrent = True
+    websocket_handler = VisualWebsocketHandler
     
     ACTIONS = {}
     
@@ -84,10 +86,15 @@ class VisualBase(Agent):
                     ),
                 }
             ),
-            "process_in_background": AgentAction(
+            "automatic_generation": AgentAction(
                 enabled=False,
+                label="Automatic Generation",
+                description="Enable automatic generation of visual content",
+            ),
+            "process_in_background": AgentAction(
+                enabled=True,
                 label="Process in Background",
-                description="Process the render in the background - make sure you have enough VRAM to load both the LLM and the stable diffusion model",
+                description="Process the render in the background",
             ),
         }
         
@@ -186,10 +193,35 @@ class VisualBase(Agent):
         if vis_type == VIS_TYPES.CHARACTER:
             portrait_style = STYLE_MAP["character_portrait"].copy()
             return portrait_style
+        elif vis_type == VIS_TYPES.ENVIRONMENT:
+            environment_style = STYLE_MAP["environment"].copy()
+            return environment_style
         return Style()
+    
+    async def apply_image(self, image:str):
+        context = visual_context.get()
+        if context.vis_type == VIS_TYPES.CHARACTER:
+            await self.apply_image_character(image, context.character_name)
+    
+    async def apply_image_character(self, image:str, character_name:str):
+        character = self.scene.get_character(character_name)
+        
+        if not character:
+            log.error("character not found", character_name=character_name)
+            return
+        
+        if character.cover_image:
+            log.info("character cover image already set", character_name=character_name)
+            return
+        
+        asset = self.scene.assets.add_asset_from_image_data(f"data:image/png;base64,{image}")
+        character.cover_image = asset.id
+        self.scene.assets.cover_image = asset.id
+        self.scene.emit_status()
     
     async def emit_image(self, image:str):
         context = visual_context.get()
+        await self.apply_image(image)
         emit(
             "image_generated",
             websocket_passthrough=True,
@@ -219,6 +251,8 @@ class VisualBase(Agent):
             prompt = await self.generate_character_prompt(context.character_name, instructions=context.instructions)
         else:
             prompt = prompt or context.prompt   
+            
+        initial_prompt = prompt
         
         # Augment the prompt with styles based on context
         
@@ -230,7 +264,8 @@ class VisualBase(Agent):
             log.error("generate", error="No prompt provided and no context to generate from")
             return 
         
-        context.prompt = str(prompt)
+        context.prompt = initial_prompt
+        context.prepared_prompt = str(prompt)
         
         # Handle format (can either come from context or be passed in)
         

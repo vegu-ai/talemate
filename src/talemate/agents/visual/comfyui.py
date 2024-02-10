@@ -19,7 +19,7 @@ from talemate.agents.base import (
 
 from .handlers import register
 from .schema import Resolution, RenderSettings
-from .style import STYLE_MAP
+from .style import STYLE_MAP, Style
 
 log = structlog.get_logger("talemate.agents.visual.comfyui")
 
@@ -105,6 +105,35 @@ class Workflow(pydantic.BaseModel):
         if negative_prompt:
             negative_prompt_node["inputs"]["text"] = negative_prompt        
 
+    def set_checkpoint(self, checkpoint:str):
+        
+        # will collect all CheckpointLoaderSimple nodes
+        # if there is multiple will look for the one with the
+        # title "Talemate Load Checkpoint" 
+        
+        # if there is no CheckpointLoaderSimple node with the title "Talemate Load Checkpoint"
+        # the first CheckpointLoaderSimple node will be used
+        
+        # checkpoint will be updated on the selected node
+        
+        # if no CheckpointLoaderSimple node is found a warning will be logged
+        
+        checkpoint_node = None
+        
+        for node_id, node in self.nodes.items():
+            if node["class_type"] == "CheckpointLoaderSimple":
+                if not checkpoint_node:
+                    checkpoint_node = node
+                elif node["_meta"]["title"] == "Talemate Load Checkpoint":
+                    checkpoint_node = node
+                    break
+        
+        if not checkpoint_node:
+            log.warning("set_checkpoint", error="No checkpoint node found")
+            return
+        
+        checkpoint_node["inputs"]["ckpt_name"] = checkpoint
+
     def set_seeds(self):
         for node in self.nodes.values():
             for field in node.get("inputs", {}).keys():
@@ -131,6 +160,13 @@ class ComfyUIMixin:
                     value="default-sdxl.json",
                     label="Workflow",
                     description="The workflow to use for comfyui (workflow file name inside ./templates/comfyui-workflows)",
+                ),
+                "checkpoint": AgentActionConfig(
+                    type="text",
+                    value="default",
+                    label="Checkpoint",
+                    choices=[],
+                    description="The main checkpoint to use.",
                 ),
             }
         )
@@ -162,6 +198,25 @@ class ComfyUIMixin:
         with open(workflow, 'r') as f:
             return Workflow(nodes=json.load(f))
     
+    @property
+    async def comfyui_object_info(self):
+        if hasattr(self, "_comfyui_object_info"):
+            return self._comfyui_object_info
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url=f'{self.api_url}/object_info')
+            self._comfyui_object_info = response.json()
+            
+        return self._comfyui_object_info
+    
+    @property
+    async def comfyui_checkpoints(self):
+        loader_node = (await self.comfyui_object_info)["CheckpointLoaderSimple"]
+        _checkpoints = loader_node["input"]["required"]["ckpt_name"][0]
+        return [
+            {"label": checkpoint, "value": checkpoint} for checkpoint in _checkpoints    
+        ]
+        
     async def comfyui_get_image(self, filename:str, subfolder:str, folder_type:str):
         data = {"filename": filename, "subfolder": subfolder, "type": folder_type}
         url_values = urllib.parse.urlencode(data)
@@ -199,18 +254,17 @@ class ComfyUIMixin:
         return output_images
             
     
-    async def comfyui_generate(self, prompt:str, format:str):
+    async def comfyui_generate(self, prompt:Style, format:str):
         url = self.api_url
-        style = self.style
         workflow = self.comfyui_workflow
         is_sdxl = self.comfyui_workflow_is_sdxl
-        prompt = f"{style}, {prompt}"
         
         resolution = self.resolution_from_format(format, "sdxl" if is_sdxl else "sd15")
         
         workflow.set_resolution(resolution)
-        workflow.set_prompt(prompt, STYLE_MAP["negative_prompt_1"])
+        workflow.set_prompt(prompt.positive_prompt, prompt.negative_prompt)
         workflow.set_seeds()
+        workflow.set_checkpoint(self.actions["comfyui"].config["checkpoint"].value)
         
         payload = {"prompt": workflow.model_dump().get("nodes")}
         
@@ -231,3 +285,12 @@ class ComfyUIMixin:
                 await self.emit_image(base64.b64encode(image).decode("utf-8"))
                 #image = Image.open(io.BytesIO(image))
                 #image.save(f'comfyui-test.png')
+
+
+    async def comfyui_apply_config(self, backend_changed:bool=False, *args, **kwargs):
+        log.debug("comfyui_apply_config", backend_changed=backend_changed)
+        if backend_changed:
+            checkpoints = await self.comfyui_checkpoints
+            selected_checkpoint = self.actions["comfyui"].config["checkpoint"].value
+            self.actions["comfyui"].config["checkpoint"].choices = checkpoints
+            self.actions["comfyui"].config["checkpoint"].value = selected_checkpoint

@@ -15,7 +15,7 @@ from talemate.agents.base import (
 from .handlers import HANDLERS
 from .schema import RenderSettings, RESOLUTION_MAP
 from .commands import * # noqa
-from .style import STYLE_MAP, combine_styles, Style
+from .style import STYLE_MAP, combine_styles, Style, MAJOR_STYLES
 from .context import visual_context, VIS_TYPES
 
 import talemate.agents.visual.automatic1111
@@ -75,13 +75,20 @@ class VisualBase(Agent):
                         label="API Key",
                         description="The API key for the backend",
                     ),
+                    "default_style": AgentActionConfig(
+                        type="text",
+                        value="ink_illustration",
+                        choices=MAJOR_STYLES,
+                        label="Default Style",
+                        description="The default style to use for visual processing",
+                    ),
                 }
             ),
             "process_in_background": AgentAction(
                 enabled=False,
                 label="Process in Background",
                 description="Process the render in the background - make sure you have enough VRAM to load both the LLM and the stable diffusion model",
-            ),                
+            ),
         }
         
         for action_name, action in self.ACTIONS.items():
@@ -112,6 +119,10 @@ class VisualBase(Agent):
                 return backend["label"]
 
     @property
+    def default_style(self):
+        return STYLE_MAP.get(self.actions["_config"].config["default_style"].value, Style())
+    
+    @property
     def ready(self):
         return True
     
@@ -135,31 +146,46 @@ class VisualBase(Agent):
         }
         
     @property
-    def style(self):
-        return combine_styles(STYLE_MAP["concept_art"])
-    
-    @property
     def process_in_background(self):
         return self.actions["process_in_background"].enabled
+
+    def apply_config(self, *args, **kwargs):
+        
+        try:
+            backend = kwargs["actions"]["_config"]["config"]["backend"]["value"]
+        except KeyError:
+            backend = self.backend
+            
+        backend_changed = backend != self.backend
+        
+        log.info("apply_config", backend=backend, backend_changed=backend_changed, old_backend=self.backend)
+        
+        super().apply_config(*args, **kwargs)
+        backend_fn = getattr(self, f"{self.backend.lower()}_apply_config", None)
+        if backend_fn:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(backend_fn(backend_changed=backend_changed, *args, **kwargs))
         
     def resolution_from_format(self, format:str, model_type:str="sdxl"):
         if model_type not in RESOLUTION_MAP:
             raise ValueError(f"Model type {model_type} not found in resolution map")
         return RESOLUTION_MAP[model_type].get(format, RESOLUTION_MAP[model_type]["portrait"])
     
-    def augment_prompt(self, prompt:str, styles:list[Style]=None):
+    def prepare_prompt(self, prompt:str, styles:list[Style]=None) -> Style:
+        
+        prompt_style = Style()
+        prompt_style.load(prompt)
+        
         if styles:
-            
-            prompt_style = Style()
-            prompt_style.load(prompt)
             prompt_style.prepend(*styles)
-            prompt = str(prompt_style)
+
             
-        return prompt
+        return prompt_style
     
     def vis_type_styles(self, vis_type:str):
         if vis_type == VIS_TYPES.CHARACTER:
-            return STYLE_MAP["character_portrait"]
+            portrait_style = STYLE_MAP["character_portrait"].copy()
+            return portrait_style
         return Style()
     
     async def emit_image(self, image:str):
@@ -196,15 +222,15 @@ class VisualBase(Agent):
         
         # Augment the prompt with styles based on context
         
-        thematic_style = self.style
+        thematic_style = self.default_style
         vis_type_styles = self.vis_type_styles(context.vis_type)
-        prompt = self.augment_prompt(prompt, [thematic_style, vis_type_styles])        
+        prompt = self.prepare_prompt(prompt, [vis_type_styles, thematic_style])        
             
         if not prompt:
             log.error("generate", error="No prompt provided and no context to generate from")
             return 
         
-        context.prompt = prompt
+        context.prompt = str(prompt)
         
         # Handle format (can either come from context or be passed in)
         

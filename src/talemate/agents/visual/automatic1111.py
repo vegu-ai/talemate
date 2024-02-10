@@ -15,7 +15,7 @@ from talemate.agents.base import (
 
 from .handlers import register
 from .schema import Resolution, RenderSettings
-from .style import STYLE_MAP
+from .style import STYLE_MAP, Style
 
 log = structlog.get_logger("talemate.agents.visual.automatic1111")
 
@@ -69,13 +69,13 @@ class Automatic1111Mixin:
         else:
             return self.automatic1111_default_render_settings
     
-    async def automatic1111_generate(self, prompt:str, format:str):
+    async def automatic1111_generate(self, prompt:Style, format:str):
         url = self.api_url
         resolution = self.resolution_from_format(format, self.automatic1111_render_settings.type_model)
         render_settings = self.automatic1111_render_settings
         payload = {
-            "prompt": prompt,
-            "negative_prompt": str(STYLE_MAP["negative_prompt_1"]),
+            "prompt": prompt.positive_prompt,
+            "negative_prompt": prompt.negative_prompt,
             "steps": render_settings.steps,
             "width": resolution.width,
             "height": resolution.height,

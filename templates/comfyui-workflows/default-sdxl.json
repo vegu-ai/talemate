@@ -5,7 +5,7 @@
       },
       "class_type": "CheckpointLoaderSimple",
       "_meta": {
-        "title": "Load Checkpoint"
+        "title": "Talemate Load Checkpoint"
       }
     },
     "3": {
@@ -51,8 +51,8 @@
         "noise_seed": 131938123826302,
         "steps": 50,
         "cfg": 7,
-        "sampler_name": "euler_ancestral",
-        "scheduler": "normal",
+        "sampler_name": "dpmpp_2m_sde",
+        "scheduler": "karras",
         "start_at_step": 0,
         "end_at_step": 10000,
         "return_with_leftover_noise": "disable",

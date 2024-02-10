@@ -49,7 +49,7 @@
     </v-navigation-drawer>
 
     <!-- debug tools navigation drawer -->
-    <v-navigation-drawer v-model="debugDrawer" app location="right" width="300">
+    <v-navigation-drawer v-model="debugDrawer" app location="right" width="400">
       <v-list>
         <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
         <DebugTools ref="debugTools"></DebugTools>

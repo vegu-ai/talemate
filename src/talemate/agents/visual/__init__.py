@@ -73,12 +73,12 @@ class VisualBase(Agent):
                         label="API URL",
                         description="The URL of the backend API",
                     ),
-                    "api_key": AgentActionConfig(
-                        type="text",
-                        value="",
-                        label="API Key",
-                        description="The API key for the backend",
-                    ),
+                    #"api_key": AgentActionConfig(
+                    #    type="text",
+                    #    value="",
+                    #    label="API Key",
+                    #    description="The API key for the backend",
+                    #),
                     "default_style": AgentActionConfig(
                         type="text",
                         value="ink_illustration",
@@ -169,13 +169,17 @@ class VisualBase(Agent):
         return self.actions["process_in_background"].enabled
     
     async def on_ready_check_success(self):
+        prev_ready = self.backend_ready
         self.backend_ready = True
-        await self.emit_status()
+        if not prev_ready:
+            await self.emit_status()
         
     async def on_ready_check_failure(self, error):
+        prev_ready = self.backend_ready
         self.backend_ready = False
         self.ready_check_error = str(error)
-        await self.emit_status()
+        if prev_ready:
+            await self.emit_status()
     
     async def ready_check(self):
         if not self.enabled:

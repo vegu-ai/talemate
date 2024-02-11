@@ -27,7 +27,7 @@ from talemate.emit.signals import handlers
 from talemate.events import GameLoopNewMessageEvent
 from talemate.scene_message import CharacterMessage, NarratorMessage
 
-from .base import Agent, AgentAction, AgentActionConfig, AgentDetail, set_processing
+from .base import Agent, AgentAction, AgentActionConfig, AgentActionConditional, AgentDetail, set_processing
 from .registry import register
 
 try:
@@ -192,6 +192,26 @@ class TTSAgent(Agent):
                         value=False,
                         label="Split generation",
                         description="Generate audio chunks for each sentence - will be much more responsive but may loose context to inform inflection",
+                    ),
+                },
+            ),
+            "openai": AgentAction(
+                enabled=True,
+                condition=AgentActionConditional(
+                    attribute="_config.config.api",
+                    value="openai"
+                ),
+                label="OpenAI Settings",
+                config={
+                    "model": AgentActionConfig(
+                        type="text",
+                        value="tts-1",
+                        choices=[
+                            {"value": "tts-1", "label": "TTS 1"},
+                            {"value": "tts-1-hd", "label": "TTS 1 HD"},
+                        ],
+                        label="Model",
+                        description="TTS model to use",
                     ),
                 },
             ),
@@ -598,8 +618,10 @@ class TTSAgent(Agent):
         
         client = AsyncOpenAI(api_key=self.openai_api_key)
         
+        model = self.actions["openai"].config["model"].value
+        
         response = await client.audio.speech.create(
-            model="tts-1",
+            model=model,
             voice=self.default_voice_id,
             input=text
         )

@@ -1224,6 +1224,15 @@ class Scene(Emitter):
 
     def num_npc_characters(self) -> int:
         return len(list(self.get_npc_characters()))
+    
+    def parse_character_from_line(self, line: str) -> Character:
+        """
+        Parse a character from a line of text
+        """
+
+        for actor in self.actors:
+            if actor.character.name.lower() in line.lower():
+                return actor.character
 
     def get_characters(self) -> Generator[Character, None, None]:
         """

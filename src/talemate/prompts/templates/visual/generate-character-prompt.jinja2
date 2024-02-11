@@ -1,12 +1,10 @@
-{% set scene_context = scene.context_history(budget=max_tokens-2048)|join("\n") %}
-{% set full_context = character.sheet + scene_context %}
-{{ query_text("What is "+character.name+" age, race, and physical appearance?", full_context) }}
+{{ query_scene("What is "+character.name+"'s age, race, and physical appearance?", full_context) }}
 
-{{ query_text("What clothes is "+character.name+" currently wearing? Provide a detailed description.", full_context) }}
+{{ query_scene("What clothes is "+character.name+" currently wearing? Provide a detailed description.", full_context) }}
 
-{{ query_text("What is "+character.name+" current scene description?", full_context) }}
+{{ query_scene("What is "+character.name+"'s current scene description?", full_context) }}
 
-{{ query_text("Where is "+character.name+" currently at? Briefly describe the environment and provide genre context.", full_context) }}
+{{ query_scene("Where is "+character.name+" currently at? Briefly describe the environment and provide genre context.", full_context) }}
 {% set emotion = scene.world_state.character_emotion(character.name) %}
 {% if emotion %}{{ character.name }}'s current emotion: {{ emotion }}{% endif %}
 <|SECTION:TASK|>

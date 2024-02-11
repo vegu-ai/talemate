@@ -163,14 +163,8 @@ def emit_agent_status(cls, agent=None):
             data=cls.config_options(),
         )
     else:
-        emit(
-            "agent_status",
-            message=agent.verbose_name or "",
-            status=agent.status,
-            id=agent.agent_type,
-            details=agent.agent_details,
-            data=cls.config_options(agent=agent),
-        )
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(agent.emit_status())
 
 
 def emit_agents_status(*args, **kwargs):

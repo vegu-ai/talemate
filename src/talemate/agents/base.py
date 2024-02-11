@@ -188,6 +188,12 @@ class Agent(ABC):
 
         return config_options
 
+    @property
+    def meta(self):
+        return {
+            "essential": self.essential,
+        }
+
     async def _handle_ready_check(self, fut: asyncio.Future):
         callback_failure = getattr(self, "on_ready_check_failure", None)
         if fut.cancelled():
@@ -272,6 +278,8 @@ class Agent(ABC):
 
         await self.emit_status()
 
+
+
     async def emit_status(self, processing: bool = None):
         # should keep a count of processing requests, and when the
         # number is 0 status is "idle", if the number is greater than 0
@@ -294,9 +302,7 @@ class Agent(ABC):
             id=self.agent_type,
             status=self.status,
             details=self.agent_details,
-            meta={
-                "essential": self.essential,
-            },
+            meta=self.meta,
             data=self.config_options(agent=self),
         )
 

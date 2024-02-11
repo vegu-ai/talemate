@@ -1,9 +1,12 @@
 import pydantic
+import structlog
 from openai import AsyncOpenAI, NotFoundError, PermissionDeniedError
 
 from talemate.client.base import ClientBase
 from talemate.client.registry import register
 from talemate.emit import emit
+
+log = structlog.get_logger("talemate.client.openai_compat")
 
 EXPERIMENTAL_DESCRIPTION = """Use this client if you want to connect to a service implementing an OpenAI-compatible API. Success is going to depend on the level of compatibility. Use the actual OpenAI client if you want to connect to OpenAI's API."""
 
@@ -28,8 +31,9 @@ class OpenAICompatibleClient(ClientBase):
         manual_model: bool = True
         defaults: Defaults = Defaults()
 
-    def __init__(self, model=None, **kwargs):
+    def __init__(self, model=None, api_key=None, **kwargs):
         self.model_name = model
+        self.api_key = api_key
         super().__init__(**kwargs)
 
     @property
@@ -37,8 +41,13 @@ class OpenAICompatibleClient(ClientBase):
         return EXPERIMENTAL_DESCRIPTION
 
     def set_client(self, **kwargs):
-        self.api_key = kwargs.get("api_key")
-        self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key=self.api_key)
+        self.api_key = kwargs.get("api_key", self.api_key)
+        
+        url = self.api_url
+        if not url.endswith("/v1"):
+            url = url + "/v1"
+        
+        self.client = AsyncOpenAI(base_url=url, api_key=self.api_key)
         self.model_name = (
             kwargs.get("model") or kwargs.get("model_name") or self.model_name
         )
@@ -109,5 +118,7 @@ class OpenAICompatibleClient(ClientBase):
             self.max_token_length = kwargs["max_token_length"]
         if "api_key" in kwargs:
             self.api_auth = kwargs["api_key"]
+            
+        log.warning("reconfigure", kwargs=kwargs)
 
         self.set_client(**kwargs)

@@ -551,6 +551,13 @@ class WorldStateAgent(Agent):
                 "reinforcement": reinforcement,
             },
         )
+        
+        # sequential reinforcment should be single sentence so we
+        # split on line breaks and take the first line in case the
+        # LLM did not understand the request and returned a longer response
+        
+        if reinforcement.insert == "sequential":
+            answer = answer.split("\n")[0]
 
         reinforcement.answer = answer
         reinforcement.due = reinforcement.interval

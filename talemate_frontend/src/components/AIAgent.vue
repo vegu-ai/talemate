@@ -109,8 +109,6 @@ export default {
             for(let i = 0; i < this.state.agents.length; i++) {
                 let agent = this.state.agents[i];
 
-                console.log("agents: configuration required", agent)
-
                 if(!agent.data.requires_llm_client || !agent.meta.essential)
                     continue
 

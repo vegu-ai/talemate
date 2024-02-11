@@ -14,6 +14,9 @@ import httpx
 import nltk
 import pydantic
 import structlog
+
+from openai import AsyncOpenAI
+
 from nltk.tokenize import sent_tokenize
 
 import talemate.config as config
@@ -136,6 +139,7 @@ class TTSAgent(Agent):
         self.voices = {
             "elevenlabs": VoiceLibrary(api="elevenlabs"),
             "tts": VoiceLibrary(api="tts"),
+            "openai": VoiceLibrary(api="openai"),
         }
         self.config = config.load_config()
         self.playback_done_event = asyncio.Event()
@@ -151,6 +155,7 @@ class TTSAgent(Agent):
                         choices=[
                             {"value": "tts", "label": "TTS (Local)"},
                             {"value": "elevenlabs", "label": "Eleven Labs"},
+                            {"value": "openai", "label": "OpenAI"}
                         ],
                         value="tts",
                         label="API",
@@ -312,6 +317,10 @@ class TTSAgent(Agent):
             return 250
 
         return 250
+
+    @property
+    def openai_api_key(self):
+        return self.config.get("openai", {}).get("api_key")
 
     async def apply_config(self, *args, **kwargs):
         try:
@@ -580,3 +589,36 @@ class TTSAgent(Agent):
         voices.sort(key=lambda x: x.label)
 
         return voices
+
+    # OPENAI
+    
+    async def _generate_openai(
+        self, text: str, chunk_size: int = 1024
+    ):
+        
+        client = AsyncOpenAI(api_key=self.openai_api_key)
+        
+        response = await client.audio.speech.create(
+            model="tts-1",
+            voice=self.default_voice_id,
+            input=text
+        )
+        
+        bytes_io = io.BytesIO()
+        for chunk in response.iter_bytes(chunk_size=chunk_size):
+            if chunk:
+                bytes_io.write(chunk)
+
+        # Put the audio data in the queue for playback
+        return bytes_io.getvalue()
+    
+        
+    async def _list_voices_openai(self) -> dict[str, str]:
+        return [
+            Voice(value="alloy", label="Alloy"),
+            Voice(value="echo", label="Echo"),
+            Voice(value="fable", label="Fable"),
+            Voice(value="onyx", label="Onyx"),
+            Voice(value="nova", label="Nova"),
+            Voice(value="shimmer", label="Shimmer"),
+        ]

@@ -57,6 +57,7 @@ class VisualBase(Agent):
         self.client = client
         self.is_enabled = False
         self.backend_ready = False
+        self.initialized = False
         self.config = load_config()
         self.actions = {
             "_config": AgentAction(
@@ -213,6 +214,8 @@ class VisualBase(Agent):
             
         if not self.backend_ready:
             await self.ready_check()
+            
+        self.initialized = True
         
     def resolution_from_format(self, format:str, model_type:str="sdxl"):
         if model_type not in RESOLUTION_MAP:

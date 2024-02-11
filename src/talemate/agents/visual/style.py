@@ -88,7 +88,8 @@ STYLE_MAP["character_portrait"] = Style(
 )
 
 STYLE_MAP["environment"] = Style(
-    keywords="scenery, environment, background, postcard".split(", ")
+    keywords="scenery, environment, background, postcard".split(", "),
+    negative_keywords="character, portrait, looking at viewer, people".split(", ")
 )
 
 MAJOR_STYLES = [

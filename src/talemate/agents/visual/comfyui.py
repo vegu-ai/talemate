@@ -294,8 +294,8 @@ class ComfyUIMixin:
 
 
     async def comfyui_apply_config(self, backend_changed:bool=False, *args, **kwargs):
-        log.debug("comfyui_apply_config", backend_changed=backend_changed)
-        if backend_changed and self.enabled:
+        log.debug("comfyui_apply_config", backend_changed=backend_changed, enabled=self.enabled)
+        if (not self.initialized or backend_changed) and self.enabled:
             checkpoints = await self.comfyui_checkpoints
             selected_checkpoint = self.actions["comfyui"].config["checkpoint"].value
             self.actions["comfyui"].config["checkpoint"].choices = checkpoints

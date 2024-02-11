@@ -147,14 +147,20 @@ class ComfyUIMixin:
     
     EXTEND_ACTIONS = {
         "comfyui": AgentAction(
-            enabled=False,
+            enabled=True,
             condition=AgentActionConditional(
                 attribute="_config.config.backend",
                 value="comfyui"
             ),
-            label="ComfyUI Advanced Settings",
+            label="ComfyUI Settings",
             description="Setting overrides for the comfyui backend",
             config={
+                "api_url": AgentActionConfig(
+                    type="text",
+                    value="http://localhost:8188",
+                    label="API URL",
+                    description="The URL of the backend API",
+                ),
                 "workflow": AgentActionConfig(
                     type="text",
                     value="default-sdxl.json",

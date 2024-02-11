@@ -31,7 +31,7 @@
                     <v-col cols="10" class="overflow-content">
                         <v-row v-if="selectedImage != null">
                             <v-col :cols="selectedImage.context.format === 'portrait' ? 7 : 12">
-                                <v-img :src="imageSource(selectedImage.base64)" :class="imagePreviewClass()"></v-img>
+                                <v-img max-height="800" :src="imageSource(selectedImage.base64)" :class="imagePreviewClass()"></v-img>
                             </v-col>
                             <v-col :cols="selectedImage.context.format === 'portrait' ? 5 : 12">
                                 <v-card elevation="7" density="compact">
@@ -195,7 +195,8 @@ export default {
 .overflow-content {
     overflow-y: auto;
     overflow-x: hidden;
-    height: 700px;
+    min-height: 700px;
+    max-height: 850px;
 }
 
 .text-underline {

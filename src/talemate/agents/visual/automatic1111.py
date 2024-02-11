@@ -28,14 +28,20 @@ class Automatic1111Mixin:
     
     EXTEND_ACTIONS = {
         "automatic1111": AgentAction(
-            enabled=False,
+            enabled=True,
             condition=AgentActionConditional(
                 attribute="_config.config.backend",
                 value="automatic1111"
             ),
-            label="Automatic1111 Advanced Settings",
+            label="Automatic1111 Settings",
             description="Setting overrides for the automatic1111 backend",
             config={
+                "api_url": AgentActionConfig(
+                    type="text",
+                    value="http://localhost:7860",
+                    label="API URL",
+                    description="The URL of the backend API",
+                ),
                 "steps": AgentActionConfig(
                     type="number",
                     value=40,

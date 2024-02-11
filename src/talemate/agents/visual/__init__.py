@@ -3,6 +3,7 @@ import asyncio
 import traceback
 
 from talemate.emit import emit
+from talemate.emit.signals import handlers as signal_handlers
 from talemate.client.base import ClientBase
 from talemate.agents.base import (
     Agent,
@@ -22,6 +23,8 @@ from .websocket_handler import VisualWebsocketHandler
 
 import talemate.agents.visual.automatic1111
 import talemate.agents.visual.comfyui
+import talemate.agents.visual.openai_image
+from talemate.config import load_config
 
 from talemate.agents.registry import register
 from talemate.prompts.base import Prompt
@@ -54,6 +57,7 @@ class VisualBase(Agent):
         self.client = client
         self.is_enabled = False
         self.backend_ready = False
+        self.config = load_config()
         self.actions = {
             "_config": AgentAction(
                 enabled=True,
@@ -67,18 +71,6 @@ class VisualBase(Agent):
                         label="Backend",
                         description="The backend to use for visual processing",
                     ),
-                    "api_url": AgentActionConfig(
-                        type="text",
-                        value="http://localhost:7860",
-                        label="API URL",
-                        description="The URL of the backend API",
-                    ),
-                    #"api_key": AgentActionConfig(
-                    #    type="text",
-                    #    value="",
-                    #    label="API Key",
-                    #    description="The API key for the backend",
-                    #),
                     "default_style": AgentActionConfig(
                         type="text",
                         value="ink_illustration",
@@ -102,6 +94,8 @@ class VisualBase(Agent):
         
         for action_name, action in self.ACTIONS.items():
             self.actions[action_name] = action
+            
+        signal_handlers["config_saved"].connect(self.on_config_saved)
 
     @property
     def enabled(self):
@@ -137,7 +131,10 @@ class VisualBase(Agent):
     
     @property
     def api_url(self):
-        return self.actions["_config"].config["api_url"].value
+        try:
+            return self.actions[self.backend].config["api_url"].value
+        except KeyError:
+            return None
 
     @property
     def agent_details(self):
@@ -167,6 +164,11 @@ class VisualBase(Agent):
     @property
     def process_in_background(self):
         return self.actions["process_in_background"].enabled
+    
+    def on_config_saved(self, event):
+        config = event.data
+        self.config = config
+        asyncio.create_task(self.emit_status())
     
     async def on_ready_check_success(self):
         prev_ready = self.backend_ready

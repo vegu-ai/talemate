@@ -20,11 +20,11 @@ This means you need to either have:
 
 ## Current features
 
-- responive modern ui
+- responsive modern ui
 - agents
     - conversation: handles character dialogue
     - narration: handles narrative exposition
-    - summarization: handles summarization to compress context while maintain history
+    - summarization: handles summarization to compress context while maintaining history
     - director: can be used to direct the story / characters
     - editor: improves AI responses (very hit and miss at the moment)
     - world state: generates world snapshot and handles passage of time (objects and characters)

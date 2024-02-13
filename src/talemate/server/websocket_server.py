@@ -226,8 +226,8 @@ class WebsocketHandler(Receiver):
                 "type": client["type"],
             }
             for dfl_key in client_cls.Meta().defaults.dict().keys():
-                client_config[dfl_key] = client.get(dfl_key)
-
+                client_config[dfl_key] = client.get(dfl_key, client.get("data",{}).get(dfl_key))
+                
         # find clients that have been removed
         removed = existing - set(self.llm_clients.keys())
         if removed:

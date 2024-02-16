@@ -18,7 +18,7 @@ from .handlers import HANDLERS
 from .schema import RenderSettings, RESOLUTION_MAP
 from .commands import * # noqa
 from .style import STYLE_MAP, combine_styles, Style, MAJOR_STYLES
-from .context import visual_context, VIS_TYPES
+from .context import visual_context, VIS_TYPES, VisualContext
 from .websocket_handler import VisualWebsocketHandler
 
 import talemate.agents.visual.automatic1111
@@ -84,12 +84,12 @@ class VisualBase(Agent):
             "automatic_generation": AgentAction(
                 enabled=False,
                 label="Automatic Generation",
-                description="Enable automatic generation of visual content",
+                description="Allow automatic generation of visual content",
             ),
             "process_in_background": AgentAction(
                 enabled=True,
                 label="Process in Background",
-                description="Process the render in the background",
+                description="Process renders in the background",
             ),
         }
         
@@ -165,6 +165,10 @@ class VisualBase(Agent):
     @property
     def process_in_background(self):
         return self.actions["process_in_background"].enabled
+    
+    @property
+    def allow_automatic_generation(self):
+        return self.actions["automatic_generation"].enabled
     
     def on_config_saved(self, event):
         config = event.data
@@ -279,9 +283,17 @@ class VisualBase(Agent):
         )
     
     @set_processing
-    async def generate(self, format:str="portrait", prompt:str=None):
+    async def generate(self, format:str="portrait", prompt:str=None, automatic:bool=False):
         
         context = visual_context.get()
+        
+        if not self.enabled:
+            log.warning("generate", skipped="Visual agent not enabled")
+            return
+        
+        if automatic and not self.allow_automatic_generation:
+            log.warning("generate", skipped="Automatic generation disabled", prompt=prompt, format=format, context=context)
+            return
         
         if not context and not prompt:
             log.error("generate", error="No context or prompt provided")
@@ -381,7 +393,18 @@ class VisualBase(Agent):
         
         return response.strip()
         
-        
+    
+    async def generate_environment_background(self, instructions:str=None):
+        with VisualContext(vis_type=VIS_TYPES.ENVIRONMENT, instructions=instructions):
+            await self.generate(format="landscape")
+    
+    async def generate_character_portrait(
+        self,
+        character_name:str,
+        instructions:str=None,
+    ):
+        with VisualContext(vis_type=VIS_TYPES.CHARACTER, character_name=character_name, instructions=instructions):
+            await self.generate(format="portrait")
         
     
 # apply mixins to the agent (from HANDLERS dict[str, cls])

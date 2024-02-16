@@ -1,5 +1,6 @@
 <template>
-      <v-app-bar-nav-icon  v-if="images.length > 0" @click="open">
+    <v-chip v-if="newImages" color="info" class="text-caption" label transition="scroll-x-reverse-transition">New Images</v-chip>
+    <v-app-bar-nav-icon  v-if="images.length > 0" @click="open">
         <v-icon>mdi-image-multiple-outline</v-icon>
         <v-icon v-if="newImages" class="btn-notification" color="info">mdi-alert-circle</v-icon>
     </v-app-bar-nav-icon>
@@ -82,7 +83,6 @@
         </v-card>
     </v-dialog>
 
-
 </template>
 <script>
 
@@ -100,7 +100,7 @@ export default {
             generating: false,
         }
     },
-    emits: [],
+    emits: ["new-image"],
     methods: {
         deleteImage() {
             let index = this.images.indexOf(this.selectedImage);
@@ -155,6 +155,7 @@ export default {
                 }
                 this.images.unshift(image);
                 this.newImages = true;
+                this.$emit("new-image", image);
                 if(this.selectedImage == null || this.selectOnGenerate) {
                     this.selectedImage = image;
                     this.selectOnGenerate = false;

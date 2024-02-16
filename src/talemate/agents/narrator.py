@@ -547,6 +547,15 @@ class NarratorAgent(Agent):
         response = f"*{response}*"
 
         return response
+    
+    async def passthrough(self, narration: str) -> str:
+        """
+        Pass through narration message as is
+        """
+        narration = narration.replace("*", "")
+        narration = f"*{narration}*"
+        narration = util.ensure_dialog_format(narration)
+        return narration
 
     def action_to_source(
         self,

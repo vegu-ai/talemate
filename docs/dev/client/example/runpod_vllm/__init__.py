@@ -1,3 +1,12 @@
+"""
+An attempt to write a client against the runpod serverless vllm worker.
+
+This is close to functional, but since runpod serverless gpu availability is currently terrible, i have
+been unable to properly test it.
+
+Putting it here for now since i think it makes a decent example of how to write a client against a new service.
+"""
+
 import pydantic
 import structlog
 import runpod

@@ -7,7 +7,7 @@
     <v-list-subheader class="text-uppercase" v-else>
         <v-progress-circular indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular> Waiting for config...
     </v-list-subheader>
-    <div v-if="!loading && isConnected() && expanded && !configurationRequired() && appConfig !== null">
+    <div v-if="!loading && isConnected() && expanded && sceneLoadingAvailable && appConfig !== null">
         <v-list-item>
             <div class="mb-3">
                 <!-- Toggle buttons for switching between file upload and path input -->
@@ -43,7 +43,7 @@
             </div>
         </v-list-item>
     </div>
-    <div v-else-if="configurationRequired()">
+    <div v-else-if="!sceneLoadingAvailable">
         <v-alert type="warning" variant="tonal">You need to configure a Talemate client before you can load scenes.</v-alert>
     </div>
     <DefaultCharacter ref="defaultCharacterModal" @save="loadScene" @cancel="loadCanceled"></DefaultCharacter>
@@ -57,6 +57,9 @@ export default {
     name: 'LoadScene',
     components: {
         DefaultCharacter,
+    },
+    props: {
+        sceneLoadingAvailable: Boolean
     },
     data() {
         return {
@@ -75,7 +78,7 @@ export default {
     emits: {
         loading: null,
     },
-    inject: ['getWebsocket', 'registerMessageHandler', 'isConnected', 'configurationRequired'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'isConnected'],
     methods: {
         // Method to show the DefaultCharacter modal
         showDefaultCharacterModal() {

@@ -109,7 +109,7 @@ export default {
             for(let i = 0; i < this.state.agents.length; i++) {
                 let agent = this.state.agents[i];
 
-                if(!agent.data.requires_llm_client || !agent.meta.essential)
+                if(!agent.data.requires_llm_client || agent.meta.essential === false)
                     continue
 
                 if(agent.status === 'warning' || agent.status === 'error' || agent.status === 'uninitialized') {

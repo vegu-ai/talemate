@@ -98,7 +98,7 @@ class ClientBase:
         self.name = name or self.client_type
         self.log = structlog.get_logger(f"client.{self.client_type}")
         if "max_token_length" in kwargs:
-            self.max_token_length = kwargs["max_token_length"]
+            self.max_token_length = int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 4096
         self.set_client(max_token_length=self.max_token_length)
 
     def __str__(self):
@@ -142,7 +142,7 @@ class ClientBase:
             self.api_url = kwargs["api_url"]
 
         if kwargs.get("max_token_length"):
-            self.max_token_length = kwargs["max_token_length"]
+            self.max_token_length = int(kwargs["max_token_length"])
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])

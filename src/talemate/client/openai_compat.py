@@ -115,7 +115,7 @@ class OpenAICompatibleClient(ClientBase):
         if "api_url" in kwargs:
             self.api_url = kwargs["api_url"]
         if "max_token_length" in kwargs:
-            self.max_token_length = kwargs["max_token_length"]
+            self.max_token_length = int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 4096
         if "api_key" in kwargs:
             self.api_auth = kwargs["api_key"]
             

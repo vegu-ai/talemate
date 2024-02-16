@@ -1,5 +1,6 @@
 import random
 import re
+
 import httpx
 import structlog
 from openai import AsyncOpenAI
@@ -28,10 +29,7 @@ class TextGeneratorWebuiClient(ClientBase):
         parameters["stop"] = parameters["stopping_strings"]
 
         # Half temperature on -Yi- models
-        if (
-            self.model_name
-            and self.is_yi_model()
-        ):
+        if self.model_name and self.is_yi_model():
             parameters["smoothing_factor"] = 0.3
             # also half the temperature
             parameters["temperature"] = max(0.1, parameters["temperature"] / 2)
@@ -45,7 +43,7 @@ class TextGeneratorWebuiClient(ClientBase):
     def is_yi_model(self):
         model_name = self.model_name.lower()
         # regex match for yi encased by non-word characters
-        
+
         return bool(re.search(r"[\-_]yi[\-_]", model_name))
 
     async def get_model_name(self):

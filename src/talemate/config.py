@@ -1,6 +1,6 @@
 import datetime
 import os
-from typing import TYPE_CHECKING, ClassVar, Dict, Optional, Union, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Dict, Optional, TypeVar, Union
 
 import pydantic
 import structlog
@@ -38,8 +38,10 @@ class Client(BaseModel):
 
     class Config:
         extra = "ignore"
-        
+
+
 ClientType = TypeVar("ClientType", bound=Client)
+
 
 class AgentActionConfig(BaseModel):
     value: Union[int, float, str, bool, None] = None
@@ -261,7 +263,7 @@ class RecentScenes(BaseModel):
 
 class Config(BaseModel):
     clients: Dict[str, ClientType] = {}
-    
+
     game: Game
 
     agents: Dict[str, Agent] = {}
@@ -299,18 +301,18 @@ class SceneAssetUpload(BaseModel):
     content: str = None
 
 
-def prepare_client_config(clients:dict) -> dict:
-    # client's can specify a custom config model in 
+def prepare_client_config(clients: dict) -> dict:
+    # client's can specify a custom config model in
     # client_cls.config_cls so we need to convert the
     # client config to the correct model
-    
+
     for client_name, client_config in clients.items():
         client_cls = get_client_class(client_config.get("type"))
         if client_cls:
             config_cls = getattr(client_cls, "config_cls", None)
             if config_cls:
                 clients[client_name] = config_cls(**client_config)
-        
+
 
 def load_config(
     file_path: str = "./config.yaml", as_model: bool = False

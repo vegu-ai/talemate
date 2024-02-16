@@ -129,61 +129,53 @@ def preset_for_kind(kind: str):
 
 def max_tokens_for_kind(kind: str, total_budget: int):
     if kind == "conversation":
-        return 75 
+        return 75
     elif kind == "conversation_old":
-        return 75 
+        return 75
     elif kind == "conversation_long":
-        return 300 
+        return 300
     elif kind == "conversation_select_talking_actor":
-        return 30 
+        return 30
     elif kind == "summarize":
-        return 500 
+        return 500
     elif kind == "analyze":
-        return 500 
+        return 500
     elif kind == "analyze_creative":
-        return 1024 
+        return 1024
     elif kind == "analyze_long":
-        return 2048 
+        return 2048
     elif kind == "analyze_freeform":
-        return 500 
+        return 500
     elif kind == "analyze_freeform_medium":
-        return 192 
+        return 192
     elif kind == "analyze_freeform_medium_short":
-        return 128 
+        return 128
     elif kind == "analyze_freeform_short":
-        return 10 
+        return 10
     elif kind == "narrate":
-        return 500 
+        return 500
     elif kind == "story":
-        return 300 
+        return 300
     elif kind == "create":
-        return min(
-            1024, int(total_budget * 0.35)
-        ) 
+        return min(1024, int(total_budget * 0.35))
     elif kind == "create_concise":
-        return min(
-            400, int(total_budget * 0.25)
-        ) 
+        return min(400, int(total_budget * 0.25))
     elif kind == "create_precise":
-        return min(
-            400, int(total_budget * 0.25)
-        ) 
+        return min(400, int(total_budget * 0.25))
     elif kind == "create_short":
         return 25
     elif kind == "director":
-        return min(
-            192, int(total_budget * 0.25)
-        ) 
+        return min(192, int(total_budget * 0.25))
     elif kind == "director_short":
-        return 25 
+        return 25
     elif kind == "director_yesno":
-        return 2 
+        return 2
     elif kind == "edit_dialogue":
-        return 100 
+        return 100
     elif kind == "edit_add_detail":
-        return 200 
+        return 200
     elif kind == "edit_fix_exposition":
-        return 1024 
+        return 1024
     elif kind == "visualize":
         return 150
     else:

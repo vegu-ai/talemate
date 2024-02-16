@@ -14,10 +14,8 @@ import httpx
 import nltk
 import pydantic
 import structlog
-
-from openai import AsyncOpenAI
-
 from nltk.tokenize import sent_tokenize
+from openai import AsyncOpenAI
 
 import talemate.config as config
 import talemate.emit.async_signals
@@ -27,7 +25,14 @@ from talemate.emit.signals import handlers
 from talemate.events import GameLoopNewMessageEvent
 from talemate.scene_message import CharacterMessage, NarratorMessage
 
-from .base import Agent, AgentAction, AgentActionConfig, AgentActionConditional, AgentDetail, set_processing
+from .base import (
+    Agent,
+    AgentAction,
+    AgentActionConditional,
+    AgentActionConfig,
+    AgentDetail,
+    set_processing,
+)
 from .registry import register
 
 try:
@@ -155,7 +160,7 @@ class TTSAgent(Agent):
                         choices=[
                             {"value": "tts", "label": "TTS (Local)"},
                             {"value": "elevenlabs", "label": "Eleven Labs"},
-                            {"value": "openai", "label": "OpenAI"}
+                            {"value": "openai", "label": "OpenAI"},
                         ],
                         value="tts",
                         label="API",
@@ -198,8 +203,7 @@ class TTSAgent(Agent):
             "openai": AgentAction(
                 enabled=True,
                 condition=AgentActionConditional(
-                    attribute="_config.config.api",
-                    value="openai"
+                    attribute="_config.config.api", value="openai"
                 ),
                 label="OpenAI Settings",
                 config={
@@ -253,7 +257,7 @@ class TTSAgent(Agent):
 
     @property
     def agent_details(self):
-        
+
         details = {
             "api": AgentDetail(
                 icon="mdi-server-outline",
@@ -261,22 +265,22 @@ class TTSAgent(Agent):
                 description="The backend to use for TTS",
             ).model_dump(),
         }
-        
+
         if self.ready and self.enabled:
             details["voice"] = AgentDetail(
                 icon="mdi-account-voice",
                 value=self.voice_id_to_label(self.default_voice_id) or "",
                 description="The voice to use for TTS",
-                color="info"
+                color="info",
             ).model_dump()
         elif self.enabled:
             details["error"] = AgentDetail(
                 icon="mdi-alert",
                 value=self.not_ready_reason,
                 description=self.not_ready_reason,
-                color="error"
+                color="error",
             ).model_dump()
-            
+
         return details
 
     @property
@@ -351,11 +355,18 @@ class TTSAgent(Agent):
         api_changed = api != self.api
 
         log.debug(
-            "apply_config", api=api, api_changed=api != self.api, current_api=self.api, args=args, kwargs=kwargs
+            "apply_config",
+            api=api,
+            api_changed=api != self.api,
+            current_api=self.api,
+            args=args,
+            kwargs=kwargs,
         )
-        
+
         try:
-            self.preselect_voice = kwargs["actions"]["_config"]["config"]["voice_id"]["value"]
+            self.preselect_voice = kwargs["actions"]["_config"]["config"]["voice_id"][
+                "value"
+            ]
         except KeyError:
             self.preselect_voice = self.default_voice_id
 
@@ -451,7 +462,7 @@ class TTSAgent(Agent):
 
         library.voices = await list_fn()
         library.last_synced = time.time()
-        
+
         if self.preselect_voice:
             if self.voice(self.preselect_voice):
                 self.actions["_config"].config["voice_id"].value = self.preselect_voice
@@ -485,7 +496,7 @@ class TTSAgent(Agent):
         await self.set_background_processing(generation_task)
 
         # Wait for both tasks to complete
-        #await asyncio.gather(generation_task)
+        # await asyncio.gather(generation_task)
 
     async def generate_chunks(self, generate_fn, chunks):
         for chunk in chunks:
@@ -611,21 +622,17 @@ class TTSAgent(Agent):
         return voices
 
     # OPENAI
-    
-    async def _generate_openai(
-        self, text: str, chunk_size: int = 1024
-    ):
-        
+
+    async def _generate_openai(self, text: str, chunk_size: int = 1024):
+
         client = AsyncOpenAI(api_key=self.openai_api_key)
-        
+
         model = self.actions["openai"].config["model"].value
-        
+
         response = await client.audio.speech.create(
-            model=model,
-            voice=self.default_voice_id,
-            input=text
+            model=model, voice=self.default_voice_id, input=text
         )
-        
+
         bytes_io = io.BytesIO()
         for chunk in response.iter_bytes(chunk_size=chunk_size):
             if chunk:
@@ -633,8 +640,7 @@ class TTSAgent(Agent):
 
         # Put the audio data in the queue for playback
         return bytes_io.getvalue()
-    
-        
+
     async def _list_voices_openai(self) -> dict[str, str]:
         return [
             Voice(value="alloy", label="Alloy"),

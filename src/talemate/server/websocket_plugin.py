@@ -6,13 +6,14 @@ __all__ = [
 
 log = structlog.get_logger("talemate.server.visual")
 
+
 class Plugin:
     router = "router"
-    
+
     @property
     def scene(self):
         return self.websocket_handler.scene
-    
+
     def __init__(self, websocket_handler):
         self.websocket_handler = websocket_handler
 

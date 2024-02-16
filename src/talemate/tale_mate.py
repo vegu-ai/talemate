@@ -24,8 +24,8 @@ import talemate.util as util
 from talemate.client.context import ClientContext, ConversationContext
 from talemate.config import Config, SceneConfig, load_config
 from talemate.context import rerun_context
-from talemate.emit import Emitter, emit, wait_for_input, Emission
-from talemate.emit.signals import ConfigSaved, handlers, ImageGenerated
+from talemate.emit import Emission, Emitter, emit, wait_for_input
+from talemate.emit.signals import ConfigSaved, ImageGenerated, handlers
 from talemate.exceptions import (
     ExitScene,
     LLMAccuracyError,
@@ -154,7 +154,7 @@ class Character:
     def set_cover_image(self, asset_id: str, initial_only: bool = False):
         if self.cover_image and initial_only:
             return
-        
+
         self.cover_image = asset_id
 
     def sheet_filtered(self, *exclude):
@@ -360,7 +360,7 @@ class Character:
 
         for key, value in kwargs.items():
             setattr(self, key, value)
-            
+
         self.memory_dirty = True
 
     async def commit_to_memory(self, memory_agent):
@@ -907,7 +907,7 @@ class Scene(Emitter):
     def on_config_saved(self, event):
         self.config = event.data
         self.emit_status()
-        
+
     def apply_scene_config(self, scene_config: dict):
         scene_config = SceneConfig(**scene_config)
 
@@ -1224,7 +1224,7 @@ class Scene(Emitter):
 
     def num_npc_characters(self) -> int:
         return len(list(self.get_npc_characters()))
-    
+
     def parse_character_from_line(self, line: str) -> Character:
         """
         Parse a character from a line of text

@@ -526,12 +526,11 @@ class WorldStateAgent(Agent):
 
         if reset and reinforcement.insert == "sequential":
             self.scene.pop_history(typ="reinforcement", source=source, all=True)
-        
+
         if reinforcement.insert == "sequential":
             kind = "analyze_freeform_medium_short"
         else:
             kind = "analyze_freeform"
-
 
         answer = await Prompt.request(
             "world_state.update-reinforcements",
@@ -551,11 +550,11 @@ class WorldStateAgent(Agent):
                 "reinforcement": reinforcement,
             },
         )
-        
+
         # sequential reinforcment should be single sentence so we
         # split on line breaks and take the first line in case the
         # LLM did not understand the request and returned a longer response
-        
+
         if reinforcement.insert == "sequential":
             answer = answer.split("\n")[0]
 

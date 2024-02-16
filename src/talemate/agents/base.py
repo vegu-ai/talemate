@@ -52,6 +52,7 @@ class AgentActionConditional(pydantic.BaseModel):
     attribute: str
     value: Union[int, float, str, bool, None] = None
 
+
 class AgentAction(pydantic.BaseModel):
     enabled: bool = True
     label: str
@@ -132,18 +133,17 @@ class Agent(ABC):
     def status(self):
         if not self.enabled:
             return "disabled"
-        
+
         if not self.ready:
             return "uninitialized"
-        
+
         if getattr(self, "processing", 0) > 0:
             return "busy"
-        
+
         if getattr(self, "processing_bg", 0) > 0:
             return "busy_bg"
-        
+
         return "idle"
-        
 
     @property
     def enabled(self):
@@ -208,15 +208,17 @@ class Agent(ABC):
             if callback_failure:
                 await callback_failure(exc)
             return
-        
+
         callback = getattr(self, "on_ready_check_success", None)
         if callback:
             await callback()
 
-    async def ready_check(self, task: asyncio.Task=None):
+    async def ready_check(self, task: asyncio.Task = None):
         self.ready_check_error = None
         if task:
-            task.add_done_callback(lambda fut: asyncio.create_task(self._handle_ready_check(fut)))
+            task.add_done_callback(
+                lambda fut: asyncio.create_task(self._handle_ready_check(fut))
+            )
             return
         return True
 
@@ -278,8 +280,6 @@ class Agent(ABC):
 
         await self.emit_status()
 
-
-
     async def emit_status(self, processing: bool = None):
         # should keep a count of processing requests, and when the
         # number is 0 status is "idle", if the number is greater than 0
@@ -312,12 +312,16 @@ class Agent(ABC):
         try:
             if fut.cancelled():
                 return
-            
+
             if fut.exception():
-                log.error("background processing error", agent=self.agent_type, exc=fut.exception())
+                log.error(
+                    "background processing error",
+                    agent=self.agent_type,
+                    exc=fut.exception(),
+                )
                 await self.emit_status()
                 return
-            
+
             log.info("background processing done", agent=self.agent_type)
         finally:
             self.processing_bg -= 1
@@ -327,12 +331,14 @@ class Agent(ABC):
         log.info("set_background_processing", agent=self.agent_type)
         if not hasattr(self, "processing_bg"):
             self.processing_bg = 0
-            
+
         self.processing_bg += 1
-        
+
         await self.emit_status()
-        task.add_done_callback(lambda fut: asyncio.create_task(self._handle_background_processing(fut)))
-        
+        task.add_done_callback(
+            lambda fut: asyncio.create_task(self._handle_background_processing(fut))
+        )
+
     def connect(self, scene):
         self.scene = scene
         talemate.emit.async_signals.get("game_loop_start").connect(

@@ -42,11 +42,11 @@ class OpenAICompatibleClient(ClientBase):
 
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)
-        
+
         url = self.api_url
         if not url.endswith("/v1"):
             url = url + "/v1"
-        
+
         self.client = AsyncOpenAI(base_url=url, api_key=self.api_key)
         self.model_name = (
             kwargs.get("model") or kwargs.get("model_name") or self.model_name
@@ -115,10 +115,12 @@ class OpenAICompatibleClient(ClientBase):
         if "api_url" in kwargs:
             self.api_url = kwargs["api_url"]
         if "max_token_length" in kwargs:
-            self.max_token_length = int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 4096
+            self.max_token_length = (
+                int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 4096
+            )
         if "api_key" in kwargs:
             self.api_auth = kwargs["api_key"]
-            
+
         log.warning("reconfigure", kwargs=kwargs)
 
         self.set_client(**kwargs)

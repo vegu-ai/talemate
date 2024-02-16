@@ -34,7 +34,12 @@
                   <v-select v-model="client.model" v-if="clientMeta().manual_model && clientMeta().manual_model_choices" :items="clientMeta().manual_model_choices" label="Model"></v-select>
                   <v-text-field v-model="client.model_name" v-else-if="clientMeta().manual_model" label="Manually specify model name" hint="It looks like we're unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you're locally serving a model."></v-text-field>
                 </v-col>
-              </v-row>  
+              </v-row> 
+              <v-row v-for="field in clientMeta().extra_fields" :key="field.name">
+                <v-col cols="12">
+                  <v-text-field v-model="client.data[field.name]" v-if="field.type==='text'" :label="field.label" :rules="[rules.required]" :hint="field.description"></v-text-field>
+                </v-col>
+              </v-row>
               <v-row>
                 <v-col cols="4">
                   <v-text-field v-model="client.max_token_length" v-if="requiresAPIUrl(client)" type="number" label="Context Length" :rules="[rules.required]"></v-text-field> 

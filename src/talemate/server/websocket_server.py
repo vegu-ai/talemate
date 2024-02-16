@@ -28,6 +28,10 @@ from talemate.server import (
     world_state_manager,
 )
 
+__all__ = [
+    "WebsocketHandler",
+]
+
 log = structlog.get_logger("talemate.server.websocket_server")
 
 AGENT_INSTANCES = {}
@@ -54,7 +58,9 @@ class WebsocketHandler(Receiver):
         # to connect signals handlers to the websocket handler
         self.connect()
 
-        self.connect_llm_clients()
+        # connect LLM clients
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.connect_llm_clients())
 
         self.routes = {
             assistant.AssistantPlugin.router: assistant.AssistantPlugin(self),
@@ -77,9 +83,23 @@ class WebsocketHandler(Receiver):
             devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
         }
 
+        self.set_agent_routers()
+
         # self.request_scenes_list()
 
         # instance.emit_clients_status()
+
+    def set_agent_routers(self):
+
+        for agent_type, agent in instance.AGENTS.items():
+            handler_cls = getattr(agent, "websocket_handler", None)
+            if not handler_cls:
+                continue
+
+            log.info(
+                "Setting agent router", agent_type=agent_type, router=handler_cls.router
+            )
+            self.routes[handler_cls.router] = handler_cls(self)
 
     def disconnect(self):
         super().disconnect()
@@ -89,7 +109,7 @@ class WebsocketHandler(Receiver):
         if memory_agent and self.scene:
             memory_agent.close_db(self.scene)
 
-    def connect_llm_clients(self):
+    async def connect_llm_clients(self):
         client = None
 
         for client_name, client_config in self.llm_clients.items():
@@ -108,9 +128,9 @@ class WebsocketHandler(Receiver):
                 client_type=client.client_type,
             )
 
-        self.connect_agents()
+        await self.connect_agents()
 
-    def connect_agents(self):
+    async def connect_agents(self):
         if not self.llm_clients:
             instance.emit_agents_status()
             return
@@ -130,7 +150,7 @@ class WebsocketHandler(Receiver):
             log.debug("Linked agent", agent_typ=agent_typ, client=client.name)
             agent = instance.get_agent(agent_typ, client=client)
             agent.client = client
-            agent.apply_config(**agent_config)
+            await agent.apply_config(**agent_config)
 
         instance.emit_agents_status()
 
@@ -188,7 +208,7 @@ class WebsocketHandler(Receiver):
         # Schedule the put coroutine to run as soon as possible
         loop.call_soon_threadsafe(lambda: self.out_queue.put_nowait(data))
 
-    def configure_clients(self, clients):
+    async def configure_clients(self, clients):
         existing = set(self.llm_clients.keys())
 
         self.llm_clients = {}
@@ -208,7 +228,9 @@ class WebsocketHandler(Receiver):
                 "type": client["type"],
             }
             for dfl_key in client_cls.Meta().defaults.dict().keys():
-                client_config[dfl_key] = client.get(dfl_key)
+                client_config[dfl_key] = client.get(
+                    dfl_key, client.get("data", {}).get(dfl_key)
+                )
 
         # find clients that have been removed
         removed = existing - set(self.llm_clients.keys())
@@ -230,12 +252,12 @@ class WebsocketHandler(Receiver):
 
         self.config["clients"] = self.llm_clients
 
-        self.connect_llm_clients()
+        await self.connect_llm_clients()
         save_config(self.config)
 
         instance.sync_emit_clients_status()
 
-    def configure_agents(self, agents):
+    async def configure_agents(self, agents):
         self.agents = {typ: {} for typ in instance.agent_types()}
 
         log.debug("Configuring agents")
@@ -255,23 +277,31 @@ class WebsocketHandler(Receiver):
                 if getattr(agent_instance, "actions", None):
                     self.agents[name]["actions"] = agent.get("actions", {})
 
-                agent_instance.apply_config(**self.agents[name])
+                await agent_instance.apply_config(**self.agents[name])
                 log.debug("Configured agent", name=name)
                 continue
 
             if name not in self.agents:
                 continue
 
-            if agent["client"] not in self.llm_clients:
+            if isinstance(agent["client"], dict):
+                try:
+                    client_name = agent["client"]["client"]["value"]
+                except KeyError:
+                    continue
+            else:
+                client_name = agent["client"]
+
+            if client_name not in self.llm_clients:
                 continue
 
             self.agents[name] = {
-                "client": self.llm_clients[agent["client"]]["name"],
+                "client": self.llm_clients[client_name]["name"],
                 "name": name,
             }
 
             agent_instance = instance.get_agent(name, **self.agents[name])
-            agent_instance.client = self.llm_clients[agent["client"]]["client"]
+            agent_instance.client = self.llm_clients[client_name]["client"]
 
             if agent_instance.has_toggle:
                 self.agents[name]["enabled"] = agent["enabled"]
@@ -279,19 +309,37 @@ class WebsocketHandler(Receiver):
             if getattr(agent_instance, "actions", None):
                 self.agents[name]["actions"] = agent.get("actions", {})
 
-            agent_instance.apply_config(**self.agents[name])
+            await agent_instance.apply_config(**self.agents[name])
 
             log.debug(
                 "Configured agent",
                 name=name,
-                client_name=self.llm_clients[agent["client"]]["name"],
-                client=self.llm_clients[agent["client"]]["client"],
+                client_name=self.llm_clients[client_name]["name"],
+                client=self.llm_clients[client_name]["client"],
             )
 
         self.config["agents"] = self.agents
         save_config(self.config)
 
         instance.emit_agents_status()
+
+    def handle(self, emission: Emission):
+        called = super().handle(emission)
+
+        if called is False and emission.websocket_passthrough:
+            log.debug(
+                "emission passthrough", emission=emission.message, typ=emission.typ
+            )
+            try:
+                self.queue_put(
+                    {
+                        "type": emission.typ,
+                        "message": emission.message,
+                        "data": emission.data,
+                    }
+                )
+            except Exception as e:
+                log.error("emission passthrough", error=traceback.format_exc())
 
     def handle_system(self, emission: Emission):
         self.queue_put(
@@ -457,6 +505,7 @@ class WebsocketHandler(Receiver):
                 "name": emission.id,
                 "status": emission.status,
                 "data": emission.data,
+                "meta": emission.meta,
             }
         )
 

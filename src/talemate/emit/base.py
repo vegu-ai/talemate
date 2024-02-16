@@ -38,6 +38,8 @@ class Emission:
     id: str = None
     details: str = None
     data: dict = None
+    websocket_passthrough: bool = False
+    meta: dict = dataclasses.field(default_factory=dict)
 
 
 def emit(
@@ -125,8 +127,9 @@ class Receiver:
     def handle(self, emission: Emission):
         fn = getattr(self, f"handle_{emission.typ}", None)
         if not fn:
-            return
+            return False
         fn(emission)
+        return True
 
     def connect(self):
         for typ in handlers:

@@ -515,3 +515,9 @@ class WorldState(BaseModel):
             for manual_context in self.manual_context.values()
             if manual_context.meta.get("typ") == "world_state"
         }
+
+    def character_emotion(self, character_name: str) -> str:
+        if character_name in self.characters:
+            return self.characters[character_name].emotion
+
+        return None

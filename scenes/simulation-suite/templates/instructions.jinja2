@@ -26,6 +26,12 @@
                 {# change environment #}
                 {% set _ = processed.append(call) %}
             
+            {% elif call.strip().startswith("answer_question") %}
+                {# answert a query #}
+
+                {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer calls the following function:\n"+call+"\nand answers the player's question.", emit_message=True) %}
+
+
             {% elif call.strip().startswith("set_player_persona") %}
                 {# treansform player #}
                 {% set _ = emit_status("busy", "Simulation suite altering user persona.", as_scene_message=True) %}
@@ -60,9 +66,10 @@
                 {% set _ = emit_status("busy", "Simulation suite adding character: "+character_name, as_scene_message=True) %}
                 {% set _ = debug("HOLODECK add npc", name=character_name)%}
                 {% set npc = agent_action("director", "persist_character", name=character_name, content=player_message.raw )%}
-                {% set _ = agent_action("world_state", "manager", action_name="add_detail_reinforcement", character_name=npc.name, question="Goal", instructions="Generate a goal for the character, based on the user's chosen simulation", interval=25, run_immediately=True) %}
+                {% set _ = agent_action("world_state", "manager", action_name="add_detail_reinforcement", character_name=npc.name, question="Goal", instructions="Generate a goal for "+npc.name+", based on the user's chosen simulation", interval=25, run_immediately=True) %}
                 {% set _ = debug("HOLODECK added npc", npc=npc) %}
                 {% set _ = processed.append(call) %}
+                {% set _ = agent_action("visual", "generate_character_portrait", character_name=npc.name) %}
             {% elif call.strip().startswith("remove_ai_character") %}
                 {# remove npc #}
 
@@ -80,12 +87,14 @@
                 {# change existing npc #}
 
                 {% set _ = emit_status("busy", "Simulation suite altering character.", as_scene_message=True) %}
-                {% set character_name = agent_action("creator", "determine_character_name", character_name=inject+" - what is the name of the character receiving the changes?", allowed_names=scene.npc_character_names) %}
+                {% set character_name = agent_action("creator", "determine_character_name", character_name=inject+" - what is the name of the character receiving the changes (before the change)?", allowed_names=scene.npc_character_names) %}
+
+                {% set character_name_after = agent_action("creator", "determine_character_name", character_name=inject+" - what is the name of the character receiving the changes (after the changes)?") %}
 
                 {% set npc = scene.get_character(character_name) %}
 
                 {% if npc %}
-                    {% set _ = emit_status("busy", "Changing "+character_name, as_scene_message=True) %}
+                    {% set _ = emit_status("busy", "Changing "+character_name+" -> "+character_name_after, as_scene_message=True) %}
                     {% set _ = debug("HOLODECK transform npc", npc=npc) %}
                     {% set character_attributes = agent_action("world_state", "extract_character_sheet", name=npc.name, alteration_instructions=player_message.raw)%}
                     {% set _ = npc.update(base_attributes=character_attributes) %}
@@ -93,15 +102,18 @@
                     {% set _ = npc.update(description=character_description) %}
                     {% set _ = debug("HOLODECK transform npc", attributes=character_attributes, description=character_description) %}
                     {% set _ = processed.append(call) %}
+                    {% if character_name_after != character_name %}
+                        {% set _ = npc.rename(character_name_after) %}
+                    {% endif %}
                 {% endif %}
             {% elif call.strip().startswith("end_simulation") %}
                 {# end simulation #}
                 {% set explicit_command = query_text_eval("has the player explicitly asked to end the simulation?", player_message.raw) %}
                 {% if explicit_command %}
                     {% set _ = emit_status("busy", "Simulation suite ending current simulation.", as_scene_message=True) %}
-                    {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer ends the simulation, disolving the environment and all artifical characters, erasing all memory of it and finally returning the player to the inactive simulation suite.", emit_message=True) %}
+                    {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer ends the simulation, disolving the environment and all artifical characters, erasing all memory of it and finally returning the player to the inactive simulation suite.List of artificial characters: "+(",".join(scene.npc_character_names))+". The player is also transformed back to their normal persona.", emit_message=True) %}
                     {% set _ = scene.sync_restore() %}
-                    {% set update_world_state = True %}
+                    {% set _ = agent_action("world_state", "update_world_state", force=True) %}
                     {% set simulation_reset = True %}
                 {% endif %}
             {% elif "(" in call.strip() %}
@@ -122,7 +134,7 @@
         {% set _ = emit_status("busy", "Simulation suite powering up.", as_scene_message=True) %}
         {% set _ = game_state.set_var("instr.simulation_started", "yes", commit=False) %}
         {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="Narrate the computer asking the user to state the nature of their desired simulation.", emit_message=False) %}
-        {% set _ = agent_action("narrator", "action_to_narration", action_name="paraphrase", narration="Please state your commands by addressing the computer by stating \"Computer,\" followed by an instruction.") %}
+        {% set _ = agent_action("narrator", "action_to_narration", action_name="passthrough", narration="Please state your commands by addressing the computer by stating \"Computer,\" followed by an instruction.") %}
 
         {# pin to make sure characters don't try to interact with the simulation #}
         {% set _ = agent_action("world_state", "manager", action_name="save_world_entry", entry_id="sim.quarantined", text="Characters in the simulation ARE NOT AWARE OF THE COMPUTER.", meta=make_dict(), pin=True) %}

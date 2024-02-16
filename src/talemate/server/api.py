@@ -42,6 +42,7 @@ async def websocket_endpoint(websocket, path):
         async def send_status():
             while True:
                 await instance.emit_clients_status()
+                await instance.agent_ready_checks()
                 await asyncio.sleep(3)
 
         send_status_task = asyncio.create_task(send_status())
@@ -116,9 +117,9 @@ async def websocket_endpoint(websocket, path):
                 query = data.get("query", "")
                 handler.request_scenes_list(query)
             elif action_type == "configure_clients":
-                handler.configure_clients(data.get("clients"))
+                await handler.configure_clients(data.get("clients"))
             elif action_type == "configure_agents":
-                handler.configure_agents(data.get("agents"))
+                await handler.configure_agents(data.get("agents"))
             elif action_type == "request_client_status":
                 await handler.request_client_status()
             elif action_type == "delete_message":

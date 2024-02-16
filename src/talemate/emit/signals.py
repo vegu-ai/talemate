@@ -34,6 +34,8 @@ MessageEdited = signal("message_edited")
 
 ConfigSaved = signal("config_saved")
 
+ImageGenerated = signal("image_generated")
+
 handlers = {
     "system": SystemMessage,
     "narrator": NarratorMessage,
@@ -60,4 +62,5 @@ handlers = {
     "audio_queue": AudioQueue,
     "config_saved": ConfigSaved,
     "status": StatusMessage,
+    "image_generated": ImageGenerated,
 }

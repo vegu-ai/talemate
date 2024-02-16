@@ -11,7 +11,10 @@
             Make sure the backend process is running.
           </p>
         </v-alert>
-        <LoadScene ref="loadScene" @loading="sceneStartedLoading" />
+        <LoadScene 
+        ref="loadScene" 
+        :scene-loading-available="ready && connected"
+        @loading="sceneStartedLoading" />
         <v-divider></v-divider>
         <div :style="(sceneActive && scene.environment === 'scene' ? 'display:block' : 'display:none')">
           <!-- <GameOptions v-if="sceneActive" ref="gameOptions" /> -->
@@ -25,7 +28,7 @@
     </v-navigation-drawer>
 
     <!-- settings navigation drawer -->
-    <v-navigation-drawer v-model="drawer" app location="right">
+    <v-navigation-drawer v-model="drawer" app location="right" width="300">
       <v-alert v-if="!connected" type="error" variant="tonal">
         Not connected to Talemate backend
         <p class="text-body-2" color="white">
@@ -49,7 +52,7 @@
     </v-navigation-drawer>
 
     <!-- debug tools navigation drawer -->
-    <v-navigation-drawer v-model="debugDrawer" app location="right">
+    <v-navigation-drawer v-model="debugDrawer" app location="right" width="400">
       <v-list>
         <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
         <DebugTools ref="debugTools"></DebugTools>
@@ -74,7 +77,7 @@
       <AudioQueue ref="audioQueue" />
       <v-spacer></v-spacer>
       <span v-if="version !== null">v{{ version }}</span>
-      <span v-if="configurationRequired()">
+      <span v-if="!ready">
         <v-icon icon="mdi-application-cog"></v-icon>
         <span class="ml-1">Configuration required</span>
       </span>
@@ -104,9 +107,10 @@
         Talemate
       </v-toolbar-title>
       <v-spacer></v-spacer>
+      <VisualQueue ref="visualQueue" />
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
-      <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="configurationRequired()"
+      <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="!ready"
         color="red-darken-1"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="toggleNavigation('settings')"
         v-else><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
@@ -149,7 +153,7 @@
         <IntroView v-else 
         @request-scene-load="(path) => { $refs.loadScene.loadJsonSceneFromPath(path); }"
         :version="version" 
-        :scene-loading-available="!configurationRequired() && connected"
+        :scene-loading-available="ready && connected"
         :config="appConfig" />
 
       </v-container>
@@ -179,6 +183,7 @@ import AppConfig from './AppConfig.vue';
 import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
+import VisualQueue from './VisualQueue.vue';
 
 import IntroView from './IntroView.vue';
 
@@ -200,6 +205,7 @@ export default {
     AudioQueue,
     StatusNotification,
     IntroView,
+    VisualQueue,
   },
   name: 'TalemateApp',
   data() {
@@ -220,6 +226,7 @@ export default {
       errorMessage: null,
       errorNotification: false,
       notificatioonBusy: false,
+      ready: false,
       inputHint: 'Enter your text...',
       messageInput: '',
       reconnectInterval: 3000,
@@ -352,7 +359,8 @@ export default {
       }
 
       if (data.type == "client_status" || data.type == "agent_status") {
-        if (this.configurationRequired()) {
+        this.ready = !this.configurationRequired();
+        if (!this.ready) {
           this.setNavigation('settings');
         }
         return;
@@ -558,10 +566,6 @@ export default {
 </script>
 
 <style scoped>
-.message.request_input {
-
-}
-
 .backdrop {
   background-image: url('/src/assets/logo-13.1-backdrop.png');
   background-repeat: no-repeat;

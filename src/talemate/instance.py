@@ -163,14 +163,9 @@ def emit_agent_status(cls, agent=None):
             data=cls.config_options(),
         )
     else:
-        emit(
-            "agent_status",
-            message=agent.verbose_name or "",
-            status=agent.status,
-            id=agent.agent_type,
-            details=agent.agent_details,
-            data=cls.config_options(agent=agent),
-        )
+        asyncio.create_task(agent.emit_status())
+        # loop = asyncio.get_event_loop()
+        # loop.run_until_complete(agent.emit_status())
 
 
 def emit_agents_status(*args, **kwargs):
@@ -178,9 +173,17 @@ def emit_agents_status(*args, **kwargs):
     Will emit status of all agents
     """
     # log.debug("emit", type="agent status")
-    for typ, cls in agents.AGENT_CLASSES.items():
+    for typ, cls in sorted(
+        agents.AGENT_CLASSES.items(), key=lambda x: x[1].verbose_name
+    ):
         agent = AGENTS.get(typ)
         emit_agent_status(cls, agent)
 
 
 handlers["request_agent_status"].connect(emit_agents_status)
+
+
+async def agent_ready_checks():
+    for agent in AGENTS.values():
+        if agent and agent.enabled:
+            await agent.ready_check()

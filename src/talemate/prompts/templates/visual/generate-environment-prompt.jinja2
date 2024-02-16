@@ -1,0 +1,18 @@
+{% set scene_context = scene.context_history(budget=max_tokens-2048)|join("\n") %}
+{{ query_text("What does the current environmemt look like? Include details about appearance, theme and vibes.", scene_context) }}
+<|SECTION:TASK|>
+{% if instructions %}Requested Image: {{ instructions }}{% endif %}
+
+Describe the scene to the painter to ensure he will capture all the important details when drawing a dynamic and truthful image of the environment.
+
+THE IMAGE MUST ONLY BE OF THE ENVIRONMENT WITHOUT ANY CHARACTERS OR ANIMALS.
+YOU MUST ONLY DESCRIBE WHAT IS CURRENTLY VISIBLE IN THE SCENE.
+
+Required information: appearance, theme, vibes, important objects and any other relevant details.
+
+You must provide your answer as a comma delimited list of keywords.
+Keywords should be ordered: appearance, theme, vibes, important objects, other relevant details.
+You must provide enough keywords to adequately describe the environment to a stranger.
+Your answer must be suitable as a stable-diffusion image generation prompt.
+<|CLOSE_SECTION|>
+{{ set_prepared_response("environment,")}}

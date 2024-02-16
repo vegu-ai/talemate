@@ -15,6 +15,7 @@ import nltk
 import pydantic
 import structlog
 from nltk.tokenize import sent_tokenize
+from openai import AsyncOpenAI
 
 import talemate.config as config
 import talemate.emit.async_signals
@@ -24,7 +25,14 @@ from talemate.emit.signals import handlers
 from talemate.events import GameLoopNewMessageEvent
 from talemate.scene_message import CharacterMessage, NarratorMessage
 
-from .base import Agent, AgentAction, AgentActionConfig, set_processing
+from .base import (
+    Agent,
+    AgentAction,
+    AgentActionConditional,
+    AgentActionConfig,
+    AgentDetail,
+    set_processing,
+)
 from .registry import register
 
 try:
@@ -116,6 +124,7 @@ class TTSAgent(Agent):
     agent_type = "tts"
     verbose_name = "Voice"
     requires_llm_client = False
+    essential = False
 
     @classmethod
     def config_options(cls, agent=None):
@@ -135,9 +144,11 @@ class TTSAgent(Agent):
         self.voices = {
             "elevenlabs": VoiceLibrary(api="elevenlabs"),
             "tts": VoiceLibrary(api="tts"),
+            "openai": VoiceLibrary(api="openai"),
         }
         self.config = config.load_config()
         self.playback_done_event = asyncio.Event()
+        self.preselect_voice = None
         self.actions = {
             "_config": AgentAction(
                 enabled=True,
@@ -149,6 +160,7 @@ class TTSAgent(Agent):
                         choices=[
                             {"value": "tts", "label": "TTS (Local)"},
                             {"value": "elevenlabs", "label": "Eleven Labs"},
+                            {"value": "openai", "label": "OpenAI"},
                         ],
                         value="tts",
                         label="API",
@@ -185,6 +197,25 @@ class TTSAgent(Agent):
                         value=False,
                         label="Split generation",
                         description="Generate audio chunks for each sentence - will be much more responsive but may loose context to inform inflection",
+                    ),
+                },
+            ),
+            "openai": AgentAction(
+                enabled=True,
+                condition=AgentActionConditional(
+                    attribute="_config.config.api", value="openai"
+                ),
+                label="OpenAI Settings",
+                config={
+                    "model": AgentActionConfig(
+                        type="text",
+                        value="tts-1",
+                        choices=[
+                            {"value": "tts-1", "label": "TTS 1"},
+                            {"value": "tts-1-hd", "label": "TTS 1 HD"},
+                        ],
+                        label="Model",
+                        description="TTS model to use",
                     ),
                 },
             ),
@@ -226,26 +257,44 @@ class TTSAgent(Agent):
 
     @property
     def agent_details(self):
-        suffix = ""
 
-        if not self.ready:
-            suffix = f"  - {self.not_ready_reason}"
-        else:
-            suffix = f"  - {self.voice_id_to_label(self.default_voice_id)}"
+        details = {
+            "api": AgentDetail(
+                icon="mdi-server-outline",
+                value=self.api_label,
+                description="The backend to use for TTS",
+            ).model_dump(),
+        }
 
-        api = self.api
-        choices = self.actions["_config"].config["api"].choices
-        api_label = api
-        for choice in choices:
-            if choice["value"] == api:
-                api_label = choice["label"]
-                break
+        if self.ready and self.enabled:
+            details["voice"] = AgentDetail(
+                icon="mdi-account-voice",
+                value=self.voice_id_to_label(self.default_voice_id) or "",
+                description="The voice to use for TTS",
+                color="info",
+            ).model_dump()
+        elif self.enabled:
+            details["error"] = AgentDetail(
+                icon="mdi-alert",
+                value=self.not_ready_reason,
+                description=self.not_ready_reason,
+                color="error",
+            ).model_dump()
 
-        return f"{api_label}{suffix}"
+        return details
 
     @property
     def api(self):
         return self.actions["_config"].config["api"].value
+
+    @property
+    def api_label(self):
+        choices = self.actions["_config"].config["api"].choices
+        api = self.api
+        for choice in choices:
+            if choice["value"] == api:
+                return choice["label"]
+        return api
 
     @property
     def token(self):
@@ -274,6 +323,8 @@ class TTSAgent(Agent):
         if not self.enabled:
             return "disabled"
         if self.ready:
+            if getattr(self, "processing_bg", 0) > 0:
+                return "busy_bg" if not getattr(self, "processing", False) else "busy"
             return "active" if not getattr(self, "processing", False) else "busy"
         if self.requires_token and not self.token:
             return "error"
@@ -291,7 +342,11 @@ class TTSAgent(Agent):
 
         return 250
 
-    def apply_config(self, *args, **kwargs):
+    @property
+    def openai_api_key(self):
+        return self.config.get("openai", {}).get("api_key")
+
+    async def apply_config(self, *args, **kwargs):
         try:
             api = kwargs["actions"]["_config"]["config"]["api"]["value"]
         except KeyError:
@@ -300,10 +355,22 @@ class TTSAgent(Agent):
         api_changed = api != self.api
 
         log.debug(
-            "apply_config", api=api, api_changed=api != self.api, current_api=self.api
+            "apply_config",
+            api=api,
+            api_changed=api != self.api,
+            current_api=self.api,
+            args=args,
+            kwargs=kwargs,
         )
 
-        super().apply_config(*args, **kwargs)
+        try:
+            self.preselect_voice = kwargs["actions"]["_config"]["config"]["voice_id"][
+                "value"
+            ]
+        except KeyError:
+            self.preselect_voice = self.default_voice_id
+
+        await super().apply_config(*args, **kwargs)
 
         if api_changed:
             try:
@@ -396,6 +463,11 @@ class TTSAgent(Agent):
         library.voices = await list_fn()
         library.last_synced = time.time()
 
+        if self.preselect_voice:
+            if self.voice(self.preselect_voice):
+                self.actions["_config"].config["voice_id"].value = self.preselect_voice
+                self.preselect_voice = None
+
         # if the current voice cannot be found, reset it
         if not self.voice(self.default_voice_id):
             self.actions["_config"].config["voice_id"].value = ""
@@ -421,9 +493,10 @@ class TTSAgent(Agent):
 
         # Start generating audio chunks in the background
         generation_task = asyncio.create_task(self.generate_chunks(generate_fn, chunks))
+        await self.set_background_processing(generation_task)
 
         # Wait for both tasks to complete
-        await asyncio.gather(generation_task)
+        # await asyncio.gather(generation_task)
 
     async def generate_chunks(self, generate_fn, chunks):
         for chunk in chunks:
@@ -547,3 +620,33 @@ class TTSAgent(Agent):
         voices.sort(key=lambda x: x.label)
 
         return voices
+
+    # OPENAI
+
+    async def _generate_openai(self, text: str, chunk_size: int = 1024):
+
+        client = AsyncOpenAI(api_key=self.openai_api_key)
+
+        model = self.actions["openai"].config["model"].value
+
+        response = await client.audio.speech.create(
+            model=model, voice=self.default_voice_id, input=text
+        )
+
+        bytes_io = io.BytesIO()
+        for chunk in response.iter_bytes(chunk_size=chunk_size):
+            if chunk:
+                bytes_io.write(chunk)
+
+        # Put the audio data in the queue for playback
+        return bytes_io.getvalue()
+
+    async def _list_voices_openai(self) -> dict[str, str]:
+        return [
+            Voice(value="alloy", label="Alloy"),
+            Voice(value="echo", label="Echo"),
+            Voice(value="fable", label="Fable"),
+            Voice(value="onyx", label="Onyx"),
+            Voice(value="nova", label="Nova"),
+            Voice(value="shimmer", label="Shimmer"),
+        ]

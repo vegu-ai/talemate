@@ -35,9 +35,9 @@ Use your imagination to fill in gaps in order to answer the question in a confid
 You are omniscient and can describe the scene in detail.
 
 {% if reinforcement.insert == 'sequential' %}
+PROVIDE A SUCCINCT ANSWER TO THE QUESTION.
 YOUR ANSWER MUST BE SHORT AND TO THE POINT.
 YOUR ANSWER MUST BE A SINGLE SENTENCE.
-YOUR RESPONSE MUST BE ONLY THE ANSWER TO THE QUESTION. NEVER EXPLAIN YOUR REASONING.
 {% endif %}
 {% if instructions %}
 {{ instructions }}
@@ -65,7 +65,6 @@ You are omniscient and can describe the scene in detail.
 {% if reinforcement.insert == 'sequential' %}
 YOUR ANSWER MUST BE SHORT AND TO THE POINT.
 YOUR ANSWER MUST BE A SINGLE SENTENCE.
-YOUR RESPONSE MUST BE ONLY THE ANSWER TO THE QUESTION. NEVER EXPLAIN YOUR REASONING.
 {% endif %}
 {% if instructions %}
 {{ instructions }}

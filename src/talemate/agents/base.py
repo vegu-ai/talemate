@@ -20,6 +20,11 @@ from talemate.events import GameLoopStartEvent
 
 __all__ = [
     "Agent",
+    "AgentAction",
+    "AgentActionConditional",
+    "AgentActionConfig",
+    "AgentDetail",
+    "AgentEmission",
     "set_processing",
 ]
 
@@ -43,11 +48,24 @@ class AgentActionConfig(pydantic.BaseModel):
         arbitrary_types_allowed = True
 
 
+class AgentActionConditional(pydantic.BaseModel):
+    attribute: str
+    value: Union[int, float, str, bool, None] = None
+
+
 class AgentAction(pydantic.BaseModel):
     enabled: bool = True
     label: str
     description: str = ""
     config: Union[dict[str, AgentActionConfig], None] = None
+    condition: Union[AgentActionConditional, None] = None
+
+
+class AgentDetail(pydantic.BaseModel):
+    value: Union[str, None] = None
+    description: Union[str, None] = None
+    icon: Union[str, None] = None
+    color: str = "grey"
 
 
 def set_processing(fn):
@@ -86,6 +104,9 @@ class Agent(ABC):
     set_processing = set_processing
     requires_llm_client = True
     auto_break_repetition = False
+    websocket_handler = None
+    essential = True
+    ready_check_error = None
 
     @property
     def agent_details(self):
@@ -110,12 +131,19 @@ class Agent(ABC):
 
     @property
     def status(self):
-        if self.ready:
-            if not self.enabled:
-                return "disabled"
-            return "idle" if getattr(self, "processing", 0) == 0 else "busy"
-        else:
+        if not self.enabled:
+            return "disabled"
+
+        if not self.ready:
             return "uninitialized"
+
+        if getattr(self, "processing", 0) > 0:
+            return "busy"
+
+        if getattr(self, "processing_bg", 0) > 0:
+            return "busy_bg"
+
+        return "idle"
 
     @property
     def enabled(self):
@@ -160,7 +188,41 @@ class Agent(ABC):
 
         return config_options
 
-    def apply_config(self, *args, **kwargs):
+    @property
+    def meta(self):
+        return {
+            "essential": self.essential,
+        }
+
+    async def _handle_ready_check(self, fut: asyncio.Future):
+        callback_failure = getattr(self, "on_ready_check_failure", None)
+        if fut.cancelled():
+            if callback_failure:
+                await callback_failure()
+            return
+
+        if fut.exception():
+            exc = fut.exception()
+            self.ready_check_error = exc
+            log.error("agent ready check error", agent=self.agent_type, exc=exc)
+            if callback_failure:
+                await callback_failure(exc)
+            return
+
+        callback = getattr(self, "on_ready_check_success", None)
+        if callback:
+            await callback()
+
+    async def ready_check(self, task: asyncio.Task = None):
+        self.ready_check_error = None
+        if task:
+            task.add_done_callback(
+                lambda fut: asyncio.create_task(self._handle_ready_check(fut))
+            )
+            return
+        return True
+
+    async def apply_config(self, *args, **kwargs):
         if self.has_toggle and "enabled" in kwargs:
             self.is_enabled = kwargs.get("enabled", False)
 
@@ -228,26 +290,54 @@ class Agent(ABC):
         if getattr(self, "processing", None) is None:
             self.processing = 0
 
-        if not processing:
+        if processing is False:
             self.processing -= 1
             self.processing = max(0, self.processing)
-        else:
+        elif processing is True:
             self.processing += 1
-
-        status = "busy" if self.processing > 0 else "idle"
-        if not self.enabled:
-            status = "disabled"
 
         emit(
             "agent_status",
             message=self.verbose_name or "",
             id=self.agent_type,
-            status=status,
+            status=self.status,
             details=self.agent_details,
+            meta=self.meta,
             data=self.config_options(agent=self),
         )
 
         await asyncio.sleep(0.01)
+
+    async def _handle_background_processing(self, fut: asyncio.Future):
+        try:
+            if fut.cancelled():
+                return
+
+            if fut.exception():
+                log.error(
+                    "background processing error",
+                    agent=self.agent_type,
+                    exc=fut.exception(),
+                )
+                await self.emit_status()
+                return
+
+            log.info("background processing done", agent=self.agent_type)
+        finally:
+            self.processing_bg -= 1
+            await self.emit_status()
+
+    async def set_background_processing(self, task: asyncio.Task):
+        log.info("set_background_processing", agent=self.agent_type)
+        if not hasattr(self, "processing_bg"):
+            self.processing_bg = 0
+
+        self.processing_bg += 1
+
+        await self.emit_status()
+        task.add_done_callback(
+            lambda fut: asyncio.create_task(self._handle_background_processing(fut))
+        )
 
     def connect(self, scene):
         self.scene = scene

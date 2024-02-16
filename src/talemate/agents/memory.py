@@ -30,7 +30,7 @@ if not chromadb:
     log.info("ChromaDB not found, disabling Chroma agent")
 
 
-from .base import Agent
+from .base import Agent, AgentDetail
 
 
 class MemoryDocument(str):
@@ -368,8 +368,30 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
     @property
     def agent_details(self):
+
+        details = {
+            "backend": AgentDetail(
+                icon="mdi-server-outline",
+                value="ChromaDB",
+                description="The backend to use for long-term memory",
+            ).model_dump(),
+            "embeddings": AgentDetail(
+                icon="mdi-cube-unfolded",
+                value=self.embeddings,
+                description="The embeddings model.",
+            ).model_dump(),
+        }
+
         if self.embeddings == "openai" and not self.openai_api_key:
-            return "No OpenAI API key set"
+            # return "No OpenAI API key set"
+            details["error"] = {
+                "icon": "mdi-alert",
+                "value": "No OpenAI API key set",
+                "description": "You must provide an OpenAI API key to use OpenAI embeddings",
+                "color": "error",
+            }
+
+        return details
 
         return f"ChromaDB: {self.embeddings}"
 

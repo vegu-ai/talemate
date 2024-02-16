@@ -18,6 +18,7 @@ You must at least call one of the following functions:
 - set_player_persona
 - set_player_name
 - end_simulation
+- answer_question
 
 Set the player persona at the beginning of a new simulation or if the player requests a change.
 
@@ -52,7 +53,7 @@ Request: Computer, I want to experience a rollercoaster ride with a friend
 change_environment("theme park, riding a rollercoaster")
 set_player_persona("young female experiencing rollercoaster ride")
 set_player_name("Susanne")
-add_ai_character("a female friend of player")
+add_ai_character("a female friend of player named Sarah")
 ```
 
 Request: Computer, I want to experience the international space station
@@ -60,7 +61,7 @@ Request: Computer, I want to experience the international space station
 change_environment("international space station")
 set_player_persona("astronaut experiencing first trip to ISS")
 set_player_name("George")
-add_ai_character("astronaut")
+add_ai_character("astronaut named Henry")
 ```
 
 Request: Computer, remove the goblin and add an elven woman instead
@@ -77,19 +78,19 @@ change_ai_character("make skiing instructor older")
 Request: Computer, change my grandma to my grandpa
 ```simulation-stack
 remove_ai_character("grandma")
-add_ai_character("grandpa")
+add_ai_character("grandpa named Steven")
 ```
 
 Request: Computer, remove the skiing instructor and add my friend instead.
 ```simulation-stack
 remove_ai_character("skiing instructor")
-add_ai_character("player's friend")
+add_ai_character("player's friend named Tara")
 ```
 
 Request: Computer, replace the skiing instructor with my friend.
 ```simulation-stack
 remove_ai_character("skiing instructor")
-add_ai_character("player's friend")
+add_ai_character("player's friend named Lisa")
 ```
 
 Request: Computer, I want to end the simulation
@@ -100,6 +101,11 @@ end_simulation("simulation ended")
 Request: Computer, shut down the simulation
 ```simulation-stack
 end_simulation("simulation ended")
+```
+
+Request: Computer, what do you know about the game of thrones?
+```simulation-stack
+answer_question("what do you know about the game of thrones?")
 ```
 
 <|CLOSE_SECTION|>

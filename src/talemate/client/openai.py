@@ -177,6 +177,9 @@ class OpenAIClient(ClientBase):
         if not self.model_name:
             self.model_name = "gpt-3.5-turbo-16k"
 
+        if max_token_length and not isinstance(max_token_length, int):
+            max_token_length = int(max_token_length)
+
         model = self.model_name
 
         self.client = AsyncOpenAI(api_key=self.openai_api_key)

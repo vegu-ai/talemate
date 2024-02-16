@@ -3,6 +3,11 @@
 {%- with memory_query=query -%}
     {% include "extra-context.jinja2" %}
 {% endwith -%}
+{% set related_character = scene.parse_character_from_line(query) -%}
+{% if related_character -%}
+<|SECTION:{{ related_character.name|upper }}|>
+{{ related_character.sheet}}
+{% endif %}
 <|CLOSE_SECTION|>
 {% endblock %}
 {% set scene_history=scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()))  %}

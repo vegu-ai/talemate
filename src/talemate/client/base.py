@@ -58,6 +58,14 @@ class Defaults(pydantic.BaseModel):
     max_token_length: int = 4096
 
 
+class ExtraField(pydantic.BaseModel):
+    name: str
+    type: str
+    label: str
+    required: bool
+    description: str
+
+
 class ClientBase:
     api_url: str
     model_name: str
@@ -91,7 +99,9 @@ class ClientBase:
         self.name = name or self.client_type
         self.log = structlog.get_logger(f"client.{self.client_type}")
         if "max_token_length" in kwargs:
-            self.max_token_length = kwargs["max_token_length"]
+            self.max_token_length = (
+                int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 4096
+            )
         self.set_client(max_token_length=self.max_token_length)
 
     def __str__(self):
@@ -135,7 +145,7 @@ class ClientBase:
             self.api_url = kwargs["api_url"]
 
         if kwargs.get("max_token_length"):
-            self.max_token_length = kwargs["max_token_length"]
+            self.max_token_length = int(kwargs["max_token_length"])
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
@@ -193,6 +203,8 @@ class ClientBase:
                 return system_prompts.ANALYST
             if "summarize" in kind:
                 return system_prompts.SUMMARIZE
+            if "visualize" in kind:
+                return system_prompts.VISUALIZE
 
         else:
 
@@ -220,6 +232,8 @@ class ClientBase:
                 return system_prompts.ANALYST_NO_DECENSOR
             if "summarize" in kind:
                 return system_prompts.SUMMARIZE_NO_DECENSOR
+            if "visualize" in kind:
+                return system_prompts.VISUALIZE_NO_DECENSOR
 
         return system_prompts.BASIC
 
@@ -249,22 +263,27 @@ class ClientBase:
 
         prompt_template_example, prompt_template_file = self.prompt_template_example()
 
+        data = {
+            "api_key": self.api_key,
+            "prompt_template_example": prompt_template_example,
+            "has_prompt_template": (
+                prompt_template_file and prompt_template_file != "default.jinja2"
+            ),
+            "template_file": prompt_template_file,
+            "meta": self.Meta().model_dump(),
+            "error_action": None,
+        }
+
+        for field_name in getattr(self.Meta(), "extra_fields", {}).keys():
+            data[field_name] = getattr(self, field_name, None)
+
         emit(
             "client_status",
             message=self.client_type,
             id=self.name,
             details=model_name,
             status=status,
-            data={
-                "api_key": self.api_key,
-                "prompt_template_example": prompt_template_example,
-                "has_prompt_template": (
-                    prompt_template_file and prompt_template_file != "default.jinja2"
-                ),
-                "template_file": prompt_template_file,
-                "meta": self.Meta().model_dump(),
-                "error_action": None,
-            },
+            data=data,
         )
 
         if status_change:

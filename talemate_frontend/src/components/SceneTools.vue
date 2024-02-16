@@ -311,6 +311,30 @@
                     </template>
                 </v-tooltip>
 
+                <!-- visualizer actions -->
+                
+                <v-menu>
+                    <template v-slot:activator="{ props }">
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled() || !visualAgentReady" color="primary" icon>
+                            <v-icon>mdi-image-frame</v-icon>
+                        </v-btn>
+                    </template>
+                    <v-list>
+                        <v-list-subheader>Visualize</v-list-subheader>
+                        <!-- environment -->
+                        <v-list-item @click="sendHotButtonMessage('!vis_env')" prepend-icon="mdi-image-filter-hdr">
+                            <v-list-item-title>Visualize Environment</v-list-item-title>
+                            <v-list-item-subtitle>Generate a background image of the environment</v-list-item-subtitle>
+                        </v-list-item>
+                        <!-- npcs -->
+                        <v-list-item v-for="npc_name in npc_characters" :key="npc_name"
+                            @click="sendHotButtonMessage('!vis_char:' + npc_name)" prepend-icon="mdi-brush">
+                            <v-list-item-title>Visualize {{ npc_name }}</v-list-item-title>
+                            <v-list-item-subtitle>Generate a portrait of {{ npc_name }}</v-list-item-subtitle>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
+
                 <!-- save menu -->
 
                 <v-menu>
@@ -371,6 +395,7 @@ export default {
             sceneHelp: "",
             sceneExperimental: false,
             canAutoSave: false,
+            visualAgentReady: false,
             npc_characters: [],
 
             quickSettings: [
@@ -669,6 +694,8 @@ export default {
                     }
                 }
                 return;
+            } else if (data.type === 'agent_status' && data.name === 'visual') {
+                this.visualAgentReady = data.status == 'idle' || data.status == 'busy' || data.status == 'busy_bg';
             } else if (data.type === "quick_settings" && data.action === 'set_done') {
                 return;
             }

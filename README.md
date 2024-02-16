@@ -29,7 +29,8 @@ This means you need to either have:
     - editor: improves AI responses (very hit and miss at the moment)
     - world state: generates world snapshot and handles passage of time (objects and characters)
     - creator: character / scenario creator
-    - tts: text to speech via elevenlabs, coqui studio, coqui local
+    - tts: text to speech via elevenlabs, OpenAI or local tts
+    - visual: stable-diffusion client for in place visual generation via AUTOMATIC1111, ComfyUI or OpenAI
 - multi-client support (agents can be connected to separate APIs)
 - long term memory
     - chromadb integration
@@ -54,7 +55,6 @@ Kinda making it up as i go along, but i want to lean more into gameplay through 
 
 In no particular order:
 
-
 - Extension support
     - modular agents and clients
 - Improved world state
@@ -68,7 +68,26 @@ In no particular order:
     - objectives
     - quests
     - win / lose conditions
-- stable-diffusion client for in place visual generation
+
+
+# Instructions
+
+Please read the documents in the `docs` folder for more advanced configuration and usage.
+
+- [Quickstart](#quickstart)
+    - [Installation](#installation)
+    - [Connecting to an LLM](#connecting-to-an-llm)
+        - [Text-generation-webui](#text-generation-webui)
+        - [Recommended Models](#recommended-models)
+        - [OpenAI](#openai)
+    - [Ready to go](#ready-to-go)
+    - [Load the introductory scenario "Infinity Quest"](#load-the-introductory-scenario-infinity-quest)
+    - [Loading character cards](#loading-character-cards)
+- [Text-to-Speech (TTS)](docs/tts.md)
+- [Visual Generation](docs/visual.md)
+- [ChromaDB (long term memory) configuration](docs/chromadb.md)
+- [Runpod Integration](docs/runpod.md)
+- [Prompt template overrides](docs/templates.md)
 
 # Quickstart
 
@@ -174,13 +193,3 @@ Expand the "Load" menu in the top left corner and either click on "Upload a char
 Once a character is uploaded, talemate may actually take a moment because it needs to convert it to a talemate format and will also run additional LLM prompts to generate character attributes and world state.
 
 Make sure you save the scene after the character is loaded as it can then be loaded as normal talemate scenario in the future.
-
-## Further documentation
-
-Please read the documents in the `docs` folder for more advanced configuration and usage.
-
-- [Prompt template overrides](docs/templates.md)
-- [Text-to-Speech (TTS)](docs/tts.md)
-- [ChromaDB (long term memory)](docs/chromadb.md)
-- [Runpod Integration](docs/runpod.md)
-- Creative mode

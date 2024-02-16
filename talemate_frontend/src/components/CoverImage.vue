@@ -1,7 +1,7 @@
 <template>
-    <div v-if="expanded">
+    <v-sheet v-if="expanded" elevation="10">
         <v-img cover @click="toggle()" v-if="asset_id !== null" :src="'data:'+media_type+';base64, '+base64"></v-img>
-    </div>
+    </v-sheet>
     <v-list-subheader v-else @click="toggle()"><v-icon>mdi-image-frame</v-icon> Cover image
         <v-icon v-if="expanded" icon="mdi-chevron-down"></v-icon>
         <v-icon v-else icon="mdi-chevron-up"></v-icon>
@@ -48,6 +48,11 @@ export default {
                     this.base64 = data.asset;
                     this.media_type = data.media_type;
                 }
+            }
+            if(data.type === "scene_asset_character_cover_image") {
+                this.asset_id = data.asset_id;
+                this.base64 = data.asset;
+                this.media_type = data.media_type;
             }
         },
     },

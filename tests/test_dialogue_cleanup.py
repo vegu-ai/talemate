@@ -32,6 +32,8 @@ def test_dialogue_cleanup(input, expected):
     ("bob: says something\nalice: says something else", "bob: says something", "bob"),
     ("bob: says a sentence. then a", "bob: says a sentence.", "bob"),
     ("bob: first paragraph\n\nsecond paragraph", "bob: first paragraph\n\nsecond paragraph", "bob"),
+    # movie script new speaker cutoff
+    ("bob: says a sentence\n\nALICE\nsays something else", "bob: says a sentence", "bob"),
 ])
 def test_clean_dialogue(input, expected, main_name):
     others = ["alice", "charlie"]

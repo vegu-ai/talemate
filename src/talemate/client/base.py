@@ -362,6 +362,10 @@ class ClientBase:
         dialog_stopping_strings = [
             f"{character}:" for character in conversation_context["other_characters"]
         ]
+        
+        dialog_stopping_strings += [
+            f"{character.upper()}\n" for character in conversation_context["other_characters"]
+        ]
 
         if "extra_stopping_strings" in parameters:
             parameters["extra_stopping_strings"] += dialog_stopping_strings

@@ -389,13 +389,18 @@ def clean_dialogue(dialogue: str, main_name: str) -> str:
         if line.startswith(f"{main_name}: "):
             cleaned.append(line[len(main_name)+2:])
             continue
-        
+
+        # if line is all capitalized
+        # this is likely a new speaker in movie script format, and we
+        # bail
+        if line.strip().isupper():
+            break
+    
         if ":" not in line:
             cleaned.append(line)
             continue
-    
-    print(cleaned)
         
+
     return clean_message(strip_partial_sentences("\n".join(cleaned)))
 
 

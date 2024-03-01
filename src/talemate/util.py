@@ -356,13 +356,13 @@ def clean_paragraph(paragraph: str) -> str:
 
 def clean_message(message: str) -> str:
     message = message.strip()
-    message = re.sub(r"\s+", " ", message)
+    message = re.sub(r" +", " ", message)
     message = message.replace("(", "*").replace(")", "*")
     message = message.replace("[", "*").replace("]", "*")
     return message
 
 
-def clean_dialogue(dialogue: str, main_name: str) -> str:
+def clean_dialogue_old(dialogue: str, main_name: str) -> str:
     # re split by \n{not main_name}: with a max count of 1
     pattern = r"\n(?!{}:).*".format(re.escape(main_name))
 
@@ -372,6 +372,31 @@ def clean_dialogue(dialogue: str, main_name: str) -> str:
     dialogue = f"{main_name}: {dialogue}"
 
     return clean_message(strip_partial_sentences(dialogue))
+
+def clean_dialogue(dialogue: str, main_name: str) -> str:
+    
+    cleaned = []
+    
+    if not dialogue.startswith(main_name):
+        dialogue = f"{main_name}: {dialogue}"
+    
+    for line in dialogue.split("\n"):
+        
+        if not cleaned:
+            cleaned.append(line)
+            continue
+        
+        if line.startswith(f"{main_name}: "):
+            cleaned.append(line[len(main_name)+2:])
+            continue
+        
+        if ":" not in line:
+            cleaned.append(line)
+            continue
+    
+    print(cleaned)
+        
+    return clean_message(strip_partial_sentences("\n".join(cleaned)))
 
 
 def clean_id(name: str) -> str:

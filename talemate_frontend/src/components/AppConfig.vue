@@ -112,6 +112,23 @@
                                         </v-row>
                                     </div>
 
+                                    <!-- MISTRAL.AI API -->
+                                    <div v-if="applicationPageSelected === 'mistralai_api'">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
+                                            <v-alert-title>mistral.ai</v-alert-title>
+                                            <div class="text-grey">
+                                                Configure your mistral.ai API key here. You can get one from <a href="https://console.mistral.ai/api-keys/" target="_blank">https://console.mistral.ai/api-keys/</a> 
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-text-field type="password" v-model="app_config.mistralai.api_key"
+                                                    label="mistral.ai API Key"></v-text-field>
+                                            </v-col>
+                                        </v-row>
+                                    </div>
+
                                     <!-- ELEVENLABS API -->
                                     <div v-if="applicationPageSelected === 'elevenlabs_api'">
                                         <v-alert color="white" variant="text" icon="mdi-api" density="compact">
@@ -130,23 +147,6 @@
                                         </v-row>
                                     </div>
 
-                                    <!-- COQUI API -->
-                                    <div v-if="applicationPageSelected === 'coqui_api'">
-                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
-                                            <v-alert-title>Coqui Studio</v-alert-title>
-                                            <div class="text-grey">
-                                                <p class="mb-1">Realistic, emotive text-to-speech through generative AI.</p>
-                                                Configure your Coqui API key here. You can get one from <a href="https://app.coqui.ai/account" target="_blank">https://app.coqui.ai/account</a> 
-                                            </div>
-                                        </v-alert>
-                                        <v-divider class="mb-2"></v-divider>
-                                        <v-row>
-                                            <v-col cols="12">
-                                                <v-text-field type="password" v-model="app_config.coqui.api_key"
-                                                    label="Coqui API Key"></v-text-field>
-                                            </v-col>
-                                        </v-row>
-                                    </div>
 
                                     <!-- RUNPOD API -->
                                     <div v-if="applicationPageSelected === 'runpod_api'">
@@ -248,8 +248,8 @@ export default {
                 ],
                 application: [
                     {title: 'OpenAI', icon: 'mdi-api', value: 'openai_api'},
+                    {title: 'mistral.ai', icon: 'mdi-api', value: 'mistralai_api'},
                     {title: 'ElevenLabs', icon: 'mdi-api', value: 'elevenlabs_api'},
-                    {title: 'Coqui Studio', icon: 'mdi-api', value: 'coqui_api'},
                     {title: 'RunPod', icon: 'mdi-api', value: 'runpod_api'},
                 ],
                 creator: [

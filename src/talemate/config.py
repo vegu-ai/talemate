@@ -128,6 +128,8 @@ class CreatorConfig(BaseModel):
 class OpenAIConfig(BaseModel):
     api_key: Union[str, None] = None
 
+class MistralAIConfig(BaseModel):
+    api_key: Union[str, None] = None
 
 class RunPodConfig(BaseModel):
     api_key: Union[str, None] = None
@@ -271,6 +273,8 @@ class Config(BaseModel):
     creator: CreatorConfig = CreatorConfig()
 
     openai: OpenAIConfig = OpenAIConfig()
+    
+    mistralai: MistralAIConfig = MistralAIConfig()
 
     runpod: RunPodConfig = RunPodConfig()
 

@@ -129,6 +129,23 @@
                                         </v-row>
                                     </div>
 
+                                    <!-- ANTHROPIC API -->
+                                    <div v-if="applicationPageSelected === 'anthropic_api'">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
+                                            <v-alert-title>Anthropic</v-alert-title>
+                                            <div class="text-grey">
+                                                Configure your Anthropic API key here. You can get one from <a href="https://console.anthropic.com/settings/keys" target="_blank">https://console.anthropic.com/settings/keys</a> 
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-text-field type="password" v-model="app_config.anthropic.api_key"
+                                                    label="Anthropic API Key"></v-text-field>
+                                            </v-col>
+                                        </v-row>
+                                    </div>
+
                                     <!-- ELEVENLABS API -->
                                     <div v-if="applicationPageSelected === 'elevenlabs_api'">
                                         <v-alert color="white" variant="text" icon="mdi-api" density="compact">
@@ -249,6 +266,7 @@ export default {
                 application: [
                     {title: 'OpenAI', icon: 'mdi-api', value: 'openai_api'},
                     {title: 'mistral.ai', icon: 'mdi-api', value: 'mistralai_api'},
+                    {title: 'Anthropic', icon: 'mdi-api', value: 'anthropic_api'},
                     {title: 'ElevenLabs', icon: 'mdi-api', value: 'elevenlabs_api'},
                     {title: 'RunPod', icon: 'mdi-api', value: 'runpod_api'},
                 ],

@@ -131,6 +131,9 @@ class OpenAIConfig(BaseModel):
 class MistralAIConfig(BaseModel):
     api_key: Union[str, None] = None
 
+class AnthropicConfig(BaseModel):
+    api_key: Union[str, None] = None
+
 class RunPodConfig(BaseModel):
     api_key: Union[str, None] = None
 
@@ -275,6 +278,8 @@ class Config(BaseModel):
     openai: OpenAIConfig = OpenAIConfig()
     
     mistralai: MistralAIConfig = MistralAIConfig()
+    
+    anthropic: AnthropicConfig = AnthropicConfig()
 
     runpod: RunPodConfig = RunPodConfig()
 

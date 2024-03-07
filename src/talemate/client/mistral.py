@@ -146,17 +146,16 @@ class MistralAIClient(ClientBase):
         self.config = config
         self.set_client(max_token_length=self.max_token_length)
 
-    def count_tokens(self, content: str):
-        if not self.model_name:
-            return 0
-        return 0
-
+    def response_tokens(self, response: str):
+        return response.usage.completion_tokens
+    
+    def prompt_tokens(self,response: str):
+        return response.usage.prompt_tokens
+    
     async def status(self):
         self.emit_status()
 
     def prompt_template(self, system_message: str, prompt: str):
-        # only gpt-4-1106-preview supports json_object response coersion
-
         if "<|BOT|>" in prompt:
             _, right = prompt.split("<|BOT|>", 1)
             if right:
@@ -168,20 +167,8 @@ class MistralAIClient(ClientBase):
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
-
         keys = list(parameters.keys())
-
-        valid_keys = ["temperature", "top_p"]
-
-        # GPT-3.5 models tend to run away with the generated
-        # response size so we allow talemate to set the max_tokens
-        #
-        # GPT-4 on the other hand seems to benefit from letting it
-        # decide the generation length naturally and it will generally
-        # produce reasonably sized responses
-        if self.model_name.startswith("gpt-3.5-"):
-            valid_keys.append("max_tokens")
-
+        valid_keys = ["temperature", "top_p", "max_tokens"]
         for key in keys:
             if key not in valid_keys:
                 del parameters[key]
@@ -218,6 +205,9 @@ class MistralAIClient(ClientBase):
                 messages=[system_message, human_message],
                 **parameters,
             )
+            
+            self._returned_prompt_tokens = self.prompt_tokens(response)
+            self._returned_response_tokens = self.response_tokens(response)
 
             response = response.choices[0].message.content
 

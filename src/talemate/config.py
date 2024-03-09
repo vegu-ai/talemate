@@ -1,6 +1,8 @@
 import datetime
 import os
-from typing import TYPE_CHECKING, ClassVar, Dict, Optional, TypeVar, Union
+import copy
+from typing import TYPE_CHECKING, ClassVar, Dict, Optional, TypeVar, Union, Any
+from typing_extensions import Annotated
 
 import pydantic
 import structlog
@@ -81,6 +83,7 @@ class GamePlayerCharacter(BaseModel):
 class General(BaseModel):
     auto_save: bool = True
     auto_progress: bool = True
+    max_backscroll: int = 512
 
 
 class StateReinforcementTemplate(BaseModel):
@@ -266,8 +269,41 @@ class RecentScenes(BaseModel):
         self.scenes = [s for s in self.scenes if os.path.exists(s.path)]
 
 
+def validate_client_type(
+    v: Any,
+    handler: pydantic.ValidatorFunctionWrapHandler,
+    info: pydantic.ValidationInfo,
+):
+    # clients can specify a custom config model in
+    # client_cls.config_cls so we need to convert the
+    # client config to the correct model
+    
+    # v is dict
+    if isinstance(v, dict):
+        client_cls = get_client_class(v.get("type"))
+        if client_cls:
+            config_cls = getattr(client_cls, "config_cls", None)
+            if config_cls:
+                return config_cls(**v)
+            else:
+                return handler(v)
+    # v is Client instance
+    elif isinstance(v, Client):
+        client_cls = get_client_class(v.type)
+        if client_cls:
+            config_cls = getattr(client_cls, "config_cls", None)
+            if config_cls:
+                return config_cls(**v.model_dump())
+            else:
+                return handler(v)
+
+AnnotatedClient = Annotated[
+    ClientType,
+    pydantic.WrapValidator(validate_client_type),
+]
+    
 class Config(BaseModel):
-    clients: Dict[str, ClientType] = {}
+    clients: Dict[str, AnnotatedClient] = {}
 
     game: Game
 
@@ -310,19 +346,6 @@ class SceneAssetUpload(BaseModel):
     content: str = None
 
 
-def prepare_client_config(clients: dict) -> dict:
-    # client's can specify a custom config model in
-    # client_cls.config_cls so we need to convert the
-    # client config to the correct model
-
-    for client_name, client_config in clients.items():
-        client_cls = get_client_class(client_config.get("type"))
-        if client_cls:
-            config_cls = getattr(client_cls, "config_cls", None)
-            if config_cls:
-                clients[client_name] = config_cls(**client_config)
-
-
 def load_config(
     file_path: str = "./config.yaml", as_model: bool = False
 ) -> Union[dict, Config]:
@@ -332,12 +355,12 @@ def load_config(
     Should cache the config and only reload if the file modification time
     has changed since the last load
     """
+    log.debug("Loading config", file_path=file_path)
 
     with open(file_path, "r") as file:
         config_data = yaml.safe_load(file)
 
     try:
-        prepare_client_config(config_data.get("clients", {}))
         config = Config(**config_data)
         config.recent_scenes.clean()
     except pydantic.ValidationError as e:
@@ -363,7 +386,6 @@ def save_config(config, file_path: str = "./config.yaml"):
     elif isinstance(config, dict):
         # validate
         try:
-            prepare_client_config(config.get("clients", {}))
             config = Config(**config).model_dump(exclude_none=True)
         except pydantic.ValidationError as e:
             log.error("config validation", error=e)

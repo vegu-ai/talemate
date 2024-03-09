@@ -45,6 +45,11 @@
                                                 <v-checkbox v-model="app_config.game.general.auto_save" label="Auto save" messages="Automatically save after each game-loop"></v-checkbox>
                                                 <v-checkbox v-model="app_config.game.general.auto_progress" label="Auto progress" messages="AI automatically progresses after player turn."></v-checkbox>
                                             </v-col>
+                                        </v-row>
+                                        <v-row>
+                                            <v-col cols="6">
+                                                <v-text-field v-model="app_config.game.general.max_backscroll" type="number" label="Max backscroll" messages="Maximum number of messages to keep in the scene backscroll"></v-text-field>
+                                            </v-col>
                                         </v-row>        
                                     </div>
                                     <div v-else-if="gamePageSelected === 'character'">

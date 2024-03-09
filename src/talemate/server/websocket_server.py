@@ -301,7 +301,11 @@ class WebsocketHandler(Receiver):
             }
 
             agent_instance = instance.get_agent(name, **self.agents[name])
-            agent_instance.client = self.llm_clients[client_name]["client"]
+            
+            try:
+                agent_instance.client = self.llm_clients[client_name]["client"]
+            except KeyError:
+                self.llm_clients[client_name]["client"] = agent_instance.client = instance.get_client(client_name)
 
             if agent_instance.has_toggle:
                 self.agents[name]["enabled"] = agent["enabled"]

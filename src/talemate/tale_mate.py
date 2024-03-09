@@ -1776,10 +1776,12 @@ class Scene(Emitter):
         continue_scene = True
         self.commands = command = commands.Manager(self)
 
+        max_backscroll = self.config.get("game", {}).get("general", {}).get("max_backscroll", 512)
+
         if init and self.history:
             # history is not empty, so we are continuing a scene
             # need to emit current messages
-            for item in self.history:
+            for item in self.history[:max_backscroll]:
                 char_name = item.split(":")[0]
                 try:
                     actor = self.get_character(char_name).actor

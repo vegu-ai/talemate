@@ -1781,7 +1781,7 @@ class Scene(Emitter):
         if init and self.history:
             # history is not empty, so we are continuing a scene
             # need to emit current messages
-            for item in self.history[:max_backscroll]:
+            for item in self.history[-max_backscroll:]:
                 char_name = item.split(":")[0]
                 try:
                     actor = self.get_character(char_name).actor

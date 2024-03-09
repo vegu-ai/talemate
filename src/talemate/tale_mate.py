@@ -1115,7 +1115,7 @@ class Scene(Emitter):
             "archived_history",
             data={
                 "history": [
-                    archived_history["text"]
+                    archived_history
                     for archived_history in self.archived_history
                 ]
             },

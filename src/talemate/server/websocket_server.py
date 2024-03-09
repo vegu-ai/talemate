@@ -619,7 +619,7 @@ class WebsocketHandler(Receiver):
 
     def request_scene_history(self):
         history = [
-            archived_history["text"] for archived_history in self.scene.archived_history
+            archived_history for archived_history in self.scene.archived_history
         ]
 
         self.queue_put(

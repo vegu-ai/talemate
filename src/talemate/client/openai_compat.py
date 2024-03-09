@@ -1,5 +1,6 @@
 import pydantic
 import structlog
+import urllib
 from openai import AsyncOpenAI, NotFoundError, PermissionDeniedError
 
 from talemate.client.base import ClientBase
@@ -42,11 +43,7 @@ class OpenAICompatibleClient(ClientBase):
 
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)
-
         url = self.api_url
-        if not url.endswith("/v1"):
-            url = url + "/v1"
-
         self.client = AsyncOpenAI(base_url=url, api_key=self.api_key)
         self.model_name = (
             kwargs.get("model") or kwargs.get("model_name") or self.model_name
@@ -64,26 +61,8 @@ class OpenAICompatibleClient(ClientBase):
                 del parameters[key]
 
     async def get_model_name(self):
-        try:
-            model_name = await super().get_model_name()
-        except NotFoundError as e:
-            # api does not implement model listing
-            return self.model_name
-        except Exception as e:
-            self.log.error("get_model_name error", e=e)
-            return self.model_name
-
-        # model name may be a file path, so we need to extract the model name
-        # the path could be windows or linux so it needs to handle both backslash and forward slash
-
-        is_filepath = "/" in model_name
-        is_filepath_windows = "\\" in model_name
-
-        if is_filepath or is_filepath_windows:
-            model_name = model_name.replace("\\", "/").split("/")[-1]
-
-        return model_name
-
+        return self.model_name
+    
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.

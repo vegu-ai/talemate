@@ -16,6 +16,7 @@
                     Creator
                 </v-tab>
             </v-tabs>
+            <v-divider></v-divider>
             <v-window v-model="tab">
 
                 <!-- GAME -->
@@ -25,11 +26,12 @@
                         <v-card-text>
                             <v-row>
                                 <v-col cols="4">
-                                    <v-list>
-                                        <v-list-item @click="gamePageSelected=item.value" :prepend-icon="item.icon"  v-for="(item, index) in navigation.game" :key="index">
-                                            <v-list-item-title>{{ item.title }}</v-list-item-title>
-                                        </v-list-item>
-                                    </v-list>
+                                    <v-tabs v-model="gamePageSelected" color="primary" direction="vertical">
+                                        <v-tab v-for="(item, index) in navigation.game" :key="index" :value="item.value">
+                                            <v-icon class="mr-1">{{ item.icon }}</v-icon>
+                                            {{ item.title }}
+                                        </v-tab>
+                                    </v-tabs>
                                 </v-col>
                                 <v-col cols="8">
                                     <div v-if="gamePageSelected === 'general'">
@@ -93,9 +95,13 @@
                                 <v-col cols="4">
                                     <v-list>
                                         <v-list-subheader>Third Party APIs</v-list-subheader>
-                                        <v-list-item @click="applicationPageSelected=item.value" :prepend-icon="item.icon"  v-for="(item, index) in navigation.application" :key="index">
-                                            <v-list-item-title>{{ item.title }}</v-list-item-title>
-                                        </v-list-item>
+
+                                        <v-tabs v-model="applicationPageSelected" color="primary" direction="vertical" density="compact">
+                                            <v-tab v-for="(item, index) in navigation.application" :key="index" :value="item.value">
+                                                <v-icon class="mr-1">{{ item.icon }}</v-icon>
+                                                {{ item.title }}
+                                            </v-tab>
+                                        </v-tabs>
                                     </v-list>
                                 </v-col>
                                 <v-col cols="8">
@@ -201,11 +207,12 @@
                         <v-card-text>
                             <v-row>
                                 <v-col cols="4">
-                                    <v-list>
-                                        <v-list-item @click="creatorPageSelected=item.value" :prepend-icon="item.icon"  v-for="(item, index) in navigation.creator" :key="index">
-                                            <v-list-item-title>{{ item.title }}</v-list-item-title>
-                                        </v-list-item>
-                                    </v-list>
+                                    <v-tabs v-model="creatorPageSelected" color="primary" direction="vertical">
+                                        <v-tab v-for="(item, index) in navigation.creator" :key="index" :value="item.value">
+                                            <v-icon class="mr-1">{{ item.icon }}</v-icon>
+                                            {{ item.title }}
+                                        </v-tab>
+                                    </v-tabs>
                                 </v-col>
                                 <v-col cols="8">
                                     <div v-if="creatorPageSelected === 'content_context'">

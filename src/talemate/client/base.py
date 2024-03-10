@@ -362,9 +362,10 @@ class ClientBase:
         dialog_stopping_strings = [
             f"{character}:" for character in conversation_context["other_characters"]
         ]
-        
+
         dialog_stopping_strings += [
-            f"{character.upper()}\n" for character in conversation_context["other_characters"]
+            f"{character.upper()}\n"
+            for character in conversation_context["other_characters"]
         ]
 
         if "extra_stopping_strings" in parameters:
@@ -411,7 +412,7 @@ class ClientBase:
         try:
             self._returned_prompt_tokens = None
             self._returned_response_tokens = None
-            
+
             self.emit_status(processing=True)
             await self.status()
 
@@ -460,7 +461,8 @@ class ClientBase:
                     prompt=finalized_prompt,
                     response=response,
                     prompt_tokens=self._returned_prompt_tokens or token_length,
-                    response_tokens=self._returned_response_tokens or self.count_tokens(response),
+                    response_tokens=self._returned_response_tokens
+                    or self.count_tokens(response),
                     agent_stack=agent_context.agent_stack if agent_context else [],
                     client_name=self.name,
                     client_type=self.client_type,

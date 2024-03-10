@@ -218,7 +218,7 @@ class WebsocketHandler(Receiver):
         for client in clients:
             client.pop("status", None)
             client_cls = CLIENT_CLASSES.get(client["type"])
-            
+
             if client.get("model") == "No API key set":
                 client.pop("model", None)
 
@@ -304,11 +304,13 @@ class WebsocketHandler(Receiver):
             }
 
             agent_instance = instance.get_agent(name, **self.agents[name])
-            
+
             try:
                 agent_instance.client = self.llm_clients[client_name]["client"]
             except KeyError:
-                self.llm_clients[client_name]["client"] = agent_instance.client = instance.get_client(client_name)
+                self.llm_clients[client_name]["client"] = agent_instance.client = (
+                    instance.get_client(client_name)
+                )
 
             if agent_instance.has_toggle:
                 self.agents[name]["enabled"] = agent["enabled"]
@@ -625,9 +627,7 @@ class WebsocketHandler(Receiver):
         )
 
     def request_scene_history(self):
-        history = [
-            archived_history for archived_history in self.scene.archived_history
-        ]
+        history = [archived_history for archived_history in self.scene.archived_history]
 
         self.queue_put(
             {

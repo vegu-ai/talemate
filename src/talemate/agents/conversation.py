@@ -621,8 +621,8 @@ class ConversationAgent(Agent):
         result = result.replace(" :", ":")
 
         total_result = total_result.split("#")[0].strip()
-        
-        # movie script format 
+
+        # movie script format
         # {uppercase character name}
         # {dialogue}
         total_result = total_result.replace(f"{character.name.upper()}\n", f"")

@@ -142,10 +142,10 @@ class AnthropicClient(ClientBase):
 
     def response_tokens(self, response: str):
         return response.usage.output_tokens
-    
-    def prompt_tokens(self,response: str):
+
+    def prompt_tokens(self, response: str):
         return response.usage.input_tokens
-    
+
     async def status(self):
         self.emit_status()
 
@@ -200,7 +200,7 @@ class AnthropicClient(ClientBase):
                 messages=[human_message],
                 **parameters,
             )
-            
+
             self._returned_prompt_tokens = self.prompt_tokens(response)
             self._returned_response_tokens = self.response_tokens(response)
 
@@ -208,10 +208,7 @@ class AnthropicClient(ClientBase):
 
             response = response.content[0].text
 
-            if (
-                expected_response
-                and expected_response.startswith("{")
-            ):
+            if expected_response and expected_response.startswith("{"):
                 if response.startswith("```json") and response.endswith("```"):
                     response = response[7:-3].strip()
 

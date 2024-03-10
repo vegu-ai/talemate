@@ -373,21 +373,22 @@ def clean_dialogue_old(dialogue: str, main_name: str) -> str:
 
     return clean_message(strip_partial_sentences(dialogue))
 
+
 def clean_dialogue(dialogue: str, main_name: str) -> str:
-    
+
     cleaned = []
-    
+
     if not dialogue.startswith(main_name):
         dialogue = f"{main_name}: {dialogue}"
-    
+
     for line in dialogue.split("\n"):
-        
+
         if not cleaned:
             cleaned.append(line)
             continue
-        
+
         if line.startswith(f"{main_name}: "):
-            cleaned.append(line[len(main_name)+2:])
+            cleaned.append(line[len(main_name) + 2 :])
             continue
 
         # if line is all capitalized
@@ -395,11 +396,10 @@ def clean_dialogue(dialogue: str, main_name: str) -> str:
         # bail
         if line.strip().isupper():
             break
-    
+
         if ":" not in line:
             cleaned.append(line)
             continue
-        
 
     return clean_message(strip_partial_sentences("\n".join(cleaned)))
 

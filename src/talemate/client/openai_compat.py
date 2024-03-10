@@ -19,9 +19,11 @@ class Defaults(pydantic.BaseModel):
     max_token_length: int = 4096
     model: str = ""
     api_handles_prompt_template: bool = False
-    
+
+
 class ClientConfig(BaseClientConfig):
     api_handles_prompt_template: bool = False
+
 
 @register()
 class OpenAICompatibleClient(ClientBase):
@@ -45,8 +47,10 @@ class OpenAICompatibleClient(ClientBase):
                 description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored.",
             )
         }
-        
-    def __init__(self, model=None, api_key=None, api_handles_prompt_template=False, **kwargs):
+
+    def __init__(
+        self, model=None, api_key=None, api_handles_prompt_template=False, **kwargs
+    ):
         self.model_name = model
         self.api_key = api_key
         self.api_handles_prompt_template = api_handles_prompt_template
@@ -55,10 +59,12 @@ class OpenAICompatibleClient(ClientBase):
     @property
     def experimental(self):
         return EXPERIMENTAL_DESCRIPTION
-    
+
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)
-        self.api_handles_prompt_template = kwargs.get("api_handles_prompt_template", self.api_handles_prompt_template)
+        self.api_handles_prompt_template = kwargs.get(
+            "api_handles_prompt_template", self.api_handles_prompt_template
+        )
         url = self.api_url
         self.client = AsyncOpenAI(base_url=url, api_key=self.api_key)
         self.model_name = (
@@ -76,14 +82,16 @@ class OpenAICompatibleClient(ClientBase):
             if key not in valid_keys:
                 del parameters[key]
 
-
     def prompt_template(self, system_message: str, prompt: str):
-        
-        log.debug("IS API HANDLING PROMPT TEMPLATE", api_handles_prompt_template=self.api_handles_prompt_template)
-        
+
+        log.debug(
+            "IS API HANDLING PROMPT TEMPLATE",
+            api_handles_prompt_template=self.api_handles_prompt_template,
+        )
+
         if not self.api_handles_prompt_template:
             return super().prompt_template(system_message, prompt)
-        
+
         if "<|BOT|>" in prompt:
             _, right = prompt.split("<|BOT|>", 1)
             if right:
@@ -95,7 +103,7 @@ class OpenAICompatibleClient(ClientBase):
 
     async def get_model_name(self):
         return self.model_name
-    
+
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.

@@ -131,11 +131,14 @@ class CreatorConfig(BaseModel):
 class OpenAIConfig(BaseModel):
     api_key: Union[str, None] = None
 
+
 class MistralAIConfig(BaseModel):
     api_key: Union[str, None] = None
 
+
 class AnthropicConfig(BaseModel):
     api_key: Union[str, None] = None
+
 
 class RunPodConfig(BaseModel):
     api_key: Union[str, None] = None
@@ -277,7 +280,7 @@ def validate_client_type(
     # clients can specify a custom config model in
     # client_cls.config_cls so we need to convert the
     # client config to the correct model
-    
+
     # v is dict
     if isinstance(v, dict):
         client_cls = get_client_class(v.get("type"))
@@ -297,11 +300,13 @@ def validate_client_type(
             else:
                 return handler(v)
 
+
 AnnotatedClient = Annotated[
     ClientType,
     pydantic.WrapValidator(validate_client_type),
 ]
-    
+
+
 class Config(BaseModel):
     clients: Dict[str, AnnotatedClient] = {}
 
@@ -312,9 +317,9 @@ class Config(BaseModel):
     creator: CreatorConfig = CreatorConfig()
 
     openai: OpenAIConfig = OpenAIConfig()
-    
+
     mistralai: MistralAIConfig = MistralAIConfig()
-    
+
     anthropic: AnthropicConfig = AnthropicConfig()
 
     runpod: RunPodConfig = RunPodConfig()

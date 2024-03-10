@@ -120,7 +120,9 @@ class MistralAIClient(ClientBase):
 
         model = self.model_name
 
-        self.client = AsyncOpenAI(api_key=self.mistralai_api_key, base_url="https://api.mistral.ai/v1/")
+        self.client = AsyncOpenAI(
+            api_key=self.mistralai_api_key, base_url="https://api.mistral.ai/v1/"
+        )
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -148,10 +150,10 @@ class MistralAIClient(ClientBase):
 
     def response_tokens(self, response: str):
         return response.usage.completion_tokens
-    
-    def prompt_tokens(self,response: str):
+
+    def prompt_tokens(self, response: str):
         return response.usage.prompt_tokens
-    
+
     async def status(self):
         self.emit_status()
 
@@ -205,7 +207,7 @@ class MistralAIClient(ClientBase):
                 messages=[system_message, human_message],
                 **parameters,
             )
-            
+
             self._returned_prompt_tokens = self.prompt_tokens(response)
             self._returned_response_tokens = self.response_tokens(response)
 
@@ -214,10 +216,7 @@ class MistralAIClient(ClientBase):
             # older models don't support json_object response coersion
             # and often like to return the response wrapped in ```json
             # so we strip that out if the expected response is a json object
-            if (
-                expected_response
-                and expected_response.startswith("{")
-            ):
+            if expected_response and expected_response.startswith("{"):
                 if response.startswith("```json") and response.endswith("```"):
                     response = response[7:-3].strip()
 

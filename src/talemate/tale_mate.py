@@ -882,7 +882,7 @@ class Scene(Emitter):
     @property
     def world_state_manager(self):
         return WorldStateManager(self)
-    
+
     @property
     def conversation_format(self):
         return self.get_helper("conversation").agent.conversation_format
@@ -1115,8 +1115,7 @@ class Scene(Emitter):
             "archived_history",
             data={
                 "history": [
-                    archived_history
-                    for archived_history in self.archived_history
+                    archived_history for archived_history in self.archived_history
                 ]
             },
         )
@@ -1333,17 +1332,14 @@ class Scene(Emitter):
         return summary
 
     def context_history(
-        self, 
-        budget: int = 2048, 
-        keep_director: Union[bool, str] = False,
-        **kwargs
+        self, budget: int = 2048, keep_director: Union[bool, str] = False, **kwargs
     ):
         parts_context = []
         parts_dialogue = []
 
         budget_context = int(0.5 * budget)
         budget_dialogue = int(0.5 * budget)
-        
+
         conversation_format = self.conversation_format
 
         # collect dialogue
@@ -1776,7 +1772,9 @@ class Scene(Emitter):
         continue_scene = True
         self.commands = command = commands.Manager(self)
 
-        max_backscroll = self.config.get("game", {}).get("general", {}).get("max_backscroll", 512)
+        max_backscroll = (
+            self.config.get("game", {}).get("general", {}).get("max_backscroll", 512)
+        )
 
         if init and self.history:
             # history is not empty, so we are continuing a scene

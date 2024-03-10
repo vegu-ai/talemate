@@ -355,8 +355,6 @@ def load_config(
     Should cache the config and only reload if the file modification time
     has changed since the last load
     """
-    log.debug("Loading config", file_path=file_path)
-
     with open(file_path, "r") as file:
         config_data = yaml.safe_load(file)
 

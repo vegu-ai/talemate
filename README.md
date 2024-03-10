@@ -9,12 +9,12 @@ Roleplay with AI with a focus on strong narration and consistent world and game 
 
 > :warning: **It does not run any large language models itself but relies on existing APIs. Currently supports OpenAI, Anthropic, mistral.ai, self-hosted text-generation-webui and LMStudio. 0.18.0 also adds support for generic OpenAI api implementations, but generation quality on that will vary.**
 
-Officially supported APIs:
+Supported APIs:
 - [OpenAI](https://platform.openai.com/overview)
 - [Anthropic](https://www.anthropic.com/)
 - [mistral.ai](https://mistral.ai/)
 
-Officially supported self-hosted APIs:
+Supported self-hosted APIs:
 - [oobabooga/text-generation-webui](https://github.com/oobabooga/text-generation-webui) (local or with runpod support)
 - [LMStudio](https://lmstudio.ai/)
 

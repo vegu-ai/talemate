@@ -883,6 +883,10 @@ class Scene(Emitter):
     def world_state_manager(self):
         return WorldStateManager(self)
 
+    @property
+    def conversation_format(self):
+        return self.get_helper("conversation").agent.conversation_format
+
     def set_description(self, description: str):
         self.description = description
 
@@ -1111,8 +1115,7 @@ class Scene(Emitter):
             "archived_history",
             data={
                 "history": [
-                    archived_history["text"]
-                    for archived_history in self.archived_history
+                    archived_history for archived_history in self.archived_history
                 ]
             },
         )
@@ -1337,6 +1340,8 @@ class Scene(Emitter):
         budget_context = int(0.5 * budget)
         budget_dialogue = int(0.5 * budget)
 
+        conversation_format = self.conversation_format
+
         # collect dialogue
 
         count = 0
@@ -1358,7 +1363,7 @@ class Scene(Emitter):
             if count_tokens(parts_dialogue) + count_tokens(message) > budget_dialogue:
                 break
 
-            parts_dialogue.insert(0, message)
+            parts_dialogue.insert(0, message.as_format(conversation_format))
 
         # collect context, ignore where end > len(history) - count
 
@@ -1767,10 +1772,14 @@ class Scene(Emitter):
         continue_scene = True
         self.commands = command = commands.Manager(self)
 
+        max_backscroll = (
+            self.config.get("game", {}).get("general", {}).get("max_backscroll", 512)
+        )
+
         if init and self.history:
             # history is not empty, so we are continuing a scene
             # need to emit current messages
-            for item in self.history:
+            for item in self.history[-max_backscroll:]:
                 char_name = item.split(":")[0]
                 try:
                     actor = self.get_character(char_name).actor

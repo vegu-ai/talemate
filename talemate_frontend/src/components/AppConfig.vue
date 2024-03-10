@@ -16,6 +16,7 @@
                     Creator
                 </v-tab>
             </v-tabs>
+            <v-divider></v-divider>
             <v-window v-model="tab">
 
                 <!-- GAME -->
@@ -25,11 +26,12 @@
                         <v-card-text>
                             <v-row>
                                 <v-col cols="4">
-                                    <v-list>
-                                        <v-list-item @click="gamePageSelected=item.value" :prepend-icon="item.icon"  v-for="(item, index) in navigation.game" :key="index">
-                                            <v-list-item-title>{{ item.title }}</v-list-item-title>
-                                        </v-list-item>
-                                    </v-list>
+                                    <v-tabs v-model="gamePageSelected" color="primary" direction="vertical">
+                                        <v-tab v-for="(item, index) in navigation.game" :key="index" :value="item.value">
+                                            <v-icon class="mr-1">{{ item.icon }}</v-icon>
+                                            {{ item.title }}
+                                        </v-tab>
+                                    </v-tabs>
                                 </v-col>
                                 <v-col cols="8">
                                     <div v-if="gamePageSelected === 'general'">
@@ -44,6 +46,11 @@
                                             <v-col cols="12">
                                                 <v-checkbox v-model="app_config.game.general.auto_save" label="Auto save" messages="Automatically save after each game-loop"></v-checkbox>
                                                 <v-checkbox v-model="app_config.game.general.auto_progress" label="Auto progress" messages="AI automatically progresses after player turn."></v-checkbox>
+                                            </v-col>
+                                        </v-row>
+                                        <v-row>
+                                            <v-col cols="6">
+                                                <v-text-field v-model="app_config.game.general.max_backscroll" type="number" label="Max backscroll" messages="Maximum number of messages to keep in the scene backscroll"></v-text-field>
                                             </v-col>
                                         </v-row>        
                                     </div>
@@ -88,9 +95,13 @@
                                 <v-col cols="4">
                                     <v-list>
                                         <v-list-subheader>Third Party APIs</v-list-subheader>
-                                        <v-list-item @click="applicationPageSelected=item.value" :prepend-icon="item.icon"  v-for="(item, index) in navigation.application" :key="index">
-                                            <v-list-item-title>{{ item.title }}</v-list-item-title>
-                                        </v-list-item>
+
+                                        <v-tabs v-model="applicationPageSelected" color="primary" direction="vertical" density="compact">
+                                            <v-tab v-for="(item, index) in navigation.application" :key="index" :value="item.value">
+                                                <v-icon class="mr-1">{{ item.icon }}</v-icon>
+                                                {{ item.title }}
+                                            </v-tab>
+                                        </v-tabs>
                                     </v-list>
                                 </v-col>
                                 <v-col cols="8">
@@ -108,6 +119,40 @@
                                             <v-col cols="12">
                                                 <v-text-field type="password" v-model="app_config.openai.api_key"
                                                     label="OpenAI API Key"></v-text-field>
+                                            </v-col>
+                                        </v-row>
+                                    </div>
+
+                                    <!-- MISTRAL.AI API -->
+                                    <div v-if="applicationPageSelected === 'mistralai_api'">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
+                                            <v-alert-title>mistral.ai</v-alert-title>
+                                            <div class="text-grey">
+                                                Configure your mistral.ai API key here. You can get one from <a href="https://console.mistral.ai/api-keys/" target="_blank">https://console.mistral.ai/api-keys/</a> 
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-text-field type="password" v-model="app_config.mistralai.api_key"
+                                                    label="mistral.ai API Key"></v-text-field>
+                                            </v-col>
+                                        </v-row>
+                                    </div>
+
+                                    <!-- ANTHROPIC API -->
+                                    <div v-if="applicationPageSelected === 'anthropic_api'">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
+                                            <v-alert-title>Anthropic</v-alert-title>
+                                            <div class="text-grey">
+                                                Configure your Anthropic API key here. You can get one from <a href="https://console.anthropic.com/settings/keys" target="_blank">https://console.anthropic.com/settings/keys</a> 
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-text-field type="password" v-model="app_config.anthropic.api_key"
+                                                    label="Anthropic API Key"></v-text-field>
                                             </v-col>
                                         </v-row>
                                     </div>
@@ -130,23 +175,6 @@
                                         </v-row>
                                     </div>
 
-                                    <!-- COQUI API -->
-                                    <div v-if="applicationPageSelected === 'coqui_api'">
-                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
-                                            <v-alert-title>Coqui Studio</v-alert-title>
-                                            <div class="text-grey">
-                                                <p class="mb-1">Realistic, emotive text-to-speech through generative AI.</p>
-                                                Configure your Coqui API key here. You can get one from <a href="https://app.coqui.ai/account" target="_blank">https://app.coqui.ai/account</a> 
-                                            </div>
-                                        </v-alert>
-                                        <v-divider class="mb-2"></v-divider>
-                                        <v-row>
-                                            <v-col cols="12">
-                                                <v-text-field type="password" v-model="app_config.coqui.api_key"
-                                                    label="Coqui API Key"></v-text-field>
-                                            </v-col>
-                                        </v-row>
-                                    </div>
 
                                     <!-- RUNPOD API -->
                                     <div v-if="applicationPageSelected === 'runpod_api'">
@@ -179,11 +207,12 @@
                         <v-card-text>
                             <v-row>
                                 <v-col cols="4">
-                                    <v-list>
-                                        <v-list-item @click="creatorPageSelected=item.value" :prepend-icon="item.icon"  v-for="(item, index) in navigation.creator" :key="index">
-                                            <v-list-item-title>{{ item.title }}</v-list-item-title>
-                                        </v-list-item>
-                                    </v-list>
+                                    <v-tabs v-model="creatorPageSelected" color="primary" direction="vertical">
+                                        <v-tab v-for="(item, index) in navigation.creator" :key="index" :value="item.value">
+                                            <v-icon class="mr-1">{{ item.icon }}</v-icon>
+                                            {{ item.title }}
+                                        </v-tab>
+                                    </v-tabs>
                                 </v-col>
                                 <v-col cols="8">
                                     <div v-if="creatorPageSelected === 'content_context'">
@@ -248,8 +277,9 @@ export default {
                 ],
                 application: [
                     {title: 'OpenAI', icon: 'mdi-api', value: 'openai_api'},
+                    {title: 'mistral.ai', icon: 'mdi-api', value: 'mistralai_api'},
+                    {title: 'Anthropic', icon: 'mdi-api', value: 'anthropic_api'},
                     {title: 'ElevenLabs', icon: 'mdi-api', value: 'elevenlabs_api'},
-                    {title: 'Coqui Studio', icon: 'mdi-api', value: 'coqui_api'},
                     {title: 'RunPod', icon: 'mdi-api', value: 'runpod_api'},
                 ],
                 creator: [

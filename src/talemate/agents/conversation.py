@@ -78,9 +78,18 @@ class ConversationAgent(Agent):
         self.actions = {
             "generation_override": AgentAction(
                 enabled=True,
-                label="Generation Override",
-                description="Override generation parameters",
+                label="Generation Settings",
                 config={
+                    "format": AgentActionConfig(
+                        type="text",
+                        label="Format",
+                        description="The format of the dialogue, as seen by the AI.",
+                        choices=[
+                            {"label": "Movie Script", "value": "movie_script"},
+                            {"label": "Chat (legacy)", "value": "chat"},
+                        ],
+                        value="chat",
+                    ),
                     "length": AgentActionConfig(
                         type="number",
                         label="Generation Length (tokens)",
@@ -165,6 +174,12 @@ class ConversationAgent(Agent):
                 },
             ),
         }
+
+    @property
+    def conversation_format(self):
+        if self.actions["generation_override"].enabled:
+            return self.actions["generation_override"].config["format"].value
+        return "movie_script"
 
     def connect(self, scene):
         super().connect(scene)
@@ -605,13 +620,19 @@ class ConversationAgent(Agent):
 
         result = result.replace(" :", ":")
 
-        total_result = total_result.split("#")[0]
+        total_result = total_result.split("#")[0].strip()
+
+        # movie script format
+        # {uppercase character name}
+        # {dialogue}
+        total_result = total_result.replace(f"{character.name.upper()}\n", f"")
+
+        # chat format
+        # {character name}: {dialogue}
+        total_result = total_result.replace(f"{character.name}:", "")
 
         # Removes partial sentence at the end
         total_result = util.clean_dialogue(total_result, main_name=character.name)
-
-        # Remove "{character.name}:" - all occurences
-        total_result = total_result.replace(f"{character.name}:", "")
 
         # Check if total_result starts with character name, if not, prepend it
         if not total_result.startswith(character.name):

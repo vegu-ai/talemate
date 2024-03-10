@@ -37,9 +37,20 @@ Based on {{ talking_character.name}}'s example dialogue style, create a continua
 
 You may chose to have {{ talking_character.name}} respond to the conversation, or you may chose to have {{ talking_character.name}} perform a new action that is in line with {{ talking_character.name}}'s character.
 
+{% if scene.conversation_format == "movie_script" -%}
+The format is a movie script, so you should write the character's name in all caps followed by a line break and then the character's dialogue. For example:
+
+    CHARACTER NAME
+    I'm so glad you're here.
+
+Emotions and actions should be written in italics. For example:
+
+    CHARACTER NAME
+    *smiles* I'm so glad you're here.
+{% else -%}
 Always contain actions in asterisks. For example, *{{ talking_character.name}} smiles*.
 Always contain dialogue in quotation marks. For example, {{ talking_character.name}}: "Hello!"
-
+{% endif -%}
 {{ extra_instructions }}
 
 {% if scene.count_character_messages(talking_character) >= 5 %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
@@ -93,7 +104,7 @@ Always contain dialogue in quotation marks. For example, {{ talking_character.na
 {% endfor %}
 {% endblock -%}
 <|CLOSE_SECTION|>
-{% if scene.count_character_messages(talking_character) < 5 %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy. Flesh out additional details by describing {{ talking_character.name }}'s actions and mannerisms within asterisks, e.g. *{{ talking_character.name }} smiles*.
+{% if scene.count_character_messages(talking_character) < 5 %}(Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy.)
 {% endif -%}
 {% if rerun_context and rerun_context.direction -%}
 {% if rerun_context.method == 'replace' -%}
@@ -104,4 +115,10 @@ Always contain dialogue in quotation marks. For example, {{ talking_character.na
 # Requested changes: {{ rerun_context.direction }}
 {% endif -%}
 {% endif -%}
-{{ bot_token}}{{ talking_character.name }}:{{ partial_message }}
+{% if scene.conversation_format == 'movie_script' -%}
+{{ bot_token }}{{ talking_character.name.upper() }}{% if partial_message %}
+{{ partial_message }}
+{% endif %}
+{% else -%}
+{{ bot_token }}{{ talking_character.name }}:{{ partial_message }}
+{% endif -%}

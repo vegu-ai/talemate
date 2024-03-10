@@ -1,10 +1,12 @@
 import pydantic
 import structlog
+import urllib
 from openai import AsyncOpenAI, NotFoundError, PermissionDeniedError
 
-from talemate.client.base import ClientBase
+from talemate.client.base import ClientBase, ExtraField
 from talemate.client.registry import register
 from talemate.emit import emit
+from talemate.config import Client as BaseClientConfig
 
 log = structlog.get_logger("talemate.client.openai_compat")
 
@@ -16,12 +18,18 @@ class Defaults(pydantic.BaseModel):
     api_key: str = ""
     max_token_length: int = 4096
     model: str = ""
+    api_handles_prompt_template: bool = False
+
+
+class ClientConfig(BaseClientConfig):
+    api_handles_prompt_template: bool = False
 
 
 @register()
 class OpenAICompatibleClient(ClientBase):
     client_type = "openai_compat"
     conversation_retries = 5
+    config_cls = ClientConfig
 
     class Meta(ClientBase.Meta):
         title: str = "OpenAI Compatible API"
@@ -30,10 +38,22 @@ class OpenAICompatibleClient(ClientBase):
         enable_api_auth: bool = True
         manual_model: bool = True
         defaults: Defaults = Defaults()
+        extra_fields: dict[str, ExtraField] = {
+            "api_handles_prompt_template": ExtraField(
+                name="api_handles_prompt_template",
+                type="bool",
+                label="API Handles Prompt Template",
+                required=False,
+                description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored.",
+            )
+        }
 
-    def __init__(self, model=None, api_key=None, **kwargs):
+    def __init__(
+        self, model=None, api_key=None, api_handles_prompt_template=False, **kwargs
+    ):
         self.model_name = model
         self.api_key = api_key
+        self.api_handles_prompt_template = api_handles_prompt_template
         super().__init__(**kwargs)
 
     @property
@@ -42,11 +62,10 @@ class OpenAICompatibleClient(ClientBase):
 
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)
-
+        self.api_handles_prompt_template = kwargs.get(
+            "api_handles_prompt_template", self.api_handles_prompt_template
+        )
         url = self.api_url
-        if not url.endswith("/v1"):
-            url = url + "/v1"
-
         self.client = AsyncOpenAI(base_url=url, api_key=self.api_key)
         self.model_name = (
             kwargs.get("model") or kwargs.get("model_name") or self.model_name
@@ -63,26 +82,27 @@ class OpenAICompatibleClient(ClientBase):
             if key not in valid_keys:
                 del parameters[key]
 
+    def prompt_template(self, system_message: str, prompt: str):
+
+        log.debug(
+            "IS API HANDLING PROMPT TEMPLATE",
+            api_handles_prompt_template=self.api_handles_prompt_template,
+        )
+
+        if not self.api_handles_prompt_template:
+            return super().prompt_template(system_message, prompt)
+
+        if "<|BOT|>" in prompt:
+            _, right = prompt.split("<|BOT|>", 1)
+            if right:
+                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
+            else:
+                prompt = prompt.replace("<|BOT|>", "")
+
+        return prompt
+
     async def get_model_name(self):
-        try:
-            model_name = await super().get_model_name()
-        except NotFoundError as e:
-            # api does not implement model listing
-            return self.model_name
-        except Exception as e:
-            self.log.error("get_model_name error", e=e)
-            return self.model_name
-
-        # model name may be a file path, so we need to extract the model name
-        # the path could be windows or linux so it needs to handle both backslash and forward slash
-
-        is_filepath = "/" in model_name
-        is_filepath_windows = "\\" in model_name
-
-        if is_filepath or is_filepath_windows:
-            model_name = model_name.replace("\\", "/").split("/")[-1]
-
-        return model_name
+        return self.model_name
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
@@ -120,6 +140,8 @@ class OpenAICompatibleClient(ClientBase):
             )
         if "api_key" in kwargs:
             self.api_auth = kwargs["api_key"]
+        if "api_handles_prompt_template" in kwargs:
+            self.api_handles_prompt_template = kwargs["api_handles_prompt_template"]
 
         log.warning("reconfigure", kwargs=kwargs)
 

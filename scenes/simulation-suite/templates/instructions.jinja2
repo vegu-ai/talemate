@@ -126,7 +126,7 @@
             {% set _ = game_state.set_var("instr.has_issued_instructions", "yes", commit=False) %}
             {% set _ = emit_status("busy", "Simulation suite altering environment.", as_scene_message=True) %}
             {% set update_world_state = True %}
-            {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer calls the following functions:\n"+processed.join("\n")+"\nand the simulation adjusts the environment according to the user's wishes. Write the narrative that describes the changes.", emit_message=True) %}
+            {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer calls the following functions:\n"+processed.join("\n")+"\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up.", emit_message=True) %}
         {% endif %}
 
     {% elif not game_state.has_var("instr.simulation_started") %}

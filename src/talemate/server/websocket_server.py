@@ -218,6 +218,9 @@ class WebsocketHandler(Receiver):
         for client in clients:
             client.pop("status", None)
             client_cls = CLIENT_CLASSES.get(client["type"])
+            
+            if client.get("model") == "No API key set":
+                client.pop("model", None)
 
             if not client_cls:
                 log.error("Client type not found", client=client)

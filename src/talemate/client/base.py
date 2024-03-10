@@ -363,6 +363,11 @@ class ClientBase:
             f"{character}:" for character in conversation_context["other_characters"]
         ]
 
+        dialog_stopping_strings += [
+            f"{character.upper()}\n"
+            for character in conversation_context["other_characters"]
+        ]
+
         if "extra_stopping_strings" in parameters:
             parameters["extra_stopping_strings"] += dialog_stopping_strings
         else:
@@ -405,6 +410,9 @@ class ClientBase:
         """
 
         try:
+            self._returned_prompt_tokens = None
+            self._returned_response_tokens = None
+
             self.emit_status(processing=True)
             await self.status()
 
@@ -452,8 +460,9 @@ class ClientBase:
                     kind=kind,
                     prompt=finalized_prompt,
                     response=response,
-                    prompt_tokens=token_length,
-                    response_tokens=self.count_tokens(response),
+                    prompt_tokens=self._returned_prompt_tokens or token_length,
+                    response_tokens=self._returned_response_tokens
+                    or self.count_tokens(response),
                     agent_stack=agent_context.agent_stack if agent_context else [],
                     client_name=self.name,
                     client_type=self.client_type,
@@ -465,6 +474,8 @@ class ClientBase:
             return response
         finally:
             self.emit_status(processing=False)
+            self._returned_prompt_tokens = None
+            self._returned_response_tokens = None
 
     async def auto_break_repetition(
         self,

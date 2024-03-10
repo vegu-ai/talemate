@@ -84,6 +84,9 @@ class SceneMessage:
     def unhide(self):
         self.hidden = False
 
+    def as_format(self, format: str) -> str:
+        return self.message
+
 
 @dataclass
 class CharacterMessage(SceneMessage):
@@ -104,6 +107,25 @@ class CharacterMessage(SceneMessage):
     @property
     def raw(self):
         return self.message.split(":", 1)[1].replace('"', "").replace("*", "").strip()
+
+    @property
+    def as_movie_script(self):
+        """
+        Returns the dialogue line as a script dialogue line.
+
+        Example:
+        {CHARACTER_NAME}
+        {dialogue}
+        """
+
+        message = self.message.split(":", 1)[1].replace('"', "").strip()
+
+        return f"\n{self.character_name.upper()}\n{message}\n"
+
+    def as_format(self, format: str) -> str:
+        if format == "movie_script":
+            return self.as_movie_script
+        return self.message
 
 
 @dataclass
@@ -126,6 +148,12 @@ class DirectorMessage(SceneMessage):
         char_name, message = transformed_message.split(":", 1)
 
         return f"# Story progression instructions for {char_name}: {message}"
+
+    def as_format(self, format: str) -> str:
+        if format == "movie_script":
+            message = str(self)[2:]
+            return f"\n({message})\n"
+        return self.message
 
 
 @dataclass
@@ -151,6 +179,12 @@ class ReinforcementMessage(SceneMessage):
     def __str__(self):
         question, _ = self.source.split(":", 1)
         return f"# Internal notes: {question}: {self.message}"
+
+    def as_format(self, format: str) -> str:
+        if format == "movie_script":
+            message = str(self)[2:]
+            return f"\n({message})\n"
+        return self.message
 
 
 MESSAGES = {

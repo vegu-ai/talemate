@@ -19,7 +19,7 @@ Officially supported self-hosted APIs:
 - [LMStudio](https://lmstudio.ai/)
 
 Generic OpenAI api implementations (tested and confirmed working):
-- [DeepInfra](https://deepinfra.com/) - see [instructions](https://github.com/vegu-ai/talemate/issues/78#issuecomment-1986884304)
+- [DeepInfra](https://deepinfra.com/)
 - [llamacpp](https://github.com/ggerganov/llama.cpp) with the `api_like_OAI.py` wrapper
 - let me know if you have tested any other implementations and they failed / worked or landed somewhere in between
 

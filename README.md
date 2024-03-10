@@ -85,6 +85,7 @@ Please read the documents in the `docs` folder for more advanced configuration a
         - [Text-generation-webui](#text-generation-webui)
             - [Recommended Models](#recommended-models)
         - [OpenAI / mistral.ai / Anthropic](#openai)
+        - [DeepInfra via OpenAI Compatible client](#deepinfra-via-openai-compatible-client)
     - [Ready to go](#ready-to-go)
     - [Load the introductory scenario "Infinity Quest"](#load-the-introductory-scenario-infinity-quest)
     - [Loading character cards](#loading-character-cards)
@@ -196,6 +197,22 @@ Click the `SET API KEY` button. This will open a modal where you can enter your 
 Click `Save` and after a moment the client should have a green dot next to it, indicating that it is ready to go.
 
 ![OpenAI API Key set](docs/img/0.18.0/openai-api-key-3.png)
+
+## DeepInfra via OpenAI Compatible client
+
+You can use the OpenAI compatible client to connect to [DeepInfra](https://deepinfra.com/).
+
+![DeepInfra](docs/img/0.21.0/deepinfra-setup.png)
+
+```
+API URL: https://api.deepinfra.com/v1/openai
+```
+
+Models on DeepInfra that work well with Talemate:
+
+- [mistralai/Mixtral-8x7B-Instruct-v0.1](https://deepinfra.com/mistralai/Mixtral-8x7B-Instruct-v0.1) (max context 32k, 8k recommended)
+- [cognitivecomputations/dolphin-2.6-mixtral-8x7b](https://deepinfra.com/cognitivecomputations/dolphin-2.6-mixtral-8x7b) (max context 32k, 8k recommended)
+- [lizpreciatior/lzlv_70b_fp16_hf](https://deepinfra.com/lizpreciatior/lzlv_70b_fp16_hf) (max context 4k)
 
 ## Ready to go
 

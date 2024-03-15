@@ -64,6 +64,22 @@ class DirectorAgent(Agent):
                         description="If enabled, direction will be given to actors based on their goals.",
                         value=True,
                     ),
+                    "actor_direction_mode": AgentActionConfig(
+                        type="text",
+                        label="Actor Direction Mode",
+                        description="The mode to use when directing actors",
+                        value="internal_monologue",
+                        choices=[
+                            {
+                                "label": "Direction",
+                                "value": "direction",
+                            },
+                            {
+                                "label": "Inner Monologue",
+                                "value": "internal_monologue",
+                            }
+                        ]
+                    )
                 },
             ),
         }
@@ -79,6 +95,22 @@ class DirectorAgent(Agent):
     @property
     def experimental(self):
         return True
+
+    @property
+    def direct_enabled(self):
+        return self.actions["direct"].enabled
+    
+    @property
+    def direct_actors_enabled(self):
+        return self.actions["direct"].config["direct_actors"].value
+    
+    @property
+    def direct_scene_enabled(self):
+        return self.actions["direct"].config["direct_scene"].value
+
+    @property
+    def actor_direction_mode(self):
+        return self.actions["direct"].config["actor_direction_mode"].value
 
     def connect(self, scene):
         super().connect(scene)

@@ -84,7 +84,7 @@ class SceneMessage:
     def unhide(self):
         self.hidden = False
 
-    def as_format(self, format: str) -> str:
+    def as_format(self, format: str, **kwargs) -> str:
         return self.message
 
 
@@ -122,7 +122,7 @@ class CharacterMessage(SceneMessage):
 
         return f"\n{self.character_name.upper()}\n{message}\n"
 
-    def as_format(self, format: str) -> str:
+    def as_format(self, format: str, **kwargs) -> str:
         if format == "movie_script":
             return self.as_movie_script
         return self.message
@@ -137,24 +137,49 @@ class NarratorMessage(SceneMessage):
 @dataclass
 class DirectorMessage(SceneMessage):
     typ = "director"
+    
+    @property
+    def transformed_message(self):
+        return self.message.replace("Director instructs ", "")
+
+    @property
+    def character_name(self):
+        return self.transformed_message.split(":", 1)[0]
+    
+    @property
+    def dialogue(self):
+        return self.transformed_message.split(":", 1)[1]
+    
+    @property
+    def instructions(self):
+        return self.dialogue.replace('"','').replace("To progress the scene, i want you to ", "")
+
+    @property
+    def as_inner_monologue(self):
+        return f"{self.character_name} thinks: {self.instructions}"
+    
+    @property
+    def as_story_progression(self):
+        return f"Story progression instructions for {self.character_name}: {self.dialogue}"
 
     def __str__(self):
         """
         The director message is a special case and needs to be transformed
-        from "Director instructs {charname}:" to "*{charname} inner monologue:"
         """
+        return self.as_format("chat")
 
-        transformed_message = self.message.replace("Director instructs ", "")
-        char_name, message = transformed_message.split(":", 1)
-
-        return f"# Story progression instructions for {char_name}: {message}"
-
-    def as_format(self, format: str) -> str:
+    def as_format(self, format: str, **kwargs) -> str:
+        mode = kwargs.get("mode", "direction")
         if format == "movie_script":
-            message = str(self)[2:]
-            return f"\n({message})\n"
-        return self.message
-
+            if mode == "internal_monologue":
+                return f"\n({self.as_inner_monologue})\n"
+            else:
+                return f"\n({self.as_story_progression})\n"
+        else:
+            if mode == "internal_monologue":
+                return f"# {self.as_inner_monologue}"
+            else:
+                return f"# {self.as_story_progression}"
 
 @dataclass
 class TimePassageMessage(SceneMessage):
@@ -180,7 +205,7 @@ class ReinforcementMessage(SceneMessage):
         question, _ = self.source.split(":", 1)
         return f"# Internal notes: {question}: {self.message}"
 
-    def as_format(self, format: str) -> str:
+    def as_format(self, format: str, **kwargs) -> str:
         if format == "movie_script":
             message = str(self)[2:]
             return f"\n({message})\n"

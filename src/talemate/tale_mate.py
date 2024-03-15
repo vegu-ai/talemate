@@ -1341,6 +1341,7 @@ class Scene(Emitter):
         budget_dialogue = int(0.5 * budget)
 
         conversation_format = self.conversation_format
+        actor_direction_mode = self.get_helper("director").agent.actor_direction_mode
 
         # collect dialogue
 
@@ -1363,7 +1364,7 @@ class Scene(Emitter):
             if count_tokens(parts_dialogue) + count_tokens(message) > budget_dialogue:
                 break
 
-            parts_dialogue.insert(0, message.as_format(conversation_format))
+            parts_dialogue.insert(0, message.as_format(conversation_format, mode=actor_direction_mode))
 
         # collect context, ignore where end > len(history) - count
 

@@ -84,7 +84,7 @@ Please read the documents in the `docs` folder for more advanced configuration a
     - [Connecting to an LLM](#connecting-to-an-llm)
         - [Text-generation-webui](#text-generation-webui)
             - [Recommended Models](#recommended-models)
-        - [OpenAI / mistral.ai / Anthropic](#openai)
+        - [OpenAI / mistral.ai / Anthropic](#openai--mistralai--anthropic)
         - [DeepInfra via OpenAI Compatible client](#deepinfra-via-openai-compatible-client)
     - [Ready to go](#ready-to-go)
     - [Load the introductory scenario "Infinity Quest"](#load-the-introductory-scenario-infinity-quest)

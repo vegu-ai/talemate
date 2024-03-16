@@ -389,13 +389,17 @@ class WebsocketHandler(Receiver):
             character = emission.message_object.source
         else:
             character = ""
+        
+        director = instance.get_agent("director")
+        direction_mode = director.actor_direction_mode
 
         self.queue_put(
             {
                 "type": "director",
-                "message": emission.message,
+                "message": emission.message_object.instructions.strip(),
                 "id": emission.id,
                 "character": character,
+                "direction_mode": direction_mode,
             }
         )
 

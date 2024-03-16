@@ -68,7 +68,7 @@ class DirectorAgent(Agent):
                         type="text",
                         label="Actor Direction Mode",
                         description="The mode to use when directing actors",
-                        value="internal_monologue",
+                        value="direction",
                         choices=[
                             {
                                 "label": "Direction",

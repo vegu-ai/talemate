@@ -160,7 +160,7 @@ class DirectorMessage(SceneMessage):
     
     @property
     def as_story_progression(self):
-        return f"Story progression instructions for {self.character_name}: {self.dialogue}"
+        return f"{self.character_name}'s next action: {self.instructions}"
 
     def __str__(self):
         """

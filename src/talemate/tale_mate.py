@@ -34,7 +34,7 @@ from talemate.exceptions import (
     TalemateError,
     TalemateInterrupt,
 )
-from talemate.game_state import GameState
+from talemate.game.state import GameState
 from talemate.instance import get_agent
 from talemate.scene_assets import SceneAssets
 from talemate.scene_message import (
@@ -2118,7 +2118,7 @@ class Scene(Emitter):
         except Exception as e:
             self.log.error("restore", error=e, traceback=traceback.format_exc())
 
-    def sync_restore(self):
+    def sync_restore(self, *args, **kwargs):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.restore())
 

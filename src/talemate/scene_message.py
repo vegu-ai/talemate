@@ -152,11 +152,11 @@ class DirectorMessage(SceneMessage):
     
     @property
     def instructions(self):
-        return self.dialogue.replace('"','').replace("To progress the scene, i want you to ", "")
+        return self.dialogue.replace('"','').replace("To progress the scene, i want you to ", "").strip()
 
     @property
     def as_inner_monologue(self):
-        return f"{self.character_name} thinks: {self.instructions}"
+        return f"{self.character_name} thinks: I should {self.instructions}"
     
     @property
     def as_story_progression(self):

@@ -10,7 +10,7 @@ from talemate import Actor, Character, Player
 from talemate.config import load_config
 from talemate.context import SceneIsLoading
 from talemate.emit import emit
-from talemate.game_state import GameState
+from talemate.game.state import GameState
 from talemate.scene_message import (
     MESSAGES,
     CharacterMessage,

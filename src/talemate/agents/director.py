@@ -17,6 +17,7 @@ from talemate.emit import emit, wait_for_input
 from talemate.events import GameLoopActorIterEvent, GameLoopStartEvent, SceneStateEvent
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, NarratorMessage
+from talemate.game.engine import GameInstructionsMixin
 
 from .base import Agent, AgentAction, AgentActionConfig, set_processing
 from .registry import register
@@ -28,7 +29,7 @@ log = structlog.get_logger("talemate.agent.director")
 
 
 @register()
-class DirectorAgent(Agent):
+class DirectorAgent(GameInstructionsMixin, Agent):
     agent_type = "director"
     verbose_name = "Director"
 
@@ -286,7 +287,13 @@ class DirectorAgent(Agent):
             self.scene.push_history(message)
         else:
             # run scene instructions
-            self.scene.game_state.scene_instructions
+            if not self.scene_has_module:
+                # no python module, attempt to run legacy jinja2
+                # template instructions
+                self.scene.game_state.scene_instructions
+            else:
+                await self.run_scene_module(self.scene)
+            
 
     @set_processing
     async def persist_characters_from_worldstate(

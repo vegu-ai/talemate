@@ -112,11 +112,12 @@ def game(TM):
             
             TM.emit_status("busy", "Simulation suite altering environment.", as_scene_message=True)
             compiled = "\n".join(processed)
-            TM.agents.narrator.action_to_narration(
-                action_name="progress_story",
-                narrative_direction=f"The computer calls the following functions:\n\n{compiled}\n\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up.",
-                emit_message=True
-            )
+            if not self.simulation_reset:
+                TM.agents.narrator.action_to_narration(
+                    action_name="progress_story",
+                    narrative_direction=f"The computer calls the following functions:\n\n{compiled}\n\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up.",
+                    emit_message=True
+                )
             self.update_world_state = True
             
             
@@ -281,9 +282,8 @@ def game(TM):
                     narrative_direction=f"The computer ends the simulation, dissolving the environment and all artificial characters, erasing all memory of it and finally returning the player to the inactive simulation suite. List of artificial characters: {', '.join(TM.scene.npc_character_names())}. The player is also transformed back to their normal persona.",
                     emit_message=True
                 )
-                TM.scene.sync_restore()
-                self.run_update_world_state(force=True)
-                self.simulat
+                TM.scene.restore()
+                self.simulation_reset = True
 
         def finalize_round(self):
             

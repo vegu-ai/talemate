@@ -242,7 +242,7 @@ class SceneScope(ObjectScope):
         "context_history",
         "last_player_message",
         "npc_character_names",
-        "sync_restore",
+        "restore",
     ]
     
     def __init__(self):

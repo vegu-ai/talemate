@@ -24,7 +24,6 @@ def game(TM):
             TM.log.debug("SIMULATION SUITE INIT...")
             
             self.player_character = TM.scene.get_player_character()
-            TM.log.debug("SIMULATION SUITE INIT...", name=self.player_character.name)
             self.player_message = TM.scene.last_player_message()
             self.last_processed_call = TM.game_state.get_var("instr.lastprocessed_call", -1)
             self.player_message_is_instruction = (

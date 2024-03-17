@@ -34,6 +34,8 @@ from talemate.util import (
     remove_extra_linebreaks,
 )
 
+from typing import Tuple
+
 __all__ = [
     "Prompt",
     "LoopedPrompt",
@@ -732,7 +734,7 @@ class Prompt:
                     model_name=self.client.model_name,
                 )
 
-    async def evaluate(self, response: str) -> (str, dict):
+    async def evaluate(self, response: str) -> Tuple[str, dict]:
         questions = self.eval_context["questions"]
         log.debug("evaluate", response=response)
 

@@ -147,7 +147,7 @@ class ClientScope(ObjectScope):
         world_state = get_agent("world_state")
         query = f"{query} Answer with a yes or no."
         response = run_async(
-            world_state.analyze_text_and_answer_question(text, query, short=True)
+            world_state.analyze_text_and_answer_question(text=text, query=query, short=True)
         )
         return response.strip().lower().startswith("y")
         

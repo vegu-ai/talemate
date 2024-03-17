@@ -51,38 +51,8 @@ class GameState(pydantic.BaseModel):
         return self.director.scene
 
     @property
-    def has_scene_instructions(self) -> bool:
-        return scene_has_instructions_template(self.scene)
-
-    @property
     def game_won(self) -> bool:
         return self.variables.get("__game_won__") == True
-
-    @property
-    def scene_instructions(self) -> str:
-        scene = self.scene
-        director = self.director
-        client = director.client
-        game_state = self
-        if scene_has_instructions_template(self.scene):
-            with PrependTemplateDirectories([scene.template_dir]):
-                prompt = Prompt.get(
-                    "instructions",
-                    {
-                        "scene": scene,
-                        "max_tokens": client.max_token_length,
-                        "game_state": game_state,
-                    },
-                )
-
-                prompt.client = client
-                instructions = prompt.render().strip()
-                log.info(
-                    "Initialized game state instructions",
-                    scene=scene,
-                    instructions=instructions,
-                )
-                return instructions
 
     def init(self, scene: "Scene") -> "GameState":
         return self
@@ -103,15 +73,3 @@ class GameState(pydantic.BaseModel):
         if not self.has_var(key):
             self.set_var(key, value, commit=commit)
         return self.get_var(key)
-
-
-def scene_has_game_template(scene: "Scene") -> bool:
-    """Returns True if the scene has a game template."""
-    game_template_path = os.path.join(scene.template_dir, "game.jinja2")
-    return os.path.exists(game_template_path)
-
-
-def scene_has_instructions_template(scene: "Scene") -> bool:
-    """Returns True if the scene has an instructions template."""
-    instructions_template_path = os.path.join(scene.template_dir, "instructions.jinja2")
-    return os.path.exists(instructions_template_path)

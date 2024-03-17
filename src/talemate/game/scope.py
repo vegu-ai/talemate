@@ -179,7 +179,7 @@ class AgentScope(ObjectScope):
             if callable(value) and hasattr(value, "exposed") and value.exposed:
                 self.exposed_methods.append(key)
                 
-        log.debug("AgentScope", agent=agent, exposed_properties=self.exposed_properties, exposed_methods=self.exposed_methods)
+        # log.debug("AgentScope", agent=agent, exposed_properties=self.exposed_properties, exposed_methods=self.exposed_methods)
         
         super().__init__(lambda: agent)
         self.config = lambda: agent.sanitized_action_config

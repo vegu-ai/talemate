@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 from talemate.game.scope import GameInstructionScope, OpenScopedContext
-from talemate.prompts.base import PrependTemplateDirectories
+from talemate.prompts.base import PrependTemplateDirectories, Prompt
 
 log = structlog.get_logger("talemate.game.engine")
 nest_asyncio.apply()
@@ -57,6 +57,57 @@ class GameInstructionsMixin:
     def scene_module_path(self):
         return os.path.join(self.scene.save_dir, "game.py")
     
+    async def scene_has_instructions(self, scene: "Scene") -> bool:
+        """Returns True if the scene has instructions."""
+        return await self.scene_has_module(scene) or await self.scene_has_template_instructions(scene)
+    
+    async def run_scene_instructions(self, scene: "Scene"):
+        """
+        runs the game/__init__.py of the scene
+        """
+        
+        if await self.scene_has_module(scene):
+            await self.run_scene_module(scene)
+        else:
+            return await self.run_scene_template_instructions(scene)
+    
+    # SCENE TEMPLATE INSTRUCTIONS SUPPORT
+    
+    async def scene_has_template_instructions(self, scene: "Scene") -> bool:
+        """Returns True if the scene has an instructions template."""
+        instructions_template_path = os.path.join(scene.template_dir, "instructions.jinja2")
+        return os.path.exists(instructions_template_path)
+        
+    async def run_scene_template_instructions(self, scene: "Scene"):
+        client = self.client
+        game_state = scene.game_state
+        
+        
+        if not await self.scene_has_template_instructions(self.scene):
+            return
+    
+        log.info("Running scene instructions from jinja2 template", scene=scene)
+        with PrependTemplateDirectories([scene.template_dir]):
+            prompt = Prompt.get(
+                "instructions",
+                {
+                    "scene": scene,
+                    "max_tokens": client.max_token_length,
+                    "game_state": game_state,
+                },
+            )
+
+            prompt.client = client
+            instructions = prompt.render().strip()
+            log.info(
+                "Initialized game state instructions",
+                scene=scene,
+                instructions=instructions,
+            )
+            return instructions
+        
+    # SCENE PYTHON INSTRUCTIONS SUPPORT
+    
     async def run_scene_module(self, scene:"Scene"):
         """
         runs the game/__init__.py of the scene
@@ -67,7 +118,7 @@ class GameInstructionsMixin:
         
         await self.load_scene_module(scene)
         
-        log.info("Running scene module", scene=scene)
+        log.info("Running scene instructions from python module", scene=scene)
         
         with OpenScopedContext(self.scene, self.client):
             with PrependTemplateDirectories(self.scene.template_dir):

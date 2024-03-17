@@ -130,13 +130,13 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         """
 
         if not self.enabled:
-            if self.scene.game_state.has_scene_instructions:
+            if await self.scene_has_instructions(self.scene):
                 self.is_enabled = True
                 log.warning("on_scene_init - enabling director", scene=self.scene)
             else:
                 return
 
-        if not self.scene.game_state.has_scene_instructions:
+        if not await self.scene_has_instructions(self.scene):
             return
 
         if not self.scene.game_state.ops.run_on_start:
@@ -156,7 +156,7 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         if not self.enabled:
             return
 
-        if not self.scene.game_state.has_scene_instructions:
+        if not await self.scene_has_instructions(self.scene):
             return
 
         if not event.actor.character.is_player:
@@ -241,7 +241,7 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         Run game state instructions, if they exist.
         """
 
-        if not self.scene.game_state.has_scene_instructions:
+        if not await self.scene_has_instructions(self.scene):
             return
 
         await self.direct_scene(None, None)
@@ -286,13 +286,7 @@ class DirectorAgent(GameInstructionsMixin, Agent):
             emit("director", message, character=character)
             self.scene.push_history(message)
         else:
-            # run scene instructions
-            if not self.scene_has_module:
-                # no python module, attempt to run legacy jinja2
-                # template instructions
-                self.scene.game_state.scene_instructions
-            else:
-                await self.run_scene_module(self.scene)
+            await self.run_scene_instructions(self.scene)
             
 
     @set_processing

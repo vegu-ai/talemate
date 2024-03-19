@@ -5,7 +5,7 @@ def game(TM):
     
     MSG_HELP = "Instructions to the simulation computer are only process if the computer is addressed at the beginning of the instruction. Please state your commands by addressing the computer by stating \"Computer,\" followed by an instruction. For example ... \"Computer, i want to experience being on a derelict spaceship.\""
     
-    PROMPT_NARRATE_ROUND = "The environment reacts to the player's actions. YOU MUST NOT ACT ON BEHALF OF THE PLAYER. YOU MUST NOT INTERACT WITH THE COMPUTER."
+    PROMPT_NARRATE_ROUND = "Narrate the simulation and reveal some new details to the player in one paragraph."
     
     PROMPT_ANSWER_QUESTION = "The computer calls the following function:\n\n{call}\n\nand answers the player's question."
     
@@ -148,6 +148,20 @@ def game(TM):
             
             return call
         
+        
+        def call_set_simulation_goal(self, call:str, inject:str) -> str:
+            """
+            Set's the simulation goal as a permanent pin
+            """
+            TM.emit_status("busy", "Simulation suite setting goal.", as_scene_message=True)
+            TM.agents.world_state.manager(
+                action_name="save_world_entry",
+                entry_id="sim.goal",
+                text=self.player_message.raw,
+                meta={},
+                pin=True
+            )
+            return call
         
         def call_change_environment(self, call:str, inject:str) -> str:
             """
@@ -307,13 +321,15 @@ def game(TM):
         def guide_player(self):
             TM.agents.narrator.action_to_narration(
                 action_name="paraphrase",
-                narration=MSG_HELP
+                narration=MSG_HELP,
+                emit_message=True
             )
                 
         def narrate_round(self):
             TM.agents.narrator.action_to_narration(
                 action_name="progress_story",
-                narrative_direction=PROMPT_NARRATE_ROUND
+                narrative_direction=PROMPT_NARRATE_ROUND,
+                emit_message=True
             )
             
         def run_update_world_state(self, force=False):

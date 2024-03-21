@@ -5,7 +5,7 @@ def game(TM):
     
     MSG_HELP = "Instructions to the simulation computer are only process if the computer is addressed at the beginning of the instruction. Please state your commands by addressing the computer by stating \"Computer,\" followed by an instruction. For example ... \"Computer, i want to experience being on a derelict spaceship.\""
     
-    PROMPT_NARRATE_ROUND = "Narrate the simulation and reveal some new details to the player in one paragraph."
+    PROMPT_NARRATE_ROUND = "Narrate the simulation and reveal some new details to the player in one paragraph. YOU MUST NOT ADDRESS THE COMPUTER OR THE SIMULATION."
     
     PROMPT_ANSWER_QUESTION = "The computer calls the following function:\n\n{call}\n\nand answers the player's question."
     

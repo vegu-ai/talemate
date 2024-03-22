@@ -890,10 +890,19 @@ def ensure_dialog_format(line: str, talking_character: str = None) -> str:
         line = line[len(talking_character) + 1 :].lstrip()
 
     lines = []
+    
+    has_asterisks = "*" in line
+    has_quotes = '"' in line
+    
+    default_wrap = None
+    if has_asterisks and not has_quotes:
+        default_wrap = '"'
+    elif not has_asterisks and has_quotes:
+        default_wrap = "*"
 
     for _line in line.split("\n"):
         try:
-            _line = ensure_dialog_line_format(_line)
+            _line = ensure_dialog_line_format(_line, default_wrap=default_wrap)
         except Exception as exc:
             log.error(
                 "ensure_dialog_format",
@@ -916,7 +925,7 @@ def ensure_dialog_format(line: str, talking_character: str = None) -> str:
     return line
 
 
-def ensure_dialog_line_format(line: str):
+def ensure_dialog_line_format(line: str, default_wrap:str=None) -> str:
     """
     a Python function that standardizes the formatting of dialogue and action/thought
     descriptions in text strings. This function is intended for use in a text-based
@@ -934,6 +943,12 @@ def ensure_dialog_line_format(line: str):
     line = line.strip()
 
     line = line.replace('"*', '"').replace('*"', '"')
+    
+    if "*" not in line and '"' not in line and default_wrap and line:
+        # if the line is not wrapped in either asterisks or quotes, wrap it in the default
+        # wrap, if specified - when it's specialized it means the line was split and we
+        # found the other wrap in one of the segments.
+        return f"{default_wrap}{line}{default_wrap}"
 
     for i in range(len(line)):
         c = line[i]

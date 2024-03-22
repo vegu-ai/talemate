@@ -399,6 +399,7 @@ class WebsocketHandler(Receiver):
                 "message": emission.message_object.instructions.strip(),
                 "id": emission.id,
                 "character": character,
+                "action": emission.message_object.action,
                 "direction_mode": direction_mode,
             }
         )

@@ -190,7 +190,8 @@ class GameStateScope(ObjectScope):
         "set_var",
         "has_var",
         "get_var",
-        "get_or_set_var"
+        "get_or_set_var",
+        "log_director_action",
     ]
     
     def __init__(self):

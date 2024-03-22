@@ -32,7 +32,7 @@ class SceneMessage:
     source: str = ""
 
     hidden: bool = False
-
+    
     typ = "scene"
 
     def __str__(self):
@@ -136,6 +136,7 @@ class NarratorMessage(SceneMessage):
 
 @dataclass
 class DirectorMessage(SceneMessage):
+    action: str = "actor_instruction"
     typ = "director"
     
     @property
@@ -144,15 +145,21 @@ class DirectorMessage(SceneMessage):
 
     @property
     def character_name(self):
-        return self.transformed_message.split(":", 1)[0]
+        if self.action == "actor_instruction":
+            return self.transformed_message.split(":", 1)[0]
+        return ""
     
     @property
     def dialogue(self):
-        return self.transformed_message.split(":", 1)[1]
+        if self.action == "actor_instruction":
+            return self.transformed_message.split(":", 1)[1]
+        return self.message
     
     @property
     def instructions(self):
-        return self.dialogue.replace('"','').replace("To progress the scene, i want you to ", "").strip()
+        if self.action == "actor_instruction":
+            return self.dialogue.replace('"','').replace("To progress the scene, i want you to ", "").strip()
+        return self.message
 
     @property
     def as_inner_monologue(self):
@@ -162,6 +169,14 @@ class DirectorMessage(SceneMessage):
     def as_story_progression(self):
         return f"{self.character_name}'s next action: {self.instructions}"
 
+    def __dict__(self):
+        rv = super().__dict__()
+        
+        if self.action:
+            rv["action"] = self.action
+        
+        return rv
+        
     def __str__(self):
         """
         The director message is a special case and needs to be transformed

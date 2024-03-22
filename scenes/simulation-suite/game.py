@@ -21,6 +21,8 @@ def game(TM):
             
             self.simulation_reset = False
             
+            self.added_npcs = []
+            
             TM.log.debug("SIMULATION SUITE INIT...")
             
             self.player_character = TM.scene.get_player_character()
@@ -80,7 +82,7 @@ def game(TM):
             simulation calls
             """
             
-            if not self.player_message_is_instruction:
+            if not self.player_message_is_instruction or self.player_message.id == self.last_processed_call:
                 return
             
             TM.game_state.set_var("instr.has_issued_instructions", "yes", commit=False)
@@ -161,6 +163,12 @@ def game(TM):
                 meta={},
                 pin=True
             )
+            
+            TM.agents.director.log_action(
+                action=call,
+                action_description="The computer sets the goal for the simulation.",
+            )
+            
             return call
         
         def call_change_environment(self, call:str, inject:str) -> str:
@@ -168,6 +176,12 @@ def game(TM):
             Simulation changes the environment, this is entirely interpreted by the AI
             and we dont need to do any logic on our end, so we just return the call
             """
+            
+            TM.agents.director.log_action(
+                action=call,
+                action_description="The computer changes the environment of the simulation."
+            )
+            
             return call
         
         
@@ -177,10 +191,15 @@ def game(TM):
             the AI produce an answer
             """
             
-            TM.narrator.action_to_narration(
+            TM.agents.narrator.action_to_narration(
                 action_name="progress_story",
                 narrative_direction=PROMPT_ANSWER_QUESTION.format(call=call),
                 emit_message=True
+            )
+            
+            TM.agents.director.log_action(
+                action=call,
+                action_description="The computer answers the player's question."
             )
         
         
@@ -200,6 +219,11 @@ def game(TM):
             self.player_character.update(description=character_description)
             TM.log.debug("SIMULATION SUITE: transform player", attributes=character_attributes, description=character_description)
             
+            TM.agents.director.log_action(
+                action=call,
+                action_description="The computer transforms the player persona."
+            )
+            
             return call
 
 
@@ -215,6 +239,11 @@ def game(TM):
             if character_name != self.player_character.name:
                 self.player_character.rename(character_name)
                 
+            TM.agents.director.log_action(
+                action=call,
+                action_description=f"The computer changes the player's identity to {character_name}."
+            )
+                
             return call
 
 
@@ -229,6 +258,8 @@ def game(TM):
             
             npc = TM.agents.director.persist_character(name=character_name, content=self.player_message.raw)
             
+            self.added_npcs.append(npc.name)
+            
             TM.agents.world_state.manager(
                 action_name="add_detail_reinforcement",
                 character_name=npc.name,
@@ -241,6 +272,11 @@ def game(TM):
             TM.log.debug("SIMULATION SUITE: added npc", npc=npc)
             
             TM.agents.visual.generate_character_portrait(character_name=npc.name)
+            
+            TM.agents.director.log_action(
+                action=call,
+                action_description=f"The computer adds {npc.name} to the simulation."
+            )
             
             return call        
 
@@ -255,6 +291,11 @@ def game(TM):
             if npc:
                 TM.log.debug("SIMULATION SUITE: remove npc", npc=npc.name)
                 TM.agents.world_state.manager(action_name="deactivate_character", character_name=npc.name)
+                
+                TM.agents.director.log_action(
+                    action=call,
+                    action_description=f"The computer removes {npc.name} from the simulation."
+                )
             
             return call
 
@@ -262,6 +303,10 @@ def game(TM):
             TM.emit_status("busy", "Simulation suite altering character.", as_scene_message=True)
             
             character_name = TM.agents.creator.determine_character_name(character_name=f"{inject} - what is the name of the character receiving the changes (before the change)?", allowed_names=TM.scene.npc_character_names())
+            
+            if character_name in self.added_npcs:
+                # we dont want to change the character if it was just added
+                return
             
             character_name_after = TM.agents.creator.determine_character_name(character_name=f"{inject} - what is the name of the character receiving the changes (after the changes)?")
             
@@ -283,6 +328,11 @@ def game(TM):
                 if character_name_after != character_name:
                     npc.rename(character_name_after)
                     
+                TM.agents.director.log_action(
+                    action=call,
+                    action_description=f"The computer transforms {npc.name}."
+                )
+                    
             return call
         
         def call_end_simulation(self, call:str, inject:str) -> str:
@@ -297,8 +347,14 @@ def game(TM):
                     emit_message=True
                 )
                 TM.scene.restore()
-                self.simulation_reset = True
 
+                self.simulation_reset = True
+                
+                TM.agents.director.log_action(
+                    action=call,
+                    action_description="The computer ends the simulation."
+                )
+                
         def finalize_round(self):
             
             if self.update_world_state:

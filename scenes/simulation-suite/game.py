@@ -109,9 +109,7 @@ def game(TM):
                 )
                 TM.scene.set_content_context(context_context)
             
-            
-            TM.game_state.set_var("instr.has_issued_instructions", "yes", commit=False)
-            
+
             calls = TM.client.render_and_request(
                 "computer",
                 dedupe_enabled=False,
@@ -136,6 +134,10 @@ def game(TM):
             {% set update_world_state = True %}
             {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer calls the following functions:\n"+processed.join("\n")+"\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up.", emit_message=True) %}
             """
+            
+            if processed:
+                TM.log.debug("SIMULATION SUITE CALLS", calls=processed)
+                TM.game_state.set_var("instr.has_issued_instructions", "yes", commit=False)
             
             TM.emit_status("busy", "Simulation suite altering environment.", as_scene_message=True)
             compiled = "\n".join(processed)

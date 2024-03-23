@@ -7,8 +7,6 @@ def game(TM):
     
     PROMPT_NARRATE_ROUND = "Narrate the simulation and reveal some new details to the player in one paragraph. YOU MUST NOT ADDRESS THE COMPUTER OR THE SIMULATION."
     
-    PROMPT_ANSWER_QUESTION = "The computer calls the following function:\n\n{call}\n\nand answers the player's question."
-    
     PROMPT_STARTUP = "Narrate the computer asking the user to state the nature of their desired simulation."
     
     CTX_PIN_UNAWARE = "Characters in the simulation ARE NOT AWARE OF THE COMPUTER."
@@ -141,12 +139,13 @@ def game(TM):
             
             TM.emit_status("busy", "Simulation suite altering environment.", as_scene_message=True)
             compiled = "\n".join(processed)
-            if not self.simulation_reset:
+            if not self.simulation_reset and compiled:
                 TM.agents.narrator.action_to_narration(
                     action_name="progress_story",
                     narrative_direction=f"The computer calls the following functions:\n\n{compiled}\n\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up. YOU MUST NOT REFERENCE THE COMPUTER.",
                     emit_message=True
                 )
+                
             self.update_world_state = True
             
             
@@ -220,13 +219,8 @@ def game(TM):
             
             TM.agents.narrator.action_to_narration(
                 action_name="progress_story",
-                narrative_direction=PROMPT_ANSWER_QUESTION.format(call=call),
+                narrative_direction=f"The computer calls the following function:\n\n{call}\n\nand answers the player's question.",
                 emit_message=True
-            )
-            
-            TM.agents.director.log_action(
-                action=parse_sim_call_arguments(call),
-                action_description="The computer answers the player's question."
             )
         
         

@@ -455,6 +455,7 @@ class ConversationAgent(Agent):
                 "partial_message": char_message,
                 "director_message": director_message,
                 "extra_instructions": extra_instructions,
+                "decensor": self.client.decensor_enabled,
             },
         )
 

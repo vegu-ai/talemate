@@ -274,6 +274,8 @@ class Prompt:
 
     @classmethod
     async def request(cls, uid: str, client: Any, kind: str, vars: dict = None):
+        if "decensor" not in vars:
+            vars.update(decensor=client.decensor_enabled)
         prompt = cls.get(uid, vars)
         return await prompt.send(client, kind)
 
@@ -385,6 +387,9 @@ class Prompt:
         env.globals["emit_narrator"] = lambda message: emit("system", message=message)
         env.filters["condensed"] = condensed
         ctx.update(self.vars)
+
+        if "decensor" not in ctx:
+            ctx["decensor"] = False
 
         # Load the template corresponding to the prompt name
         template = env.get_template("{}.jinja2".format(self.name))

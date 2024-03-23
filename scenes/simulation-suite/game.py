@@ -13,6 +13,22 @@ def game(TM):
     
     CTX_PIN_UNAWARE = "Characters in the simulation ARE NOT AWARE OF THE COMPUTER."
     
+    def parse_sim_call_arguments(call:str) -> str:
+        """
+        Returns the value between the parentheses of a simulation call
+        
+        Example:
+        
+        call = 'change_environment("a house")'
+        
+        parse_sim_call_arguments(call) -> "a house"
+        """
+        
+        try:
+            return call.split("(", 1)[1].split(")")[0]
+        except Exception:
+            return ""
+    
     class SimulationSuite:
         
         def __init__(self):
@@ -85,6 +101,17 @@ def game(TM):
             if not self.player_message_is_instruction or self.player_message.id == self.last_processed_call:
                 return
             
+            # First instruction?
+            if not TM.game_state.has_var("instr.has_issued_instructions"):
+                
+                # determine the context of the simulation
+                
+                context_context = TM.agents.creator.determine_content_context_for_description(
+                    description=self.player_message.raw,
+                )
+                TM.scene.set_content_context(context_context)
+            
+            
             TM.game_state.set_var("instr.has_issued_instructions", "yes", commit=False)
             
             calls = TM.client.render_and_request(
@@ -117,7 +144,7 @@ def game(TM):
             if not self.simulation_reset:
                 TM.agents.narrator.action_to_narration(
                     action_name="progress_story",
-                    narrative_direction=f"The computer calls the following functions:\n\n{compiled}\n\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up.",
+                    narrative_direction=f"The computer calls the following functions:\n\n{compiled}\n\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up. YOU MUST NOT REFERENCE THE COMPUTER.",
                     emit_message=True
                 )
             self.update_world_state = True
@@ -165,7 +192,7 @@ def game(TM):
             )
             
             TM.agents.director.log_action(
-                action=call,
+                action=parse_sim_call_arguments(call),
                 action_description="The computer sets the goal for the simulation.",
             )
             
@@ -178,7 +205,7 @@ def game(TM):
             """
             
             TM.agents.director.log_action(
-                action=call,
+                action=parse_sim_call_arguments(call),
                 action_description="The computer changes the environment of the simulation."
             )
             
@@ -198,7 +225,7 @@ def game(TM):
             )
             
             TM.agents.director.log_action(
-                action=call,
+                action=parse_sim_call_arguments(call),
                 action_description="The computer answers the player's question."
             )
         
@@ -220,7 +247,7 @@ def game(TM):
             TM.log.debug("SIMULATION SUITE: transform player", attributes=character_attributes, description=character_description)
             
             TM.agents.director.log_action(
-                action=call,
+                action=parse_sim_call_arguments(call),
                 action_description="The computer transforms the player persona."
             )
             
@@ -240,7 +267,7 @@ def game(TM):
                 self.player_character.rename(character_name)
                 
             TM.agents.director.log_action(
-                action=call,
+                action=parse_sim_call_arguments(call),
                 action_description=f"The computer changes the player's identity to {character_name}."
             )
                 
@@ -274,7 +301,7 @@ def game(TM):
             TM.agents.visual.generate_character_portrait(character_name=npc.name)
             
             TM.agents.director.log_action(
-                action=call,
+                action=parse_sim_call_arguments(call),
                 action_description=f"The computer adds {npc.name} to the simulation."
             )
             
@@ -293,7 +320,7 @@ def game(TM):
                 TM.agents.world_state.manager(action_name="deactivate_character", character_name=npc.name)
                 
                 TM.agents.director.log_action(
-                    action=call,
+                    action=parse_sim_call_arguments(call),
                     action_description=f"The computer removes {npc.name} from the simulation."
                 )
             
@@ -329,7 +356,7 @@ def game(TM):
                     npc.rename(character_name_after)
                     
                 TM.agents.director.log_action(
-                    action=call,
+                    action=parse_sim_call_arguments(call),
                     action_description=f"The computer transforms {npc.name}."
                 )
                     
@@ -343,15 +370,19 @@ def game(TM):
                 TM.emit_status("busy", "Simulation suite ending current simulation.", as_scene_message=True)
                 TM.agents.narrator.action_to_narration(
                     action_name="progress_story",
-                    narrative_direction=f"The computer ends the simulation, dissolving the environment and all artificial characters, erasing all memory of it and finally returning the player to the inactive simulation suite. List of artificial characters: {', '.join(TM.scene.npc_character_names())}. The player is also transformed back to their normal persona.",
+                    narrative_direction=f"Narrate the computer ending the simulation, dissolving the environment and all artificial characters, erasing all memory of it and finally returning the player to the inactive simulation suite. List of artificial characters: {', '.join(TM.scene.npc_character_names())}. The player is also transformed back to their normal, non-descript persona as the form of {self.player_character.name} ceases to exist.",
                     emit_message=True
                 )
                 TM.scene.restore()
 
                 self.simulation_reset = True
                 
+                TM.game_state.unset_var("instr.has_issued_instructions")
+                TM.game_state.unset_var("instr.lastprocessed_call")
+                TM.game_state.unset_var("instr.simulation_started")
+                
                 TM.agents.director.log_action(
-                    action=call,
+                    action=parse_sim_call_arguments(call),
                     action_description="The computer ends the simulation."
                 )
                 

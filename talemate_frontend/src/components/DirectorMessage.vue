@@ -25,17 +25,11 @@
     </v-alert>
   </div>
   <div v-else-if="action">
-    <div class="director-container" v-if="show && minimized" >
-      <v-chip color="deep-purple-lighten-2" class="clickable" @click="toggle()" >
-        <v-icon class="mr-2">{{ icon }}</v-icon>
-        <span>{{ text }}</span>
-      </v-chip>
-    </div>
-    <v-alert v-else-if="show" color="deep-purple-lighten-2" class="director-message clickable" variant="text" type="info" :icon="icon"
-    elevation="0" density="compact" @click="toggle()">
+    <v-alert color="deep-purple-lighten-2" class="director-message" variant="text" type="info" :icon="icon"
+    elevation="0" density="compact" >
 
-      <v-alert-title class="text-caption">{{ text }}</v-alert-title>
-      <span class="text-grey-darken-1 text-caption">{{ action }}</span>
+      <div>{{ text }}</div>
+      <div class="text-grey text-caption">{{ action }}</div>
     </v-alert>
   </div>
 
@@ -94,9 +88,6 @@ export default {
   --content: "*";
 }
 
-.director-text {
-}
-
 .director-message {
   color: #9FA8DA;
 }
@@ -108,10 +99,6 @@ export default {
 .director-instructs {
   /* Add your CSS styles for "Director instructs" here */
   color: #BF360C;
-}
-
-.director-character {
-  /* Add your CSS styles for the character name here */
 }
 
 .director-text {

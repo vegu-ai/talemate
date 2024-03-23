@@ -364,6 +364,12 @@ class DirectorAgent(GameInstructionsMixin, Agent):
 
         self.scene.log.debug("persist_character", description=description)
 
+        dialogue_instructions = await creator.determine_character_dialogue_instructions(character)
+        
+        character.dialogue_instructions = dialogue_instructions
+        
+        self.scene.log.debug("persist_character", dialogue_instructions=dialogue_instructions)
+
         actor = self.scene.Actor(
             character=character, agent=instance.get_agent("conversation")
         )

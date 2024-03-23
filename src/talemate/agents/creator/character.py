@@ -192,6 +192,23 @@ class CharacterCreatorMixin:
             },
         )
         return content_context.strip()
+    
+    @set_processing
+    async def determine_character_dialogue_instructions(
+        self,
+        character: Character,
+    ):
+        instructions = await Prompt.request(
+            f"creator.determine-character-dialogue-instructions",
+            self.client,
+            "create",
+            vars={
+                "character": character,
+            },
+        )
+    
+        r = instructions.strip().strip('"').strip()
+        return r
 
     @set_processing
     async def determine_character_attributes(

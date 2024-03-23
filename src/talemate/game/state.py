@@ -73,3 +73,6 @@ class GameState(pydantic.BaseModel):
         if not self.has_var(key):
             self.set_var(key, value, commit=commit)
         return self.get_var(key)
+    
+    def unset_var(self, key: str):
+        self.variables.pop(key, None)

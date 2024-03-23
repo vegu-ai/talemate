@@ -191,7 +191,7 @@ class GameStateScope(ObjectScope):
         "has_var",
         "get_var",
         "get_or_set_var",
-        "log_director_action",
+        "unset_var",
     ]
     
     def __init__(self):
@@ -240,10 +240,12 @@ class SceneScope(ObjectScope):
     """
     
     exposed_methods = [
+        "context",
         "context_history",
         "last_player_message",
         "npc_character_names",
         "restore",
+        "set_content_context",
     ]
     
     def __init__(self):

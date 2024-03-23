@@ -1,12 +1,23 @@
+{% if character -%}
 <|SECTION:CHARACTER AND CONTEXT|>
 {{ character.name }}
 {{ character.description }}
 <|CLOSE_SECTION|>
+{% elif description -%}
+<|SECTION:SCENARIO DESCRIPTION|>
+{{ description }}
+<|CLOSE_SECTION|>
+{% endif -%}
 <|SECTION:TASK|>
+{% if character -%}
 Analyze the character information and context and determine a fitting content context.
 
-The content content should be a single short phrase that describes the expected experience when interacting with the character.
+The content context should be a single short phrase that describes the expected experience when interacting with the character.
+{% else -%}
+Analyze the scenario description and determine a fitting content context.
 
+The content context should be a single short phrase that describes the expected experience when interacting with the scenario.
+{% endif %}
 Examples:
 
 {% for content_context in config.get('creator', {}).get('content_context',[]) -%}

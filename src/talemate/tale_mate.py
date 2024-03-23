@@ -892,6 +892,9 @@ class Scene(Emitter):
 
     def set_intro(self, intro: str):
         self.intro = intro
+        
+    def set_content_context(self, content_context: str):
+        self.context = content_context
 
     def connect(self):
         """

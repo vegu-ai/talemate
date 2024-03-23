@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-
+import re
 import isodate
 
 _message_id = 0
@@ -163,7 +163,23 @@ class DirectorMessage(SceneMessage):
 
     @property
     def as_inner_monologue(self):
-        return f"{self.character_name} thinks: I should {self.instructions}"
+        
+        # instructions may be written referencing the character as you, your etc.,
+        # so we need to replace those to fit a first person perspective
+        
+        # first we lowercase
+        instructions = self.instructions.lower()
+        
+        # then we replace yourself with myself using regex, taking care of word boundaries
+        instructions = re.sub(r"\byourself\b", "myself", instructions)
+        
+        # then we replace your with my using regex, taking care of word boundaries
+        instructions = re.sub(r"\byour\b", "my", instructions)
+        
+        # then we replace you with i using regex, taking care of word boundaries
+        instructions = re.sub(r"\byou\b", "i", instructions)
+
+        return f"{self.character_name} thinks: I should {instructions}"
     
     @property
     def as_story_progression(self):

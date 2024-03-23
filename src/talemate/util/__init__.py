@@ -945,6 +945,12 @@ def ensure_dialog_line_format(line: str, default_wrap:str=None) -> str:
 
     line = line.replace('"*', '"').replace('*"', '"')
     
+    # if the line ends with a whitespace followed by a classifier, strip both from the end
+    # as this indicates the remnants of a partial segment that was removed.
+    
+    if line.endswith(" *") or line.endswith(' "'):
+        line = line[:-2]
+    
     if "*" not in line and '"' not in line and default_wrap and line:
         # if the line is not wrapped in either asterisks or quotes, wrap it in the default
         # wrap, if specified - when it's specialized it means the line was split and we

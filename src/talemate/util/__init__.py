@@ -939,6 +939,7 @@ def ensure_dialog_line_format(line: str, default_wrap:str=None) -> str:
     segments = []
     segment = None
     segment_open = None
+    last_classifier = None
 
     line = line.strip()
 
@@ -964,6 +965,7 @@ def ensure_dialog_line_format(line: str, default_wrap:str=None) -> str:
                 segment += c
                 segments += [segment.strip()]
                 segment = None
+                last_classifier = c
             elif segment_open is not None and segment_open != c:
                 # open segment is not the same as the current character
                 # opening - close the current segment and open a new one
@@ -974,20 +976,30 @@ def ensure_dialog_line_format(line: str, default_wrap:str=None) -> str:
                     segments += [segment.strip()]
                     segment_open = None
                     segment = None
+                    last_classifier = c
                     continue
 
                 segments += [segment.strip()]
                 segment_open = c
                 segment = c
+                last_classifier = c
             elif segment_open is None:
                 # we're opening a segment
                 segment_open = c
                 segment = c
+                last_classifier = c
         else:
-            if segment_open is None:
-                segment_open = "unclassified"
-                segment = c
-            else:
+            if segment_open is None and c and c != " ":
+                if last_classifier == '"':
+                    segment_open = '*'
+                    segment = f"{segment_open}{c}"
+                elif last_classifier == '*':
+                    segment_open = '"'
+                    segment = f"{segment_open}{c}"
+                else:
+                    segment_open = "unclassified"
+                    segment = c
+            elif segment:
                 segment += c
 
     if segment is not None:

@@ -119,6 +119,8 @@ def game(TM):
             
             calls = calls.split("\n")
             
+            calls = self.prepare_calls(calls)
+            
             TM.log.debug("SIMULATION SUITE CALLS", callse=calls)
             
             # calls that are processed
@@ -150,6 +152,31 @@ def game(TM):
                 
             self.update_world_state = True
             
+        def prepare_calls(self, calls):
+            """
+            Loops through calls and if a `set_player_name` call and a `set_player_persona` call are both
+            found, ensure that the `set_player_name` call is processed first by moving it in front of the
+            `set_player_persona` call.
+            """
+            
+            set_player_name_call_exists = -1
+            set_player_persona_call_exists = -1
+            
+            i = 0
+            for call in calls:
+                if "set_player_name" in call:
+                    set_player_name_call_exists = i
+                elif "set_player_persona" in call:
+                    set_player_persona_call_exists = i
+                i = i + 1
+                    
+            if set_player_name_call_exists > -1 and set_player_persona_call_exists > -1:
+
+                if set_player_name_call_exists > set_player_persona_call_exists:
+                    calls.insert(set_player_persona_call_exists, calls.pop(set_player_name_call_exists))
+                    TM.log.debug("SIMULATION SUITE: prepare calls - moved set_player_persona call", calls=calls)
+                    
+            return calls
             
         def process_call(self, call:str) -> str:
             """
@@ -272,7 +299,16 @@ def game(TM):
 
         def call_add_ai_character(self, call:str, inject:str) -> str:
             
+            # sometimes the AI will call this function an pass an inanimate object as the parameter
+            # we need to determine if this is the case and just ignore it
+            is_inanimate = TM.client.query_text_eval("does the function add an inanimate object?", call)
             
+            if is_inanimate:
+                TM.log.debug("SIMULATION SUITE: add npc - inanimate object", call=call)
+                return
+            
+            # sometimes the AI will ask if the function adds a group of characters, we need to
+            # determine if this is the case
             adds_group = TM.client.query_text_eval("does the function add a group of characters?", call)
             
             TM.log.debug("SIMULATION SUITE: add npc", adds_group=adds_group)

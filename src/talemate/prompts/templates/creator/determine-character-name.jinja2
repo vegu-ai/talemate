@@ -7,6 +7,8 @@
 {% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
+{% if not group -%}
+{# single character name -#}
 Determine character name based on the following sentence: {{ character_name }}
 
 {% if not allowed_names -%}
@@ -17,5 +19,17 @@ YOU MUST ONLY RESPOND WITH THE CHARACTER NAME, NOTHING ELSE.
 {% else %}
 Pick the most fitting name from the following list: {{ allowed_names|join(', ') }}. If none of the names fit, respond with the most accurate name based on the sentence.
 {%- endif %}
+{%- else %}
+{# group name -#}
+Determine a descriptive group name based on the following sentence: {{ character_name }}
+
+This is how this group of characters will be referred to in the script whenever they have dialogue or performance.
+
+The group name MUST fit the context of the scenario and scene.
+
+If the sentence lists multiple characters by name, you must repeat it back as is.
+
+YOU MUST ONLY RESPOND WITH THE GROUP NAME, NOTHING ELSE.
+{%- endif %}
 <|CLOSE_SECTION|>
-{{ bot_token }}The character's name is "
+{{ bot_token }}The {% if not group %}character{% else %}group{% endif %}'s name is "

@@ -192,6 +192,23 @@ class CharacterCreatorMixin:
             },
         )
         return content_context.strip()
+    
+    @set_processing
+    async def determine_character_dialogue_instructions(
+        self,
+        character: Character,
+    ):
+        instructions = await Prompt.request(
+            f"creator.determine-character-dialogue-instructions",
+            self.client,
+            "create",
+            vars={
+                "character": character,
+            },
+        )
+    
+        r = instructions.strip().strip('"').strip()
+        return r
 
     @set_processing
     async def determine_character_attributes(
@@ -213,6 +230,7 @@ class CharacterCreatorMixin:
         self,
         character_name: str,
         allowed_names: list[str] = None,
+        group:bool = False,
     ) -> str:
         name = await Prompt.request(
             f"creator.determine-character-name",
@@ -223,6 +241,7 @@ class CharacterCreatorMixin:
                 "max_tokens": self.client.max_token_length,
                 "character_name": character_name,
                 "allowed_names": allowed_names or [],
+                "group": group,
             },
         )
         return name.split('"', 1)[0].strip().strip(".").strip()

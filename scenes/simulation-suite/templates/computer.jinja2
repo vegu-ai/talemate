@@ -19,6 +19,7 @@ You must at least call one of the following functions:
 - set_player_name
 - end_simulation
 - answer_question
+- set_simulation_goal
 
 `add_ai_character` and `change_ai_character` are exclusive if they are targeting the same character.
 
@@ -52,14 +53,16 @@ change_ai_character("George is injured")
 
 Request: Computer, I want to experience a rollercoaster ride with a friend
 ```simulation-stack
+set_simulation_goal("player experiences a rollercoaster ride")
 change_environment("theme park, riding a rollercoaster")
 set_player_persona("young female experiencing rollercoaster ride")
 set_player_name("Susanne")
 add_ai_character("a female friend of player named Sarah")
 ```
 
-Request: Computer, I want to experience the international space station
+Request: Computer, I want to experience the international space station, to experience the overview effect
 ```simulation-stack
+set_simulation_goal("player experiences the overview effect")
 change_environment("international space station")
 set_player_persona("astronaut experiencing first trip to ISS")
 set_player_name("George")
@@ -108,6 +111,15 @@ end_simulation("simulation ended")
 Request: Computer, what do you know about the game of thrones?
 ```simulation-stack
 answer_question("what do you know about the game of thrones?")
+```
+
+Request: Computer, i want to be a wizard in a dark goblin infested dungeon in a fantasy world, looking for secret treasure and fighting goblins.
+```simulation-stack
+set_simulation_goal("player wants to find secret treasure and fight creatures")
+change_environment("dark dungeon in a fantasy world")
+set_player_persona("powerful wizard")
+set_player_name("Lanadel")
+add_ai_character("a goblin named Gobbo")
 ```
 
 <|CLOSE_SECTION|>

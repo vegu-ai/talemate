@@ -34,7 +34,7 @@ from talemate.exceptions import (
     TalemateError,
     TalemateInterrupt,
 )
-from talemate.game_state import GameState
+from talemate.game.state import GameState
 from talemate.instance import get_agent
 from talemate.scene_assets import SceneAssets
 from talemate.scene_message import (
@@ -265,6 +265,12 @@ class Character:
 
         orig_name = self.name
         self.name = new_name
+        
+        if orig_name.lower() == "you":
+            # we dont want to replace "you" in the description
+            # or anywhere else so we can just return here
+            return 
+            
         if self.description:
             self.description = self.description.replace(f"{orig_name}", self.name)
         for k, v in self.base_attributes.items():
@@ -892,6 +898,9 @@ class Scene(Emitter):
 
     def set_intro(self, intro: str):
         self.intro = intro
+        
+    def set_content_context(self, content_context: str):
+        self.context = content_context
 
     def connect(self):
         """
@@ -1341,6 +1350,7 @@ class Scene(Emitter):
         budget_dialogue = int(0.5 * budget)
 
         conversation_format = self.conversation_format
+        actor_direction_mode = self.get_helper("director").agent.actor_direction_mode
 
         # collect dialogue
 
@@ -1363,7 +1373,7 @@ class Scene(Emitter):
             if count_tokens(parts_dialogue) + count_tokens(message) > budget_dialogue:
                 break
 
-            parts_dialogue.insert(0, message.as_format(conversation_format))
+            parts_dialogue.insert(0, message.as_format(conversation_format, mode=actor_direction_mode))
 
         # collect context, ignore where end > len(history) - count
 
@@ -2117,7 +2127,7 @@ class Scene(Emitter):
         except Exception as e:
             self.log.error("restore", error=e, traceback=traceback.format_exc())
 
-    def sync_restore(self):
+    def sync_restore(self, *args, **kwargs):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.restore())
 

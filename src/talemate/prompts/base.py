@@ -34,6 +34,8 @@ from talemate.util import (
     remove_extra_linebreaks,
 )
 
+from typing import Tuple
+
 __all__ = [
     "Prompt",
     "LoopedPrompt",
@@ -272,6 +274,8 @@ class Prompt:
 
     @classmethod
     async def request(cls, uid: str, client: Any, kind: str, vars: dict = None):
+        if "decensor" not in vars:
+            vars.update(decensor=client.decensor_enabled)
         prompt = cls.get(uid, vars)
         return await prompt.send(client, kind)
 
@@ -383,6 +387,9 @@ class Prompt:
         env.globals["emit_narrator"] = lambda message: emit("system", message=message)
         env.filters["condensed"] = condensed
         ctx.update(self.vars)
+
+        if "decensor" not in ctx:
+            ctx["decensor"] = False
 
         # Load the template corresponding to the prompt name
         template = env.get_template("{}.jinja2".format(self.name))
@@ -732,7 +739,7 @@ class Prompt:
                     model_name=self.client.model_name,
                 )
 
-    async def evaluate(self, response: str) -> (str, dict):
+    async def evaluate(self, response: str) -> Tuple[str, dict]:
         questions = self.eval_context["questions"]
         log.debug("evaluate", response=response)
 

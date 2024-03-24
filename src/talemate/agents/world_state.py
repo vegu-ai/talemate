@@ -212,6 +212,7 @@ class WorldStateAgent(Agent):
 
         self.next_update = 0
         await scene.world_state.request_update()
+    update_world_state.exposed = True
 
     @set_processing
     async def request_world_state(self):

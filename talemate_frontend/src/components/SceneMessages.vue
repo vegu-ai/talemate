@@ -42,7 +42,7 @@
             </div>
             <div v-else-if="message.type === 'director'" :class="`message ${message.type}`">
                 <div class="director-message"  :id="`message-${message.id}`">
-                    <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" />
+                    <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action"/>
                 </div>
             </div>
             <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
@@ -188,6 +188,16 @@ export default {
                     const character = parts.shift();
                     const text = parts.join(':');
                     this.messages.push({ id: data.id, type: data.type, character: character.trim(), text: text.trim(), color: data.color }); // Add color property to the message
+                } else if (data.type === 'director') {
+                    this.messages.push(
+                        { 
+                            id: data.id, 
+                            type: data.type, 
+                            character: data.character, 
+                            text: data.message, direction_mode: data.direction_mode,
+                            action: data.action
+                        }
+                    );
                 } else if (data.type != 'request_input' && data.type != 'client_status' && data.type != 'agent_status' && data.type != 'status') {
                     this.messages.push({ id: data.id, type: data.type, text: data.message, color: data.color, character: data.character, status:data.status, ts:data.ts }); // Add color property to the message
                 } else if (data.type === 'status' && data.data && data.data.as_scene_message === true) {

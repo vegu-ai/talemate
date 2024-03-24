@@ -91,6 +91,7 @@ def set_processing(fn):
                     # some concurrency error?
                     log.error("error emitting agent status", exc=exc)
 
+    wrapper.exposed = True
     return wrapper
 
 
@@ -193,6 +194,13 @@ class Agent(ABC):
         return {
             "essential": self.essential,
         }
+        
+    @property
+    def sanitized_action_config(self):
+        if not getattr(self, "actions", None):
+            return {}
+        
+        return {k: v.model_dump() for k, v in self.actions.items()}
 
     async def _handle_ready_check(self, fut: asyncio.Future):
         callback_failure = getattr(self, "on_ready_check_failure", None)

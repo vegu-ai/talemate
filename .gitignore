@@ -16,3 +16,4 @@ scenes/
 !scenes/infinity-quest-dynamic-scenario/infinity-quest.json
 !scenes/infinity-quest/assets/
 !scenes/infinity-quest/infinity-quest.json
+tts_voice_samples/*.wav

@@ -455,6 +455,7 @@ class ConversationAgent(Agent):
                 "partial_message": char_message,
                 "director_message": director_message,
                 "extra_instructions": extra_instructions,
+                "decensor": self.client.decensor_enabled,
             },
         )
 
@@ -535,6 +536,9 @@ class ConversationAgent(Agent):
     def clean_result(self, result, character):
         if "#" in result:
             result = result.split("#")[0]
+            
+        if "(Internal acting instructions" in result:
+            result = result.split("(Internal acting instructions")[0]
 
         result = result.replace(" :", ":")
         result = result.replace("[", "*").replace("]", "*")

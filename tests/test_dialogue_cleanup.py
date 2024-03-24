@@ -19,6 +19,9 @@ from talemate.util import ensure_dialog_format, clean_dialogue
     ('*narrative.* dialogue" *more narrative.*', '*narrative.* "dialogue" *more narrative.*'),
     ('"*messed up dialogue formatting.*" *some narration.*', '"messed up dialogue formatting." *some narration.*'),
     ('*"messed up narration formatting."* "some dialogue."', '"messed up narration formatting." "some dialogue."'),
+    ('Some dialogue and two line-breaks right after, followed by narration.\n\n*Narration*', '"Some dialogue and two line-breaks right after, followed by narration."\n\n*Narration*'),
+    ('*Some narration with a "quoted" string in it.* Then some unquoted dialogue.\n\n*More narration.*', '*Some narration with a* "quoted" *string in it.* "Then some unquoted dialogue."\n\n*More narration.*'),
+    ('*Some narration* Some dialogue but not in quotes. *', '*Some narration* "Some dialogue but not in quotes."'),
 ])
 def test_dialogue_cleanup(input, expected):
     assert ensure_dialog_format(input) == expected

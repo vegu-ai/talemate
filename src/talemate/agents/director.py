@@ -323,13 +323,16 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         name: str,
         content: str = None,
         attributes: str = None,
+        determine_name: bool = True,
     ):
         world_state = instance.get_agent("world_state")
         creator = instance.get_agent("creator")
 
         self.scene.log.debug("persist_character", name=name)
-        name = await creator.determine_character_name(name)
-        self.scene.log.debug("persist_character", adjusted_name=name)
+        
+        if determine_name:
+            name = await creator.determine_character_name(name)
+            self.scene.log.debug("persist_character", adjusted_name=name)
 
         character = self.scene.Character(name=name)
         character.color = random.choice(

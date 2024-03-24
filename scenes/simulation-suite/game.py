@@ -271,15 +271,24 @@ def game(TM):
 
 
         def call_add_ai_character(self, call:str, inject:str) -> str:
+            
+            
+            adds_group = TM.client.query_text_eval("does the function add a group of characters?", call)
+            
+            TM.log.debug("SIMULATION SUITE: add npc", adds_group=adds_group)
+            
             TM.emit_status("busy", "Simulation suite adding character.", as_scene_message=True)
             
-            character_name = TM.agents.creator.determine_character_name(character_name=f"{inject} - what is the name of the character to be added to the scene? If no name can extracted from the text, extract a short descriptive name instead. Respond only with the name.")
+            if not adds_group:
+                character_name = TM.agents.creator.determine_character_name(character_name=f"{inject} - what is the name of the character to be added to the scene? If no name can extracted from the text, extract a short descriptive name instead. Respond only with the name.")
+            else:
+                character_name = TM.agents.creator.determine_character_name(character_name=f"{inject} - what is the name of the group of characters to be added to the scene? If no name can extracted from the text, extract a short descriptive name instead. Respond only with the name.", group=True)
             
             TM.emit_status("busy", f"Simulation suite adding character: {character_name}", as_scene_message=True)
             
             TM.log.debug("SIMULATION SUITE: add npc", name=character_name)
             
-            npc = TM.agents.director.persist_character(name=character_name, content=self.player_message.raw)
+            npc = TM.agents.director.persist_character(name=character_name, content=self.player_message.raw, determine_name=False)
             
             self.added_npcs.append(npc.name)
             

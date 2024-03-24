@@ -324,7 +324,7 @@ def game(TM):
             
             TM.log.debug("SIMULATION SUITE: add npc", name=character_name)
             
-            npc = TM.agents.director.persist_character(name=character_name, content=self.player_message.raw, determine_name=False)
+            npc = TM.agents.director.persist_character(name=character_name, content=self.player_message.raw+f"\n\n{inject}", determine_name=False)
             
             self.added_npcs.append(npc.name)
             

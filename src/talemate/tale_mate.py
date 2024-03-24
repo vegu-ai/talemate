@@ -265,6 +265,12 @@ class Character:
 
         orig_name = self.name
         self.name = new_name
+        
+        if orig_name.lower() == "you":
+            # we dont want to replace "you" in the description
+            # or anywhere else so we can just return here
+            return 
+            
         if self.description:
             self.description = self.description.replace(f"{orig_name}", self.name)
         for k, v in self.base_attributes.items():

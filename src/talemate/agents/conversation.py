@@ -314,7 +314,7 @@ class ConversationAgent(Agent):
 
                 # AI will attempt to figure out who should talk next
                 next_actor = await self.select_talking_actor(character_names)
-                next_actor = next_actor.strip().strip('"').strip(".")
+                next_actor = next_actor.split("\n")[0].strip().strip('"').strip(".")
 
                 for character_name in scene.character_names:
                     if (

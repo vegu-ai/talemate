@@ -232,9 +232,13 @@ class TimePassageMessage(SceneMessage):
 class ReinforcementMessage(SceneMessage):
     typ = "reinforcement"
 
+    @property
+    def character_name(self):
+        return self.source.split(":")[1]
+
     def __str__(self):
         question, _ = self.source.split(":", 1)
-        return f"# Internal notes: {question}: {self.message}"
+        return f"# Internal notes for {self.character_name} - {question}: {self.message}"
 
     def as_format(self, format: str, **kwargs) -> str:
         if format == "movie_script":

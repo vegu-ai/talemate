@@ -537,8 +537,8 @@ class ConversationAgent(Agent):
         if "#" in result:
             result = result.split("#")[0]
             
-        if "(Internal acting instructions" in result:
-            result = result.split("(Internal acting instructions")[0]
+        if "(Internal" in result:
+            result = result.split("(Internal")[0]
 
         result = result.replace(" :", ":")
         result = result.replace("[", "*").replace("]", "*")

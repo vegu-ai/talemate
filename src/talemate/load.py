@@ -10,7 +10,7 @@ from talemate import Actor, Character, Player
 from talemate.config import load_config
 from talemate.context import SceneIsLoading
 from talemate.emit import emit
-from talemate.game_state import GameState
+from talemate.game.state import GameState
 from talemate.scene_message import (
     MESSAGES,
     CharacterMessage,
@@ -125,6 +125,10 @@ async def load_scene_from_character_card(scene, file_path):
         character.base_attributes = {
             k.lower(): v for k, v in character.base_attributes.items()
         }
+        
+        character.dialogue_instructions = await creator.determine_character_dialogue_instructions(
+            character
+        )
 
         # any values that are lists should be converted to strings joined by ,
 

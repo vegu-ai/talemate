@@ -206,6 +206,7 @@ class VisualBase(Agent):
             backend = self.backend
 
         backend_changed = backend != self.backend
+        was_disabled = not self.enabled
 
         if backend_changed:
             self.backend_ready = False
@@ -218,8 +219,15 @@ class VisualBase(Agent):
         )
 
         await super().apply_config(*args, **kwargs)
+        
         backend_fn = getattr(self, f"{self.backend.lower()}_apply_config", None)
         if backend_fn:
+            
+            if not backend_changed and was_disabled and self.enabled:
+                # If the backend has not changed, but the agent was previously disabled
+                # and is now enabled, we need to trigger the backend apply_config function
+                backend_changed = True
+            
             task = asyncio.create_task(
                 backend_fn(backend_changed=backend_changed, *args, **kwargs)
             )
@@ -421,6 +429,7 @@ class VisualBase(Agent):
     async def generate_environment_background(self, instructions: str = None):
         with VisualContext(vis_type=VIS_TYPES.ENVIRONMENT, instructions=instructions):
             await self.generate(format="landscape")
+    generate_environment_background.exposed = True
 
     async def generate_character_portrait(
         self,
@@ -433,7 +442,7 @@ class VisualBase(Agent):
             instructions=instructions,
         ):
             await self.generate(format="portrait")
-
+    generate_character_portrait.exposed = True
 
 # apply mixins to the agent (from HANDLERS dict[str, cls])
 

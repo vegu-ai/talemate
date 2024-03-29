@@ -17,6 +17,7 @@ from talemate.emit import emit, wait_for_input
 from talemate.events import GameLoopActorIterEvent, GameLoopStartEvent, SceneStateEvent
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, NarratorMessage
+from talemate.game.engine import GameInstructionsMixin
 
 from .base import Agent, AgentAction, AgentActionConfig, set_processing
 from .registry import register
@@ -28,7 +29,7 @@ log = structlog.get_logger("talemate.agent.director")
 
 
 @register()
-class DirectorAgent(Agent):
+class DirectorAgent(GameInstructionsMixin, Agent):
     agent_type = "director"
     verbose_name = "Director"
 
@@ -64,6 +65,22 @@ class DirectorAgent(Agent):
                         description="If enabled, direction will be given to actors based on their goals.",
                         value=True,
                     ),
+                    "actor_direction_mode": AgentActionConfig(
+                        type="text",
+                        label="Actor Direction Mode",
+                        description="The mode to use when directing actors",
+                        value="direction",
+                        choices=[
+                            {
+                                "label": "Direction",
+                                "value": "direction",
+                            },
+                            {
+                                "label": "Inner Monologue",
+                                "value": "internal_monologue",
+                            }
+                        ]
+                    )
                 },
             ),
         }
@@ -79,6 +96,22 @@ class DirectorAgent(Agent):
     @property
     def experimental(self):
         return True
+
+    @property
+    def direct_enabled(self):
+        return self.actions["direct"].enabled
+    
+    @property
+    def direct_actors_enabled(self):
+        return self.actions["direct"].config["direct_actors"].value
+    
+    @property
+    def direct_scene_enabled(self):
+        return self.actions["direct"].config["direct_scene"].value
+
+    @property
+    def actor_direction_mode(self):
+        return self.actions["direct"].config["actor_direction_mode"].value
 
     def connect(self, scene):
         super().connect(scene)
@@ -97,13 +130,13 @@ class DirectorAgent(Agent):
         """
 
         if not self.enabled:
-            if self.scene.game_state.has_scene_instructions:
+            if await self.scene_has_instructions(self.scene):
                 self.is_enabled = True
                 log.warning("on_scene_init - enabling director", scene=self.scene)
             else:
                 return
 
-        if not self.scene.game_state.has_scene_instructions:
+        if not await self.scene_has_instructions(self.scene):
             return
 
         if not self.scene.game_state.ops.run_on_start:
@@ -123,7 +156,7 @@ class DirectorAgent(Agent):
         if not self.enabled:
             return
 
-        if not self.scene.game_state.has_scene_instructions:
+        if not await self.scene_has_instructions(self.scene):
             return
 
         if not event.actor.character.is_player:
@@ -208,7 +241,7 @@ class DirectorAgent(Agent):
         Run game state instructions, if they exist.
         """
 
-        if not self.scene.game_state.has_scene_instructions:
+        if not await self.scene_has_instructions(self.scene):
             return
 
         await self.direct_scene(None, None)
@@ -253,8 +286,8 @@ class DirectorAgent(Agent):
             emit("director", message, character=character)
             self.scene.push_history(message)
         else:
-            # run scene instructions
-            self.scene.game_state.scene_instructions
+            await self.run_scene_instructions(self.scene)
+            
 
     @set_processing
     async def persist_characters_from_worldstate(
@@ -290,13 +323,16 @@ class DirectorAgent(Agent):
         name: str,
         content: str = None,
         attributes: str = None,
+        determine_name: bool = True,
     ):
         world_state = instance.get_agent("world_state")
         creator = instance.get_agent("creator")
 
         self.scene.log.debug("persist_character", name=name)
-        name = await creator.determine_character_name(name)
-        self.scene.log.debug("persist_character", adjusted_name=name)
+        
+        if determine_name:
+            name = await creator.determine_character_name(name)
+            self.scene.log.debug("persist_character", adjusted_name=name)
 
         character = self.scene.Character(name=name)
         character.color = random.choice(
@@ -331,6 +367,12 @@ class DirectorAgent(Agent):
 
         self.scene.log.debug("persist_character", description=description)
 
+        dialogue_instructions = await creator.determine_character_dialogue_instructions(character)
+        
+        character.dialogue_instructions = dialogue_instructions
+        
+        self.scene.log.debug("persist_character", dialogue_instructions=dialogue_instructions)
+
         actor = self.scene.Actor(
             character=character, agent=instance.get_agent("conversation")
         )
@@ -361,6 +403,12 @@ class DirectorAgent(Agent):
 
         self.scene.context = response.strip()
         self.scene.emit_status()
+
+    async def log_action(self, action:str, action_description:str):
+        message = DirectorMessage(message=action_description, action=action)
+        self.scene.push_history(message)
+        emit("director", message)
+    log_action.exposed = True
 
     def inject_prompt_paramters(
         self, prompt_param: dict, kind: str, agent_function_name: str

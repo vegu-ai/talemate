@@ -393,8 +393,6 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         return details
 
-        return f"ChromaDB: {self.embeddings}"
-
     @property
     def embeddings(self):
         """

@@ -23,57 +23,17 @@ Generic OpenAI api implementations (tested and confirmed working):
 - [llamacpp](https://github.com/ggerganov/llama.cpp) with the `api_like_OAI.py` wrapper
 - let me know if you have tested any other implementations and they failed / worked or landed somewhere in between
 
-## Current features
+## Core Features
 
-- responsive modern ui
-- agents
-    - conversation: handles character dialogue
-    - narration: handles narrative exposition
-    - summarization: handles summarization to compress context while maintaining history
-    - director: can be used to direct the story / characters
-    - editor: improves AI responses (very hit and miss at the moment)
-    - world state: generates world snapshot and handles passage of time (objects and characters)
-    - creator: character / scenario creator
-    - tts: text to speech via elevenlabs, OpenAI or local tts
-    - visual: stable-diffusion client for in place visual generation via AUTOMATIC1111, ComfyUI or OpenAI
-- multi-client support (agents can be connected to separate APIs)
-- long term memory
-    - chromadb integration
-    - passage of time
-- narrative world state
-    - Automatically keep track and reinforce selected character and world truths / states.
-- narrative tools
-- creative tools 
-    - manage multiple NPCs
-    - AI backed character creation with template support (jinja2)
-    - AI backed scenario creation
-- context managegement
-    - Manage character details and attributes
-    - Manage world information / past events
-    - Pin important information to the context (Manually or conditionally through AI)
-- runpod integration
-- overridable templates for all prompts. (jinja2)
-
-## Planned features
-
-Kinda making it up as i go along, but i want to lean more into gameplay through AI, keeping track of gamestates, moving away from simply roleplaying towards a more game-ified experience.
-
-In no particular order:
-
-- Extension support
-    - modular agents and clients
-- Improved world state
-- Dynamic player choice generation
-- Better creative tools
-    - node based scenario / character creation
-- Improved and consistent long term memory and accurate current state of the world
-- Improved director agent
-    - Right now this doesn't really work well on anything but GPT-4 (and even there it's debatable). It tends to steer the story in a way that introduces pacing issues. It needs a model that is creative but also reasons really well i think.
-- Gameplay loop governed by AI
-    - objectives
-    - quests
-    - win / lose conditions
-
+- Multiple AI agents for dialogue, narration, summarization, direction, editing, world state management, character/scenario creation, text-to-speech, and visual generation
+- Support for multiple AI clients and APIs
+- Long-term memory using ChromaDB and passage of time tracking
+- Narrative world state management to reinforce character and world truths
+- Creative tools for managing NPCs, AI-assisted character, and scenario creation with template support
+- Context management for character details, world information, past events, and pinned information
+- Integration with Runpod
+- Customizable templates for all prompts using Jinja2
+- Modern, responsive UI
 
 # Instructions
 
@@ -81,10 +41,13 @@ Please read the documents in the `docs` folder for more advanced configuration a
 
 - [Quickstart](#quickstart)
     - [Installation](#installation)
+        - [Windows](#windows)
+        - [Linux](#linux)
     - [Connecting to an LLM](#connecting-to-an-llm)
-        - [Text-generation-webui](#text-generation-webui)
-            - [Recommended Models](#recommended-models)
         - [OpenAI / mistral.ai / Anthropic](#openai--mistralai--anthropic)
+        - [Text-generation-webui / LMStudio](#text-generation-webui--lmstudio)
+            - [Specifying the correct prompt template](#specifying-the-correct-prompt-template)
+            - [Recommended Models](#recommended-models)
         - [DeepInfra via OpenAI Compatible client](#deepinfra-via-openai-compatible-client)
     - [Ready to go](#ready-to-go)
     - [Load the introductory scenario "Infinity Quest"](#load-the-introductory-scenario-infinity-quest)
@@ -132,7 +95,27 @@ On the right hand side click the "Add Client" button. If there is no button, you
 
 ![No clients](docs/img/0.21.0/no-clients.png)
 
-## Text-generation-webui
+## OpenAI / mistral.ai / Anthropic
+
+The setup is the same for all three, the example below is for OpenAI.
+
+If you want to add an OpenAI client, just change the client type and select the apropriate model.
+
+![Add client modal](docs/img/0.21.0/openai-setup.png)
+
+If you are setting this up for the first time, you should now see the client, but it will have a red dot next to it, stating that it requires an API key.
+
+![OpenAI API Key missing](docs/img/0.18.0/openai-api-key-1.png)
+
+Click the `SET API KEY` button. This will open a modal where you can enter your API key.
+
+![OpenAI API Key missing](docs/img/0.21.0/openai-add-api-key.png)
+
+Click `Save` and after a moment the client should have a green dot next to it, indicating that it is ready to go.
+
+![OpenAI API Key set](docs/img/0.18.0/openai-api-key-3.png)
+
+## Text-generation-webui / LMStudio
 
 > :warning: As of version 0.13.0 the legacy text-generator-webui API `--extension api` is no longer supported, please use their new `--extension openai` api implementation instead. 
 
@@ -177,26 +160,6 @@ As of 2024.03.07 my personal regular drivers (the ones i test with) are:
 That said, any of the top models in any of the size classes here should work well (i wouldn't recommend going lower than 7B):
 
 https://www.reddit.com/r/LocalLLaMA/comments/18yp9u4/llm_comparisontest_api_edition_gpt4_vs_gemini_vs/
-
-## OpenAI / mistral.ai / Anthropic
-
-The setup is the same for all three, the example below is for OpenAI.
-
-If you want to add an OpenAI client, just change the client type and select the apropriate model.
-
-![Add client modal](docs/img/0.21.0/openai-setup.png)
-
-If you are setting this up for the first time, you should now see the client, but it will have a red dot next to it, stating that it requires an API key.
-
-![OpenAI API Key missing](docs/img/0.18.0/openai-api-key-1.png)
-
-Click the `SET API KEY` button. This will open a modal where you can enter your API key.
-
-![OpenAI API Key missing](docs/img/0.21.0/openai-add-api-key.png)
-
-Click `Save` and after a moment the client should have a green dot next to it, indicating that it is ready to go.
-
-![OpenAI API Key set](docs/img/0.18.0/openai-api-key-3.png)
 
 ## DeepInfra via OpenAI Compatible client
 

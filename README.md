@@ -43,6 +43,7 @@ Please read the documents in the `docs` folder for more advanced configuration a
     - [Installation](#installation)
         - [Windows](#windows)
         - [Linux](#linux)
+        - [Docker](#docker)
     - [Connecting to an LLM](#connecting-to-an-llm)
         - [OpenAI / mistral.ai / Anthropic](#openai--mistralai--anthropic)
         - [Text-generation-webui / LMStudio](#text-generation-webui--lmstudio)

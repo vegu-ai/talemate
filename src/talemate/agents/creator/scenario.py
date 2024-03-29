@@ -129,3 +129,19 @@ class ScenarioCreatorMixin:
             },
         )
         return description
+
+
+    @set_processing
+    async def determine_content_context_for_description(
+        self,
+        description:str,
+    ):
+        content_context = await Prompt.request(
+            f"creator.determine-content-context",
+            self.client,
+            "create",
+            vars={
+                "description": description,
+            },
+        )
+        return content_context.strip()

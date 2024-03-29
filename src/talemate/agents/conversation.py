@@ -22,7 +22,7 @@ from talemate.events import GameLoopEvent
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage, DirectorMessage
 
-from .base import Agent, AgentAction, AgentActionConfig, AgentEmission, set_processing
+from .base import Agent, AgentAction, AgentActionConfig, AgentDetail, AgentEmission, set_processing
 from .registry import register
 
 if TYPE_CHECKING:
@@ -83,12 +83,12 @@ class ConversationAgent(Agent):
                     "format": AgentActionConfig(
                         type="text",
                         label="Format",
-                        description="The format of the dialogue, as seen by the AI.",
+                        description="The generation format of the scene context, as seen by the AI.",
                         choices=[
-                            {"label": "Movie Script", "value": "movie_script"},
+                            {"label": "Screenplay", "value": "movie_script"},
                             {"label": "Chat (legacy)", "value": "chat"},
                         ],
-                        value="chat",
+                        value="movie_script",
                     ),
                     "length": AgentActionConfig(
                         type="number",
@@ -180,7 +180,37 @@ class ConversationAgent(Agent):
         if self.actions["generation_override"].enabled:
             return self.actions["generation_override"].config["format"].value
         return "movie_script"
-
+    
+    @property
+    def conversation_format_label(self):
+        value = self.conversation_format
+        
+        choices = self.actions["generation_override"].config["format"].choices
+        
+        for choice in choices:
+            if choice["value"] == value:
+                return choice["label"]
+        
+        return value
+    
+    @property
+    def agent_details(self) -> dict:
+        
+        details = {
+            "client": AgentDetail(
+                icon="mdi-network-outline",
+                value=self.client.name if self.client else None,
+                description="The client to use for prompt generation",
+            ).model_dump(),
+            "format": AgentDetail(
+                icon="mdi-format-float-none",
+                value=self.conversation_format_label,
+                description="Generation format of the scene context, as seen by the AI",
+            ).model_dump(),
+        }
+        
+        return details
+    
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("game_loop").connect(self.on_game_loop)
@@ -314,7 +344,7 @@ class ConversationAgent(Agent):
 
                 # AI will attempt to figure out who should talk next
                 next_actor = await self.select_talking_actor(character_names)
-                next_actor = next_actor.strip().strip('"').strip(".")
+                next_actor = next_actor.split("\n")[0].strip().strip('"').strip(".")
 
                 for character_name in scene.character_names:
                     if (
@@ -440,8 +470,9 @@ class ConversationAgent(Agent):
                 self.actions["generation_override"].config["instructions"].value
             )
 
+        conversation_format = self.conversation_format
         prompt = Prompt.get(
-            "conversation.dialogue",
+            f"conversation.dialogue-{conversation_format}",
             vars={
                 "scene": scene,
                 "max_tokens": self.client.max_token_length,
@@ -455,6 +486,7 @@ class ConversationAgent(Agent):
                 "partial_message": char_message,
                 "director_message": director_message,
                 "extra_instructions": extra_instructions,
+                "decensor": self.client.decensor_enabled,
             },
         )
 
@@ -535,6 +567,9 @@ class ConversationAgent(Agent):
     def clean_result(self, result, character):
         if "#" in result:
             result = result.split("#")[0]
+            
+        if "(Internal" in result:
+            result = result.split("(Internal")[0]
 
         result = result.replace(" :", ":")
         result = result.replace("[", "*").replace("]", "*")

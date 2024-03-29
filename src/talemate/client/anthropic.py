@@ -15,6 +15,7 @@ log = structlog.get_logger("talemate")
 
 # Edit this to add new models / remove old models
 SUPPORTED_MODELS = [
+    "claude-3-haiku-20240307",
     "claude-3-sonnet-20240229",
     "claude-3-opus-20240229",
 ]

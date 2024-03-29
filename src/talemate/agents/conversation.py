@@ -88,7 +88,7 @@ class ConversationAgent(Agent):
                             {"label": "Movie Script", "value": "movie_script"},
                             {"label": "Chat (legacy)", "value": "chat"},
                         ],
-                        value="chat",
+                        value="movie_script",
                     ),
                     "length": AgentActionConfig(
                         type="number",

@@ -83,9 +83,9 @@ class ConversationAgent(Agent):
                     "format": AgentActionConfig(
                         type="text",
                         label="Format",
-                        description="The format of the dialogue, as seen by the AI.",
+                        description="The generation format of the scene context, as seen by the AI.",
                         choices=[
-                            {"label": "Movie Script", "value": "movie_script"},
+                            {"label": "Screenplay", "value": "movie_script"},
                             {"label": "Chat (legacy)", "value": "chat"},
                         ],
                         value="movie_script",
@@ -440,8 +440,9 @@ class ConversationAgent(Agent):
                 self.actions["generation_override"].config["instructions"].value
             )
 
+        conversation_format = self.conversation_format
         prompt = Prompt.get(
-            "conversation.dialogue",
+            f"conversation.dialogue-{conversation_format}",
             vars={
                 "scene": scene,
                 "max_tokens": self.client.max_token_length,

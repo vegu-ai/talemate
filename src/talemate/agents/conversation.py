@@ -22,7 +22,7 @@ from talemate.events import GameLoopEvent
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage, DirectorMessage
 
-from .base import Agent, AgentAction, AgentActionConfig, AgentEmission, set_processing
+from .base import Agent, AgentAction, AgentActionConfig, AgentDetail, AgentEmission, set_processing
 from .registry import register
 
 if TYPE_CHECKING:
@@ -180,7 +180,37 @@ class ConversationAgent(Agent):
         if self.actions["generation_override"].enabled:
             return self.actions["generation_override"].config["format"].value
         return "movie_script"
-
+    
+    @property
+    def conversation_format_label(self):
+        value = self.conversation_format
+        
+        choices = self.actions["generation_override"].config["format"].choices
+        
+        for choice in choices:
+            if choice["value"] == value:
+                return choice["label"]
+        
+        return value
+    
+    @property
+    def agent_details(self) -> dict:
+        
+        details = {
+            "client": AgentDetail(
+                icon="mdi-network-outline",
+                value=self.client.name if self.client else None,
+                description="The client to use for prompt generation",
+            ).model_dump(),
+            "format": AgentDetail(
+                icon="mdi-format-float-none",
+                value=self.conversation_format_label,
+                description="Generation format of the scene context, as seen by the AI",
+            ).model_dump(),
+        }
+        
+        return details
+    
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("game_loop").connect(self.on_game_loop)

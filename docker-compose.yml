@@ -8,7 +8,8 @@ services:
     ports:
       - "5050:5050"
     volumes:
-      - ./src/talemate:/app/src/talemate
+      # can uncomment for dev purposes
+      #- ./src/talemate:/app/src/talemate
       - ./config.yaml:/app/config.yaml
       - ./scenes:/app/scenes
       - ./templates:/app/templates

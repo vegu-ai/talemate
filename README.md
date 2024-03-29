@@ -95,6 +95,10 @@ There is also a [troubleshooting guide](docs/troubleshoot.md) that might help.
 1. `docker-compose up`
 1. Navigate your browser to http://localhost:8080
 
+#### To shut down the Docker container
+
+Just closing the terminal window will not stop the Docker container. You need to run `docker-compose down` to stop the container.
+
 #### How to install Docker
 
 1. Download and install Docker Desktop from the [official Docker website](https://www.docker.com/products/docker-desktop).

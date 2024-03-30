@@ -112,7 +112,7 @@
       </v-toolbar-title>
       <v-spacer></v-spacer>
 
-      <v-app-bar-nav-icon @click="returnToStartScreen()"><v-icon>mdi-home</v-icon></v-app-bar-nav-icon>
+      <v-app-bar-nav-icon v-if="sceneActive" @click="returnToStartScreen()"><v-icon>mdi-home</v-icon></v-app-bar-nav-icon>
 
       <VisualQueue ref="visualQueue" />
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>

@@ -13,6 +13,7 @@ log = structlog.get_logger("talemate.client.textgenwebui")
 
 @register()
 class TextGeneratorWebuiClient(ClientBase):
+    auto_determine_prompt_template: bool = True
     client_type = "textgenwebui"
 
     class Meta(ClientBase.Meta):

@@ -152,28 +152,32 @@ def game(TM):
                 
             self.update_world_state = True
             
-            self.set_simulation_name(compiled)
+            self.set_simulation_title(compiled)
             
-        def set_simulation_name(self, compiled_calls):
+        def set_simulation_title(self, compiled_calls):
             
-            TM.log.debug("SIMULATION SUITE: set simulation name", name=TM.scene.name, compiled_calls=compiled_calls)
+            """
+            Generates a fitting title for the simulation based on the user's instructions
+            """
+            
+            TM.log.debug("SIMULATION SUITE: set simulation title", name=TM.scene.title, compiled_calls=compiled_calls)
             
             if not compiled_calls:
                 return
             
-            if TM.scene.name != "Simulation Suite":
+            if TM.scene.title != "Simulation Suite":
                 # name already changed, no need to do it again
                 return
             
-            name = TM.agents.creator.contextual_generate_from_args(
+            title = TM.agents.creator.contextual_generate_from_args(
                 "scene:simulation title",
                 "Create a fitting title for the simulated scenario that the user has requested. You response MUST be a short but exciting, descriptive title.",
                 length=75                
             )
             
-            name = name.strip('"').strip()
+            title = title.strip('"').strip()
             
-            TM.scene.set_name(name)
+            TM.scene.set_title(title)
             
         def prepare_calls(self, calls):
             """

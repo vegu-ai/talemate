@@ -241,6 +241,7 @@ class SceneScope(ObjectScope):
     
     exposed_properties = [
         "name",
+        "title",
     ]
     
     exposed_methods = [
@@ -250,7 +251,7 @@ class SceneScope(ObjectScope):
         "npc_character_names",
         "restore",
         "set_content_context",
-        "set_name",
+        "set_title",
     ]
     
     def __init__(self):

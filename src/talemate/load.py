@@ -181,6 +181,7 @@ async def load_scene_from_data(
     scene.experimental = scene_data.get("experimental", False)
     scene.help = scene_data.get("help", "")
     scene.restore_from = scene_data.get("restore_from", "")
+    scene.title = scene_data.get("title", "")
 
     # reset = True
 

@@ -756,6 +756,7 @@ class Scene(Emitter):
         self.static_tokens = 0
         self.max_tokens = 2048
         self.next_actor = None
+        self.title = ""
 
         self.experimental = False
         self.help = ""
@@ -901,6 +902,9 @@ class Scene(Emitter):
         
     def set_name(self, name: str):
         self.name = name
+        
+    def set_title(self, title: str):
+        self.title = title
         
     def set_content_context(self, content_context: str):
         self.context = content_context
@@ -1608,6 +1612,7 @@ class Scene(Emitter):
             self.name,
             status="started",
             data={
+                "title": self.title or self.name,
                 "environment": self.environment,
                 "scene_config": self.scene_config,
                 "player_character_name": (

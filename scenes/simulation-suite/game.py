@@ -429,6 +429,14 @@ def game(TM):
                 
         def finalize_round(self):
             
+            # track rounds
+            rounds = TM.game_state.get_var("instr.rounds", 0)
+            
+            # increase rounds
+            TM.game_state.set_var("instr.rounds", rounds + 1, commit=False)
+            
+            has_issued_instructions = TM.game_state.has_var("instr.has_issued_instructions")
+            
             if self.update_world_state:
                 self.run_update_world_state()
                 
@@ -437,13 +445,17 @@ def game(TM):
                 TM.game_state.set_var("instr.lastprocessed_call", self.player_message.id, commit=False)
                 TM.emit_status("success", MSG_PROCESSED_INSTRUCTIONS, as_scene_message=True)
                 
-            elif self.player_message and not TM.game_state.has_var("instr.has_issued_instructions"):
+            elif self.player_message and not has_issued_instructions:
                 # simulation started, player message is NOT an instruction, and player has not given
                 # any instructions
                 self.guide_player()
 
             elif self.player_message and not TM.scene.npc_character_names():
                 # simulation started, player message is NOT an instruction, but there are no npcs to interact with 
+                self.narrate_round()
+            
+            elif rounds % 3 == 0 and TM.scene.npc_character_names() and has_issued_instructions:
+                # every 3 rounds, narrate the round
                 self.narrate_round()
          
         def guide_player(self):

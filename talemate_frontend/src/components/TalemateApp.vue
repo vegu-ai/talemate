@@ -86,7 +86,11 @@
 
     <!-- app bar -->
     <v-app-bar app>
-      <v-app-bar-nav-icon @click="toggleNavigation('game')"><v-icon>mdi-script</v-icon></v-app-bar-nav-icon>
+      <v-app-bar-nav-icon size="x-small" @click="toggleNavigation('game')">
+        <v-icon v-if="sceneDrawer">mdi-arrow-collapse-left</v-icon>
+        <v-icon v-else>mdi-arrow-collapse-right</v-icon>
+      </v-app-bar-nav-icon>
+      
       <v-toolbar-title v-if="scene.name !== undefined">
         {{ scene.name || 'Untitled Scenario' }}
         <span v-if="scene.saved === false" class="text-red">*</span>
@@ -107,6 +111,9 @@
         Talemate
       </v-toolbar-title>
       <v-spacer></v-spacer>
+
+      <v-app-bar-nav-icon @click="returnToStartScreen()"><v-icon>mdi-home</v-icon></v-app-bar-nav-icon>
+
       <VisualQueue ref="visualQueue" />
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
@@ -446,6 +453,16 @@ export default {
         this.drawer = !this.drawer;
       else if (navigation == "debug")
         this.debugDrawer = !this.debugDrawer;
+    },
+    returnToStartScreen() {
+
+      if(this.sceneActive && !this.scene.saved) {
+        let confirm = window.confirm("Are you sure you want to return to the start screen? You will lose any unsaved progress.");
+        if(!confirm)
+          return;
+      }
+      // reload
+      document.location.reload();
     },
     getClients() {
       if (!this.$refs.aiClient) {

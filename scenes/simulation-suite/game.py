@@ -3,11 +3,11 @@ def game(TM):
     
     MSG_PROCESSED_INSTRUCTIONS = "Simulation suite processed instructions"
     
-    MSG_HELP = "Instructions to the simulation computer are only process if the computer is addressed at the beginning of the instruction. Please state your commands by addressing the computer by stating \"Computer,\" followed by an instruction. For example ... \"Computer, i want to experience being on a derelict spaceship.\""
+    MSG_HELP = "Instructions to the simulation computer are only processed if the computer is directly addressed at the beginning of the instruction. Please state your commands by addressing the computer by stating \"Computer,\" followed by an instruction. For example ... \"Computer, i want to experience being on a derelict spaceship.\""
     
     PROMPT_NARRATE_ROUND = "Narrate the simulation and reveal some new details to the player in one paragraph. YOU MUST NOT ADDRESS THE COMPUTER OR THE SIMULATION."
     
-    PROMPT_STARTUP = "Narrate the computer asking the user to state the nature of their desired simulation."
+    PROMPT_STARTUP = "Narrate the computer asking the user to state the nature of their desired simulation in a synthetic and soft sounding voice."
     
     CTX_PIN_UNAWARE = "Characters in the simulation ARE NOT AWARE OF THE COMPUTER."
     
@@ -454,7 +454,7 @@ def game(TM):
                 # simulation started, player message is NOT an instruction, but there are no npcs to interact with 
                 self.narrate_round()
             
-            elif rounds % 3 == 0 and TM.scene.npc_character_names() and has_issued_instructions:
+            elif rounds % 3 == 0 and rounds and TM.scene.npc_character_names() and has_issued_instructions:
                 # every 3 rounds, narrate the round
                 self.narrate_round()
          

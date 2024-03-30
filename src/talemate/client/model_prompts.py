@@ -1,6 +1,7 @@
 import os
 import shutil
 import tempfile
+import json
 
 import huggingface_hub
 import structlog
@@ -155,9 +156,22 @@ class ModelPrompt:
         except ValueError:
             return None
 
+        branch_name = "main"
+
+        # special popular cases
+        
+        # bartowski
+        
+        if author == "bartowski" and "exl2" in model_name:
+            # split model_name by exl2 and take the first part with "exl2" readded
+            # the second part is the branch name
+            model_name, branch_name = model_name.split("exl2_", 1)
+            model_name = f"{model_name}exl2"
+            
+
         models = list(
             api.list_models(
-                filter=huggingface_hub.ModelFilter(model_name=model_name, author=author)
+                model_name=model_name, author=author
             )
         )
 
@@ -167,9 +181,11 @@ class ModelPrompt:
         model = models[0]
 
         repo_id = f"{author}/{model_name}"
+        
+        # Check README.md
         with tempfile.TemporaryDirectory() as tmpdir:
             readme_path = huggingface_hub.hf_hub_download(
-                repo_id=repo_id, filename="README.md", cache_dir=tmpdir
+                repo_id=repo_id, filename="README.md", cache_dir=tmpdir, revision=branch_name
             )
             if not readme_path:
                 return None
@@ -179,6 +195,22 @@ class ModelPrompt:
                     identifier = identifer_cls()
                     if identifier(readme):
                         return f"{identifier.template_str}.jinja2"
+                    
+        # Check tokenizer_config.json
+        # "chat_template" key
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = huggingface_hub.hf_hub_download(
+                repo_id=repo_id, filename="tokenizer_config.json", cache_dir=tmpdir, revision=branch_name
+            )
+            if not config_path:
+                return None
+            with open(config_path) as f:
+                config = json.load(f)
+                for identifer_cls in TEMPLATE_IDENTIFIERS:
+                    identifier = identifer_cls()
+                    if identifier(config.get("chat_template", "")):
+                        return f"{identifier.template_str}.jinja2"
+                
 
 
 model_prompt = ModelPrompt()
@@ -212,10 +244,8 @@ class ChatMLIdentifier(TemplateIdentifier):
         """
 
         return (
-            "<|im_start|>system" in content
+            "<|im_start|>" in content
             and "<|im_end|>" in content
-            and "<|im_start|>user" in content
-            and "<|im_start|>assistant" in content
         )
 
 

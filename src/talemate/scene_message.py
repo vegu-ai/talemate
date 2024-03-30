@@ -170,6 +170,9 @@ class DirectorMessage(SceneMessage):
         # first we lowercase
         instructions = self.instructions.lower()
         
+        if not self.character_name:
+            return instructions
+        
         # then we replace yourself with myself using regex, taking care of word boundaries
         instructions = re.sub(r"\byourself\b", "myself", instructions)
         

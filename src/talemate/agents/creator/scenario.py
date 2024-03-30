@@ -128,7 +128,7 @@ class ScenarioCreatorMixin:
                 "text": text,
             },
         )
-        return description
+        return description.strip()
 
 
     @set_processing
@@ -139,9 +139,9 @@ class ScenarioCreatorMixin:
         content_context = await Prompt.request(
             f"creator.determine-content-context",
             self.client,
-            "create",
+            "create_short",
             vars={
                 "description": description,
             },
         )
-        return content_context.strip()
+        return content_context.lstrip().split("\n")[0].strip('"').strip()

@@ -117,7 +117,7 @@ def game(TM):
                 scene=TM.scene,
             )
             
-            calls = calls.split("\n")
+            self.calls = calls = calls.split("\n")
             
             calls = self.prepare_calls(calls)
             
@@ -151,6 +151,29 @@ def game(TM):
                 )
                 
             self.update_world_state = True
+            
+            self.set_simulation_name(compiled)
+            
+        def set_simulation_name(self, compiled_calls):
+            
+            TM.log.debug("SIMULATION SUITE: set simulation name", name=TM.scene.name, compiled_calls=compiled_calls)
+            
+            if not compiled_calls:
+                return
+            
+            if TM.scene.name != "Simulation Suite":
+                # name already changed, no need to do it again
+                return
+            
+            name = TM.agents.creator.contextual_generate_from_args(
+                "scene:simulation title",
+                "Create a fitting title for the simulated scenario that the user has requested. You response MUST be a short but exciting, descriptive title.",
+                length=75                
+            )
+            
+            name = name.strip('"').strip()
+            
+            TM.scene.set_name(name)
             
         def prepare_calls(self, calls):
             """
@@ -319,6 +342,20 @@ def game(TM):
                 character_name = TM.agents.creator.determine_character_name(character_name=f"{inject} - what is the name of the character to be added to the scene? If no name can extracted from the text, extract a short descriptive name instead. Respond only with the name.")
             else:
                 character_name = TM.agents.creator.determine_character_name(character_name=f"{inject} - what is the name of the group of characters to be added to the scene? If no name can extracted from the text, extract a short descriptive name instead. Respond only with the name.", group=True)
+            
+            # sometimes add_ai_character and change_ai_character are called in the same instruction targeting
+            # the same character, if this happens we need to combine into a single add_ai_character call
+            
+            has_change_ai_character_call = TM.client.query_text_eval(f"Are there any calls to `change_ai_character` in the instruction for {character_name}?", "\n".join(self.calls))
+            
+            if has_change_ai_character_call:
+                combined_arg = TM.agents.world_state.analyze_and_follow_instruction(
+                    "\n".join(self.calls),
+                    f"Combine the arguments of the function calls `add_ai_character` and `change_ai_character` for {character_name} into a single text string. Respond with the new argument."
+                )
+                call = f"add_ai_character({combined_arg})"
+                inject = f"The computer executes the function `{call}`"
+                
             
             TM.emit_status("busy", f"Simulation suite adding character: {character_name}", as_scene_message=True)
             

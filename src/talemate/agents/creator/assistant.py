@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, Tuple
 
 import pydantic
 
@@ -22,7 +22,7 @@ class ContentGenerationContext(pydantic.BaseModel):
     original: Union[str, None] = None
 
     @property
-    def computed_context(self) -> (str, str):
+    def computed_context(self) -> Tuple[str, str]:
         typ, context = self.context.split(":", 1)
         return typ, context
 
@@ -53,6 +53,7 @@ class AssistantMixin:
         )
 
         return await self.contextual_generate(generation_context)
+    contextual_generate_from_args.exposed = True
 
     @set_processing
     async def contextual_generate(

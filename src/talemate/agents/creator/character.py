@@ -201,13 +201,13 @@ class CharacterCreatorMixin:
         instructions = await Prompt.request(
             f"creator.determine-character-dialogue-instructions",
             self.client,
-            "create",
+            "create_concise",
             vars={
                 "character": character,
             },
         )
     
-        r = instructions.strip().strip('"').strip()
+        r = instructions.strip().split("\n")[0].strip('"').strip()
         return r
 
     @set_processing

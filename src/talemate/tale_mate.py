@@ -899,6 +899,9 @@ class Scene(Emitter):
     def set_intro(self, intro: str):
         self.intro = intro
         
+    def set_name(self, name: str):
+        self.name = name
+        
     def set_content_context(self, content_context: str):
         self.context = content_context
 
@@ -1367,6 +1370,12 @@ class Scene(Emitter):
             if isinstance(message, DirectorMessage):
                 if not keep_director:
                     continue
+                
+                if not message.character_name:
+                    # skip director messages that are not character specific
+                    # TODO: we may want to include these in the future
+                    continue
+                
                 elif isinstance(keep_director, str) and message.source != keep_director:
                     continue
 

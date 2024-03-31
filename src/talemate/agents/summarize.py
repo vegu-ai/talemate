@@ -140,7 +140,9 @@ class SummarizeAgent(Agent):
         if recent_entry:
             ts = recent_entry.get("ts", ts)
 
-        for i in range(start, len(scene.history)):
+        # we ignore the most recent entry, as the user may still chose to
+        # regenerate it
+        for i in range(start, max(start, len(scene.history)-1)):
             dialogue = scene.history[i]
 
             # log.debug("build_archive", idx=i, content=str(dialogue)[:64]+"...")

@@ -351,6 +351,9 @@ class VisualBase(Agent):
         vis_type_styles = self.vis_type_styles(context.vis_type)
         prompt = self.prepare_prompt(prompt, [vis_type_styles, thematic_style])
 
+        if context.vis_type == VIS_TYPES.CHARACTER:
+            prompt.keywords.append("character portrait")
+
         if not prompt:
             log.error(
                 "generate", error="No prompt provided and no context to generate from"

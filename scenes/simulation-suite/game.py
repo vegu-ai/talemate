@@ -11,6 +11,8 @@ def game(TM):
     
     CTX_PIN_UNAWARE = "Characters in the simulation ARE NOT AWARE OF THE COMPUTER."
     
+    AUTO_NARRATE_INTERVAL = 10
+    
     def parse_sim_call_arguments(call:str) -> str:
         """
         Returns the value between the parentheses of a simulation call
@@ -495,7 +497,7 @@ def game(TM):
                 # simulation started, player message is NOT an instruction, but there are no npcs to interact with 
                 self.narrate_round()
             
-            elif rounds % 3 == 0 and rounds and TM.scene.npc_character_names() and has_issued_instructions:
+            elif rounds % AUTO_NARRATE_INTERVAL == 0 and rounds and TM.scene.npc_character_names() and has_issued_instructions:
                 # every 3 rounds, narrate the round
                 self.narrate_round()
          

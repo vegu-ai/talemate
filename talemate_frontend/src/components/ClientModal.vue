@@ -51,7 +51,7 @@
 
                     <v-card-text>
                       <div class="text-caption" v-if="!client.data.has_prompt_template">No matching LLM prompt template found. Using default.</div>
-                      <pre>{{ client.data.prompt_template_example }}</pre>
+                      <div class="prompt-template-preview">{{ client.data.prompt_template_example }}</div>
                     </v-card-text>
                     <v-card-actions>
                       <v-btn @click.stop="determineBestTemplate" prepend-icon="mdi-web-box">Determine via HuggingFace</v-btn>
@@ -251,3 +251,12 @@ export default {
   },
 }
 </script>
+<style scoped>
+
+.prompt-template-preview {
+  white-space: pre-wrap;
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+
+</style>

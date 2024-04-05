@@ -139,6 +139,8 @@ class MistralAIConfig(BaseModel):
 class AnthropicConfig(BaseModel):
     api_key: Union[str, None] = None
 
+class CohereConfig(BaseModel):
+    api_key: Union[str, None] = None
 
 class RunPodConfig(BaseModel):
     api_key: Union[str, None] = None
@@ -321,6 +323,8 @@ class Config(BaseModel):
     mistralai: MistralAIConfig = MistralAIConfig()
 
     anthropic: AnthropicConfig = AnthropicConfig()
+    
+    cohere: CohereConfig = CohereConfig()
 
     runpod: RunPodConfig = RunPodConfig()
 

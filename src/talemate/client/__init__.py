@@ -8,3 +8,4 @@ from talemate.client.anthropic import AnthropicClient
 from talemate.client.openai_compat import OpenAICompatibleClient
 from talemate.client.registry import CLIENT_CLASSES, get_client_class, register
 from talemate.client.textgenwebui import TextGeneratorWebuiClient
+from talemate.client.cohere import CohereClient

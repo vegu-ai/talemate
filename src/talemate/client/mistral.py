@@ -1,9 +1,9 @@
-import json
 
 import pydantic
 import structlog
-import tiktoken
-from openai import AsyncOpenAI, PermissionDeniedError
+from mistralai.async_client import MistralAsyncClient
+from mistralai.exceptions import MistralAPIStatusException
+from mistralai.models.chat_completion import ChatMessage
 
 from talemate.client.base import ClientBase, ErrorAction
 from talemate.client.registry import register
@@ -25,6 +25,7 @@ SUPPORTED_MODELS = [
     "mistral-large-latest",
 ]
 
+JSON_OBJECT_RESPONSE_MODELS = SUPPORTED_MODELS
 
 class Defaults(pydantic.BaseModel):
     max_token_length: int = 16384
@@ -104,7 +105,7 @@ class MistralAIClient(ClientBase):
 
     def set_client(self, max_token_length: int = None):
         if not self.mistralai_api_key:
-            self.client = AsyncOpenAI(api_key="sk-1111")
+            self.client = MistralAsyncClient(api_key="sk-1111")
             log.error("No mistral.ai API key set")
             if self.api_key_status:
                 self.api_key_status = False
@@ -120,9 +121,7 @@ class MistralAIClient(ClientBase):
 
         model = self.model_name
 
-        self.client = AsyncOpenAI(
-            api_key=self.mistralai_api_key, base_url="https://api.mistral.ai/v1/"
-        )
+        self.client = MistralAsyncClient(api_key=self.mistralai_api_key)
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -183,16 +182,24 @@ class MistralAIClient(ClientBase):
         if not self.mistralai_api_key:
             raise Exception("No mistral.ai API key set")
 
+        supports_json_object = self.model_name in JSON_OBJECT_RESPONSE_MODELS
         right = None
         expected_response = None
         try:
             _, right = prompt.split("\nStart your response with: ")
             expected_response = right.strip()
+            if expected_response.startswith("{") and supports_json_object:
+                parameters["response_format"] = {"type": "json_object"}
         except (IndexError, ValueError):
             pass
 
-        human_message = {"role": "user", "content": prompt.strip()}
-        system_message = {"role": "system", "content": self.get_system_message(kind)}
+        
+        system_message = self.get_system_message(kind)
+        
+        messages = [
+            ChatMessage(role="system", content=system_message),
+            ChatMessage(role="user", content=prompt.strip()),
+        ]
 
         self.log.debug(
             "generate",
@@ -202,9 +209,9 @@ class MistralAIClient(ClientBase):
         )
 
         try:
-            response = await self.client.chat.completions.create(
+            response = await self.client.chat(
                 model=self.model_name,
-                messages=[system_message, human_message],
+                messages=messages,
                 **parameters,
             )
 
@@ -216,17 +223,22 @@ class MistralAIClient(ClientBase):
             # older models don't support json_object response coersion
             # and often like to return the response wrapped in ```json
             # so we strip that out if the expected response is a json object
-            if expected_response and expected_response.startswith("{"):
+            if (
+                not supports_json_object
+                and expected_response
+                and expected_response.startswith("{")
+            ):
                 if response.startswith("```json") and response.endswith("```"):
                     response = response[7:-3].strip()
-
+                    
             if right and response.startswith(right):
                 response = response[len(right) :].strip()
 
             return response
-        except PermissionDeniedError as e:
+        except MistralAPIStatusException as e:
             self.log.error("generate error", e=e)
-            emit("status", message="mistral.ai API: Permission Denied", status="error")
+            if e.http_status in [403, 401]:
+                emit("status", message="mistral.ai API: Permission Denied", status="error")
             return ""
         except Exception as e:
             raise

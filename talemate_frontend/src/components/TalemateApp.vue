@@ -132,6 +132,7 @@
 
           <SceneTools 
             @open-world-state-manager="onOpenWorldStateManager"
+            :messageInput="messageInput"
             :playerCharacterName="getPlayerCharacterName()"
             :passiveCharacters="passiveCharacters"
             :inactiveCharacters="inactiveCharacters"
@@ -380,6 +381,23 @@ export default {
         return;
       }
 
+      if (data.type === 'autocomplete_suggestion') {
+
+        const completion = data.message;
+
+        // append completion to messageInput, add a space if
+        // neither messageInput ends with a space nor completion starts with a space
+        // unless completion starts with !, ., or ?
+
+        const completionStartsWithSentenceEnd = completion.startsWith('!') || completion.startsWith('.') || completion.startsWith('?') || completion.startsWith(')') || completion.startsWith(']') || completion.startsWith('}') || completion.startsWith('"') || completion.startsWith("'") || completion.startsWith("*") || completion.startsWith(",")
+
+        if (this.messageInput.endsWith(' ') || completion.startsWith(' ') || completionStartsWithSentenceEnd) {
+          this.messageInput += completion;
+        } else {
+          this.messageInput += ' ' + completion;
+        }
+      }
+
       if (data.type === 'request_input') {
 
         this.waitingForInput = true;
@@ -417,7 +435,14 @@ export default {
       }
 
     },
-    sendMessage() {
+    sendMessage(event) {
+
+      // if ctrl+enter is pressed, request autocomplete
+      if (event.ctrlKey && event.key === 'Enter') {
+        this.websocket.send(JSON.stringify({ type: 'interact', text: `!acdlg: ${this.messageInput}` }));
+        return;
+      }
+
       if (!this.inputDisabled) {
         this.websocket.send(JSON.stringify({ type: 'interact', text: this.messageInput }));
         this.messageInput = '';

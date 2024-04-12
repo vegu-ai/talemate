@@ -50,6 +50,15 @@
                 <v-icon class="ml-1 mr-3" v-else-if="isWaitingForInput()">mdi-keyboard</v-icon>
                 <v-icon class="ml-1 mr-3" v-else>mdi-circle-outline</v-icon>
 
+                <v-tooltip v-if="isWaitingForInput()" location="top" text="Request autocomplete suggestion for your input.">
+                    <template v-slot:activator="{ props }">
+                        <v-btn :disabled="messageInput.length < 5" class="hotkey mr-3" v-bind="props" @click="requestAutocompleteSuggestion" color="primary" icon>
+                            <v-icon>mdi-auto-fix</v-icon>
+                        </v-btn>
+                    </template>
+                </v-tooltip>
+
+
                 <v-divider vertical></v-divider>
 
 
@@ -372,6 +381,7 @@ export default {
         inactiveCharacters: Array,
         activeCharacters: Array,
         playerCharacterName: String,
+        messageInput: String,
     },
     computed: {
         deactivatableCharacters: function() {
@@ -665,6 +675,10 @@ export default {
             command += ":0.5:"+method;
 
             this.sendHotButtonMessage(command)
+        },
+
+        requestAutocompleteSuggestion() {
+            this.getWebsocket().send(JSON.stringify({ type: 'interact', text: `!acdlg:${this.messageInput}` }));
         },
 
         handleMessage(data) {

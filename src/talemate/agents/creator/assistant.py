@@ -1,10 +1,12 @@
 from typing import TYPE_CHECKING, Union, Tuple
 
 import pydantic
+import asyncio
 
 import talemate.util as util
 from talemate.agents.base import set_processing
 from talemate.prompts import Prompt
+from talemate.emit import emit
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -94,3 +96,41 @@ class AssistantMixin:
         content = util.strip_partial_sentences(content)
 
         return content.strip()
+
+    @set_processing
+    async def autocomplete_dialogue(
+        self,
+        input: str,
+        character: "Character",
+        emit_signal: bool = True,
+    ) -> str:
+        """
+        Autocomplete dialogue.
+        """
+
+        response = await Prompt.request(
+            f"creator.autocomplete-dialogue",
+            self.client,
+            "create_short",
+            vars={
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "input": input.strip(),
+                "character": character,
+                "can_coerce": self.client.Meta().requires_prompt_template,
+            },
+            pad_prepended_response=False,
+            dedupe_enabled=False,
+        )
+        
+        response = util.clean_dialogue(response, character.name)[len(character.name+":"):].strip()
+        
+        if response.startswith(input):
+            response = response[len(input):]
+
+        self.scene.log.debug("autocomplete_suggestion", suggestion=response, input=input)
+
+        if emit_signal:
+            emit("autocomplete_suggestion", response)
+        
+        return response

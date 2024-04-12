@@ -36,6 +36,8 @@ ConfigSaved = signal("config_saved")
 
 ImageGenerated = signal("image_generated")
 
+AutocompleteSuggestion = signal("autocomplete_suggestion")
+
 handlers = {
     "system": SystemMessage,
     "narrator": NarratorMessage,
@@ -63,4 +65,5 @@ handlers = {
     "config_saved": ConfigSaved,
     "status": StatusMessage,
     "image_generated": ImageGenerated,
+    "autocomplete_suggestion": AutocompleteSuggestion,
 }

@@ -273,10 +273,15 @@ class Prompt:
         return prompt
 
     @classmethod
-    async def request(cls, uid: str, client: Any, kind: str, vars: dict = None):
+    async def request(cls, uid: str, client: Any, kind: str, vars: dict = None, **kwargs):
         if "decensor" not in vars:
             vars.update(decensor=client.decensor_enabled)
         prompt = cls.get(uid, vars)
+        
+        # kwargs update prompt class attributes
+        for key, value in kwargs.items():
+            setattr(prompt, key, value)
+        
         return await prompt.send(client, kind)
 
     @property

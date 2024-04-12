@@ -540,6 +540,14 @@ class WebsocketHandler(Receiver):
                 "character": emission.character.name if emission.character else "",
             }
         )
+        
+    def handle_autocomplete_suggestion(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "autocomplete_suggestion",
+                "message": emission.message,
+            }
+        )
 
     def handle_audio_queue(self, emission: Emission):
         self.queue_put(

@@ -822,14 +822,9 @@ class Prompt:
                 response = self.prepared_response.rstrip() + pad + response.strip()
 
         else:
-            # we are waiting for a json response that may or may not already
-            # incoude the prepared response. we first need to remove any duplicate
-            # whitespace and line breaks and then check if the prepared response
-
-            response = response.replace("\n", " ")
-            response = re.sub(r"\s+", " ", response)
-
-            if not response.lower().startswith(self.prepared_response.lower()):
+            # awaiting json response, if the response does not start with a {
+            # it means its likely a coerced response and we need to prepend the prepared response
+            if not response.lower().startswith("{"):
                 pad = " " if self.pad_prepended_response else ""
                 response = self.prepared_response.rstrip() + pad + response.strip()
 

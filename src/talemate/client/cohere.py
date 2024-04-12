@@ -163,7 +163,7 @@ class CohereClient(ClientBase):
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
         keys = list(parameters.keys())
-        valid_keys = ["temperature", "top_p", "max_tokens"]
+        valid_keys = ["temperature", "max_tokens"]
         for key in keys:
             if key not in valid_keys:
                 del parameters[key]
@@ -199,6 +199,7 @@ class CohereClient(ClientBase):
                 model=self.model_name,
                 preamble=system_message,
                 message=human_message,
+                **parameters,
             )
 
             self._returned_prompt_tokens = self.prompt_tokens(prompt)

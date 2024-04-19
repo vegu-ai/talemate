@@ -394,6 +394,9 @@ class ClientBase:
             parameters["extra_stopping_strings"] += dialog_stopping_strings
         else:
             parameters["extra_stopping_strings"] = dialog_stopping_strings
+            
+    def finalize(self, parameters:dict, prompt:str):
+        return prompt
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
@@ -444,9 +447,7 @@ class ClientBase:
                 self.get_system_message(kind), prompt
             ).strip(" ")
             
-            if finalized_prompt.endswith("<|end_header_id|>"):
-                # append two linebreaks
-                finalized_prompt += "\n\n"
+            finalized_prompt = self.finalize(prompt_param, finalized_prompt)
             
             prompt_param = finalize(prompt_param)
 

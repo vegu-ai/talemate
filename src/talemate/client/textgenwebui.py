@@ -38,30 +38,38 @@ class TextGeneratorWebuiClient(ClientBase):
                 "applying temperature smoothing for Yi model",
             )
             
-        elif self.model_name and self.is_llama3_model():
-            # llama3 models need to add  "<|eot_id|>", "<|end_of_text|>" to the stopping strings
-            parameters["stopping_strings"] += ["<|eot_id|>", "<|end_of_text|>"]
-            
-            # also needs to add `skip_special_tokens`= False to the parameters
-            parameters["skip_special_tokens"] = False
-            log.debug(
-                "applying extra stopping strings for Llama3 model",
-            )
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
 
-    def is_llama3_model(self):
-        model_name = self.model_name.lower()
-        # regex match for llama3 encased by non-word characters
+    def finalize_llama3_instruct_model(self, parameters:dict, prompt:str) -> str:
+        
+        if "<|eot_id|>" not in prompt:
+            return prompt
+        
+        # llama3 instruct models need to add  "<|eot_id|>", "<|end_of_text|>" to the stopping strings
+        parameters["stopping_strings"] += ["<|eot_id|>", "<|end_of_text|>"]
+        
+        # also needs to add `skip_special_tokens`= False to the parameters
+        parameters["skip_special_tokens"] = False
+        log.debug("finalizing llama3 instruct model", parameters=parameters)
 
-        return "llama-3" in model_name
+        if prompt.endswith("<|end_header_id|>"):
+            # append two linebreaks
+            prompt += "\n\n"
+            log.debug("adjusting llama3 instruct model prompt linebreaks")
+            
+        return prompt
 
     def is_yi_model(self):
         model_name = self.model_name.lower()
         # regex match for yi encased by non-word characters
 
         return bool(re.search(r"[\-_]yi[\-_]", model_name))
+    
+    def finalize(self, parameters: dict, prompt: str) -> str:
+        prompt = self.finalize_llama3_instruct_model(parameters, prompt)
+        return prompt
 
     async def get_model_name(self):
         async with httpx.AsyncClient() as client:

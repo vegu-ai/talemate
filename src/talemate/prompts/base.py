@@ -14,7 +14,7 @@ import random
 import re
 import uuid
 from contextvars import ContextVar
-from typing import Any
+from typing import Any, Tuple
 
 import jinja2
 import nest_asyncio
@@ -33,8 +33,6 @@ from talemate.util import (
     fix_faulty_json,
     remove_extra_linebreaks,
 )
-
-from typing import Tuple
 
 __all__ = [
     "Prompt",
@@ -273,10 +271,17 @@ class Prompt:
         return prompt
 
     @classmethod
-    async def request(cls, uid: str, client: Any, kind: str, vars: dict = None):
+    async def request(
+        cls, uid: str, client: Any, kind: str, vars: dict = None, **kwargs
+    ):
         if "decensor" not in vars:
             vars.update(decensor=client.decensor_enabled)
         prompt = cls.get(uid, vars)
+
+        # kwargs update prompt class attributes
+        for key, value in kwargs.items():
+            setattr(prompt, key, value)
+
         return await prompt.send(client, kind)
 
     @property
@@ -822,14 +827,9 @@ class Prompt:
                 response = self.prepared_response.rstrip() + pad + response.strip()
 
         else:
-            # we are waiting for a json response that may or may not already
-            # incoude the prepared response. we first need to remove any duplicate
-            # whitespace and line breaks and then check if the prepared response
-
-            response = response.replace("\n", " ")
-            response = re.sub(r"\s+", " ", response)
-
-            if not response.lower().startswith(self.prepared_response.lower()):
+            # awaiting json response, if the response does not start with a {
+            # it means its likely a coerced response and we need to prepend the prepared response
+            if not response.lower().startswith("{"):
                 pad = " " if self.pad_prepended_response else ""
                 response = self.prepared_response.rstrip() + pad + response.strip()
 

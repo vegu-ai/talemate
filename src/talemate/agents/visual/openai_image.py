@@ -1,5 +1,6 @@
 import base64
 import io
+from urllib.parse import unquote
 
 import httpx
 import structlog
@@ -100,6 +101,8 @@ class OpenAIImageMixin:
         else:
             resolution = Resolution(width=1024, height=1024)
 
+        log.debug("openai_image_generate", resolution=resolution)
+
         response = await client.images.generate(
             model=self.openai_model_type,
             prompt=prompt.positive_prompt,
@@ -110,8 +113,15 @@ class OpenAIImageMixin:
 
         download_url = response.data[0].url
 
+        # decode url because httpx will encode it again
+        download_url = unquote(download_url)
+        log.debug("openai_image_generate", download_url=download_url)
+
         async with httpx.AsyncClient() as client:
             response = await client.get(download_url, timeout=90)
+            log.debug("openai_image_generate", status_code=response.status_code)
+            if response.status_code >= 400:
+                raise ValueError(f"Error downloading image: {response.content}")
             # bytes to base64encoded
             image = base64.b64encode(response.content).decode("utf-8")
             await self.emit_image(image)

@@ -12,6 +12,7 @@ class Defaults(pydantic.BaseModel):
 
 @register()
 class LMStudioClient(ClientBase):
+    auto_determine_prompt_template: bool = True
     client_type = "lmstudio"
 
     class Meta(ClientBase.Meta):

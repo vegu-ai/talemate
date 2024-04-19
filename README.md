@@ -43,6 +43,7 @@ Please read the documents in the `docs` folder for more advanced configuration a
     - [Installation](#installation)
         - [Windows](#windows)
         - [Linux](#linux)
+        - [Docker](#docker)
     - [Connecting to an LLM](#connecting-to-an-llm)
         - [OpenAI / mistral.ai / Anthropic](#openai--mistralai--anthropic)
         - [Text-generation-webui / LMStudio](#text-generation-webui--lmstudio)
@@ -81,11 +82,28 @@ There is also a [troubleshooting guide](docs/troubleshoot.md) that might help.
 
 `nodejs v19 or v20` :warning: `v21` not supported yet.
 
-1. `git clone git@github.com:vegu-ai/talemate`
+1. `git clone https://github.com/vegu-ai/talemate.git`
 1. `cd talemate`
 1. `source install.sh`
 1. Start the backend: `python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050`.
 1. Open a new terminal, navigate to the `talemate_frontend` directory, and start the frontend server by running `npm run serve`.
+
+### Docker
+
+1. `git clone https://github.com/vegu-ai/talemate.git`
+1. `cd talemate`
+1. `docker-compose up`
+1. Navigate your browser to http://localhost:8080
+
+:warning: When connecting local APIs running on the hostmachine (e.g. text-generation-webui), you need to use `host.docker.internal` as the hostname.
+
+#### To shut down the Docker container
+
+Just closing the terminal window will not stop the Docker container. You need to run `docker-compose down` to stop the container.
+
+#### How to install Docker
+
+1. Download and install Docker Desktop from the [official Docker website](https://www.docker.com/products/docker-desktop).
 
 # Connecting to an LLM
 

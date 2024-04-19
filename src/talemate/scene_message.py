@@ -1,5 +1,6 @@
-from dataclasses import dataclass, field
 import re
+from dataclasses import dataclass, field
+
 import isodate
 
 _message_id = 0
@@ -32,7 +33,7 @@ class SceneMessage:
     source: str = ""
 
     hidden: bool = False
-    
+
     typ = "scene"
 
     def __str__(self):
@@ -138,7 +139,7 @@ class NarratorMessage(SceneMessage):
 class DirectorMessage(SceneMessage):
     action: str = "actor_instruction"
     typ = "director"
-    
+
     @property
     def transformed_message(self):
         return self.message.replace("Director instructs ", "")
@@ -148,51 +149,58 @@ class DirectorMessage(SceneMessage):
         if self.action == "actor_instruction":
             return self.transformed_message.split(":", 1)[0]
         return ""
-    
+
     @property
     def dialogue(self):
         if self.action == "actor_instruction":
             return self.transformed_message.split(":", 1)[1]
         return self.message
-    
+
     @property
     def instructions(self):
         if self.action == "actor_instruction":
-            return self.dialogue.replace('"','').replace("To progress the scene, i want you to ", "").strip()
+            return (
+                self.dialogue.replace('"', "")
+                .replace("To progress the scene, i want you to ", "")
+                .strip()
+            )
         return self.message
 
     @property
     def as_inner_monologue(self):
-        
+
         # instructions may be written referencing the character as you, your etc.,
         # so we need to replace those to fit a first person perspective
-        
+
         # first we lowercase
         instructions = self.instructions.lower()
-        
+
+        if not self.character_name:
+            return instructions
+
         # then we replace yourself with myself using regex, taking care of word boundaries
         instructions = re.sub(r"\byourself\b", "myself", instructions)
-        
+
         # then we replace your with my using regex, taking care of word boundaries
         instructions = re.sub(r"\byour\b", "my", instructions)
-        
+
         # then we replace you with i using regex, taking care of word boundaries
         instructions = re.sub(r"\byou\b", "i", instructions)
 
         return f"{self.character_name} thinks: I should {instructions}"
-    
+
     @property
     def as_story_progression(self):
         return f"{self.character_name}'s next action: {self.instructions}"
 
     def __dict__(self):
         rv = super().__dict__()
-        
+
         if self.action:
             rv["action"] = self.action
-        
+
         return rv
-        
+
     def __str__(self):
         """
         The director message is a special case and needs to be transformed
@@ -211,6 +219,7 @@ class DirectorMessage(SceneMessage):
                 return f"# {self.as_inner_monologue}"
             else:
                 return f"# {self.as_story_progression}"
+
 
 @dataclass
 class TimePassageMessage(SceneMessage):
@@ -238,7 +247,9 @@ class ReinforcementMessage(SceneMessage):
 
     def __str__(self):
         question, _ = self.source.split(":", 1)
-        return f"# Internal notes for {self.character_name} - {question}: {self.message}"
+        return (
+            f"# Internal notes for {self.character_name} - {question}: {self.message}"
+        )
 
     def as_format(self, format: str, **kwargs) -> str:
         if format == "movie_script":

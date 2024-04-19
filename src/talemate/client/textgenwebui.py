@@ -13,6 +13,12 @@ log = structlog.get_logger("talemate.client.textgenwebui")
 
 @register()
 class TextGeneratorWebuiClient(ClientBase):
+    auto_determine_prompt_template: bool = True
+    finalizers: list[str] = [
+        "finalize_llama3",
+        "finalize_YI",
+    ]
+
     client_type = "textgenwebui"
 
     class Meta(ClientBase.Meta):
@@ -28,23 +34,42 @@ class TextGeneratorWebuiClient(ClientBase):
         parameters["max_new_tokens"] = parameters["max_tokens"]
         parameters["stop"] = parameters["stopping_strings"]
 
-        # Half temperature on -Yi- models
-        if self.model_name and self.is_yi_model():
-            parameters["smoothing_factor"] = 0.3
-            # also half the temperature
-            parameters["temperature"] = max(0.1, parameters["temperature"] / 2)
-            log.debug(
-                "applying temperature smoothing for Yi model",
-            )
-
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
 
-    def is_yi_model(self):
+    def finalize_llama3(self, parameters: dict, prompt: str) -> tuple[str, bool]:
+
+        if "<|eot_id|>" not in prompt:
+            return prompt, False
+
+        # llama3 instruct models need to add  "<|eot_id|>", "<|end_of_text|>" to the stopping strings
+        parameters["stopping_strings"] += ["<|eot_id|>", "<|end_of_text|>"]
+
+        # also needs to add `skip_special_tokens`= False to the parameters
+        parameters["skip_special_tokens"] = False
+        log.debug("finalizing llama3 instruct parameters", parameters=parameters)
+
+        if prompt.endswith("<|end_header_id|>"):
+            # append two linebreaks
+            prompt += "\n\n"
+            log.debug("adjusting llama3 instruct prompt: missing linebreaks")
+
+        return prompt, True
+
+    def finalize_YI(self, parameters: dict, prompt: str) -> tuple[str, bool]:
         model_name = self.model_name.lower()
         # regex match for yi encased by non-word characters
+        if not bool(re.search(r"[\-_]yi[\-_]", model_name)):
+            return prompt, False
 
-        return bool(re.search(r"[\-_]yi[\-_]", model_name))
+        parameters["smoothing_factor"] = 0.1
+        # also half the temperature
+        parameters["temperature"] = max(0.1, parameters["temperature"] / 2)
+        log.debug(
+            "finalizing YI parameters",
+            parameters=parameters,
+        )
+        return prompt, True
 
     async def get_model_name(self):
         async with httpx.AsyncClient() as client:

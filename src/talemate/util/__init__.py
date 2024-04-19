@@ -890,10 +890,10 @@ def ensure_dialog_format(line: str, talking_character: str = None) -> str:
         line = line[len(talking_character) + 1 :].lstrip()
 
     lines = []
-    
+
     has_asterisks = "*" in line
     has_quotes = '"' in line
-    
+
     default_wrap = None
     if has_asterisks and not has_quotes:
         default_wrap = '"'
@@ -925,7 +925,7 @@ def ensure_dialog_format(line: str, talking_character: str = None) -> str:
     return line
 
 
-def ensure_dialog_line_format(line: str, default_wrap:str=None) -> str:
+def ensure_dialog_line_format(line: str, default_wrap: str = None) -> str:
     """
     a Python function that standardizes the formatting of dialogue and action/thought
     descriptions in text strings. This function is intended for use in a text-based
@@ -944,13 +944,13 @@ def ensure_dialog_line_format(line: str, default_wrap:str=None) -> str:
     line = line.strip()
 
     line = line.replace('"*', '"').replace('*"', '"')
-    
+
     # if the line ends with a whitespace followed by a classifier, strip both from the end
     # as this indicates the remnants of a partial segment that was removed.
-    
+
     if line.endswith(" *") or line.endswith(' "'):
         line = line[:-2]
-    
+
     if "*" not in line and '"' not in line and default_wrap and line:
         # if the line is not wrapped in either asterisks or quotes, wrap it in the default
         # wrap, if specified - when it's specialized it means the line was split and we
@@ -997,9 +997,9 @@ def ensure_dialog_line_format(line: str, default_wrap:str=None) -> str:
         else:
             if segment_open is None and c and c != " ":
                 if last_classifier == '"':
-                    segment_open = '*'
+                    segment_open = "*"
                     segment = f"{segment_open}{c}"
-                elif last_classifier == '*':
+                elif last_classifier == "*":
                     segment_open = '"'
                     segment = f"{segment_open}{c}"
                 else:

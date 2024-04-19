@@ -21,11 +21,13 @@ dotenv.load_dotenv()
 
 runpod.api_key = load_config().get("runpod", {}).get("api_key", "")
 
+TEXTGEN_IDENTIFIERS = ["textgen", "thebloke llms", "text-generation-webui"]
+
 
 def is_textgen_pod(pod):
     name = pod["name"].lower()
 
-    if "textgen" in name or "thebloke llms" in name:
+    if any(identifier in name for identifier in TEXTGEN_IDENTIFIERS):
         return True
 
     return False

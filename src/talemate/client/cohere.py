@@ -1,58 +1,52 @@
 import pydantic
 import structlog
-from mistralai.async_client import MistralAsyncClient
-from mistralai.exceptions import MistralAPIStatusException
-from mistralai.models.chat_completion import ChatMessage
+from cohere import AsyncClient
 
 from talemate.client.base import ClientBase, ErrorAction
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
 from talemate.emit.signals import handlers
+from talemate.util import count_tokens
 
 __all__ = [
-    "MistralAIClient",
+    "CohereClient",
 ]
 log = structlog.get_logger("talemate")
 
 # Edit this to add new models / remove old models
 SUPPORTED_MODELS = [
-    "open-mistral-7b",
-    "open-mixtral-8x7b",
-    "mistral-small-latest",
-    "mistral-medium-latest",
-    "mistral-large-latest",
+    "command",
+    "command-r",
+    "command-r-plus",
 ]
-
-JSON_OBJECT_RESPONSE_MODELS = SUPPORTED_MODELS
 
 
 class Defaults(pydantic.BaseModel):
     max_token_length: int = 16384
-    model: str = "open-mixtral-8x7b"
+    model: str = "command-r-plus"
 
 
 @register()
-class MistralAIClient(ClientBase):
+class CohereClient(ClientBase):
     """
-    OpenAI client for generating text.
+    Cohere client for generating text.
     """
 
-    client_type = "mistral"
+    client_type = "cohere"
     conversation_retries = 0
     auto_break_repetition_enabled = False
-    # TODO: make this configurable?
     decensor_enabled = True
 
     class Meta(ClientBase.Meta):
-        name_prefix: str = "MistralAI"
-        title: str = "MistralAI"
+        name_prefix: str = "Cohere"
+        title: str = "Cohere"
         manual_model: bool = True
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
 
-    def __init__(self, model="open-mixtral-8x7b", **kwargs):
+    def __init__(self, model="command-r-plus", **kwargs):
         self.model_name = model
         self.api_key_status = None
         self.config = load_config()
@@ -61,15 +55,15 @@ class MistralAIClient(ClientBase):
         handlers["config_saved"].connect(self.on_config_saved)
 
     @property
-    def mistralai_api_key(self):
-        return self.config.get("mistralai", {}).get("api_key")
+    def cohere_api_key(self):
+        return self.config.get("cohere", {}).get("api_key")
 
     def emit_status(self, processing: bool = None):
         error_action = None
         if processing is not None:
             self.processing = processing
 
-        if self.mistralai_api_key:
+        if self.cohere_api_key:
             status = "busy" if self.processing else "idle"
             model_name = self.model_name
         else:
@@ -81,7 +75,7 @@ class MistralAIClient(ClientBase):
                 icon="mdi-key-variant",
                 arguments=[
                     "application",
-                    "mistralai_api",
+                    "cohere_api",
                 ],
             )
 
@@ -104,9 +98,9 @@ class MistralAIClient(ClientBase):
         )
 
     def set_client(self, max_token_length: int = None):
-        if not self.mistralai_api_key:
-            self.client = MistralAsyncClient(api_key="sk-1111")
-            log.error("No mistral.ai API key set")
+        if not self.cohere_api_key:
+            self.client = AsyncClient("sk-1111")
+            log.error("No cohere API key set")
             if self.api_key_status:
                 self.api_key_status = False
                 emit("request_client_status")
@@ -114,14 +108,14 @@ class MistralAIClient(ClientBase):
             return
 
         if not self.model_name:
-            self.model_name = "open-mixtral-8x7b"
+            self.model_name = "command-r-plus"
 
         if max_token_length and not isinstance(max_token_length, int):
             max_token_length = int(max_token_length)
 
         model = self.model_name
 
-        self.client = MistralAsyncClient(api_key=self.mistralai_api_key)
+        self.client = AsyncClient(self.cohere_api_key)
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -131,7 +125,7 @@ class MistralAIClient(ClientBase):
             self.api_key_status = True
 
         log.info(
-            "mistral.ai set client",
+            "cohere set client",
             max_token_length=self.max_token_length,
             provided_max_token_length=max_token_length,
             model=model,
@@ -148,10 +142,10 @@ class MistralAIClient(ClientBase):
         self.set_client(max_token_length=self.max_token_length)
 
     def response_tokens(self, response: str):
-        return response.usage.completion_tokens
+        return count_tokens(response.text)
 
-    def prompt_tokens(self, response: str):
-        return response.usage.prompt_tokens
+    def prompt_tokens(self, prompt: str):
+        return count_tokens(prompt)
 
     async def status(self):
         self.emit_status()
@@ -169,7 +163,7 @@ class MistralAIClient(ClientBase):
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
         keys = list(parameters.keys())
-        valid_keys = ["temperature", "top_p", "max_tokens"]
+        valid_keys = ["temperature", "max_tokens"]
         for key in keys:
             if key not in valid_keys:
                 del parameters[key]
@@ -179,26 +173,19 @@ class MistralAIClient(ClientBase):
         Generates text from the given prompt and parameters.
         """
 
-        if not self.mistralai_api_key:
-            raise Exception("No mistral.ai API key set")
+        if not self.cohere_api_key:
+            raise Exception("No cohere API key set")
 
-        supports_json_object = self.model_name in JSON_OBJECT_RESPONSE_MODELS
         right = None
         expected_response = None
         try:
             _, right = prompt.split("\nStart your response with: ")
             expected_response = right.strip()
-            if expected_response.startswith("{") and supports_json_object:
-                parameters["response_format"] = {"type": "json_object"}
         except (IndexError, ValueError):
             pass
 
+        human_message = prompt.strip()
         system_message = self.get_system_message(kind)
-
-        messages = [
-            ChatMessage(role="system", content=system_message),
-            ChatMessage(role="user", content=prompt.strip()),
-        ]
 
         self.log.debug(
             "generate",
@@ -210,23 +197,19 @@ class MistralAIClient(ClientBase):
         try:
             response = await self.client.chat(
                 model=self.model_name,
-                messages=messages,
+                preamble=system_message,
+                message=human_message,
                 **parameters,
             )
 
-            self._returned_prompt_tokens = self.prompt_tokens(response)
+            self._returned_prompt_tokens = self.prompt_tokens(prompt)
             self._returned_response_tokens = self.response_tokens(response)
 
-            response = response.choices[0].message.content
+            log.debug("generated response", response=response.text)
 
-            # older models don't support json_object response coersion
-            # and often like to return the response wrapped in ```json
-            # so we strip that out if the expected response is a json object
-            if (
-                not supports_json_object
-                and expected_response
-                and expected_response.startswith("{")
-            ):
+            response = response.text
+
+            if expected_response and expected_response.startswith("{"):
                 if response.startswith("```json") and response.endswith("```"):
                     response = response[7:-3].strip()
 
@@ -234,14 +217,9 @@ class MistralAIClient(ClientBase):
                 response = response[len(right) :].strip()
 
             return response
-        except MistralAPIStatusException as e:
-            self.log.error("generate error", e=e)
-            if e.http_status in [403, 401]:
-                emit(
-                    "status",
-                    message="mistral.ai API: Permission Denied",
-                    status="error",
-                )
-            return ""
+        # except PermissionDeniedError as e:
+        #    self.log.error("generate error", e=e)
+        #    emit("status", message="cohere API: Permission Denied", status="error")
+        #    return ""
         except Exception as e:
             raise

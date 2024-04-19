@@ -157,6 +157,23 @@
                                         </v-row>
                                     </div>
 
+                                    <!-- COHERE API -->
+                                    <div v-if="applicationPageSelected === 'cohere_api'">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
+                                            <v-alert-title>Cohere</v-alert-title>
+                                            <div class="text-grey">
+                                                Configure your Cohere API key here. You can get one from <a href="https://dashboard.cohere.com/api-keys" target="_blank">https://dashboard.cohere.com/api-keys</a> 
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-text-field type="password" v-model="app_config.cohere.api_key"
+                                                    label="Cohere API Key"></v-text-field>
+                                            </v-col>
+                                        </v-row>
+                                    </div>
+
                                     <!-- ELEVENLABS API -->
                                     <div v-if="applicationPageSelected === 'elevenlabs_api'">
                                         <v-alert color="white" variant="text" icon="mdi-api" density="compact">
@@ -279,6 +296,7 @@ export default {
                     {title: 'OpenAI', icon: 'mdi-api', value: 'openai_api'},
                     {title: 'mistral.ai', icon: 'mdi-api', value: 'mistralai_api'},
                     {title: 'Anthropic', icon: 'mdi-api', value: 'anthropic_api'},
+                    {title: 'Cohere', icon: 'mdi-api', value: 'cohere_api'},
                     {title: 'ElevenLabs', icon: 'mdi-api', value: 'elevenlabs_api'},
                     {title: 'RunPod', icon: 'mdi-api', value: 'runpod_api'},
                 ],

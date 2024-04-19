@@ -15,9 +15,9 @@ from talemate.agents.conversation import ConversationAgentEmission
 from talemate.automated_action import AutomatedAction
 from talemate.emit import emit, wait_for_input
 from talemate.events import GameLoopActorIterEvent, GameLoopStartEvent, SceneStateEvent
+from talemate.game.engine import GameInstructionsMixin
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, NarratorMessage
-from talemate.game.engine import GameInstructionsMixin
 
 from .base import Agent, AgentAction, AgentActionConfig, set_processing
 from .registry import register
@@ -78,9 +78,9 @@ class DirectorAgent(GameInstructionsMixin, Agent):
                             {
                                 "label": "Inner Monologue",
                                 "value": "internal_monologue",
-                            }
-                        ]
-                    )
+                            },
+                        ],
+                    ),
                 },
             ),
         }
@@ -100,11 +100,11 @@ class DirectorAgent(GameInstructionsMixin, Agent):
     @property
     def direct_enabled(self):
         return self.actions["direct"].enabled
-    
+
     @property
     def direct_actors_enabled(self):
         return self.actions["direct"].config["direct_actors"].value
-    
+
     @property
     def direct_scene_enabled(self):
         return self.actions["direct"].config["direct_scene"].value
@@ -287,7 +287,6 @@ class DirectorAgent(GameInstructionsMixin, Agent):
             self.scene.push_history(message)
         else:
             await self.run_scene_instructions(self.scene)
-            
 
     @set_processing
     async def persist_characters_from_worldstate(
@@ -329,7 +328,7 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         creator = instance.get_agent("creator")
 
         self.scene.log.debug("persist_character", name=name)
-        
+
         if determine_name:
             name = await creator.determine_character_name(name)
             self.scene.log.debug("persist_character", adjusted_name=name)
@@ -367,11 +366,15 @@ class DirectorAgent(GameInstructionsMixin, Agent):
 
         self.scene.log.debug("persist_character", description=description)
 
-        dialogue_instructions = await creator.determine_character_dialogue_instructions(character)
-        
+        dialogue_instructions = await creator.determine_character_dialogue_instructions(
+            character
+        )
+
         character.dialogue_instructions = dialogue_instructions
-        
-        self.scene.log.debug("persist_character", dialogue_instructions=dialogue_instructions)
+
+        self.scene.log.debug(
+            "persist_character", dialogue_instructions=dialogue_instructions
+        )
 
         actor = self.scene.Actor(
             character=character, agent=instance.get_agent("conversation")
@@ -404,10 +407,11 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         self.scene.context = response.strip()
         self.scene.emit_status()
 
-    async def log_action(self, action:str, action_description:str):
+    async def log_action(self, action: str, action_description: str):
         message = DirectorMessage(message=action_description, action=action)
         self.scene.push_history(message)
         emit("director", message)
+
     log_action.exposed = True
 
     def inject_prompt_paramters(

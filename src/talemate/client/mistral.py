@@ -1,4 +1,3 @@
-
 import pydantic
 import structlog
 from mistralai.async_client import MistralAsyncClient
@@ -26,6 +25,7 @@ SUPPORTED_MODELS = [
 ]
 
 JSON_OBJECT_RESPONSE_MODELS = SUPPORTED_MODELS
+
 
 class Defaults(pydantic.BaseModel):
     max_token_length: int = 16384
@@ -193,9 +193,8 @@ class MistralAIClient(ClientBase):
         except (IndexError, ValueError):
             pass
 
-        
         system_message = self.get_system_message(kind)
-        
+
         messages = [
             ChatMessage(role="system", content=system_message),
             ChatMessage(role="user", content=prompt.strip()),
@@ -230,7 +229,7 @@ class MistralAIClient(ClientBase):
             ):
                 if response.startswith("```json") and response.endswith("```"):
                     response = response[7:-3].strip()
-                    
+
             if right and response.startswith(right):
                 response = response[len(right) :].strip()
 
@@ -238,7 +237,11 @@ class MistralAIClient(ClientBase):
         except MistralAPIStatusException as e:
             self.log.error("generate error", e=e)
             if e.http_status in [403, 401]:
-                emit("status", message="mistral.ai API: Permission Denied", status="error")
+                emit(
+                    "status",
+                    message="mistral.ai API: Permission Denied",
+                    status="error",
+                )
             return ""
         except Exception as e:
             raise

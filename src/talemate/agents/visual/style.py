@@ -31,14 +31,14 @@ class Style(pydantic.BaseModel):
     def load(self, prompt: str, negative_prompt: str = ""):
         self.keywords = prompt.split(", ")
         self.negative_keywords = negative_prompt.split(", ")
-        
+
         # loop through keywords and drop any starting with "no " and add to negative_keywords
         # with "no " removed
         for kw in self.keywords:
             if kw.startswith("no "):
                 self.keywords.remove(kw)
                 self.negative_keywords.append(kw[3:])
-        
+
         return self
 
     def prepend(self, *styles):

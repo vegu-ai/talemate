@@ -194,12 +194,12 @@ class Agent(ABC):
         return {
             "essential": self.essential,
         }
-        
+
     @property
     def sanitized_action_config(self):
         if not getattr(self, "actions", None):
             return {}
-        
+
         return {k: v.model_dump() for k, v in self.actions.items()}
 
     async def _handle_ready_check(self, fut: asyncio.Future):

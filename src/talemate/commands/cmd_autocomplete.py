@@ -6,6 +6,7 @@ __all__ = [
     "CmdAutocompleteDialogue",
 ]
 
+
 @register
 class CmdAutocompleteDialogue(TalemateCommand):
     """
@@ -17,11 +18,9 @@ class CmdAutocompleteDialogue(TalemateCommand):
     aliases = ["acdlg"]
 
     async def run(self):
-        
+
         input = self.args[0]
         creator = self.scene.get_helper("creator").agent
         character = self.scene.get_player_character()
-        
+
         await creator.autocomplete_dialogue(input, character, emit_signal=True)
-        
-        

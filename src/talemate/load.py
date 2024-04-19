@@ -125,9 +125,9 @@ async def load_scene_from_character_card(scene, file_path):
         character.base_attributes = {
             k.lower(): v for k, v in character.base_attributes.items()
         }
-        
-        character.dialogue_instructions = await creator.determine_character_dialogue_instructions(
-            character
+
+        character.dialogue_instructions = (
+            await creator.determine_character_dialogue_instructions(character)
         )
 
         # any values that are lists should be converted to strings joined by ,

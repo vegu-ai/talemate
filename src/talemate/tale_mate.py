@@ -265,12 +265,12 @@ class Character:
 
         orig_name = self.name
         self.name = new_name
-        
+
         if orig_name.lower() == "you":
             # we dont want to replace "you" in the description
             # or anywhere else so we can just return here
-            return 
-            
+            return
+
         if self.description:
             self.description = self.description.replace(f"{orig_name}", self.name)
         for k, v in self.base_attributes.items():
@@ -899,13 +899,13 @@ class Scene(Emitter):
 
     def set_intro(self, intro: str):
         self.intro = intro
-        
+
     def set_name(self, name: str):
         self.name = name
-        
+
     def set_title(self, title: str):
         self.title = title
-        
+
     def set_content_context(self, content_context: str):
         self.context = content_context
 
@@ -1374,19 +1374,21 @@ class Scene(Emitter):
             if isinstance(message, DirectorMessage):
                 if not keep_director:
                     continue
-                
+
                 if not message.character_name:
                     # skip director messages that are not character specific
                     # TODO: we may want to include these in the future
                     continue
-                
+
                 elif isinstance(keep_director, str) and message.source != keep_director:
                     continue
 
             if count_tokens(parts_dialogue) + count_tokens(message) > budget_dialogue:
                 break
 
-            parts_dialogue.insert(0, message.as_format(conversation_format, mode=actor_direction_mode))
+            parts_dialogue.insert(
+                0, message.as_format(conversation_format, mode=actor_direction_mode)
+            )
 
         # collect context, ignore where end > len(history) - count
 

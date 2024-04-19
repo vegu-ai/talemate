@@ -1,12 +1,12 @@
-from typing import TYPE_CHECKING, Union, Tuple
+import asyncio
+from typing import TYPE_CHECKING, Tuple, Union
 
 import pydantic
-import asyncio
 
 import talemate.util as util
 from talemate.agents.base import set_processing
-from talemate.prompts import Prompt
 from talemate.emit import emit
+from talemate.prompts import Prompt
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -55,6 +55,7 @@ class AssistantMixin:
         )
 
         return await self.contextual_generate(generation_context)
+
     contextual_generate_from_args.exposed = True
 
     @set_processing
@@ -122,15 +123,19 @@ class AssistantMixin:
             pad_prepended_response=False,
             dedupe_enabled=False,
         )
-        
-        response = util.clean_dialogue(response, character.name)[len(character.name+":"):].strip()
-        
-        if response.startswith(input):
-            response = response[len(input):]
 
-        self.scene.log.debug("autocomplete_suggestion", suggestion=response, input=input)
+        response = util.clean_dialogue(response, character.name)[
+            len(character.name + ":") :
+        ].strip()
+
+        if response.startswith(input):
+            response = response[len(input) :]
+
+        self.scene.log.debug(
+            "autocomplete_suggestion", suggestion=response, input=input
+        )
 
         if emit_signal:
             emit("autocomplete_suggestion", response)
-        
+
         return response

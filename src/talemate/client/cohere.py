@@ -217,7 +217,7 @@ class CohereClient(ClientBase):
                 response = response[len(right) :].strip()
 
             return response
-        #except PermissionDeniedError as e:
+        # except PermissionDeniedError as e:
         #    self.log.error("generate error", e=e)
         #    emit("status", message="cohere API: Permission Denied", status="error")
         #    return ""

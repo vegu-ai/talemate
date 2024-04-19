@@ -14,7 +14,7 @@ import random
 import re
 import uuid
 from contextvars import ContextVar
-from typing import Any
+from typing import Any, Tuple
 
 import jinja2
 import nest_asyncio
@@ -33,8 +33,6 @@ from talemate.util import (
     fix_faulty_json,
     remove_extra_linebreaks,
 )
-
-from typing import Tuple
 
 __all__ = [
     "Prompt",
@@ -273,15 +271,17 @@ class Prompt:
         return prompt
 
     @classmethod
-    async def request(cls, uid: str, client: Any, kind: str, vars: dict = None, **kwargs):
+    async def request(
+        cls, uid: str, client: Any, kind: str, vars: dict = None, **kwargs
+    ):
         if "decensor" not in vars:
             vars.update(decensor=client.decensor_enabled)
         prompt = cls.get(uid, vars)
-        
+
         # kwargs update prompt class attributes
         for key, value in kwargs.items():
             setattr(prompt, key, value)
-        
+
         return await prompt.send(client, kind)
 
     @property

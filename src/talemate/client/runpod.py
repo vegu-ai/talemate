@@ -21,11 +21,8 @@ dotenv.load_dotenv()
 
 runpod.api_key = load_config().get("runpod", {}).get("api_key", "")
 
-TEXTGEN_IDENTIFIERS = [
-    "textgen",
-    "thebloke llms",
-    "text-generation-webui"
-]
+TEXTGEN_IDENTIFIERS = ["textgen", "thebloke llms", "text-generation-webui"]
+
 
 def is_textgen_pod(pod):
     name = pod["name"].lower()

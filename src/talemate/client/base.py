@@ -80,7 +80,7 @@ class ClientBase:
     auto_break_repetition_enabled: bool = True
     decensor_enabled: bool = True
     auto_determine_prompt_template: bool = False
-    finalizers:list[str] = []
+    finalizers: list[str] = []
     client_type = "base"
 
     class Meta(pydantic.BaseModel):
@@ -265,19 +265,25 @@ class ClientBase:
         self.current_status = status
 
         prompt_template_example, prompt_template_file = self.prompt_template_example()
-        has_prompt_template = (prompt_template_file and prompt_template_file != "default.jinja2")
+        has_prompt_template = (
+            prompt_template_file and prompt_template_file != "default.jinja2"
+        )
 
         if not has_prompt_template and self.auto_determine_prompt_template:
-            
-            # only attempt to determine the prompt template once per model and 
+
+            # only attempt to determine the prompt template once per model and
             # only if the model does not already have a prompt template
-            
+
             if self.auto_determine_prompt_template_attempt != self.model_name:
                 log.info("auto_determine_prompt_template", model_name=self.model_name)
                 self.auto_determine_prompt_template_attempt = self.model_name
                 self.determine_prompt_template()
-                prompt_template_example, prompt_template_file = self.prompt_template_example()
-                has_prompt_template = (prompt_template_file and prompt_template_file != "default.jinja2")
+                prompt_template_example, prompt_template_file = (
+                    self.prompt_template_example()
+                )
+                has_prompt_template = (
+                    prompt_template_file and prompt_template_file != "default.jinja2"
+                )
 
         data = {
             "api_key": self.api_key,
@@ -306,9 +312,9 @@ class ClientBase:
     def determine_prompt_template(self):
         if not self.model_name:
             return
-        
+
         template = model_prompt.query_hf_for_prompt_template_suggestion(self.model_name)
-        
+
         if template:
             model_prompt.create_user_override(template, self.model_name)
 
@@ -395,8 +401,8 @@ class ClientBase:
             parameters["extra_stopping_strings"] += dialog_stopping_strings
         else:
             parameters["extra_stopping_strings"] = dialog_stopping_strings
-            
-    def finalize(self, parameters:dict, prompt:str):
+
+    def finalize(self, parameters: dict, prompt: str):
         for finalizer in self.finalizers:
             fn = getattr(self, finalizer, None)
             prompt, applied = fn(parameters, prompt)
@@ -452,9 +458,9 @@ class ClientBase:
             finalized_prompt = self.prompt_template(
                 self.get_system_message(kind), prompt
             ).strip(" ")
-            
+
             finalized_prompt = self.finalize(prompt_param, finalized_prompt)
-            
+
             prompt_param = finalize(prompt_param)
 
             token_length = self.count_tokens(finalized_prompt)
@@ -681,4 +687,3 @@ class ClientBase:
                 new_lines.append(line)
 
         return "\n".join(new_lines)
-    

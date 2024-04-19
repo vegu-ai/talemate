@@ -389,7 +389,7 @@ class WebsocketHandler(Receiver):
             character = emission.message_object.source
         else:
             character = ""
-        
+
         director = instance.get_agent("director")
         direction_mode = director.actor_direction_mode
 
@@ -540,7 +540,7 @@ class WebsocketHandler(Receiver):
                 "character": emission.character.name if emission.character else "",
             }
         )
-        
+
     def handle_autocomplete_suggestion(self, emission: Emission):
         self.queue_put(
             {

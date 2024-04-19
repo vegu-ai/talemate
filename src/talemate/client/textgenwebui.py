@@ -55,7 +55,7 @@ class TextGeneratorWebuiClient(ClientBase):
         model_name = self.model_name.lower()
         # regex match for llama3 encased by non-word characters
 
-        return bool(re.search(r"[\-_]llama-3[\-_]", model_name))
+        return "llama-3" in model_name
 
     def is_yi_model(self):
         model_name = self.model_name.lower()

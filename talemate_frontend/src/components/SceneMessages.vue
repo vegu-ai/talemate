@@ -140,6 +140,16 @@ export default {
             this.setWaitingForInput(false);
         },
 
+        messageTypeIsSceneMessage(type) {
+            return ![ 
+                'request_input', 
+                'client_status', 
+                'agent_status', 
+                'status', 
+                'autocomplete_suggestion' 
+            ].includes(type);
+        },
+
         handleMessage(data) {
 
             var i;
@@ -198,7 +208,7 @@ export default {
                             action: data.action
                         }
                     );
-                } else if (data.type != 'request_input' && data.type != 'client_status' && data.type != 'agent_status' && data.type != 'status') {
+                } else if (this.messageTypeIsSceneMessage(data.type)) {
                     this.messages.push({ id: data.id, type: data.type, text: data.message, color: data.color, character: data.character, status:data.status, ts:data.ts }); // Add color property to the message
                 } else if (data.type === 'status' && data.data && data.data.as_scene_message === true) {
 

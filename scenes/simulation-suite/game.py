@@ -3,13 +3,15 @@ def game(TM):
     
     MSG_PROCESSED_INSTRUCTIONS = "Simulation suite processed instructions"
     
-    MSG_HELP = "Instructions to the simulation computer are only process if the computer is addressed at the beginning of the instruction. Please state your commands by addressing the computer by stating \"Computer,\" followed by an instruction. For example ... \"Computer, i want to experience being on a derelict spaceship.\""
+    MSG_HELP = "Instructions to the simulation computer are only processed if the computer is directly addressed at the beginning of the instruction. Please state your commands by addressing the computer by stating \"Computer,\" followed by an instruction. For example ... \"Computer, i want to experience being on a derelict spaceship.\""
     
     PROMPT_NARRATE_ROUND = "Narrate the simulation and reveal some new details to the player in one paragraph. YOU MUST NOT ADDRESS THE COMPUTER OR THE SIMULATION."
     
-    PROMPT_STARTUP = "Narrate the computer asking the user to state the nature of their desired simulation."
+    PROMPT_STARTUP = "Narrate the computer asking the user to state the nature of their desired simulation in a synthetic and soft sounding voice."
     
     CTX_PIN_UNAWARE = "Characters in the simulation ARE NOT AWARE OF THE COMPUTER."
+    
+    AUTO_NARRATE_INTERVAL = 10
     
     def parse_sim_call_arguments(call:str) -> str:
         """
@@ -117,7 +119,7 @@ def game(TM):
                 scene=TM.scene,
             )
             
-            calls = calls.split("\n")
+            self.calls = calls = calls.split("\n")
             
             calls = self.prepare_calls(calls)
             
@@ -151,6 +153,33 @@ def game(TM):
                 )
                 
             self.update_world_state = True
+            
+            self.set_simulation_title(compiled)
+            
+        def set_simulation_title(self, compiled_calls):
+            
+            """
+            Generates a fitting title for the simulation based on the user's instructions
+            """
+            
+            TM.log.debug("SIMULATION SUITE: set simulation title", name=TM.scene.title, compiled_calls=compiled_calls)
+            
+            if not compiled_calls:
+                return
+            
+            if TM.scene.title != "Simulation Suite":
+                # name already changed, no need to do it again
+                return
+            
+            title = TM.agents.creator.contextual_generate_from_args(
+                "scene:simulation title",
+                "Create a fitting title for the simulated scenario that the user has requested. You response MUST be a short but exciting, descriptive title.",
+                length=75                
+            )
+            
+            title = title.strip('"').strip()
+            
+            TM.scene.set_title(title)
             
         def prepare_calls(self, calls):
             """
@@ -320,6 +349,20 @@ def game(TM):
             else:
                 character_name = TM.agents.creator.determine_character_name(character_name=f"{inject} - what is the name of the group of characters to be added to the scene? If no name can extracted from the text, extract a short descriptive name instead. Respond only with the name.", group=True)
             
+            # sometimes add_ai_character and change_ai_character are called in the same instruction targeting
+            # the same character, if this happens we need to combine into a single add_ai_character call
+            
+            has_change_ai_character_call = TM.client.query_text_eval(f"Are there any calls to `change_ai_character` in the instruction for {character_name}?", "\n".join(self.calls))
+            
+            if has_change_ai_character_call:
+                combined_arg = TM.agents.world_state.analyze_and_follow_instruction(
+                    "\n".join(self.calls),
+                    f"Combine the arguments of the function calls `add_ai_character` and `change_ai_character` for {character_name} into a single text string. Respond with the new argument."
+                )
+                call = f"add_ai_character({combined_arg})"
+                inject = f"The computer executes the function `{call}`"
+                
+            
             TM.emit_status("busy", f"Simulation suite adding character: {character_name}", as_scene_message=True)
             
             TM.log.debug("SIMULATION SUITE: add npc", name=character_name)
@@ -429,6 +472,14 @@ def game(TM):
                 
         def finalize_round(self):
             
+            # track rounds
+            rounds = TM.game_state.get_var("instr.rounds", 0)
+            
+            # increase rounds
+            TM.game_state.set_var("instr.rounds", rounds + 1, commit=False)
+            
+            has_issued_instructions = TM.game_state.has_var("instr.has_issued_instructions")
+            
             if self.update_world_state:
                 self.run_update_world_state()
                 
@@ -437,13 +488,17 @@ def game(TM):
                 TM.game_state.set_var("instr.lastprocessed_call", self.player_message.id, commit=False)
                 TM.emit_status("success", MSG_PROCESSED_INSTRUCTIONS, as_scene_message=True)
                 
-            elif self.player_message and not TM.game_state.has_var("instr.has_issued_instructions"):
+            elif self.player_message and not has_issued_instructions:
                 # simulation started, player message is NOT an instruction, and player has not given
                 # any instructions
                 self.guide_player()
 
             elif self.player_message and not TM.scene.npc_character_names():
                 # simulation started, player message is NOT an instruction, but there are no npcs to interact with 
+                self.narrate_round()
+            
+            elif rounds % AUTO_NARRATE_INTERVAL == 0 and rounds and TM.scene.npc_character_names() and has_issued_instructions:
+                # every 3 rounds, narrate the round
                 self.narrate_round()
          
         def guide_player(self):

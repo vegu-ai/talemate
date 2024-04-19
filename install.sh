@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # create a virtual environment
-python -m venv talemate_env
+python3 -m venv talemate_env
 
 # activate the virtual environment
 source talemate_env/bin/activate

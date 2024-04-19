@@ -73,7 +73,7 @@ class VisualBase(Agent):
                     ),
                     "default_style": AgentActionConfig(
                         type="text",
-                        value="ink_illustration",
+                        value="concept_art",
                         choices=MAJOR_STYLES,
                         label="Default Style",
                         description="The default style to use for visual processing",
@@ -219,15 +219,15 @@ class VisualBase(Agent):
         )
 
         await super().apply_config(*args, **kwargs)
-        
+
         backend_fn = getattr(self, f"{self.backend.lower()}_apply_config", None)
         if backend_fn:
-            
+
             if not backend_changed and was_disabled and self.enabled:
                 # If the backend has not changed, but the agent was previously disabled
                 # and is now enabled, we need to trigger the backend apply_config function
                 backend_changed = True
-            
+
             task = asyncio.create_task(
                 backend_fn(backend_changed=backend_changed, *args, **kwargs)
             )
@@ -351,6 +351,9 @@ class VisualBase(Agent):
         vis_type_styles = self.vis_type_styles(context.vis_type)
         prompt = self.prepare_prompt(prompt, [vis_type_styles, thematic_style])
 
+        if context.vis_type == VIS_TYPES.CHARACTER:
+            prompt.keywords.append("character portrait")
+
         if not prompt:
             log.error(
                 "generate", error="No prompt provided and no context to generate from"
@@ -429,6 +432,7 @@ class VisualBase(Agent):
     async def generate_environment_background(self, instructions: str = None):
         with VisualContext(vis_type=VIS_TYPES.ENVIRONMENT, instructions=instructions):
             await self.generate(format="landscape")
+
     generate_environment_background.exposed = True
 
     async def generate_character_portrait(
@@ -442,7 +446,9 @@ class VisualBase(Agent):
             instructions=instructions,
         ):
             await self.generate(format="portrait")
+
     generate_character_portrait.exposed = True
+
 
 # apply mixins to the agent (from HANDLERS dict[str, cls])
 

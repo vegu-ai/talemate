@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  talemate-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "5050:5050"
+    volumes:
+      # can uncomment for dev purposes
+      #- ./src/talemate:/app/src/talemate
+      - ./config.yaml:/app/config.yaml
+      - ./scenes:/app/scenes
+      - ./templates:/app/templates
+      - ./chroma:/app/chroma
+    environment:
+      - PYTHONUNBUFFERED=1
+  
+  talemate-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./talemate_frontend:/app

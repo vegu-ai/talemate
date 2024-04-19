@@ -86,9 +86,13 @@
 
     <!-- app bar -->
     <v-app-bar app>
-      <v-app-bar-nav-icon @click="toggleNavigation('game')"><v-icon>mdi-script</v-icon></v-app-bar-nav-icon>
+      <v-app-bar-nav-icon size="x-small" @click="toggleNavigation('game')">
+        <v-icon v-if="sceneDrawer">mdi-arrow-collapse-left</v-icon>
+        <v-icon v-else>mdi-arrow-collapse-right</v-icon>
+      </v-app-bar-nav-icon>
+      
       <v-toolbar-title v-if="scene.name !== undefined">
-        {{ scene.name || 'Untitled Scenario' }}
+        {{ scene.title || 'Untitled Scenario' }}
         <span v-if="scene.saved === false" class="text-red">*</span>
         <v-chip size="x-small" v-if="scene.environment === 'creative'" class="ml-2"><v-icon text="Creative" size="14"
             class="mr-1">mdi-palette-outline</v-icon>Creative Mode</v-chip>
@@ -107,6 +111,9 @@
         Talemate
       </v-toolbar-title>
       <v-spacer></v-spacer>
+
+      <v-app-bar-nav-icon v-if="sceneActive" @click="returnToStartScreen()"><v-icon>mdi-home</v-icon></v-app-bar-nav-icon>
+
       <VisualQueue ref="visualQueue" />
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
@@ -125,6 +132,7 @@
 
           <SceneTools 
             @open-world-state-manager="onOpenWorldStateManager"
+            :messageInput="messageInput"
             :playerCharacterName="getPlayerCharacterName()"
             :passiveCharacters="passiveCharacters"
             :inactiveCharacters="inactiveCharacters"
@@ -345,6 +353,7 @@ export default {
       if (data.type == "scene_status") {
         this.scene = {
           name: data.name,
+          title: data.data.title,
           environment: data.data.environment,
           scene_time: data.data.scene_time,
           saved: data.data.saved,
@@ -370,6 +379,23 @@ export default {
         this.appConfig = data.data;
         this.version = data.version;
         return;
+      }
+
+      if (data.type === 'autocomplete_suggestion') {
+
+        const completion = data.message;
+
+        // append completion to messageInput, add a space if
+        // neither messageInput ends with a space nor completion starts with a space
+        // unless completion starts with !, ., or ?
+
+        const completionStartsWithSentenceEnd = completion.startsWith('!') || completion.startsWith('.') || completion.startsWith('?') || completion.startsWith(')') || completion.startsWith(']') || completion.startsWith('}') || completion.startsWith('"') || completion.startsWith("'") || completion.startsWith("*") || completion.startsWith(",")
+
+        if (this.messageInput.endsWith(' ') || completion.startsWith(' ') || completionStartsWithSentenceEnd) {
+          this.messageInput += completion;
+        } else {
+          this.messageInput += ' ' + completion;
+        }
       }
 
       if (data.type === 'request_input') {
@@ -409,7 +435,14 @@ export default {
       }
 
     },
-    sendMessage() {
+    sendMessage(event) {
+
+      // if ctrl+enter is pressed, request autocomplete
+      if (event.ctrlKey && event.key === 'Enter') {
+        this.websocket.send(JSON.stringify({ type: 'interact', text: `!acdlg: ${this.messageInput}` }));
+        return;
+      }
+
       if (!this.inputDisabled) {
         this.websocket.send(JSON.stringify({ type: 'interact', text: this.messageInput }));
         this.messageInput = '';
@@ -446,6 +479,16 @@ export default {
         this.drawer = !this.drawer;
       else if (navigation == "debug")
         this.debugDrawer = !this.debugDrawer;
+    },
+    returnToStartScreen() {
+
+      if(this.sceneActive && !this.scene.saved) {
+        let confirm = window.confirm("Are you sure you want to return to the start screen? You will lose any unsaved progress.");
+        if(!confirm)
+          return;
+      }
+      // reload
+      document.location.reload();
     },
     getClients() {
       if (!this.$refs.aiClient) {

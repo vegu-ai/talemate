@@ -1,13 +1,13 @@
+import copy
 import datetime
 import os
-import copy
-from typing import TYPE_CHECKING, ClassVar, Dict, Optional, TypeVar, Union, Any
-from typing_extensions import Annotated
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union
 
 import pydantic
 import structlog
 import yaml
 from pydantic import BaseModel, Field
+from typing_extensions import Annotated
 
 from talemate.agents.registry import get_agent_class
 from talemate.client.registry import get_client_class
@@ -137,6 +137,10 @@ class MistralAIConfig(BaseModel):
 
 
 class AnthropicConfig(BaseModel):
+    api_key: Union[str, None] = None
+
+
+class CohereConfig(BaseModel):
     api_key: Union[str, None] = None
 
 
@@ -321,6 +325,8 @@ class Config(BaseModel):
     mistralai: MistralAIConfig = MistralAIConfig()
 
     anthropic: AnthropicConfig = AnthropicConfig()
+
+    cohere: CohereConfig = CohereConfig()
 
     runpod: RunPodConfig = RunPodConfig()
 

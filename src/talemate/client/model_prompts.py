@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import tempfile
@@ -155,11 +156,19 @@ class ModelPrompt:
         except ValueError:
             return None
 
-        models = list(
-            api.list_models(
-                filter=huggingface_hub.ModelFilter(model_name=model_name, author=author)
-            )
-        )
+        branch_name = "main"
+
+        # special popular cases
+
+        # bartowski
+
+        if author == "bartowski" and "exl2" in model_name:
+            # split model_name by exl2 and take the first part with "exl2" readded
+            # the second part is the branch name
+            model_name, branch_name = model_name.split("exl2_", 1)
+            model_name = f"{model_name}exl2"
+
+        models = list(api.list_models(model_name=model_name, author=author))
 
         if not models:
             return None
@@ -167,9 +176,14 @@ class ModelPrompt:
         model = models[0]
 
         repo_id = f"{author}/{model_name}"
+
+        # Check README.md
         with tempfile.TemporaryDirectory() as tmpdir:
             readme_path = huggingface_hub.hf_hub_download(
-                repo_id=repo_id, filename="README.md", cache_dir=tmpdir
+                repo_id=repo_id,
+                filename="README.md",
+                cache_dir=tmpdir,
+                revision=branch_name,
             )
             if not readme_path:
                 return None
@@ -178,6 +192,24 @@ class ModelPrompt:
                 for identifer_cls in TEMPLATE_IDENTIFIERS:
                     identifier = identifer_cls()
                     if identifier(readme):
+                        return f"{identifier.template_str}.jinja2"
+
+        # Check tokenizer_config.json
+        # "chat_template" key
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = huggingface_hub.hf_hub_download(
+                repo_id=repo_id,
+                filename="tokenizer_config.json",
+                cache_dir=tmpdir,
+                revision=branch_name,
+            )
+            if not config_path:
+                return None
+            with open(config_path) as f:
+                config = json.load(f)
+                for identifer_cls in TEMPLATE_IDENTIFIERS:
+                    identifier = identifer_cls()
+                    if identifier(config.get("chat_template", "")):
                         return f"{identifier.template_str}.jinja2"
 
 
@@ -198,6 +230,14 @@ class Llama2Identifier(TemplateIdentifier):
 
 
 @register_template_identifier
+class Llama3Identifier(TemplateIdentifier):
+    template_str = "Llama3"
+
+    def __call__(self, content: str):
+        return "<|start_header_id|>" in content and "<|end_header_id|>" in content
+
+
+@register_template_identifier
 class ChatMLIdentifier(TemplateIdentifier):
     template_str = "ChatML"
 
@@ -211,11 +251,42 @@ class ChatMLIdentifier(TemplateIdentifier):
         {{ coercion_message }}
         """
 
+        return "<|im_start|>" in content and "<|im_end|>" in content
+
+
+@register_template_identifier
+class CommandRIdentifier(TemplateIdentifier):
+    template_str = "CommandR"
+
+    def __call__(self, content: str):
+        """
+        <BOS_TOKEN><|START_OF_TURN_TOKEN|><|USER_TOKEN|>{{ system_message }}
+        {{ user_message }}<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|>
+        <|CHATBOT_TOKEN|>{{ coercion_message }}
+        """
+
         return (
-            "<|im_start|>system" in content
-            and "<|im_end|>" in content
-            and "<|im_start|>user" in content
-            and "<|im_start|>assistant" in content
+            "<|START_OF_TURN_TOKEN|>" in content
+            and "<|END_OF_TURN_TOKEN|>" in content
+            and "<|SYSTEM_TOKEN|>" not in content
+        )
+
+
+@register_template_identifier
+class CommandRPlusIdentifier(TemplateIdentifier):
+    template_str = "CommandRPlus"
+
+    def __call__(self, content: str):
+        """
+        <BOS_TOKEN><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>{{ system_message }}
+        <|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|USER_TOKEN|>{{ user_message }}
+        <|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>{{ coercion_message }}
+        """
+
+        return (
+            "<|START_OF_TURN_TOKEN|>" in content
+            and "<|END_OF_TURN_TOKEN|>" in content
+            and "<|SYSTEM_TOKEN|>" in content
         )
 
 

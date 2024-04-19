@@ -1,0 +1,25 @@
+{% block rendered_context -%}
+<|SECTION:CONTEXT|>
+{%- with memory_query=scene.snapshot() -%}
+    {% include "extra-context.jinja2" %}
+{% endwith %}
+<|CLOSE_SECTION|>
+{% endblock -%}
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=min(2048, max_tokens-300-count_tokens(self.rendered_context())), min_dialogue=20, sections=False) -%}
+{{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Continue {{ character.name }}'s unfinished line in this screenplay.
+
+Your response MUST only be the new parts of the dialogue, not the entire line.
+
+Partial line: {{ character.name }}: {{ input }}
+{% if not can_coerce -%}
+Continuation: 
+<|CLOSE_SECTION|>
+{%- else -%}
+<|CLOSE_SECTION|>
+{{ bot_token }}{{ input }}
+{%- endif -%}

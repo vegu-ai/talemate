@@ -1,12 +1,13 @@
+import urllib
+
 import pydantic
 import structlog
-import urllib
 from openai import AsyncOpenAI, NotFoundError, PermissionDeniedError
 
 from talemate.client.base import ClientBase, ExtraField
 from talemate.client.registry import register
-from talemate.emit import emit
 from talemate.config import Client as BaseClientConfig
+from talemate.emit import emit
 
 log = structlog.get_logger("talemate.client.openai_compat")
 

@@ -1,5 +1,6 @@
 {
     "name": "Simulation Suite",
+    "title": "Simulation Suite",
     "environment": "scene",
     "immutable_save": true,
     "restore_from": "simulation-suite.json",

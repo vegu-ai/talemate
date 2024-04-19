@@ -79,6 +79,8 @@ class ClientBase:
     conversation_retries: int = 2
     auto_break_repetition_enabled: bool = True
     decensor_enabled: bool = True
+    auto_determine_prompt_template: bool = False
+    finalizers: list[str] = []
     client_type = "base"
 
     class Meta(pydantic.BaseModel):
@@ -97,6 +99,7 @@ class ClientBase:
     ):
         self.api_url = api_url
         self.name = name or self.client_type
+        self.auto_determine_prompt_template_attempt = None
         self.log = structlog.get_logger(f"client.{self.client_type}")
         if "max_token_length" in kwargs:
             self.max_token_length = (
@@ -262,13 +265,30 @@ class ClientBase:
         self.current_status = status
 
         prompt_template_example, prompt_template_file = self.prompt_template_example()
+        has_prompt_template = (
+            prompt_template_file and prompt_template_file != "default.jinja2"
+        )
+
+        if not has_prompt_template and self.auto_determine_prompt_template:
+
+            # only attempt to determine the prompt template once per model and
+            # only if the model does not already have a prompt template
+
+            if self.auto_determine_prompt_template_attempt != self.model_name:
+                log.info("auto_determine_prompt_template", model_name=self.model_name)
+                self.auto_determine_prompt_template_attempt = self.model_name
+                self.determine_prompt_template()
+                prompt_template_example, prompt_template_file = (
+                    self.prompt_template_example()
+                )
+                has_prompt_template = (
+                    prompt_template_file and prompt_template_file != "default.jinja2"
+                )
 
         data = {
             "api_key": self.api_key,
             "prompt_template_example": prompt_template_example,
-            "has_prompt_template": (
-                prompt_template_file and prompt_template_file != "default.jinja2"
-            ),
+            "has_prompt_template": has_prompt_template,
             "template_file": prompt_template_file,
             "meta": self.Meta().model_dump(),
             "error_action": None,
@@ -288,6 +308,15 @@ class ClientBase:
 
         if status_change:
             instance.emit_agent_status_by_client(self)
+
+    def determine_prompt_template(self):
+        if not self.model_name:
+            return
+
+        template = model_prompt.query_hf_for_prompt_template_suggestion(self.model_name)
+
+        if template:
+            model_prompt.create_user_override(template, self.model_name)
 
     async def get_model_name(self):
         models = await self.client.models.list()
@@ -373,6 +402,14 @@ class ClientBase:
         else:
             parameters["extra_stopping_strings"] = dialog_stopping_strings
 
+    def finalize(self, parameters: dict, prompt: str):
+        for finalizer in self.finalizers:
+            fn = getattr(self, finalizer, None)
+            prompt, applied = fn(parameters, prompt)
+            if applied:
+                return prompt
+        return prompt
+
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
@@ -421,6 +458,9 @@ class ClientBase:
             finalized_prompt = self.prompt_template(
                 self.get_system_message(kind), prompt
             ).strip(" ")
+
+            finalized_prompt = self.finalize(prompt_param, finalized_prompt)
+
             prompt_param = finalize(prompt_param)
 
             token_length = self.count_tokens(finalized_prompt)

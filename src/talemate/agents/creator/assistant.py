@@ -1,9 +1,11 @@
-from typing import TYPE_CHECKING, Union
+import asyncio
+from typing import TYPE_CHECKING, Tuple, Union
 
 import pydantic
 
 import talemate.util as util
 from talemate.agents.base import set_processing
+from talemate.emit import emit
 from talemate.prompts import Prompt
 
 if TYPE_CHECKING:
@@ -22,7 +24,7 @@ class ContentGenerationContext(pydantic.BaseModel):
     original: Union[str, None] = None
 
     @property
-    def computed_context(self) -> (str, str):
+    def computed_context(self) -> Tuple[str, str]:
         typ, context = self.context.split(":", 1)
         return typ, context
 
@@ -53,6 +55,8 @@ class AssistantMixin:
         )
 
         return await self.contextual_generate(generation_context)
+
+    contextual_generate_from_args.exposed = True
 
     @set_processing
     async def contextual_generate(
@@ -93,3 +97,45 @@ class AssistantMixin:
         content = util.strip_partial_sentences(content)
 
         return content.strip()
+
+    @set_processing
+    async def autocomplete_dialogue(
+        self,
+        input: str,
+        character: "Character",
+        emit_signal: bool = True,
+    ) -> str:
+        """
+        Autocomplete dialogue.
+        """
+
+        response = await Prompt.request(
+            f"creator.autocomplete-dialogue",
+            self.client,
+            "create_short",
+            vars={
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "input": input.strip(),
+                "character": character,
+                "can_coerce": self.client.Meta().requires_prompt_template,
+            },
+            pad_prepended_response=False,
+            dedupe_enabled=False,
+        )
+
+        response = util.clean_dialogue(response, character.name)[
+            len(character.name + ":") :
+        ].strip()
+
+        if response.startswith(input):
+            response = response[len(input) :]
+
+        self.scene.log.debug(
+            "autocomplete_suggestion", suggestion=response, input=input
+        )
+
+        if emit_signal:
+            emit("autocomplete_suggestion", response)
+
+        return response

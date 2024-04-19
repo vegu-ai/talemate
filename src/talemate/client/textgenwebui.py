@@ -37,9 +37,25 @@ class TextGeneratorWebuiClient(ClientBase):
             log.debug(
                 "applying temperature smoothing for Yi model",
             )
+            
+        elif self.model_name and self.is_llama3_model():
+            # llama3 models need to add  "<|eot_id|>", "<|end_of_text|>" to the stopping strings
+            parameters["stopping_strings"] += ["<|eot_id|>", "<|end_of_text|>"]
+            
+            # also needs to add `skip_special_tokens`= False to the parameters
+            parameters["skip_special_tokens"] = False
+            log.debug(
+                "applying extra stopping strings for Llama3 model",
+            )
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
+
+    def is_llama3_model(self):
+        model_name = self.model_name.lower()
+        # regex match for llama3 encased by non-word characters
+
+        return bool(re.search(r"[\-_]llama-3[\-_]", model_name))
 
     def is_yi_model(self):
         model_name = self.model_name.lower()

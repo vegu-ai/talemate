@@ -30,7 +30,7 @@ REMOTE_SERVICES = [
     ".runpod.net"
 ]
 
-STOPPING_STRINGS = ["<|im_end|>", "</s>", "<|eot_id|>"]
+STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 
 
 class PromptData(pydantic.BaseModel):
@@ -443,6 +443,11 @@ class ClientBase:
             finalized_prompt = self.prompt_template(
                 self.get_system_message(kind), prompt
             ).strip(" ")
+            
+            if finalized_prompt.endswith("<|end_header_id|>"):
+                # append two linebreaks
+                finalized_prompt += "\n\n"
+            
             prompt_param = finalize(prompt_param)
 
             token_length = self.count_tokens(finalized_prompt)

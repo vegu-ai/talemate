@@ -80,6 +80,7 @@ class ClientBase:
     auto_break_repetition_enabled: bool = True
     decensor_enabled: bool = True
     auto_determine_prompt_template: bool = False
+    finalizers:list[str] = []
     client_type = "base"
 
     class Meta(pydantic.BaseModel):
@@ -396,6 +397,11 @@ class ClientBase:
             parameters["extra_stopping_strings"] = dialog_stopping_strings
             
     def finalize(self, parameters:dict, prompt:str):
+        for finalizer in self.finalizers:
+            fn = getattr(self, finalizer, None)
+            prompt, applied = fn(parameters, prompt)
+            if applied:
+                return prompt
         return prompt
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
@@ -675,3 +681,4 @@ class ClientBase:
                 new_lines.append(line)
 
         return "\n".join(new_lines)
+    

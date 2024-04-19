@@ -30,7 +30,7 @@ REMOTE_SERVICES = [
     ".runpod.net"
 ]
 
-STOPPING_STRINGS = ["<|im_end|>", "</s>"]
+STOPPING_STRINGS = ["<|im_end|>", "</s>", "<|eot_id|>"]
 
 
 class PromptData(pydantic.BaseModel):

@@ -248,6 +248,13 @@ class ChatMLIdentifier(TemplateIdentifier):
             and "<|im_end|>" in content
         )
 
+@register_template_identifier
+class Llama3Identifier(TemplateIdentifier):
+    template_str = "Llama3"
+
+    def __call__(self, content: str):
+        return "<|start_header_id|>" in content and "<|end_header_id|>" in content
+
 
 @register_template_identifier
 class InstructionInputResponseIdentifier(TemplateIdentifier):

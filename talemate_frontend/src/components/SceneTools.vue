@@ -50,7 +50,7 @@
                 <v-icon class="ml-1 mr-3" v-else-if="isWaitingForInput()">mdi-keyboard</v-icon>
                 <v-icon class="ml-1 mr-3" v-else>mdi-circle-outline</v-icon>
 
-                <v-tooltip v-if="isWaitingForInput()" location="top" text="Request autocomplete suggestion for your input.">
+                <v-tooltip v-if="isWaitingForInput()" location="top" text="Request autocomplete suggestion for your input. [Ctrl+Enter while typing]">
                     <template v-slot:activator="{ props }">
                         <v-btn :disabled="messageInput.length < 5" class="hotkey mr-3" v-bind="props" @click="requestAutocompleteSuggestion" color="primary" icon>
                             <v-icon>mdi-auto-fix</v-icon>

@@ -230,6 +230,14 @@ class Llama2Identifier(TemplateIdentifier):
 
 
 @register_template_identifier
+class Llama3Identifier(TemplateIdentifier):
+    template_str = "Llama3"
+
+    def __call__(self, content: str):
+        return "<|start_header_id|>" in content and "<|end_header_id|>" in content
+
+
+@register_template_identifier
 class ChatMLIdentifier(TemplateIdentifier):
     template_str = "ChatML"
 
@@ -248,13 +256,41 @@ class ChatMLIdentifier(TemplateIdentifier):
             and "<|im_end|>" in content
         )
 
+
 @register_template_identifier
-class Llama3Identifier(TemplateIdentifier):
-    template_str = "Llama3"
+class CommandRIdentifier(TemplateIdentifier):
+    template_str = "CommandR"
 
     def __call__(self, content: str):
-        return "<|start_header_id|>" in content and "<|end_header_id|>" in content
+        """
+        <BOS_TOKEN><|START_OF_TURN_TOKEN|><|USER_TOKEN|>{{ system_message }} 
+        {{ user_message }}<|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|>
+        <|CHATBOT_TOKEN|>{{ coercion_message }}
+        """
+        
+        return (
+            "<|START_OF_TURN_TOKEN|>" in content
+            and "<|END_OF_TURN_TOKEN|>" in content
+            and "<|SYSTEM_TOKEN|>" not in content
+        )
+        
+@register_template_identifier
+class CommandRPlusIdentifier(TemplateIdentifier):
+    template_str = "CommandRPlus"
 
+    def __call__(self, content: str):
+        """
+        <BOS_TOKEN><|START_OF_TURN_TOKEN|><|SYSTEM_TOKEN|>{{ system_message }}
+        <|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|USER_TOKEN|>{{ user_message }}
+        <|END_OF_TURN_TOKEN|><|START_OF_TURN_TOKEN|><|CHATBOT_TOKEN|>{{ coercion_message }}
+        """
+        
+        return (
+            "<|START_OF_TURN_TOKEN|>" in content
+            and "<|END_OF_TURN_TOKEN|>" in content
+            and "<|SYSTEM_TOKEN|>" in content
+        )
+                
 
 @register_template_identifier
 class InstructionInputResponseIdentifier(TemplateIdentifier):

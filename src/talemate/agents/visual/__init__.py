@@ -73,7 +73,7 @@ class VisualBase(Agent):
                     ),
                     "default_style": AgentActionConfig(
                         type="text",
-                        value="ink_illustration",
+                        value="concept_art",
                         choices=MAJOR_STYLES,
                         label="Default Style",
                         description="The default style to use for visual processing",

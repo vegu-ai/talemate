@@ -663,6 +663,9 @@ class ConversationAgent(Agent):
         result = result.replace(" :", ":")
 
         total_result = total_result.split("#")[0].strip()
+        
+        if total_result.startswith(":\n"):
+            total_result = total_result[2:]
 
         # movie script format
         # {uppercase character name}

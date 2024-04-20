@@ -548,7 +548,7 @@ class ClientBase:
         - the response
         """
 
-        if not self.auto_break_repetition_enabled:
+        if not self.auto_break_repetition_enabled or not response.strip():
             return response, finalized_prompt
 
         agent_context = active_agent.get()

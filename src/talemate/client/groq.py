@@ -24,7 +24,7 @@ JSON_OBJECT_RESPONSE_MODELS = []
 
 
 class Defaults(pydantic.BaseModel):
-    max_token_length: int = 16384
+    max_token_length: int = 8192
     model: str = "llama3-70b-8192"
 
 

@@ -144,6 +144,9 @@ class CohereConfig(BaseModel):
     api_key: Union[str, None] = None
 
 
+class GroqConfig(BaseModel):
+    api_key: Union[str, None] = None
+
 class RunPodConfig(BaseModel):
     api_key: Union[str, None] = None
 
@@ -327,6 +330,8 @@ class Config(BaseModel):
     anthropic: AnthropicConfig = AnthropicConfig()
 
     cohere: CohereConfig = CohereConfig()
+    
+    groq: GroqConfig = GroqConfig()
 
     runpod: RunPodConfig = RunPodConfig()
 

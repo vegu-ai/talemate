@@ -58,6 +58,11 @@ class EditorAgent(Agent):
                 label="Add detail",
                 description="Will attempt to add extra detail and exposition to the dialogue. Runs automatically after each AI dialogue.",
             ),
+            "check_continuity_errors": AgentAction(
+                enabled=False,
+                label="Check continuity errors",
+                description="Will attempt to fix continuity errors in the dialogue. Runs automatically after each AI dialogue.",
+            ),
         }
 
     @property
@@ -96,6 +101,8 @@ class EditorAgent(Agent):
             edit = await self.add_detail(text, emission.character)
 
             edit = await self.fix_exposition(edit, emission.character)
+            
+            edit = await self.check_continuity_errors(edit, emission.character)
 
             edited.append(edit)
 
@@ -191,3 +198,41 @@ class EditorAgent(Agent):
         response = util.strip_partial_sentences(response)
 
         return response
+
+    @set_processing
+    async def check_continuity_errors(
+        self, content: str, character: Character
+    ) -> str:
+        """
+        Edits a text to ensure that it is consistent with the scene
+        so far
+        """
+        
+        if not self.actions["check_continuity_errors"].enabled:
+            return content
+        
+        response = await Prompt.request(
+            "editor.check-continuity-errors",
+            self.client,
+            "edit_fix_continuity",
+            vars={
+                "content": content,
+                "character": character,
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+            },
+        )
+        
+        # if there was any correction made it will be between the markers
+        # ```fixed and ```
+    
+        # sometimes ```\nfixed is returned, we need to fix that first
+        if "```\nfixed" in response:
+            response = response.replace("```\nfixed", "```fixed")
+        
+        if "```fixed" in response:
+            response = response.split("```fixed")[1].strip()
+            response = response.split("```")[0].strip()
+        
+            return response
+        return content

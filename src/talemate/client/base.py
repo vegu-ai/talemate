@@ -204,6 +204,8 @@ class ClientBase:
                 return system_prompts.ROLEPLAY
             if "editor" in kind:
                 return system_prompts.EDITOR
+            if "edit" in kind:
+                return system_prompts.EDITOR
             if "world_state" in kind:
                 return system_prompts.WORLD_STATE
             if "analyze_freeform" in kind:
@@ -232,6 +234,8 @@ class ClientBase:
             if "conversation" in kind:
                 return system_prompts.ROLEPLAY_NO_DECENSOR
             if "editor" in kind:
+                return system_prompts.EDITOR_NO_DECENSOR
+            if "edit" in kind:
                 return system_prompts.EDITOR_NO_DECENSOR
             if "world_state" in kind:
                 return system_prompts.WORLD_STATE_NO_DECENSOR

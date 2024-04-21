@@ -121,6 +121,8 @@ def preset_for_kind(kind: str):
         return PRESET_DIVINE_INTELLECT  # Assuming adding detail uses the same preset as divine intellect
     elif kind == "edit_fix_exposition":
         return PRESET_DIVINE_INTELLECT  # Assuming fixing exposition uses the same preset as divine intellect
+    elif kind == "edit_fix_continuity":
+        return PRESET_DIVINE_INTELLECT
     elif kind == "visualize":
         return PRESET_SIMPLE_1
     else:
@@ -176,6 +178,8 @@ def max_tokens_for_kind(kind: str, total_budget: int):
         return 200
     elif kind == "edit_fix_exposition":
         return 1024
+    elif kind == "edit_fix_continuity":
+        return 512
     elif kind == "visualize":
         return 150
     else:

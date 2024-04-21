@@ -1,0 +1,37 @@
+<|{% block rendered_context -%}
+<|SECTION:CONTEXT|>
+{%- with memory_query=scene.snapshot() -%}
+    {% include "extra-context.jinja2" %}
+{% endwith %}
+{% if character %}
+{{ character.name }}'s description: {{ character.description|condensed }}
+{% endif %}
+
+{{ text }}
+<|CLOSE_SECTION|>
+{% endblock -%}
+<|SECTION:SCENE|>
+{% set scene_history=scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context())) -%}
+{% set final_line_number=len(scene_history) -%}
+{% for scene_context in scene_history -%}
+{{ loop.index }}. {{ scene_context }}
+{% endfor -%}
+{% if not scene.history -%}
+No dialogue so far
+{% endif -%}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Carefully analyze this continuation of the scene for continuity errors:
+
+```
+{{ content }}
+```
+
+If there are continuity errors, rewrite the text to fix them. In order for us to easily locate your changed text please use the following format:
+
+```fixed
+your fixed text here
+```
+
+IF THERE ARE NO ERRORS, PLEASE WRITE "NO ERRORS" IN THE BOX BELOW.
+<|CLOSE_SECTION|>

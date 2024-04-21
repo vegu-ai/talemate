@@ -361,10 +361,15 @@ def game(TM):
             has_change_ai_character_call = TM.client.query_text_eval(f"Are there any calls to `change_ai_character` in the instruction for {character_name}?", "\n".join(self.calls))
             
             if has_change_ai_character_call:
-                combined_arg = TM.agents.world_state.analyze_and_follow_instruction(
-                    "\n".join(self.calls),
-                    f"Combine the arguments of the function calls `add_ai_character` and `change_ai_character` for {character_name} into a single text string. Respond with the new argument."
-                )
+                
+                combined_arg = TM.client.render_and_request(
+                    "combine-add-and-alter-ai-character",
+                    dedupe_enabled=False,
+                    calls="\n".join(self.calls),
+                    character_name=character_name,
+                    scene=TM.scene,
+                ).replace("COMBINED ARGUMENT:", "").strip()
+            
                 call = f"add_ai_character({combined_arg})"
                 inject = f"The computer executes the function `{call}`"
                 

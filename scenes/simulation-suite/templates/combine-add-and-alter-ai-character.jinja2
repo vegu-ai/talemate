@@ -1,0 +1,28 @@
+<|SECTION:EXAMPLES|>
+combine the arguments of the function calls `add_ai_character` and `change_ai_character` for "Sarah" into a single text string argument to be passed to a single `add_ai_character` function call.
+```
+set_simulation_goal("player experiences a rollercoaster ride")
+change_environment("theme park, riding a rollercoaster")
+set_player_persona("young female experiencing rollercoaster ride")
+set_player_name("Susanne")
+add_ai_character("a female friend of player named Sarah")
+change_ai_character("Sarah hates rollercoasters")
+```
+COMBINED ARGUMENT: "a female friend of player named Sarah, Sarah hates rollercoasters"
+
+TASK: combine the arguments of the function calls `add_ai_character` and `change_ai_character` for "George" into a single text string argument to be passed to a single `add_ai_character` function call.
+```
+change_environment("building on fire")
+change_ai_character("George is injured")
+add_ai_character("a firefighter named Stephen")
+change_ai_character("Stephen is afraid of heights")
+```
+COMBINED ARGUMENT: "a firefighter named Stephen, Stephen is afraid of heights"
+
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+TASK: combine the arguments of the function calls `add_ai_character` and `change_ai_character` for "{{ character_name }}" into a single text string argument to be passed to a single `add_ai_character` function call.
+```
+{{ calls }}
+```
+{{ set_prepared_response("COMBINED ARGUMENT:") }}

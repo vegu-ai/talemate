@@ -1,3 +1,4 @@
+import enum
 import re
 from dataclasses import dataclass, field
 
@@ -17,6 +18,14 @@ def reset_message_id():
     _message_id = 0
 
 
+class Flags(enum.IntFlag):
+    """
+    Flags for messages
+    """
+
+    NONE = 0
+    HIDDEN = 1
+
 @dataclass
 class SceneMessage:
     """
@@ -32,7 +41,7 @@ class SceneMessage:
     # the source of the message (e.g. "ai", "progress_story", "director")
     source: str = ""
 
-    hidden: bool = False
+    flags: Flags = Flags.NONE
 
     typ = "scene"
 
@@ -57,6 +66,7 @@ class SceneMessage:
             "id": self.id,
             "typ": self.typ,
             "source": self.source,
+            "flags": int(self.flags),
         }
 
     def __iter__(self):
@@ -78,13 +88,17 @@ class SceneMessage:
     @property
     def raw(self):
         return str(self.message)
+    
+    @property
+    def hidden(self):
+        return self.flags & Flags.HIDDEN
 
     def hide(self):
-        self.hidden = True
+        self.flags |= Flags.HIDDEN
 
     def unhide(self):
-        self.hidden = False
-
+        self.flags &= ~Flags.HIDDEN
+        
     def as_format(self, format: str, **kwargs) -> str:
         return self.message
 
@@ -234,6 +248,7 @@ class TimePassageMessage(SceneMessage):
             "typ": "time",
             "source": self.source,
             "ts": self.ts,
+            "flags": int(self.flags),
         }
 
 

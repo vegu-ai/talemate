@@ -379,6 +379,7 @@ class WebsocketHandler(Receiver):
                 "message": emission.message,
                 "id": emission.id,
                 "character": emission.character.name if emission.character else "",
+                "flags": int(emission.message_object.flags) if emission.message_object else 0,
             }
         )
 
@@ -401,6 +402,7 @@ class WebsocketHandler(Receiver):
                 "character": character,
                 "action": emission.message_object.action,
                 "direction_mode": direction_mode,
+                "flags": int(emission.message_object.flags) if emission.message_object else 0,
             }
         )
 
@@ -412,6 +414,7 @@ class WebsocketHandler(Receiver):
                 "character": emission.character.name if emission.character else "",
                 "id": emission.id,
                 "color": emission.character.color if emission.character else None,
+                "flags": int(emission.message_object.flags) if emission.message_object else 0,
             }
         )
 
@@ -422,6 +425,7 @@ class WebsocketHandler(Receiver):
                 "message": emission.message,
                 "id": emission.id,
                 "ts": emission.message_object.ts,
+                "flags": int(emission.message_object.flags) if emission.message_object else 0,
             }
         )
 

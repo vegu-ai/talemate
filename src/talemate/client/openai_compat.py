@@ -29,7 +29,7 @@ class ClientConfig(BaseClientConfig):
 @register()
 class OpenAICompatibleClient(ClientBase):
     client_type = "openai_compat"
-    conversation_retries = 5
+    conversation_retries = 0
     config_cls = ClientConfig
 
     class Meta(ClientBase.Meta):

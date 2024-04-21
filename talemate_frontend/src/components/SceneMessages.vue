@@ -65,6 +65,11 @@ import DirectorMessage from './DirectorMessage.vue';
 import TimePassageMessage from './TimePassageMessage.vue';
 import StatusMessage from './StatusMessage.vue';
 
+const MESSAGE_FLAGS = {
+    NONE: 0,
+    HIDDEN: 1,
+}
+
 export default {
     name: 'SceneMessages',
     components: {
@@ -193,6 +198,11 @@ export default {
             }
             
             if (data.message) {
+
+                if(data.flags && data.flags & MESSAGE_FLAGS.HIDDEN) {
+                    return;
+                }
+
                 if (data.type === 'character') {
                     const parts = data.message.split(':');
                     const character = parts.shift();

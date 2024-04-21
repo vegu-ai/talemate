@@ -9,7 +9,7 @@ def game(TM):
     
     PROMPT_STARTUP = "Narrate the computer asking the user to state the nature of their desired simulation in a synthetic and soft sounding voice."
     
-    CTX_PIN_UNAWARE = "Characters in the simulation ARE NOT AWARE OF THE COMPUTER."
+    CTX_PIN_UNAWARE = "Characters in the simulation ARE NOT AWARE OF THE COMPUTER OR THE SIMULATION."
     
     AUTO_NARRATE_INTERVAL = 10
     
@@ -133,12 +133,7 @@ def game(TM):
                 if processed_call:
                     processed.append(processed_call)
             
-            """
-            {% set _ = emit_status("busy", "Simulation suite altering environment.", as_scene_message=True) %}
-            {% set update_world_state = True %}
-            {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer calls the following functions:\n"+processed.join("\n")+"\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up.", emit_message=True) %}
-            """
-            
+
             if processed:
                 TM.log.debug("SIMULATION SUITE CALLS", calls=processed)
                 TM.game_state.set_var("instr.has_issued_instructions", "yes", commit=False)
@@ -146,11 +141,22 @@ def game(TM):
             TM.emit_status("busy", "Simulation suite altering environment.", as_scene_message=True)
             compiled = "\n".join(processed)
             if not self.simulation_reset and compiled:
-                TM.agents.narrator.action_to_narration(
+                narration = TM.agents.narrator.action_to_narration(
                     action_name="progress_story",
-                    narrative_direction=f"The computer calls the following functions:\n\n{compiled}\n\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up. YOU MUST NOT REFERENCE THE COMPUTER OR THE SIMULATION.",
+                    narrative_direction=f"The computer calls the following functions:\n\n```\n{compiled}\n```\n\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up. YOU MUST NOT REFERENCE THE COMPUTER OR THE SIMULATION.",
                     emit_message=True
                 )
+                
+                # on the first narration we update the scene description and remove any mention of the computer
+                # or the simulation from the previous narration
+                is_initial_narration = TM.game_state.get_var("instr.intro_narration", False)
+                if not is_initial_narration:
+                    TM.scene.set_description(str(narration))
+                    TM.scene.set_intro(str(narration))
+                    TM.log.debug("SIMULATION SUITE: initial narration", intro=str(narration))
+                    TM.scene.pop_history(typ="narrator", all=True, reverse=True)
+                    TM.scene.pop_history(typ="director", all=True, reverse=True)
+                    TM.game_state.set_var("instr.intro_narration", True, commit=False)
                 
             self.update_world_state = True
             

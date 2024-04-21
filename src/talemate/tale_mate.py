@@ -1021,20 +1021,31 @@ class Scene(Emitter):
             )
 
     def pop_history(
-        self, typ: str, source: str, all: bool = False, max_iterations: int = None
+        self, typ: str, source: str = None, all: bool = False, max_iterations: int = None, reverse: bool = False
     ):
         """
         Removes the last message from the history that matches the given typ and source
         """
         iterations = 0
-        for idx in range(len(self.history) - 1, -1, -1):
-            if self.history[idx].typ == typ and self.history[idx].source == source:
-                self.history.pop(idx)
+        
+        if not reverse:
+            iter_range = range(len(self.history) - 1, -1, -1)
+        else:
+            iter_range = range(len(self.history))
+        
+        to_remove = []
+        
+        for idx in iter_range:
+            if self.history[idx].typ == typ and (self.history[idx].source == source or source is None):
+                to_remove.append(self.history[idx])
                 if not all:
-                    return
+                    break
             iterations += 1
             if max_iterations and iterations >= max_iterations:
                 break
+            
+        for message in to_remove:
+            self.history.remove(message)
 
     def find_message(self, typ: str, source: str, max_iterations: int = 100):
         """

@@ -60,6 +60,14 @@ class OpenAICompatibleClient(ClientBase):
     @property
     def experimental(self):
         return EXPERIMENTAL_DESCRIPTION
+    
+    @property
+    def can_be_coerced(self):
+        """
+        Determines whether or not his client can pass LLM coercion. (e.g., is able
+        to predefine partial LLM output in the prompt)
+        """
+        return not self.api_handles_prompt_template
 
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)

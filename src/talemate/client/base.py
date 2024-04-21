@@ -113,6 +113,14 @@ class ClientBase:
     @property
     def experimental(self):
         return False
+    
+    @property
+    def can_be_coerced(self):
+        """
+        Determines whether or not his client can pass LLM coercion. (e.g., is able
+        to predefine partial LLM output in the prompt)
+        """
+        return self.Meta().requires_prompt_template
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")

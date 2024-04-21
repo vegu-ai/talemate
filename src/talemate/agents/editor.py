@@ -61,7 +61,7 @@ class EditorAgent(Agent):
             "check_continuity_errors": AgentAction(
                 enabled=False,
                 label="Check continuity errors",
-                description="Will attempt to fix continuity errors in the dialogue. Runs automatically after each AI dialogue.",
+                description="Will attempt to fix continuity errors in the dialogue. Runs automatically after each AI dialogue. (super experimental)",
             ),
         }
 
@@ -211,6 +211,13 @@ class EditorAgent(Agent):
         if not self.actions["check_continuity_errors"].enabled:
             return content
         
+        MAX_CONTENT_LENGTH = 255
+        count = util.count_tokens(content)
+        
+        if count > MAX_CONTENT_LENGTH:
+            log.warning("check_continuity_errors content too long", length=count, max=MAX_CONTENT_LENGTH, content=content[:255]) 
+            return content
+        
         response = await Prompt.request(
             "editor.check-continuity-errors",
             self.client,
@@ -231,8 +238,10 @@ class EditorAgent(Agent):
             response = response.replace("```\nfixed", "```fixed")
         
         if "```fixed" in response:
+            log.debug("check_continuity_errors FIXED", response=response)
             response = response.split("```fixed")[1].strip()
             response = response.split("```")[0].strip()
         
             return response
+        log.debug("check_continuity_errors NO FIX")
         return content

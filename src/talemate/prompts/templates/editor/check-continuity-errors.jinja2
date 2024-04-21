@@ -11,7 +11,7 @@
 <|CLOSE_SECTION|>
 {% endblock -%}
 <|SECTION:SCENE|>
-{% set scene_history=scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context())) -%}
+{% set scene_history=scene.context_history(budget=max_tokens-512-count_tokens(self.rendered_context())) -%}
 {% set final_line_number=len(scene_history) -%}
 {% for scene_context in scene_history -%}
 {{ loop.index }}. {{ scene_context }}
@@ -21,17 +21,21 @@ No dialogue so far
 {% endif -%}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
+What are continuity errors?
+
+Continuity errors are mistakes in a story that occur when something changes from one scene to the next. This could be a character's appearance, the time of day, or even the weather. These errors can be distracting for the reader and can take them out of the story. It's important to catch these errors and fix them before the story is published.
+
 Carefully analyze this continuation of the scene for continuity errors:
 
 ```
 {{ content }}
 ```
 
-If there are continuity errors, rewrite the text to fix them. In order for us to easily locate your changed text please use the following format:
+If there are continuity errors, rewrite the entire text to fix them. In order for us to easily locate your changed text please use the following format:
 
 ```fixed
-your fixed text here
+the fixed text (complete, not individual lines)
 ```
 
-IF THERE ARE NO ERRORS, PLEASE WRITE "NO ERRORS" IN THE BOX BELOW.
+THIS IS NOT A REVISION TASK. DO NOT CHANGE THE MEANING OF THE TEXT. ONLY FIX CONTINUITY ERRORS.
 <|CLOSE_SECTION|>

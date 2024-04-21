@@ -1069,6 +1069,14 @@ class Scene(Emitter):
                 return idx
         return -1
 
+    def get_message(self, message_id: int) -> SceneMessage:
+        """
+        Returns the message in the history with the given id
+        """
+        for idx in range(len(self.history) - 1, -1, -1):
+            if self.history[idx].id == message_id:
+                return self.history[idx]
+
     def last_player_message(self) -> str:
         """
         Returns the last message from the player

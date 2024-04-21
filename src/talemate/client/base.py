@@ -76,7 +76,7 @@ class ClientBase:
     max_token_length: int = 4096
     processing: bool = False
     connected: bool = False
-    conversation_retries: int = 2
+    conversation_retries: int = 1
     auto_break_repetition_enabled: bool = True
     decensor_enabled: bool = True
     auto_determine_prompt_template: bool = False

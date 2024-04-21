@@ -148,7 +148,7 @@ def game(TM):
             if not self.simulation_reset and compiled:
                 TM.agents.narrator.action_to_narration(
                     action_name="progress_story",
-                    narrative_direction=f"The computer calls the following functions:\n\n{compiled}\n\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up. YOU MUST NOT REFERENCE THE COMPUTER.",
+                    narrative_direction=f"The computer calls the following functions:\n\n{compiled}\n\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up. YOU MUST NOT REFERENCE THE COMPUTER OR THE SIMULATION.",
                     emit_message=True
                 )
                 
@@ -330,15 +330,15 @@ def game(TM):
             
             # sometimes the AI will call this function an pass an inanimate object as the parameter
             # we need to determine if this is the case and just ignore it
-            is_inanimate = TM.client.query_text_eval("does the function add an inanimate object?", call)
+            is_inanimate = TM.client.query_text_eval(f"does the function `{call}` add an inanimate object, concept or abstract idea? (ANYTHING THAT IS NOT A CHARACTER THAT COULD BE PORTRAYED BY AN ACTOR)", call)
             
             if is_inanimate:
-                TM.log.debug("SIMULATION SUITE: add npc - inanimate object", call=call)
+                TM.log.debug("SIMULATION SUITE: add npc - inanimate object / abstact idea - skipped", call=call)
                 return
             
             # sometimes the AI will ask if the function adds a group of characters, we need to
             # determine if this is the case
-            adds_group = TM.client.query_text_eval("does the function add a group of characters?", call)
+            adds_group = TM.client.query_text_eval(f"does the function `{call}` add MULTIPLE ai characters?", call)
             
             TM.log.debug("SIMULATION SUITE: add npc", adds_group=adds_group)
             
@@ -498,7 +498,7 @@ def game(TM):
                 self.narrate_round()
             
             elif rounds % AUTO_NARRATE_INTERVAL == 0 and rounds and TM.scene.npc_character_names() and has_issued_instructions:
-                # every 3 rounds, narrate the round
+                # every N rounds, narrate the round
                 self.narrate_round()
          
         def guide_player(self):

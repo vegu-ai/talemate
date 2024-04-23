@@ -149,7 +149,7 @@ class ClientBase:
     def prompt_template_example(self):
         if not getattr(self, "model_name", None):
             return None, None
-        return model_prompt(self.model_name, "sysmsg", "prompt<|BOT|>{LLM coercion}")
+        return model_prompt(self.model_name, "{sysmsg}", "{prompt}<|BOT|>{LLM coercion}")
 
     def reconfigure(self, **kwargs):
         """

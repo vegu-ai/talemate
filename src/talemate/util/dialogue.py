@@ -12,4 +12,5 @@ def handle_endofline_special_delimiter(content:str) -> str:
     content = content.rsplit("-- endofline --", 1)[0]
     content = content.replace("-- endofline --", "")
     content = content.strip()
+    content = content.replace("--","*")
     return content

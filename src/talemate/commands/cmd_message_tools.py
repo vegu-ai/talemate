@@ -36,7 +36,7 @@ class CmdFixContinuityErrors(TalemateCommand):
         else:
             character = None
         
-        fixed_message = await editor.check_continuity_errors(str(message), character)
+        fixed_message = await editor.check_continuity_errors(str(message), character, force=True)
         
         self.scene.edit_message(message_id, fixed_message)
     

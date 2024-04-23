@@ -201,14 +201,14 @@ class EditorAgent(Agent):
 
     @set_processing
     async def check_continuity_errors(
-        self, content: str, character: Character
+        self, content: str, character: Character, force: bool = False
     ) -> str:
         """
         Edits a text to ensure that it is consistent with the scene
         so far
         """
         
-        if not self.actions["check_continuity_errors"].enabled:
+        if not self.actions["check_continuity_errors"].enabled and not force:
             return content
         
         MAX_CONTENT_LENGTH = 255

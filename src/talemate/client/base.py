@@ -56,6 +56,7 @@ class ErrorAction(pydantic.BaseModel):
 class Defaults(pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
     max_token_length: int = 4096
+    double_coercion: str = None
 
 
 class ExtraField(pydantic.BaseModel):
@@ -76,11 +77,12 @@ class ClientBase:
     max_token_length: int = 4096
     processing: bool = False
     connected: bool = False
-    conversation_retries: int = 1
+    conversation_retries: int = 0
     auto_break_repetition_enabled: bool = True
     decensor_enabled: bool = True
     auto_determine_prompt_template: bool = False
     finalizers: list[str] = []
+    double_coercion: Union[str, None] = None
     client_type = "base"
 
     class Meta(pydantic.BaseModel):
@@ -101,6 +103,7 @@ class ClientBase:
         self.name = name or self.client_type
         self.auto_determine_prompt_template_attempt = None
         self.log = structlog.get_logger(f"client.{self.client_type}")
+        self.double_coercion = kwargs.get("double_coercion", None)
         if "max_token_length" in kwargs:
             self.max_token_length = (
                 int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 4096
@@ -125,7 +128,7 @@ class ClientBase:
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
 
-    def prompt_template(self, sys_msg, prompt):
+    def prompt_template(self, sys_msg:str, prompt:str):
         """
         Applies the appropriate prompt template for the model.
         """
@@ -134,7 +137,14 @@ class ClientBase:
             self.log.warning("prompt template not applied", reason="no model loaded")
             return f"{sys_msg}\n{prompt}"
 
-        return model_prompt(self.model_name, sys_msg, prompt)[0]
+        if self.can_be_coerced and self.double_coercion:
+            double_coercion = self.double_coercion
+            if not double_coercion.endswith(" "):
+                double_coercion += " "
+        else:
+            double_coercion = None
+
+        return model_prompt(self.model_name, sys_msg, prompt, double_coercion)[0]
 
     def prompt_template_example(self):
         if not getattr(self, "model_name", None):
@@ -160,6 +170,9 @@ class ClientBase:
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
+            
+        if "double_coercion" in kwargs:
+            self.double_coercion = kwargs["double_coercion"]
 
     def toggle_disabled_if_remote(self):
         """
@@ -304,6 +317,7 @@ class ClientBase:
             "template_file": prompt_template_file,
             "meta": self.Meta().model_dump(),
             "error_action": None,
+            "double_coercion": self.double_coercion,
         }
 
         for field_name in getattr(self.Meta(), "extra_fields", {}).keys():

@@ -94,6 +94,7 @@ export default {
           api_url: '',
           model_name: '',
           max_token_length: 4096,
+          double_coercion: null,
           data: {
             has_prompt_template: false,
           }
@@ -235,6 +236,7 @@ export default {
           client.max_token_length = data.max_token_length;
           client.api_url = data.api_url;
           client.api_key = data.api_key;
+          client.double_coercion = data.data.double_coercion;
           client.data = data.data;
         } else if(!client) {
           console.log("Adding new client", data);
@@ -248,6 +250,7 @@ export default {
             max_token_length: data.max_token_length,
             api_url: data.api_url,
             api_key: data.api_key,
+            double_coercion: data.data.double_coercion,
             data: data.data,
           });
           // sort the clients by name

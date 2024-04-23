@@ -31,6 +31,9 @@
                       <v-text-field type="password" v-model="client.api_key" v-if="requiresAPIUrl(client) && clientMeta().enable_api_auth" label="API Key"></v-text-field>
                     </v-col>  
                   </v-row>
+                  <div v-if="clientMeta().requires_prompt_template">
+                      <v-text-field v-model="client.double_coercion" label="Double coercion" hint="If set, this text will be prepended to every LLM response, attempting to enforce compliance with the request. `Certainly!` or `Absolutely, here is exactly what you asked for: ` are good examples. Tone of this coercion can also affect the tone of the rest of the response."></v-text-field>
+                  </div>
                   <v-select v-model="client.model" v-if="clientMeta().manual_model && clientMeta().manual_model_choices" :items="clientMeta().manual_model_choices" label="Model"></v-select>
                   <v-text-field v-model="client.model_name" v-else-if="clientMeta().manual_model" label="Manually specify model name" hint="It looks like we're unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you're locally serving a model."></v-text-field>
                 </v-col>
@@ -128,6 +131,7 @@ export default {
         this.client.model = defaults.model || '';
         this.client.api_url = defaults.api_url || '';
         this.client.max_token_length = defaults.max_token_length || 4096;
+        this.client.double_coercion = defaults.double_coercion || null;
         // loop and build name from prefix, checking against current clients
         let name = this.clientTypes[this.client.type].name_prefix;
         let i = 2;

@@ -8,6 +8,7 @@ def handle_endofline_special_delimiter(content:str) -> str:
     # then remove all remaining -- endofline -- from the left side
     # then remove all leading and trailing whitespace
     
+    content = content.replace("--endofline--", "-- endofline --")
     content = content.rsplit("-- endofline --", 1)[0]
     content = content.replace("-- endofline --", "")
     content = content.strip()

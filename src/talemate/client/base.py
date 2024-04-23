@@ -137,10 +137,14 @@ class ClientBase:
             self.log.warning("prompt template not applied", reason="no model loaded")
             return f"{sys_msg}\n{prompt}"
 
-        if self.can_be_coerced and self.double_coercion:
+        # is JSON coercion active?
+        # Check for <|BOT|>{ in the prompt
+        json_coercion = "<|BOT|>{" in prompt
+
+        if self.can_be_coerced and self.double_coercion and not json_coercion:
             double_coercion = self.double_coercion
-            if not double_coercion.endswith(" "):
-                double_coercion += " "
+            if not double_coercion.endswith("\n"):
+                double_coercion += "\n\n"
         else:
             double_coercion = None
 

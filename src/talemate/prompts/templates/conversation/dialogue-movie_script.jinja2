@@ -126,6 +126,7 @@ YOU MUST DELIMIT YOUR CONTRIBUTION WITH "-- endofline --" AT THE END OF YOUR CON
 # Requested changes: {{ rerun_context.direction }}
 {% endif -%}
 {% endif -%}
-{{ bot_token }}{{ talking_character.name.upper() }}{% if partial_message %}
+{{ bot_token }}{{ talking_character.name.upper() }}
+{% if partial_message -%}
 {{ partial_message.strip() }}
 {% endif %}

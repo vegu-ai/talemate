@@ -95,17 +95,17 @@
                     <div>
                       If set, this text will be prepended to every LLM response, attempting to enforce compliance with the request.
                       <p>
-                        <v-chip label size="small" color="primary">Certainly!</v-chip> or <v-chip color="primary" size="small" label>Absolutely! here is exactly what you asked for: </v-chip> are good examples. 
+                        <v-chip label size="small" color="primary" @click.stop="double_coercion='Certainly: '">Certainly: </v-chip> or <v-chip @click.stop="client.double_coercion='Absolutely! here is exactly what you asked for: '" color="primary" size="small" label>Absolutely! here is exactly what you asked for: </v-chip> are good examples. 
                       </p>
                       The tone of this coercion can also affect the tone of the rest of the response.
                     </div>
                     <v-divider class="mb-2 mt-2"></v-divider>
                     <div>
-                      The longer the coercion, the more likely it will coerce the model to follow the instruction, but it may also make the response less natural or affect accuracy. <span class="text-grey">I would recommend only setting this if you are actually getting hard refusals from the model.</span>
+                      The longer the coercion, the more likely it will coerce the model to accept the instruction, but it may also make the response less natural or affect accuracy. <span class="text-warning">Only set this if you are actually getting hard refusals from the model.</span>
                     </div>
                   </v-alert>
                   <div class="mt-1" v-if="clientMeta().requires_prompt_template">
-                    <v-textarea v-model="client.double_coercion" rows="2" max-rows="3" auto-grow label="Coercion" placeholder="Certainly!"
+                    <v-textarea v-model="client.double_coercion" rows="2" max-rows="3" auto-grow label="Coercion" placeholder="Certainly: "
                       hint=""></v-textarea>
                   </div>
                 </v-window-item>

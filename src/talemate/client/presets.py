@@ -120,9 +120,9 @@ def preset_for_kind(kind: str):
     elif kind == "edit_add_detail":
         return PRESET_DIVINE_INTELLECT  # Assuming adding detail uses the same preset as divine intellect
     elif kind == "edit_fix_exposition":
-        return PRESET_DIVINE_INTELLECT  # Assuming fixing exposition uses the same preset as divine intellect
+        return PRESET_LLAMA_PRECISE  # Assuming fixing exposition uses the same preset as divine intellect
     elif kind == "edit_fix_continuity":
-        return PRESET_DIVINE_INTELLECT
+        return PRESET_LLAMA_PRECISE
     elif kind == "visualize":
         return PRESET_SIMPLE_1
     else:

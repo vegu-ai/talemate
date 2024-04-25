@@ -218,7 +218,7 @@ class ClientBase:
                 return system_prompts.ROLEPLAY
             if "conversation" in kind:
                 return system_prompts.ROLEPLAY
-            if "edit_fix_continuity" in kind:
+            if "basic" in kind:
                 return system_prompts.BASIC
             if "editor" in kind:
                 return system_prompts.EDITOR
@@ -251,7 +251,7 @@ class ClientBase:
                 return system_prompts.ROLEPLAY_NO_DECENSOR
             if "conversation" in kind:
                 return system_prompts.ROLEPLAY_NO_DECENSOR
-            if "edit_fix_continuity" in kind:
+            if "basic" in kind:
                 return system_prompts.BASIC
             if "editor" in kind:
                 return system_prompts.EDITOR_NO_DECENSOR
@@ -436,13 +436,16 @@ class ClientBase:
             parameters["extra_stopping_strings"] = dialog_stopping_strings
 
     def finalize(self, parameters: dict, prompt: str):
+        
+        prompt = util.replace_special_tokens(prompt)
+        
         for finalizer in self.finalizers:
             fn = getattr(self, finalizer, None)
             prompt, applied = fn(parameters, prompt)
             if applied:
                 return prompt
         return prompt
-
+    
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.

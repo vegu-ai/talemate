@@ -36,7 +36,7 @@ PRESET_LLAMA_PRECISE = {
 
 PRESET_DETERMINISTIC = {
     "temperature": 0.01,
-    "top_p": 0.0,
+    "top_p": 0.01,
     "top_k": 0,
     "repetition_penalty": 1.0,
 }
@@ -127,11 +127,17 @@ def preset_for_kind(kind: str):
     elif kind == "edit_add_detail":
         return PRESET_DIVINE_INTELLECT  # Assuming adding detail uses the same preset as divine intellect
     elif kind == "edit_fix_exposition":
-        return PRESET_LLAMA_PRECISE  # Assuming fixing exposition uses the same preset as divine intellect
+        return PRESET_DETERMINISTIC  # Assuming fixing exposition uses the same preset as divine intellect
     elif kind == "edit_fix_continuity":
-        return PRESET_DETERMINISTIC
+        return PRESET_DETERMINISTIC    
     elif kind == "visualize":
         return PRESET_SIMPLE_1
+    
+    # tag based
+    elif "deterministic" in kind:
+        return PRESET_DETERMINISTIC
+    elif "creative" in kind:
+        return PRESET_DIVINE_INTELLECT
     else:
         return PRESET_SIMPLE_1  # Default preset if none of the kinds match
 
@@ -189,5 +195,24 @@ def max_tokens_for_kind(kind: str, total_budget: int):
         return 512
     elif kind == "visualize":
         return 150
+    # tag based
+    elif "extensive" in kind:
+        return 2048
+    elif "long" in kind:
+        return 1024
+    elif "medium2" in kind:
+        return 512
+    elif "medium" in kind:
+        return 192
+    elif "short2" in kind:
+        return 128
+    elif "short" in kind:
+        return 75
+    elif "tiny2" in kind:
+        return 25
+    elif "tiny" in kind:
+        return 10
+    elif "yesno" in kind:
+        return 2
     else:
         return 150  # Default value if none of the kinds match

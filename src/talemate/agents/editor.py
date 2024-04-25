@@ -221,7 +221,7 @@ class EditorAgent(Agent):
         response = await Prompt.request(
             "editor.check-continuity-errors",
             self.client,
-            "edit_fix_continuity",
+            "basic_deterministic_medium2",
             vars={
                 "content": content,
                 "character": character,
@@ -231,17 +231,12 @@ class EditorAgent(Agent):
         )
         
         # loop through response line by line, checking for lines beginning
-        # with "STATUS LINE {number}:
+        # with "ERROR {number}:
         
         errors = []
         
         for line in response.split("\n"):
-            if not line.startswith("STATUS LINE"):
-                continue
-            
-            # look for "Error found"
-            
-            if not "Error found" in line:
+            if not line.startswith("ERROR"):
                 continue
             
             errors.append(line)
@@ -260,7 +255,7 @@ class EditorAgent(Agent):
         response = await Prompt.request(
             "editor.fix-continuity-errors",
             self.client,
-            "edit_fix_continuity",
+            "editor_creative_medium2",
             vars={
                 "content": content,
                 "character": character,
@@ -271,11 +266,15 @@ class EditorAgent(Agent):
             },
         )
         
-        content_fix_identifer = state.get("content_fix_identifer")
+        content_fix_identifer = state.get("content_fix_identifier")
         
-        # fixed content will be between "```{content_fix_identifer}" and "```"
         
-        content = content.split(f"```{content_fix_identifer}")[1].split("```")[0].strip()
+        try:
+            content = response.split("```")[0].strip()
+            content = content.strip(":")
+        except Exception as e:
+            log.error("check_continuity_errors FAILED", content_fix_identifer=content_fix_identifer, response=response, e=e)
+            return content
 
         log.debug("check_continuity_errors FIXED", content=content)
         

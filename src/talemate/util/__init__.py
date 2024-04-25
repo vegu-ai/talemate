@@ -14,7 +14,8 @@ from PIL import Image
 from thefuzz import fuzz
 
 from talemate.scene_message import SceneMessage
-from talemate.util.dialogue import handle_endofline_special_delimiter
+from talemate.util.dialogue import *
+from talemate.util.prompt import *
 
 log = structlog.get_logger("talemate.util")
 

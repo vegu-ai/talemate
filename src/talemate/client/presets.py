@@ -34,6 +34,13 @@ PRESET_LLAMA_PRECISE = {
     "repetition_penalty": 1.18,
 }
 
+PRESET_DETERMINISTIC = {
+    "temperature": 0.01,
+    "top_p": 0.0,
+    "top_k": 0,
+    "repetition_penalty": 1.0,
+}
+
 PRESET_DIVINE_INTELLECT = {
     "temperature": 1.31,
     "top_p": 0.14,
@@ -122,7 +129,7 @@ def preset_for_kind(kind: str):
     elif kind == "edit_fix_exposition":
         return PRESET_LLAMA_PRECISE  # Assuming fixing exposition uses the same preset as divine intellect
     elif kind == "edit_fix_continuity":
-        return PRESET_LLAMA_PRECISE
+        return PRESET_DETERMINISTIC
     elif kind == "visualize":
         return PRESET_SIMPLE_1
     else:

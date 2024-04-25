@@ -1,0 +1,51 @@
+{% if character -%}
+    {% set content_block_identifier = character.name + "'s next dialogue" %}
+    {% set content_fix_identifier = character.name + "'s adjusted dialogue" %}
+{% else -%}
+    {% set content_block_identifier = "next narrative" %}
+    {% set content_fix_identifier = "adjusted narrative" %}
+{% endif -%}
+{% set _ = set_state("content_fix_identifier", content_fix_identifier) %}
+{% block rendered_context -%}
+<|SECTION:CONTEXT|>
+{%- with memory_query=scene.snapshot() -%}
+    {% include "extra-context.jinja2" %}
+{% endwith %}
+{% if character %}
+{{ character.name }}'s description: {{ character.description|condensed }}
+{% endif %}
+
+{{ text }}
+<|CLOSE_SECTION|>
+{% endblock -%}
+<|SECTION:SCENE|>
+{% set scene_history=scene.context_history(budget=max_tokens-512-count_tokens(self.rendered_context())) -%}
+{% set final_line_number=len(scene_history) -%}
+{% for scene_context in scene_history -%}
+{{ loop.index }}. {{ scene_context }}
+{% endfor -%}
+{% if not scene.history -%}
+No dialogue so far
+{% endif -%}
+<|CLOSE_SECTION|>
+<|SECTION:CONTINUITY ERRORS|>
+
+```{{ content_block_identifier }}
+{{ content }}
+```
+
+The following continuity errors have been identified in "{{ content_block_identifier }}":
+
+{% for error in errors -%}
+{{ error }}
+
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Write a revised draft of "{{ content_block_identifier }}" and fix the continuity errors identified. 
+
+YOU MUST NOT CHANGE THE MEANING, PLOT DIRECTION OR TONE OF THE TEXT. 
+
+YOU MUST ONLY FIX CONTINUITY ERRORS.
+<|CLOSE_SECTION|>
+{{ set_prepared_response("```"+content_fix_identifier) }}

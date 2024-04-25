@@ -201,7 +201,7 @@ class EditorAgent(Agent):
 
     @set_processing
     async def check_continuity_errors(
-        self, content: str, character: Character, force: bool = False
+        self, content: str, character: Character, force: bool = False, fix:bool = True
     ) -> str:
         """
         Edits a text to ensure that it is consistent with the scene
@@ -230,18 +230,54 @@ class EditorAgent(Agent):
             },
         )
         
-        # if there was any correction made it will be between the markers
-        # ```fixed and ```
-    
-        # sometimes ```\nfixed is returned, we need to fix that first
-        if "```\nfixed" in response:
-            response = response.replace("```\nfixed", "```fixed")
+        # loop through response line by line, checking for lines beginning
+        # with "STATUS LINE {number}:
         
-        if "```fixed" in response:
-            log.debug("check_continuity_errors FIXED", response=response)
-            response = response.split("```fixed")[1].strip()
-            response = response.split("```")[0].strip()
+        errors = []
         
-            return response
-        log.debug("check_continuity_errors NO FIX")
+        for line in response.split("\n"):
+            if not line.startswith("STATUS LINE"):
+                continue
+            
+            # look for "Error found"
+            
+            if not "Error found" in line:
+                continue
+            
+            errors.append(line)
+            
+        if not errors:
+            log.debug("check_continuity_errors NO ERRORS")
+            return content
+        
+        log.debug("check_continuity_errors ERRORS", fix=fix, errors=errors)
+        
+        if not fix:
+            return content
+        
+        state = {}
+        
+        response = await Prompt.request(
+            "editor.fix-continuity-errors",
+            self.client,
+            "edit_fix_continuity",
+            vars={
+                "content": content,
+                "character": character,
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "errors": errors,
+                "set_state": lambda k,v: state.update({k:v}),
+            },
+        )
+        
+        content_fix_identifer = state.get("content_fix_identifer")
+        
+        # fixed content will be between "```{content_fix_identifer}" and "```"
+        
+        content = content.split(f"```{content_fix_identifer}")[1].split("```")[0].strip()
+
+        log.debug("check_continuity_errors FIXED", content=content)
+        
         return content
+    

@@ -84,13 +84,14 @@ class ModelPrompt:
         else:
             user_message = prompt
             coercion_message = ""
-
+            
+            
         return (
             template.render(
                 {
                     "system_message": system_message,
-                    "prompt": prompt,
-                    "user_message": user_message,
+                    "prompt": prompt.strip(),
+                    "user_message": user_message.strip(),
                     "coercion_message": coercion_message,
                     "set_response": lambda prompt, response_str: self.set_response(prompt, response_str, double_coercion),
                 }

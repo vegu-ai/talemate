@@ -1,4 +1,9 @@
-<|{% block rendered_context -%}
+{% if character -%}
+    {% set content_block_identifier = character.name + "'s next dialogue" %}
+{% else -%}
+    {% set content_block_identifier = "next narrative" %}
+{% endif -%}
+{% block rendered_context -%}
 <|SECTION:CONTEXT|>
 {%- with memory_query=scene.snapshot() -%}
     {% include "extra-context.jinja2" %}
@@ -23,19 +28,37 @@ No dialogue so far
 <|SECTION:TASK|>
 What are continuity errors?
 
-Continuity errors are mistakes in a story that occur when something changes from one scene to the next. This could be a character's appearance, the time of day, or even the weather. These errors can be distracting for the reader and can take them out of the story. It's important to catch these errors and fix them before the story is published.
+Continuity errors are mistakes in a story that occur when something changes from one scene to the next. This could be a character's appearance, state of clothing, the time of day, or even the weather. These errors can be distracting for the reader and can take them out of the story. It's important to catch these errors and fix them before the story is published.
+{% if character -%}
+CAREFULLY Analyze {{ character.name }}'s next line in the scene for continuity errors.
+{% else -%}
+CAREFULLY Analyze the next line in the scene for continuity errors.
+{% endif -%}
 
-Carefully analyze this continuation of the scene for continuity errors:
+YOU MUST DO THIS LINE BY LINE PROVIDING ANALYSIS FOR EACH LINE SEPARATELY.
 
-```
+```{{ content_block_identifier }}
 {{ content }}
 ```
 
-If there are continuity errors, rewrite the entire text to fix them. In order for us to easily locate your changed text please use the following format:
+YOU MUST NOT PROVIDE REPLACEMENT SUGGESTIONS WHEN YOU FIND CONTINUITY ERRORS.
 
-```fixed
-the fixed text (complete, not individual lines)
-```
+THINK CAREFULLY, consider state of the scene, the characters, clothing, items present or not longer present. If you find any continuity errors, list them in the response.
 
-THIS IS NOT A REVISION TASK. DO NOT CHANGE THE MEANING OF THE TEXT. ONLY FIX CONTINUITY ERRORS.
-<|CLOSE_SECTION|>
+A line can have multiple continuity errors - if it does list all of them.
+
+Always analyze the full dialogue, don't stop if you find one error.
+
+You response must be in the following format (per line):
+
+LINE 1: <first line of dialogue>
+
+STATUS LINE 1: "No errors" or "Error found" followed by an explanation of the continuity errors detected
+
+STATUS LINE 1: "Error found" followed by an explanation of the continuity errors detected (if any additional errors)
+
+...
+
+LINE 2: <second line of dialogue>
+
+...

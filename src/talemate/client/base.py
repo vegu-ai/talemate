@@ -143,8 +143,7 @@ class ClientBase:
 
         if self.can_be_coerced and self.double_coercion and not json_coercion:
             double_coercion = self.double_coercion
-            if not double_coercion.endswith("\n"):
-                double_coercion += "\n\n"
+            double_coercion = f"({double_coercion})\n\n"
         else:
             double_coercion = None
 
@@ -219,6 +218,8 @@ class ClientBase:
                 return system_prompts.ROLEPLAY
             if "conversation" in kind:
                 return system_prompts.ROLEPLAY
+            if "edit_fix_continuity" in kind:
+                return system_prompts.BASIC
             if "editor" in kind:
                 return system_prompts.EDITOR
             if "edit" in kind:
@@ -250,6 +251,8 @@ class ClientBase:
                 return system_prompts.ROLEPLAY_NO_DECENSOR
             if "conversation" in kind:
                 return system_prompts.ROLEPLAY_NO_DECENSOR
+            if "edit_fix_continuity" in kind:
+                return system_prompts.BASIC
             if "editor" in kind:
                 return system_prompts.EDITOR_NO_DECENSOR
             if "edit" in kind:

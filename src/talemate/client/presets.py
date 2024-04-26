@@ -129,10 +129,10 @@ def preset_for_kind(kind: str):
     elif kind == "edit_fix_exposition":
         return PRESET_DETERMINISTIC  # Assuming fixing exposition uses the same preset as divine intellect
     elif kind == "edit_fix_continuity":
-        return PRESET_DETERMINISTIC    
+        return PRESET_DETERMINISTIC
     elif kind == "visualize":
         return PRESET_SIMPLE_1
-    
+
     # tag based
     elif "deterministic" in kind:
         return PRESET_DETERMINISTIC

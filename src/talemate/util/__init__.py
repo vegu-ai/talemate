@@ -946,7 +946,7 @@ def ensure_dialog_line_format(line: str, default_wrap: str = None) -> str:
     line = line.strip()
 
     line = line.replace('"*', '"').replace('*"', '"')
-    
+
     line = line.replace('*, "', '* "')
     line = line.replace('*. "', '* "')
 

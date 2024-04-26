@@ -116,7 +116,7 @@ class ClientBase:
     @property
     def experimental(self):
         return False
-    
+
     @property
     def can_be_coerced(self):
         """
@@ -128,7 +128,7 @@ class ClientBase:
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
 
-    def prompt_template(self, sys_msg:str, prompt:str):
+    def prompt_template(self, sys_msg: str, prompt: str):
         """
         Applies the appropriate prompt template for the model.
         """
@@ -152,7 +152,9 @@ class ClientBase:
     def prompt_template_example(self):
         if not getattr(self, "model_name", None):
             return None, None
-        return model_prompt(self.model_name, "{sysmsg}", "{prompt}<|BOT|>{LLM coercion}")
+        return model_prompt(
+            self.model_name, "{sysmsg}", "{prompt}<|BOT|>{LLM coercion}"
+        )
 
     def reconfigure(self, **kwargs):
         """
@@ -173,7 +175,7 @@ class ClientBase:
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
-            
+
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
 
@@ -436,16 +438,16 @@ class ClientBase:
             parameters["extra_stopping_strings"] = dialog_stopping_strings
 
     def finalize(self, parameters: dict, prompt: str):
-        
+
         prompt = util.replace_special_tokens(prompt)
-        
+
         for finalizer in self.finalizers:
             fn = getattr(self, finalizer, None)
             prompt, applied = fn(parameters, prompt)
             if applied:
                 return prompt
         return prompt
-    
+
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.

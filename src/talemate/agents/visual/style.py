@@ -15,6 +15,7 @@ MAJOR_STYLES = {}
 
 log = structlog.get_logger("talemate.agents.visual.style")
 
+
 class Style(pydantic.BaseModel):
     keywords: list[str] = pydantic.Field(default_factory=list)
     negative_keywords: list[str] = pydantic.Field(default_factory=list)
@@ -104,8 +105,12 @@ STYLE_MAP["anime"] = Style(
 )
 
 STYLE_MAP["graphic_novel"] = Style(
-    keywords="(stylized by Enki Bilal:0.7), best quality, graphic novels, detailed linework, digital art".split(", "),
-    negative_keywords="text, watermark, low quality, blurry, photo, 3d, cgi".split(", "),
+    keywords="(stylized by Enki Bilal:0.7), best quality, graphic novels, detailed linework, digital art".split(
+        ", "
+    ),
+    negative_keywords="text, watermark, low quality, blurry, photo, 3d, cgi".split(
+        ", "
+    ),
 )
 
 STYLE_MAP["character_portrait"] = Style(keywords="solo, looking at viewer".split(", "))

@@ -60,7 +60,7 @@ class OpenAICompatibleClient(ClientBase):
     @property
     def experimental(self):
         return EXPERIMENTAL_DESCRIPTION
-    
+
     @property
     def can_be_coerced(self):
         """

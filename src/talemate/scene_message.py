@@ -26,6 +26,7 @@ class Flags(enum.IntFlag):
     NONE = 0
     HIDDEN = 1
 
+
 @dataclass
 class SceneMessage:
     """
@@ -88,7 +89,7 @@ class SceneMessage:
     @property
     def raw(self):
         return str(self.message)
-    
+
     @property
     def hidden(self):
         return self.flags & Flags.HIDDEN
@@ -98,7 +99,7 @@ class SceneMessage:
 
     def unhide(self):
         self.flags &= ~Flags.HIDDEN
-        
+
     def as_format(self, format: str, **kwargs) -> str:
         return self.message
 

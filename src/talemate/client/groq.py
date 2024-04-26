@@ -202,7 +202,7 @@ class GroqClient(ClientBase):
             parameters=parameters,
             system_message=system_message,
         )
-        
+
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,

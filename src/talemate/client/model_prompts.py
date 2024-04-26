@@ -29,6 +29,7 @@ USER_TEMPLATE_PATH = os.path.join(BASE_TEMPLATE_PATH, "user")
 
 TEMPLATE_IDENTIFIERS = []
 
+
 def register_template_identifier(cls):
     TEMPLATE_IDENTIFIERS.append(cls)
     return cls
@@ -66,7 +67,13 @@ class ModelPrompt:
         env = Environment(loader=FileSystemLoader(STD_TEMPLATE_PATH))
         return sorted(env.list_templates())
 
-    def __call__(self, model_name: str, system_message: str, prompt: str, double_coercion:str= None):
+    def __call__(
+        self,
+        model_name: str,
+        system_message: str,
+        prompt: str,
+        double_coercion: str = None,
+    ):
         template, template_file = self.get_template(model_name)
         if not template:
             template_file = "default.jinja2"
@@ -84,8 +91,7 @@ class ModelPrompt:
         else:
             user_message = prompt
             coercion_message = ""
-            
-            
+
         return (
             template.render(
                 {
@@ -93,15 +99,17 @@ class ModelPrompt:
                     "prompt": prompt.strip(),
                     "user_message": user_message.strip(),
                     "coercion_message": coercion_message,
-                    "set_response": lambda prompt, response_str: self.set_response(prompt, response_str, double_coercion),
+                    "set_response": lambda prompt, response_str: self.set_response(
+                        prompt, response_str, double_coercion
+                    ),
                 }
             ),
             template_file,
         )
 
-    def set_response(self, prompt: str, response_str: str, double_coercion:str= None):
+    def set_response(self, prompt: str, response_str: str, double_coercion: str = None):
         prompt = prompt.strip("\n").strip()
-        
+
         if not double_coercion:
             double_coercion = ""
 
@@ -109,9 +117,9 @@ class ModelPrompt:
             prompt = f"{prompt}<|BOT|>"
 
         if "<|BOT|>" in prompt:
-            
+
             response_str = f"{double_coercion}{response_str}"
-            
+
             if "\n<|BOT|>" in prompt:
                 prompt = prompt.replace("\n<|BOT|>", response_str)
             else:

@@ -167,7 +167,7 @@ class CohereClient(ClientBase):
         for key in keys:
             if key not in valid_keys:
                 del parameters[key]
-                
+
         # if temperature is set, it needs to be clamped between 0 and 1.0
         if "temperature" in parameters:
             parameters["temperature"] = max(0.0, min(1.0, parameters["temperature"]))

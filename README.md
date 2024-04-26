@@ -13,6 +13,8 @@ Supported APIs:
 - [OpenAI](https://platform.openai.com/overview)
 - [Anthropic](https://www.anthropic.com/)
 - [mistral.ai](https://mistral.ai/)
+- [Cohere](https://www.cohere.com/)
+- [Groq](https://www.groq.com/)
 
 Supported self-hosted APIs:
 - [oobabooga/text-generation-webui](https://github.com/oobabooga/text-generation-webui) (local or with runpod support)

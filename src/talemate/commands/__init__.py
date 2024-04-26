@@ -11,6 +11,7 @@ from .cmd_inject import CmdInject
 from .cmd_list_scenes import CmdListScenes
 from .cmd_memget import CmdMemget
 from .cmd_memset import CmdMemset
+from .cmd_message_tools import *
 from .cmd_narrate import *
 from .cmd_rebuild_archive import CmdRebuildArchive
 from .cmd_remove_character import CmdRemoveCharacter

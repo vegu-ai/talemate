@@ -58,6 +58,11 @@ class EditorAgent(Agent):
                 label="Add detail",
                 description="Will attempt to add extra detail and exposition to the dialogue. Runs automatically after each AI dialogue.",
             ),
+            "check_continuity_errors": AgentAction(
+                enabled=False,
+                label="Check continuity errors",
+                description="Will attempt to fix continuity errors in the dialogue. Runs automatically after each AI dialogue. (super experimental)",
+            ),
         }
 
     @property
@@ -96,6 +101,8 @@ class EditorAgent(Agent):
             edit = await self.add_detail(text, emission.character)
 
             edit = await self.fix_exposition(edit, emission.character)
+
+            edit = await self.check_continuity_errors(edit, emission.character)
 
             edited.append(edit)
 
@@ -191,3 +198,93 @@ class EditorAgent(Agent):
         response = util.strip_partial_sentences(response)
 
         return response
+
+    @set_processing
+    async def check_continuity_errors(
+        self, content: str, character: Character, force: bool = False, fix: bool = True
+    ) -> str:
+        """
+        Edits a text to ensure that it is consistent with the scene
+        so far
+        """
+
+        if not self.actions["check_continuity_errors"].enabled and not force:
+            return content
+
+        MAX_CONTENT_LENGTH = 255
+        count = util.count_tokens(content)
+
+        if count > MAX_CONTENT_LENGTH:
+            log.warning(
+                "check_continuity_errors content too long",
+                length=count,
+                max=MAX_CONTENT_LENGTH,
+                content=content[:255],
+            )
+            return content
+
+        response = await Prompt.request(
+            "editor.check-continuity-errors",
+            self.client,
+            "basic_deterministic_medium2",
+            vars={
+                "content": content,
+                "character": character,
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+            },
+        )
+
+        # loop through response line by line, checking for lines beginning
+        # with "ERROR {number}:
+
+        errors = []
+
+        for line in response.split("\n"):
+            if not line.startswith("ERROR"):
+                continue
+
+            errors.append(line)
+
+        if not errors:
+            log.debug("check_continuity_errors NO ERRORS")
+            return content
+
+        log.debug("check_continuity_errors ERRORS", fix=fix, errors=errors)
+
+        if not fix:
+            return content
+
+        state = {}
+
+        response = await Prompt.request(
+            "editor.fix-continuity-errors",
+            self.client,
+            "editor_creative_medium2",
+            vars={
+                "content": content,
+                "character": character,
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "errors": errors,
+                "set_state": lambda k, v: state.update({k: v}),
+            },
+        )
+
+        content_fix_identifer = state.get("content_fix_identifier")
+
+        try:
+            content = response.split("```")[0].strip()
+            content = content.strip(":")
+        except Exception as e:
+            log.error(
+                "check_continuity_errors FAILED",
+                content_fix_identifer=content_fix_identifer,
+                response=response,
+                e=e,
+            )
+            return content
+
+        log.debug("check_continuity_errors FIXED", content=content)
+
+        return content

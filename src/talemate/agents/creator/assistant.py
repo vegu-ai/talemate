@@ -118,7 +118,7 @@ class AssistantMixin:
                 "max_tokens": self.client.max_token_length,
                 "input": input.strip(),
                 "character": character,
-                "can_coerce": self.client.Meta().requires_prompt_template,
+                "can_coerce": self.client.can_be_coerced,
             },
             pad_prepended_response=False,
             dedupe_enabled=False,

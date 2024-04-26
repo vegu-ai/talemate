@@ -9,7 +9,7 @@ def game(TM):
     
     PROMPT_STARTUP = "Narrate the computer asking the user to state the nature of their desired simulation in a synthetic and soft sounding voice."
     
-    CTX_PIN_UNAWARE = "Characters in the simulation ARE NOT AWARE OF THE COMPUTER."
+    CTX_PIN_UNAWARE = "Characters in the simulation ARE NOT AWARE OF THE COMPUTER OR THE SIMULATION."
     
     AUTO_NARRATE_INTERVAL = 10
     
@@ -133,12 +133,7 @@ def game(TM):
                 if processed_call:
                     processed.append(processed_call)
             
-            """
-            {% set _ = emit_status("busy", "Simulation suite altering environment.", as_scene_message=True) %}
-            {% set update_world_state = True %}
-            {% set _ = agent_action("narrator", "action_to_narration", action_name="progress_story", narrative_direction="The computer calls the following functions:\n"+processed.join("\n")+"\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up.", emit_message=True) %}
-            """
-            
+
             if processed:
                 TM.log.debug("SIMULATION SUITE CALLS", calls=processed)
                 TM.game_state.set_var("instr.has_issued_instructions", "yes", commit=False)
@@ -146,11 +141,22 @@ def game(TM):
             TM.emit_status("busy", "Simulation suite altering environment.", as_scene_message=True)
             compiled = "\n".join(processed)
             if not self.simulation_reset and compiled:
-                TM.agents.narrator.action_to_narration(
+                narration = TM.agents.narrator.action_to_narration(
                     action_name="progress_story",
-                    narrative_direction=f"The computer calls the following functions:\n\n{compiled}\n\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up. YOU MUST NOT REFERENCE THE COMPUTER.",
+                    narrative_direction=f"The computer calls the following functions:\n\n```\n{compiled}\n```\n\nand the simulation adjusts the environment according to the user's wishes.\n\nWrite the narrative that describes the changes to the player in the context of the simulation starting up. YOU MUST NOT REFERENCE THE COMPUTER OR THE SIMULATION.",
                     emit_message=True
                 )
+                
+                # on the first narration we update the scene description and remove any mention of the computer
+                # or the simulation from the previous narration
+                is_initial_narration = TM.game_state.get_var("instr.intro_narration", False)
+                if not is_initial_narration:
+                    TM.scene.set_description(str(narration))
+                    TM.scene.set_intro(str(narration))
+                    TM.log.debug("SIMULATION SUITE: initial narration", intro=str(narration))
+                    TM.scene.pop_history(typ="narrator", all=True, reverse=True)
+                    TM.scene.pop_history(typ="director", all=True, reverse=True)
+                    TM.game_state.set_var("instr.intro_narration", True, commit=False)
                 
             self.update_world_state = True
             
@@ -330,15 +336,15 @@ def game(TM):
             
             # sometimes the AI will call this function an pass an inanimate object as the parameter
             # we need to determine if this is the case and just ignore it
-            is_inanimate = TM.client.query_text_eval("does the function add an inanimate object?", call)
+            is_inanimate = TM.client.query_text_eval(f"does the function `{call}` add an inanimate object, concept or abstract idea? (ANYTHING THAT IS NOT A CHARACTER THAT COULD BE PORTRAYED BY AN ACTOR)", call)
             
             if is_inanimate:
-                TM.log.debug("SIMULATION SUITE: add npc - inanimate object", call=call)
+                TM.log.debug("SIMULATION SUITE: add npc - inanimate object / abstact idea - skipped", call=call)
                 return
             
             # sometimes the AI will ask if the function adds a group of characters, we need to
             # determine if this is the case
-            adds_group = TM.client.query_text_eval("does the function add a group of characters?", call)
+            adds_group = TM.client.query_text_eval(f"does the function `{call}` add MULTIPLE ai characters?", call)
             
             TM.log.debug("SIMULATION SUITE: add npc", adds_group=adds_group)
             
@@ -355,10 +361,15 @@ def game(TM):
             has_change_ai_character_call = TM.client.query_text_eval(f"Are there any calls to `change_ai_character` in the instruction for {character_name}?", "\n".join(self.calls))
             
             if has_change_ai_character_call:
-                combined_arg = TM.agents.world_state.analyze_and_follow_instruction(
-                    "\n".join(self.calls),
-                    f"Combine the arguments of the function calls `add_ai_character` and `change_ai_character` for {character_name} into a single text string. Respond with the new argument."
-                )
+                
+                combined_arg = TM.client.render_and_request(
+                    "combine-add-and-alter-ai-character",
+                    dedupe_enabled=False,
+                    calls="\n".join(self.calls),
+                    character_name=character_name,
+                    scene=TM.scene,
+                ).replace("COMBINED ARGUMENT:", "").strip()
+            
                 call = f"add_ai_character({combined_arg})"
                 inject = f"The computer executes the function `{call}`"
                 
@@ -498,7 +509,7 @@ def game(TM):
                 self.narrate_round()
             
             elif rounds % AUTO_NARRATE_INTERVAL == 0 and rounds and TM.scene.npc_character_names() and has_issued_instructions:
-                # every 3 rounds, narrate the round
+                # every N rounds, narrate the round
                 self.narrate_round()
          
         def guide_player(self):

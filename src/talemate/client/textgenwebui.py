@@ -5,7 +5,7 @@ import httpx
 import structlog
 from openai import AsyncOpenAI
 
-from talemate.client.base import STOPPING_STRINGS, ClientBase
+from talemate.client.base import STOPPING_STRINGS, ClientBase, ExtraField
 from talemate.client.registry import register
 
 log = structlog.get_logger("talemate.client.textgenwebui")

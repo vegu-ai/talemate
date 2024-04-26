@@ -1,4 +1,5 @@
 import pydantic
+import structlog
 
 __all__ = [
     "Style",
@@ -11,6 +12,8 @@ __all__ = [
 STYLE_MAP = {}
 THEME_MAP = {}
 MAJOR_STYLES = {}
+
+log = structlog.get_logger("talemate.agents.visual.style")
 
 
 class Style(pydantic.BaseModel):
@@ -35,7 +38,10 @@ class Style(pydantic.BaseModel):
         # loop through keywords and drop any starting with "no " and add to negative_keywords
         # with "no " removed
         for kw in self.keywords:
+            kw = kw.strip()
+            log.debug("Checking keyword", keyword=kw)
             if kw.startswith("no "):
+                log.debug("Transforming negative keyword", keyword=kw, to=kw[3:])
                 self.keywords.remove(kw)
                 self.negative_keywords.append(kw[3:])
 
@@ -98,6 +104,15 @@ STYLE_MAP["anime"] = Style(
     negative_keywords="text, watermark, low quality, blurry, photo, 3d".split(", "),
 )
 
+STYLE_MAP["graphic_novel"] = Style(
+    keywords="(stylized by Enki Bilal:0.7), best quality, graphic novels, detailed linework, digital art".split(
+        ", "
+    ),
+    negative_keywords="text, watermark, low quality, blurry, photo, 3d, cgi".split(
+        ", "
+    ),
+)
+
 STYLE_MAP["character_portrait"] = Style(keywords="solo, looking at viewer".split(", "))
 
 STYLE_MAP["environment"] = Style(
@@ -110,6 +125,7 @@ MAJOR_STYLES = [
     {"value": "concept_art", "label": "Concept Art"},
     {"value": "ink_illustration", "label": "Ink Illustration"},
     {"value": "anime", "label": "Anime"},
+    {"value": "graphic_novel", "label": "Graphic Novel"},
 ]
 
 

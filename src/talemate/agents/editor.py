@@ -276,6 +276,11 @@ class EditorAgent(Agent):
         try:
             content = response.split("```")[0].strip()
             content = content.strip(":")
+
+            # if content doesnt start with {character_name}: then add it
+            if not content.startswith(f"{character.name}:"):
+                content = f"{character.name}: {content}"
+            
         except Exception as e:
             log.error(
                 "check_continuity_errors FAILED",

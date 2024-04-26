@@ -143,7 +143,7 @@ class ClientBase:
 
         if self.can_be_coerced and self.double_coercion and not json_coercion:
             double_coercion = self.double_coercion
-            double_coercion = f"({double_coercion})\n\n"
+            double_coercion = f"{double_coercion}\n\n"
         else:
             double_coercion = None
 

@@ -37,6 +37,7 @@ class Client(BaseModel):
     api_url: Union[str, None] = None
     api_key: Union[str, None] = None
     max_token_length: int = 4096
+    double_coercion: Union[str, None] = None
 
     class Config:
         extra = "ignore"
@@ -141,6 +142,10 @@ class AnthropicConfig(BaseModel):
 
 
 class CohereConfig(BaseModel):
+    api_key: Union[str, None] = None
+
+
+class GroqConfig(BaseModel):
     api_key: Union[str, None] = None
 
 
@@ -327,6 +332,8 @@ class Config(BaseModel):
     anthropic: AnthropicConfig = AnthropicConfig()
 
     cohere: CohereConfig = CohereConfig()
+
+    groq: GroqConfig = GroqConfig()
 
     runpod: RunPodConfig = RunPodConfig()
 

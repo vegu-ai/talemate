@@ -1,52 +1,54 @@
 import pydantic
 import structlog
-from cohere import AsyncClient
+from groq import AsyncGroq, PermissionDeniedError
 
 from talemate.client.base import ClientBase, ErrorAction
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
 from talemate.emit.signals import handlers
-from talemate.util import count_tokens
 
 __all__ = [
-    "CohereClient",
+    "GroqClient",
 ]
 log = structlog.get_logger("talemate")
 
 # Edit this to add new models / remove old models
 SUPPORTED_MODELS = [
-    "command",
-    "command-r",
-    "command-r-plus",
+    "mixtral-8x7b-32768",
+    "llama3-8b-8192",
+    "llama3-70b-8192",
 ]
+
+JSON_OBJECT_RESPONSE_MODELS = []
 
 
 class Defaults(pydantic.BaseModel):
-    max_token_length: int = 16384
-    model: str = "command-r-plus"
+    max_token_length: int = 8192
+    model: str = "llama3-70b-8192"
 
 
 @register()
-class CohereClient(ClientBase):
+class GroqClient(ClientBase):
     """
-    Cohere client for generating text.
+    OpenAI client for generating text.
     """
 
-    client_type = "cohere"
+    client_type = "groq"
     conversation_retries = 0
     auto_break_repetition_enabled = False
+    # TODO: make this configurable?
     decensor_enabled = True
 
     class Meta(ClientBase.Meta):
-        name_prefix: str = "Cohere"
-        title: str = "Cohere"
+        name_prefix: str = "Groq"
+        title: str = "Groq"
         manual_model: bool = True
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
 
-    def __init__(self, model="command-r-plus", **kwargs):
+    def __init__(self, model="llama3-70b-8192", **kwargs):
         self.model_name = model
         self.api_key_status = None
         self.config = load_config()
@@ -55,15 +57,15 @@ class CohereClient(ClientBase):
         handlers["config_saved"].connect(self.on_config_saved)
 
     @property
-    def cohere_api_key(self):
-        return self.config.get("cohere", {}).get("api_key")
+    def groq_api_key(self):
+        return self.config.get("groq", {}).get("api_key")
 
     def emit_status(self, processing: bool = None):
         error_action = None
         if processing is not None:
             self.processing = processing
 
-        if self.cohere_api_key:
+        if self.groq_api_key:
             status = "busy" if self.processing else "idle"
             model_name = self.model_name
         else:
@@ -75,7 +77,7 @@ class CohereClient(ClientBase):
                 icon="mdi-key-variant",
                 arguments=[
                     "application",
-                    "cohere_api",
+                    "groq_api",
                 ],
             )
 
@@ -98,9 +100,9 @@ class CohereClient(ClientBase):
         )
 
     def set_client(self, max_token_length: int = None):
-        if not self.cohere_api_key:
-            self.client = AsyncClient("sk-1111")
-            log.error("No cohere API key set")
+        if not self.groq_api_key:
+            self.client = AsyncGroq(api_key="sk-1111")
+            log.error("No groq.ai API key set")
             if self.api_key_status:
                 self.api_key_status = False
                 emit("request_client_status")
@@ -108,14 +110,14 @@ class CohereClient(ClientBase):
             return
 
         if not self.model_name:
-            self.model_name = "command-r-plus"
+            self.model_name = "llama3-70b-8192"
 
         if max_token_length and not isinstance(max_token_length, int):
             max_token_length = int(max_token_length)
 
         model = self.model_name
 
-        self.client = AsyncClient(self.cohere_api_key)
+        self.client = AsyncGroq(api_key=self.groq_api_key)
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -125,7 +127,7 @@ class CohereClient(ClientBase):
             self.api_key_status = True
 
         log.info(
-            "cohere set client",
+            "groq.ai set client",
             max_token_length=self.max_token_length,
             provided_max_token_length=max_token_length,
             model=model,
@@ -142,10 +144,10 @@ class CohereClient(ClientBase):
         self.set_client(max_token_length=self.max_token_length)
 
     def response_tokens(self, response: str):
-        return count_tokens(response.text)
+        return response.usage.completion_tokens
 
-    def prompt_tokens(self, prompt: str):
-        return count_tokens(prompt)
+    def prompt_tokens(self, response: str):
+        return response.usage.prompt_tokens
 
     async def status(self):
         self.emit_status()
@@ -163,33 +165,36 @@ class CohereClient(ClientBase):
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
         keys = list(parameters.keys())
-        valid_keys = ["temperature", "max_tokens"]
+        valid_keys = ["temperature", "top_p", "max_tokens"]
         for key in keys:
             if key not in valid_keys:
                 del parameters[key]
-
-        # if temperature is set, it needs to be clamped between 0 and 1.0
-        if "temperature" in parameters:
-            parameters["temperature"] = max(0.0, min(1.0, parameters["temperature"]))
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
         """
 
-        if not self.cohere_api_key:
-            raise Exception("No cohere API key set")
+        if not self.groq_api_key:
+            raise Exception("No groq.ai API key set")
 
+        supports_json_object = self.model_name in JSON_OBJECT_RESPONSE_MODELS
         right = None
         expected_response = None
         try:
             _, right = prompt.split("\nStart your response with: ")
             expected_response = right.strip()
+            if expected_response.startswith("{") and supports_json_object:
+                parameters["response_format"] = {"type": "json_object"}
         except (IndexError, ValueError):
             pass
 
-        human_message = prompt.strip()
         system_message = self.get_system_message(kind)
+
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": prompt},
+        ]
 
         self.log.debug(
             "generate",
@@ -199,21 +204,22 @@ class CohereClient(ClientBase):
         )
 
         try:
-            response = await self.client.chat(
+            response = await self.client.chat.completions.create(
                 model=self.model_name,
-                preamble=system_message,
-                message=human_message,
+                messages=messages,
                 **parameters,
             )
 
-            self._returned_prompt_tokens = self.prompt_tokens(prompt)
-            self._returned_response_tokens = self.response_tokens(response)
+            response = response.choices[0].message.content
 
-            log.debug("generated response", response=response.text)
-
-            response = response.text
-
-            if expected_response and expected_response.startswith("{"):
+            # older models don't support json_object response coersion
+            # and often like to return the response wrapped in ```json
+            # so we strip that out if the expected response is a json object
+            if (
+                not supports_json_object
+                and expected_response
+                and expected_response.startswith("{")
+            ):
                 if response.startswith("```json") and response.endswith("```"):
                     response = response[7:-3].strip()
 
@@ -221,9 +227,9 @@ class CohereClient(ClientBase):
                 response = response[len(right) :].strip()
 
             return response
-        # except PermissionDeniedError as e:
-        #    self.log.error("generate error", e=e)
-        #    emit("status", message="cohere API: Permission Denied", status="error")
-        #    return ""
+        except PermissionDeniedError as e:
+            self.log.error("generate error", e=e)
+            emit("status", message="OpenAI API: Permission Denied", status="error")
+            return ""
         except Exception as e:
             raise

@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "talemate"
-version = "0.23.0"
+version = "0.24.0"
 description = "AI-backed roleplay and narrative tools"
 authors = ["FinalWombat"]
 license = "GNU Affero General Public License v3.0"
@@ -21,6 +21,7 @@ openai = ">=1"
 mistralai = ">=0.1.8"
 cohere = ">=5.2.2"
 anthropic = ">=0.19.1"
+groq = ">=0.5.0"
 requests = "^2.26"
 colorama = ">=0.4.6"
 Pillow = ">=9.5"
@@ -48,6 +49,7 @@ RestrictedPython = ">7.1"
 chromadb = ">=0.4.17,<1"
 InstructorEmbedding = "^1.0.1"
 torch = ">=2.1.0"
+torchaudio = ">=2.3.0"
 sentence-transformers="^2.2.2"
 
 [tool.poetry.dev-dependencies]

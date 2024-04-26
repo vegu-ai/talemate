@@ -56,6 +56,7 @@ class ErrorAction(pydantic.BaseModel):
 class Defaults(pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
     max_token_length: int = 4096
+    double_coercion: str = None
 
 
 class ExtraField(pydantic.BaseModel):
@@ -76,11 +77,12 @@ class ClientBase:
     max_token_length: int = 4096
     processing: bool = False
     connected: bool = False
-    conversation_retries: int = 2
+    conversation_retries: int = 0
     auto_break_repetition_enabled: bool = True
     decensor_enabled: bool = True
     auto_determine_prompt_template: bool = False
     finalizers: list[str] = []
+    double_coercion: Union[str, None] = None
     client_type = "base"
 
     class Meta(pydantic.BaseModel):
@@ -101,6 +103,7 @@ class ClientBase:
         self.name = name or self.client_type
         self.auto_determine_prompt_template_attempt = None
         self.log = structlog.get_logger(f"client.{self.client_type}")
+        self.double_coercion = kwargs.get("double_coercion", None)
         if "max_token_length" in kwargs:
             self.max_token_length = (
                 int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 4096
@@ -114,10 +117,18 @@ class ClientBase:
     def experimental(self):
         return False
 
+    @property
+    def can_be_coerced(self):
+        """
+        Determines whether or not his client can pass LLM coercion. (e.g., is able
+        to predefine partial LLM output in the prompt)
+        """
+        return self.Meta().requires_prompt_template
+
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
 
-    def prompt_template(self, sys_msg, prompt):
+    def prompt_template(self, sys_msg: str, prompt: str):
         """
         Applies the appropriate prompt template for the model.
         """
@@ -126,12 +137,24 @@ class ClientBase:
             self.log.warning("prompt template not applied", reason="no model loaded")
             return f"{sys_msg}\n{prompt}"
 
-        return model_prompt(self.model_name, sys_msg, prompt)[0]
+        # is JSON coercion active?
+        # Check for <|BOT|>{ in the prompt
+        json_coercion = "<|BOT|>{" in prompt
+
+        if self.can_be_coerced and self.double_coercion and not json_coercion:
+            double_coercion = self.double_coercion
+            double_coercion = f"{double_coercion}\n\n"
+        else:
+            double_coercion = None
+
+        return model_prompt(self.model_name, sys_msg, prompt, double_coercion)[0]
 
     def prompt_template_example(self):
         if not getattr(self, "model_name", None):
             return None, None
-        return model_prompt(self.model_name, "sysmsg", "prompt<|BOT|>{LLM coercion}")
+        return model_prompt(
+            self.model_name, "{sysmsg}", "{prompt}<|BOT|>{LLM coercion}"
+        )
 
     def reconfigure(self, **kwargs):
         """
@@ -152,6 +175,9 @@ class ClientBase:
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
+
+        if "double_coercion" in kwargs:
+            self.double_coercion = kwargs["double_coercion"]
 
     def toggle_disabled_if_remote(self):
         """
@@ -194,7 +220,11 @@ class ClientBase:
                 return system_prompts.ROLEPLAY
             if "conversation" in kind:
                 return system_prompts.ROLEPLAY
+            if "basic" in kind:
+                return system_prompts.BASIC
             if "editor" in kind:
+                return system_prompts.EDITOR
+            if "edit" in kind:
                 return system_prompts.EDITOR
             if "world_state" in kind:
                 return system_prompts.WORLD_STATE
@@ -223,7 +253,11 @@ class ClientBase:
                 return system_prompts.ROLEPLAY_NO_DECENSOR
             if "conversation" in kind:
                 return system_prompts.ROLEPLAY_NO_DECENSOR
+            if "basic" in kind:
+                return system_prompts.BASIC
             if "editor" in kind:
+                return system_prompts.EDITOR_NO_DECENSOR
+            if "edit" in kind:
                 return system_prompts.EDITOR_NO_DECENSOR
             if "world_state" in kind:
                 return system_prompts.WORLD_STATE_NO_DECENSOR
@@ -292,6 +326,7 @@ class ClientBase:
             "template_file": prompt_template_file,
             "meta": self.Meta().model_dump(),
             "error_action": None,
+            "double_coercion": self.double_coercion,
         }
 
         for field_name in getattr(self.Meta(), "extra_fields", {}).keys():
@@ -403,6 +438,9 @@ class ClientBase:
             parameters["extra_stopping_strings"] = dialog_stopping_strings
 
     def finalize(self, parameters: dict, prompt: str):
+
+        prompt = util.replace_special_tokens(prompt)
+
         for finalizer in self.finalizers:
             fn = getattr(self, finalizer, None)
             prompt, applied = fn(parameters, prompt)
@@ -548,7 +586,7 @@ class ClientBase:
         - the response
         """
 
-        if not self.auto_break_repetition_enabled:
+        if not self.auto_break_repetition_enabled or not response.strip():
             return response, finalized_prompt
 
         agent_context = active_agent.get()

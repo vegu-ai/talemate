@@ -583,6 +583,8 @@ class ConversationAgent(Agent):
         result = result.replace("(", "*").replace(")", "*")
         result = result.replace("**", "*")
 
+        result = util.handle_endofline_special_delimiter(result)
+
         return result
 
     def set_generation_overrides(self):
@@ -663,6 +665,11 @@ class ConversationAgent(Agent):
         result = result.replace(" :", ":")
 
         total_result = total_result.split("#")[0].strip()
+
+        total_result = util.handle_endofline_special_delimiter(total_result)
+
+        if total_result.startswith(":\n"):
+            total_result = total_result[2:]
 
         # movie script format
         # {uppercase character name}

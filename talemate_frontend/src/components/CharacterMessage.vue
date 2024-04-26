@@ -31,6 +31,10 @@
           <v-icon class="mr-1">mdi-pin</v-icon>
           Create Pin
         </v-chip>
+        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered" variant="outlined" @click="fixMessageContinuityErrors(message_id)">
+          <v-icon class="mr-1">mdi-call-split</v-icon>
+          Fix Continuity Errors
+        </v-chip>
     </v-sheet>
     <div v-else style="height:24px">
 
@@ -41,7 +45,7 @@
 <script>
 export default {
   props: ['character', 'text', 'color', 'message_id'],
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin'],
+  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors'],
   computed: {
     parts() {
       const parts = [];

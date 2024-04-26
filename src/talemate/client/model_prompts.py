@@ -67,14 +67,27 @@ class ModelPrompt:
         env = Environment(loader=FileSystemLoader(STD_TEMPLATE_PATH))
         return sorted(env.list_templates())
 
-    def __call__(self, model_name: str, system_message: str, prompt: str):
+    def __call__(
+        self,
+        model_name: str,
+        system_message: str,
+        prompt: str,
+        double_coercion: str = None,
+    ):
         template, template_file = self.get_template(model_name)
         if not template:
             template_file = "default.jinja2"
             template = self.env.get_template(template_file)
 
+        if not double_coercion:
+            double_coercion = ""
+
+        if "<|BOT|>" not in prompt and double_coercion:
+            prompt = f"{prompt}<|BOT|>"
+
         if "<|BOT|>" in prompt:
             user_message, coercion_message = prompt.split("<|BOT|>", 1)
+            coercion_message = f"{double_coercion}{coercion_message}"
         else:
             user_message = prompt
             coercion_message = ""
@@ -83,19 +96,30 @@ class ModelPrompt:
             template.render(
                 {
                     "system_message": system_message,
-                    "prompt": prompt,
-                    "user_message": user_message,
+                    "prompt": prompt.strip(),
+                    "user_message": user_message.strip(),
                     "coercion_message": coercion_message,
-                    "set_response": self.set_response,
+                    "set_response": lambda prompt, response_str: self.set_response(
+                        prompt, response_str, double_coercion
+                    ),
                 }
             ),
             template_file,
         )
 
-    def set_response(self, prompt: str, response_str: str):
+    def set_response(self, prompt: str, response_str: str, double_coercion: str = None):
         prompt = prompt.strip("\n").strip()
 
+        if not double_coercion:
+            double_coercion = ""
+
+        if "<|BOT|>" not in prompt and double_coercion:
+            prompt = f"{prompt}<|BOT|>"
+
         if "<|BOT|>" in prompt:
+
+            response_str = f"{double_coercion}{response_str}"
+
             if "\n<|BOT|>" in prompt:
                 prompt = prompt.replace("\n<|BOT|>", response_str)
             else:

@@ -250,8 +250,11 @@ class SceneScope(ObjectScope):
         "context_history",
         "last_player_message",
         "npc_character_names",
+        "pop_history",
         "restore",
         "set_content_context",
+        "set_description",
+        "set_intro",
         "set_title",
     ]
 

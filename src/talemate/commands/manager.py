@@ -1,4 +1,5 @@
 import structlog
+import json
 
 from talemate.emit import AbortCommand, Emitter
 
@@ -38,20 +39,28 @@ class Manager(Emitter):
         # commands start with ! and are followed by a command name
         cmd = cmd.strip()
         cmd_args = ""
+        cmd_kwargs = {}
         if not self.is_command(cmd):
             return False
 
         if ":" in cmd:
             # split command name and args which are separated by a colon
             cmd_name, cmd_args = cmd[1:].split(":", 1)
+            cmd_args_unsplit = cmd_args
             cmd_args = cmd_args.split(":")
+            
         else:
             cmd_name = cmd[1:]
             cmd_args = []
 
         for command_cls in self.command_classes:
             if command_cls.is_command(cmd_name):
-                command = command_cls(self, *cmd_args)
+                
+                if command_cls.argument_cls:
+                    cmd_kwargs = json.loads(cmd_args_unsplit)
+                    cmd_args = []
+                
+                command = command_cls(self, *cmd_args, **cmd_kwargs)
                 try:
                     self.processing_command = True
                     command.command_start()

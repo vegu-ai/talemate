@@ -18,10 +18,11 @@ class ContentGenerationContext(pydantic.BaseModel):
     """
 
     context: str
-    instructions: str
-    length: int
+    instructions: str = ""
+    length: int = 100
     character: Union[str, None] = None
     original: Union[str, None] = None
+    partial: Union[str, None] = None
 
     @property
     def computed_context(self) -> Tuple[str, str]:
@@ -37,10 +38,11 @@ class AssistantMixin:
     async def contextual_generate_from_args(
         self,
         context: str,
-        instructions: str,
+        instructions: str = "",
         length: int = 100,
         character: Union[str, None] = None,
         original: Union[str, None] = None,
+        partial: Union[str, None] = None,
     ):
         """
         Request content from the assistant.
@@ -52,6 +54,7 @@ class AssistantMixin:
             length=length,
             character=character,
             original=original,
+            partial=partial,
         )
 
         return await self.contextual_generate(generation_context)
@@ -86,6 +89,7 @@ class AssistantMixin:
                 "generation_context": generation_context,
                 "context_typ": context_typ,
                 "context_name": context_name,
+                "can_coerce": self.client.can_be_coerced,
                 "character": (
                     self.scene.get_character(generation_context.character)
                     if generation_context.character
@@ -94,7 +98,8 @@ class AssistantMixin:
             },
         )
 
-        content = util.strip_partial_sentences(content)
+        if not generation_context.partial:
+            content = util.strip_partial_sentences(content)
 
         return content.strip()
 

@@ -107,11 +107,16 @@
                                                         @generate="content => setAndUpdateCharacterDescription(content)"
                                                     />
 
-                                                    <v-textarea rows="5" auto-grow v-model="characterDetails.description"
+                                                    <v-textarea ref="characterDescription" rows="5" auto-grow v-model="characterDetails.description"
                                                         :color="characterDescriptionDirty ? 'info' : ''"
+
+                                                        :disabled="characterDescriptionBusy"
+                                                        :messages="autocompleteInfoMessage(characterDescriptionBusy)"
+                                                        @keyup.ctrl.enter.stop="autocompleteRequestCharacterDescription"
+
                                                         @update:model-value="queueUpdateCharacterDescription"
                                                         label="Description"
-                                                        hint="A short description of the character."></v-textarea>
+                                                        :hint="'A short description of the character. '+autocompleteInfoMessage(characterDescriptionBusy)"></v-textarea>
                                                 </div>
 
                                                 <!-- CHARACTER ATTRIBUTES -->
@@ -166,11 +171,13 @@
                                                                     :label="selectedCharacterAttribute"
                                                                     :color="characterAttributeDirty ? 'info' : ''"
 
+                                                                    :disabled="characterAttributeBusy"
+                                                                    :messages="autocompleteInfoMessage(characterAttributeBusy)"
+                                                                    @keyup.ctrl.enter.stop="autocompleteRequestCharacterAttribute"
+
                                                                     @update:modelValue="queueUpdateCharacterAttribute(selectedCharacterAttribute)"
 
                                                                     v-model="characterDetails.base_attributes[selectedCharacterAttribute]">
-                                                                    
-
                                                                 </v-textarea>
 
                                                             </div>
@@ -253,6 +260,12 @@
                                                                 <v-textarea rows="5" max-rows="10" auto-grow
                                                                     ref="characterDetail"
                                                                     :color="characterDetailDirty ? 'info' : ''"
+
+                                                                    :disabled="characterDetailBusy"
+                                                                    :messages="autocompleteInfoMessage(characterDetailBusy)"
+
+                                                                    @keyup.ctrl.enter.stop="autocompleteRequestCharacterDetail"
+
                                                                     @update:modelValue="queueUpdateCharacterDetail(selectedCharacterDetail)"
                                                                     :label="selectedCharacterDetail"
                                                                     v-model="characterDetails.details[selectedCharacterDetail]">
@@ -888,6 +901,10 @@ export default {
             characterDescriptionDirty: false,
             characterStateReinforcerDirty: false,
 
+            characterAttributeBusy: false,
+            characterDetailBusy: false,
+            characterDescriptionBusy: false,
+
             characterAttributeUpdateTimeout: null,
             characterDetailUpdateTimeout: null,
             characterDescriptionUpdateTimeout: null,
@@ -1003,6 +1020,8 @@ export default {
         'openCharacterSheet',
         'characterSheet',
         'isInputDisabled',
+        'autocompleteRequest',
+        'autocompleteInfoMessage',
     ],
     methods: {
         show(tab, sub1, sub2, sub3) {
@@ -1083,6 +1102,8 @@ export default {
             this.removePinConfirm = false;
             this.deferedNavigation = null;
             this.isBusy = false;
+            this.characterAttributeBusy = false;
+            this.characterDetailBusy = false;
         },
         exit() {
             this.dialog = false;
@@ -1710,6 +1731,46 @@ export default {
             else if (message.action === 'operation_done') {
                 this.isBusy = false;
             }
+
+        },
+        // autocomplete handlers
+
+        autocompleteRequestCharacterAttribute() {
+            this.characterAttributeBusy = true;
+            this.autocompleteRequest({
+                partial: this.characterDetails.base_attributes[this.selectedCharacterAttribute],
+                context: `character attribute:${this.selectedCharacterAttribute}`,
+                character: this.characterDetails.name
+            }, (completion) => {
+                this.characterDetails.base_attributes[this.selectedCharacterAttribute] += completion;
+                this.characterAttributeBusy = false;
+            }, this.$refs.characterAttribute);
+
+        },
+
+        autocompleteRequestCharacterDetail() {
+            this.characterDetailBusy = true;
+            this.autocompleteRequest({
+                partial: this.characterDetails.details[this.selectedCharacterDetail],
+                context: `character detail:${this.selectedCharacterDetail}`,
+                character: this.characterDetails.name
+            }, (completion) => {
+                this.characterDetails.details[this.selectedCharacterDetail] += completion;
+                this.characterDetailBusy = false;
+            }, this.$refs.characterDetail);
+
+        },
+
+        autocompleteRequestCharacterDescription() {
+            this.characterDescriptionBusy = true;
+            this.autocompleteRequest({
+                partial: this.characterDetails.description,
+                context: `character detail:description`,
+                character: this.characterDetails.name
+            }, (completion) => {
+                this.characterDetails.description += completion;
+                this.characterDescriptionBusy = false;
+            }, this.$refs.characterDescription);
 
         },
     },

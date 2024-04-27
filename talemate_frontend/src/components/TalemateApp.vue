@@ -244,6 +244,10 @@ export default {
       messageHandlers: [],
       scene: {},
       appConfig: {},
+
+      autocompletePartialInput: "",
+      autocompleteCallback: null,
+      autocompleteFocusElement: null,
     }
   },
   mounted() {
@@ -281,6 +285,8 @@ export default {
       getTrackedWorldState: (question) => this.$refs.worldState.trackedWorldState(question),
       getPlayerCharacterName: () => this.getPlayerCharacterName(),
       formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
+      autocompleteRequest: (partialInput, callback, focus_element) => this.autocompleteRequest(partialInput, callback, focus_element),
+      autocompleteInfoMessage: (active) => this.autocompleteInfoMessage(active),
     };
   },
   methods: {
@@ -383,6 +389,9 @@ export default {
 
       if (data.type === 'autocomplete_suggestion') {
 
+        if(!this.autocompleteCallback)
+          return;
+
         const completion = data.message;
 
         // append completion to messageInput, add a space if
@@ -391,11 +400,23 @@ export default {
 
         const completionStartsWithSentenceEnd = completion.startsWith('!') || completion.startsWith('.') || completion.startsWith('?') || completion.startsWith(')') || completion.startsWith(']') || completion.startsWith('}') || completion.startsWith('"') || completion.startsWith("'") || completion.startsWith("*") || completion.startsWith(",")
 
-        if (this.messageInput.endsWith(' ') || completion.startsWith(' ') || completionStartsWithSentenceEnd) {
-          this.messageInput += completion;
+        if (this.autocompletePartialInput.endsWith(' ') || completion.startsWith(' ') || completionStartsWithSentenceEnd) {
+          this.autocompleteCallback(completion);
         } else {
-          this.messageInput += ' ' + completion;
+          this.autocompleteCallback(' ' + completion);
         }
+
+        if (this.autocompleteFocusElement) {
+          let focus_element = this.autocompleteFocusElement;
+          setTimeout(() => {
+            focus_element.focus();
+          }, 200);
+          this.autocompleteFocusElement = null;
+        }
+
+        this.autocompleteCallback = null;
+        this.autocompletePartialInput = "";
+        return;
       }
 
       if (data.type === 'request_input') {
@@ -439,7 +460,16 @@ export default {
 
       // if ctrl+enter is pressed, request autocomplete
       if (event.ctrlKey && event.key === 'Enter') {
-        this.websocket.send(JSON.stringify({ type: 'interact', text: `!acdlg: ${this.messageInput}` }));
+        this.autocompleteRequest(
+          {
+            partial: this.messageInput,
+            context: "dialogue:player"
+          }, 
+          (completion) => {
+            this.messageInput += completion;
+          },
+          this.$refs.messageInput
+        );
         return;
       }
 
@@ -450,6 +480,25 @@ export default {
         this.waitingForInput = false;
       }
     },
+
+    autocompleteRequest(param, callback, focus_element) {
+
+      this.autocompleteCallback = callback;
+      this.autocompleteFocusElement = focus_element;
+      this.autocompletePartialInput = param.partial;
+
+      if(focus_element){
+        // set disabled (vue event.which element)
+        console.log({focus_element})
+      }
+
+      this.websocket.send(JSON.stringify({ type: 'interact', text: `!autocomplete:${JSON.stringify(param)}` }));
+    },
+
+    autocompleteInfoMessage(active) {
+      return active ? 'Generating ...' : "Ctrl+Enter to autocomplete";
+    },
+
     requestAppConfig() {
       this.websocket.send(JSON.stringify({ type: 'request_app_config' }));
     },

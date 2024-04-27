@@ -67,6 +67,22 @@ Use a simple, easy to read writing format.
 {% endif %}
 {% if generation_context.instructions %}Additional instructions: {{ generation_context.instructions }}{% endif %}
 <|CLOSE_SECTION|>
+{% if can_coerce -%}
+{{ bot_token }}
+{%- if context_typ == 'character attribute' -%}
+{{ character.name }}'s {{ context_name }}:{{ generation_context.partial }}
+{%- elif context_typ == 'character dialogue' -%}
+{{ character.name }}:{{ generation_context.partial }}
+{%- else -%}
+{{ context_name }}:{{ generation_context.partial }}
+{%- endif -%}
+{%- elif generation_context.partial -%}
+Continue the partially generated text for "{{ context_name }}".
+
+Your response MUST only be the new parts of the text, not the entire text.
+
+Continue this text: {{ generation_context.partial }}
+{%- else -%}
 {{ bot_token }}
 {%- if context_typ == 'character attribute' -%}
 {{ character.name }}'s {{ context_name }}:
@@ -74,4 +90,5 @@ Use a simple, easy to read writing format.
 {{ character.name }}:
 {%- else -%}
 {{ context_name }}:
+{%- endif -%}
 {%- endif -%}

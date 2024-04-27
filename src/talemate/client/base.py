@@ -512,8 +512,9 @@ class ClientBase:
                 max_token_length=self.max_token_length,
                 parameters=prompt_param,
             )
+            prompt_sent =  self.repetition_adjustment(finalized_prompt)
             response = await self.generate(
-                self.repetition_adjustment(finalized_prompt), prompt_param, kind
+                prompt_sent, prompt_param, kind
             )
 
             response, finalized_prompt = await self.auto_break_repetition(
@@ -536,7 +537,7 @@ class ClientBase:
                 "prompt_sent",
                 data=PromptData(
                     kind=kind,
-                    prompt=finalized_prompt,
+                    prompt=prompt_sent,
                     response=response,
                     prompt_tokens=self._returned_prompt_tokens or token_length,
                     response_tokens=self._returned_response_tokens
@@ -714,7 +715,6 @@ class ClientBase:
 
         lines = prompt.split("\n")
         new_lines = []
-
         for line in lines:
             if line.startswith("[$REPETITION|"):
                 if is_repetitive:

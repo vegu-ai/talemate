@@ -22,7 +22,7 @@ class ContentGenerationContext(pydantic.BaseModel):
     length: int = 100
     character: Union[str, None] = None
     original: Union[str, None] = None
-    partial: Union[str, None] = None
+    partial: str = ""
 
     @property
     def computed_context(self) -> Tuple[str, str]:
@@ -42,7 +42,7 @@ class AssistantMixin:
         length: int = 100,
         character: Union[str, None] = None,
         original: Union[str, None] = None,
-        partial: Union[str, None] = None,
+        partial: str = ""
     ):
         """
         Request content from the assistant.

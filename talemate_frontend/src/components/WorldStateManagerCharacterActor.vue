@@ -14,7 +14,17 @@
         <v-col cols="9">
 
             <div v-if="tab == 'instructions'">
+                <v-sheet class="text-right">
+                    <v-spacer></v-spacer>
+                    <v-tooltip class="pre-wrap" :text="tooltipText" max-width="250" >
+                        <template v-slot:activator="{ props }">
+                            <v-btn v-bind="props" color="primary" @click.stop="generateCharacterDialogueInstructions" variant="text" size="x-small" prepend-icon="mdi-auto-fix">Generate</v-btn>
+                        </template>
+                    </v-tooltip>
+                </v-sheet>
                 <v-textarea 
+                :loading="dialogueInstructionsBusy"
+                :disabled="dialogueInstructionsBusy"
                 placeholder="speak less formally, use more contractions, and be more casual." 
                 v-model="dialogueInstructions" label="Acting Instructions" 
                 :color="dialogueInstructionsDirty ? 'primary' : null"
@@ -78,6 +88,7 @@ export default {
             dialogueExample: "",
             dialogueInstructions: null,
             dialogueInstructionsDirty: false,
+            dialogueInstructionsBusy: false,
             updateCharacterActorTimeout: null,
         }
     },
@@ -86,6 +97,9 @@ export default {
             return this.dialogueExamples.map((example) => {
                 return example.replace(this.character.name + ': ', '');
             });
+        },
+        tooltipText() {
+            return `Automatically generate dialogue instructions for ${this.character.name}, based on their attributes and description`;
         }
     },
     props: {
@@ -111,11 +125,24 @@ export default {
                 dialogue_examples: this.dialogueExamples,
             }));
         },
+
+        generateCharacterDialogueInstructions() {
+            this.dialogueInstructionsBusy = true;
+            this.getWebsocket().send(JSON.stringify({
+                type: "world_state_manager",
+                action: "generate_character_dialogue_instructions",
+                name: this.character.name,
+            }));
+        },
         
         handleMessage(data) {
             if(data.type === 'world_state_manager') {
+                console.log("WORLD STATE MANAGER", data);
                 if(data.action === 'character_actor_updated') {
                     this.dialogueInstructionsDirty = false;
+                } else if (data.action === 'character_dialogue_instructions_generated') {
+                    this.dialogueInstructions = data.data.instructions;
+                    this.dialogueInstructionsBusy = false;
                 }
             }
         },

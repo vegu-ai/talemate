@@ -111,7 +111,7 @@
                                                         :color="characterDescriptionDirty ? 'info' : ''"
 
                                                         :disabled="characterDescriptionBusy"
-                                                        :messages="autocompleteInfoMessage(characterDescriptionBusy)"
+                                                        :loading="characterDescriptionBusy"
                                                         @keyup.ctrl.enter.stop="autocompleteRequestCharacterDescription"
 
                                                         @update:model-value="queueUpdateCharacterDescription"
@@ -172,7 +172,8 @@
                                                                     :color="characterAttributeDirty ? 'info' : ''"
 
                                                                     :disabled="characterAttributeBusy"
-                                                                    :messages="autocompleteInfoMessage(characterAttributeBusy)"
+                                                                    :loading="characterAttributeBusy"
+                                                                    :hint="autocompleteInfoMessage(characterAttributeBusy)"
                                                                     @keyup.ctrl.enter.stop="autocompleteRequestCharacterAttribute"
 
                                                                     @update:modelValue="queueUpdateCharacterAttribute(selectedCharacterAttribute)"
@@ -262,7 +263,8 @@
                                                                     :color="characterDetailDirty ? 'info' : ''"
 
                                                                     :disabled="characterDetailBusy"
-                                                                    :messages="autocompleteInfoMessage(characterDetailBusy)"
+                                                                    :loading="characterDetailBusy"
+                                                                    :hint="autocompleteInfoMessage(characterDetailBusy)"
 
                                                                     @keyup.ctrl.enter.stop="autocompleteRequestCharacterDetail"
 

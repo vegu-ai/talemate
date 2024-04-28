@@ -82,7 +82,13 @@ def set_preset(config: dict, kind: str):
 
 
 def preset_for_kind(kind: str):
-    if kind == "conversation":
+    
+    # tag based
+    if "deterministic" in kind:
+        return PRESET_DETERMINISTIC
+    elif "creative" in kind:
+        return PRESET_DIVINE_INTELLECT
+    elif kind == "conversation":
         return PRESET_TALEMATE_CONVERSATION
     elif kind == "conversation_old":
         return PRESET_TALEMATE_CONVERSATION  # Assuming old conversation uses the same preset
@@ -133,11 +139,6 @@ def preset_for_kind(kind: str):
     elif kind == "visualize":
         return PRESET_SIMPLE_1
 
-    # tag based
-    elif "deterministic" in kind:
-        return PRESET_DETERMINISTIC
-    elif "creative" in kind:
-        return PRESET_DIVINE_INTELLECT
     else:
         return PRESET_SIMPLE_1  # Default preset if none of the kinds match
 

@@ -148,7 +148,7 @@ class OpenAICompatibleClient(ClientBase):
                 int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 4096
             )
         if "api_key" in kwargs:
-            self.api_auth = kwargs["api_key"]
+            self.api_key = kwargs["api_key"]
         if "api_handles_prompt_template" in kwargs:
             self.api_handles_prompt_template = kwargs["api_handles_prompt_template"]
 

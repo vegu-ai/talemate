@@ -1,7 +1,7 @@
 {% if character -%}
-    {% set content_block_identifier = character.name + "'s next dialogue" %}
+    {% set content_block_identifier = character.name + "'s next scene (ID 4504)" %}
 {% else -%}
-    {% set content_block_identifier = "next narrative" %}
+    {% set content_block_identifier = "next narrative (ID 4504)" %}
 {% endif -%}
 {% block rendered_context -%}
 <|SECTION:CONTEXT|>
@@ -26,31 +26,26 @@ No dialogue so far
 {% endif -%}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-What are continuity errors?
-
-Continuity errors are mistakes in a story that occur when something changes from one scene to the next. This could be a character's appearance, state of clothing, the time of day, or even the weather. These errors can be distracting for the reader and can take them out of the story. It's important to catch these errors and fix them before the story is published.
 {% if character -%}
-CAREFULLY Analyze {{ character.name }}'s next line in the scene for continuity errors.
+CAREFULLY Analyze {{ character.name }}'s next scene for continuity errors.
 {% else -%}
-CAREFULLY Analyze the next line in the scene for continuity errors.
-{% endif -%}
-
-YOU MUST DO THIS LINE BY LINE PROVIDING ANALYSIS FOR EACH LINE SEPARATELY.
+CAREFULLY Analyze the next scene for continuity errors.
+{% endif %}
 
 ```{{ content_block_identifier }}
 {{ content }}
 ```
 
+Continuity errors are mistakes in the narrative that break the consistency of the story. These errors can be related to the plot, characters, setting, or even the time of day. They can be as simple as a character's hair changing length between scenes or as complex as a character's backstory changing.
+
+Progression of the dialogue is important. The last line is the most important, the first line is the least important.
+
+Respect the scene progression and answer in the context of line {{ final_line_number }}.
+
 YOU MUST NOT PROVIDE REPLACEMENT SUGGESTIONS WHEN YOU FIND CONTINUITY ERRORS.
 
-THINK CAREFULLY, consider state of the scene, the characters, clothing, items present or not longer present. If you find any continuity errors, list them in the response.
+THINK CAREFULLY, consider state of the scene, the characters, agreements, clothing. If you find any CONFIRMED continuity errors specifically in {{ content_block_identifier }}, list them in the response.
 
-It is possible for the text to have multiple continuity errors. You must identify all of them.
+You response must be in the following format, with each error on a new line:
 
-Always analyze the full dialogue, don't stop if you find one error.
-
-You response must be in the following format:
-
-ERROR 1: explanation of error
-ERROR 2: explanation of error
-ERROR 3: explanation of error
+ERROR: [Description of the error found]

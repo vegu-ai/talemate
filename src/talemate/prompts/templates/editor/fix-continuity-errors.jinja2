@@ -1,8 +1,8 @@
 {% if character -%}
-    {% set content_block_identifier = character.name + "'s next dialogue" %}
+    {% set content_block_identifier = character.name + "'s next scene (ID 4504)" %}
     {% set content_fix_identifier = character.name + "'s adjusted dialogue" %}
 {% else -%}
-    {% set content_block_identifier = "next narrative" %}
+    {% set content_block_identifier = "next narrative (ID 4504)" %}
     {% set content_fix_identifier = "adjusted narrative" %}
 {% endif -%}
 {% set _ = set_state("content_fix_identifier", content_fix_identifier) %}
@@ -33,19 +33,17 @@ No dialogue so far
 ```{{ content_block_identifier }}
 {{ content }}
 ```
-
-The following continuity errors have been identified in "{{ content_block_identifier }}":
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Write a revised draft of "{{ content_block_identifier }}" and fix the continuity errors identified in "{{ content_block_identifier }}":
 
 {% for error in errors -%}
 {{ error }}
 
 {% endfor %}
-<|CLOSE_SECTION|>
-<|SECTION:TASK|>
-Write a revised draft of "{{ content_block_identifier }}" and fix the continuity errors identified. 
 
-YOU MUST NOT CHANGE THE MEANING, PLOT DIRECTION OR TONE OF THE TEXT. 
+YOU MUST ONLY FIX CONTINUITY ERRORS, KEEP THE TONE, STYLE, AND MEANING THE SAME.
 
-YOU MUST ONLY FIX CONTINUITY ERRORS.
+Your revision must be between "```{{ content_fix_identifier }}" and "```".
 <|CLOSE_SECTION|>
 {{ bot_token }}```{{ content_fix_identifier }}<|TRAILING_NEW_LINE|>

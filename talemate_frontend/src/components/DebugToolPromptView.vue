@@ -28,12 +28,20 @@
                             <v-list-subheader>
                                 <v-icon>mdi-details</v-icon>Parameters
                             </v-list-subheader>
-                            <v-list-item v-for="(value, name) in filteredParameters" :key="name">
-                                <v-list-item-subtitle color="grey-lighten-1">{{ name }}</v-list-item-subtitle>
-                                <p class="text-caption text-grey">
-                                    {{ value }}
-                                </p>
+                            <v-list-item>
+                                <v-text-field class="mt-1" v-for="(value, name) in filteredParameters" :key="name" v-model="prompt.generation_parameters[name]" :label="name" density="compact" variant="plain" placeholder="Value">
+                                    <template v-slot:prepend-inner>
+                                        <v-icon class="mt-1" size="x-small">mdi-pencil</v-icon>
+                                    </template>
+
+                                </v-text-field>
+
                             </v-list-item>
+                            <!--
+                            <v-list-item v-for="(value, name) in filteredParameters" :key="name">
+                                <v-text-field variant="plain" density="compact" v-model="prompt.generation_parameters[name]" placeholder="Value" :label="name"></v-text-field>
+                            </v-list-item>
+                            -->
                         </v-list>
                     </v-col>
                     <v-col :cols="details ? 5 : 6">

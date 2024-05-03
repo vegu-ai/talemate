@@ -44,6 +44,8 @@ Write a revised draft of "{{ content_block_identifier }}" and fix the continuity
 
 YOU MUST ONLY FIX CONTINUITY ERRORS, KEEP THE TONE, STYLE, AND MEANING THE SAME.
 
-Your revision must be between "```{{ content_fix_identifier }}" and "```".
+Your revision must be between "```{{ content_fix_identifier }}" and "```". Your revision must only be {{ character.name }}'s dialogue and must not include any other character's dialogue.
 <|CLOSE_SECTION|>
+{% if llm_can_be_coerced() -%}
 {{ bot_token }}```{{ content_fix_identifier }}<|TRAILING_NEW_LINE|>
+{% endif -%}

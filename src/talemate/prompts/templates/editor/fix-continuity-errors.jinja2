@@ -1,8 +1,8 @@
 {% if character -%}
-    {% set content_block_identifier = character.name + "'s next scene (ID 4504)" %}
+    {% set content_block_identifier = character.name + "'s next scene (ID 11)" %}
     {% set content_fix_identifier = character.name + "'s adjusted dialogue" %}
 {% else -%}
-    {% set content_block_identifier = "next narrative (ID 4504)" %}
+    {% set content_block_identifier = "next narrative (ID 11)" %}
     {% set content_fix_identifier = "adjusted narrative" %}
 {% endif -%}
 {% set _ = set_state("content_fix_identifier", content_fix_identifier) %}

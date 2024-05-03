@@ -1,29 +1,13 @@
 {% if character -%}
-    {% set content_block_identifier = character.name + "'s next scene (ID 4504)" %}
+    {% set content_block_identifier = character.name + "'s next scene" %}
 {% else -%}
-    {% set content_block_identifier = "next narrative (ID 4504)" %}
+    {% set content_block_identifier = "next narrative" %}
 {% endif -%}
 {% block rendered_context -%}
-<|SECTION:CONTEXT|>
-{%- with memory_query=scene.snapshot() -%}
-    {% include "extra-context.jinja2" %}
-{% endwith %}
-{% if character %}
-{{ character.name }}'s description: {{ character.description|condensed }}
-{% endif %}
-
-{{ text }}
-<|CLOSE_SECTION|>
 {% endblock -%}
-<|SECTION:SCENE|>
-{% set scene_history=scene.context_history(budget=max_tokens-512-count_tokens(self.rendered_context())) -%}
-{% set final_line_number=len(scene_history) -%}
-{% for scene_context in scene_history -%}
-{{ loop.index }}. {{ scene_context }}
-{% endfor -%}
-{% if not scene.history -%}
-No dialogue so far
-{% endif -%}
+<|SECTION:STORY DEVELOPMENT|>
+{% set scene_history=scene.context_history(budget=max_tokens-512-count_tokens(self.rendered_context()), dialogue_offset=1, include_reinfocements=False) -%}
+{{ agent_action("summarizer", "summarize", text=join(scene_history, '\n\n'), method="facts") }}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
 {% if character -%}
@@ -33,15 +17,21 @@ CAREFULLY Analyze the next scene for continuity errors.
 {% endif %}
 
 ```{{ content_block_identifier }}
-{{ content }}
+{{ instruct_text("Create a one line summary for the scene above. Important is anything that causes a state change in the scene, characters or objects. Use simple, clear language, and note details. Use exact words. YOUR RESPONSE MUST ONLY BE THE SUMMARY.", content)}}
 ```
 
-Continuity errors are mistakes in the narrative that break the consistency of the story. These errors can be related to the plot, characters, setting, or even the time of day. They can be as simple as a character's hair changing length between scenes or as complex as a character's backstory changing.
+You are looking for clear mistakes in objects or characters' state. 
 
-YOU MUST NOT PROVIDE REPLACEMENT SUGGESTIONS WHEN YOU FIND CONTINUITY ERRORS.
+For example:
 
-THINK CAREFULLY, consider state of the scene. If you find any logical continuity errors specifically in {{ content_block_identifier }}, list them in the response.
+- Characters interacting with objects in a way that contradicts the object's state as per the story developments.
+- Characters forgetting something they said / agreed to earlier.
+
+THINK CAREFULLY, consider the chronological order of the story. If you find any logical continuity mistakes specifically in {{ content_block_identifier }}.
 
 Your response must be in the following format:
 
 ERROR: [Description of the logical contradiction] - one per line
+{% if llm_can_be_coerced() -%}
+{{ bot_token }}I carefully analyzed the story developments and compared against the next proposed scene, and i found that there are
+{% endif -%}

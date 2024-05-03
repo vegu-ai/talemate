@@ -1385,16 +1385,22 @@ class Scene(Emitter):
         conversation_format = self.conversation_format
         actor_direction_mode = self.get_helper("director").agent.actor_direction_mode
 
+        dialogue_offset = kwargs.get("dialogue_offset", 0)
+        include_reinfocements = kwargs.get("include_reinfocements", True)
+
         # collect dialogue
 
         count = 0
 
-        for i in range(len(self.history) - 1, -1, -1):
+        for i in range(len(self.history) - (1 + dialogue_offset), -1, -1):
             count += 1
 
             message = self.history[i]
 
             if message.hidden:
+                continue
+            
+            if isinstance(message, ReinforcementMessage) and not include_reinfocements:
                 continue
 
             if isinstance(message, DirectorMessage):
@@ -2202,6 +2208,7 @@ class Scene(Emitter):
             "ts": scene.ts,
             "help": scene.help,
             "experimental": scene.experimental,
+            "restore_from": scene.restore_from,
         }
 
     @property

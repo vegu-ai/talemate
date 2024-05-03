@@ -61,6 +61,7 @@ class SummarizeAgent(Agent):
                             {"label": "Short & Concise", "value": "short"},
                             {"label": "Balanced", "value": "balanced"},
                             {"label": "Lengthy & Detailed", "value": "long"},
+                            {"label": "Factual List", "value": "facts"},
                         ],
                     ),
                     "include_previous": AgentActionConfig(

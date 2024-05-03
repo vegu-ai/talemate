@@ -226,7 +226,7 @@ class EditorAgent(Agent):
         response = await Prompt.request(
             "editor.check-continuity-errors",
             self.client,
-            "basic_deterministic_medium2",
+            "basic_analytical_medium2",
             vars={
                 "content": content,
                 "character": character,

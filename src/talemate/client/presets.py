@@ -35,8 +35,8 @@ PRESET_LLAMA_PRECISE = {
 }
 
 PRESET_DETERMINISTIC = {
-    "temperature": 0.01,
-    "top_p": 0.01,
+    "temperature": 0.1,
+    "top_p": 1,
     "top_k": 0,
     "repetition_penalty": 1.0,
 }
@@ -54,6 +54,12 @@ PRESET_SIMPLE_1 = {
     "top_p": 0.9,
     "top_k": 20,
     "repetition_penalty": 1.15,
+}
+
+PRESET_ANALYTICAL = {
+    "temperature": 0.1,
+    "top_p": 0.9,
+    "top_k": 20,
 }
 
 
@@ -88,6 +94,10 @@ def preset_for_kind(kind: str):
         return PRESET_DETERMINISTIC
     elif "creative" in kind:
         return PRESET_DIVINE_INTELLECT
+    elif "simple" in kind:
+        return PRESET_SIMPLE_1
+    elif "analytical" in kind:
+        return PRESET_ANALYTICAL
     elif kind == "conversation":
         return PRESET_TALEMATE_CONVERSATION
     elif kind == "conversation_old":

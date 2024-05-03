@@ -42,7 +42,9 @@
                     </v-col>
                     <v-col :cols="details ? 6 : 7">
                         <v-card flat>
-                            <v-card-title>Prompt</v-card-title>
+                            <v-card-title>Prompt
+                                <v-btn size="x-small" variant="text" v-if="promptHasDirtyPrompt" color="orange" @click.stop="resetPrompt" prepend-icon="mdi-restore">Reset</v-btn>
+                            </v-card-title>
                             <v-card-text>
                                 <!--
                                 <v-textarea :disabled="busy" density="compact" v-model="prompt.prompt" rows="10" auto-grow max-rows="22"></v-textarea>
@@ -59,7 +61,8 @@
                         <v-card elevation="10" color="grey-darken-3">
                             <v-card-title>Response
                                 <v-progress-circular class="ml-1 mr-3" size="20" v-if="busy" indeterminate="disable-shrink"
-                                color="primary"></v-progress-circular>    
+                                color="primary"></v-progress-circular>
+                                <v-btn size="x-small" variant="text" v-else-if="promptHasDirtyResponse" color="orange" @click.stop="resetResponse" prepend-icon="mdi-restore">Reset</v-btn> 
                             </v-card-title>
                             <v-card-text style="max-height:600px; overflow-y:auto;" :class="busy ? 'text-grey' : 'text-white'">
                                 <div class="prompt-view">{{  prompt.response }}</div>
@@ -122,7 +125,13 @@ export default {
             // compoare prompt.generation_parameters with prompt.original_generation_parameters
             // use json string comparison
             return JSON.stringify(this.prompt.generation_parameters) !== JSON.stringify(this.prompt.original_generation_parameters);
-        }
+        },
+        promptHasDirtyPrompt() {
+            return this.prompt.prompt !== this.prompt.original_prompt;
+        },
+        promptHasDirtyResponse() {
+            return this.prompt.response !== this.prompt.original_response;
+        },
     },
     inject: [
         "getWebsocket",
@@ -144,6 +153,14 @@ export default {
 
         resetParams() {
             this.prompt.generation_parameters = JSON.parse(JSON.stringify(this.prompt.original_generation_parameters));
+        },
+
+        resetPrompt() {
+            this.prompt.prompt = this.prompt.original_prompt;
+        },
+
+        resetResponse() {
+            this.prompt.response = this.prompt.original_response;
         },
 
         toggleDetailsLabel() {

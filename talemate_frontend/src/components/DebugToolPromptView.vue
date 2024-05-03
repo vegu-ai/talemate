@@ -27,9 +27,10 @@
                             </v-list-item>
                             <v-list-subheader>
                                 <v-icon>mdi-details</v-icon>Parameters
+                                <v-btn size="x-small" variant="text" v-if="promptHasDirtyParams" color="orange" @click.stop="resetParams" prepend-icon="mdi-restore">Reset</v-btn>
                             </v-list-subheader>
                             <v-list-item>
-                                <v-text-field class="mt-1" v-for="(value, name) in filteredParameters" :key="name" v-model="prompt.generation_parameters[name]" :label="name" density="compact" variant="plain" placeholder="Value">
+                                <v-text-field class="mt-1" v-for="(value, name) in filteredParameters" :key="name" v-model="prompt.generation_parameters[name]" :label="name" density="compact" variant="plain" placeholder="Value" :type="parameterType(name)">
                                     <template v-slot:prepend-inner>
                                         <v-icon class="mt-1" size="x-small">mdi-pencil</v-icon>
                                     </template>
@@ -37,25 +38,17 @@
                                 </v-text-field>
 
                             </v-list-item>
-                            <!--
-                            <v-list-item v-for="(value, name) in filteredParameters" :key="name">
-                                <v-text-field variant="plain" density="compact" v-model="prompt.generation_parameters[name]" placeholder="Value" :label="name"></v-text-field>
-                            </v-list-item>
-                            -->
                         </v-list>
                     </v-col>
-                    <v-col :cols="details ? 5 : 6">
+                    <v-col :cols="details ? 6 : 7">
                         <v-card flat>
                             <v-card-title>Prompt</v-card-title>
                             <v-card-text>
-                                <!--
-                                <div class="prompt-view">{{  prompt.prompt }}</div>
-                                -->
                                 <v-textarea :disabled="busy" density="compact" v-model="prompt.prompt" rows="10" auto-grow max-rows="22"></v-textarea>
                             </v-card-text>
                         </v-card>
                     </v-col>
-                    <v-col :cols="details ? 5 : 6">
+                    <v-col :cols="details ? 4 : 5">
                         <v-card elevation="10" color="grey-darken-3">
                             <v-card-title>Response
                                 <v-progress-circular class="ml-1 mr-3" size="20" v-if="busy" indeterminate="disable-shrink"
@@ -85,6 +78,8 @@
 <script>
 export default {
     name: 'DebugToolPromptView',
+    components: {
+    },
     data() {
         return {
             prompt: null,
@@ -110,12 +105,33 @@ export default {
 
             return filtered;
         },
+        promptHasDirtyParams() {
+            // compoare prompt.generation_parameters with prompt.original_generation_parameters
+            // use json string comparison
+            return JSON.stringify(this.prompt.generation_parameters) !== JSON.stringify(this.prompt.original_generation_parameters);
+        }
     },
     inject: [
         "getWebsocket",
         'registerMessageHandler',
     ],
     methods: {
+
+        parameterType(name) {
+            // to vuetify text-field type
+            const typ = typeof this.prompt.original_generation_parameters[name];
+            if(typ === 'number') {
+                return 'number';
+            } else if(typ === 'boolean') {
+                return 'boolean';
+            } else {
+                return 'text';
+            }
+        },
+
+        resetParams() {
+            this.prompt.generation_parameters = JSON.parse(JSON.stringify(this.prompt.original_generation_parameters));
+        },
 
         toggleDetailsLabel() {
             return this.details ? 'Hide Details' : 'Show Details';

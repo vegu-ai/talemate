@@ -27,7 +27,7 @@ No dialogue so far
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
 {% if character -%}
-CAREFULLY Analyze {{ character.name }}'s next scene for continuity errors.
+CAREFULLY Analyze {{ character.name }}'s next scene for logical continuity errors in the context of the story developments so far.
 {% else -%}
 CAREFULLY Analyze the next scene for continuity errors.
 {% endif %}
@@ -38,14 +38,10 @@ CAREFULLY Analyze the next scene for continuity errors.
 
 Continuity errors are mistakes in the narrative that break the consistency of the story. These errors can be related to the plot, characters, setting, or even the time of day. They can be as simple as a character's hair changing length between scenes or as complex as a character's backstory changing.
 
-Progression of the dialogue is important. The last line is the most important, the first line is the least important.
-
-Respect the scene progression and answer in the context of line {{ final_line_number }}.
-
 YOU MUST NOT PROVIDE REPLACEMENT SUGGESTIONS WHEN YOU FIND CONTINUITY ERRORS.
 
-THINK CAREFULLY, consider state of the scene, the characters, agreements, clothing. If you find any CONFIRMED continuity errors specifically in {{ content_block_identifier }}, list them in the response.
+THINK CAREFULLY, consider state of the scene. If you find any logical continuity errors specifically in {{ content_block_identifier }}, list them in the response.
 
-You response must be in the following format, with each error on a new line:
+Your response must be in the following format:
 
-ERROR: [Description of the error found]
+ERROR: [Description of the logical contradiction] - one per line

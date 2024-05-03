@@ -44,7 +44,14 @@
                         <v-card flat>
                             <v-card-title>Prompt</v-card-title>
                             <v-card-text>
+                                <!--
                                 <v-textarea :disabled="busy" density="compact" v-model="prompt.prompt" rows="10" auto-grow max-rows="22"></v-textarea>
+                                -->
+                                <Codemirror
+                                    v-model="prompt.prompt"
+                                    :extensions="extensions"
+                                    :style="promptEditorStyle"
+                                ></Codemirror>
                             </v-card-text>
                         </v-card>
                     </v-col>
@@ -76,9 +83,15 @@
 </template>
 
 <script>
+import { Codemirror } from 'vue-codemirror'
+import { markdown } from '@codemirror/lang-markdown'
+import { oneDark } from '@codemirror/theme-one-dark'
+import { EditorView } from '@codemirror/view'
+
 export default {
     name: 'DebugToolPromptView',
     components: {
+        Codemirror,
     },
     data() {
         return {
@@ -209,6 +222,23 @@ export default {
     created() {
         this.registerMessageHandler(this.handleMessage);
     },
+    setup() {
+
+        const extensions = [
+            markdown(),
+            oneDark,
+            EditorView.lineWrapping
+        ];
+
+        const promptEditorStyle = {
+            maxHeight: "600px"
+        }
+
+        return {
+            extensions,
+            promptEditorStyle,
+        }
+    }
 }
 </script>
 

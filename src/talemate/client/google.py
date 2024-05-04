@@ -4,6 +4,7 @@ import vertexai
 import json
 import os
 from vertexai.generative_models import GenerativeModel, ChatSession, SafetySetting, ResponseValidationError
+from google.api_core.exceptions import ResourceExhausted
 
 from talemate.client.base import ClientBase, ErrorAction, ExtraField
 from talemate.client.remote import RemoteServiceMixin
@@ -285,6 +286,10 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         #    self.log.error("generate error", e=e)
         #    emit("status", message="google API: Permission Denied", status="error")
         #    return ""
+        except ResourceExhausted as e:
+            self.log.error("generate error", e=e)
+            emit("status", message="google API: Quota Limit reached", status="error")
+            return ""
         except ResponseValidationError as e:
             self.log.error("generate error", e=e)
             emit("status", message="google API: Response Validation Error", status="error")

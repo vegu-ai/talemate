@@ -46,6 +46,7 @@ from talemate.scene_message import (
     TimePassageMessage,
 )
 from talemate.util import colored_text, count_tokens, extract_metadata, wrap_text
+from talemate.util.prompt import condensed
 from talemate.world_state import WorldState
 from talemate.world_state.manager import WorldStateManager
 
@@ -1447,7 +1448,7 @@ class Scene(Emitter):
             if count_tokens(parts_context) + count_tokens(text) > budget_context:
                 break
 
-            parts_context.insert(0, text)
+            parts_context.insert(0, condensed(text))
 
         if count_tokens(parts_context + parts_dialogue) < 1024:
             intro = self.get_intro()

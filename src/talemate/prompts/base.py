@@ -33,6 +33,7 @@ from talemate.util import (
     fix_faulty_json,
     remove_extra_linebreaks,
 )
+from talemate.util.prompt import condensed
 
 __all__ = [
     "Prompt",
@@ -94,14 +95,6 @@ def validate_line(line):
         and not line.strip().startswith("[end of")
         and not line.strip().startswith("</")
     )
-
-
-def condensed(s):
-    """Replace all line breaks in a string with spaces."""
-    r = s.replace("\n", " ").replace("\r", "")
-
-    # also replace multiple spaces with a single space
-    return re.sub(r"\s+", " ", r)
 
 
 def clean_response(response):

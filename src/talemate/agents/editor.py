@@ -274,7 +274,8 @@ class EditorAgent(Agent):
         content_fix_identifer = state.get("content_fix_identifier")
 
         try:
-            content = response.split("```")[0].strip()
+            content = response.strip().strip("```").split("```")[0].strip()
+            content = content.replace(content_fix_identifer, "").strip()
             content = content.strip(":")
 
             # if content doesnt start with {character_name}: then add it

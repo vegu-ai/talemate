@@ -214,6 +214,8 @@ Once you have downloaded the credentials you can either note where they are on y
 
 ![Google Gemini](docs/img/0.25.0/google-add-client.png)
 
+The `Disable Safety Settings` option will turn off the google reponse validation for what they consider harmful content. Use at your own risk.
+
 ### Conmplete the google cloud setup in talemate
 
 ![Google Gemini](docs/img/0.25.0/google-setup-incomplete.png)

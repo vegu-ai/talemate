@@ -487,12 +487,13 @@ export default {
       this.autocompleteFocusElement = focus_element;
       this.autocompletePartialInput = param.partial;
 
-      if(focus_element){
-        // set disabled (vue event.which element)
-        console.log({focus_element})
-      }
+      const param_copy = JSON.parse(JSON.stringify(param));
+      param_copy.type = "assistant";
+      param_copy.action = "autocomplete";
 
-      this.websocket.send(JSON.stringify({ type: 'interact', text: `!autocomplete:${JSON.stringify(param)}` }));
+      this.websocket.send(JSON.stringify(param_copy));
+
+      //this.websocket.send(JSON.stringify({ type: 'interact', text: `!autocomplete:${JSON.stringify(param)}` }));
     },
 
     autocompleteInfoMessage(active) {

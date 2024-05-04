@@ -757,6 +757,16 @@ class WebsocketHandler(Receiver):
         self.scene.delete_message(message_id)
 
     def edit_message(self, message_id, new_text):
+        
+        message = self.scene.get_message(message_id)
+        
+        editor = instance.get_agent("editor")
+        
+        if editor.enabled and message.typ == "character":
+            character = self.scene.get_character(message.character_name)
+            loop = asyncio.get_event_loop()
+            new_text = loop.run_until_complete(editor.fix_exposition(new_text, character))
+        
         self.scene.edit_message(message_id, new_text)
 
     def apply_scene_config(self, scene_config: dict):

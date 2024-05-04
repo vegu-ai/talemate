@@ -144,3 +144,39 @@ class AssistantMixin:
             emit("autocomplete_suggestion", response)
 
         return response
+    
+    @set_processing
+    async def autocomplete_narrative(
+        self,
+        input: str,
+        emit_signal: bool = True,
+    ) -> str:
+        """
+        Autocomplete narrative.
+        """
+
+        response = await Prompt.request(
+            f"creator.autocomplete-narrative",
+            self.client,
+            "create_short",
+            vars={
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "input": input.strip(),
+                "can_coerce": self.client.can_be_coerced,
+            },
+            pad_prepended_response=False,
+            dedupe_enabled=False,
+        )
+
+        if response.startswith(input):
+            response = response[len(input) :]
+
+        self.scene.log.debug(
+            "autocomplete_suggestion", suggestion=response, input=input
+        )
+
+        if emit_signal:
+            emit("autocomplete_suggestion", response)
+
+        return response

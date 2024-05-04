@@ -204,7 +204,7 @@
                                             <div class="text-grey">
                                                 In order for you to use Google Cloud services like the vertexi ai api for Gemini inference you will need to set up a Google Cloud project and credentials.
                                                 
-                                                Please follow the instructions <a href="https://cloud.google.com/vertex-ai/docs/start/client-libraries#python">here</a> and then fill in the fields below.
+                                                Please follow the instructions <a href="https://cloud.google.com/vertex-ai/docs/start/client-libraries">here</a> and then fill in the fields below.
                                             </div>
                                         </v-alert>
                                         <v-divider class="mb-2"></v-divider>

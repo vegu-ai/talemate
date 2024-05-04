@@ -206,7 +206,7 @@ Models on DeepInfra that work well with Talemate:
 
 Unlike the other clients the setup for Google Gemini is a bit more involved as you will need to set up a google cloud project and credentials for it.
 
-Please follow their [instructions for setup](https://cloud.google.com/vertex-ai/docs/start/client-libraries#python) - which includes setting up a project, enabling the Vertex AI API, creating a service account, and downloading the credentials.
+Please follow their [instructions for setup](https://cloud.google.com/vertex-ai/docs/start/client-libraries) - which includes setting up a project, enabling the Vertex AI API, creating a service account, and downloading the credentials.
 
 Once you have downloaded the credentials you can either note where they are on your system or move them to the `talemate` directory.
 

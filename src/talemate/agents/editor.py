@@ -241,7 +241,7 @@ class EditorAgent(Agent):
         errors = []
 
         for line in response.split("\n"):
-            if not line.startswith("ERROR"):
+            if "ERROR" not in line:
                 continue
 
             errors.append(line)

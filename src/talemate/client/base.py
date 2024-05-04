@@ -344,6 +344,14 @@ class ClientBase:
         if status_change:
             instance.emit_agent_status_by_client(self)
 
+    def populate_extra_fields(self, data:dict):
+        """
+        Updates data with the extra fields from the client's Meta
+        """
+        
+        for field_name in getattr(self.Meta(), "extra_fields", {}).keys():
+            data[field_name] = getattr(self, field_name, None)
+
     def determine_prompt_template(self):
         if not self.model_name:
             return

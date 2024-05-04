@@ -140,13 +140,16 @@
           <CharacterSheet ref="characterSheet" />
           <SceneHistory ref="sceneHistory" />
 
-          <v-text-field
+          <v-textarea
             v-model="messageInput" 
             :label="inputHint" 
+            rows="1"
+            auto-grow
             outlined 
             ref="messageInput" 
             @keyup.enter="sendMessage"
             :disabled="isInputDisabled()" 
+            :loading="autocompleting"
             :prepend-inner-icon="messageInputIcon()"
             :color="messageInputColor()">
             <template v-slot:append>
@@ -155,7 +158,7 @@
                 <v-icon v-else>mdi-skip-next</v-icon>
               </v-btn>
             </template>
-          </v-text-field>
+          </v-textarea>
         </div>
 
         <IntroView v-else 
@@ -244,7 +247,7 @@ export default {
       messageHandlers: [],
       scene: {},
       appConfig: {},
-
+      autcompleting: false,
       autocompletePartialInput: "",
       autocompleteCallback: null,
       autocompleteFocusElement: null,
@@ -460,12 +463,15 @@ export default {
 
       // if ctrl+enter is pressed, request autocomplete
       if (event.ctrlKey && event.key === 'Enter') {
+        this.autocompleting = true
         this.autocompleteRequest(
           {
             partial: this.messageInput,
             context: "dialogue:player"
           }, 
           (completion) => {
+            this.inputDisabled = false
+            this.autocompleting = false
             this.messageInput += completion;
           },
           this.$refs.messageInput
@@ -483,6 +489,7 @@ export default {
 
     autocompleteRequest(param, callback, focus_element) {
 
+      this.inputDisabled = true;
       this.autocompleteCallback = callback;
       this.autocompleteFocusElement = focus_element;
       this.autocompletePartialInput = param.partial;

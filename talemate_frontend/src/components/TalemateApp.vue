@@ -147,7 +147,8 @@
             auto-grow
             outlined 
             ref="messageInput" 
-            @keyup.enter="sendMessage"
+            @keydown.enter.prevent="sendMessage"
+            hint="Ctrl+Enter to autocomplete, Shift+Enter for newline"
             :disabled="isInputDisabled()" 
             :loading="autocompleting"
             :prepend-inner-icon="messageInputIcon()"
@@ -476,6 +477,12 @@ export default {
           },
           this.$refs.messageInput
         );
+        return;
+      }
+
+      // if shift+enter is pressed, add a newline
+      if (event.shiftKey && event.key === 'Enter') {
+        this.messageInput += "\n";
         return;
       }
 

@@ -465,6 +465,7 @@ export default {
       // if ctrl+enter is pressed, request autocomplete
       if (event.ctrlKey && event.key === 'Enter') {
         this.autocompleting = true
+        this.inputDisabled = true;
         this.autocompleteRequest(
           {
             partial: this.messageInput,
@@ -496,7 +497,6 @@ export default {
 
     autocompleteRequest(param, callback, focus_element) {
 
-      this.inputDisabled = true;
       this.autocompleteCallback = callback;
       this.autocompleteFocusElement = focus_element;
       this.autocompletePartialInput = param.partial;

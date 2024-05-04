@@ -211,7 +211,7 @@
                                         <v-row>
                                             <v-col cols="12">
                                                 <v-text-field v-model="app_config.google.gcloud_credentials_path"
-                                                    label="Google Cloud Credentials Path" messages="This should be a path to the credentials JSON file you downloaded through the setup above."></v-text-field>
+                                                    label="Google Cloud Credentials Path" messages="This should be a path to the credentials JSON file you downloaded through the setup above. This path needs to be accessible by the computer that is running the Talemate backend. If you are running Talemate on a server, you can upload the file to the server and the path should be the path to the file on the server."></v-text-field>
                                             </v-col>
                                             <v-col cols="6">
                                                 <v-combobox v-model="app_config.google.gcloud_location"

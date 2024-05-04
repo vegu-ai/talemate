@@ -720,6 +720,11 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
             doc = _results["documents"][0][i]
             meta = _results["metadatas"][0][i]
+            
+            if not meta:
+                log.warning("chromadb agent get", error="no meta", doc=doc)
+                continue
+            
             ts = meta.get("ts")
 
             # skip pin_only entries

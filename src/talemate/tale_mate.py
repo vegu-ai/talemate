@@ -1392,17 +1392,20 @@ class Scene(Emitter):
 
         # if message id is provided, find the message in the history
         if message_id:
-            
+
             if history_offset:
-                log.warning("context_history", message="history_offset is ignored when message_id is provided")
-            
+                log.warning(
+                    "context_history",
+                    message="history_offset is ignored when message_id is provided",
+                )
+
             message_index = self.message_index(message_id)
             history_start = message_index - 1
         else:
             history_start = len(self.history) - (1 + history_offset)
-        
+
         # collect dialogue
-        
+
         count = 0
 
         for i in range(history_start, -1, -1):
@@ -1412,7 +1415,7 @@ class Scene(Emitter):
 
             if message.hidden:
                 continue
-            
+
             if isinstance(message, ReinforcementMessage) and not include_reinfocements:
                 continue
 

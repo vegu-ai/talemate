@@ -1,7 +1,8 @@
 __all__ = ["RemoteServiceMixin"]
 
+
 class RemoteServiceMixin:
-    
+
     def prompt_template(self, system_message: str, prompt: str):
         if "<|BOT|>" in prompt:
             _, right = prompt.split("<|BOT|>", 1)
@@ -21,7 +22,6 @@ class RemoteServiceMixin:
         config = event.data
         self.config = config
         self.set_client(max_token_length=self.max_token_length)
-
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)

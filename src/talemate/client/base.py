@@ -2,15 +2,15 @@
 A unified client base, based on the openai API
 """
 
+import ipaddress
 import logging
 import random
 import time
-import urllib3
-import ipaddress
 from typing import Callable, Union
 
 import pydantic
 import structlog
+import urllib3
 from openai import AsyncOpenAI, PermissionDeniedError
 
 import talemate.client.presets as presets
@@ -176,48 +176,47 @@ class ClientBase:
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
 
-    def host_is_remote(self, url:str) -> bool:
+    def host_is_remote(self, url: str) -> bool:
         """
         Returns whether or not the host is a remote service.
-        
+
         It checks common local hostnames / ip prefixes.
-        
+
         - localhost
         """
-        
+
         host = urllib3.util.parse_url(url).host
-        
+
         if host.lower() == "localhost":
             return False
-        
+
         # use ipaddress module to check for local ip prefixes
         try:
             ip = ipaddress.ip_address(host)
         except ValueError:
             return True
-        
+
         if ip.is_loopback or ip.is_private:
             return False
-        
-        return True
 
+        return True
 
     def toggle_disabled_if_remote(self):
         """
         If the client is targeting a remote recognized service, this
         will disable the client.
         """
-        
+
         if not self.api_url:
             return False
-        
+
         if self.host_is_remote(self.api_url) and self.enabled:
             self.log.warn(
                 "remote service unreachable, disabling client", client=self.name
             )
             self.enabled = False
             return True
-        
+
         return False
 
     def get_system_message(self, kind: str) -> str:
@@ -367,11 +366,11 @@ class ClientBase:
         if status_change:
             instance.emit_agent_status_by_client(self)
 
-    def populate_extra_fields(self, data:dict):
+    def populate_extra_fields(self, data: dict):
         """
         Updates data with the extra fields from the client's Meta
         """
-        
+
         for field_name in getattr(self.Meta(), "extra_fields", {}).keys():
             data[field_name] = getattr(self, field_name, None)
 
@@ -542,10 +541,8 @@ class ClientBase:
                 max_token_length=self.max_token_length,
                 parameters=prompt_param,
             )
-            prompt_sent =  self.repetition_adjustment(finalized_prompt)
-            response = await self.generate(
-                prompt_sent, prompt_param, kind
-            )
+            prompt_sent = self.repetition_adjustment(finalized_prompt)
+            response = await self.generate(prompt_sent, prompt_param, kind)
 
             response, finalized_prompt = await self.auto_break_repetition(
                 finalized_prompt, prompt_param, response, kind, retries

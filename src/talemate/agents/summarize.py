@@ -77,11 +77,11 @@ class SummarizeAgent(Agent):
                 },
             )
         }
-        
+
     @property
     def threshold(self):
         return self.actions["archive"].config["threshold"].value
-    
+
     @property
     def estimated_entry_count(self):
         all_tokens = sum([util.count_tokens(entry) for entry in self.scene.history])

@@ -383,7 +383,9 @@ class Prompt:
         env.globals["emit_system"] = lambda status, message: emit(
             "system", status=status, message=message
         )
-        env.globals["llm_can_be_coerced"] = lambda: self.client.can_be_coerced if self.client else False
+        env.globals["llm_can_be_coerced"] = lambda: (
+            self.client.can_be_coerced if self.client else False
+        )
         env.globals["emit_narrator"] = lambda message: emit("system", message=message)
         env.filters["condensed"] = condensed
         ctx.update(self.vars)

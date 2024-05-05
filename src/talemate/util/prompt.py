@@ -1,9 +1,6 @@
 import re
 
-__all__ = [
-    "condensed",
-    "replace_special_tokens"
-]
+__all__ = ["condensed", "replace_special_tokens"]
 
 
 def replace_special_tokens(prompt: str):

@@ -3,9 +3,11 @@ Talemate Command Base class
 """
 
 from __future__ import annotations
-import pydantic
+
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
+
+import pydantic
 
 from talemate.emit import Emitter, emit
 
@@ -32,7 +34,7 @@ class TalemateCommand(Emitter, ABC):
         self.scene = manager.scene
         self.manager = manager
         self.setup_emitter(self.scene)
-        
+
         if self.argument_cls is not None:
             self.args = self.argument_cls(**kwargs)
         else:

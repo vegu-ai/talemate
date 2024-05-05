@@ -949,7 +949,7 @@ def ensure_dialog_line_format(line: str, default_wrap: str = None) -> str:
 
     line = line.replace('*, "', '* "')
     line = line.replace('*. "', '* "')
-    line = line.replace('*.', '.*')
+    line = line.replace("*.", ".*")
 
     # if the line ends with a whitespace followed by a classifier, strip both from the end
     # as this indicates the remnants of a partial segment that was removed.

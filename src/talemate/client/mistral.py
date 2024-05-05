@@ -174,10 +174,10 @@ class MistralAIClient(ClientBase):
         for key in keys:
             if key not in valid_keys:
                 del parameters[key]
-                
+
         # clamp temperature to 0.1 and 1.0
         # Unhandled Error: Status: 422. Message: {"object":"error","message":{"detail":[{"type":"less_than_equal","loc":["body","temperature"],"msg":"Input should be less than or equal to 1","input":1.31,"ctx":{"le":1.0},"url":"https://errors.pydantic.dev/2.6/v/less_than_equal"}]},"type":"invalid_request_error","param":null,"code":null}
-        
+
         if "temperature" in parameters:
             parameters["temperature"] = min(1.0, max(0.1, parameters["temperature"]))
 

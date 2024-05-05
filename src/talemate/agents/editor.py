@@ -201,9 +201,10 @@ class EditorAgent(Agent):
 
     @set_processing
     async def check_continuity_errors(
-        self, content: str, 
-        character: Character, 
-        force: bool = False, 
+        self,
+        content: str,
+        character: Character,
+        force: bool = False,
         fix: bool = True,
         message_id: int = None,
     ) -> str:
@@ -226,8 +227,15 @@ class EditorAgent(Agent):
                 content=content[:255],
             )
             return content
-        
-        log.debug("check_continuity_errors START", content=content, character=character, force=force, fix=fix, message_id=message_id)
+
+        log.debug(
+            "check_continuity_errors START",
+            content=content,
+            character=character,
+            force=force,
+            fix=fix,
+            message_id=message_id,
+        )
 
         response = await Prompt.request(
             "editor.check-continuity-errors",
@@ -288,7 +296,7 @@ class EditorAgent(Agent):
             # if content doesnt start with {character_name}: then add it
             if not content.startswith(f"{character.name}:"):
                 content = f"{character.name}: {content}"
-            
+
         except Exception as e:
             log.error(
                 "check_continuity_errors FAILED",

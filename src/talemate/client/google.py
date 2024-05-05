@@ -1,15 +1,22 @@
+import json
+import os
+
 import pydantic
 import structlog
 import vertexai
-import json
-import os
-from vertexai.generative_models import GenerativeModel, ChatSession, SafetySetting, ResponseValidationError
 from google.api_core.exceptions import ResourceExhausted
+from vertexai.generative_models import (
+    ChatSession,
+    GenerativeModel,
+    ResponseValidationError,
+    SafetySetting,
+)
 
 from talemate.client.base import ClientBase, ErrorAction, ExtraField
-from talemate.client.remote import RemoteServiceMixin
 from talemate.client.registry import register
-from talemate.config import load_config, Client as BaseClientConfig
+from talemate.client.remote import RemoteServiceMixin
+from talemate.config import Client as BaseClientConfig
+from talemate.config import load_config
 from talemate.emit import emit
 from talemate.emit.signals import handlers
 from talemate.util import count_tokens
@@ -31,8 +38,10 @@ class Defaults(pydantic.BaseModel):
     model: str = "gemini-1.0-pro"
     disable_safety_settings: bool = False
 
+
 class ClientConfig(BaseClientConfig):
     disable_safety_settings: bool = False
+
 
 @register()
 class GoogleClient(RemoteServiceMixin, ClientBase):
@@ -66,7 +75,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
     def __init__(self, model="gemini-1.0-pro", **kwargs):
         self.model_name = model
         self.setup_status = None
-        self.model_instance =None
+        self.model_instance = None
         self.disable_safety_settings = kwargs.get("disable_safety_settings", False)
         self.google_credentials_read = False
         self.google_project_id = None
@@ -74,7 +83,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         super().__init__(**kwargs)
 
         handlers["config_saved"].connect(self.on_config_saved)
-        
+
     @property
     def google_credentials(self):
         path = self.google_credentials_path
@@ -86,9 +95,9 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
     @property
     def google_credentials_path(self):
         return self.config.get("google").get("gcloud_credentials_path")
-    
+
     @property
-    def google_location(self):  
+    def google_location(self):
         return self.config.get("google").get("gcloud_location")
 
     @property
@@ -105,7 +114,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
     def safety_settings(self):
         if not self.disable_safety_settings:
             return None
-        
+
         safety_settings = [
             SafetySetting(
                 category=SafetySetting.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
@@ -128,7 +137,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
                 threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE,
             ),
         ]
-        
+
         return safety_settings
 
     def emit_status(self, processing: bool = None):
@@ -157,13 +166,13 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
             model_name = "No model loaded"
 
         self.current_status = status
-        data={
+        data = {
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
         }
-        
+
         self.populate_extra_fields(data)
-        
+
         emit(
             "client_status",
             message=self.client_type,
@@ -204,7 +213,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
                 emit("request_client_status")
                 emit("request_agent_status")
             self.setup_status = True
-            
+
         self.model_instance = GenerativeModel(model_name=model)
 
         log.info(
@@ -224,10 +233,9 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         if kwargs.get("model"):
             self.model_name = kwargs["model"]
             self.set_client(kwargs.get("max_token_length"))
-        
+
         if "disable_safety_settings" in kwargs:
             self.disable_safety_settings = kwargs["disable_safety_settings"]
-            
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
@@ -258,30 +266,30 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         )
 
         try:
-            
+
             chat = self.model_instance.start_chat()
-            
+
             response = await chat.send_message_async(
-                human_message, 
+                human_message,
                 safety_settings=self.safety_settings,
             )
-            
+
             self._returned_prompt_tokens = self.prompt_tokens(prompt)
             self._returned_response_tokens = self.response_tokens(response)
-            
+
             response = response.text
-            
+
             log.debug("generated response", response=response)
-            
+
             if expected_response and expected_response.startswith("{"):
                 if response.startswith("```json") and response.endswith("```"):
                     response = response[7:-3].strip()
-                    
+
             if right and response.startswith(right):
                 response = response[len(right) :].strip()
-                
+
             return response
-            
+
         # except PermissionDeniedError as e:
         #    self.log.error("generate error", e=e)
         #    emit("status", message="google API: Permission Denied", status="error")
@@ -292,7 +300,11 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
             return ""
         except ResponseValidationError as e:
             self.log.error("generate error", e=e)
-            emit("status", message="google API: Response Validation Error", status="error")
+            emit(
+                "status",
+                message="google API: Response Validation Error",
+                status="error",
+            )
             if not self.disable_safety_settings:
                 return "Failed to generate response. Probably due to safety settings, you can turn them off in the client settings."
             return "Failed to generate response. Please check logs."

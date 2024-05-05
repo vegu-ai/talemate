@@ -30,9 +30,14 @@ class DevToolsPlugin:
     async def handle_test_prompt(self, data):
         payload = TestPromptPayload(**data)
         client = self.websocket_handler.llm_clients[payload.client_name]["client"]
-        
-        log.info("Testing prompt", payload={k:v for k,v in payload.generation_parameters.items() if k != "prompt"})
-        
+
+        log.info(
+            "Testing prompt",
+            payload={
+                k: v for k, v in payload.generation_parameters.items() if k != "prompt"
+            },
+        )
+
         response = await client.generate(
             payload.prompt,
             payload.generation_parameters,

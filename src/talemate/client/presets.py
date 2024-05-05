@@ -88,7 +88,7 @@ def set_preset(config: dict, kind: str):
 
 
 def preset_for_kind(kind: str):
-    
+
     # tag based
     if "deterministic" in kind:
         return PRESET_DETERMINISTIC

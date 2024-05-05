@@ -42,7 +42,7 @@ class AssistantMixin:
         length: int = 100,
         character: Union[str, None] = None,
         original: Union[str, None] = None,
-        partial: str = ""
+        partial: str = "",
     ):
         """
         Request content from the assistant.
@@ -144,7 +144,7 @@ class AssistantMixin:
             emit("autocomplete_suggestion", response)
 
         return response
-    
+
     @set_processing
     async def autocomplete_narrative(
         self,

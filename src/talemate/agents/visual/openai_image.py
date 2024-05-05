@@ -109,7 +109,7 @@ class OpenAIImageMixin:
             size=f"{resolution.width}x{resolution.height}",
             quality=self.openai_quality,
             n=1,
-            response_format="b64_json"
+            response_format="b64_json",
         )
 
         await self.emit_image(response.data[0].b64_json)

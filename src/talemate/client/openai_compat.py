@@ -17,7 +17,7 @@ EXPERIMENTAL_DESCRIPTION = """Use this client if you want to connect to a servic
 class Defaults(pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
     api_key: str = ""
-    max_token_length: int = 4096
+    max_token_length: int = 8192
     model: str = ""
     api_handles_prompt_template: bool = False
 
@@ -145,7 +145,7 @@ class OpenAICompatibleClient(ClientBase):
             self.api_url = kwargs["api_url"]
         if "max_token_length" in kwargs:
             self.max_token_length = (
-                int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 4096
+                int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 8192
             )
         if "api_key" in kwargs:
             self.api_key = kwargs["api_key"]

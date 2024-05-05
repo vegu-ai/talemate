@@ -200,7 +200,7 @@ export default {
       if (defaults) {
         this.client.model = defaults.model || '';
         this.client.api_url = defaults.api_url || '';
-        this.client.max_token_length = defaults.max_token_length || 4096;
+        this.client.max_token_length = defaults.max_token_length || 8192;
         this.client.double_coercion = defaults.double_coercion || null;
         // loop and build name from prefix, checking against current clients
         let name = this.clientTypes[this.client.type].name_prefix;

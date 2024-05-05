@@ -99,7 +99,7 @@ export default {
           type: '',
           api_url: '',
           model_name: '',
-          max_token_length: 4096,
+          max_token_length: 8192,
           double_coercion: null,
           data: {
             has_prompt_template: false,
@@ -156,7 +156,7 @@ export default {
         type: 'textgenwebui',
         api_url: 'http://localhost:5000',
         model_name: '',
-        max_token_length: 4096,
+        max_token_length: 8192,
         data: {
           has_prompt_template: false,
         }

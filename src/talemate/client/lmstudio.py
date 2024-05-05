@@ -7,7 +7,7 @@ from talemate.client.registry import register
 
 class Defaults(pydantic.BaseModel):
     api_url: str = "http://localhost:1234"
-    max_token_length: int = 4096
+    max_token_length: int = 8192
 
 
 @register()

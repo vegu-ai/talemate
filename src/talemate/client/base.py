@@ -52,7 +52,7 @@ class ErrorAction(pydantic.BaseModel):
 
 class Defaults(pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
-    max_token_length: int = 4096
+    max_token_length: int = 8192
     double_coercion: str = None
 
 
@@ -71,7 +71,7 @@ class ClientBase:
     name: str = None
     enabled: bool = True
     current_status: str = None
-    max_token_length: int = 4096
+    max_token_length: int = 8192
     processing: bool = False
     connected: bool = False
     conversation_retries: int = 0
@@ -103,7 +103,7 @@ class ClientBase:
         self.double_coercion = kwargs.get("double_coercion", None)
         if "max_token_length" in kwargs:
             self.max_token_length = (
-                int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 4096
+                int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 8192
             )
         self.set_client(max_token_length=self.max_token_length)
 

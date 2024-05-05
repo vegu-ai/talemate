@@ -191,6 +191,35 @@
                                         </v-row>
                                     </div>
 
+                                    <!-- GOOGLE API
+                                         THis adds fields for 
+                                            gcloud_credentials_path
+                                            gcloud_project_id
+                                            gcloud_location
+                                    -->
+
+                                    <div v-if="applicationPageSelected === 'google_api'">
+                                        <v-alert color="white" variant="text" icon="mdi-google-cloud" density="compact">
+                                            <v-alert-title>Google Cloud</v-alert-title>
+                                            <div class="text-grey">
+                                                In order for you to use Google Cloud services like the vertexi ai api for Gemini inference you will need to set up a Google Cloud project and credentials.
+                                                
+                                                Please follow the instructions <a href="https://cloud.google.com/vertex-ai/docs/start/client-libraries">here</a> and then fill in the fields below.
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-text-field v-model="app_config.google.gcloud_credentials_path"
+                                                    label="Google Cloud Credentials Path" messages="This should be a path to the credentials JSON file you downloaded through the setup above. This path needs to be accessible by the computer that is running the Talemate backend. If you are running Talemate on a server, you can upload the file to the server and the path should be the path to the file on the server."></v-text-field>
+                                            </v-col>
+                                            <v-col cols="6">
+                                                <v-combobox v-model="app_config.google.gcloud_location"
+                                                    label="Google Cloud Location" :items="googleCloudLocations" messages="Pick something close to you" :return-object="false"></v-combobox>
+                                            </v-col>
+                                        </v-row>
+                                    </div>
+
                                     <!-- ELEVENLABS API -->
                                     <div v-if="applicationPageSelected === 'elevenlabs_api'">
                                         <v-alert color="white" variant="text" icon="mdi-api" density="compact">
@@ -315,6 +344,7 @@ export default {
                     {title: 'Anthropic', icon: 'mdi-api', value: 'anthropic_api'},
                     {title: 'Cohere', icon: 'mdi-api', value: 'cohere_api'},
                     {title: 'groq', icon: 'mdi-api', value: 'groq_api'},
+                    {title: 'Google Cloud', icon: 'mdi-google-cloud', value: 'google_api'},
                     {title: 'ElevenLabs', icon: 'mdi-api', value: 'elevenlabs_api'},
                     {title: 'RunPod', icon: 'mdi-api', value: 'runpod_api'},
                 ],
@@ -325,6 +355,40 @@ export default {
             gamePageSelected: 'general',
             applicationPageSelected: 'openai_api',
             creatorPageSelected: 'content_context',
+            googleCloudLocations: [
+                {"value": 'us-central1', "title": 'US Central - Iowa'},
+                {"value": 'us-west4', "title": 'US West 4 - Las Vegas'},
+                {"value": 'us-east1', "title": 'US East 1 - South Carolina'},
+                {"value": 'us-east4', "title": 'US East 4 - Northern Virginia'},
+                {"value": 'us-west1', "title": 'US West 1 - Oregon'},
+                {"value": 'northamerica-northeast1', "title": 'North America Northeast 1 - Montreal'},
+                {"value": 'southamerica-east1', "title": 'South America East 1 - Sao Paulo'},
+                {"value": 'europe-west1', "title": 'Europe West 1 - Belgium'},
+                {"value": 'europe-north1', "title": 'Europe North 1 - Finland'},
+                {"value": 'europe-west3', "title": 'Europe West 3 - Frankfurt'},
+                {"value": 'europe-west2', "title": 'Europe West 2 - London'},
+                {"value": 'europe-southwest1', "title": 'Europe Southwest 1 - Zurich'},
+                {"value": 'europe-west8', "title": 'Europe West 8 - Netherlands'},
+                {"value": 'europe-west4', "title": 'Europe West 4 - London'},
+                {"value": 'europe-west9', "title": 'Europe West 9 - Stockholm'},
+                {"value": 'europe-central2', "title": 'Europe Central 2 - Warsaw'},
+                {"value": 'europe-west6', "title": 'Europe West 6 - Zurich'},
+                {"value": 'asia-east1', "title": 'Asia East 1 - Taiwan'},
+                {"value": 'asia-east2', "title": 'Asia East 2 - Hong Kong'},
+                {"value": 'asia-south1', "title": 'Asia South 1 - Mumbai'},
+                {"value": 'asia-northeast1', "title": 'Asia Northeast 1 - Tokyo'},
+                {"value": 'asia-northeast3', "title": 'Asia Northeast 3 - Seoul'},
+                {"value": 'asia-southeast1', "title": 'Asia Southeast 1 - Singapore'},
+                {"value": 'asia-southeast2', "title": 'Asia Southeast 2 - Jakarta'},
+                {"value": 'australia-southeast1', "title": 'Australia Southeast 1 - Sydney'},
+                {"value": 'australia-southeast2', "title": 'Australia Southeast 2 - Melbourne'},
+                {"value": 'me-west1', "title": 'Middle East West 1 - Dammam'},
+                {"value": 'asia-northeast2', "title": 'Asia Northeast 2 - Osaka'},
+                {"value": 'asia-northeast3', "title": 'Asia Northeast 3 - Seoul'},
+                {"value": 'asia-south1', "title": 'Asia South 1 - Mumbai'},
+                {"value": 'asia-southeast1', "title": 'Asia Southeast 1 - Singapore'},
+                {"value": 'asia-southeast2', "title": 'Asia Southeast 2 - Jakarta'}
+            ].sort((a, b) => a.title.localeCompare(b.title))
         }
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'requestSceneAssets', 'requestAppConfig'],

@@ -2,6 +2,7 @@
 A unified client base, based on the openai API
 """
 
+import ipaddress
 import logging
 import random
 import time
@@ -9,6 +10,7 @@ from typing import Callable, Union
 
 import pydantic
 import structlog
+import urllib3
 from openai import AsyncOpenAI, PermissionDeniedError
 
 import talemate.client.presets as presets
@@ -24,11 +26,6 @@ from talemate.emit import emit
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 log = structlog.get_logger("client.base")
-
-REMOTE_SERVICES = [
-    # TODO: runpod.py should add this to the list
-    ".runpod.net"
-]
 
 STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 
@@ -55,7 +52,7 @@ class ErrorAction(pydantic.BaseModel):
 
 class Defaults(pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
-    max_token_length: int = 4096
+    max_token_length: int = 8192
     double_coercion: str = None
 
 
@@ -74,7 +71,7 @@ class ClientBase:
     name: str = None
     enabled: bool = True
     current_status: str = None
-    max_token_length: int = 4096
+    max_token_length: int = 8192
     processing: bool = False
     connected: bool = False
     conversation_retries: int = 0
@@ -106,7 +103,7 @@ class ClientBase:
         self.double_coercion = kwargs.get("double_coercion", None)
         if "max_token_length" in kwargs:
             self.max_token_length = (
-                int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 4096
+                int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 8192
             )
         self.set_client(max_token_length=self.max_token_length)
 
@@ -179,21 +176,46 @@ class ClientBase:
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
 
+    def host_is_remote(self, url: str) -> bool:
+        """
+        Returns whether or not the host is a remote service.
+
+        It checks common local hostnames / ip prefixes.
+
+        - localhost
+        """
+
+        host = urllib3.util.parse_url(url).host
+
+        if host.lower() == "localhost":
+            return False
+
+        # use ipaddress module to check for local ip prefixes
+        try:
+            ip = ipaddress.ip_address(host)
+        except ValueError:
+            return True
+
+        if ip.is_loopback or ip.is_private:
+            return False
+
+        return True
+
     def toggle_disabled_if_remote(self):
         """
         If the client is targeting a remote recognized service, this
         will disable the client.
         """
 
-        for service in REMOTE_SERVICES:
-            if service in self.api_url:
-                if self.enabled:
-                    self.log.warn(
-                        "remote service unreachable, disabling client", client=self.name
-                    )
-                self.enabled = False
+        if not self.api_url:
+            return False
 
-                return True
+        if self.host_is_remote(self.api_url) and self.enabled:
+            self.log.warn(
+                "remote service unreachable, disabling client", client=self.name
+            )
+            self.enabled = False
+            return True
 
         return False
 
@@ -344,6 +366,14 @@ class ClientBase:
         if status_change:
             instance.emit_agent_status_by_client(self)
 
+    def populate_extra_fields(self, data: dict):
+        """
+        Updates data with the extra fields from the client's Meta
+        """
+
+        for field_name in getattr(self.Meta(), "extra_fields", {}).keys():
+            data[field_name] = getattr(self, field_name, None)
+
     def determine_prompt_template(self):
         if not self.model_name:
             return
@@ -387,7 +417,6 @@ class ClientBase:
         self.connected = True
 
         if not self.model_name or self.model_name == "None":
-            self.log.warning("client model not loaded", client=self)
             self.emit_status()
             return
 
@@ -512,9 +541,8 @@ class ClientBase:
                 max_token_length=self.max_token_length,
                 parameters=prompt_param,
             )
-            response = await self.generate(
-                self.repetition_adjustment(finalized_prompt), prompt_param, kind
-            )
+            prompt_sent = self.repetition_adjustment(finalized_prompt)
+            response = await self.generate(prompt_sent, prompt_param, kind)
 
             response, finalized_prompt = await self.auto_break_repetition(
                 finalized_prompt, prompt_param, response, kind, retries
@@ -536,7 +564,7 @@ class ClientBase:
                 "prompt_sent",
                 data=PromptData(
                     kind=kind,
-                    prompt=finalized_prompt,
+                    prompt=prompt_sent,
                     response=response,
                     prompt_tokens=self._returned_prompt_tokens or token_length,
                     response_tokens=self._returned_response_tokens
@@ -714,7 +742,6 @@ class ClientBase:
 
         lines = prompt.split("\n")
         new_lines = []
-
         for line in lines:
             if line.startswith("[$REPETITION|"):
                 if is_repetitive:

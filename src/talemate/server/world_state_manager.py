@@ -4,6 +4,7 @@ from typing import Any, Union
 import pydantic
 import structlog
 
+from talemate.instance import get_agent
 from talemate.world_state.manager import (
     StateReinforcementTemplate,
     WorldStateManager,
@@ -103,6 +104,10 @@ class SaveWorldStateTemplatePayload(pydantic.BaseModel):
 
 class DeleteWorldStateTemplatePayload(pydantic.BaseModel):
     template: StateReinforcementTemplate
+
+
+class GenerateCharacterDialogueInstructionsPayload(pydantic.BaseModel):
+    name: str
 
 
 class WorldStateManagerPlugin:
@@ -602,3 +607,36 @@ class WorldStateManagerPlugin:
 
         await self.handle_get_templates({})
         await self.signal_operation_done()
+
+    async def handle_generate_character_dialogue_instructions(self, data):
+        payload = GenerateCharacterDialogueInstructionsPayload(**data)
+
+        log.debug("Generate character dialogue instructions", name=payload.name)
+
+        character = self.scene.get_character(payload.name)
+
+        if not character:
+            log.error("Character not found", name=payload.name)
+            return
+
+        creator = get_agent("creator")
+
+        instructions = await creator.determine_character_dialogue_instructions(
+            character
+        )
+
+        character.dialogue_instructions = instructions
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "character_dialogue_instructions_generated",
+                "data": {
+                    "name": payload.name,
+                    "instructions": instructions,
+                },
+            }
+        )
+
+        await self.signal_operation_done()
+        self.scene.emit_status()

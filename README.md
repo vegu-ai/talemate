@@ -13,6 +13,7 @@ Supported APIs:
 - [mistral.ai](https://mistral.ai/)
 - [Cohere](https://www.cohere.com/)
 - [Groq](https://www.groq.com/)
+- [Google Gemini](https://console.cloud.google.com/)
 
 Supported self-hosted APIs:
 - [oobabooga/text-generation-webui](https://github.com/oobabooga/text-generation-webui) (local or with runpod support)
@@ -50,6 +51,8 @@ Please read the documents in the `docs` folder for more advanced configuration a
             - [Specifying the correct prompt template](#specifying-the-correct-prompt-template)
             - [Recommended Models](#recommended-models)
         - [DeepInfra via OpenAI Compatible client](#deepinfra-via-openai-compatible-client)
+        - [Google Gemini](#google-gemini)
+            - [Google Cloud Setup](#google-cloud-setup)
     - [Ready to go](#ready-to-go)
     - [Load the introductory scenario "Infinity Quest"](#load-the-introductory-scenario-infinity-quest)
     - [Loading character cards](#loading-character-cards)
@@ -194,6 +197,36 @@ Models on DeepInfra that work well with Talemate:
 - [mistralai/Mixtral-8x7B-Instruct-v0.1](https://deepinfra.com/mistralai/Mixtral-8x7B-Instruct-v0.1) (max context 32k, 8k recommended)
 - [cognitivecomputations/dolphin-2.6-mixtral-8x7b](https://deepinfra.com/cognitivecomputations/dolphin-2.6-mixtral-8x7b) (max context 32k, 8k recommended)
 - [lizpreciatior/lzlv_70b_fp16_hf](https://deepinfra.com/lizpreciatior/lzlv_70b_fp16_hf) (max context 4k)
+
+## Google Gemini
+
+### Google Cloud Setup
+
+Unlike the other clients the setup for Google Gemini is a bit more involved as you will need to set up a google cloud project and credentials for it.
+
+Please follow their [instructions for setup](https://cloud.google.com/vertex-ai/docs/start/client-libraries) - which includes setting up a project, enabling the Vertex AI API, creating a service account, and downloading the credentials.
+
+Once you have downloaded the credentials, copy the JSON file into the talemate directory. You can rename it to something that's easier to remember, like `my-credentials.json`.
+
+### Add the client
+
+![Google Gemini](docs/img/0.25.0/google-add-client.png)
+
+The `Disable Safety Settings` option will turn off the google reponse validation for what they consider harmful content. Use at your own risk.
+
+### Conmplete the google cloud setup in talemate
+
+![Google Gemini](docs/img/0.25.0/google-setup-incomplete.png)
+
+Click the `SETUP GOOGLE API CREDENTIALS` button that will appear on the client.
+
+The google cloud setup modal will appear, fill in the path to the credentials file and select a location that is close to you.
+
+![Google Gemini](docs/img/0.25.0/google-cloud-setup.png)
+
+Click save and after a moment the client should have a green dot next to it, indicating that it is ready to go.
+
+![Google Gemini](docs/img/0.25.0/google-ready.png)
 
 ## Ready to go
 

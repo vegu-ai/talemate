@@ -46,6 +46,7 @@ from talemate.scene_message import (
     TimePassageMessage,
 )
 from talemate.util import colored_text, count_tokens, extract_metadata, wrap_text
+from talemate.util.prompt import condensed
 from talemate.world_state import WorldState
 from talemate.world_state.manager import WorldStateManager
 
@@ -1385,16 +1386,37 @@ class Scene(Emitter):
         conversation_format = self.conversation_format
         actor_direction_mode = self.get_helper("director").agent.actor_direction_mode
 
+        history_offset = kwargs.get("history_offset", 0)
+        message_id = kwargs.get("message_id")
+        include_reinfocements = kwargs.get("include_reinfocements", True)
+
+        # if message id is provided, find the message in the history
+        if message_id:
+
+            if history_offset:
+                log.warning(
+                    "context_history",
+                    message="history_offset is ignored when message_id is provided",
+                )
+
+            message_index = self.message_index(message_id)
+            history_start = message_index - 1
+        else:
+            history_start = len(self.history) - (1 + history_offset)
+
         # collect dialogue
 
         count = 0
 
-        for i in range(len(self.history) - 1, -1, -1):
+        for i in range(history_start, -1, -1):
             count += 1
 
             message = self.history[i]
 
             if message.hidden:
+                continue
+
+            if isinstance(message, ReinforcementMessage) and not include_reinfocements:
                 continue
 
             if isinstance(message, DirectorMessage):
@@ -1441,7 +1463,7 @@ class Scene(Emitter):
             if count_tokens(parts_context) + count_tokens(text) > budget_context:
                 break
 
-            parts_context.insert(0, text)
+            parts_context.insert(0, condensed(text))
 
         if count_tokens(parts_context + parts_dialogue) < 1024:
             intro = self.get_intro()
@@ -2202,6 +2224,7 @@ class Scene(Emitter):
             "ts": scene.ts,
             "help": scene.help,
             "experimental": scene.experimental,
+            "restore_from": scene.restore_from,
         }
 
     @property

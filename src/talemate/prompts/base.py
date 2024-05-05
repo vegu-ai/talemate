@@ -33,6 +33,7 @@ from talemate.util import (
     fix_faulty_json,
     remove_extra_linebreaks,
 )
+from talemate.util.prompt import condensed
 
 __all__ = [
     "Prompt",
@@ -94,14 +95,6 @@ def validate_line(line):
         and not line.strip().startswith("[end of")
         and not line.strip().startswith("</")
     )
-
-
-def condensed(s):
-    """Replace all line breaks in a string with spaces."""
-    r = s.replace("\n", " ").replace("\r", "")
-
-    # also replace multiple spaces with a single space
-    return re.sub(r"\s+", " ", r)
 
 
 def clean_response(response):
@@ -379,6 +372,7 @@ class Prompt:
         env.globals["len"] = lambda x: len(x)
         env.globals["max"] = lambda x, y: max(x, y)
         env.globals["min"] = lambda x, y: min(x, y)
+        env.globals["join"] = lambda x, y: y.join(x)
         env.globals["make_list"] = lambda: JoinableList()
         env.globals["make_dict"] = lambda: {}
         env.globals["count_tokens"] = lambda x: count_tokens(
@@ -388,6 +382,9 @@ class Prompt:
         env.globals["emit_status"] = self.emit_status
         env.globals["emit_system"] = lambda status, message: emit(
             "system", status=status, message=message
+        )
+        env.globals["llm_can_be_coerced"] = lambda: (
+            self.client.can_be_coerced if self.client else False
         )
         env.globals["emit_narrator"] = lambda message: emit("system", message=message)
         env.filters["condensed"] = condensed

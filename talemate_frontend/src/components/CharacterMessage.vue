@@ -12,7 +12,21 @@
       <div class="character-avatar">
         <!-- Placeholder for character avatar -->
       </div>
-      <v-textarea ref="textarea" v-if="editing" v-model="editing_text" @keydown.enter.prevent="submitEdit()" @blur="cancelEdit()" @keydown.escape.prevent="cancelEdit()">
+      <v-textarea 
+        ref="textarea" 
+        v-if="editing"
+        v-model="editing_text"
+
+        auto-grow
+
+        :hint="autocompleteInfoMessage(autocompleting) + ', Shift+Enter for newline'"
+        :loading="autocompleting"
+        :disabled="autocompleting"
+
+        @keydown.enter.prevent="handleEnter" 
+        @blur="autocompleting ? null : cancelEdit()"
+        @keydown.escape.prevent="cancelEdit()"
+        >
       </v-textarea>
       <div v-else class="character-text" @dblclick="startEdit()">
         <span v-for="(part, index) in parts" :key="index" :class="{ highlight: part.isNarrative }">
@@ -45,7 +59,7 @@
 <script>
 export default {
   props: ['character', 'text', 'color', 'message_id'],
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors'],
+  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage'],
   computed: {
     parts() {
       const parts = [];
@@ -68,11 +82,42 @@ export default {
   data() {
     return {
       editing: false,
+      autocompleting: false,
       editing_text: "",
       hovered: false,
     }
   },
   methods: {
+
+    handleEnter(event) {
+      // if ctrl -> autocomplete
+      // else -> submit
+      // shift -> newline
+
+      if (event.ctrlKey) {
+        this.autocompleteEdit();
+      } else if (event.shiftKey) {
+        this.editing_text += "\n";
+      } else {
+        this.submitEdit();
+      }
+    },
+
+    autocompleteEdit() {
+      this.autocompleting = true;
+      this.autocompleteRequest(
+        {
+          partial: this.editing_text,
+          context: "dialogue:npc",
+          character: this.character,
+        },
+        (completion) => {
+          this.editing_text += completion;
+          this.autocompleting = false;
+        },
+        this.$refs.textarea
+      )
+    },
     cancelEdit() {
       console.log('cancelEdit', this.message_id);
       this.editing = false;

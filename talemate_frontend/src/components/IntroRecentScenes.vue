@@ -19,10 +19,10 @@
                 <div class="tile" v-for="(scene, index) in recentScenes()" :key="index">
                     <v-card density="compact" elevation="7"  @click="loadScene(scene)" color="primary" variant="outlined">
                         <v-card-title>
-                            {{ scene.name }}
+                            {{ filenameToTitle(scene.filename) }}
                         </v-card-title>
                         <v-card-subtitle>
-                            {{ scene.filename }}
+                            {{ scene.name }}
                         </v-card-subtitle>
                         <v-card-text>
                             <div class="cover-image-placeholder">
@@ -59,6 +59,14 @@ export default {
         },
     },
     methods: {
+
+        filenameToTitle(filename) {
+            // remove .json extension, replace _ with space, and capitalize first letter of each word
+
+            filename = filename.replace('.json', '');
+
+            return filename.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        },
 
         hasRecentScenes() {
             return this.config != null && this.config.recent_scenes != null && this.config.recent_scenes.scenes != null && this.config.recent_scenes.scenes.length > 0;

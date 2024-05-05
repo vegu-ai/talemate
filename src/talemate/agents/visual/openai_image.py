@@ -109,29 +109,10 @@ class OpenAIImageMixin:
             size=f"{resolution.width}x{resolution.height}",
             quality=self.openai_quality,
             n=1,
+            response_format="b64_json",
         )
 
-        download_url = response.data[0].url
-
-        # decode url because httpx will encode it again
-        download_url = unquote(download_url)
-        parsed = urlparse(download_url)
-        query = parse_qs(parsed.query)
-
-        log.debug("openai_image_generate", download_url=download_url, query=query)
-
-        async with httpx.AsyncClient() as client:
-            response = await client.get(download_url, params=query, timeout=90)
-            log.debug("openai_image_generate", status_code=response.status_code)
-            if response.status_code >= 400:
-                log.error(
-                    f"Error downloading image",
-                    content=response.content,
-                    status=response.status_code,
-                )
-            # bytes to base64encoded
-            image = base64.b64encode(response.content).decode("utf-8")
-            await self.emit_image(image)
+        await self.emit_image(response.data[0].b64_json)
 
     async def openai_image_ready(self) -> bool:
         """

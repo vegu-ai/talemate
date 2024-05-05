@@ -204,6 +204,8 @@ class CharacterCreatorMixin:
             "create_concise",
             vars={
                 "character": character,
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
             },
         )
 

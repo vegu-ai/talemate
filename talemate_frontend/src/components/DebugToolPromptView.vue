@@ -27,31 +27,42 @@
                             </v-list-item>
                             <v-list-subheader>
                                 <v-icon>mdi-details</v-icon>Parameters
+                                <v-btn size="x-small" variant="text" v-if="promptHasDirtyParams" color="orange" @click.stop="resetParams" prepend-icon="mdi-restore">Reset</v-btn>
                             </v-list-subheader>
-                            <v-list-item v-for="(value, name) in filteredParameters" :key="name">
-                                <v-list-item-subtitle color="grey-lighten-1">{{ name }}</v-list-item-subtitle>
-                                <p class="text-caption text-grey">
-                                    {{ value }}
-                                </p>
+                            <v-list-item>
+                                <v-text-field class="mt-1" v-for="(value, name) in filteredParameters" :key="name" v-model="prompt.generation_parameters[name]" :label="name" density="compact" variant="plain" placeholder="Value" :type="parameterType(name)">
+                                    <template v-slot:prepend-inner>
+                                        <v-icon class="mt-1" size="x-small">mdi-pencil</v-icon>
+                                    </template>
+
+                                </v-text-field>
+
                             </v-list-item>
                         </v-list>
                     </v-col>
-                    <v-col :cols="details ? 5 : 6">
+                    <v-col :cols="details ? 6 : 7">
                         <v-card flat>
-                            <v-card-title>Prompt</v-card-title>
+                            <v-card-title>Prompt
+                                <v-btn size="x-small" variant="text" v-if="promptHasDirtyPrompt" color="orange" @click.stop="resetPrompt" prepend-icon="mdi-restore">Reset</v-btn>
+                            </v-card-title>
                             <v-card-text>
                                 <!--
-                                <div class="prompt-view">{{  prompt.prompt }}</div>
-                                -->
                                 <v-textarea :disabled="busy" density="compact" v-model="prompt.prompt" rows="10" auto-grow max-rows="22"></v-textarea>
+                                -->
+                                <Codemirror
+                                    v-model="prompt.prompt"
+                                    :extensions="extensions"
+                                    :style="promptEditorStyle"
+                                ></Codemirror>
                             </v-card-text>
                         </v-card>
                     </v-col>
-                    <v-col :cols="details ? 5 : 6">
+                    <v-col :cols="details ? 4 : 5">
                         <v-card elevation="10" color="grey-darken-3">
                             <v-card-title>Response
                                 <v-progress-circular class="ml-1 mr-3" size="20" v-if="busy" indeterminate="disable-shrink"
-                                color="primary"></v-progress-circular>    
+                                color="primary"></v-progress-circular>
+                                <v-btn size="x-small" variant="text" v-else-if="promptHasDirtyResponse" color="orange" @click.stop="resetResponse" prepend-icon="mdi-restore">Reset</v-btn> 
                             </v-card-title>
                             <v-card-text style="max-height:600px; overflow-y:auto;" :class="busy ? 'text-grey' : 'text-white'">
                                 <div class="prompt-view">{{  prompt.response }}</div>
@@ -75,8 +86,16 @@
 </template>
 
 <script>
+import { Codemirror } from 'vue-codemirror'
+import { markdown } from '@codemirror/lang-markdown'
+import { oneDark } from '@codemirror/theme-one-dark'
+import { EditorView } from '@codemirror/view'
+
 export default {
     name: 'DebugToolPromptView',
+    components: {
+        Codemirror,
+    },
     data() {
         return {
             prompt: null,
@@ -102,12 +121,47 @@ export default {
 
             return filtered;
         },
+        promptHasDirtyParams() {
+            // compoare prompt.generation_parameters with prompt.original_generation_parameters
+            // use json string comparison
+            return JSON.stringify(this.prompt.generation_parameters) !== JSON.stringify(this.prompt.original_generation_parameters);
+        },
+        promptHasDirtyPrompt() {
+            return this.prompt.prompt !== this.prompt.original_prompt;
+        },
+        promptHasDirtyResponse() {
+            return this.prompt.response !== this.prompt.original_response;
+        },
     },
     inject: [
         "getWebsocket",
         'registerMessageHandler',
     ],
     methods: {
+
+        parameterType(name) {
+            // to vuetify text-field type
+            const typ = typeof this.prompt.original_generation_parameters[name];
+            if(typ === 'number') {
+                return 'number';
+            } else if(typ === 'boolean') {
+                return 'boolean';
+            } else {
+                return 'text';
+            }
+        },
+
+        resetParams() {
+            this.prompt.generation_parameters = JSON.parse(JSON.stringify(this.prompt.original_generation_parameters));
+        },
+
+        resetPrompt() {
+            this.prompt.prompt = this.prompt.original_prompt;
+        },
+
+        resetResponse() {
+            this.prompt.response = this.prompt.original_response;
+        },
 
         toggleDetailsLabel() {
             return this.details ? 'Hide Details' : 'Show Details';
@@ -185,6 +239,23 @@ export default {
     created() {
         this.registerMessageHandler(this.handleMessage);
     },
+    setup() {
+
+        const extensions = [
+            markdown(),
+            oneDark,
+            EditorView.lineWrapping
+        ];
+
+        const promptEditorStyle = {
+            maxHeight: "600px"
+        }
+
+        return {
+            extensions,
+            promptEditorStyle,
+        }
+    }
 }
 </script>
 

@@ -7,6 +7,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+import pydantic
+
 from talemate.emit import Emitter, emit
 
 if TYPE_CHECKING:
@@ -21,16 +23,22 @@ class TalemateCommand(Emitter, ABC):
     manager: CommandManager = None
     label: str = None
     sets_scene_unsaved: bool = True
+    argument_cls: pydantic.BaseModel | None = None
 
     def __init__(
         self,
         manager,
         *args,
+        **kwargs,
     ):
         self.scene = manager.scene
         self.manager = manager
-        self.args = args
         self.setup_emitter(self.scene)
+
+        if self.argument_cls is not None:
+            self.args = self.argument_cls(**kwargs)
+        else:
+            self.args = args
 
     @classmethod
     def is_command(cls, name):

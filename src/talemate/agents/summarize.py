@@ -61,6 +61,7 @@ class SummarizeAgent(Agent):
                             {"label": "Short & Concise", "value": "short"},
                             {"label": "Balanced", "value": "balanced"},
                             {"label": "Lengthy & Detailed", "value": "long"},
+                            {"label": "Factual List", "value": "facts"},
                         ],
                     ),
                     "include_previous": AgentActionConfig(
@@ -76,6 +77,15 @@ class SummarizeAgent(Agent):
                 },
             )
         }
+
+    @property
+    def threshold(self):
+        return self.actions["archive"].config["threshold"].value
+
+    @property
+    def estimated_entry_count(self):
+        all_tokens = sum([util.count_tokens(entry) for entry in self.scene.history])
+        return all_tokens // self.threshold
 
     def connect(self, scene):
         super().connect(scene)

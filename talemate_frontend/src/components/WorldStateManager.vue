@@ -1668,7 +1668,33 @@ export default {
                 this.characterList = message.data;
             }
             else if (message.action === 'character_details') {
+                // if we are currently editing an attribute, override it in the incoming data
+                // this fixes the annoying rubberbanding when editing an attribute
+                if (this.selectedCharacterAttribute) {
+                    message.data.base_attributes[this.selectedCharacterAttribute] = this.characterDetails.base_attributes[this.selectedCharacterAttribute];
+                }
+
+                // if we are currently editing a detail, override it in the incoming data
+                // this fixes the annoying rubberbanding when editing a detail
+                if (this.selectedCharacterDetail) {
+                    message.data.details[this.selectedCharacterDetail] = this.characterDetails.details[this.selectedCharacterDetail];
+                }
+
+                // if we are currently editing a description, override it in the incoming data
+                // this fixes the annoying rubberbanding when editing a description
+                if (this.characterDescriptionDirty) {
+                    message.data.description = this.characterDetails.description;
+                }
+
+                // if we are currently editing a state reinforcement, override it in the incoming data
+                // this fixes the annoying rubberbanding when editing a state reinforcement
+                if (this.characterStateReinforcerDirty) {
+                    message.data.reinforcements[this.selectedCharacterStateReinforcer] = this.characterDetails.reinforcements[this.selectedCharacterStateReinforcer];
+                }
+
                 this.characterDetails = message.data;
+
+
                 // select first attribute
                 if (!this.selectedCharacterAttribute)
                     this.selectedCharacterAttribute = Object.keys(this.characterDetails.base_attributes)[0];

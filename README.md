@@ -206,7 +206,7 @@ Unlike the other clients the setup for Google Gemini is a bit more involved as y
 
 Please follow their [instructions for setup](https://cloud.google.com/vertex-ai/docs/start/client-libraries) - which includes setting up a project, enabling the Vertex AI API, creating a service account, and downloading the credentials.
 
-Once you have downloaded the credentials you can either note where they are on your system or move them to the `talemate` directory.
+Once you have downloaded the credentials, copy the JSON file into the talemate directory. You can rename it to something that's easier to remember, like `my-credentials.json`.
 
 ### Add the client
 

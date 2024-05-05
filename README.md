@@ -168,19 +168,16 @@ In the case for `bartowski_Nous-Hermes-2-Mistral-7B-DPO-exl2_8_0` that is `ChatM
 
 ### Recommended Models 
 
-As of 2024.03.07 my personal regular drivers (the ones i test with) are:
+As of 2024.05.06 my personal regular drivers (the ones i test with) are:
 
-- Kunoichi-7B
-- sparsetral-16x7B
-- Nous-Hermes-2-Mistral-7B-DPO
+- meta-llama_Meta-Llama-3-8B-Instruct
 - brucethemoose_Yi-34B-200K-RPMerge
-- dolphin-2.7-mixtral-8x7b
 - rAIfle_Verdict-8x7B
-- Mixtral-8x7B-instruct
+- meta-llama_Meta-Llama-3-70B-Instruct
 
 That said, any of the top models in any of the size classes here should work well (i wouldn't recommend going lower than 7B):
 
-https://www.reddit.com/r/LocalLLaMA/comments/18yp9u4/llm_comparisontest_api_edition_gpt4_vs_gemini_vs/
+[https://oobabooga.github.io/benchmark.html](https://oobabooga.github.io/benchmark.html)
 
 ## DeepInfra via OpenAI Compatible client
 

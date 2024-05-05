@@ -410,7 +410,6 @@ class ClientBase:
             self.log.warning("client status error", e=e, client=self.name)
             self.model_name = None
             self.connected = False
-            self.toggle_disabled_if_remote()
             self.emit_status()
             return
 

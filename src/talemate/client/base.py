@@ -5,6 +5,8 @@ A unified client base, based on the openai API
 import logging
 import random
 import time
+import urllib3
+import ipaddress
 from typing import Callable, Union
 
 import pydantic
@@ -24,11 +26,6 @@ from talemate.emit import emit
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 log = structlog.get_logger("client.base")
-
-REMOTE_SERVICES = [
-    # TODO: runpod.py should add this to the list
-    ".runpod.net"
-]
 
 STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 
@@ -179,22 +176,48 @@ class ClientBase:
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
 
+    def host_is_remote(self, url:str) -> bool:
+        """
+        Returns whether or not the host is a remote service.
+        
+        It checks common local hostnames / ip prefixes.
+        
+        - localhost
+        """
+        
+        host = urllib3.util.parse_url(url).host
+        
+        if host.lower() == "localhost":
+            return False
+        
+        # use ipaddress module to check for local ip prefixes
+        try:
+            ip = ipaddress.ip_address(host)
+        except ValueError:
+            return True
+        
+        if ip.is_loopback or ip.is_private:
+            return False
+        
+        return True
+
+
     def toggle_disabled_if_remote(self):
         """
         If the client is targeting a remote recognized service, this
         will disable the client.
         """
-
-        for service in REMOTE_SERVICES:
-            if service in self.api_url:
-                if self.enabled:
-                    self.log.warn(
-                        "remote service unreachable, disabling client", client=self.name
-                    )
-                self.enabled = False
-
-                return True
-
+        
+        if not self.api_url:
+            return False
+        
+        if self.host_is_remote(self.api_url) and self.enabled:
+            self.log.warn(
+                "remote service unreachable, disabling client", client=self.name
+            )
+            self.enabled = False
+            return True
+        
         return False
 
     def get_system_message(self, kind: str) -> str:
@@ -395,7 +418,6 @@ class ClientBase:
         self.connected = True
 
         if not self.model_name or self.model_name == "None":
-            self.log.warning("client model not loaded", client=self)
             self.emit_status()
             return
 

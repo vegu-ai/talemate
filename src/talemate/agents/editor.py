@@ -201,7 +201,11 @@ class EditorAgent(Agent):
 
     @set_processing
     async def check_continuity_errors(
-        self, content: str, character: Character, force: bool = False, fix: bool = True
+        self, content: str, 
+        character: Character, 
+        force: bool = False, 
+        fix: bool = True,
+        message_id: int = None,
     ) -> str:
         """
         Edits a text to ensure that it is consistent with the scene
@@ -222,6 +226,8 @@ class EditorAgent(Agent):
                 content=content[:255],
             )
             return content
+        
+        log.debug("check_continuity_errors START", content=content, character=character, force=force, fix=fix, message_id=message_id)
 
         response = await Prompt.request(
             "editor.check-continuity-errors",
@@ -232,6 +238,7 @@ class EditorAgent(Agent):
                 "character": character,
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
+                "message_id": message_id,
             },
         )
 

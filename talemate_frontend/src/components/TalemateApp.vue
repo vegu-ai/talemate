@@ -140,13 +140,17 @@
           <CharacterSheet ref="characterSheet" />
           <SceneHistory ref="sceneHistory" />
 
-          <v-text-field
+          <v-textarea
             v-model="messageInput" 
             :label="inputHint" 
+            rows="1"
+            auto-grow
             outlined 
             ref="messageInput" 
-            @keyup.enter="sendMessage"
+            @keydown.enter.prevent="sendMessage"
+            hint="Ctrl+Enter to autocomplete, Shift+Enter for newline"
             :disabled="isInputDisabled()" 
+            :loading="autocompleting"
             :prepend-inner-icon="messageInputIcon()"
             :color="messageInputColor()">
             <template v-slot:append>
@@ -155,7 +159,7 @@
                 <v-icon v-else>mdi-skip-next</v-icon>
               </v-btn>
             </template>
-          </v-text-field>
+          </v-textarea>
         </div>
 
         <IntroView v-else 
@@ -244,6 +248,10 @@ export default {
       messageHandlers: [],
       scene: {},
       appConfig: {},
+      autcompleting: false,
+      autocompletePartialInput: "",
+      autocompleteCallback: null,
+      autocompleteFocusElement: null,
     }
   },
   mounted() {
@@ -281,6 +289,8 @@ export default {
       getTrackedWorldState: (question) => this.$refs.worldState.trackedWorldState(question),
       getPlayerCharacterName: () => this.getPlayerCharacterName(),
       formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
+      autocompleteRequest: (partialInput, callback, focus_element) => this.autocompleteRequest(partialInput, callback, focus_element),
+      autocompleteInfoMessage: (active) => this.autocompleteInfoMessage(active),
     };
   },
   methods: {
@@ -383,6 +393,9 @@ export default {
 
       if (data.type === 'autocomplete_suggestion') {
 
+        if(!this.autocompleteCallback)
+          return;
+
         const completion = data.message;
 
         // append completion to messageInput, add a space if
@@ -391,11 +404,23 @@ export default {
 
         const completionStartsWithSentenceEnd = completion.startsWith('!') || completion.startsWith('.') || completion.startsWith('?') || completion.startsWith(')') || completion.startsWith(']') || completion.startsWith('}') || completion.startsWith('"') || completion.startsWith("'") || completion.startsWith("*") || completion.startsWith(",")
 
-        if (this.messageInput.endsWith(' ') || completion.startsWith(' ') || completionStartsWithSentenceEnd) {
-          this.messageInput += completion;
+        if (this.autocompletePartialInput.endsWith(' ') || completion.startsWith(' ') || completionStartsWithSentenceEnd) {
+          this.autocompleteCallback(completion);
         } else {
-          this.messageInput += ' ' + completion;
+          this.autocompleteCallback(' ' + completion);
         }
+
+        if (this.autocompleteFocusElement) {
+          let focus_element = this.autocompleteFocusElement;
+          setTimeout(() => {
+            focus_element.focus();
+          }, 200);
+          this.autocompleteFocusElement = null;
+        }
+
+        this.autocompleteCallback = null;
+        this.autocompletePartialInput = "";
+        return;
       }
 
       if (data.type === 'request_input') {
@@ -439,7 +464,26 @@ export default {
 
       // if ctrl+enter is pressed, request autocomplete
       if (event.ctrlKey && event.key === 'Enter') {
-        this.websocket.send(JSON.stringify({ type: 'interact', text: `!acdlg: ${this.messageInput}` }));
+        this.autocompleting = true
+        this.inputDisabled = true;
+        this.autocompleteRequest(
+          {
+            partial: this.messageInput,
+            context: "dialogue:player"
+          }, 
+          (completion) => {
+            this.inputDisabled = false
+            this.autocompleting = false
+            this.messageInput += completion;
+          },
+          this.$refs.messageInput
+        );
+        return;
+      }
+
+      // if shift+enter is pressed, add a newline
+      if (event.shiftKey && event.key === 'Enter') {
+        this.messageInput += "\n";
         return;
       }
 
@@ -450,6 +494,26 @@ export default {
         this.waitingForInput = false;
       }
     },
+
+    autocompleteRequest(param, callback, focus_element) {
+
+      this.autocompleteCallback = callback;
+      this.autocompleteFocusElement = focus_element;
+      this.autocompletePartialInput = param.partial;
+
+      const param_copy = JSON.parse(JSON.stringify(param));
+      param_copy.type = "assistant";
+      param_copy.action = "autocomplete";
+
+      this.websocket.send(JSON.stringify(param_copy));
+
+      //this.websocket.send(JSON.stringify({ type: 'interact', text: `!autocomplete:${JSON.stringify(param)}` }));
+    },
+
+    autocompleteInfoMessage(active) {
+      return active ? 'Generating ...' : "Ctrl+Enter to autocomplete";
+    },
+
     requestAppConfig() {
       this.websocket.send(JSON.stringify({ type: 'request_app_config' }));
     },

@@ -35,8 +35,8 @@ PRESET_LLAMA_PRECISE = {
 }
 
 PRESET_DETERMINISTIC = {
-    "temperature": 0.01,
-    "top_p": 0.01,
+    "temperature": 0.1,
+    "top_p": 1,
     "top_k": 0,
     "repetition_penalty": 1.0,
 }
@@ -54,6 +54,12 @@ PRESET_SIMPLE_1 = {
     "top_p": 0.9,
     "top_k": 20,
     "repetition_penalty": 1.15,
+}
+
+PRESET_ANALYTICAL = {
+    "temperature": 0.1,
+    "top_p": 0.9,
+    "top_k": 20,
 }
 
 
@@ -82,7 +88,17 @@ def set_preset(config: dict, kind: str):
 
 
 def preset_for_kind(kind: str):
-    if kind == "conversation":
+
+    # tag based
+    if "deterministic" in kind:
+        return PRESET_DETERMINISTIC
+    elif "creative" in kind:
+        return PRESET_DIVINE_INTELLECT
+    elif "simple" in kind:
+        return PRESET_SIMPLE_1
+    elif "analytical" in kind:
+        return PRESET_ANALYTICAL
+    elif kind == "conversation":
         return PRESET_TALEMATE_CONVERSATION
     elif kind == "conversation_old":
         return PRESET_TALEMATE_CONVERSATION  # Assuming old conversation uses the same preset
@@ -133,11 +149,6 @@ def preset_for_kind(kind: str):
     elif kind == "visualize":
         return PRESET_SIMPLE_1
 
-    # tag based
-    elif "deterministic" in kind:
-        return PRESET_DETERMINISTIC
-    elif "creative" in kind:
-        return PRESET_DIVINE_INTELLECT
     else:
         return PRESET_SIMPLE_1  # Default preset if none of the kinds match
 

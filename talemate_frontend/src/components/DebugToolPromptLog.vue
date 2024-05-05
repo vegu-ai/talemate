@@ -99,6 +99,10 @@ export default {
                     time: parseInt(data.data.time),
                     num: this.total++,
                     generation_parameters: data.data.generation_parameters,
+                    // immutable copy of original generation parameters
+                    original_generation_parameters: JSON.parse(JSON.stringify(data.data.generation_parameters)),
+                    original_prompt: data.data.prompt,
+                    original_response: data.data.response,
                 })
 
                 while(this.prompts.length > this.max_prompts) {

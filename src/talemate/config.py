@@ -162,6 +162,11 @@ class CoquiConfig(BaseModel):
     api_key: Union[str, None] = None
 
 
+class GoogleConfig(BaseModel):
+    gcloud_credentials_path: Union[str, None] = None
+    gcloud_location: Union[str, None] = None
+
+
 class TTSVoiceSamples(BaseModel):
     label: str
     value: str
@@ -336,6 +341,8 @@ class Config(BaseModel):
     groq: GroqConfig = GroqConfig()
 
     runpod: RunPodConfig = RunPodConfig()
+
+    google: GoogleConfig = GoogleConfig()
 
     chromadb: ChromaDB = ChromaDB()
 

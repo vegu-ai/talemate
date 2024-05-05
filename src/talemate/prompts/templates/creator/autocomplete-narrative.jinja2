@@ -11,11 +11,11 @@
 {% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-Continue {{ character.name }}'s unfinished line in this screenplay.
+Continue the unfinished section of the next narrative.
 
-Your response MUST only be the new parts of {{ character.name }}'s dialogue, not the entire line.
+Your response MUST only be the new parts of the narrative completion, not the entire line. Never add dialogue.
 
-Continue this text: {{ character.name }}: {{ input }}
+Continue this text: {{ input }}
 {% if not can_coerce -%}
 Continuation: 
 <|CLOSE_SECTION|>

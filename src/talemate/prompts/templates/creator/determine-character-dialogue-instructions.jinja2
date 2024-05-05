@@ -3,13 +3,20 @@
 {{ character.description }}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-Your task is to determine fitting dialogue instructions for this character.
+Your task is to determine fitting dialogue instructions for {{ character.name }}.
 
 By default all actors are given the following instructions for their character(s):
 
 Dialogue instructions: "Use an informal and colloquial register with a conversational tone. Overall, {{ character.name }}'s dialog is informal, conversational, natural, and spontaneous, with a sense of immediacy."
 
 However you can override this default instruction by providing your own instructions below.
+
+{{ character.name }} is a character in {{ scene.context }}. The goal is always for {{ character.name }} to feel like a believable character in the context of the scene.
+
+The character MUST feel relatable to the audience.
+
+You must use simple language to describe the character's dialogue instructions.
+
 Keep the format similar and stick to one paragraph.
 <|CLOSE_SECTION|>
 {{ bot_token }}Dialogue instructions:

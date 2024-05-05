@@ -6,7 +6,10 @@
             </v-card-title>
             <v-card-text style="max-height:600px; overflow-y:scroll;">
                 <v-list-item v-for="(entry, index) in history" :key="index" class="text-body-2">
-                    {{ entry.ts }} {{ entry.text }}
+                    <v-list-item-subtitle>{{ entry.ts }}</v-list-item-subtitle>
+                    <div class="history-entry">
+                        {{ entry.text }}
+                    </div>
                     <v-divider class="mt-1"></v-divider>
                 </v-list-item>
             </v-card-text>
@@ -63,4 +66,8 @@ export default {
 }
 </script>
 
-<style scoped></style>
+<style scoped>
+.history-entry {
+    white-space: pre-wrap;
+}
+</style>

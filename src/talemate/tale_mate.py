@@ -1880,11 +1880,16 @@ class Scene(Emitter):
         )
 
         await self.world_state_manager.apply_all_auto_create_templates()
-
+        
+        # if loop sets this to True, we skip to the player
+        skip_to_player = False
+            
         while continue_scene:
             log.debug(
                 "game loop", auto_save=self.auto_save, auto_progress=self.auto_progress
             )
+            
+
 
             try:
                 await self.load_active_pins()
@@ -1897,6 +1902,11 @@ class Scene(Emitter):
                 signal_game_loop = True
 
                 for actor in self.actors:
+                    
+                    if skip_to_player and not isinstance(actor, Player):
+                        continue
+                    
+                    skip_to_player = False
 
                     if not actor.character:
                         self.log.warning("Actor has no character", actor=actor)
@@ -1977,6 +1987,15 @@ class Scene(Emitter):
                 )
             except TalemateError as e:
                 self.log.error("game_loop", error=e)
+            except client.ClientDisabledError as e:
+                self.log.error("game_loop", error=e)
+                emit(
+                    "status",
+                    status="error",
+                    message=f"{e.client.name} is disabled and cannot be used.",
+                )
+                signal_game_loop = False
+                skip_to_player = True
             except Exception as e:
                 self.log.error(
                     "game_loop",

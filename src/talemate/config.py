@@ -36,8 +36,9 @@ class Client(BaseModel):
     model: Union[str, None] = None
     api_url: Union[str, None] = None
     api_key: Union[str, None] = None
-    max_token_length: int = 4096
+    max_token_length: int = 8192
     double_coercion: Union[str, None] = None
+    enabled: bool = True
 
     class Config:
         extra = "ignore"

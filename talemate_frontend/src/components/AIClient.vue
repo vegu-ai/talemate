@@ -1,76 +1,90 @@
 <template>
   <div v-if="isConnected()">
-    <v-list v-for="(client, index) in state.clients" :key="index">
+    <v-list density="compact" v-for="(client, index) in state.clients" :key="index">
       <v-list-item>
-
-        <v-divider v-if="index !== 0" class="mb-3"></v-divider>
         <v-list-item-title>
           <v-progress-circular v-if="client.status === 'busy'" indeterminate="disable-shrink" color="primary"
             size="14"></v-progress-circular>
           
           <v-icon v-else-if="client.status == 'warning'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>
           <v-icon v-else-if="client.status == 'error'" color="red-darken-1" size="14">mdi-checkbox-blank-circle</v-icon>
-          <v-icon v-else-if="client.status == 'disabled'" color="grey-darken-2" size="14">mdi-checkbox-blank-circle</v-icon>
+          <v-btn v-else-if="client.status == 'disabled'" size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleClient(client)" icon="mdi-power-standby"></v-btn>
           <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
-          {{ client.name }}          
+          <span :class="client.status == 'disabled' ? 'text-grey-darken-2 ml-1' : 'ml-1'"> {{ client.name }}</span>       
         </v-list-item-title>
-        <v-list-item-subtitle class="text-caption" v-if="client.data.error_action != null">
-          <v-btn class="mt-1 mb-1" variant="tonal" :prepend-icon="client.data.error_action.icon" size="x-small" color="warning" @click.stop="callErrorAction(client, client.data.error_action)">
-            {{ client.data.error_action.title }}
-          </v-btn>
-        </v-list-item-subtitle> 
-        <v-list-item-subtitle class="text-caption">
-          {{ client.model_name }}
-        </v-list-item-subtitle>
-        <v-list-item-subtitle class="text-caption">
-          {{ client.type }} 
-          <v-chip label size="x-small" variant="outlined" class="ml-1">ctx {{ client.max_token_length }}</v-chip>
-        </v-list-item-subtitle>
-        <div density="compact">
-          <v-slider
-            hide-details
-            v-model="client.max_token_length"
-            :min="1024"
-            :max="128000"
-            :step="1024"
-            @update:modelValue="saveClientDelayed(client)"
-            @click.stop
-            density="compact"
-          ></v-slider>
+        <div v-if="client.enabled">
+
+          <v-list-item-subtitle class="text-caption" v-if="client.data.error_action != null">
+            <v-btn class="mt-1 mb-1" variant="tonal" :prepend-icon="client.data.error_action.icon" size="x-small" color="warning" @click.stop="callErrorAction(client, client.data.error_action)">
+              {{ client.data.error_action.title }}
+            </v-btn>
+          </v-list-item-subtitle> 
+          <v-list-item-subtitle class="text-caption">
+            {{ client.model_name }}
+          </v-list-item-subtitle>
+          <v-list-item-subtitle class="text-caption">
+            {{ client.type }} 
+            <v-chip label size="x-small" variant="outlined" class="ml-1">ctx {{ client.max_token_length }}</v-chip>
+          </v-list-item-subtitle>
+          <div density="compact">
+            <v-slider
+              hide-details
+              v-model="client.max_token_length"
+              :min="1024"
+              :max="128000"
+              :step="1024"
+              @update:modelValue="saveClientDelayed(client)"
+              @click.stop
+              density="compact"
+            ></v-slider>
+          </div>
+          <v-list-item-subtitle class="text-center">
+
+            <!-- LLM prompt template warning -->
+            <v-tooltip text="No LLM prompt template for this model. Using default. Templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template" max-width="200">
+              <template v-slot:activator="{ props }">
+                <v-icon x-size="14" class="mr-1" v-bind="props" color="orange">mdi-alert</v-icon>
+              </template>
+            </v-tooltip>
+
+            <!-- coercion status -->
+            <v-tooltip :text="'Coercion active: ' + client.double_coercion" v-if="client.double_coercion" max-width="200">
+              <template v-slot:activator="{ props }">
+                <v-icon x-size="14" class="mr-1" v-bind="props" color="primary">mdi-account-lock-open</v-icon>
+              </template>
+            </v-tooltip>
+
+            <!-- disable/enable -->
+            <v-tooltip :text="client.enabled ? 'Disable':'Enable'">
+              <template v-slot:activator="{ props }">
+                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleClient(client)" icon="mdi-power-standby"></v-btn>
+              </template>
+            </v-tooltip>
+
+            <!-- edit client button -->
+            <v-tooltip text="Edit client">
+              <template v-slot:activator="{ props }">
+                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="editClient(index)" icon="mdi-cogs"></v-btn>
+
+              </template>
+            </v-tooltip>
+
+            <!-- assign to all agents button -->
+            <v-tooltip text="Assign to all agents">
+              <template v-slot:activator="{ props }">
+                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="assignClientToAllAgents(index)" icon="mdi-transit-connection-variant"></v-btn>
+              </template>
+            </v-tooltip>
+            
+            <!-- delete the client button -->
+            <v-tooltip text="Delete client">
+              <template v-slot:activator="{ props }">
+                <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="deleteClient(index)" icon="mdi-close-thick"></v-btn>
+              </template>
+            </v-tooltip>
+            
+          </v-list-item-subtitle>
         </div>
-        <v-list-item-subtitle class="text-center">
-
-          <v-tooltip text="No LLM prompt template for this model. Using default. Templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template" max-width="200">
-            <template v-slot:activator="{ props }">
-              <v-icon x-size="14" class="mr-1" v-bind="props" color="orange">mdi-alert</v-icon>
-            </template>
-          </v-tooltip>
-
-          <v-tooltip :text="'Coercion active: ' + client.double_coercion" v-if="client.double_coercion" max-width="200">
-            <template v-slot:activator="{ props }">
-              <v-icon x-size="14" class="mr-1" v-bind="props" color="primary">mdi-account-lock-open</v-icon>
-            </template>
-          </v-tooltip>
-
-          <v-tooltip text="Edit client">
-            <template v-slot:activator="{ props }">
-              <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="editClient(index)" icon="mdi-cogs"></v-btn>
-
-            </template>
-          </v-tooltip>
-          <v-tooltip text="Assign to all agents">
-            <template v-slot:activator="{ props }">
-              <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="assignClientToAllAgents(index)" icon="mdi-transit-connection-variant"></v-btn>
-            </template>
-          </v-tooltip>
-          
-          <v-tooltip text="Delete client">
-            <template v-slot:activator="{ props }">
-              <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="deleteClient(index)" icon="mdi-close-thick"></v-btn>
-            </template>
-          </v-tooltip>
-          
-        </v-list-item-subtitle>
       </v-list-item>
     </v-list>
     <ClientModal :dialog="state.dialog" :formTitle="state.formTitle" @save="saveClient" @error="propagateError" @update:dialog="updateDialog"></ClientModal>
@@ -214,6 +228,18 @@ export default {
       }
       this.$emit('client-assigned', agents);
     },
+
+    toggleClient(client) {
+      console.log("Toggling client", client.enabled, "to", !client.enabled)
+      client.enabled = !client.enabled;
+      if(client.enabled) {
+        client.status = 'warning';
+      } else {
+        client.status = 'disabled';
+      }
+      this.saveClient(client);
+    },
+
     updateDialog(newVal) {
       this.state.dialog = newVal;
     },
@@ -244,6 +270,7 @@ export default {
           client.api_key = data.api_key;
           client.double_coercion = data.data.double_coercion;
           client.data = data.data;
+          client.enabled = data.data.enabled;
         } else if(!client) {
           console.log("Adding new client", data);
 
@@ -258,6 +285,7 @@ export default {
             api_key: data.api_key,
             double_coercion: data.data.double_coercion,
             data: data.data,
+            enabled: data.data.enabled,
           });
           // sort the clients by name
           this.state.clients.sort((a, b) => (a.name > b.name) ? 1 : -1);

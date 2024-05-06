@@ -152,6 +152,9 @@ class OpenAICompatibleClient(ClientBase):
         if "api_handles_prompt_template" in kwargs:
             self.api_handles_prompt_template = kwargs["api_handles_prompt_template"]
 
+        if "enabled" in kwargs:
+            self.enabled = bool(kwargs["enabled"])
+            
         log.warning("reconfigure", kwargs=kwargs)
 
         self.set_client(**kwargs)

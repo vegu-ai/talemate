@@ -159,10 +159,11 @@ class OpenAIClient(ClientBase):
             message=self.client_type,
             id=self.name,
             details=model_name,
-            status=status,
+            status=status if self.enabled else "disabled",
             data={
                 "error_action": error_action.model_dump() if error_action else None,
                 "meta": self.Meta().model_dump(),
+                "enabled": self.enabled,
             },
         )
 
@@ -213,6 +214,10 @@ class OpenAIClient(ClientBase):
         if kwargs.get("model"):
             self.model_name = kwargs["model"]
             self.set_client(kwargs.get("max_token_length"))
+            
+        if "enabled" in kwargs:
+            self.enabled = bool(kwargs["enabled"])
+            
 
     def on_config_saved(self, event):
         config = event.data

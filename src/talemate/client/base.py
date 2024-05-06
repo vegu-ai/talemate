@@ -29,6 +29,11 @@ log = structlog.get_logger("client.base")
 
 STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 
+class ClientDisabledError(OSError):
+    def __init__(self, client: "ClientBase"):
+        self.client = client
+        self.message = f"Client {client.name} is disabled"
+        super().__init__(self.message)
 
 class PromptData(pydantic.BaseModel):
     kind: str
@@ -101,6 +106,7 @@ class ClientBase:
         self.auto_determine_prompt_template_attempt = None
         self.log = structlog.get_logger(f"client.{self.client_type}")
         self.double_coercion = kwargs.get("double_coercion", None)
+        self.enabled = kwargs.get("enabled", True)
         if "max_token_length" in kwargs:
             self.max_token_length = (
                 int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 8192
@@ -330,7 +336,7 @@ class ClientBase:
             # only attempt to determine the prompt template once per model and
             # only if the model does not already have a prompt template
 
-            if self.auto_determine_prompt_template_attempt != self.model_name:
+            if hasattr(self, "model_name") and self.auto_determine_prompt_template_attempt != self.model_name:
                 log.info("auto_determine_prompt_template", model_name=self.model_name)
                 self.auto_determine_prompt_template_attempt = self.model_name
                 self.determine_prompt_template()
@@ -349,6 +355,7 @@ class ClientBase:
             "meta": self.Meta().model_dump(),
             "error_action": None,
             "double_coercion": self.double_coercion,
+            "enabled": self.enabled,
         }
 
         for field_name in getattr(self.Meta(), "extra_fields", {}).keys():
@@ -511,6 +518,9 @@ class ClientBase:
         :param prompt: The text prompt to send.
         :return: The AI's response text.
         """
+        
+        if not self.enabled:
+            raise ClientDisabledError(self)
 
         try:
             self._returned_prompt_tokens = None

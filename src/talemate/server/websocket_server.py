@@ -219,8 +219,15 @@ class WebsocketHandler(Receiver):
             client.pop("status", None)
             client_cls = CLIENT_CLASSES.get(client["type"])
 
-            if client.get("model") == "No API key set":
-                client.pop("model", None)
+            # so hacky, such sad
+            ignore_model_names = ["Disabled", "No model loaded", "Could not connect", "No API key set"]
+            if client.get("model") in ignore_model_names:
+                # if client instance exists copy model_name from it
+                _client = instance.get_client(client["name"])
+                if _client:
+                    client["model"] = getattr(_client, "model_name", None   )
+                else:
+                    client.pop("model", None)
 
             if not client_cls:
                 log.error("Client type not found", client=client)
@@ -229,6 +236,7 @@ class WebsocketHandler(Receiver):
             client_config = self.llm_clients[client["name"]] = {
                 "name": client["name"],
                 "type": client["type"],
+                "enabled": client.get("enabled", True),
             }
             for dfl_key in client_cls.Meta().defaults.dict().keys():
                 client_config[dfl_key] = client.get(

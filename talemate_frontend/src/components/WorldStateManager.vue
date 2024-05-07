@@ -1,832 +1,827 @@
 <template>
-    <v-dialog v-model="dialog" scrollable max-width="1400px" min-height="600px">
-        <v-overlay contained v-model="isBusy"></v-overlay>
-        <v-card>
-            <v-card-title><v-icon class="mr-1">mdi-earth</v-icon>World State Manager
-                <v-progress-circular v-if="isBusy" indeterminate="disable-shrink" color="primary" size="11"></v-progress-circular>
-            </v-card-title>
-            <v-tabs color="primary" v-model="tab">
-                <v-tab value="characters">
-                    <v-icon start>mdi-account-group</v-icon>
-                    Characters
-                </v-tab>
-                <v-tab value="world">
-                    <v-icon start>mdi-earth</v-icon>
-                    World
-                </v-tab>
-                <v-tab v-if="historyEnabled" value="history" disabled>
-                    <v-icon start>mdi-history</v-icon>
-                    History
-                </v-tab>
-                <v-tab value="contextdb">
-                    <v-icon start>mdi-book-open-page-variant</v-icon>
-                    Context
-                </v-tab>
-                <v-tab value="pins">
-                    <v-icon start>mdi-pin</v-icon>
-                    Pins
-                </v-tab>
-                <v-tab value="templates">
-                    <v-icon start>mdi-cube-scan</v-icon>
-                    Templates
-                </v-tab>
+    <v-overlay contained v-model="isBusy"></v-overlay>
+    <v-card variant="text">
+        <v-tabs color="primary" v-model="tab">
+            <v-tab value="characters">
+                <v-icon start>mdi-account-group</v-icon>
+                Characters
+            </v-tab>
+            <v-tab value="world">
+                <v-icon start>mdi-earth</v-icon>
+                World
+            </v-tab>
+            <v-tab v-if="historyEnabled" value="history" disabled>
+                <v-icon start>mdi-history</v-icon>
+                History
+            </v-tab>
+            <v-tab value="contextdb">
+                <v-icon start>mdi-book-open-page-variant</v-icon>
+                Context
+            </v-tab>
+            <v-tab value="pins">
+                <v-icon start>mdi-pin</v-icon>
+                Pins
+            </v-tab>
+            <v-tab value="templates">
+                <v-icon start>mdi-cube-scan</v-icon>
+                Templates
+            </v-tab>
 
-            </v-tabs>
-            <v-window v-model="tab">
+        </v-tabs>
+        <v-window v-model="tab">
 
-                <!-- CHARACTERS -->
+            <!-- CHARACTERS -->
 
-                <v-window-item value="characters">
-                    <v-card flat>
-                        <v-card-text>
-                            <v-row>
-                                <v-col cols="2">
-                                    <v-tabs density="compact" direction="vertical" v-model="selectedCharacter" color="indigo-lighten-3">
-                                        <v-tab prepend-icon="mdi-account" v-for="character in characterList.characters" :key="character.name"
-                                            @click="loadCharacter(character.name)" :value="character.name">
-                                            <div class="text-left text-caption">
-                                                {{ character.name }}
-                                                <div class="text-caption">
-                                                <v-chip v-if="character.is_player === true" label size="x-small"
-                                                    variant="tonal" color="info">Player</v-chip>
-                                                <v-chip v-else-if="character.is_player === false" label size="x-small"
-                                                    variant="tonal" color="warning">AI</v-chip>
-                                                <v-chip v-if="character.active === true && character.is_player === false"
-                                                    label size="x-small" variant="tonal" color="success"
-                                                    class="ml-1">Active</v-chip>
-                                                </div>
-
+            <v-window-item value="characters">
+                <v-card flat>
+                    <v-card-text>
+                        <v-row>
+                            <v-col cols="2">
+                                <v-tabs density="compact" direction="vertical" v-model="selectedCharacter" color="indigo-lighten-3">
+                                    <v-tab prepend-icon="mdi-account" v-for="character in characterList.characters" :key="character.name"
+                                        @click="loadCharacter(character.name)" :value="character.name">
+                                        <div class="text-left text-caption">
+                                            {{ character.name }}
+                                            <div class="text-caption">
+                                            <v-chip v-if="character.is_player === true" label size="x-small"
+                                                variant="tonal" color="info">Player</v-chip>
+                                            <v-chip v-else-if="character.is_player === false" label size="x-small"
+                                                variant="tonal" color="warning">AI</v-chip>
+                                            <v-chip v-if="character.active === true && character.is_player === false"
+                                                label size="x-small" variant="tonal" color="success"
+                                                class="ml-1">Active</v-chip>
                                             </div>
-                                        </v-tab>
-                                    </v-tabs>
-                                </v-col>
-                                <v-col cols="10">
-                                    <div v-if="selectedCharacter !== null">
-                                        <v-card>
-                                            <v-card-title>
-                                                <v-icon size="small">mdi-account</v-icon>
-                                                {{ characterDetails.name }}
-                                                <v-chip size="x-small" v-if="characterDetails.is_player === false" color="warning" label>AI</v-chip>
-                                                <v-chip size="x-small" v-if="characterDetails.is_player === true" color="info" label>Player</v-chip>
-                                                <v-chip size="x-small" class="ml-1" v-if="characterDetails.active === true && characterDetails.is_player === false" color="success" label>Active</v-chip>
-                                            
-                                                </v-card-title>
-                                            <v-divider></v-divider>
-                                            <v-tabs v-model="selectedCharacterPage" color="primary" density="compact">
-                                                <v-tab value="description">
-                                                    <v-icon size="small">mdi-text-account</v-icon>
-                                                    Description
-                                                </v-tab>
-                                                <v-tab value="attributes">
-                                                    <v-icon size="small">mdi-format-list-bulleted-type</v-icon>
-                                                    Attributes
-                                                </v-tab>
-                                                <v-tab value="details">
-                                                    <v-icon size="small">mdi-format-list-text</v-icon>
-                                                    Details
-                                                </v-tab>
-                                                <v-tab value="reinforce">
-                                                    <v-icon size="small">mdi-image-auto-adjust</v-icon>
-                                                    States
-                                                </v-tab>
-                                                <v-tab value="actor" :disabled="characterDetails.is_player">
-                                                    <v-icon size="small">mdi-bullhorn</v-icon>
-                                                    Actor
-                                                </v-tab>
-                                            </v-tabs>
 
-                                            <v-card-text>
-                                                <!-- CHARACTER DESCRIPTION -->
+                                        </div>
+                                    </v-tab>
+                                </v-tabs>
+                            </v-col>
+                            <v-col cols="10">
+                                <div v-if="selectedCharacter !== null">
+                                    <v-card>
+                                        <v-card-title>
+                                            <v-icon size="small">mdi-account</v-icon>
+                                            {{ characterDetails.name }}
+                                            <v-chip size="x-small" v-if="characterDetails.is_player === false" color="warning" label>AI</v-chip>
+                                            <v-chip size="x-small" v-if="characterDetails.is_player === true" color="info" label>Player</v-chip>
+                                            <v-chip size="x-small" class="ml-1" v-if="characterDetails.active === true && characterDetails.is_player === false" color="success" label>Active</v-chip>
+                                        
+                                            </v-card-title>
+                                        <v-divider></v-divider>
+                                        <v-tabs v-model="selectedCharacterPage" color="primary" density="compact">
+                                            <v-tab value="description">
+                                                <v-icon size="small">mdi-text-account</v-icon>
+                                                Description
+                                            </v-tab>
+                                            <v-tab value="attributes">
+                                                <v-icon size="small">mdi-format-list-bulleted-type</v-icon>
+                                                Attributes
+                                            </v-tab>
+                                            <v-tab value="details">
+                                                <v-icon size="small">mdi-format-list-text</v-icon>
+                                                Details
+                                            </v-tab>
+                                            <v-tab value="reinforce">
+                                                <v-icon size="small">mdi-image-auto-adjust</v-icon>
+                                                States
+                                            </v-tab>
+                                            <v-tab value="actor" :disabled="characterDetails.is_player">
+                                                <v-icon size="small">mdi-bullhorn</v-icon>
+                                                Actor
+                                            </v-tab>
+                                        </v-tabs>
 
-                                                <div v-if="selectedCharacterPage === 'description'">
+                                        <v-card-text>
+                                            <!-- CHARACTER DESCRIPTION -->
 
-                                                    <ContextualGenerate 
-                                                        :context="'character detail:description'" 
-                                                        :original="characterDetails.description"
-                                                        :character="characterDetails.name"
-                                                        @generate="content => setAndUpdateCharacterDescription(content)"
-                                                    />
+                                            <div v-if="selectedCharacterPage === 'description'">
 
-                                                    <v-textarea ref="characterDescription" rows="5" auto-grow v-model="characterDetails.description"
-                                                        :color="characterDescriptionDirty ? 'info' : ''"
+                                                <ContextualGenerate 
+                                                    :context="'character detail:description'" 
+                                                    :original="characterDetails.description"
+                                                    :character="characterDetails.name"
+                                                    @generate="content => setAndUpdateCharacterDescription(content)"
+                                                />
 
-                                                        :disabled="characterDescriptionBusy"
-                                                        :loading="characterDescriptionBusy"
-                                                        @keyup.ctrl.enter.stop="autocompleteRequestCharacterDescription"
+                                                <v-textarea ref="characterDescription" rows="5" auto-grow v-model="characterDetails.description"
+                                                    :color="characterDescriptionDirty ? 'info' : ''"
 
-                                                        @update:model-value="queueUpdateCharacterDescription"
-                                                        label="Description"
-                                                        :hint="'A short description of the character. '+autocompleteInfoMessage(characterDescriptionBusy)"></v-textarea>
-                                                </div>
+                                                    :disabled="characterDescriptionBusy"
+                                                    :loading="characterDescriptionBusy"
+                                                    @keyup.ctrl.enter.stop="autocompleteRequestCharacterDescription"
 
-                                                <!-- CHARACTER ATTRIBUTES -->
+                                                    @update:model-value="queueUpdateCharacterDescription"
+                                                    label="Description"
+                                                    :hint="'A short description of the character. '+autocompleteInfoMessage(characterDescriptionBusy)"></v-textarea>
+                                            </div>
 
-                                                <div v-else-if="selectedCharacterPage === 'attributes'">
-                                                    <v-row floating color="grey-darken-5">
-                                                        <v-col cols="3">
-                                                            <v-text-field v-model="characterAttributeSearch"
-                                                                label="Filter attributes" append-inner-icon="mdi-magnify"
-                                                                clearable density="compact" variant="underlined"
-                                                                class="ml-1 mb-1"
-                                                                @update:modelValue="autoSelectFilteredAttribute"></v-text-field>
+                                            <!-- CHARACTER ATTRIBUTES -->
 
-                                                        </v-col>
-                                                        <v-col cols="3"></v-col>
-                                                        <v-col cols="2"></v-col>
-                                                        <v-col cols="4">
-                                                            <v-text-field v-model="newCharacterAttributeName"
-                                                                label="New attribute" append-inner-icon="mdi-plus"
-                                                                class="mr-1 mb-1" variant="underlined" density="compact"
-                                                                @keyup.enter="handleNewCharacterAttribute"
-                                                                hint="Attribute name"></v-text-field>
+                                            <div v-else-if="selectedCharacterPage === 'attributes'">
+                                                <v-row floating color="grey-darken-5">
+                                                    <v-col cols="3">
+                                                        <v-text-field v-model="characterAttributeSearch"
+                                                            label="Filter attributes" append-inner-icon="mdi-magnify"
+                                                            clearable density="compact" variant="underlined"
+                                                            class="ml-1 mb-1"
+                                                            @update:modelValue="autoSelectFilteredAttribute"></v-text-field>
 
-                                                        </v-col>
-                                                    </v-row>
-                                                    <v-divider></v-divider>
-                                                    <v-row>
-                                                        <v-col cols="4">
-                                                            <v-tabs v-model="selectedCharacterAttribute" density="compact" direction="vertical" color="indigo-lighten-3">
-                                                                <v-tab density="compact" v-for="(value, attribute) in filteredCharacterAttributes()"
-                                                                class="text-caption"
-                                                                    :key="attribute" 
-                                                                    :value="attribute">
-                                                                    {{ attribute }}
-                                                                </v-tab>
-                                                            </v-tabs>
-                                                        </v-col>
-                                                        <v-col cols="8">
-                                                            <div v-if="selectedCharacterAttribute !== null">
+                                                    </v-col>
+                                                    <v-col cols="3"></v-col>
+                                                    <v-col cols="2"></v-col>
+                                                    <v-col cols="4">
+                                                        <v-text-field v-model="newCharacterAttributeName"
+                                                            label="New attribute" append-inner-icon="mdi-plus"
+                                                            class="mr-1 mb-1" variant="underlined" density="compact"
+                                                            @keyup.enter="handleNewCharacterAttribute"
+                                                            hint="Attribute name"></v-text-field>
 
-                                                                <ContextualGenerate 
-                                                                    :context="'character attribute:'+selectedCharacterAttribute" 
+                                                    </v-col>
+                                                </v-row>
+                                                <v-divider></v-divider>
+                                                <v-row>
+                                                    <v-col cols="4">
+                                                        <v-tabs v-model="selectedCharacterAttribute" density="compact" direction="vertical" color="indigo-lighten-3">
+                                                            <v-tab density="compact" v-for="(value, attribute) in filteredCharacterAttributes()"
+                                                            class="text-caption"
+                                                                :key="attribute" 
+                                                                :value="attribute">
+                                                                {{ attribute }}
+                                                            </v-tab>
+                                                        </v-tabs>
+                                                    </v-col>
+                                                    <v-col cols="8">
+                                                        <div v-if="selectedCharacterAttribute !== null">
 
-                                                                    :original="characterDetails.base_attributes[selectedCharacterAttribute]"
+                                                            <ContextualGenerate 
+                                                                :context="'character attribute:'+selectedCharacterAttribute" 
 
-                                                                    :character="characterDetails.name"
+                                                                :original="characterDetails.base_attributes[selectedCharacterAttribute]"
 
-                                                                    @generate="content => setAndUpdateCharacterAttribute(selectedCharacterAttribute, content)"
-                                                                />
+                                                                :character="characterDetails.name"
 
-                                                                <v-textarea ref="characterAttribute" rows="5" auto-grow
-                                                                    :label="selectedCharacterAttribute"
-                                                                    :color="characterAttributeDirty ? 'info' : ''"
+                                                                @generate="content => setAndUpdateCharacterAttribute(selectedCharacterAttribute, content)"
+                                                            />
 
-                                                                    :disabled="characterAttributeBusy"
-                                                                    :loading="characterAttributeBusy"
-                                                                    :hint="autocompleteInfoMessage(characterAttributeBusy)"
-                                                                    @keyup.ctrl.enter.stop="autocompleteRequestCharacterAttribute"
+                                                            <v-textarea ref="characterAttribute" rows="5" auto-grow
+                                                                :label="selectedCharacterAttribute"
+                                                                :color="characterAttributeDirty ? 'info' : ''"
 
-                                                                    @update:modelValue="queueUpdateCharacterAttribute(selectedCharacterAttribute)"
+                                                                :disabled="characterAttributeBusy"
+                                                                :loading="characterAttributeBusy"
+                                                                :hint="autocompleteInfoMessage(characterAttributeBusy)"
+                                                                @keyup.ctrl.enter.stop="autocompleteRequestCharacterAttribute"
 
-                                                                    v-model="characterDetails.base_attributes[selectedCharacterAttribute]">
-                                                                </v-textarea>
+                                                                @update:modelValue="queueUpdateCharacterAttribute(selectedCharacterAttribute)"
 
-                                                            </div>
-                                                            <v-row v-if="selectedCharacterAttribute !== null">
-                                                                <v-col cols="12">
-                                                                    <v-btn v-if="removeCharacterAttributeConfirm === false"
-                                                                        rounded="sm" prepend-icon="mdi-close-box-outline" color="error"
-                                                                        variant="text"
-                                                                        @click.stop="removeCharacterAttributeConfirm = true">
-                                                                        Remove attribute
+                                                                v-model="characterDetails.base_attributes[selectedCharacterAttribute]">
+                                                            </v-textarea>
+
+                                                        </div>
+                                                        <v-row v-if="selectedCharacterAttribute !== null">
+                                                            <v-col cols="12">
+                                                                <v-btn v-if="removeCharacterAttributeConfirm === false"
+                                                                    rounded="sm" prepend-icon="mdi-close-box-outline" color="error"
+                                                                    variant="text"
+                                                                    @click.stop="removeCharacterAttributeConfirm = true">
+                                                                    Remove attribute
+                                                                </v-btn>
+                                                                <div v-else>
+                                                                    <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
+                                                                        @click.stop="deleteCharacterAttribute(selectedCharacterAttribute)"
+                                                                        color="error" variant="text">
+                                                                        Confirm removal
                                                                     </v-btn>
-                                                                    <div v-else>
-                                                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
-                                                                            @click.stop="deleteCharacterAttribute(selectedCharacterAttribute)"
-                                                                            color="error" variant="text">
-                                                                            Confirm removal
-                                                                        </v-btn>
-                                                                        <v-btn class="ml-1" rounded="sm"
-                                                                            prepend-icon="mdi-cancel"
-                                                                            @click.stop="removeCharacterAttributeConfirm = false"
-                                                                            color="info" variant="text">
-                                                                            Cancel
-                                                                        </v-btn>
-                                                                    </div>
-
-                                                                </v-col>
-                                                            </v-row>
-                                                        </v-col>
-                                                    </v-row>
-                                                </div>
-
-                                                <!-- CHARACTER DETAILS -->
-
-                                                <div v-else-if="selectedCharacterPage === 'details'">
-                                                    <v-row floating color="grey-darken-5">
-                                                        <v-col cols="3">
-                                                            <v-text-field v-model="characterDetailSearch"
-                                                                label="Filter details" append-inner-icon="mdi-magnify"
-                                                                clearable density="compact" variant="underlined"
-                                                                class="ml-1 mb-1"
-                                                                @update:modelValue="autoSelectFilteredDetail"></v-text-field>
-                                                        </v-col>
-                                                        <v-col cols="3"></v-col>
-                                                        <v-col cols="2"></v-col>
-                                                        <v-col cols="4">
-                                                            <v-text-field v-model="newCharacterDetailName"
-                                                                label="New detail" append-inner-icon="mdi-plus"
-                                                                class="mr-1 mb-1" variant="underlined" density="compact"
-                                                                @keyup.enter="handleNewCharacterDetail"
-                                                                hint="Descriptive name or question."></v-text-field>
-                                                        </v-col>
-                                                    </v-row>
-                                                    <v-divider></v-divider>
-                                                    <v-row>
-                                                        <v-col cols="4">
-                                                            <v-tabs direction="vertical" density="compact" v-model="selectedCharacterDetail" color="indigo-lighten-3">
-                                                                <v-tab v-for="(value, detail) in filteredCharacterDetails()"
-                                                                    :key="detail"
-                                                                    class="text-caption"
-                                                                    :value="detail">
-                                                                    <v-list-item-title class="text-caption">{{ detail
-                                                                    }}</v-list-item-title>
-                                                                </v-tab>
-                                                            </v-tabs>
-                                                        </v-col>
-                                                        <v-col cols="8">
-                                                            <div v-if="selectedCharacterDetail">
-
-                                                                <ContextualGenerate 
-                                                                    :context="'character detail:'+selectedCharacterDetail" 
-
-                                                                    :original="characterDetails.details[selectedCharacterDetail]"
-
-                                                                    :character="characterDetails.name"
-
-                                                                    @generate="content => setAndUpdateCharacterDetail(selectedCharacterDetail, content)"
-                                                                />
-
-
-                                                                <v-textarea rows="5" max-rows="10" auto-grow
-                                                                    ref="characterDetail"
-                                                                    :color="characterDetailDirty ? 'info' : ''"
-
-                                                                    :disabled="characterDetailBusy"
-                                                                    :loading="characterDetailBusy"
-                                                                    :hint="autocompleteInfoMessage(characterDetailBusy)"
-
-                                                                    @keyup.ctrl.enter.stop="autocompleteRequestCharacterDetail"
-
-                                                                    @update:modelValue="queueUpdateCharacterDetail(selectedCharacterDetail)"
-                                                                    :label="selectedCharacterDetail"
-                                                                    v-model="characterDetails.details[selectedCharacterDetail]">
-                                                                </v-textarea>
-
-
-                                                            </div>
-
-                                                            <v-row v-if="selectedCharacterDetail">
-                                                                <v-col cols="6">
-                                                                    <v-btn v-if="removeCharacterDetailConfirm === false"
-                                                                        rounded="sm" prepend-icon="mdi-close-box-outline" color="error"
-                                                                        variant="text"
-                                                                        @click.stop="removeCharacterDetailConfirm = true">
-                                                                        Remove detail
+                                                                    <v-btn class="ml-1" rounded="sm"
+                                                                        prepend-icon="mdi-cancel"
+                                                                        @click.stop="removeCharacterAttributeConfirm = false"
+                                                                        color="info" variant="text">
+                                                                        Cancel
                                                                     </v-btn>
-                                                                    <div v-else>
-                                                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
-                                                                            @click.stop="deleteCharacterDetail(selectedCharacterDetail)"
-                                                                            color="error" variant="text">
-                                                                            Confirm removal
-                                                                        </v-btn>
-                                                                        <v-btn class="ml-1" rounded="sm"
-                                                                            prepend-icon="mdi-cancel"
-                                                                            @click.stop="removeCharacterDetailConfirm = false"
-                                                                            color="info" variant="text">
-                                                                            Cancel
-                                                                        </v-btn>
-                                                                    </div>
-
-                                                                </v-col>
-                                                                <v-col cols="6" class="text-right">
-                                                                    <div
-                                                                        v-if="characterDetails.reinforcements[selectedCharacterDetail]">
-                                                                        <v-btn rounded="sm"
-                                                                            prepend-icon="mdi-image-auto-adjust"
-                                                                            @click.stop="viewCharacterStateReinforcer(selectedCharacterDetail)"
-                                                                            color="primary" variant="text">
-                                                                            Manage auto state
-                                                                        </v-btn>
-                                                                    </div>
-                                                                    <div v-else>
-                                                                        <v-btn rounded="sm"
-                                                                            prepend-icon="mdi-image-auto-adjust"
-                                                                            @click.stop="viewCharacterStateReinforcer(selectedCharacterDetail)"
-                                                                            color="primary" variant="text">
-                                                                            Setup auto state
-                                                                        </v-btn>
-                                                                    </div>
-                                                                </v-col>
-                                                            </v-row>
-
-                                                        </v-col>
-                                                    </v-row>
-                                                </div>
-
-                                                <!-- CHARACTER STATE REINFORCERS -->
-
-                                                <div v-else-if="selectedCharacterPage === 'reinforce'">
-
-                                                    <v-row floating color="grey-darken-5">
-                                                        <v-col cols="3">
-                                                            <v-text-field v-model="characterStateReinforcerSearch"
-                                                                label="Filter states" append-inner-icon="mdi-magnify"
-                                                                clearable density="compact" variant="underlined"
-                                                                class="ml-1 mb-1"
-                                                                @update:modelValue="autoSelectFilteredStateReinforcer"></v-text-field>
-
-                                                        </v-col>
-                                                        <v-col cols="3"></v-col>
-                                                        <v-col cols="2"></v-col>
-                                                        <v-col cols="4">
-                                                            <v-text-field v-model="newCharacterStateReinforcerQuestion"
-                                                                label="New state" append-inner-icon="mdi-plus"
-                                                                class="mr-1 mb-1" variant="underlined" density="compact"
-                                                                @keyup.enter="handleNewCharacterStateReinforcer"
-                                                                hint="Question or attribute name."></v-text-field>
-                                                        </v-col>
-                                                    </v-row>
-                                                    <v-divider></v-divider>
-                                                    <v-row>
-                                                        <v-col cols="4">
-                                                            <v-list density="compact">
-
-                                                                <!-- add from template -->
-                                                                <div v-if="characterStateTemplatesAvailable()">
-                                                                    <v-list-item density="compact"
-                                                                        @click.stop="showCharacterStateTemplates = !showCharacterStateTemplates"
-                                                                        prepend-icon="mdi-cube-scan" color="info">
-                                                                        <v-list-item-title>
-                                                                            Templates
-                                                                            <v-progress-circular class="ml-1 mr-3" size="14"
-                                                                                indeterminate="disable-shrink" color="primary"
-                                                                                v-if="characterStateTemplateBusy"></v-progress-circular>
-                                                                        </v-list-item-title>
-                                                                    </v-list-item>
-                                                                    <div v-if="showCharacterStateTemplates">
-                                                                        <v-list-item density="compact"
-                                                                            @click.stop="addCharacterStateFromTemplate(template, characterDetails.name)"
-                                                                            v-for="(template, index) in characterStateTemplates()"
-                                                                            :key="index" prepend-icon="mdi-cube-scan"
-                                                                            :disabled="characterStateTemplateBusy">
-                                                                            <v-list-item-title>{{ template.name
-                                                                            }}</v-list-item-title>
-                                                                            <v-list-item-subtitle>{{ template.description
-                                                                            }}</v-list-item-subtitle>
-                                                                        </v-list-item>
-                                                                    </div>
-                                                                    <v-divider></v-divider>
                                                                 </div>
 
-                                                            </v-list>
-                                                            <v-tabs v-model="selectedCharacterStateReinforcer" direction="vertical" color="indigo-lighten-3" density="compact">
-                                                                <v-tab v-for="(value, detail) in filteredCharacterStateReinforcers()"
-                                                                    :key="detail"
-                                                                    class="text-caption"
-                                                                    :value="detail">
-                                                                    <div class="text-left">{{ detail }}<div><v-chip size="x-small" label variant="outlined"
-                                                                            color="info">update in {{ value.due }}
-                                                                            turns</v-chip>
-                                                                        </div>
-                                                                    </div>
-                                                                </v-tab>
-                                                            </v-tabs>
-                                                        </v-col>
-                                                        <v-col cols="8">
-                                                            <div v-if="selectedCharacterStateReinforcer">
-                                                                <v-textarea rows="5" auto-grow max-rows="15"
-                                                                    :label="selectedCharacterStateReinforcer"
-                                                                    v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].answer"
-                                                                    @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)"
-                                                                    :color="characterStateReinforcerDirty ? 'info' : ''"></v-textarea>
+                                                            </v-col>
+                                                        </v-row>
+                                                    </v-col>
+                                                </v-row>
+                                            </div>
 
-                                                                <v-row>
-                                                                    <v-col cols="6">
-                                                                        <v-text-field
-                                                                            v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].interval"
-                                                                            label="Re-inforce / Update detail every N turns"
-                                                                            type="number" min="1" max="100" step="1"
-                                                                            class="mb-2"
-                                                                            @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)"
-                                                                            :color="characterStateReinforcerDirty ? 'info' : ''"></v-text-field>
-                                                                    </v-col>
-                                                                    <v-col cols="6">
-                                                                        <v-select
-                                                                            v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].insert"
-                                                                            :items="insertionModes"
-                                                                            label="Context Attachment Method"
-                                                                            class="mr-1 mb-1" variant="underlined"
-                                                                            density="compact"
-                                                                            @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)"
-                                                                            :color="characterStateReinforcerDirty ? 'info' : ''">
-                                                                        </v-select>
-                                                                    </v-col>
-                                                                </v-row>
+                                            <!-- CHARACTER DETAILS -->
+
+                                            <div v-else-if="selectedCharacterPage === 'details'">
+                                                <v-row floating color="grey-darken-5">
+                                                    <v-col cols="3">
+                                                        <v-text-field v-model="characterDetailSearch"
+                                                            label="Filter details" append-inner-icon="mdi-magnify"
+                                                            clearable density="compact" variant="underlined"
+                                                            class="ml-1 mb-1"
+                                                            @update:modelValue="autoSelectFilteredDetail"></v-text-field>
+                                                    </v-col>
+                                                    <v-col cols="3"></v-col>
+                                                    <v-col cols="2"></v-col>
+                                                    <v-col cols="4">
+                                                        <v-text-field v-model="newCharacterDetailName"
+                                                            label="New detail" append-inner-icon="mdi-plus"
+                                                            class="mr-1 mb-1" variant="underlined" density="compact"
+                                                            @keyup.enter="handleNewCharacterDetail"
+                                                            hint="Descriptive name or question."></v-text-field>
+                                                    </v-col>
+                                                </v-row>
+                                                <v-divider></v-divider>
+                                                <v-row>
+                                                    <v-col cols="4">
+                                                        <v-tabs direction="vertical" density="compact" v-model="selectedCharacterDetail" color="indigo-lighten-3">
+                                                            <v-tab v-for="(value, detail) in filteredCharacterDetails()"
+                                                                :key="detail"
+                                                                class="text-caption"
+                                                                :value="detail">
+                                                                <v-list-item-title class="text-caption">{{ detail
+                                                                }}</v-list-item-title>
+                                                            </v-tab>
+                                                        </v-tabs>
+                                                    </v-col>
+                                                    <v-col cols="8">
+                                                        <div v-if="selectedCharacterDetail">
+
+                                                            <ContextualGenerate 
+                                                                :context="'character detail:'+selectedCharacterDetail" 
+
+                                                                :original="characterDetails.details[selectedCharacterDetail]"
+
+                                                                :character="characterDetails.name"
+
+                                                                @generate="content => setAndUpdateCharacterDetail(selectedCharacterDetail, content)"
+                                                            />
 
 
+                                                            <v-textarea rows="5" max-rows="10" auto-grow
+                                                                ref="characterDetail"
+                                                                :color="characterDetailDirty ? 'info' : ''"
 
-                                                                <v-textarea rows="3" auto-grow max-rows="5"
-                                                                    label="Additional instructions to the AI for generating this state."
-                                                                    v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].instructions"
-                                                                    @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)"
-                                                                    :color="characterStateReinforcerDirty ? 'info' : ''"></v-textarea>
+                                                                :disabled="characterDetailBusy"
+                                                                :loading="characterDetailBusy"
+                                                                :hint="autocompleteInfoMessage(characterDetailBusy)"
 
-                                                                <v-row>
-                                                                    <v-col cols="6">
-                                                                        <div
-                                                                            v-if="removeCharacterStateReinforcerConfirm === false">
-                                                                            <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
-                                                                                color="error" variant="text"
-                                                                                @click.stop="removeCharacterStateReinforcerConfirm = true">
-                                                                                Remove state
-                                                                            </v-btn>
-                                                                        </div>
-                                                                        <div v-else>
-                                                                            <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
-                                                                                @click.stop="deleteCharacterStateReinforcement(selectedCharacterStateReinforcer)"
-                                                                                color="error" variant="text">
-                                                                                Confirm removal
-                                                                            </v-btn>
-                                                                            <v-btn class="ml-1" rounded="sm"
-                                                                                prepend-icon="mdi-cancel"
-                                                                                @click.stop="removeCharacterStateReinforcerConfirm = false"
-                                                                                color="info" variant="text">
-                                                                                Cancel
-                                                                            </v-btn>
-                                                                        </div>
-                                                                    </v-col>
-                                                                    <v-col cols="6" class="text-right flex">
-                                                                        <v-btn rounded="sm" prepend-icon="mdi-refresh"
-                                                                            @click.stop="runCharacterStateReinforcement(selectedCharacterStateReinforcer)"
-                                                                            color="primary" variant="text">
-                                                                            Refresh State
-                                                                        </v-btn>
-                                                                        <v-tooltip
-                                                                            text="Removes all previously generated reinforcements for this state and then regenerates it">
-                                                                            <template v-slot:activator="{ props }">
-                                                                                <v-btn
-                                                                                    v-if="resetCharacterStateReinforcerConfirm === true"
-                                                                                    v-bind="props" rounded="sm"
-                                                                                    prepend-icon="mdi-backup-restore"
-                                                                                    @click.stop="runCharacterStateReinforcement(selectedCharacterStateReinforcer, true)"
-                                                                                    color="warning" variant="text">
-                                                                                    Confirm Reset State
-                                                                                </v-btn>
-                                                                                <v-btn v-else v-bind="props" rounded="sm"
-                                                                                    prepend-icon="mdi-backup-restore"
-                                                                                    @click.stop="resetCharacterStateReinforcerConfirm = true"
-                                                                                    color="warning" variant="text">
-                                                                                    Reset State
-                                                                                </v-btn>
-                                                                            </template>
-                                                                        </v-tooltip>
-                                                                    </v-col>
-                                                                </v-row>
+                                                                @keyup.ctrl.enter.stop="autocompleteRequestCharacterDetail"
+
+                                                                @update:modelValue="queueUpdateCharacterDetail(selectedCharacterDetail)"
+                                                                :label="selectedCharacterDetail"
+                                                                v-model="characterDetails.details[selectedCharacterDetail]">
+                                                            </v-textarea>
+
+
+                                                        </div>
+
+                                                        <v-row v-if="selectedCharacterDetail">
+                                                            <v-col cols="6">
+                                                                <v-btn v-if="removeCharacterDetailConfirm === false"
+                                                                    rounded="sm" prepend-icon="mdi-close-box-outline" color="error"
+                                                                    variant="text"
+                                                                    @click.stop="removeCharacterDetailConfirm = true">
+                                                                    Remove detail
+                                                                </v-btn>
+                                                                <div v-else>
+                                                                    <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
+                                                                        @click.stop="deleteCharacterDetail(selectedCharacterDetail)"
+                                                                        color="error" variant="text">
+                                                                        Confirm removal
+                                                                    </v-btn>
+                                                                    <v-btn class="ml-1" rounded="sm"
+                                                                        prepend-icon="mdi-cancel"
+                                                                        @click.stop="removeCharacterDetailConfirm = false"
+                                                                        color="info" variant="text">
+                                                                        Cancel
+                                                                    </v-btn>
+                                                                </div>
+
+                                                            </v-col>
+                                                            <v-col cols="6" class="text-right">
+                                                                <div
+                                                                    v-if="characterDetails.reinforcements[selectedCharacterDetail]">
+                                                                    <v-btn rounded="sm"
+                                                                        prepend-icon="mdi-image-auto-adjust"
+                                                                        @click.stop="viewCharacterStateReinforcer(selectedCharacterDetail)"
+                                                                        color="primary" variant="text">
+                                                                        Manage auto state
+                                                                    </v-btn>
+                                                                </div>
+                                                                <div v-else>
+                                                                    <v-btn rounded="sm"
+                                                                        prepend-icon="mdi-image-auto-adjust"
+                                                                        @click.stop="viewCharacterStateReinforcer(selectedCharacterDetail)"
+                                                                        color="primary" variant="text">
+                                                                        Setup auto state
+                                                                    </v-btn>
+                                                                </div>
+                                                            </v-col>
+                                                        </v-row>
+
+                                                    </v-col>
+                                                </v-row>
+                                            </div>
+
+                                            <!-- CHARACTER STATE REINFORCERS -->
+
+                                            <div v-else-if="selectedCharacterPage === 'reinforce'">
+
+                                                <v-row floating color="grey-darken-5">
+                                                    <v-col cols="3">
+                                                        <v-text-field v-model="characterStateReinforcerSearch"
+                                                            label="Filter states" append-inner-icon="mdi-magnify"
+                                                            clearable density="compact" variant="underlined"
+                                                            class="ml-1 mb-1"
+                                                            @update:modelValue="autoSelectFilteredStateReinforcer"></v-text-field>
+
+                                                    </v-col>
+                                                    <v-col cols="3"></v-col>
+                                                    <v-col cols="2"></v-col>
+                                                    <v-col cols="4">
+                                                        <v-text-field v-model="newCharacterStateReinforcerQuestion"
+                                                            label="New state" append-inner-icon="mdi-plus"
+                                                            class="mr-1 mb-1" variant="underlined" density="compact"
+                                                            @keyup.enter="handleNewCharacterStateReinforcer"
+                                                            hint="Question or attribute name."></v-text-field>
+                                                    </v-col>
+                                                </v-row>
+                                                <v-divider></v-divider>
+                                                <v-row>
+                                                    <v-col cols="4">
+                                                        <v-list density="compact">
+
+                                                            <!-- add from template -->
+                                                            <div v-if="characterStateTemplatesAvailable()">
+                                                                <v-list-item density="compact"
+                                                                    @click.stop="showCharacterStateTemplates = !showCharacterStateTemplates"
+                                                                    prepend-icon="mdi-cube-scan" color="info">
+                                                                    <v-list-item-title>
+                                                                        Templates
+                                                                        <v-progress-circular class="ml-1 mr-3" size="14"
+                                                                            indeterminate="disable-shrink" color="primary"
+                                                                            v-if="characterStateTemplateBusy"></v-progress-circular>
+                                                                    </v-list-item-title>
+                                                                </v-list-item>
+                                                                <div v-if="showCharacterStateTemplates">
+                                                                    <v-list-item density="compact"
+                                                                        @click.stop="addCharacterStateFromTemplate(template, characterDetails.name)"
+                                                                        v-for="(template, index) in characterStateTemplates()"
+                                                                        :key="index" prepend-icon="mdi-cube-scan"
+                                                                        :disabled="characterStateTemplateBusy">
+                                                                        <v-list-item-title>{{ template.name
+                                                                        }}</v-list-item-title>
+                                                                        <v-list-item-subtitle>{{ template.description
+                                                                        }}</v-list-item-subtitle>
+                                                                    </v-list-item>
+                                                                </div>
+                                                                <v-divider></v-divider>
                                                             </div>
-                                                        </v-col>
-                                                    </v-row>
-                                                </div>
 
-                                                <!-- CHARACTER ACTOR -->
+                                                        </v-list>
+                                                        <v-tabs v-model="selectedCharacterStateReinforcer" direction="vertical" color="indigo-lighten-3" density="compact">
+                                                            <v-tab v-for="(value, detail) in filteredCharacterStateReinforcers()"
+                                                                :key="detail"
+                                                                class="text-caption"
+                                                                :value="detail">
+                                                                <div class="text-left">{{ detail }}<div><v-chip size="x-small" label variant="outlined"
+                                                                        color="info">update in {{ value.due }}
+                                                                        turns</v-chip>
+                                                                    </div>
+                                                                </div>
+                                                            </v-tab>
+                                                        </v-tabs>
+                                                    </v-col>
+                                                    <v-col cols="8">
+                                                        <div v-if="selectedCharacterStateReinforcer">
+                                                            <v-textarea rows="5" auto-grow max-rows="15"
+                                                                :label="selectedCharacterStateReinforcer"
+                                                                v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].answer"
+                                                                @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)"
+                                                                :color="characterStateReinforcerDirty ? 'info' : ''"></v-textarea>
 
-                                                <div v-else-if="selectedCharacterPage === 'actor'">
-                                                    <WorldStateManagerCharacterActor ref="actor" :character="characterDetails" />
-                                                </div>
-                                            </v-card-text>
-                                        </v-card>
+                                                            <v-row>
+                                                                <v-col cols="6">
+                                                                    <v-text-field
+                                                                        v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].interval"
+                                                                        label="Re-inforce / Update detail every N turns"
+                                                                        type="number" min="1" max="100" step="1"
+                                                                        class="mb-2"
+                                                                        @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)"
+                                                                        :color="characterStateReinforcerDirty ? 'info' : ''"></v-text-field>
+                                                                </v-col>
+                                                                <v-col cols="6">
+                                                                    <v-select
+                                                                        v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].insert"
+                                                                        :items="insertionModes"
+                                                                        label="Context Attachment Method"
+                                                                        class="mr-1 mb-1" variant="underlined"
+                                                                        density="compact"
+                                                                        @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)"
+                                                                        :color="characterStateReinforcerDirty ? 'info' : ''">
+                                                                    </v-select>
+                                                                </v-col>
+                                                            </v-row>
 
 
 
-                                    </div>
-                                    <v-alert v-else type="info" color="grey" variant="text" icon="mdi-account">
-                                        Manage character attributes and add extra details.
-                                        <br><br>
-                                        You can also set up automatic reinforcement of character states. This will cause the
-                                        AI to regularly re-evaluate the state and update the detail accordingly.
-                                        <br><br>
-                                        Select a character from the list on the left to get started.
-                                    </v-alert>
-                                </v-col>
-                            </v-row>
-                        </v-card-text>
-                    </v-card>
-                </v-window-item>
+                                                            <v-textarea rows="3" auto-grow max-rows="5"
+                                                                label="Additional instructions to the AI for generating this state."
+                                                                v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].instructions"
+                                                                @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)"
+                                                                :color="characterStateReinforcerDirty ? 'info' : ''"></v-textarea>
 
-                <!-- WORLD -->
+                                                            <v-row>
+                                                                <v-col cols="6">
+                                                                    <div
+                                                                        v-if="removeCharacterStateReinforcerConfirm === false">
+                                                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
+                                                                            color="error" variant="text"
+                                                                            @click.stop="removeCharacterStateReinforcerConfirm = true">
+                                                                            Remove state
+                                                                        </v-btn>
+                                                                    </div>
+                                                                    <div v-else>
+                                                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
+                                                                            @click.stop="deleteCharacterStateReinforcement(selectedCharacterStateReinforcer)"
+                                                                            color="error" variant="text">
+                                                                            Confirm removal
+                                                                        </v-btn>
+                                                                        <v-btn class="ml-1" rounded="sm"
+                                                                            prepend-icon="mdi-cancel"
+                                                                            @click.stop="removeCharacterStateReinforcerConfirm = false"
+                                                                            color="info" variant="text">
+                                                                            Cancel
+                                                                        </v-btn>
+                                                                    </div>
+                                                                </v-col>
+                                                                <v-col cols="6" class="text-right flex">
+                                                                    <v-btn rounded="sm" prepend-icon="mdi-refresh"
+                                                                        @click.stop="runCharacterStateReinforcement(selectedCharacterStateReinforcer)"
+                                                                        color="primary" variant="text">
+                                                                        Refresh State
+                                                                    </v-btn>
+                                                                    <v-tooltip
+                                                                        text="Removes all previously generated reinforcements for this state and then regenerates it">
+                                                                        <template v-slot:activator="{ props }">
+                                                                            <v-btn
+                                                                                v-if="resetCharacterStateReinforcerConfirm === true"
+                                                                                v-bind="props" rounded="sm"
+                                                                                prepend-icon="mdi-backup-restore"
+                                                                                @click.stop="runCharacterStateReinforcement(selectedCharacterStateReinforcer, true)"
+                                                                                color="warning" variant="text">
+                                                                                Confirm Reset State
+                                                                            </v-btn>
+                                                                            <v-btn v-else v-bind="props" rounded="sm"
+                                                                                prepend-icon="mdi-backup-restore"
+                                                                                @click.stop="resetCharacterStateReinforcerConfirm = true"
+                                                                                color="warning" variant="text">
+                                                                                Reset State
+                                                                            </v-btn>
+                                                                        </template>
+                                                                    </v-tooltip>
+                                                                </v-col>
+                                                            </v-row>
+                                                        </div>
+                                                    </v-col>
+                                                </v-row>
+                                            </div>
 
-                <v-window-item value="world">
-                    <WorldStateManagerWorld ref="world" />
-                </v-window-item>
+                                            <!-- CHARACTER ACTOR -->
 
-                <!-- HISTORY -->
-
-                <v-window-item value="history">
-                    <v-card flat>
-                        <v-card-text>
-                            <div>
-                                <!-- Placeholder for History content -->
-                            </div>
-                        </v-card-text>
-                    </v-card>
-                </v-window-item>
-
-                <!-- CONTEXT DB -->
-
-                <v-window-item value="contextdb">
-                    <v-card flat>
-                        <v-card-text>
-                            <v-toolbar floating density="compact" class="mb-2" color="grey-darken-4">
-                                <v-text-field v-model="contextDBQuery" label="Content search"
-                                    append-inner-icon="mdi-magnify" clearable single-line hide-details density="compact"
-                                    variant="underlined" class="ml-1 mb-1 mr-1"
-                                    @keyup.enter="queryContextDB"></v-text-field>
-
-                                <v-select v-model="contextDBQueryMetaKey" :items="contextDBMetaKeys" label="Filter By Tag"
-                                    class="mr-1 mb-1" variant="underlined" single-line hide-details
-                                    density="compact"></v-select>
-                                <v-select
-                                    v-if="contextDBQueryMetaKey !== null && contextDBMetaValuesByType[contextDBQueryMetaKey]"
-                                    v-model="contextDBQueryMetaValue"
-                                    :items="contextDBMetaValuesByType[contextDBQueryMetaKey]()" label="Tag value"
-                                    class="mr-1 mb-1" variant="underlined" single-line hide-details
-                                    density="compact"></v-select>
-                                <v-text-field v-else v-model="contextDBQueryMetaValue" label="Tag value" class="mr-1 mb-1"
-                                    variant="underlined" single-line hide-details density="compact"></v-text-field>
-                                <v-spacer></v-spacer>
-                                <!-- button that opens the tools menu -->
-                                <v-menu>
-                                    <template v-slot:activator="{ props }">
-                                        <v-btn rounded="sm" v-bind="props" prepend-icon="mdi-tools" variant="text">
-                                            Tools
-                                        </v-btn>
-                                    </template>
-                                    <v-list>
-                                        <v-list-item @click.stop="resetContextDB" append-icon="mdi-shield-alert">
-                                            <v-list-item-title>Reset</v-list-item-title>
-                                        </v-list-item>
-                                    </v-list>
-                                </v-menu>
-
-                                <!-- button to open add content db entry dialog -->
-                                <v-btn rounded="sm" prepend-icon="mdi-plus" @click.stop="dialogAddContextDBEntry = true"
-                                    variant="text">
-                                    Add entry
-                                </v-btn>
-                            </v-toolbar>
-                            <v-divider></v-divider>
-                            <!-- add entry-->
-                            <v-card v-if="dialogAddContextDBEntry === true">
-                                <v-card-title>
-                                    Add entry
-                                </v-card-title>
-                                <v-card-text>
-                                    <v-row>
-                                        <v-col cols="12">
-                                            <v-textarea rows="5" auto-grow v-model="newContextDBEntryText" label="Content"
-                                                hint="The content of the entry."></v-textarea>
-                                        </v-col>
-                                    </v-row>
-                                    <v-row>
-                                        <v-col cols="12">
-                                            <v-chip v-for="(value, name) in newContextDBEntryMeta" :key="name" label
-                                                size="x-small" variant="outlined" class="ml-1" closable
-                                                @click:close="handleRemoveContextDBEntryMeta(name)">{{ name }}: {{ value
-                                                }}</v-chip>
-                                        </v-col>
-                                    </v-row>
-                                    <v-row>
-                                        <v-col cols="3">
-                                            <v-select v-model="newContextDBEntryMetaKey" :items="contextDBMetaKeys"
-                                                label="Meta key" class="mr-1 mb-1" variant="underlined" single-line
-                                                hide-details density="compact"></v-select>
-                                        </v-col>
-                                        <v-col cols="3">
-                                            <v-select
-                                                v-if="newContextDBEntryMetaKey !== null && contextDBMetaValuesByType[newContextDBEntryMetaKey]"
-                                                v-model="newContextDBEntryMetaValue"
-                                                :items="contextDBMetaValuesByType[newContextDBEntryMetaKey]()"
-                                                label="Meta value" class="mr-1 mb-1" variant="underlined" single-line
-                                                hide-details density="compact"></v-select>
-                                            <v-text-field v-else v-model="newContextDBEntryMetaValue" label="Meta value"
-                                                class="mr-1 mb-1" variant="underlined" single-line hide-details
-                                                density="compact"></v-text-field>
-                                        </v-col>
-                                        <v-col cols="3">
-                                            <v-btn rounded="sm" color="primary" prepend-icon="mdi-plus"
-                                                @click.stop="handleNewContextDBEntryMeta" variant="text">
-                                                Add meta
-                                            </v-btn>
-                                        </v-col>
-                                    </v-row>
-                                </v-card-text>
-                                <v-card-actions>
-                                    <!-- cancel -->
-                                    <v-btn rounded="sm" prepend-icon="mdi-cancel"
-                                        @click.stop="dialogAddContextDBEntry = false" color="info" variant="text">
-                                        Cancel
-                                    </v-btn>
-                                    <v-spacer></v-spacer>
-                                    <!-- add -->
-                                    <v-btn rounded="sm" prepend-icon="mdi-plus" @click.stop="addContextDBEntry"
-                                        color="primary" variant="text">
-                                        Add
-                                    </v-btn>
-                                </v-card-actions>
-                            </v-card>
-
-                            <!-- results -->
-                            <div v-else>
-                                <v-table height="600px" v-if="contextDB.entries.length > 0">
-                                    <thead>
-                                        <tr>
-                                            <th class="text-left"></th>
-                                            <th class="text-left" width="60%">Content</th>
-                                            <th class="text-center">Pin</th>
-                                            <th class="text-left">Tags</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr v-for="entry in contextDB.entries" :key="entry.id">
-                                            <td>
-                                                <!-- remove -->
-                                                <v-tooltip text="Delete entry">
-                                                    <template v-slot:activator="{ props }">
-                                                        <v-btn icon size="x-small" v-bind="props" rounded="sm"
-                                                            variant="text" color="red-darken-1"
-                                                            @click.stop="deleteContextDBEntry(entry.id)">
-                                                            <v-icon>mdi-close-box-outline</v-icon>
-                                                        </v-btn>
-                                                    </template>
-                                                </v-tooltip>
-                                            </td>
-                                            <td>
-                                                <v-textarea rows="1" auto-grow density="compact" hide-details
-                                                    :color="entry.dirty ? 'info' : ''" v-model="entry.text"
-                                                    @update:model-value="queueUpdateContextDBEntry(entry)"></v-textarea>
-                                            </td>
-                                            <td class="text-center">
-                                                <v-tooltip :text="entryHasPin(entry.id) ? 'Manage pin' : 'Add pin'">
-                                                    <template v-slot:activator="{ props }">
-                                                        <v-btn v-bind="props" size="x-small" rounded="sm" variant="text"
-                                                            v-if="entryIsPinned(entry.id)" color="success" icon
-                                                            @click.stop="selectPin(entry.id)"><v-icon>mdi-pin</v-icon></v-btn>
-                                                        <v-btn v-bind="props" size="x-small" rounded="sm" variant="text"
-                                                            v-else-if="entryHasPin(entry.id)" color="red-darken-2" icon
-                                                            @click.stop="selectPin(entry.id)"><v-icon>mdi-pin</v-icon></v-btn>
-                                                        <v-btn v-bind="props" size="x-small" rounded="sm" variant="text"
-                                                            v-else color="grey-lighten-2" icon
-                                                            @click.stop="addPin(entry.id)"><v-icon>mdi-pin</v-icon></v-btn>
-                                                    </template>
-                                                </v-tooltip>
-
-                                            </td>
-                                            <td>
-                                                <!-- render entry.meta as v-chip elements showing both name and value -->
-                                                <v-chip v-for="(value, name) in visibleMetaTags(entry.meta)" :key="name"
-                                                    label size="x-small" variant="outlined" class="ml-1">{{ name }}: {{
-                                                        value }}</v-chip>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </v-table>
-                                <v-alert v-else-if="contextDBCurrentQuery" dense type="warning" variant="text"
-                                    icon="mdi-information-outline">
-                                    No results
-                                </v-alert>
-                                <v-alert v-else dense type="info" variant="text" icon="mdi-magnify">
-                                    Enter a query to search the context database.
-                                </v-alert>
-                            </div>
-
-                        </v-card-text>
-                    </v-card>
-                </v-window-item>
-
-                <!-- PINS -->
-
-                <v-window-item value="pins">
-                    <v-card flat>
-                        <v-card-text>
-                            <v-row>
-                                <v-col cols="3">
-                                    <v-list dense v-if="pinsExist()">
-                                        <v-list-item prepend-icon="mdi-help" @click.stop="selectedPin = null">
-                                            <v-list-item-title>Information</v-list-item-title>
-                                        </v-list-item>
-                                        <v-list-item v-for="pin in pins" :key="pin.pin.entry_id"
-                                            @click.stop="selectedPin = pin"
-                                            :prepend-icon="pin.pin.active ? 'mdi-pin' : 'mdi-pin-off'"
-                                            :class="pin.pin.active ? '' : 'inactive'">
-                                            <v-list-item-title>{{ pin.text }}</v-list-item-title>
-                                            <v-list-item-subtitle>
-
-                                            </v-list-item-subtitle>
-                                        </v-list-item>
-                                    </v-list>
-                                    <v-card v-else>
-                                        <v-card-text>
-                                            No pins defined.
+                                            <div v-else-if="selectedCharacterPage === 'actor'">
+                                                <WorldStateManagerCharacterActor ref="actor" :character="characterDetails" />
+                                            </div>
                                         </v-card-text>
                                     </v-card>
-                                </v-col>
-                                <v-col cols="9">
-                                    <v-row v-if="selectedPin !== null">
-                                        <v-col cols="7">
-                                            <v-card>
-                                                <v-checkbox hide-details dense v-model="selectedPin.pin.active"
-                                                    label="Pin active" @change="updatePin(selectedPin)"></v-checkbox>
-                                                <v-alert class="mb-2 pre-wrap" variant="text" color="grey"
-                                                    icon="mdi-book-open-page-variant">
-                                                    {{ selectedPin.text }}
 
-                                                </v-alert>
-                                                <v-card-actions>
-                                                    <v-btn v-if="removePinConfirm === false" rounded="sm"
-                                                        prepend-icon="mdi-close-box-outline" color="error" variant="text"
-                                                        @click.stop="removePinConfirm = true">
-                                                        Remove Pin
+
+
+                                </div>
+                                <v-alert v-else type="info" color="grey" variant="text" icon="mdi-account">
+                                    Manage character attributes and add extra details.
+                                    <br><br>
+                                    You can also set up automatic reinforcement of character states. This will cause the
+                                    AI to regularly re-evaluate the state and update the detail accordingly.
+                                    <br><br>
+                                    Select a character from the list on the left to get started.
+                                </v-alert>
+                            </v-col>
+                        </v-row>
+                    </v-card-text>
+                </v-card>
+            </v-window-item>
+
+            <!-- WORLD -->
+
+            <v-window-item value="world">
+                <WorldStateManagerWorld ref="world" />
+            </v-window-item>
+
+            <!-- HISTORY -->
+
+            <v-window-item value="history">
+                <v-card flat>
+                    <v-card-text>
+                        <div>
+                            <!-- Placeholder for History content -->
+                        </div>
+                    </v-card-text>
+                </v-card>
+            </v-window-item>
+
+            <!-- CONTEXT DB -->
+
+            <v-window-item value="contextdb">
+                <v-card flat>
+                    <v-card-text>
+                        <v-toolbar floating density="compact" class="mb-2" color="grey-darken-4">
+                            <v-text-field v-model="contextDBQuery" label="Content search"
+                                append-inner-icon="mdi-magnify" clearable single-line hide-details density="compact"
+                                variant="underlined" class="ml-1 mb-1 mr-1"
+                                @keyup.enter="queryContextDB"></v-text-field>
+
+                            <v-select v-model="contextDBQueryMetaKey" :items="contextDBMetaKeys" label="Filter By Tag"
+                                class="mr-1 mb-1" variant="underlined" single-line hide-details
+                                density="compact"></v-select>
+                            <v-select
+                                v-if="contextDBQueryMetaKey !== null && contextDBMetaValuesByType[contextDBQueryMetaKey]"
+                                v-model="contextDBQueryMetaValue"
+                                :items="contextDBMetaValuesByType[contextDBQueryMetaKey]()" label="Tag value"
+                                class="mr-1 mb-1" variant="underlined" single-line hide-details
+                                density="compact"></v-select>
+                            <v-text-field v-else v-model="contextDBQueryMetaValue" label="Tag value" class="mr-1 mb-1"
+                                variant="underlined" single-line hide-details density="compact"></v-text-field>
+                            <v-spacer></v-spacer>
+                            <!-- button that opens the tools menu -->
+                            <v-menu>
+                                <template v-slot:activator="{ props }">
+                                    <v-btn rounded="sm" v-bind="props" prepend-icon="mdi-tools" variant="text">
+                                        Tools
+                                    </v-btn>
+                                </template>
+                                <v-list>
+                                    <v-list-item @click.stop="resetContextDB" append-icon="mdi-shield-alert">
+                                        <v-list-item-title>Reset</v-list-item-title>
+                                    </v-list-item>
+                                </v-list>
+                            </v-menu>
+
+                            <!-- button to open add content db entry dialog -->
+                            <v-btn rounded="sm" prepend-icon="mdi-plus" @click.stop="dialogAddContextDBEntry = true"
+                                variant="text">
+                                Add entry
+                            </v-btn>
+                        </v-toolbar>
+                        <v-divider></v-divider>
+                        <!-- add entry-->
+                        <v-card v-if="dialogAddContextDBEntry === true">
+                            <v-card-title>
+                                Add entry
+                            </v-card-title>
+                            <v-card-text>
+                                <v-row>
+                                    <v-col cols="12">
+                                        <v-textarea rows="5" auto-grow v-model="newContextDBEntryText" label="Content"
+                                            hint="The content of the entry."></v-textarea>
+                                    </v-col>
+                                </v-row>
+                                <v-row>
+                                    <v-col cols="12">
+                                        <v-chip v-for="(value, name) in newContextDBEntryMeta" :key="name" label
+                                            size="x-small" variant="outlined" class="ml-1" closable
+                                            @click:close="handleRemoveContextDBEntryMeta(name)">{{ name }}: {{ value
+                                            }}</v-chip>
+                                    </v-col>
+                                </v-row>
+                                <v-row>
+                                    <v-col cols="3">
+                                        <v-select v-model="newContextDBEntryMetaKey" :items="contextDBMetaKeys"
+                                            label="Meta key" class="mr-1 mb-1" variant="underlined" single-line
+                                            hide-details density="compact"></v-select>
+                                    </v-col>
+                                    <v-col cols="3">
+                                        <v-select
+                                            v-if="newContextDBEntryMetaKey !== null && contextDBMetaValuesByType[newContextDBEntryMetaKey]"
+                                            v-model="newContextDBEntryMetaValue"
+                                            :items="contextDBMetaValuesByType[newContextDBEntryMetaKey]()"
+                                            label="Meta value" class="mr-1 mb-1" variant="underlined" single-line
+                                            hide-details density="compact"></v-select>
+                                        <v-text-field v-else v-model="newContextDBEntryMetaValue" label="Meta value"
+                                            class="mr-1 mb-1" variant="underlined" single-line hide-details
+                                            density="compact"></v-text-field>
+                                    </v-col>
+                                    <v-col cols="3">
+                                        <v-btn rounded="sm" color="primary" prepend-icon="mdi-plus"
+                                            @click.stop="handleNewContextDBEntryMeta" variant="text">
+                                            Add meta
+                                        </v-btn>
+                                    </v-col>
+                                </v-row>
+                            </v-card-text>
+                            <v-card-actions>
+                                <!-- cancel -->
+                                <v-btn rounded="sm" prepend-icon="mdi-cancel"
+                                    @click.stop="dialogAddContextDBEntry = false" color="info" variant="text">
+                                    Cancel
+                                </v-btn>
+                                <v-spacer></v-spacer>
+                                <!-- add -->
+                                <v-btn rounded="sm" prepend-icon="mdi-plus" @click.stop="addContextDBEntry"
+                                    color="primary" variant="text">
+                                    Add
+                                </v-btn>
+                            </v-card-actions>
+                        </v-card>
+
+                        <!-- results -->
+                        <div v-else>
+                            <v-table height="600px" v-if="contextDB.entries.length > 0">
+                                <thead>
+                                    <tr>
+                                        <th class="text-left"></th>
+                                        <th class="text-left" width="60%">Content</th>
+                                        <th class="text-center">Pin</th>
+                                        <th class="text-left">Tags</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="entry in contextDB.entries" :key="entry.id">
+                                        <td>
+                                            <!-- remove -->
+                                            <v-tooltip text="Delete entry">
+                                                <template v-slot:activator="{ props }">
+                                                    <v-btn icon size="x-small" v-bind="props" rounded="sm"
+                                                        variant="text" color="red-darken-1"
+                                                        @click.stop="deleteContextDBEntry(entry.id)">
+                                                        <v-icon>mdi-close-box-outline</v-icon>
                                                     </v-btn>
-                                                    <span v-else>
-                                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
-                                                            @click.stop="removePin(selectedPin.pin.entry_id)" color="error"
-                                                            variant="text">
-                                                            Confirm removal
-                                                        </v-btn>
-                                                        <v-btn class="ml-1" rounded="sm" prepend-icon="mdi-cancel"
-                                                            @click.stop="removePinConfirm = false" color="info"
-                                                            variant="text">
-                                                            Cancel
-                                                        </v-btn>
-                                                    </span>
-                                                    <v-spacer></v-spacer>
-                                                    <v-btn variant="text" color="primary"
-                                                        @click.stop="loadContextDBEntry(selectedPin.pin.entry_id)"
-                                                        prepend-icon="mdi-book-open-page-variant">View in context DB</v-btn>
-                                                </v-card-actions>
-                                            </v-card>
-                                        </v-col>
-                                        <v-col cols="5">
-                                            <v-card>
-                                                <v-card-title><v-icon size="small">mdi-robot</v-icon> Conditional auto
-                                                    pinning</v-card-title>
-                                                <v-card-text>
-                                                    <v-textarea rows="1" auto-grow v-model="selectedPin.pin.condition"
-                                                        label="Condition question prompt for auto pinning"
-                                                        hint="The condition that must be met for the pin to be active. Prompt will be evaluated by the AI (World State agent) regularly. This should be a question that the AI can answer with a yes or no."
-                                                        @update:model-value="queueUpdatePin(selectedPin)">
-                                                    </v-textarea>
-                                                    <v-checkbox hide-details dense v-model="selectedPin.pin.condition_state"
-                                                        label="Current condition evaluation"
-                                                        @change="updatePin(selectedPin)"></v-checkbox>
-                                                </v-card-text>
-                                            </v-card>
-                                        </v-col>
+                                                </template>
+                                            </v-tooltip>
+                                        </td>
+                                        <td>
+                                            <v-textarea rows="1" auto-grow density="compact" hide-details
+                                                :color="entry.dirty ? 'info' : ''" v-model="entry.text"
+                                                @update:model-value="queueUpdateContextDBEntry(entry)"></v-textarea>
+                                        </td>
+                                        <td class="text-center">
+                                            <v-tooltip :text="entryHasPin(entry.id) ? 'Manage pin' : 'Add pin'">
+                                                <template v-slot:activator="{ props }">
+                                                    <v-btn v-bind="props" size="x-small" rounded="sm" variant="text"
+                                                        v-if="entryIsPinned(entry.id)" color="success" icon
+                                                        @click.stop="selectPin(entry.id)"><v-icon>mdi-pin</v-icon></v-btn>
+                                                    <v-btn v-bind="props" size="x-small" rounded="sm" variant="text"
+                                                        v-else-if="entryHasPin(entry.id)" color="red-darken-2" icon
+                                                        @click.stop="selectPin(entry.id)"><v-icon>mdi-pin</v-icon></v-btn>
+                                                    <v-btn v-bind="props" size="x-small" rounded="sm" variant="text"
+                                                        v-else color="grey-lighten-2" icon
+                                                        @click.stop="addPin(entry.id)"><v-icon>mdi-pin</v-icon></v-btn>
+                                                </template>
+                                            </v-tooltip>
+
+                                        </td>
+                                        <td>
+                                            <!-- render entry.meta as v-chip elements showing both name and value -->
+                                            <v-chip v-for="(value, name) in visibleMetaTags(entry.meta)" :key="name"
+                                                label size="x-small" variant="outlined" class="ml-1">{{ name }}: {{
+                                                    value }}</v-chip>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </v-table>
+                            <v-alert v-else-if="contextDBCurrentQuery" dense type="warning" variant="text"
+                                icon="mdi-information-outline">
+                                No results
+                            </v-alert>
+                            <v-alert v-else dense type="info" variant="text" icon="mdi-magnify">
+                                Enter a query to search the context database.
+                            </v-alert>
+                        </div>
+
+                    </v-card-text>
+                </v-card>
+            </v-window-item>
+
+            <!-- PINS -->
+
+            <v-window-item value="pins">
+                <v-card flat>
+                    <v-card-text>
+                        <v-row>
+                            <v-col cols="3">
+                                <v-list dense v-if="pinsExist()">
+                                    <v-list-item prepend-icon="mdi-help" @click.stop="selectedPin = null">
+                                        <v-list-item-title>Information</v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item v-for="pin in pins" :key="pin.pin.entry_id"
+                                        @click.stop="selectedPin = pin"
+                                        :prepend-icon="pin.pin.active ? 'mdi-pin' : 'mdi-pin-off'"
+                                        :class="pin.pin.active ? '' : 'inactive'">
+                                        <v-list-item-title>{{ pin.text }}</v-list-item-title>
+                                        <v-list-item-subtitle>
+
+                                        </v-list-item-subtitle>
+                                    </v-list-item>
+                                </v-list>
+                                <v-card v-else>
+                                    <v-card-text>
+                                        No pins defined.
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                            <v-col cols="9">
+                                <v-row v-if="selectedPin !== null">
+                                    <v-col cols="7">
+                                        <v-card>
+                                            <v-checkbox hide-details dense v-model="selectedPin.pin.active"
+                                                label="Pin active" @change="updatePin(selectedPin)"></v-checkbox>
+                                            <v-alert class="mb-2 pre-wrap" variant="text" color="grey"
+                                                icon="mdi-book-open-page-variant">
+                                                {{ selectedPin.text }}
+
+                                            </v-alert>
+                                            <v-card-actions>
+                                                <v-btn v-if="removePinConfirm === false" rounded="sm"
+                                                    prepend-icon="mdi-close-box-outline" color="error" variant="text"
+                                                    @click.stop="removePinConfirm = true">
+                                                    Remove Pin
+                                                </v-btn>
+                                                <span v-else>
+                                                    <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
+                                                        @click.stop="removePin(selectedPin.pin.entry_id)" color="error"
+                                                        variant="text">
+                                                        Confirm removal
+                                                    </v-btn>
+                                                    <v-btn class="ml-1" rounded="sm" prepend-icon="mdi-cancel"
+                                                        @click.stop="removePinConfirm = false" color="info"
+                                                        variant="text">
+                                                        Cancel
+                                                    </v-btn>
+                                                </span>
+                                                <v-spacer></v-spacer>
+                                                <v-btn variant="text" color="primary"
+                                                    @click.stop="loadContextDBEntry(selectedPin.pin.entry_id)"
+                                                    prepend-icon="mdi-book-open-page-variant">View in context DB</v-btn>
+                                            </v-card-actions>
+                                        </v-card>
+                                    </v-col>
+                                    <v-col cols="5">
+                                        <v-card>
+                                            <v-card-title><v-icon size="small">mdi-robot</v-icon> Conditional auto
+                                                pinning</v-card-title>
+                                            <v-card-text>
+                                                <v-textarea rows="1" auto-grow v-model="selectedPin.pin.condition"
+                                                    label="Condition question prompt for auto pinning"
+                                                    hint="The condition that must be met for the pin to be active. Prompt will be evaluated by the AI (World State agent) regularly. This should be a question that the AI can answer with a yes or no."
+                                                    @update:model-value="queueUpdatePin(selectedPin)">
+                                                </v-textarea>
+                                                <v-checkbox hide-details dense v-model="selectedPin.pin.condition_state"
+                                                    label="Current condition evaluation"
+                                                    @change="updatePin(selectedPin)"></v-checkbox>
+                                            </v-card-text>
+                                        </v-card>
+                                    </v-col>
 
 
-                                    </v-row>
-                                    <v-alert v-else type="info" color="grey" variant="text" icon="mdi-pin">
-                                        Pins allow you to permanently pin a context entry to the AI context. While a pin is
-                                        active, the AI will always consider the pinned entry when generating text. <v-icon
-                                            color="warning">mdi-alert</v-icon> Pinning too many entries may use up your
-                                        available context size, so use them wisely.
+                                </v-row>
+                                <v-alert v-else type="info" color="grey" variant="text" icon="mdi-pin">
+                                    Pins allow you to permanently pin a context entry to the AI context. While a pin is
+                                    active, the AI will always consider the pinned entry when generating text. <v-icon
+                                        color="warning">mdi-alert</v-icon> Pinning too many entries may use up your
+                                    available context size, so use them wisely.
 
-                                        <br><br>
-                                        Additionally you may also define auto pin conditions that the World State agent will
-                                        check every turn. If the condition is met, the entry will be pinned. If the
-                                        condition
-                                        is no longer met, the entry will be unpinned.
+                                    <br><br>
+                                    Additionally you may also define auto pin conditions that the World State agent will
+                                    check every turn. If the condition is met, the entry will be pinned. If the
+                                    condition
+                                    is no longer met, the entry will be unpinned.
 
-                                        <br><br>
-                                        Finally, remember there is also automatic insertion of context based on relevance to
-                                        the current scene progress, which happens regardless of pins. Pins are just a way to
-                                        ensure that a specific entry is always considered relevant.
+                                    <br><br>
+                                    Finally, remember there is also automatic insertion of context based on relevance to
+                                    the current scene progress, which happens regardless of pins. Pins are just a way to
+                                    ensure that a specific entry is always considered relevant.
 
-                                        <br><br>
-                                        <v-btn color="primary" variant="text" prepend-icon="mdi-plus"
-                                            @click.stop="tab = 'contextdb'">Add new pins through the context
-                                            manager.</v-btn>
+                                    <br><br>
+                                    <v-btn color="primary" variant="text" prepend-icon="mdi-plus"
+                                        @click.stop="tab = 'contextdb'">Add new pins through the context
+                                        manager.</v-btn>
 
-                                    </v-alert>
+                                </v-alert>
 
-                                </v-col>
-                            </v-row>
-                        </v-card-text>
-                    </v-card>
-                </v-window-item>
+                            </v-col>
+                        </v-row>
+                    </v-card-text>
+                </v-card>
+            </v-window-item>
 
-                <!-- TEMPLATES -->
-                <v-window-item value="templates">
-                    <WorldStateManagerTemplates ref="templates" />
-                </v-window-item>
+            <!-- TEMPLATES -->
+            <v-window-item value="templates">
+                <WorldStateManagerTemplates ref="templates" />
+            </v-window-item>
 
-            </v-window>
-            <v-card-actions>
-                <v-spacer></v-spacer>
-                <!-- Placeholder for any actions -->
-            </v-card-actions>
-        </v-card>
-    </v-dialog>
+        </v-window>
+        <v-card-actions>
+            <v-spacer></v-spacer>
+            <!-- Placeholder for any actions -->
+        </v-card-actions>
+    </v-card>
 </template>
 
 <script>

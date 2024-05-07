@@ -1,50 +1,36 @@
 <template>
-    <v-list-subheader v-if="appConfig !== null" @click="toggle()" class="text-uppercase"><v-icon>mdi-script-text-outline</v-icon> Load
-        <v-progress-circular v-if="loading" indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular>
-        <v-icon v-if="expanded" icon="mdi-chevron-down"></v-icon>
-        <v-icon v-else icon="mdi-chevron-up"></v-icon>
-    </v-list-subheader>
-    <v-list-subheader class="text-uppercase" v-else>
-        <v-progress-circular indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular> Waiting for config...
-    </v-list-subheader>
-    <div v-if="!loading && isConnected() && expanded && sceneLoadingAvailable && appConfig !== null">
-        <v-list-item>
-            <div class="mb-3">
-                <!-- Toggle buttons for switching between file upload and path input -->
-                <v-btn-toggle density="compact" class="mb-3" v-model="inputMethod" mandatory>
-                    <v-btn value="file">
-                        <v-icon>mdi-file-upload</v-icon>
-                    </v-btn>
-                    <v-btn value="path">
-                        <v-icon>mdi-file-document-outline</v-icon>
-                    </v-btn>
-                    <v-btn value="creative">
-                        <v-icon>mdi-palette-outline</v-icon>
-                    </v-btn>
-                </v-btn-toggle>
-                <!-- File input for file upload -->
-                <div  v-if="inputMethod === 'file' && !loading">
-                    <v-file-input prepend-icon="" style="height:200px" density="compact" v-model="sceneFile"  @change="loadScene" label="Upload a character card"
-                    outlined accept="image/*" variant="solo-filled"></v-file-input>
-                </div>
-                <!-- Text field for path input -->
-                <v-autocomplete v-else-if="inputMethod === 'path' && !loading" v-model="sceneInput" :items="scenes"
-                    label="Search scenes" outlined @update:search="updateSearchInput" item-title="label" item-value="path" :loading="sceneSearchLoading">
-                </v-autocomplete>
-                <!-- Upload/Load button -->
-                <v-btn v-if="!loading && inputMethod === 'path'" @click="loadScene" color="primary" block class="mb-3">
-                    <v-icon left>mdi-folder</v-icon>
-                    Load
-                </v-btn>
-                <v-btn v-else-if="!loading && inputMethod === 'creative'" @click="loadCreative" color="primary" block class="mb-3">
-                    <v-icon left>mdi-palette-outline</v-icon>
-                    Creative Mode
-                </v-btn>
-            </div>
-        </v-list-item>
-    </div>
-    <div v-else-if="!sceneLoadingAvailable">
-        <v-alert type="warning" variant="tonal">You need to configure a Talemate client before you can load scenes.</v-alert>
+    <div v-if="isConnected() && sceneLoadingAvailable && appConfig !== null">
+
+        <v-row>
+            <v-col cols="6">
+                <v-card variant="text">
+                    <v-card-title>
+                        <v-icon size="x-small" class="mr-1" color="primary">mdi-folder</v-icon>
+                        Load</v-card-title>
+                    <v-card-text>
+                        <v-autocomplete :disabled="loading" v-model="sceneInput" :items="scenes"
+                        label="Search scenes" outlined @update:search="updateSearchInput" item-title="label" item-value="path" :loading="sceneSearchLoading" messages="Load previously saved scenes.">
+                            <template v-slot:append>
+                                <v-btn variant="text" :disabled="loading" @click="loadScene" icon="mdi-play" color="primary">
+                                </v-btn>
+                            </template>
+                        </v-autocomplete>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="6">
+                <v-card variant="text">
+                    <v-card-title>
+                        <v-icon size="x-small" class="mr-1" color="primary">mdi-upload</v-icon>
+                        Upload</v-card-title>
+                    <v-card-text>
+                        <!-- File input for file upload -->
+                        <v-file-input :disabled="loading" prepend-icon="" v-model="sceneFile" @change="loadScene" label="Upload a talemate scene or a character card."
+                        outlined accept="image/*" variant="solo-filled" messages="Drag and drop the file onto this field."></v-file-input>
+                    </v-card-text>
+                </v-card>        
+            </v-col>
+        </v-row>
     </div>
     <DefaultCharacter ref="defaultCharacterModal" @save="loadScene" @cancel="loadCanceled"></DefaultCharacter>
 </template>

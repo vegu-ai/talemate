@@ -3,26 +3,36 @@
 
 
     <!-- scene navigation drawer -->
-    <v-navigation-drawer v-model="sceneDrawer" app>
-      <v-list>
+    <v-navigation-drawer v-model="sceneDrawer" app width="300">
+      <v-list density="compact">
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
           <p class="text-body-2" color="white">
             Make sure the backend process is running.
           </p>
         </v-alert>
-        <LoadScene 
-        ref="loadScene" 
-        :scene-loading-available="ready && connected"
-        @loading="sceneStartedLoading" />
-        <v-divider></v-divider>
+        <v-window v-model="tab">
+          <v-window-item value="home">
+            <v-alert type="info" variant="text" color="primary" icon="mdi-script">
+              Talemate v{{ version }}
+            </v-alert>
+            <v-alert type="warning" variant="text" v-if="!(ready && connected)">You need to configure a Talemate client before you can load scenes.</v-alert>
+
+            <v-card>
+              <v-card-title>Resources</v-card-title>
+            </v-card>
+          </v-window-item>
+          <v-window-item value="main">
+            <CoverImage v-if="sceneActive" ref="coverImage" />
+            <WorldState v-if="sceneActive" ref="worldState" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
+          
+          </v-window-item>
+        </v-window>
+        <!--
         <div :style="(sceneActive && scene.environment === 'scene' ? 'display:block' : 'display:none')">
-          <!-- <GameOptions v-if="sceneActive" ref="gameOptions" /> -->
-          <v-divider></v-divider>
-          <CoverImage v-if="sceneActive" ref="coverImage" />
-          <WorldState v-if="sceneActive" ref="worldState" @passive-characters="(characters) => { passiveCharacters = characters }" />
-        </div>
-            <CreativeEditor v-if="sceneActive" ref="creativeEditor" @open-world-state-manager="onOpenWorldStateManager"  />
+</div>
+-->
+        <CreativeEditor v-if="sceneActive" ref="creativeEditor" @open-world-state-manager="onOpenWorldStateManager"  />
       </v-list>
 
     </v-navigation-drawer>
@@ -91,25 +101,13 @@
         <v-icon v-else>mdi-arrow-collapse-right</v-icon>
       </v-app-bar-nav-icon>
       
-      <v-toolbar-title v-if="scene.name !== undefined">
-        {{ scene.title || 'Untitled Scenario' }}
-        <span v-if="scene.saved === false" class="text-red">*</span>
-        <v-chip size="x-small" v-if="scene.environment === 'creative'" class="ml-2"><v-icon text="Creative" size="14"
-            class="mr-1">mdi-palette-outline</v-icon>Creative Mode</v-chip>
-        <v-chip size="x-small" v-else-if="scene.environment === 'scene'" class="ml-1"><v-icon text="Play" size="14"
-            class="mr-1">mdi-gamepad-square</v-icon>Game Mode</v-chip>
-
-        <v-tooltip :text="scene.scene_time" v-if="scene.scene_time !== undefined">
-          <template v-slot:activator="{ props }">
-            <v-btn v-bind="props" v-if="scene.environment === 'scene'" class="ml-1" @click="openSceneHistory()"><v-icon size="14"
-            class="mr-1">mdi-clock</v-icon>History</v-btn>
-          </template>
-        </v-tooltip>
-
-      </v-toolbar-title>
-      <v-toolbar-title v-else>
-        Talemate
-      </v-toolbar-title>
+      <v-tabs v-model="tab" color="primary">
+        <v-tab v-for="tab in availableTabs" :key="tab" :value="tab.value" @click.stop="tab.click">
+          <v-icon class="mr-1">{{ tab.icon() }}</v-icon>
+          {{ tab.title() }}
+        </v-tab>
+      </v-tabs>
+  
       <v-spacer></v-spacer>
 
       <v-app-bar-nav-icon v-if="sceneActive" @click="returnToStartScreen()"><v-icon>mdi-home</v-icon></v-app-bar-nav-icon>
@@ -123,50 +121,67 @@
         v-else><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
 
     </v-app-bar>
+
     <v-main style="height: 100%; display: flex; flex-direction: column;">
-      <v-container :class="(sceneActive ? '' : 'backdrop')" style="display: flex; flex-direction: column; height: 100%;">
 
-        <SceneMessages ref="sceneMessages" v-if="sceneActive" />
+      <v-container :class="(sceneActive ? '' : 'backdrop')" style="display: flex; flex-direction: column; height: 100%;" fluid>
 
-        <div style="flex-shrink: 0;" v-if="sceneActive">
+        <v-window v-model="tab">
+          <!-- HOME -->
+          <v-window-item value="home">
+            <LoadScene 
+            ref="loadScene" 
+            :scene-loading-available="ready && connected"
+            @loading="sceneStartedLoading" />
+            <IntroView
+            @request-scene-load="(path) => { $refs.loadScene.loadJsonSceneFromPath(path); }"
+            :version="version" 
+            :scene-loading-available="ready && connected"
+            :config="appConfig" />
+          </v-window-item>
+          <!-- SCENE -->
+          <v-window-item value="main">
+            <SceneMessages ref="sceneMessages" />
+            <div style="flex-shrink: 0;">
+    
+              <SceneTools 
+                @open-world-state-manager="onOpenWorldStateManager"
+                :messageInput="messageInput"
+                :playerCharacterName="getPlayerCharacterName()"
+                :passiveCharacters="passiveCharacters"
+                :inactiveCharacters="inactiveCharacters"
+                :activeCharacters="activeCharacters" />
+              <CharacterSheet ref="characterSheet" />
+              <SceneHistory ref="sceneHistory" />
+    
+              <v-textarea
+                v-model="messageInput" 
+                :label="inputHint" 
+                rows="1"
+                auto-grow
+                outlined 
+                ref="messageInput" 
+                @keydown.enter.prevent="sendMessage"
+                hint="Ctrl+Enter to autocomplete, Shift+Enter for newline"
+                :disabled="isInputDisabled()" 
+                :loading="autocompleting"
+                :prepend-inner-icon="messageInputIcon()"
+                :color="messageInputColor()">
+                <template v-slot:append>
+                  <v-btn @click="sendMessage" color="primary" icon>
+                    <v-icon v-if="messageInput">mdi-send</v-icon>
+                    <v-icon v-else>mdi-skip-next</v-icon>
+                  </v-btn>
+                </template>
+              </v-textarea>
+            </div>
+          </v-window-item>
+          <!-- WORLD -->
+          <v-window-item value="world">
+            <WorldStateManager ref="worldStateManager" />
+          </v-window-item>
 
-          <SceneTools 
-            @open-world-state-manager="onOpenWorldStateManager"
-            :messageInput="messageInput"
-            :playerCharacterName="getPlayerCharacterName()"
-            :passiveCharacters="passiveCharacters"
-            :inactiveCharacters="inactiveCharacters"
-            :activeCharacters="activeCharacters" />
-          <CharacterSheet ref="characterSheet" />
-          <SceneHistory ref="sceneHistory" />
-
-          <v-textarea
-            v-model="messageInput" 
-            :label="inputHint" 
-            rows="1"
-            auto-grow
-            outlined 
-            ref="messageInput" 
-            @keydown.enter.prevent="sendMessage"
-            hint="Ctrl+Enter to autocomplete, Shift+Enter for newline"
-            :disabled="isInputDisabled()" 
-            :loading="autocompleting"
-            :prepend-inner-icon="messageInputIcon()"
-            :color="messageInputColor()">
-            <template v-slot:append>
-              <v-btn @click="sendMessage" color="primary" icon>
-                <v-icon v-if="messageInput">mdi-send</v-icon>
-                <v-icon v-else>mdi-skip-next</v-icon>
-              </v-btn>
-            </template>
-          </v-textarea>
-        </div>
-
-        <IntroView v-else 
-        @request-scene-load="(path) => { $refs.loadScene.loadJsonSceneFromPath(path); }"
-        :version="version" 
-        :scene-loading-available="ready && connected"
-        :config="appConfig" />
+        </v-window>
 
       </v-container>
     </v-main>
@@ -196,6 +211,7 @@ import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 import VisualQueue from './VisualQueue.vue';
+import WorldStateManager from './WorldStateManager.vue';
 
 import IntroView from './IntroView.vue';
 
@@ -218,10 +234,47 @@ export default {
     StatusNotification,
     IntroView,
     VisualQueue,
+    WorldStateManager,
   },
   name: 'TalemateApp',
   data() {
     return {
+      tab: 'home',
+      tabs: [
+        {
+          title: () => { return 'Home' },
+          condition: () => { return true },
+          icon: () => { return 'mdi-home' },
+          value: 'home'
+        },
+        {
+          title: () => {
+            return this.scene.title || 'Untitled Scenario';
+          }, 
+          condition: () => { return this.sceneActive },
+          icon: () => { return 'mdi-script' },
+          click: () => { },
+          value: 'main'
+        },
+        { 
+          title: () => { return 'Editor' },
+          condition: () => { return this.sceneActive },
+          icon: () => { return 'mdi-puzzle-edit' },
+          click: () => { 
+            this.$nextTick(() => {
+              this.onOpenWorldStateManager();
+            });
+          },
+          value: 'world' 
+        },
+        {
+          title: () => { return 'History' },
+          condition: () => { return this.sceneActive },
+          icon: () => { return 'mdi-clock' },
+          click: () => { },
+          value: 'history'
+        }
+      ],
       version: null,
       loading: false,
       sceneActive: false,
@@ -248,11 +301,16 @@ export default {
       messageHandlers: [],
       scene: {},
       appConfig: {},
-      autcompleting: false,
+      autocompleting: false,
       autocompletePartialInput: "",
       autocompleteCallback: null,
       autocompleteFocusElement: null,
     }
+  },
+  computed: {
+    availableTabs() {
+      return this.tabs.filter(tab => tab.condition());
+    },
   },
   mounted() {
     console.log("mounted!")
@@ -349,6 +407,7 @@ export default {
           this.loading = false;
           this.sceneActive = true;
           this.requestAppConfig();
+          this.tab = 'main';
         }
         if(data.status == 'error') {
           this.errorNotification = true;
@@ -387,7 +446,8 @@ export default {
 
       if (data.type === 'app_config') {
         this.appConfig = data.data;
-        this.version = data.version;
+        if(data.version)
+          this.version = data.version;
         return;
       }
 
@@ -602,7 +662,8 @@ export default {
       this.$refs.sceneHistory.open();
     },
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
-      this.$refs.worldState.openWorldStateManager(tab, sub1, sub2, sub3);
+      this.tab = 'world';
+      this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
     },
     openAppConfig(tab, page) {
       this.$refs.appConfig.show(tab, page);

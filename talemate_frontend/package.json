@@ -17,7 +17,7 @@
     "roboto-fontface": "*",
     "vue": "^3.2.13",
     "vue-codemirror": "^6.1.1",
-    "vuetify": "^3.5.0",
+    "vuetify": "^3.6.4",
     "webfontloader": "^1.0.0"
   },
   "devDependencies": {

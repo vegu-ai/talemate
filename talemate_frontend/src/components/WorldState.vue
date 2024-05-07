@@ -204,11 +204,9 @@
         </div>
     </v-sheet>
 
-    <WorldStateManager ref="worldStateManager" />
 </template>
 
 <script>
-import WorldStateManager from './WorldStateManager.vue';
 
 export default {
     name: 'WorldState',
@@ -225,9 +223,6 @@ export default {
             hasAnyWorldState: false,
         }
     },
-    components: {
-        WorldStateManager,
-    },
 
     inject: [
         'getWebsocket', 
@@ -241,6 +236,7 @@ export default {
 
     emits: [
         'passive-characters',
+        'open-world-state-manager'
     ],
 
     methods: {
@@ -272,8 +268,7 @@ export default {
             }
         },
         openWorldStateManager(tab, sub1, sub2, sub3) {
-            console.log("OPENING WORLDSTATE MANAGER", tab, sub1, sub2, sub3)
-            this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
+            this.$emit('open-world-state-manager', tab, sub1, sub2, sub3);
         },
         passiveCharacters() {
             let characters = [];

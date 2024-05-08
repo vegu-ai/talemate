@@ -11,30 +11,25 @@
             Make sure the backend process is running.
           </p>
         </v-alert>
-        <v-window v-model="tab">
-          <v-window-item value="home">
-            <v-alert type="info" variant="text" color="primary" icon="mdi-script">
-              Talemate v{{ version }}
-            </v-alert>
+        <v-tabs-window v-model="tab">
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
             <v-alert type="warning" variant="text" v-if="!(ready && connected)">You need to configure a Talemate client before you can load scenes.</v-alert>
-
-            <v-card>
-              <v-card-title>Resources</v-card-title>
-            </v-card>
-          </v-window-item>
-          <v-window-item value="main">
+            <LoadScene 
+            ref="loadScene" 
+            :scene-loading-available="ready && connected"
+            @loading="sceneStartedLoading" />
+          </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
             <CoverImage v-if="sceneActive" ref="coverImage" />
             <WorldState v-if="sceneActive" ref="worldState" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
           
-          </v-window-item>
-        </v-window>
-        <!--
-        <div :style="(sceneActive && scene.environment === 'scene' ? 'display:block' : 'display:none')">
-</div>
--->
+          </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
+            <WorldStateManagerMenu v-if="sceneActive" ref="worldStateManagerMenu" :scene="scene" @world-state-manager-navigate="onOpenWorldStateManager" />
+          </v-tabs-window-item>
+        </v-tabs-window>
         <CreativeEditor v-if="sceneActive" ref="creativeEditor" @open-world-state-manager="onOpenWorldStateManager"  />
       </v-list>
-
     </v-navigation-drawer>
 
     <!-- settings navigation drawer -->
@@ -126,21 +121,17 @@
 
       <v-container :class="(sceneActive ? '' : 'backdrop')" style="display: flex; flex-direction: column; height: 100%;" fluid>
 
-        <v-window v-model="tab">
+        <v-tabs-window v-model="tab">
           <!-- HOME -->
-          <v-window-item value="home">
-            <LoadScene 
-            ref="loadScene" 
-            :scene-loading-available="ready && connected"
-            @loading="sceneStartedLoading" />
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
             <IntroView
             @request-scene-load="(path) => { $refs.loadScene.loadJsonSceneFromPath(path); }"
             :version="version" 
             :scene-loading-available="ready && connected"
             :config="appConfig" />
-          </v-window-item>
+          </v-tabs-window-item>
           <!-- SCENE -->
-          <v-window-item value="main">
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
             <SceneMessages ref="sceneMessages" />
             <div style="flex-shrink: 0;">
     
@@ -175,13 +166,13 @@
                 </template>
               </v-textarea>
             </div>
-          </v-window-item>
+          </v-tabs-window-item>
           <!-- WORLD -->
-          <v-window-item value="world">
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
             <WorldStateManager ref="worldStateManager" />
-          </v-window-item>
+          </v-tabs-window-item>
 
-        </v-window>
+        </v-tabs-window>
 
       </v-container>
     </v-main>
@@ -212,7 +203,7 @@ import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 import VisualQueue from './VisualQueue.vue';
 import WorldStateManager from './WorldStateManager.vue';
-
+import WorldStateManagerMenu from './WorldStateManagerMenu.vue';
 import IntroView from './IntroView.vue';
 
 export default {
@@ -235,6 +226,7 @@ export default {
     IntroView,
     VisualQueue,
     WorldStateManager,
+    WorldStateManagerMenu,
   },
   name: 'TalemateApp',
   data() {
@@ -245,6 +237,7 @@ export default {
           title: () => { return 'Home' },
           condition: () => { return true },
           icon: () => { return 'mdi-home' },
+          click: () => {},
           value: 'home'
         },
         {
@@ -253,26 +246,24 @@ export default {
           }, 
           condition: () => { return this.sceneActive },
           icon: () => { return 'mdi-script' },
-          click: () => { },
+          click: () => {
+            // on next tick, scroll to the bottom of the message list
+            this.$nextTick(() => {
+              this.$refs.messageInput.$el.scrollIntoView(false);
+            });
+          },
           value: 'main'
         },
         { 
-          title: () => { return 'Editor' },
+          title: () => { return 'World Editor' },
           condition: () => { return this.sceneActive },
-          icon: () => { return 'mdi-puzzle-edit' },
+          icon: () => { return 'mdi-earth-box' },
           click: () => { 
             this.$nextTick(() => {
               this.onOpenWorldStateManager();
             });
           },
           value: 'world' 
-        },
-        {
-          title: () => { return 'History' },
-          condition: () => { return this.sceneActive },
-          icon: () => { return 'mdi-clock' },
-          click: () => { },
-          value: 'history'
         }
       ],
       version: null,

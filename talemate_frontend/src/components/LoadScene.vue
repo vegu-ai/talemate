@@ -1,36 +1,42 @@
 <template>
     <div v-if="isConnected() && sceneLoadingAvailable && appConfig !== null">
-
-        <v-row>
-            <v-col cols="6">
-                <v-card variant="text">
-                    <v-card-title>
-                        <v-icon size="x-small" class="mr-1" color="primary">mdi-folder</v-icon>
-                        Load</v-card-title>
-                    <v-card-text>
-                        <v-autocomplete :disabled="loading" v-model="sceneInput" :items="scenes"
-                        label="Search scenes" outlined @update:search="updateSearchInput" item-title="label" item-value="path" :loading="sceneSearchLoading" messages="Load previously saved scenes.">
-                            <template v-slot:append>
-                                <v-btn variant="text" :disabled="loading" @click="loadScene" icon="mdi-play" color="primary">
-                                </v-btn>
-                            </template>
-                        </v-autocomplete>
-                    </v-card-text>
-                </v-card>
-            </v-col>
-            <v-col cols="6">
-                <v-card variant="text">
-                    <v-card-title>
-                        <v-icon size="x-small" class="mr-1" color="primary">mdi-upload</v-icon>
-                        Upload</v-card-title>
-                    <v-card-text>
-                        <!-- File input for file upload -->
-                        <v-file-input :disabled="loading" prepend-icon="" v-model="sceneFile" @change="loadScene" label="Upload a talemate scene or a character card."
-                        outlined accept="image/*" variant="solo-filled" messages="Drag and drop the file onto this field."></v-file-input>
-                    </v-card-text>
-                </v-card>        
-            </v-col>
-        </v-row>
+        <v-list-subheader>
+            <v-icon class="mr-1" color="primary">mdi-folder</v-icon>
+            Load
+        </v-list-subheader>
+        <v-card variant="text">
+            <v-card-text>
+                <v-autocomplete :disabled="loading" v-model="sceneInput" :items="scenes"
+                label="Search scenes" outlined @update:search="updateSearchInput" item-title="label" item-value="path" :loading="sceneSearchLoading" messages="Load previously saved scenes.">
+                </v-autocomplete>
+                <v-btn class="mt-2" variant="tonal" block :disabled="loading" @click="loadScene" append-icon="mdi-folder" color="primary">Load</v-btn>
+            </v-card-text>
+        </v-card>
+        <v-divider class="mt-3 mb-3"></v-divider>
+        <v-list-subheader>
+            <v-icon class="mr-1" color="primary">mdi-upload</v-icon>
+            Upload
+        </v-list-subheader>
+        <v-card variant="text">
+            <v-card-text>
+                <!-- File input for file upload -->
+                <div class="fixed-file-input-size">
+                    
+                    <v-file-input 
+                    :disabled="loading" 
+                    prepend-icon="" 
+                    v-model="sceneFile" 
+                    @change="loadScene" 
+                    label="Drag and Drop file."
+                    style="height:300px"
+                    outlined accept="image/*" 
+                    variant="solo-filled" 
+                    messages="Upload a talemate scene or a character card"
+                    ></v-file-input>
+                
+                </div>
+            </v-card-text>
+        </v-card>
     </div>
     <DefaultCharacter ref="defaultCharacterModal" @save="loadScene" @cancel="loadCanceled"></DefaultCharacter>
 </template>
@@ -46,6 +52,14 @@ export default {
     },
     props: {
         sceneLoadingAvailable: Boolean
+    },
+    computed: {
+      cols () {
+        const { lg, sm } = this.$vuetify.display
+        return lg ? [2, 2]
+          : sm ? [4, 4]
+            : [6, 6]
+      },
     },
     data() {
         return {
@@ -201,6 +215,8 @@ export default {
 }
 </script>
 
-<style scoped>
-/* styles for LoadScene component */
+<style>
+.fixed-file-input-size div.v-input__details {
+    align-items: flex-start !important;
+}
 </style>

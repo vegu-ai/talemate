@@ -1,33 +1,6 @@
 <template>
     <v-overlay contained v-model="isBusy"></v-overlay>
     <v-card variant="text">
-        <v-tabs color="primary" v-model="tab">
-            <v-tab value="characters">
-                <v-icon start>mdi-account-group</v-icon>
-                Characters
-            </v-tab>
-            <v-tab value="world">
-                <v-icon start>mdi-earth</v-icon>
-                World
-            </v-tab>
-            <v-tab v-if="historyEnabled" value="history" disabled>
-                <v-icon start>mdi-history</v-icon>
-                History
-            </v-tab>
-            <v-tab value="contextdb">
-                <v-icon start>mdi-book-open-page-variant</v-icon>
-                Context
-            </v-tab>
-            <v-tab value="pins">
-                <v-icon start>mdi-pin</v-icon>
-                Pins
-            </v-tab>
-            <v-tab value="templates">
-                <v-icon start>mdi-cube-scan</v-icon>
-                Templates
-            </v-tab>
-
-        </v-tabs>
         <v-window v-model="tab">
 
             <!-- CHARACTERS -->
@@ -1022,7 +995,7 @@ export default {
     ],
     methods: {
         show(tab, sub1, sub2, sub3) {
-            this.reset();
+            //this.reset();
             this.requestCharacterList();
             this.requestPins();
             this.requestTemplates();

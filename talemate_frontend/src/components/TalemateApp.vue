@@ -125,6 +125,7 @@
           <!-- HOME -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
             <IntroView
+            ref="introView"
             @request-scene-load="(path) => { $refs.loadScene.loadJsonSceneFromPath(path); }"
             :version="version" 
             :scene-loading-available="ready && connected"
@@ -237,7 +238,12 @@ export default {
           title: () => { return 'Home' },
           condition: () => { return true },
           icon: () => { return 'mdi-home' },
-          click: () => {},
+          click: () => {
+            // on next tick, scroll to the top
+            this.$nextTick(() => {
+              window.scrollTo(0, 0);
+            });
+          },
           value: 'home'
         },
         {

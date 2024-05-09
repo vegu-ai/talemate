@@ -46,7 +46,7 @@
     </v-sheet>
 </template>
 <script>
-
+import { v4 as uuidv4 } from 'uuid';
 export default {
     name: 'ContextualGenerate',
     props: {
@@ -80,6 +80,7 @@ export default {
             withInstructions: false,
             withOriginal: false,
             busy: false,
+            uid: null,
         }
     },
     emits: ["generate"],
@@ -116,6 +117,7 @@ export default {
             this.getWebsocket().send(JSON.stringify({
                 type: "assistant",
                 action: "contextual_generate",
+                uid: this.uid,
                 context: this.context,
                 character: this.character,
                 length: this.length,
@@ -127,6 +129,9 @@ export default {
         handleMessage(message) {
             if (message.type === "assistant" && message.action === "contextual_generate_done") {
                 
+                if(message.data.uid !== this.uid)
+                    return;
+
                 // slot will be some input element with a v-model attribute
                 // update the slot with the generated text
 
@@ -139,6 +144,8 @@ export default {
     },
     created() {
         this.registerMessageHandler(this.handleMessage);
+        // uuid
+        this.uid = uuidv4();
         // hook click event on child v-textarea
     },
 }

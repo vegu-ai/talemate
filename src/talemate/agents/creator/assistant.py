@@ -23,6 +23,7 @@ class ContentGenerationContext(pydantic.BaseModel):
     character: Union[str, None] = None
     original: Union[str, None] = None
     partial: str = ""
+    uid: Union[str, None] = None
 
     @property
     def computed_context(self) -> Tuple[str, str]:
@@ -43,6 +44,7 @@ class AssistantMixin:
         character: Union[str, None] = None,
         original: Union[str, None] = None,
         partial: str = "",
+        uid: Union[str, None] = None,
     ):
         """
         Request content from the assistant.
@@ -55,6 +57,7 @@ class AssistantMixin:
             character=character,
             original=original,
             partial=partial,
+            uid=uid,
         )
 
         return await self.contextual_generate(generation_context)

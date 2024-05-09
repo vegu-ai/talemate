@@ -6,6 +6,12 @@
             <!-- CHARACTERS -->
 
             <v-window-item value="characters">
+
+                <WorldStateManagerCharacter 
+                ref="characters" 
+                @require-scene-save="requireSceneSave = true"
+                :character-list="characterList" />
+
                 <v-card flat>
                     <v-card-text>
                         <v-row>
@@ -42,14 +48,6 @@
                                             </v-card-title>
                                         <v-divider></v-divider>
                                         <v-tabs v-model="selectedCharacterPage" color="primary" density="compact">
-                                            <v-tab value="description">
-                                                <v-icon size="small">mdi-text-account</v-icon>
-                                                Description
-                                            </v-tab>
-                                            <v-tab value="attributes">
-                                                <v-icon size="small">mdi-format-list-bulleted-type</v-icon>
-                                                Attributes
-                                            </v-tab>
                                             <v-tab value="details">
                                                 <v-icon size="small">mdi-format-list-text</v-icon>
                                                 Details
@@ -65,123 +63,10 @@
                                         </v-tabs>
 
                                         <v-card-text>
-                                            <!-- CHARACTER DESCRIPTION -->
-
-                                            <div v-if="selectedCharacterPage === 'description'">
-
-                                                <ContextualGenerate 
-                                                    :context="'character detail:description'" 
-                                                    :original="characterDetails.description"
-                                                    :character="characterDetails.name"
-                                                    @generate="content => setAndUpdateCharacterDescription(content)"
-                                                />
-
-                                                <v-textarea ref="characterDescription" rows="5" auto-grow v-model="characterDetails.description"
-                                                    :color="characterDescriptionDirty ? 'info' : ''"
-
-                                                    :disabled="characterDescriptionBusy"
-                                                    :loading="characterDescriptionBusy"
-                                                    @keyup.ctrl.enter.stop="autocompleteRequestCharacterDescription"
-
-                                                    @update:model-value="queueUpdateCharacterDescription"
-                                                    label="Description"
-                                                    :hint="'A short description of the character. '+autocompleteInfoMessage(characterDescriptionBusy)"></v-textarea>
-                                            </div>
-
-                                            <!-- CHARACTER ATTRIBUTES -->
-
-                                            <div v-else-if="selectedCharacterPage === 'attributes'">
-                                                <v-row floating color="grey-darken-5">
-                                                    <v-col cols="3">
-                                                        <v-text-field v-model="characterAttributeSearch"
-                                                            label="Filter attributes" append-inner-icon="mdi-magnify"
-                                                            clearable density="compact" variant="underlined"
-                                                            class="ml-1 mb-1"
-                                                            @update:modelValue="autoSelectFilteredAttribute"></v-text-field>
-
-                                                    </v-col>
-                                                    <v-col cols="3"></v-col>
-                                                    <v-col cols="2"></v-col>
-                                                    <v-col cols="4">
-                                                        <v-text-field v-model="newCharacterAttributeName"
-                                                            label="New attribute" append-inner-icon="mdi-plus"
-                                                            class="mr-1 mb-1" variant="underlined" density="compact"
-                                                            @keyup.enter="handleNewCharacterAttribute"
-                                                            hint="Attribute name"></v-text-field>
-
-                                                    </v-col>
-                                                </v-row>
-                                                <v-divider></v-divider>
-                                                <v-row>
-                                                    <v-col cols="4">
-                                                        <v-tabs v-model="selectedCharacterAttribute" density="compact" direction="vertical" color="indigo-lighten-3">
-                                                            <v-tab density="compact" v-for="(value, attribute) in filteredCharacterAttributes()"
-                                                            class="text-caption"
-                                                                :key="attribute" 
-                                                                :value="attribute">
-                                                                {{ attribute }}
-                                                            </v-tab>
-                                                        </v-tabs>
-                                                    </v-col>
-                                                    <v-col cols="8">
-                                                        <div v-if="selectedCharacterAttribute !== null">
-
-                                                            <ContextualGenerate 
-                                                                :context="'character attribute:'+selectedCharacterAttribute" 
-
-                                                                :original="characterDetails.base_attributes[selectedCharacterAttribute]"
-
-                                                                :character="characterDetails.name"
-
-                                                                @generate="content => setAndUpdateCharacterAttribute(selectedCharacterAttribute, content)"
-                                                            />
-
-                                                            <v-textarea ref="characterAttribute" rows="5" auto-grow
-                                                                :label="selectedCharacterAttribute"
-                                                                :color="characterAttributeDirty ? 'info' : ''"
-
-                                                                :disabled="characterAttributeBusy"
-                                                                :loading="characterAttributeBusy"
-                                                                :hint="autocompleteInfoMessage(characterAttributeBusy)"
-                                                                @keyup.ctrl.enter.stop="autocompleteRequestCharacterAttribute"
-
-                                                                @update:modelValue="queueUpdateCharacterAttribute(selectedCharacterAttribute)"
-
-                                                                v-model="characterDetails.base_attributes[selectedCharacterAttribute]">
-                                                            </v-textarea>
-
-                                                        </div>
-                                                        <v-row v-if="selectedCharacterAttribute !== null">
-                                                            <v-col cols="12">
-                                                                <v-btn v-if="removeCharacterAttributeConfirm === false"
-                                                                    rounded="sm" prepend-icon="mdi-close-box-outline" color="error"
-                                                                    variant="text"
-                                                                    @click.stop="removeCharacterAttributeConfirm = true">
-                                                                    Remove attribute
-                                                                </v-btn>
-                                                                <div v-else>
-                                                                    <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
-                                                                        @click.stop="deleteCharacterAttribute(selectedCharacterAttribute)"
-                                                                        color="error" variant="text">
-                                                                        Confirm removal
-                                                                    </v-btn>
-                                                                    <v-btn class="ml-1" rounded="sm"
-                                                                        prepend-icon="mdi-cancel"
-                                                                        @click.stop="removeCharacterAttributeConfirm = false"
-                                                                        color="info" variant="text">
-                                                                        Cancel
-                                                                    </v-btn>
-                                                                </div>
-
-                                                            </v-col>
-                                                        </v-row>
-                                                    </v-col>
-                                                </v-row>
-                                            </div>
 
                                             <!-- CHARACTER DETAILS -->
 
-                                            <div v-else-if="selectedCharacterPage === 'details'">
+                                            <div v-if="selectedCharacterPage === 'details'">
                                                 <v-row floating color="grey-darken-5">
                                                     <v-col cols="3">
                                                         <v-text-field v-model="characterDetailSearch"
@@ -800,6 +685,7 @@
 <script>
 import WorldStateManagerTemplates from './WorldStateManagerTemplates.vue';
 import WorldStateManagerWorld from './WorldStateManagerWorld.vue';
+import WorldStateManagerCharacter from './WorldStateManagerCharacter.vue';
 import WorldStateManagerCharacterActor from './WorldStateManagerCharacterActor.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
 
@@ -808,6 +694,7 @@ export default {
     components: {
         WorldStateManagerTemplates,
         WorldStateManagerWorld,
+        WorldStateManagerCharacter,
         WorldStateManagerCharacterActor,
         ContextualGenerate,
     },
@@ -841,13 +728,9 @@ export default {
 
             // characters
             selectedCharacter: null,
-            selectedCharacterPage: 'description',
-            selectedCharacterAttribute: null,
+            selectedCharacterPage: 'details',
             selectedCharacterDetail: null,
             selectedCharacterStateReinforcer: null,
-
-            newCharacterAttributeName: null,
-            newCharacterAttributeValue: null,
 
             newCharacterDetailName: null,
             newCharacterDetailValue: null,
@@ -857,27 +740,19 @@ export default {
             newCharacterStateReinforcerQuestion: null,
             newCharacterStateReinforcerInsert: "sequential",
 
-            removeCharacterAttributeConfirm: false,
             removeCharacterDetailConfirm: false,
             removeCharacterStateReinforcerConfirm: false,
             resetCharacterStateReinforcerConfirm: false,
 
-            characterAttributeSearch: null,
             characterDetailSearch: null,
             characterStateReinforcerSearch: null,
 
-            characterAttributeDirty: false,
             characterDetailDirty: false,
-            characterDescriptionDirty: false,
             characterStateReinforcerDirty: false,
 
-            characterAttributeBusy: false,
             characterDetailBusy: false,
-            characterDescriptionBusy: false,
 
-            characterAttributeUpdateTimeout: null,
             characterDetailUpdateTimeout: null,
-            characterDescriptionUpdateTimeout: null,
             contextDBEntryUpdateTimeout: null,
 
             characterDetailReinforceInterval: 10,
@@ -1034,27 +909,20 @@ export default {
             this.contextDB = { entries: [] };
             this.selectedCharacter = null;
             this.deferSelectedCharacter = null;
-            this.selectedCharacterPage = 'description';
-            this.selectedCharacterAttribute = null;
+            this.selectedCharacterPage = 'details';
             this.selectedCharacterDetail = null;
             this.selectedCharacterStateReinforcer = null;
             this.selectedContextDBEntry = null;
-            this.newCharacterAttributeName = null;
-            this.newCharacterAttributeValue = null;
             this.newCharacterDetailName = null;
             this.newCharacterDetailValue = null;
-            this.removeCharacterAttributeConfirm = false;
             this.removeCharacterDetailConfirm = false;
             this.resetCharacterStateReinforcerConfirm = false;
-            this.characterAttributeSearch = null;
             this.characterDetailSearch = null;
             this.newCharacterStateReinforcerInterval = 10;
             this.newCharacterStateReinforcerInstructions = "";
             this.newCharacterStateReinforcerQuestion = null;
             this.newCharacterStateReinforcerInsert = "sequential";
-            this.characterAttributeDirty = false;
             this.characterDetailDirty = false;
-            this.characterDescriptionDirty = false;
             this.characterStateReinforcerDirty = false;
             this.characterStateTemplateBusy = false;
             this.showCharacterStateTemplates = false;
@@ -1072,7 +940,6 @@ export default {
             this.removePinConfirm = false;
             this.deferedNavigation = null;
             this.isBusy = false;
-            this.characterAttributeBusy = false;
             this.characterDetailBusy = false;
         },
         exit() {
@@ -1108,74 +975,6 @@ export default {
             this.selectedCharacter = name;
         },
 
-        // character attributes
-
-        filteredCharacterAttributes() {
-            if (this.characterAttributeSearch === null) {
-                return this.characterDetails.base_attributes;
-            }
-
-            let filtered = {};
-            for (let attribute in this.characterDetails.base_attributes) {
-                if (attribute.toLowerCase().includes(this.characterAttributeSearch.toLowerCase())) {
-                    filtered[attribute] = this.characterDetails.base_attributes[attribute];
-                }
-            }
-            return filtered;
-        },
-
-        autoSelectFilteredAttribute() {
-            // if there is only one attribute in the filtered list, select it
-            if (Object.keys(this.filteredCharacterAttributes()).length === 1) {
-                this.selectedCharacterAttribute = Object.keys(this.filteredCharacterAttributes())[0];
-            }
-        },
-
-        queueUpdateCharacterAttribute(name) {
-            if (this.characterAttributeUpdateTimeout !== null) {
-                clearTimeout(this.characterAttributeUpdateTimeout);
-            }
-
-            this.characterAttributeDirty = true;
-
-            this.characterAttributeUpdateTimeout = setTimeout(() => {
-                this.updateCharacterAttribute(name);
-            }, 500);
-        },
-
-        updateCharacterAttribute(name) {
-            return this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'update_character_attribute',
-                name: this.selectedCharacter,
-                attribute: name,
-                value: this.characterDetails.base_attributes[name],
-            }));
-        },
-
-        setAndUpdateCharacterAttribute(name, value) {
-            this.characterDetails.base_attributes[name] = value;
-            this.updateCharacterAttribute(name);
-        },
-
-        handleNewCharacterAttribute() {
-            this.characterDetails.base_attributes[this.newCharacterAttributeName] = "";
-            this.selectedCharacterAttribute = this.newCharacterAttributeName;
-            this.newCharacterAttributeName = null;
-            // set focus to the new attribute
-            this.$refs.characterAttribute.focus();
-        },
-
-        deleteCharacterAttribute(name) {
-            // set value to blank
-            this.characterDetails.base_attributes[name] = "";
-            this.removeCharacterAttributeConfirm = false;
-            // send update
-            this.updateCharacterAttribute(name);
-            // remove attribute from list
-            delete this.characterDetails.base_attributes[name];
-            this.selectedCharacterAttribute = null;
-        },
 
         // character details
 
@@ -1380,34 +1179,6 @@ export default {
             this.resetCharacterStateReinforcerConfirm = false;
         },
 
-        // character description
-
-        queueUpdateCharacterDescription() {
-            if (this.characterDescriptionUpdateTimeout !== null) {
-                clearTimeout(this.characterDescriptionUpdateTimeout);
-            }
-
-            this.characterDescriptionDirty = true;
-
-            this.characterDescriptionUpdateTimeout = setTimeout(() => {
-                this.updateCharacterDescription();
-            }, 500);
-        },
-
-        updateCharacterDescription() {
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'update_character_description',
-                name: this.selectedCharacter,
-                attribute: 'description',
-                value: this.characterDetails.description,
-            }));
-        },
-
-        setAndUpdateCharacterDescription(value) {
-            this.characterDetails.description = value;
-            this.updateCharacterDescription();
-        },
 
         // contextdb
         isHiddenMetaTag(name) {
@@ -1636,22 +1407,11 @@ export default {
                 this.characterList = message.data;
             }
             else if (message.action === 'character_details') {
-                // if we are currently editing an attribute, override it in the incoming data
-                // this fixes the annoying rubberbanding when editing an attribute
-                if (this.selectedCharacterAttribute) {
-                    message.data.base_attributes[this.selectedCharacterAttribute] = this.characterDetails.base_attributes[this.selectedCharacterAttribute];
-                }
 
                 // if we are currently editing a detail, override it in the incoming data
                 // this fixes the annoying rubberbanding when editing a detail
                 if (this.selectedCharacterDetail) {
                     message.data.details[this.selectedCharacterDetail] = this.characterDetails.details[this.selectedCharacterDetail];
-                }
-
-                // if we are currently editing a description, override it in the incoming data
-                // this fixes the annoying rubberbanding when editing a description
-                if (this.characterDescriptionDirty) {
-                    message.data.description = this.characterDetails.description;
                 }
 
                 // if we are currently editing a state reinforcement, override it in the incoming data
@@ -1663,9 +1423,6 @@ export default {
                 this.characterDetails = message.data;
 
 
-                // select first attribute
-                if (!this.selectedCharacterAttribute)
-                    this.selectedCharacterAttribute = Object.keys(this.characterDetails.base_attributes)[0];
                 // select first detail
                 if (!this.selectedCharacterDetail)
                     this.selectedCharacterDetail = Object.keys(this.characterDetails.details)[0];
@@ -1683,16 +1440,9 @@ export default {
                     this.selectedPin = this.pins[this.selectedPin.pin.entry_id];
                 this.requireSceneSave = true;
             }
-            else if (message.action === 'character_attribute_updated') {
-                this.characterAttributeDirty = false;
-                this.requireSceneSave = true;
-            }
+
             else if (message.action === 'character_detail_updated') {
                 this.characterDetailDirty = false;
-                this.requireSceneSave = true;
-            }
-            else if (message.action === 'character_description_updated') {
-                this.characterDescriptionDirty = false;
                 this.requireSceneSave = true;
             }
             else if (message.action === 'character_detail_reinforcement_set') {
@@ -1731,18 +1481,7 @@ export default {
         },
         // autocomplete handlers
 
-        autocompleteRequestCharacterAttribute() {
-            this.characterAttributeBusy = true;
-            this.autocompleteRequest({
-                partial: this.characterDetails.base_attributes[this.selectedCharacterAttribute],
-                context: `character attribute:${this.selectedCharacterAttribute}`,
-                character: this.characterDetails.name
-            }, (completion) => {
-                this.characterDetails.base_attributes[this.selectedCharacterAttribute] += completion;
-                this.characterAttributeBusy = false;
-            }, this.$refs.characterAttribute);
 
-        },
 
         autocompleteRequestCharacterDetail() {
             this.characterDetailBusy = true;
@@ -1757,22 +1496,13 @@ export default {
 
         },
 
-        autocompleteRequestCharacterDescription() {
-            this.characterDescriptionBusy = true;
-            this.autocompleteRequest({
-                partial: this.characterDetails.description,
-                context: `character detail:description`,
-                character: this.characterDetails.name
-            }, (completion) => {
-                this.characterDetails.description += completion;
-                this.characterDescriptionBusy = false;
-            }, this.$refs.characterDescription);
-
-        },
     },
     created() {
         this.registerMessageHandler(this.handleMessage);
     },
+    unmouted() {
+        this.saveOnExit();
+    }
 }
 </script>
 

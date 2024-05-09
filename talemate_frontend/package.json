@@ -15,6 +15,7 @@
     "core-js": "^3.8.3",
     "dot-prop": "^8.0.2",
     "roboto-fontface": "*",
+    "uuid": "^9.0.1",
     "vue": "^3.2.13",
     "vue-codemirror": "^6.1.1",
     "vuetify": "^3.6.4",

@@ -1,0 +1,236 @@
+<template>
+    <v-row floating color="grey-darken-5">
+        <v-col cols="3">
+            <v-text-field v-model="search"
+                label="Filter attributes" append-inner-icon="mdi-magnify"
+                clearable density="compact" variant="underlined"
+                class="ml-1 mb-1"
+                @update:modelValue="autoSelect"></v-text-field>
+
+        </v-col>
+        <v-col cols="3"></v-col>
+        <v-col cols="2"></v-col>
+        <v-col cols="4">
+            <v-text-field v-model="newName"
+                label="New attribute" append-inner-icon="mdi-plus"
+                class="mr-1 mb-1" variant="underlined" density="compact"
+                @keyup.enter="handleNew"
+                hint="Attribute name"></v-text-field>
+
+        </v-col>
+    </v-row>
+    <v-divider></v-divider>
+    <v-row>
+        <v-col cols="4">
+            <v-tabs v-model="selected" density="compact" direction="vertical" color="indigo-lighten-3">
+                <v-tab density="compact" v-for="(value, attribute) in filteredList"
+                class="text-caption"
+                    :key="attribute" 
+                    :value="attribute">
+                    {{ attribute }}
+                </v-tab>
+            </v-tabs>
+        </v-col>
+        <v-col cols="8">
+            <div v-if="selected !== null">
+
+                <ContextualGenerate 
+                    :context="'character attribute:'+selected" 
+
+                    :original="character.base_attributes[selected]"
+
+                    :character="character.name"
+
+                    @generate="content => setAndUpdate(selected, content)"
+                />
+
+                <v-textarea ref="attribute" rows="5" auto-grow
+                    :label="selected"
+                    :color="dirty ? 'info' : ''"
+
+                    :disabled="busy"
+                    :loading="busy"
+                    :hint="autocompleteInfoMessage(busy)"
+                    @keyup.ctrl.enter.stop="sendAutocompleteRequest"
+
+                    @update:modelValue="queueUpdate(selected)"
+
+                    v-model="character.base_attributes[selected]">
+                </v-textarea>
+
+            </div>
+            <v-row v-if="selected !== null">
+                <v-col cols="12">
+                    <v-btn v-if="removeConfirm === false"
+                        rounded="sm" prepend-icon="mdi-close-box-outline" color="error"
+                        variant="text"
+                        @click.stop="removeConfirm = true">
+                        Remove attribute
+                    </v-btn>
+                    <div v-else>
+                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
+                            @click.stop="remove(selected)"
+                            color="error" variant="text">
+                            Confirm removal
+                        </v-btn>
+                        <v-btn class="ml-1" rounded="sm"
+                            prepend-icon="mdi-cancel"
+                            @click.stop="removeConfirm = false"
+                            color="info" variant="text">
+                            Cancel
+                        </v-btn>
+                    </div>
+
+                </v-col>
+            </v-row>
+        </v-col>
+    </v-row>
+</template>
+<script>
+import ContextualGenerate from './ContextualGenerate.vue';
+
+export default {
+    name: 'WorldStateManagerCharacterAttributes',
+    components: {
+        ContextualGenerate,
+    },
+    props: {
+        immutableCharacter: Object
+    },
+    data() {
+        return {
+            selected: null,
+            newName: null,
+            newValue: null,
+            removeConfirm: false,
+            search: null,
+            dirty: false,
+            busy: false,
+            updateTimeout: null,
+            character: null,
+        }
+    },
+    inject: [
+        'getWebsocket',
+        'autocompleteInfoMessage',
+        'autocompleteRequest',
+        'registerMessageHandler',
+    ],
+    emits:[
+        'require-scene-save'
+    ],
+    watch: {
+        immutableCharacter: {
+            immediate: true,
+            handler(value) {
+                if (!value) {
+                    this.character = null;
+                } else {
+                    this.character = { ...value };
+                }
+            }
+        }
+    },
+    computed: {
+        filteredList() {
+            if(!this.character) {
+                return {};
+            }
+
+            if (this.search === null) {
+                return this.character.base_attributes;
+            }
+
+            let filtered = {};
+            for (let attribute in this.character.base_attributes) {
+                if (attribute.toLowerCase().includes(this.search.toLowerCase())) {
+                    filtered[attribute] = this.character.base_attributes[attribute];
+                }
+            }
+            return filtered;
+        },
+    },
+    methods: {
+
+        autoSelect() {
+            // if there is only one attribute in the filtered list, select it
+            if (Object.keys(this.filtered()).length === 1) {
+                this.selected = Object.keys(this.filtered())[0];
+            }
+        },
+
+        queueUpdate(name) {
+            if (this.updateTimeout !== null) {
+                clearTimeout(this.updateTimeout);
+            }
+
+            this.dirty = true;
+
+            this.updateTimeout = setTimeout(() => {
+                this.update(name);
+            }, 500);
+        },
+
+        update(name) {
+            return this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'update_character_attribute',
+                name: this.character.name,
+                attribute: name,
+                value: this.character.base_attributes[name],
+            }));
+        },
+
+        setAndUpdate(name, value) {
+            this.character.base_attributes[name] = value;
+            this.update(name);
+        },
+
+        handleNew() {
+            this.character.base_attributes[this.newName] = "";
+            this.selected = this.newName;
+            this.newName = null;
+            // set focus to the new attribute
+            this.$refs.attribute.focus();
+        },
+
+        remove(name) {
+            // set value to blank
+            this.character.base_attributes[name] = "";
+            this.removeConfirm = false;
+            // send update
+            this.update(name);
+            // remove attribute from list
+            delete this.character.base_attributes[name];
+            this.selected = null;
+        },
+
+        sendAutocompleteRequest() {
+            this.busy = true;
+            this.autocompleteRequest({
+                partial: this.character.base_attributes[this.selected],
+                context: `character attribute:${this.selected}`,
+                character: this.character.name
+            }, (completion) => {
+                this.character.base_attributes[this.selected] += completion;
+                this.busy = false;
+            }, this.$refs.attribute);
+
+        },
+        
+        handleMessage(message) {
+            if (message.type !== 'world_state_manager') {
+                return;
+            }
+            if (message.action === 'character_attribute_updated') {
+                this.dirty = false;
+                this.requireSceneSave = true;
+            }
+        }
+    },
+    created() {
+        this.registerMessageHandler(this.handleMessage);
+    }
+}
+
+</script>

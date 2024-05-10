@@ -137,7 +137,7 @@ async def websocket_endpoint(websocket, path):
                 log.info("request_scene_history")
                 handler.request_scene_history()
             elif action_type == "request_assets":
-                log.info("request_assets", data=data)
+                log.info("request_assets")
                 handler.request_assets(data.get("assets"))
             elif action_type == "edit_message":
                 log.info("edit_message", data=data)

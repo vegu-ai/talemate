@@ -143,7 +143,6 @@ class WebsocketHandler(Receiver):
 
             if not client:
                 # select first client
-                print("selecting first client", self.llm_clients)
                 client = list(self.llm_clients.values())[0]["client"]
                 agent_config["client"] = client.name
 

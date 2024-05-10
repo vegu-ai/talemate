@@ -81,27 +81,40 @@ class KoboldCppClient(ClientBase):
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
+        log.debug("PARAMS", parameters=parameters)
         if not self.is_openai:
             # adjustments for united api
-            parameters["max_context_length"] = parameters.pop("max_tokens")
+            parameters["max_length"] = parameters.pop("max_tokens")
+            parameters["max_context_length"] = self.max_token_length
             if "repetition_penalty_range" in parameters:
                 parameters["rep_pen_range"] = parameters.pop("repetition_penalty_range")
             if "repetition_penalty" in parameters:
                 parameters["rep_pen"] = parameters.pop("repetition_penalty")
-
+            if parameters.get("stop_sequence"):
+                parameters["stop_sequence"] = parameters.pop("stopping_strings")
+                
+            if parameters.get("extra_stopping_strings"):
+                if "stop_sequence" in parameters:
+                    parameters["stop_sequence"] += parameters.pop("extra_stopping_strings")
+                else:
+                    parameters["stop_sequence"] = parameters.pop("extra_stopping_strings")
+                
+                
             allowed_params = [
+                "max_length",
                 "max_context_length",
                 "rep_pen",
                 "rep_pen_range",
                 "top_p",
                 "top_k",
                 "temperature",
+                "stop_sequence",
             ]
         else:
             # adjustments for openai api
-            if "repetition_penalty_range" in parameters:
+            if "repetition_penalty" in parameters:
                 parameters["presence_penalty"] = parameters.pop(
-                    "repetition_penalty_range"
+                    "repetition_penalty"
                 )
 
             allowed_params = ["max_tokens", "presence_penalty", "top_p", "temperature"]
@@ -147,7 +160,7 @@ class KoboldCppClient(ClientBase):
         """
 
         parameters["prompt"] = prompt.strip(" ")
-
+        
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 self.api_url_for_generation,
@@ -157,10 +170,14 @@ class KoboldCppClient(ClientBase):
             )
             response_data = response.json()
 
-            if self.is_openai:
-                return response_data["choices"][0]["text"]
-            else:
-                return response_data["results"][0]["text"]
+            try:
+                if self.is_openai:
+                    return response_data["choices"][0]["text"]
+                else:
+                    return response_data["results"][0]["text"]
+            except (TypeError, KeyError) as exc:
+                log.error("Failed to generate text", exc=exc, response_data=response_data, response_status=response.status_code)
+                return ""
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

@@ -1,4 +1,5 @@
 <template>
+<v-list density="compact">
     <v-list-subheader class="text-uppercase">
         <v-icon class="mr-1">mdi-earth</v-icon>World
         <v-progress-circular class="ml-1 mr-3" size="14" v-if="requesting" indeterminate="disable-shrink" color="primary"></v-progress-circular>   
@@ -203,7 +204,7 @@
 
         </div>
     </v-sheet>
-
+</v-list>
 </template>
 
 <script>

@@ -1,6 +1,9 @@
 <template>
-    <v-overlay contained v-model="isBusy"></v-overlay>
     <v-card variant="text">
+        <v-tabs v-model="tab" color="secondary">
+            <v-tab v-for="tab in tabs" :disabled="tab.disabled" :key="tab.name" :text="tab.title" :prepend-icon="tab.icon" :value="tab.name">
+            </v-tab>
+        </v-tabs>
         <v-window v-model="tab">
 
             <!-- CHARACTERS -->
@@ -9,6 +12,7 @@
                 <WorldStateManagerCharacter 
                 ref="characters" 
                 @require-scene-save="requireSceneSave = true"
+                @selected-character="(character) => { $emit('selected-character', character) }"
                 :templates="templates"
                 :character-list="characterList" />
             </v-window-item>
@@ -98,9 +102,51 @@ export default {
         return {
             // general
             tab: 'characters',
-            dialog: false,
+            tabs: [
+                {
+                    name: "scene",
+                    title: "Scene",
+                    icon: "mdi-script"
+                },
+                {
+                    name: "characters",
+                    title: "Characters",
+                    icon: "mdi-account-group"
+                },
+                {
+                    name: "world",
+                    title: "World",
+                    icon: "mdi-earth"
+                },
+                {
+                    name: "history",
+                    title: "History",
+                    icon: "mdi-clock",
+                    disabled: true,
+                },
+                {
+                    name: "contextdb",
+                    title: "Context",
+                    icon: "mdi-book-open-page-variant"
+                },
+                {
+                    name: "pins",
+                    title: "Pins",
+                    icon: "mdi-pin"
+                },
+                {
+                    name: "templates",
+                    title: "Templates",
+                    icon: "mdi-cube-scan"
+                },
+                {
+                    name: "game",
+                    title: "Game Master",
+                    icon: "mdi-dice-multiple",
+                    disabled: true,
+                },
+            ],
             requireSceneSave: false,
-            isBusy: false,
             historyEnabled: false,
             insertionModes: [
                 { "title": "Passive", "value": "never", "props": { "subtitle": "Rely on pins and relevancy attachment" } },
@@ -112,21 +158,6 @@ export default {
             templates: {
                 state_reinforcement: {},
             },
-
-            // characters
-            selectedCharacter: null,
-            selectedCharacterPage: 'details',
-            selectedCharacterDetail: null,
-            selectedCharacterStateReinforcer: null,
-
-            
-
-            characterDetailReinforceInterval: 10,
-            characterDetailReinforceIntructions: "",
-
-            characterStateTemplateBusy: false,
-            showCharacterStateTemplates: false,
-
             characterList: {
                 characters: [],
             },
@@ -137,7 +168,8 @@ export default {
         }
     },
     emits: [
-        'world-state-manager-navigate-r'
+        'navigate-r',
+        'selected-character',
     ],
     watch: {
         dialog(val) {
@@ -151,7 +183,7 @@ export default {
                     this.$refs.templates.requestTemplates();
                 });
             }
-            this.$emit('world-state-manager-navigate-r', val)
+            this.$emit('navigate-r', val, {manager:this})
         },
         characterDetails() {
             if (this.deferedNavigation !== null) {
@@ -236,7 +268,6 @@ export default {
             this.pins = {};
             this.deferSelectedCharacter = null;
             this.deferedNavigation = null;
-            this.isBusy = false;
             this.tab = 'characters';
 
             if(this.$refs.characters) {
@@ -332,12 +363,10 @@ export default {
         },
 
         handleMessage(message) {
-
             // Scene loaded
             if (message.type === "system" && message.id === 'scene.loaded') {
                 this.reset()
             }
-
             if (message.type !== 'world_state_manager') {
                 return;
             }
@@ -345,46 +374,17 @@ export default {
             if (message.action === 'character_list') {
                 this.characterList = message.data;
             }
-            else if (message.action === 'character_details') {
-
-                // if we are currently editing a state reinforcement, override it in the incoming data
-                // this fixes the annoying rubberbanding when editing a state reinforcement
-                if (this.characterStateReinforcerDirty) {
-                    message.data.reinforcements[this.selectedCharacterStateReinforcer] = this.characterDetails.reinforcements[this.selectedCharacterStateReinforcer];
-                }
-
-                this.characterDetails = message.data;
-
-
-                // select first detail
-                if (!this.selectedCharacterDetail)
-                    this.selectedCharacterDetail = Object.keys(this.characterDetails.details)[0];
-
-                // loop through characterDetails.base_attributes and characterDetails.details and convert any objects to strings
-                for (let attribute in this.characterDetails.base_attributes) {
-                    if (typeof this.characterDetails.base_attributes[attribute] === 'object') {
-                        this.characterDetails.base_attributes[attribute] = JSON.stringify(this.characterDetails.base_attributes[attribute]);
-                    }
-                }
-            }
             else if (message.action === 'pins') {
                 this.pins = message.data.pins;
             }
             else if (message.action == 'templates') {
                 this.templates = message.data;
             }
-            else if (message.action === 'operation_done') {
-                this.isBusy = false;
-            }
-
         },
     },
     created() {
         this.registerMessageHandler(this.handleMessage);
     },
-    unmouted() {
-        this.saveOnExit();
-    }
 }
 </script>
 

@@ -44,6 +44,7 @@ class CharacterDetails(pydantic.BaseModel):
     details: dict[str, str] = {}
     reinforcements: dict[str, Reinforcement] = {}
     actor: CharacterActor = pydantic.Field(default_factory=CharacterActor)
+    cover_image: Union[str, None] = None
 
 
 class World(pydantic.BaseModel):
@@ -141,6 +142,7 @@ class WorldStateManager:
                 dialogue_examples=character.example_dialogue,
                 dialogue_instructions=character.dialogue_instructions,
             ),
+            cover_image=character.cover_image,
         )
 
         # sorted base attributes

@@ -4,32 +4,29 @@
 
     <!-- scene navigation drawer -->
     <v-navigation-drawer v-model="sceneDrawer" app width="300">
-      <v-list density="compact">
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
           <p class="text-body-2" color="white">
             Make sure the backend process is running.
           </p>
         </v-alert>
-        <v-tabs-window v-model="tab">
-          <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
-            <v-alert type="warning" variant="text" v-if="!(ready && connected)">You need to configure a Talemate client before you can load scenes.</v-alert>
-            <LoadScene 
-            ref="loadScene" 
-            :scene-loading-available="ready && connected"
-            @loading="sceneStartedLoading" />
-          </v-tabs-window-item>
-          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
-            <CoverImage v-if="sceneActive" ref="coverImage" />
-            <WorldState v-if="sceneActive" ref="worldState" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
-          
-          </v-tabs-window-item>
-          <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
-            <WorldStateManagerMenu v-if="sceneActive" ref="worldStateManagerMenu" :scene="scene" @world-state-manager-navigate="onOpenWorldStateManager" />
-          </v-tabs-window-item>
-        </v-tabs-window>
-        <CreativeEditor v-if="sceneActive" ref="creativeEditor" @open-world-state-manager="onOpenWorldStateManager"  />
-      </v-list>
+      <v-tabs-window v-model="tab">
+      <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
+          <v-alert type="warning" variant="text" v-if="!(ready && connected)">You need to configure a Talemate client before you can load scenes.</v-alert>
+          <LoadScene 
+          ref="loadScene" 
+          :scene-loading-available="ready && connected"
+          @loading="sceneStartedLoading" />
+      </v-tabs-window-item>
+        <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
+          <CoverImage v-if="sceneActive" ref="coverImage" />
+          <WorldState v-if="sceneActive" ref="worldState" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
+        </v-tabs-window-item>
+        <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
+          <WorldStateManagerMenu v-if="sceneActive" ref="worldStateManagerMenu" :scene="scene" @world-state-manager-navigate="onOpenWorldStateManager" />
+        </v-tabs-window-item>
+      </v-tabs-window>
+      <CreativeEditor v-if="sceneActive" ref="creativeEditor" @open-world-state-manager="onOpenWorldStateManager"  />
     </v-navigation-drawer>
 
     <!-- settings navigation drawer -->
@@ -174,7 +171,8 @@
           <!-- WORLD -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
             <WorldStateManager 
-            @world-state-manager-navigate-r="onWorldStateManagerNavigateR"
+            @navigate-r="onWorldStateManagerNavigateR"
+            @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />
           </v-tabs-window-item>
 
@@ -439,6 +437,7 @@ export default {
           scene_time: data.data.scene_time,
           saved: data.data.saved,
           player_character_name: data.data.player_character_name,
+          data: {...data.data},
         }
         this.sceneActive = true;
         this.inactiveCharacters = data.data.inactive_characters;
@@ -679,10 +678,18 @@ export default {
         this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
       });
     },
-    onWorldStateManagerNavigateR(tab) {
+    onWorldStateManagerNavigateR(tab, meta) {
+      console.log("onWorldStateManagerNavigateR", {tab, meta})
       this.$nextTick(() => {
         if(this.$refs.worldStateManagerMenu)
-          this.$refs.worldStateManagerMenu.tab = tab;
+          this.$refs.worldStateManagerMenu.update(tab, meta);
+      });
+    },
+    onWorldStateManagerSelectedCharacter(character) {
+      console.log("onWorldStateManagerSelectedCharacter", character)
+      this.$nextTick(() => {
+        if(this.$refs.worldStateManagerMenu)
+          this.$refs.worldStateManagerMenu.setCharacter(character)
       });
     },
     openAppConfig(tab, page) {

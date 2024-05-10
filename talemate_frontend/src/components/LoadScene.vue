@@ -1,4 +1,5 @@
 <template>
+<v-list density="compact">
     <div v-if="isConnected() && sceneLoadingAvailable && appConfig !== null">
         <v-list-subheader>
             <v-icon class="mr-1" color="primary">mdi-folder</v-icon>
@@ -39,6 +40,7 @@
         </v-card>
     </div>
     <DefaultCharacter ref="defaultCharacterModal" @save="loadScene" @cancel="loadCanceled"></DefaultCharacter>
+</v-list>
 </template>
   
 

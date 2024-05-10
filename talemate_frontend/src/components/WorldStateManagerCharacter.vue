@@ -146,7 +146,8 @@ export default {
         }
     },
     emits:[
-        'require-scene-save'
+        'require-scene-save',
+        'selected-character',
     ],
     methods: {
 
@@ -183,6 +184,7 @@ export default {
             }
             else if (message.action === 'character_details') {
                 this.character = message.data;
+                this.$emit('selected-character', this.character)
             }
         },
     },

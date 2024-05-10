@@ -1,11 +1,24 @@
 <template>
     <v-sheet v-if="expanded" elevation="10">
-        <v-img cover @click="toggle()" v-if="asset_id !== null" :src="'data:'+media_type+';base64, '+base64"></v-img>
+        <v-img cover @click="toggle()" v-if="asset_id !== null" :src="'data:'+media_type+';base64, '+base64" v-on:drop="onDrop" v-on:dragover.prevent></v-img>
+        <div class="empty-portrait" v-else>
+            <v-img  src="@/assets/logo-13.1-backdrop.png" cover v-on:drop="onDrop" v-on:dragover.prevent></v-img>
+        </div>
+        <div v-if="allowUpdate && type === 'character' && target">
+            <v-card density="compact">
+                <v-card-text class="text-caption text-grey">
+                    Drag and drop an image to update <span class="text-primary">{{ target.name }}</span>'s main image.
+                </v-card-text>
+            </v-card>
+            <v-divider></v-divider>
+        </div>
     </v-sheet>
-    <v-list-subheader v-else @click="toggle()"><v-icon>mdi-image-frame</v-icon> Cover image
-        <v-icon v-if="expanded" icon="mdi-chevron-down"></v-icon>
-        <v-icon v-else icon="mdi-chevron-up"></v-icon>
-    </v-list-subheader>
+    <v-list density="compact" v-else>
+        <v-list-subheader @click="toggle()"><v-icon>mdi-image-frame</v-icon> Cover image
+            <v-icon v-if="expanded" icon="mdi-chevron-down"></v-icon>
+            <v-icon v-else icon="mdi-chevron-up"></v-icon>
+        </v-list-subheader>
+    </v-list>
 </template>
 
 <script>
@@ -20,13 +33,65 @@ export default {
             expanded: true,
         }
     },
+    props: {
+        type: String,
+        target: Object,
+        allowUpdate: Boolean,
+    },
+    watch: {
+        target: {
+            immediate: true,
+            handler(value) {
+                console.log("watch target", value)
+                if(!value) {
+                    this.asset_id = null;
+                } else if(this.type === 'scene' && value.data.assets.cover_image !== this.asset_id) {
+                    this.asset_id = value.data.assets.cover_image;
+                    if(this.asset_id)
+                        this.requestSceneAssets([value.data.assets.cover_image]);
+                } else if(this.type === 'character' && value.cover_image !== this.asset_id) {
+                    this.asset_id = value.cover_image;
+                    if(this.asset_id)
+                        this.requestSceneAssets([value.cover_image]);
+                }
+            }
+        },
+    },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'requestSceneAssets'],
     methods: {
 
         toggle() {
             this.expanded = !this.expanded;
         },
+        onDrop(e) {
+            if(!this.allowUpdate)
+                return
 
+            e.preventDefault();
+            let files = e.dataTransfer.files;
+            if (files.length > 0) {
+                let reader = new FileReader();
+                reader.onload = (e) => {
+                    let result = e.target.result;
+                    this.uploadCharacterImage(result);
+                };
+                reader.readAsDataURL(files[0]);
+            }
+        },
+        uploadCharacterImage(image_file_base64) {
+            if(!this.allowUpdate)
+                return
+            
+            if(this.type !== 'character')
+                return
+
+            this.getWebsocket().send(JSON.stringify({ 
+                type: 'upload_scene_asset', 
+                scene_cover_image: false,
+                character_cover_image: this.target.name,
+                content: image_file_base64,
+            }));
+        },
         handleMessage(data) {
 
             if(data.type === "scene_status" && data.status == "started") {
@@ -64,4 +129,7 @@ export default {
 </script>
 
 <style scoped>
+div.empty-portrait {
+
+}
 </style>

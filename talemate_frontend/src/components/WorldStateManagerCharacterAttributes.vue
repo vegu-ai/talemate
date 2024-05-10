@@ -239,6 +239,9 @@ export default {
                 this.dirty = false;
                 this.$emit('require-scene-save');
             }
+            else if (message.action === 'operation_done') {
+                this.busy = false;
+            }
         }
     },
     created() {

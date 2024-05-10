@@ -13,6 +13,7 @@ export default createVuetify({
       dark: {
         colors: {
           primary: colors.deepPurple.lighten2,
+          secondary: colors.deepOrange.base,
         }
       }
     }

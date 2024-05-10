@@ -1,5 +1,6 @@
 import random
 import re
+
 # import urljoin
 from urllib.parse import urljoin
 import httpx
@@ -33,18 +34,17 @@ class KoboldCppClient(ClientBase):
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
-    
+
     @property
     def is_openai(self) -> bool:
         """
         kcpp has two apis
-        
+
         open-ai implementation at /v1
         their own implenation at /api/v1
         """
         return "/api/v1" not in self.api_url
 
-    
     @property
     def api_url_for_model(self) -> str:
         if self.is_openai:
@@ -53,7 +53,7 @@ class KoboldCppClient(ClientBase):
         else:
             # join /models to url
             return urljoin(self.api_url, "model")
-        
+
     @property
     def api_url_for_generation(self) -> str:
         if self.is_openai:
@@ -63,21 +63,17 @@ class KoboldCppClient(ClientBase):
             # join /api/v1/generate
             return urljoin(self.api_url, "generate")
 
-    
-    def api_endpoint_specified(self, url:str) -> bool:
-        return "/v1" in self.api_url  
-        
+    def api_endpoint_specified(self, url: str) -> bool:
+        return "/v1" in self.api_url
+
     def ensure_api_endpoint_specified(self):
         if not self.api_endpoint_specified(self.api_url):
             # url doesn't specify the api endpoint
             # use the koboldcpp openai api
-            print("joining", self.api_url, "/api/v1/")
-            self.api_url = urljoin(self.api_url.rstrip("/")+"/", "/api/v1/")
-            print()
-            print("joined", self.api_url)
+            self.api_url = urljoin(self.api_url.rstrip("/") + "/", "/api/v1/")
         if not self.api_url.endswith("/"):
             self.api_url += "/"
-        
+
     def __init__(self, **kwargs):
         self.api_key = kwargs.pop("api_key", "")
         super().__init__(**kwargs)
@@ -92,15 +88,24 @@ class KoboldCppClient(ClientBase):
                 parameters["rep_pen_range"] = parameters.pop("repetition_penalty_range")
             if "repetition_penalty" in parameters:
                 parameters["rep_pen"] = parameters.pop("repetition_penalty")
-                
-            allowed_params = ["max_context_length", "rep_pen", "rep_pen_range", "top_p", "top_k", "temperature"]
+
+            allowed_params = [
+                "max_context_length",
+                "rep_pen",
+                "rep_pen_range",
+                "top_p",
+                "top_k",
+                "temperature",
+            ]
         else:
             # adjustments for openai api
             if "repetition_penalty_range" in parameters:
-                parameters["presence_penalty"] = parameters.pop("repetition_penalty_range")
-                
+                parameters["presence_penalty"] = parameters.pop(
+                    "repetition_penalty_range"
+                )
+
             allowed_params = ["max_tokens", "presence_penalty", "top_p", "temperature"]
-        
+
         # drop unsupported params
         for param in list(parameters.keys()):
             if param not in allowed_params:
@@ -121,7 +126,7 @@ class KoboldCppClient(ClientBase):
 
         if response.status_code == 404:
             raise KeyError(f"Could not find model info at: {self.api_url_for_model}")
-    
+
         response_data = response.json()
         if self.is_openai:
             # {"object": "list", "data": [{"id": "koboldcpp/dolphin-2.8-mistral-7b", "object": "model", "created": 1, "owned_by": "koboldcpp", "permission": [], "root": "koboldcpp"}]}
@@ -129,11 +134,11 @@ class KoboldCppClient(ClientBase):
         else:
             # {"result": "koboldcpp/dolphin-2.8-mistral-7b"}
             model_name = response_data.get("result")
-            
+
         # split by "/" and take last
         if model_name:
             model_name = model_name.split("/")[-1]
-            
+
         return model_name
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
@@ -151,7 +156,7 @@ class KoboldCppClient(ClientBase):
                 headers=self.request_headers,
             )
             response_data = response.json()
-            
+
             if self.is_openai:
                 return response_data["choices"][0]["text"]
             else:

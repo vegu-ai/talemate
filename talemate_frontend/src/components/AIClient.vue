@@ -244,6 +244,13 @@ export default {
           client.api_key = data.api_key;
           client.double_coercion = data.data.double_coercion;
           client.data = data.data;
+          for (let key in client.data.meta.extra_fields) {
+            if (client.data[key] === null || client.data[key] === undefined) {
+              client.data[key] = client.data.meta.defaults[key];
+            }
+            client[key] = client.data[key];
+          }
+
         } else if(!client) {
           console.log("Adding new client", data);
 
@@ -259,6 +266,16 @@ export default {
             double_coercion: data.data.double_coercion,
             data: data.data,
           });
+
+          // apply extra field defaults
+          let client = this.state.clients[this.state.clients.length - 1];
+          for (let key in client.data.meta.extra_fields) {
+            if (client.data[key] === null || client.data[key] === undefined) {
+              client.data[key] = client.data.meta.defaults[key];
+            }
+            client[key] = client.data[key];
+          }
+
           // sort the clients by name
           this.state.clients.sort((a, b) => (a.name > b.name) ? 1 : -1);
         }

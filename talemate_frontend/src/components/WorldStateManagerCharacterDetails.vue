@@ -2,70 +2,72 @@
     <v-row floating color="grey-darken-5">
         <v-col cols="3">
             <v-text-field v-model="search"
-                label="Filter attributes" append-inner-icon="mdi-magnify"
+                label="Filter details" append-inner-icon="mdi-magnify"
                 clearable density="compact" variant="underlined"
                 class="ml-1 mb-1 mt-1"
-                @update:modelValue="autoSelect"></v-text-field>
-
+                @update:model-value="autoSelect"></v-text-field>
         </v-col>
         <v-col cols="3"></v-col>
         <v-col cols="2"></v-col>
         <v-col cols="4">
             <v-text-field v-model="newName"
-                label="New attribute" append-inner-icon="mdi-plus"
+                label="New detail" append-inner-icon="mdi-plus"
                 class="mr-1 mb-1 mt-1" variant="underlined" density="compact"
                 @keyup.enter="handleNew"
-                hint="Attribute name"></v-text-field>
-
+                hint="Descriptive name or question."></v-text-field>
         </v-col>
     </v-row>
     <v-divider></v-divider>
     <v-row>
         <v-col cols="4">
-            <v-tabs v-model="selected" density="compact" direction="vertical" color="indigo-lighten-3">
-                <v-tab density="compact" v-for="(value, attribute) in filteredList"
-                class="text-caption"
-                    :key="attribute" 
-                    :value="attribute">
-                    {{ attribute }}
+            <v-tabs direction="vertical" density="compact" v-model="selected" color="indigo-lighten-3">
+                <v-tab v-for="(value, detail) in filteredList"
+                    :key="detail"
+                    class="text-caption"
+                    :value="detail">
+                    <v-list-item-title class="text-caption">{{ detail }}</v-list-item-title>
                 </v-tab>
             </v-tabs>
         </v-col>
         <v-col cols="8">
-            <div v-if="selected !== null && character.base_attributes[selected] !== undefined">
+            <div v-if="selected && character.details[selected] !== undefined">
 
                 <ContextualGenerate 
-                    :context="'character attribute:'+selected" 
+                    :context="'character detail:'+selected" 
 
-                    :original="character.base_attributes[selected]"
+                    :original="character.details[selected]"
 
                     :character="character.name"
 
                     @generate="content => setAndUpdate(selected, content)"
                 />
 
-                <v-textarea ref="attribute" rows="5" auto-grow
-                    :label="selected"
+
+                <v-textarea rows="5" max-rows="10" auto-grow
+                    ref="detail"
                     :color="dirty ? 'info' : ''"
 
                     :disabled="busy"
                     :loading="busy"
                     :hint="autocompleteInfoMessage(busy)"
+
                     @keyup.ctrl.enter.stop="sendAutocompleteRequest"
 
                     @update:modelValue="queueUpdate(selected)"
-
-                    v-model="character.base_attributes[selected]">
+                    :label="selected"
+                    v-model="character.details[selected]">
                 </v-textarea>
 
+
             </div>
-            <v-row v-if="selected !== null && character.base_attributes[selected] !== undefined">
-                <v-col cols="12">
+
+            <v-row v-if="selected && character.details[selected] !== undefined">
+                <v-col cols="6">
                     <v-btn v-if="removeConfirm === false"
                         rounded="sm" prepend-icon="mdi-close-box-outline" color="error"
                         variant="text"
                         @click.stop="removeConfirm = true">
-                        Remove attribute
+                        Remove detail
                     </v-btn>
                     <div v-else>
                         <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
@@ -82,15 +84,36 @@
                     </div>
 
                 </v-col>
+                <v-col cols="6" class="text-right">
+                    <div
+                        v-if="character.reinforcements[selected]">
+                        <v-btn rounded="sm"
+                            prepend-icon="mdi-image-auto-adjust"
+                            @click.stop="viewCharacterStateReinforcer(selected)"
+                            color="primary" variant="text">
+                            Manage auto state
+                        </v-btn>
+                    </div>
+                    <div v-else>
+                        <v-btn rounded="sm"
+                            prepend-icon="mdi-image-auto-adjust"
+                            @click.stop="viewCharacterStateReinforcer(selected)"
+                            color="primary" variant="text">
+                            Setup auto state
+                        </v-btn>
+                    </div>
+                </v-col>
             </v-row>
+
         </v-col>
     </v-row>
 </template>
+
 <script>
 import ContextualGenerate from './ContextualGenerate.vue';
 
 export default {
-    name: 'WorldStateManagerCharacterAttributes',
+    name: 'WorldStateManagerCharacterDetails',
     components: {
         ContextualGenerate,
     },
@@ -117,7 +140,8 @@ export default {
         'registerMessageHandler',
     ],
     emits:[
-        'require-scene-save'
+        'require-scene-save',
+        'load-character-state-reinforcement'
     ],
     watch: {
         immutableCharacter: {
@@ -143,23 +167,23 @@ export default {
             }
 
             if (!this.search) {
-                return this.character.base_attributes;
+                return this.character.details;
             }
 
-            let filtered = {};
-            for (let attribute in this.character.base_attributes) {
-                if (attribute.toLowerCase().includes(this.search.toLowerCase()) || attribute === this.selected) {
-                    filtered[attribute] = this.character.base_attributes[attribute];
+            let result = {};
+            for (let detail in this.character.details) {
+                if (detail.toLowerCase().includes(this.search.toLowerCase()) || detail === this.selected) {
+                    result[detail] = this.character.details[detail];
                 }
             }
-            return filtered;
+            return result;
         },
     },
     methods: {
 
         autoSelect() {
             this.selected = null;
-            // if there is only one attribute in the filtered list, select it
+            // if there is only one detail in the filtered list, select it
             if (Object.keys(this.filteredList).length > 0) {
                 this.selected = Object.keys(this.filteredList)[0];
             }
@@ -180,65 +204,70 @@ export default {
         update(name) {
             return this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
-                action: 'update_character_attribute',
+                action: 'update_character_detail',
                 name: this.character.name,
-                attribute: name,
-                value: this.character.base_attributes[name],
+                detail: name,
+                value: this.character.details[name],
             }));
         },
 
         setAndUpdate(name, value) {
-            this.character.base_attributes[name] = value;
+            this.character.details[name] = value;
             this.update(name);
         },
 
         handleNew() {
-            this.character.base_attributes[this.newName] = "";
+            this.character.details[this.newName] = "";
             this.selected = this.newName;
             this.newName = null;
-            // set focus to the new attribute
+            // set focus to the new detail
             this.$nextTick(() => {
-                this.$refs.attribute.focus();
+                this.$refs.detail.focus();
             });
         },
 
         remove(name) {
             // set value to blank
-            this.character.base_attributes[name] = "";
+            this.character.details[name] = "";
             this.removeConfirm = false;
             // send update
             this.update(name);
-            // remove attribute from list
-            delete this.character.base_attributes[name];
+            // remove detail from list
+            delete this.character.details[name];
             this.selected = null;
         },
 
         sendAutocompleteRequest() {
             this.busy = true;
             this.autocompleteRequest({
-                partial: this.character.base_attributes[this.selected],
-                context: `character attribute:${this.selected}`,
+                partial: this.character.details[this.selected],
+                context: `character detail:${this.selected}`,
                 character: this.character.name
             }, (completion) => {
-                this.character.base_attributes[this.selected] += completion;
+                this.character.details[this.selected] += completion;
                 this.busy = false;
-            }, this.$refs.attribute);
+            }, this.$refs.detail);
 
         },
         
+        viewCharacterStateReinforcer(name) {
+            this.$emit('load-character-state-reinforcement', name)
+        },
+
         handleMessage(message) {
             if (message.type !== 'world_state_manager') {
                 return;
             }
-            if (message.action === 'character_attribute_updated') {
+            if (message.action === 'character_detail_updated') {
                 this.dirty = false;
                 this.$emit('require-scene-save');
             }
         }
     },
+    mounted() {
+    },
     created() {
         this.registerMessageHandler(this.handleMessage);
     }
 }
-
 </script>

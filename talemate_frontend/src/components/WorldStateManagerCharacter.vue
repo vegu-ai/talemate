@@ -74,12 +74,40 @@
                                         @require-scene-save="$emit('require-scene-save')"
                                         :immutable-character="character" />
                                     </v-tabs-window-item>
+                                    <v-tabs-window-item value="details">
+                                        <WorldStateManagerCharacterDetails
+                                        ref="details" 
+                                        @require-scene-save="$emit('require-scene-save')"
+                                        @load-character-state-reinforcement="onLoadCharacterStateReinforcement"
+                                        :immutable-character="character" />
+                                    </v-tabs-window-item>
+                                    <v-tabs-window-item value="reinforce">
+                                        <WorldStateManagerCharacterReinforcements
+                                        ref="reinforcements" 
+                                        @require-scene-save="$emit('require-scene-save')"
+                                        :templates="templates"
+                                        :immutable-character="character" />
+                                    </v-tabs-window-item>
+                                    <v-tabs-window-item value="actor">
+                                        <WorldStateManagerCharacterActor
+                                        ref="reinforcements" 
+                                        @require-scene-save="$emit('require-scene-save')"
+                                        :character="character" />
+                                    </v-tabs-window-item>
                                 </v-tabs-window>
                             </v-card-text>
                         </v-card>
 
 
                     </div>
+                    <v-alert v-else type="info" color="grey" variant="text" icon="mdi-account">
+                        Manage character attributes and add extra details.
+                        <br><br>
+                        You can also set up automatic reinforcement of character states. This will cause the
+                        AI to regularly re-evaluate the state and update the detail accordingly.
+                        <br><br>
+                        Select a character from the list on the left to get started.
+                    </v-alert>
                 </v-col>
             </v-row>
         </v-card-text>
@@ -89,15 +117,22 @@
 
 import WorldStateManagerCharacterAttributes from './WorldStateManagerCharacterAttributes.vue';
 import WorldStateManagerCharacterDescription from './WorldStateManagerCharacterDescription.vue';
+import WorldStateManagerCharacterDetails from './WorldStateManagerCharacterDetails.vue';
+import WorldStateManagerCharacterReinforcements from './WorldStateManagerCharacterReinforcements.vue';
+import WorldStateManagerCharacterActor from './WorldStateManagerCharacterActor.vue';
 
 export default {
     name: 'WorldStateManagerCharacter',
     components: {
         WorldStateManagerCharacterAttributes,
         WorldStateManagerCharacterDescription,
+        WorldStateManagerCharacterDetails,
+        WorldStateManagerCharacterReinforcements,
+        WorldStateManagerCharacterActor,
     },
     props: {
-        characterList: Object
+        characterList: Object,
+        templates: Object,
     },
     inject: [
         'getWebsocket',
@@ -114,6 +149,14 @@ export default {
         'require-scene-save'
     ],
     methods: {
+
+        onLoadCharacterStateReinforcement(name) {
+            this.page = 'reinforce'
+            this.$nextTick(() => {
+                this.$refs.reinforcements.loadWithRequire(name);
+            });
+        },
+
         requestCharacter(name) {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
@@ -124,8 +167,6 @@ export default {
         loadCharacter(name) {
             this.requestCharacter(name);
             this.page = 'description';
-            if(this.$refs.attributes)
-                this.$refs.attributes.selected = null;
             this.selectedCharacter = name;
         },
         handleMessage(message) {

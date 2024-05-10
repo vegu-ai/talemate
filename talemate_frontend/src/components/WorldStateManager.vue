@@ -6,365 +6,11 @@
             <!-- CHARACTERS -->
 
             <v-window-item value="characters">
-
                 <WorldStateManagerCharacter 
                 ref="characters" 
                 @require-scene-save="requireSceneSave = true"
+                :templates="templates"
                 :character-list="characterList" />
-
-                <v-card flat>
-                    <v-card-text>
-                        <v-row>
-                            <v-col cols="2">
-                                <v-tabs density="compact" direction="vertical" v-model="selectedCharacter" color="indigo-lighten-3">
-                                    <v-tab prepend-icon="mdi-account" v-for="character in characterList.characters" :key="character.name"
-                                        @click="loadCharacter(character.name)" :value="character.name">
-                                        <div class="text-left text-caption">
-                                            {{ character.name }}
-                                            <div class="text-caption">
-                                            <v-chip v-if="character.is_player === true" label size="x-small"
-                                                variant="tonal" color="info">Player</v-chip>
-                                            <v-chip v-else-if="character.is_player === false" label size="x-small"
-                                                variant="tonal" color="warning">AI</v-chip>
-                                            <v-chip v-if="character.active === true && character.is_player === false"
-                                                label size="x-small" variant="tonal" color="success"
-                                                class="ml-1">Active</v-chip>
-                                            </div>
-
-                                        </div>
-                                    </v-tab>
-                                </v-tabs>
-                            </v-col>
-                            <v-col cols="10">
-                                <div v-if="selectedCharacter !== null">
-                                    <v-card>
-                                        <v-card-title>
-                                            <v-icon size="small">mdi-account</v-icon>
-                                            {{ characterDetails.name }}
-                                            <v-chip size="x-small" v-if="characterDetails.is_player === false" color="warning" label>AI</v-chip>
-                                            <v-chip size="x-small" v-if="characterDetails.is_player === true" color="info" label>Player</v-chip>
-                                            <v-chip size="x-small" class="ml-1" v-if="characterDetails.active === true && characterDetails.is_player === false" color="success" label>Active</v-chip>
-                                        
-                                            </v-card-title>
-                                        <v-divider></v-divider>
-                                        <v-tabs v-model="selectedCharacterPage" color="primary" density="compact">
-                                            <v-tab value="details">
-                                                <v-icon size="small">mdi-format-list-text</v-icon>
-                                                Details
-                                            </v-tab>
-                                            <v-tab value="reinforce">
-                                                <v-icon size="small">mdi-image-auto-adjust</v-icon>
-                                                States
-                                            </v-tab>
-                                            <v-tab value="actor" :disabled="characterDetails.is_player">
-                                                <v-icon size="small">mdi-bullhorn</v-icon>
-                                                Actor
-                                            </v-tab>
-                                        </v-tabs>
-
-                                        <v-card-text>
-
-                                            <!-- CHARACTER DETAILS -->
-
-                                            <div v-if="selectedCharacterPage === 'details'">
-                                                <v-row floating color="grey-darken-5">
-                                                    <v-col cols="3">
-                                                        <v-text-field v-model="characterDetailSearch"
-                                                            label="Filter details" append-inner-icon="mdi-magnify"
-                                                            clearable density="compact" variant="underlined"
-                                                            class="ml-1 mb-1"
-                                                            @update:modelValue="autoSelectFilteredDetail"></v-text-field>
-                                                    </v-col>
-                                                    <v-col cols="3"></v-col>
-                                                    <v-col cols="2"></v-col>
-                                                    <v-col cols="4">
-                                                        <v-text-field v-model="newCharacterDetailName"
-                                                            label="New detail" append-inner-icon="mdi-plus"
-                                                            class="mr-1 mb-1" variant="underlined" density="compact"
-                                                            @keyup.enter="handleNewCharacterDetail"
-                                                            hint="Descriptive name or question."></v-text-field>
-                                                    </v-col>
-                                                </v-row>
-                                                <v-divider></v-divider>
-                                                <v-row>
-                                                    <v-col cols="4">
-                                                        <v-tabs direction="vertical" density="compact" v-model="selectedCharacterDetail" color="indigo-lighten-3">
-                                                            <v-tab v-for="(value, detail) in filteredCharacterDetails()"
-                                                                :key="detail"
-                                                                class="text-caption"
-                                                                :value="detail">
-                                                                <v-list-item-title class="text-caption">{{ detail
-                                                                }}</v-list-item-title>
-                                                            </v-tab>
-                                                        </v-tabs>
-                                                    </v-col>
-                                                    <v-col cols="8">
-                                                        <div v-if="selectedCharacterDetail">
-
-                                                            <ContextualGenerate 
-                                                                :context="'character detail:'+selectedCharacterDetail" 
-
-                                                                :original="characterDetails.details[selectedCharacterDetail]"
-
-                                                                :character="characterDetails.name"
-
-                                                                @generate="content => setAndUpdateCharacterDetail(selectedCharacterDetail, content)"
-                                                            />
-
-
-                                                            <v-textarea rows="5" max-rows="10" auto-grow
-                                                                ref="characterDetail"
-                                                                :color="characterDetailDirty ? 'info' : ''"
-
-                                                                :disabled="characterDetailBusy"
-                                                                :loading="characterDetailBusy"
-                                                                :hint="autocompleteInfoMessage(characterDetailBusy)"
-
-                                                                @keyup.ctrl.enter.stop="autocompleteRequestCharacterDetail"
-
-                                                                @update:modelValue="queueUpdateCharacterDetail(selectedCharacterDetail)"
-                                                                :label="selectedCharacterDetail"
-                                                                v-model="characterDetails.details[selectedCharacterDetail]">
-                                                            </v-textarea>
-
-
-                                                        </div>
-
-                                                        <v-row v-if="selectedCharacterDetail">
-                                                            <v-col cols="6">
-                                                                <v-btn v-if="removeCharacterDetailConfirm === false"
-                                                                    rounded="sm" prepend-icon="mdi-close-box-outline" color="error"
-                                                                    variant="text"
-                                                                    @click.stop="removeCharacterDetailConfirm = true">
-                                                                    Remove detail
-                                                                </v-btn>
-                                                                <div v-else>
-                                                                    <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
-                                                                        @click.stop="deleteCharacterDetail(selectedCharacterDetail)"
-                                                                        color="error" variant="text">
-                                                                        Confirm removal
-                                                                    </v-btn>
-                                                                    <v-btn class="ml-1" rounded="sm"
-                                                                        prepend-icon="mdi-cancel"
-                                                                        @click.stop="removeCharacterDetailConfirm = false"
-                                                                        color="info" variant="text">
-                                                                        Cancel
-                                                                    </v-btn>
-                                                                </div>
-
-                                                            </v-col>
-                                                            <v-col cols="6" class="text-right">
-                                                                <div
-                                                                    v-if="characterDetails.reinforcements[selectedCharacterDetail]">
-                                                                    <v-btn rounded="sm"
-                                                                        prepend-icon="mdi-image-auto-adjust"
-                                                                        @click.stop="viewCharacterStateReinforcer(selectedCharacterDetail)"
-                                                                        color="primary" variant="text">
-                                                                        Manage auto state
-                                                                    </v-btn>
-                                                                </div>
-                                                                <div v-else>
-                                                                    <v-btn rounded="sm"
-                                                                        prepend-icon="mdi-image-auto-adjust"
-                                                                        @click.stop="viewCharacterStateReinforcer(selectedCharacterDetail)"
-                                                                        color="primary" variant="text">
-                                                                        Setup auto state
-                                                                    </v-btn>
-                                                                </div>
-                                                            </v-col>
-                                                        </v-row>
-
-                                                    </v-col>
-                                                </v-row>
-                                            </div>
-
-                                            <!-- CHARACTER STATE REINFORCERS -->
-
-                                            <div v-else-if="selectedCharacterPage === 'reinforce'">
-
-                                                <v-row floating color="grey-darken-5">
-                                                    <v-col cols="3">
-                                                        <v-text-field v-model="characterStateReinforcerSearch"
-                                                            label="Filter states" append-inner-icon="mdi-magnify"
-                                                            clearable density="compact" variant="underlined"
-                                                            class="ml-1 mb-1"
-                                                            @update:modelValue="autoSelectFilteredStateReinforcer"></v-text-field>
-
-                                                    </v-col>
-                                                    <v-col cols="3"></v-col>
-                                                    <v-col cols="2"></v-col>
-                                                    <v-col cols="4">
-                                                        <v-text-field v-model="newCharacterStateReinforcerQuestion"
-                                                            label="New state" append-inner-icon="mdi-plus"
-                                                            class="mr-1 mb-1" variant="underlined" density="compact"
-                                                            @keyup.enter="handleNewCharacterStateReinforcer"
-                                                            hint="Question or attribute name."></v-text-field>
-                                                    </v-col>
-                                                </v-row>
-                                                <v-divider></v-divider>
-                                                <v-row>
-                                                    <v-col cols="4">
-                                                        <v-list density="compact">
-
-                                                            <!-- add from template -->
-                                                            <div v-if="characterStateTemplatesAvailable()">
-                                                                <v-list-item density="compact"
-                                                                    @click.stop="showCharacterStateTemplates = !showCharacterStateTemplates"
-                                                                    prepend-icon="mdi-cube-scan" color="info">
-                                                                    <v-list-item-title>
-                                                                        Templates
-                                                                        <v-progress-circular class="ml-1 mr-3" size="14"
-                                                                            indeterminate="disable-shrink" color="primary"
-                                                                            v-if="characterStateTemplateBusy"></v-progress-circular>
-                                                                    </v-list-item-title>
-                                                                </v-list-item>
-                                                                <div v-if="showCharacterStateTemplates">
-                                                                    <v-list-item density="compact"
-                                                                        @click.stop="addCharacterStateFromTemplate(template, characterDetails.name)"
-                                                                        v-for="(template, index) in characterStateTemplates()"
-                                                                        :key="index" prepend-icon="mdi-cube-scan"
-                                                                        :disabled="characterStateTemplateBusy">
-                                                                        <v-list-item-title>{{ template.name
-                                                                        }}</v-list-item-title>
-                                                                        <v-list-item-subtitle>{{ template.description
-                                                                        }}</v-list-item-subtitle>
-                                                                    </v-list-item>
-                                                                </div>
-                                                                <v-divider></v-divider>
-                                                            </div>
-
-                                                        </v-list>
-                                                        <v-tabs v-model="selectedCharacterStateReinforcer" direction="vertical" color="indigo-lighten-3" density="compact">
-                                                            <v-tab v-for="(value, detail) in filteredCharacterStateReinforcers()"
-                                                                :key="detail"
-                                                                class="text-caption"
-                                                                :value="detail">
-                                                                <div class="text-left">{{ detail }}<div><v-chip size="x-small" label variant="outlined"
-                                                                        color="info">update in {{ value.due }}
-                                                                        turns</v-chip>
-                                                                    </div>
-                                                                </div>
-                                                            </v-tab>
-                                                        </v-tabs>
-                                                    </v-col>
-                                                    <v-col cols="8">
-                                                        <div v-if="selectedCharacterStateReinforcer">
-                                                            <v-textarea rows="5" auto-grow max-rows="15"
-                                                                :label="selectedCharacterStateReinforcer"
-                                                                v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].answer"
-                                                                @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)"
-                                                                :color="characterStateReinforcerDirty ? 'info' : ''"></v-textarea>
-
-                                                            <v-row>
-                                                                <v-col cols="6">
-                                                                    <v-text-field
-                                                                        v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].interval"
-                                                                        label="Re-inforce / Update detail every N turns"
-                                                                        type="number" min="1" max="100" step="1"
-                                                                        class="mb-2"
-                                                                        @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)"
-                                                                        :color="characterStateReinforcerDirty ? 'info' : ''"></v-text-field>
-                                                                </v-col>
-                                                                <v-col cols="6">
-                                                                    <v-select
-                                                                        v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].insert"
-                                                                        :items="insertionModes"
-                                                                        label="Context Attachment Method"
-                                                                        class="mr-1 mb-1" variant="underlined"
-                                                                        density="compact"
-                                                                        @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)"
-                                                                        :color="characterStateReinforcerDirty ? 'info' : ''">
-                                                                    </v-select>
-                                                                </v-col>
-                                                            </v-row>
-
-
-
-                                                            <v-textarea rows="3" auto-grow max-rows="5"
-                                                                label="Additional instructions to the AI for generating this state."
-                                                                v-model="characterDetails.reinforcements[selectedCharacterStateReinforcer].instructions"
-                                                                @update:modelValue="queueUpdateCharacterStateReinforcement(selectedCharacterStateReinforcer)"
-                                                                :color="characterStateReinforcerDirty ? 'info' : ''"></v-textarea>
-
-                                                            <v-row>
-                                                                <v-col cols="6">
-                                                                    <div
-                                                                        v-if="removeCharacterStateReinforcerConfirm === false">
-                                                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
-                                                                            color="error" variant="text"
-                                                                            @click.stop="removeCharacterStateReinforcerConfirm = true">
-                                                                            Remove state
-                                                                        </v-btn>
-                                                                    </div>
-                                                                    <div v-else>
-                                                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
-                                                                            @click.stop="deleteCharacterStateReinforcement(selectedCharacterStateReinforcer)"
-                                                                            color="error" variant="text">
-                                                                            Confirm removal
-                                                                        </v-btn>
-                                                                        <v-btn class="ml-1" rounded="sm"
-                                                                            prepend-icon="mdi-cancel"
-                                                                            @click.stop="removeCharacterStateReinforcerConfirm = false"
-                                                                            color="info" variant="text">
-                                                                            Cancel
-                                                                        </v-btn>
-                                                                    </div>
-                                                                </v-col>
-                                                                <v-col cols="6" class="text-right flex">
-                                                                    <v-btn rounded="sm" prepend-icon="mdi-refresh"
-                                                                        @click.stop="runCharacterStateReinforcement(selectedCharacterStateReinforcer)"
-                                                                        color="primary" variant="text">
-                                                                        Refresh State
-                                                                    </v-btn>
-                                                                    <v-tooltip
-                                                                        text="Removes all previously generated reinforcements for this state and then regenerates it">
-                                                                        <template v-slot:activator="{ props }">
-                                                                            <v-btn
-                                                                                v-if="resetCharacterStateReinforcerConfirm === true"
-                                                                                v-bind="props" rounded="sm"
-                                                                                prepend-icon="mdi-backup-restore"
-                                                                                @click.stop="runCharacterStateReinforcement(selectedCharacterStateReinforcer, true)"
-                                                                                color="warning" variant="text">
-                                                                                Confirm Reset State
-                                                                            </v-btn>
-                                                                            <v-btn v-else v-bind="props" rounded="sm"
-                                                                                prepend-icon="mdi-backup-restore"
-                                                                                @click.stop="resetCharacterStateReinforcerConfirm = true"
-                                                                                color="warning" variant="text">
-                                                                                Reset State
-                                                                            </v-btn>
-                                                                        </template>
-                                                                    </v-tooltip>
-                                                                </v-col>
-                                                            </v-row>
-                                                        </div>
-                                                    </v-col>
-                                                </v-row>
-                                            </div>
-
-                                            <!-- CHARACTER ACTOR -->
-
-                                            <div v-else-if="selectedCharacterPage === 'actor'">
-                                                <WorldStateManagerCharacterActor ref="actor" :character="characterDetails" />
-                                            </div>
-                                        </v-card-text>
-                                    </v-card>
-
-
-
-                                </div>
-                                <v-alert v-else type="info" color="grey" variant="text" icon="mdi-account">
-                                    Manage character attributes and add extra details.
-                                    <br><br>
-                                    You can also set up automatic reinforcement of character states. This will cause the
-                                    AI to regularly re-evaluate the state and update the detail accordingly.
-                                    <br><br>
-                                    Select a character from the list on the left to get started.
-                                </v-alert>
-                            </v-col>
-                        </v-row>
-                    </v-card-text>
-                </v-card>
             </v-window-item>
 
             <!-- WORLD -->
@@ -686,8 +332,6 @@
 import WorldStateManagerTemplates from './WorldStateManagerTemplates.vue';
 import WorldStateManagerWorld from './WorldStateManagerWorld.vue';
 import WorldStateManagerCharacter from './WorldStateManagerCharacter.vue';
-import WorldStateManagerCharacterActor from './WorldStateManagerCharacterActor.vue';
-import ContextualGenerate from './ContextualGenerate.vue';
 
 export default {
     name: 'WorldStateManager',
@@ -695,8 +339,6 @@ export default {
         WorldStateManagerTemplates,
         WorldStateManagerWorld,
         WorldStateManagerCharacter,
-        WorldStateManagerCharacterActor,
-        ContextualGenerate,
     },
     computed: {
         characterStateReinforcementsList() {
@@ -732,27 +374,6 @@ export default {
             selectedCharacterDetail: null,
             selectedCharacterStateReinforcer: null,
 
-            newCharacterDetailName: null,
-            newCharacterDetailValue: null,
-
-            newCharacterStateReinforcerInterval: 10,
-            newCharacterStateReinforcerInstructions: "",
-            newCharacterStateReinforcerQuestion: null,
-            newCharacterStateReinforcerInsert: "sequential",
-
-            removeCharacterDetailConfirm: false,
-            removeCharacterStateReinforcerConfirm: false,
-            resetCharacterStateReinforcerConfirm: false,
-
-            characterDetailSearch: null,
-            characterStateReinforcerSearch: null,
-
-            characterDetailDirty: false,
-            characterStateReinforcerDirty: false,
-
-            characterDetailBusy: false,
-
-            characterDetailUpdateTimeout: null,
             contextDBEntryUpdateTimeout: null,
 
             characterDetailReinforceInterval: 10,
@@ -975,209 +596,7 @@ export default {
             this.selectedCharacter = name;
         },
 
-
-        // character details
-
-        filteredCharacterDetails() {
-            if (this.characterDetailSearch === null) {
-                return this.characterDetails.details;
-            }
-
-            let filtered = {};
-            for (let detail in this.characterDetails.details) {
-                if (detail.toLowerCase().includes(this.characterDetailSearch.toLowerCase())) {
-                    filtered[detail] = this.characterDetails.details[detail];
-                }
-            }
-            return filtered;
-        },
-
-        autoSelectFilteredDetail() {
-            // if there is only one detail in the filtered list, select it
-            if (Object.keys(this.filteredCharacterDetails()).length === 1) {
-                this.selectedCharacterDetail = Object.keys(this.filteredCharacterDetails())[0];
-            }
-        },
-
-        queueUpdateCharacterDetail(name) {
-            if (this.characterDetailUpdateTimeout !== null) {
-                clearTimeout(this.characterDetailUpdateTimeout);
-            }
-
-            this.characterDetailDirty = true;
-
-            this.characterDetailUpdateTimeout = setTimeout(() => {
-                this.updateCharacterDetail(name);
-            }, 500);
-        },
-
-        updateCharacterDetail(name) {
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'update_character_detail',
-                name: this.selectedCharacter,
-                detail: name,
-                value: this.characterDetails.details[name],
-            }));
-        },
-
-        setAndUpdateCharacterDetail(name, value) {
-            this.characterDetails.details[name] = value;
-            this.updateCharacterDetail(name);
-        },
-
-        handleNewCharacterDetail() {
-            this.characterDetails.details[this.newCharacterDetailName] = "";
-            this.selectedCharacterDetail = this.newCharacterDetailName;
-            this.newCharacterDetailName = null;
-            // set focus to the new detail
-            this.$refs.characterDetail.focus();
-        },
-
-        deleteCharacterDetail(name) {
-            // set value to blank
-            this.characterDetails.details[name] = "";
-            this.removeCharacterDetailConfirm = false;
-            // send update
-            this.updateCharacterDetail(name);
-            // remove detail from list
-            delete this.characterDetails.details[name];
-            this.selectedCharacterDetail = null;
-        },
-
         // Character state reinforcement
-
-        characterStateTemplatesAvailable() {
-            for (let template in this.templates.state_reinforcement) {
-                if (this.templates.state_reinforcement[template].state_type == "character" || this.templates.state_reinforcement[template].state_type == "npc" || this.templates.state_reinforcement[template].state_type == "player") {
-                    return true;
-                }
-            }
-        },
-
-        characterStateTemplates() {
-            return Object.values(this.templates.state_reinforcement).filter(template => {
-                return template.state_type == "character" || template.state_type == "npc" || template.state_type == "player";
-            });
-        },
-
-        addCharacterStateFromTemplate(template, characterName) {
-            this.characterStateTemplateBusy = true;
-            this.getWebsocket().send(JSON.stringify({
-                type: 'interact',
-                text: '!apply_world_state_template:' + template.name + ':state_reinforcement:' + characterName,
-            }));
-        },
-
-        filteredCharacterStateReinforcers() {
-            if (this.characterStateReinforcerSearch === null) {
-                return this.characterDetails.reinforcements;
-            }
-
-            let filtered = {};
-            for (let detail in this.characterDetails.reinforcements) {
-                if (detail.toLowerCase().includes(this.characterStateReinforcerSearch.toLowerCase())) {
-                    filtered[detail] = this.characterDetails.reinforcements[detail];
-                }
-            }
-            return filtered;
-        },
-
-        autoSelectFilteredStateReinforcer() {
-            // if there is only one detail in the filtered list, select it
-            if (Object.keys(this.filteredCharacterStateReinforcers()).length === 1) {
-                this.selectedCharacterStateReinforcer = Object.keys(this.filteredCharacterStateReinforcers())[0];
-            }
-        },
-
-        viewCharacterStateReinforcer(name) {
-            if (this.characterDetails.reinforcements[name]) {
-                this.selectedCharacterStateReinforcer = name;
-            } else {
-                this.addCharacterStateReinforcement(name);
-                this.updateCharacterStateReinforcement(name, true);
-                this.selectedCharacterStateReinforcer = name;
-            }
-            this.selectedCharacterPage = 'reinforce';
-        },
-
-        handleNewCharacterStateReinforcer() {
-            this.addCharacterStateReinforcement(this.newCharacterStateReinforcerQuestion);
-            this.updateCharacterStateReinforcement(this.newCharacterStateReinforcerQuestion, true);
-            this.selectedCharacterStateReinforcer = this.newCharacterStateReinforcerQuestion;
-            this.newCharacterStateReinforcerQuestion = null;
-        },
-
-        addCharacterStateReinforcement(name) {
-            this.characterDetails.reinforcements[name] = {
-                interval: this.characterDetailReinforceInterval,
-                instructions: this.characterDetailReinforceIntructions,
-                insert: this.newCharacterStateReinforcerInsert,
-            };
-        },
-
-        queueUpdateCharacterStateReinforcement(name) {
-            if (this.characterStateReinforcerUpdateTimeout !== null) {
-                clearTimeout(this.characterStateReinforcerUpdateTimeout);
-            }
-
-            this.characterStateReinforcerDirty = true;
-
-            this.characterStateReinforcerUpdateTimeout = setTimeout(() => {
-                this.updateCharacterStateReinforcement(name);
-            }, 500);
-        },
-
-        updateCharacterStateReinforcement(name, updateState) {
-            let interval = this.characterDetails.reinforcements[name].interval;
-            let instructions = this.characterDetails.reinforcements[name].instructions;
-            let insert = this.characterDetails.reinforcements[name].insert;
-            if (updateState === true)
-                this.isBusy = true;
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'set_character_detail_reinforcement',
-                name: this.selectedCharacter,
-                question: name,
-                interval: interval,
-                instructions: instructions,
-                answer: this.characterDetails.reinforcements[name].answer,
-                update_state: updateState,
-                insert: insert,
-            }));
-        },
-
-        deleteCharacterStateReinforcement(name) {
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'delete_character_detail_reinforcement',
-                name: this.selectedCharacter,
-                question: name,
-            }));
-
-            if (this.characterDetails.reinforcements[name])
-                delete this.characterDetails.reinforcements[name];
-
-            this.removeCharacterStateReinforcerConfirm = false;
-
-            // select first detail
-            if (this.selectedCharacterStateReinforcer == name)
-                this.selectedCharacterStateReinforcer = Object.keys(this.characterDetails.reinforcements)[0];
-        },
-
-        runCharacterStateReinforcement(name, reset) {
-            this.isBusy = true;
-
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'run_character_detail_reinforcement',
-                name: this.selectedCharacter,
-                question: name,
-                reset: reset || false,
-            }));
-
-            this.resetCharacterStateReinforcerConfirm = false;
-        },
 
 
         // contextdb
@@ -1385,19 +804,7 @@ export default {
 
         handleMessage(message) {
 
-            if (message.type === 'status' && message.status === 'success' && message.message === 'Auto state added.') {
-                console.log("auto state added", message);
-                if (this.selectedCharacter) {
-                    if (message.data.reinforcement) {
-                        this.characterDetails.reinforcements[message.data.reinforcement.question] = message.data.reinforcement;
-                        this.selectedCharacterStateReinforcer = message.data.reinforcement.question;
-                    }
-                    //this.requestCharacter(this.selectedCharacter); 
 
-                }
-                this.characterStateTemplateBusy = false;
-                return;
-            }
 
             if (message.type !== 'world_state_manager') {
                 return;
@@ -1407,12 +814,6 @@ export default {
                 this.characterList = message.data;
             }
             else if (message.action === 'character_details') {
-
-                // if we are currently editing a detail, override it in the incoming data
-                // this fixes the annoying rubberbanding when editing a detail
-                if (this.selectedCharacterDetail) {
-                    message.data.details[this.selectedCharacterDetail] = this.characterDetails.details[this.selectedCharacterDetail];
-                }
 
                 // if we are currently editing a state reinforcement, override it in the incoming data
                 // this fixes the annoying rubberbanding when editing a state reinforcement
@@ -1441,17 +842,7 @@ export default {
                 this.requireSceneSave = true;
             }
 
-            else if (message.action === 'character_detail_updated') {
-                this.characterDetailDirty = false;
-                this.requireSceneSave = true;
-            }
-            else if (message.action === 'character_detail_reinforcement_set') {
-                this.characterStateReinforcerDirty = false;
-                this.requireSceneSave = true;
-            }
-            else if (message.action === 'character_detail_reinforcement_deleted') {
-                this.requireSceneSave = true;
-            }
+
             else if (message.action === 'context_db_result') {
                 this.contextDB = message.data;
                 this.contextDBCurrentQuery = this.contextDBQuery;
@@ -1479,23 +870,6 @@ export default {
             }
 
         },
-        // autocomplete handlers
-
-
-
-        autocompleteRequestCharacterDetail() {
-            this.characterDetailBusy = true;
-            this.autocompleteRequest({
-                partial: this.characterDetails.details[this.selectedCharacterDetail],
-                context: `character detail:${this.selectedCharacterDetail}`,
-                character: this.characterDetails.name
-            }, (completion) => {
-                this.characterDetails.details[this.selectedCharacterDetail] += completion;
-                this.characterDetailBusy = false;
-            }, this.$refs.characterDetail);
-
-        },
-
     },
     created() {
         this.registerMessageHandler(this.handleMessage);

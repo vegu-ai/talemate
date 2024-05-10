@@ -119,9 +119,9 @@
 
     <v-main style="height: 100%; display: flex; flex-direction: column;">
 
-      <v-container :class="(sceneActive ? '' : 'backdrop')" style="display: flex; flex-direction: column; height: 100%;" fluid>
+      <v-container :class="(sceneActive ? '' : 'backdrop')" fluid style="height: 100%;">
 
-        <v-tabs-window v-model="tab">
+        <v-tabs-window v-model="tab" style="height: 100%;">
           <!-- HOME -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
             <IntroView
@@ -132,41 +132,44 @@
             :config="appConfig" />
           </v-tabs-window-item>
           <!-- SCENE -->
-          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
-            <SceneMessages ref="sceneMessages" />
-            <div style="flex-shrink: 0;">
-    
-              <SceneTools 
-                @open-world-state-manager="onOpenWorldStateManager"
-                :messageInput="messageInput"
-                :playerCharacterName="getPlayerCharacterName()"
-                :passiveCharacters="passiveCharacters"
-                :inactiveCharacters="inactiveCharacters"
-                :activeCharacters="activeCharacters" />
-              <CharacterSheet ref="characterSheet" />
-              <SceneHistory ref="sceneHistory" />
-    
-              <v-textarea
-                v-model="messageInput" 
-                :label="inputHint" 
-                rows="1"
-                auto-grow
-                outlined 
-                ref="messageInput" 
-                @keydown.enter.prevent="sendMessage"
-                hint="Ctrl+Enter to autocomplete, Shift+Enter for newline"
-                :disabled="isInputDisabled()" 
-                :loading="autocompleting"
-                :prepend-inner-icon="messageInputIcon()"
-                :color="messageInputColor()">
-                <template v-slot:append>
-                  <v-btn @click="sendMessage" color="primary" icon>
-                    <v-icon v-if="messageInput">mdi-send</v-icon>
-                    <v-icon v-else>mdi-skip-next</v-icon>
-                  </v-btn>
-                </template>
-              </v-textarea>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main" style="height: 100%;">
+            <div style="display: flex; flex-direction: column; height: 100%">
+              <SceneMessages ref="sceneMessages" />
+              <div style="flex-shrink: 0;">
+      
+                <SceneTools 
+                  @open-world-state-manager="onOpenWorldStateManager"
+                  :messageInput="messageInput"
+                  :playerCharacterName="getPlayerCharacterName()"
+                  :passiveCharacters="passiveCharacters"
+                  :inactiveCharacters="inactiveCharacters"
+                  :activeCharacters="activeCharacters" />
+                <CharacterSheet ref="characterSheet" />
+                <SceneHistory ref="sceneHistory" />
+      
+                <v-textarea
+                  v-model="messageInput" 
+                  :label="inputHint" 
+                  rows="1"
+                  auto-grow
+                  outlined 
+                  ref="messageInput" 
+                  @keydown.enter.prevent="sendMessage"
+                  hint="Ctrl+Enter to autocomplete, Shift+Enter for newline"
+                  :disabled="isInputDisabled()" 
+                  :loading="autocompleting"
+                  :prepend-inner-icon="messageInputIcon()"
+                  :color="messageInputColor()">
+                  <template v-slot:append>
+                    <v-btn @click="sendMessage" color="primary" icon>
+                      <v-icon v-if="messageInput">mdi-send</v-icon>
+                      <v-icon v-else>mdi-skip-next</v-icon>
+                    </v-btn>
+                  </template>
+                </v-textarea>
+              </div>
             </div>
+
           </v-tabs-window-item>
           <!-- WORLD -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">

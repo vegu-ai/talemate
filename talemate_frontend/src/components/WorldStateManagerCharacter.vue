@@ -3,7 +3,7 @@
         <v-card-text>
             <v-row>
                 <v-col cols="2">
-                    <v-tabs density="compact" direction="vertical" v-model="selectedCharacter" color="indigo-lighten-3">
+                    <v-tabs density="compact" direction="vertical" v-model="selected" color="indigo-lighten-3">
                         <v-tab prepend-icon="mdi-account" v-for="character in characterList.characters" :key="character.name"
                             @click="loadCharacter(character.name)" :value="character.name">
                             <div class="text-left text-caption">
@@ -23,7 +23,7 @@
                     </v-tabs>
                 </v-col>
                 <v-col cols="10">
-                    <div v-if="selectedCharacter !== null">
+                    <div v-if="selected !== null">
                         <v-card>
 
                             <v-card-title>
@@ -141,7 +141,7 @@ export default {
     data() {
         return {
             page: 'description',
-            selectedCharacter: null,
+            selected: null,
             character: {},
         }
     },
@@ -167,7 +167,7 @@ export default {
         loadCharacter(name) {
             this.requestCharacter(name);
             this.page = 'description';
-            this.selectedCharacter = name;
+            this.selected = name;
         },
         handleMessage(message) {
             if (message.type !== 'world_state_manager') {

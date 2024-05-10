@@ -663,7 +663,9 @@ export default {
     },
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
       this.tab = 'world';
-      this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
+      this.$nextTick(() => {
+        this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
+      });
     },
     openAppConfig(tab, page) {
       this.$refs.appConfig.show(tab, page);

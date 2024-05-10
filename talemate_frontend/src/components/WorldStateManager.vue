@@ -451,18 +451,25 @@ export default {
         },
         characterDetails() {
             if (this.deferedNavigation !== null) {
-                if (this.deferedNavigation[0] === 'characters') {
-                    this.selectedCharacter = this.deferedNavigation[1];
-                    this.selectedCharacterPage = this.deferedNavigation[2];
-                    if (this.deferedNavigation[2] == 'attributes') {
-                        this.selectedCharacterAttribute = this.deferedNavigation[3];
-                    }
-                    else if (this.deferedNavigation[2] == 'details') {
-                        this.selectedCharacterDetail = this.deferedNavigation[3];
-                    }
-                    else if (this.deferedNavigation[2] == 'reinforce') {
-                        this.selectedCharacterStateReinforcer = this.deferedNavigation[3];
-                    }
+                const deferedNavigation = {...this.deferedNavigation}
+                console.log("DEFERED", deferedNavigation)
+                if (deferedNavigation[0] === 'characters') {
+
+                    this.$refs.characters.selected = deferedNavigation[1];
+                    this.$refs.characters.page = deferedNavigation[2];
+
+                    this.$nextTick(() => {
+                        if (deferedNavigation[2] == 'attributes') {
+                            this.$refs.characters.$refs.attributes.selected = deferedNavigation[3];
+                        }
+                        else if (deferedNavigation[2] == 'details') {
+                            this.$refs.characters.$refs.details.selected = deferedNavigation[3];
+                        }
+                        else if (deferedNavigation[2] == 'reinforce') {
+                            this.$refs.characters.$refs.reinforcements.selected = deferedNavigation[3];
+                        }
+                    });
+
                 }
                 this.deferedNavigation = null;
             }

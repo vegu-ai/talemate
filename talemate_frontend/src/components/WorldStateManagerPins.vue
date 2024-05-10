@@ -145,6 +145,11 @@ export default {
     ],
     methods: {
 
+        reset() {
+            this.selected = null;
+            this.pins = {};
+        },
+
         pinsExist() {
             return Object.keys(this.pins).length > 0;
         },

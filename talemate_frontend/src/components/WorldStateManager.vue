@@ -237,6 +237,20 @@ export default {
             this.deferSelectedCharacter = null;
             this.deferedNavigation = null;
             this.isBusy = false;
+            this.tab = 'characters';
+
+            if(this.$refs.characters) {
+                this.$refs.characters.reset()
+            }
+            if(this.$refs.world) {
+                this.$refs.world.reset()
+            }
+            if(this.$refs.contextdb) {
+                this.$refs.contextdb.reset()
+            }
+            if(this.$refs.pins) {
+                this.$refs.pins.reset()
+            }
         },
         exit() {
             this.dialog = false;
@@ -318,6 +332,11 @@ export default {
         },
 
         handleMessage(message) {
+
+            // Scene loaded
+            if (message.type === "system" && message.id === 'scene.loaded') {
+                this.reset()
+            }
 
             if (message.type !== 'world_state_manager') {
                 return;

@@ -23,7 +23,7 @@
                     </v-tabs>
                 </v-col>
                 <v-col cols="10">
-                    <div v-if="selected !== null">
+                    <div v-if="selected !== null && character">
                         <v-card>
 
                             <v-card-title>
@@ -142,13 +142,21 @@ export default {
         return {
             page: 'description',
             selected: null,
-            character: {},
+            character: null,
         }
     },
     emits:[
         'require-scene-save'
     ],
     methods: {
+
+        reset() {
+            this.selected = null;
+            this.character = null;
+            this.page = 'description';
+            if(this.$refs.attributes)
+                this.$refs.attributes.reset()
+        },
 
         onLoadCharacterStateReinforcement(name) {
             this.page = 'reinforce'

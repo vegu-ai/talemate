@@ -27,7 +27,7 @@
                         </v-btn>
                     </template>
                     <v-list>
-                        <v-list-item @click.stop="reset" append-icon="mdi-shield-alert">
+                        <v-list-item @click.stop="resetDB" append-icon="mdi-shield-alert">
                             <v-list-item-title>Reset</v-list-item-title>
                         </v-list-item>
                     </v-list>
@@ -227,6 +227,14 @@ export default {
         'request-sync',
     ],
     methods: {
+        reset() {
+            this.query = null;
+            this.queryMetaKey = null;
+            this.queryMetaValue = null;
+            this.currentQuery = null;
+            this.contextDB = { entries: [] };
+        },
+
         entryHasPin(entryId) {
             return this.pins[entryId] !== undefined;
         },
@@ -350,7 +358,7 @@ export default {
             }));
         },
 
-        reset() {
+        resetDB() {
             let confirm = window.confirm("Are you sure you want to reset the context database? This will remove all entries and reimport them from the current save file. Manually added context entries will be lost.");
             if (!confirm) {
                 return;

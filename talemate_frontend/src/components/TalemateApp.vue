@@ -126,7 +126,7 @@
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
             <IntroView
             ref="introView"
-            @request-scene-load="(path) => { $refs.loadScene.loadJsonSceneFromPath(path); }"
+            @request-scene-load="(path) => {  resetViews(); $refs.loadScene.loadJsonSceneFromPath(path); }"
             :version="version" 
             :scene-loading-available="ready && connected"
             :config="appConfig" />
@@ -307,6 +307,16 @@ export default {
       autocompletePartialInput: "",
       autocompleteCallback: null,
       autocompleteFocusElement: null,
+    }
+  },
+  watch:{
+    availableTabs(tabs) {
+      // check if tab still exists
+      // in tabs
+      // if not select first tab
+      if(!tabs.find(tab => tab.value == this.tab)) {
+        this.tab = tabs[0].value;
+      }
     }
   },
   computed: {
@@ -671,7 +681,8 @@ export default {
     },
     onWorldStateManagerNavigateR(tab) {
       this.$nextTick(() => {
-        this.$refs.worldStateManagerMenu.tab = tab;
+        if(this.$refs.worldStateManagerMenu)
+          this.$refs.worldStateManagerMenu.tab = tab;
       });
     },
     openAppConfig(tab, page) {
@@ -737,6 +748,10 @@ export default {
         }
       }
       return null;
+    },
+    resetViews() {
+      if(this.$refs.worldStateManager)
+        this.$refs.worldStateManager.reset()
     }
   }
 }

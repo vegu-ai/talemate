@@ -349,6 +349,13 @@ export default {
     ],
     methods: {
 
+        reset() {
+            this.selectedEntryId = null;
+            this.selectedStateQuery = null;
+            this.entry = null;
+            this.state = null;
+        },
+
         navigate(page, stateOrEntryId) {
             this.$nextTick().then(() => {
                 this.requestWorld();

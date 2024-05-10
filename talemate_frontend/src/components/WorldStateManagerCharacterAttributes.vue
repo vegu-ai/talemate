@@ -32,7 +32,7 @@
             </v-tabs>
         </v-col>
         <v-col cols="8">
-            <div v-if="selected !== null && character.base_attributes[selected] !== undefined">
+            <div v-if="selected !== null && character !== null && character.base_attributes[selected] !== undefined">
 
                 <ContextualGenerate 
                     :context="'character attribute:'+selected" 
@@ -59,7 +59,7 @@
                 </v-textarea>
 
             </div>
-            <v-row v-if="selected !== null && character.base_attributes[selected] !== undefined">
+            <v-row v-if="selected !== null &&  character !== null && character.base_attributes[selected] !== undefined">
                 <v-col cols="12">
                     <v-btn v-if="removeConfirm === false"
                         rounded="sm" prepend-icon="mdi-close-box-outline" color="error"
@@ -126,9 +126,9 @@ export default {
                 if(value && this.character && value.name !== this.character.name) {
                     this.character = null;
                     this.selected = null;
-                    this.newName = null;
                 }
                 if (!value) {
+                    this.selected = null;
                     this.character = null;
                 } else {
                     this.character = { ...value };
@@ -156,6 +156,11 @@ export default {
         },
     },
     methods: {
+
+        reset() {
+            this.selected = null;
+            this.character = null;
+        },
 
         autoSelect() {
             this.selected = null;

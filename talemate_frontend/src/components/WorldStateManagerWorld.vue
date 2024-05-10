@@ -258,6 +258,9 @@ export default {
     components: {
         ContextualGenerate,
     },
+    props: {
+        pins: Object
+    },
     data() {
         return {
             entries: {},
@@ -316,10 +319,6 @@ export default {
         'characterSheet',
         'isInputDisabled',
         'insertionModes',
-        'pins',
-        'addPin',
-        'entryHasPin',
-        'selectPin',
         'loadContextDBEntry',
     ],
     watch:{
@@ -342,6 +341,12 @@ export default {
             }
         }
     },
+    emits:[
+        'require-scene-save',
+        'load-pin',
+        'add-pin',
+        'request-sync',
+    ],
     methods: {
 
         navigate(page, stateOrEntryId) {
@@ -349,6 +354,23 @@ export default {
                 this.requestWorld();
                 this.deferedNavigation = [page, stateOrEntryId];
             });
+        },
+
+        // pins
+        entryHasPin(entryId) {
+            return this.pins[entryId] !== undefined;
+        },
+
+        selectPin(entryId) {
+            this.$emit('load-pin', entryId);
+        },
+
+        addPin(entryId) {
+            this.$emit('add-pin', entryId)
+        },
+
+        entryIsPinned(entryId) {
+            return this.entryHasPin(entryId) && this.pins[entryId].pin.active;
         },
 
         // entries

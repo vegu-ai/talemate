@@ -173,7 +173,9 @@
           </v-tabs-window-item>
           <!-- WORLD -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
-            <WorldStateManager ref="worldStateManager" />
+            <WorldStateManager 
+            @world-state-manager-navigate-r="onWorldStateManagerNavigateR"
+            ref="worldStateManager" />
           </v-tabs-window-item>
 
         </v-tabs-window>
@@ -665,6 +667,11 @@ export default {
       this.tab = 'world';
       this.$nextTick(() => {
         this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
+      });
+    },
+    onWorldStateManagerNavigateR(tab) {
+      this.$nextTick(() => {
+        this.$refs.worldStateManagerMenu.tab = tab;
       });
     },
     openAppConfig(tab, page) {

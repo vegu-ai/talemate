@@ -692,7 +692,8 @@ class ChromaDBMemoryAgent(MemoryAgent):
             where["$and"].append({k: v})
 
         if character and not character_filtered:
-            where["$and"].append({"character": character.name})
+            character_name = character if isinstance(character, str) else character.name
+            where["$and"].append({"character": character_name})
 
         if len(where["$and"]) == 1:
             where = where["$and"][0]
@@ -703,9 +704,9 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         _results = self.db.query(query_texts=[text], where=where, n_results=limit)
 
-        # import json
-        # print(json.dumps(_results["ids"], indent=2))
-        # print(json.dumps(_results["distances"], indent=2))
+        #import json
+        #print(json.dumps(_results["ids"], indent=2))
+        #print(json.dumps(_results["distances"], indent=2))
 
         results = []
 

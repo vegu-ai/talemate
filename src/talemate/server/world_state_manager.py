@@ -106,7 +106,7 @@ class DeleteWorldStateTemplatePayload(pydantic.BaseModel):
     template: StateReinforcementTemplate
 
 
-class GenerateCharacterDialogueInstructionsPayload(pydantic.BaseModel):
+class SelectiveCharacterPayload(pydantic.BaseModel):
     name: str
 
 
@@ -609,7 +609,7 @@ class WorldStateManagerPlugin:
         await self.signal_operation_done()
 
     async def handle_generate_character_dialogue_instructions(self, data):
-        payload = GenerateCharacterDialogueInstructionsPayload(**data)
+        payload = SelectiveCharacterPayload(**data)
 
         log.debug("Generate character dialogue instructions", name=payload.name)
 
@@ -638,5 +638,73 @@ class WorldStateManagerPlugin:
             }
         )
 
+        await self.signal_operation_done()
+        self.scene.emit_status()
+
+    async def handle_delete_character(self, data):
+        payload = SelectiveCharacterPayload(**data)
+        character = self.scene.get_character(payload.name)
+        
+        if not character:
+            log.error("Character not found", name=payload.name)
+            return
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "character_deleted",
+                "data": {
+                    "name": payload.name,
+                },
+            }
+        )
+            
+        await self.scene.remove_actor(character.actor)
+        await self.signal_operation_done()
+        self.scene.emit_status()
+        
+    async def handle_activate_character(self, data):
+        payload = SelectiveCharacterPayload(**data)
+        character = self.scene.get_character(payload.name)
+        
+        if not character:
+            log.error("Character not found", name=payload.name)
+            return
+        
+        await self.world_state_manager.activate_character(character.name)
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "character_activated",
+                "data": {
+                    "name": payload.name,
+                },
+            }
+        )
+        
+        await self.signal_operation_done()
+        self.scene.emit_status()
+        
+    async def handle_deactivate_character(self, data):
+        payload = SelectiveCharacterPayload(**data)
+        character = self.scene.get_character(payload.name)
+        
+        if not character:
+            log.error("Character not found", name=payload.name)
+            return
+        
+        await self.world_state_manager.deactivate_character(character.name)
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "character_deactivated",
+                "data": {
+                    "name": payload.name,
+                },
+            }
+        )
+        
         await self.signal_operation_done()
         self.scene.emit_status()

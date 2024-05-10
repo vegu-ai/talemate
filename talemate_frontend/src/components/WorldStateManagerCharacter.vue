@@ -185,6 +185,15 @@ export default {
             else if (message.action === 'character_details') {
                 this.character = message.data;
                 this.$emit('selected-character', this.character)
+            } else if(message.action === 'character_deleted') {
+                if(this.selected === message.data.name) {
+                    this.reset();
+                    this.$emit('selected-character', this.character)
+                }
+            } else if(message.action === 'character_deactivated' || message.action === 'character_activated') {
+                if(this.selected === message.data.name) {
+                    this.character.active = false;
+                }
             }
         },
     },

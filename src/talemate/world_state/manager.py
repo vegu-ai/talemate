@@ -135,7 +135,7 @@ class WorldStateManager:
 
         details = CharacterDetails(
             name=character.name,
-            active=True,
+            active=(character.name not in self.scene.inactive_characters),
             description=character.description,
             is_player=character.is_player,
             actor=CharacterActor(

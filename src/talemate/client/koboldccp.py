@@ -71,8 +71,8 @@ class KoboldCppClient(ClientBase):
         if not self.api_endpoint_specified(self.api_url):
             # url doesn't specify the api endpoint
             # use the koboldcpp openai api
-            print("joining", self.api_url, "/v1/")
-            self.api_url = urljoin(self.api_url.rstrip("/")+"/", "/v1/")
+            print("joining", self.api_url, "/api/v1/")
+            self.api_url = urljoin(self.api_url.rstrip("/")+"/", "/api/v1/")
             print()
             print("joined", self.api_url)
         if not self.api_url.endswith("/"):

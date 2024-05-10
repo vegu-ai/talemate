@@ -9,6 +9,7 @@ module.exports = defineConfig({
   },
 
   devServer: {
+    allowedHosts: "all",
     client: {
       overlay: {
         warnings: false,

@@ -56,9 +56,9 @@
                   </v-row>
                   <v-row v-for="field in clientMeta().extra_fields" :key="field.name">
                     <v-col cols="12">
-                      <v-text-field v-model="client.data[field.name]" v-if="field.type === 'text'" :label="field.label"
+                      <v-text-field v-model="client[field.name]" v-if="field.type === 'text'" :label="field.label"
                         :rules="[rules.required]" :hint="field.description"></v-text-field>
-                      <v-checkbox v-else-if="field.type === 'bool'" v-model="client.data[field.name]"
+                      <v-checkbox v-else-if="field.type === 'bool'" v-model="client[field.name]"
                         :label="field.label" :hint="field.description" density="compact"></v-checkbox>
                     </v-col>
                   </v-row>

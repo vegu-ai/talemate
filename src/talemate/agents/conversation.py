@@ -668,7 +668,9 @@ class ConversationAgent(Agent):
 
         total_result = util.handle_endofline_special_delimiter(total_result)
 
-        if total_result.startswith(":\n"):
+        log.info("conversation agent", total_result=total_result)
+
+        if total_result.startswith(":\n") or total_result.startswith(": "):
             total_result = total_result[2:]
 
         # movie script format

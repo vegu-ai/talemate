@@ -248,7 +248,7 @@ export default {
       messageHandlers: [],
       scene: {},
       appConfig: {},
-      autcompleting: false,
+      autocompleting: false,
       autocompletePartialInput: "",
       autocompleteCallback: null,
       autocompleteFocusElement: null,

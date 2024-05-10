@@ -192,7 +192,7 @@ export default {
                 }
             } else if(message.action === 'character_deactivated' || message.action === 'character_activated') {
                 if(this.selected === message.data.name) {
-                    this.character.active = false;
+                    this.loadCharacter(this.selected)
                 }
             }
         },

@@ -104,7 +104,7 @@ export default {
     return {
       saveDelayTimeout: null,
       clientStatusCheck: null,
-      clientDeleted: false,
+      clientImmutable: {},
       state: {
         clients: [],
         dialog: false,
@@ -211,9 +211,9 @@ export default {
     },
     deleteClient(index) {
       if (window.confirm('Are you sure you want to delete this client?')) {
+        this.clientImmutable[this.state.clients[index].name] = true;
         this.state.clients.splice(index, 1);
         this.$emit('clients-updated', this.state.clients);
-        this.clientDeleted = true;
       }
     },
     assignClientToAllAgents(index) {
@@ -231,6 +231,7 @@ export default {
 
     toggleClient(client) {
       console.log("Toggling client", client.enabled, "to", !client.enabled)
+      this.clientImmutable[client.name] = true;
       client.enabled = !client.enabled;
       if(client.enabled) {
         client.status = 'warning';
@@ -248,11 +249,11 @@ export default {
       // Handle client_status message type
       if (data.type === 'client_status') {
 
-        if(this.clientDeleted) {
+        if(this.clientImmutable[data.name]) {
           
           // If we have just deleted a client, we need to wait for the next client_status message
-
-          this.clientDeleted = false;
+          console.log("Ignoring client_status message for immutable client", data.name)
+          delete this.clientImmutable[data.name]
           return;
         }
 

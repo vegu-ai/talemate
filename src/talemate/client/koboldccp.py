@@ -81,7 +81,6 @@ class KoboldCppClient(ClientBase):
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
-        log.debug("PARAMS", parameters=parameters)
         if not self.is_openai:
             # adjustments for united api
             parameters["max_length"] = parameters.pop("max_tokens")

@@ -69,7 +69,7 @@ class KoboldCppClient(ClientBase):
     def ensure_api_endpoint_specified(self):
         if not self.api_endpoint_specified(self.api_url):
             # url doesn't specify the api endpoint
-            # use the koboldcpp openai api
+            # use the koboldcpp united api
             self.api_url = urljoin(self.api_url.rstrip("/") + "/", "/api/v1/")
         if not self.api_url.endswith("/"):
             self.api_url += "/"
@@ -183,14 +183,19 @@ class KoboldCppClient(ClientBase):
         adjusts temperature and repetition_penalty
         by random values using the base value as a center
         """
+        
+        if self.is_openai:
+            rep_pen_key = "presence_penalty"
+        else:
+            rep_pen_key = "rep_pen"
 
         temp = prompt_config["temperature"]
-        rep_pen = prompt_config["rep_pen"]
+        rep_pen = prompt_config[rep_pen_key]
 
         min_offset = offset * 0.3
 
         prompt_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
-        prompt_config["rep_pen"] = random.uniform(
+        prompt_config[rep_pen_key] = random.uniform(
             rep_pen + min_offset * 0.3, rep_pen + offset * 0.3
         )
 

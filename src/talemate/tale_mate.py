@@ -2103,6 +2103,7 @@ class Scene(Emitter):
             "description": scene.description,
             "intro": scene.intro,
             "name": scene.name,
+            "title": scene.title,
             "history": scene.history,
             "environment": scene.environment,
             "archived_history": scene.archived_history,

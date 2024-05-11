@@ -47,12 +47,21 @@ class CharacterImporterServerPlugin:
         with open(scene_path, "r") as f:
             scene_data = json.load(f)
 
+        sorted_characters = scene_data.get("characters", [])
+
+        # sort by name
+        
+        sorted_characters = sorted(
+            sorted_characters,
+            key=lambda character: character["name"].lower(),
+        )
+
         self.websocket_handler.queue_put(
             {
                 "type": "character_importer",
                 "action": "list_characters",
                 "characters": [
-                    character["name"] for character in scene_data.get("characters", [])
+                    character["name"] for character in sorted_characters
                 ],
             }
         )

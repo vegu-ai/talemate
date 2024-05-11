@@ -1,17 +1,19 @@
 <template>
     <v-list density="compact" slim>
         <v-list-subheader>
-            <v-icon color="primary" class="mr-1">mdi-tools</v-icon>
-            Tools
+            <v-icon color="primary" class="mr-1">mdi-account-multiple-plus</v-icon>
+            Create
         </v-list-subheader>
         <v-list-item prepend-icon="mdi-account-plus">
             <v-list-item-title>Create Character</v-list-item-title>
+            <v-list-item-subtitle class="text-caption">Add a new character to the scene.</v-list-item-subtitle>
         </v-list-item>
         <v-list-item prepend-icon="mdi-account-arrow-right" @click.stop="openCharacterImporter">
             <v-list-item-title>Import Character</v-list-item-title>
+            <v-list-item-subtitle class="text-caption">Import rom another scene.</v-list-item-subtitle>
         </v-list-item>
     </v-list>
-    <v-list density="compact" slim selectable @update:selected="onSelect" active-color="primary">
+    <v-list density="compact" slim selectable @update:selected="onSelect" color="primary">
         <v-list-subheader>
             <v-icon color="primary" class="mr-1">mdi-account-group</v-icon>
             Characters

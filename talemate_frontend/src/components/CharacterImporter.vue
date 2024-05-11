@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="dialog" scrollable max-width="50%">
+    <v-dialog v-model="dialog" scrollable max-width="500">
         <v-window>
             <v-card>
                 <v-card-title>
@@ -89,15 +89,12 @@ export default {
 
                 if(data.action === 'list_characters') {
                     this.characters = data.characters;
-                    return;
                 } else if(data.action === 'import_character_done') {
                     this.importing = false;
                     this.dialog = false;
                     this.$emit('import-done', data.character);
-                    return;
                 }
 
-                return;
             }
 
         },

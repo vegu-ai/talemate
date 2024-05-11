@@ -21,6 +21,7 @@ from talemate.scene_message import (
 )
 from talemate.status import LoadingStatus, set_loading
 from talemate.world_state import WorldState
+from talemate.character import deactivate_character
 
 __all__ = [
     "load_scene",
@@ -300,6 +301,10 @@ async def transfer_character(scene, scene_json_path, character_name):
 
             # Add the character actor to the current scene
             await scene.add_actor(actor)
+            
+            # deactivate the character
+            await deactivate_character(scene, character.name)
+            
             break
     else:
         raise ValueError(

@@ -1,5 +1,5 @@
 <template>
-    <v-card elevation="7" density="compact">
+    <v-card density="compact">
         <v-card-title>
             <v-icon class="mr-2" size="x-small" color="primary">{{ icon }}</v-icon>
             {{ title }}
@@ -8,8 +8,12 @@
     <div v-if="tab === 'scene'">
         <CoverImage ref="coverImageScene" :target="scene" :type="'scene'" />
     </div>
-    <div v-if="tab === 'characters' && character">
-        <WorldStateManagerMenuCharacterTools ref="characterTools" :scene="scene" :character="character" />
+    <div v-if="tab === 'characters'">
+        <WorldStateManagerMenuCharacterTools 
+        ref="characterTools" 
+        :scene="scene" 
+        @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
+        :character="character" />
     </div>
 </template>
 
@@ -34,7 +38,7 @@ export default {
                 case 'scene':
                     return 'mdi-image';
                 case 'characters':
-                    return 'mdi-account';
+                    return 'mdi-account-group';
                 default:
                     return 'mdi-tools';
             }
@@ -44,7 +48,7 @@ export default {
                 case 'scene':
                     return this.scene ? this.scene.title : 'Scene Tools';
                 case 'characters':
-                    return this.character ? this.character.name : 'Character Tools';
+                    return 'Characters';
                 default:
                     return 'Tools';   
             }

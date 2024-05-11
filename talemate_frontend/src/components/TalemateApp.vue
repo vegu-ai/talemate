@@ -1,66 +1,6 @@
 <template>
   <v-app>
 
-
-    <!-- scene navigation drawer -->
-    <v-navigation-drawer v-model="sceneDrawer" app width="300">
-        <v-alert v-if="!connected" type="error" variant="tonal">
-          Not connected to Talemate backend
-          <p class="text-body-2" color="white">
-            Make sure the backend process is running.
-          </p>
-        </v-alert>
-      <v-tabs-window v-model="tab">
-      <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
-          <v-alert type="warning" variant="text" v-if="!(ready && connected)">You need to configure a Talemate client before you can load scenes.</v-alert>
-          <LoadScene 
-          ref="loadScene" 
-          :scene-loading-available="ready && connected"
-          @loading="sceneStartedLoading" />
-      </v-tabs-window-item>
-        <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
-          <CoverImage v-if="sceneActive" ref="coverImage" />
-          <WorldState v-if="sceneActive" ref="worldState" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
-        </v-tabs-window-item>
-        <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
-          <WorldStateManagerMenu v-if="sceneActive" ref="worldStateManagerMenu" :scene="scene" @world-state-manager-navigate="onOpenWorldStateManager" />
-        </v-tabs-window-item>
-      </v-tabs-window>
-      <CreativeEditor v-if="sceneActive" ref="creativeEditor" @open-world-state-manager="onOpenWorldStateManager"  />
-    </v-navigation-drawer>
-
-    <!-- settings navigation drawer -->
-    <v-navigation-drawer v-model="drawer" app location="right" width="300">
-      <v-alert v-if="!connected" type="error" variant="tonal">
-        Not connected to Talemate backend
-        <p class="text-body-2" color="white">
-          Make sure the backend process is running.
-        </p>
-      </v-alert>
-
-      <v-list>
-        <v-list-subheader class="text-uppercase"><v-icon>mdi-network-outline</v-icon>
-          Clients</v-list-subheader>
-        <v-list-item>
-          <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig"></AIClient>
-        </v-list-item>
-        <v-divider></v-divider>
-        <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
-        <v-list-item>
-          <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents"></AIAgent>
-        </v-list-item>
-        <!-- More sections can be added here -->
-      </v-list>
-    </v-navigation-drawer>
-
-    <!-- debug tools navigation drawer -->
-    <v-navigation-drawer v-model="debugDrawer" app location="right" width="400">
-      <v-list>
-        <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
-        <DebugTools ref="debugTools"></DebugTools>
-      </v-list>
-    </v-navigation-drawer>
-
     <!-- system bar -->
     <v-system-bar>
       <v-icon icon="mdi-network-outline"></v-icon>
@@ -87,7 +27,7 @@
     </v-system-bar>
 
     <!-- app bar -->
-    <v-app-bar app>
+    <v-app-bar app density="compact">
       <v-app-bar-nav-icon size="x-small" @click="toggleNavigation('game')">
         <v-icon v-if="sceneDrawer">mdi-arrow-collapse-left</v-icon>
         <v-icon v-else>mdi-arrow-collapse-right</v-icon>
@@ -115,6 +55,69 @@
     </v-app-bar>
 
     <v-main style="height: 100%; display: flex; flex-direction: column;">
+
+      <!-- left side navigation drawer -->
+      <v-navigation-drawer v-model="sceneDrawer" app width="300">
+        <v-alert v-if="!connected" type="error" variant="tonal">
+          Not connected to Talemate backend
+          <p class="text-body-2" color="white">
+            Make sure the backend process is running.
+          </p>
+        </v-alert>
+        <v-tabs-window v-model="tab">
+        <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
+            <v-alert type="warning" variant="text" v-if="!(ready && connected)">You need to configure a Talemate client before you can load scenes.</v-alert>
+            <LoadScene 
+            ref="loadScene" 
+            :scene-loading-available="ready && connected"
+            @loading="sceneStartedLoading" />
+        </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
+            <CoverImage v-if="sceneActive" ref="coverImage" />
+            <WorldState v-if="sceneActive" ref="worldState" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
+          </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
+            <WorldStateManagerMenu v-if="sceneActive"
+            ref="worldStateManagerMenu" 
+            :scene="scene" 
+            @world-state-manager-navigate="onOpenWorldStateManager" 
+            />
+          </v-tabs-window-item>
+        </v-tabs-window>
+        <CreativeEditor v-if="sceneActive" ref="creativeEditor" @open-world-state-manager="onOpenWorldStateManager"  />
+      </v-navigation-drawer>
+      <!-- right side navigation drawer -->
+      <v-navigation-drawer v-model="drawer" app location="right" width="300" disable-resize-watcher>
+        <v-alert v-if="!connected" type="error" variant="tonal">
+          Not connected to Talemate backend
+          <p class="text-body-2" color="white">
+            Make sure the backend process is running.
+          </p>
+        </v-alert>
+
+        <v-list>
+          <v-list-subheader class="text-uppercase"><v-icon>mdi-network-outline</v-icon>
+            Clients</v-list-subheader>
+          <v-list-item>
+            <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig"></AIClient>
+          </v-list-item>
+          <v-divider></v-divider>
+          <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
+          <v-list-item>
+            <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents"></AIAgent>
+          </v-list-item>
+          <!-- More sections can be added here -->
+        </v-list>
+      </v-navigation-drawer>
+
+      <!-- debug tools navigation drawer -->
+      <v-navigation-drawer v-model="debugDrawer" app location="right" width="400" disable-resize-watcher>
+        <v-list>
+          <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
+          <DebugTools ref="debugTools"></DebugTools>
+        </v-list>
+      </v-navigation-drawer>
+
 
       <v-container :class="(sceneActive ? '' : 'backdrop')" fluid style="height: 100%;">
 
@@ -238,18 +241,6 @@ export default {
       tab: 'home',
       tabs: [
         {
-          title: () => { return 'Home' },
-          condition: () => { return true },
-          icon: () => { return 'mdi-home' },
-          click: () => {
-            // on next tick, scroll to the top
-            this.$nextTick(() => {
-              window.scrollTo(0, 0);
-            });
-          },
-          value: 'home'
-        },
-        {
           title: () => {
             return this.scene.title || 'Untitled Scenario';
           }, 
@@ -273,7 +264,19 @@ export default {
             });
           },
           value: 'world' 
-        }
+        },
+        {
+          title: () => { return 'Home' },
+          condition: () => { return true },
+          icon: () => { return 'mdi-home' },
+          click: () => {
+            // on next tick, scroll to the top
+            this.$nextTick(() => {
+              window.scrollTo(0, 0);
+            });
+          },
+          value: 'home'
+        },
       ],
       version: null,
       loading: false,
@@ -674,6 +677,7 @@ export default {
     },
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
       this.tab = 'world';
+      console.log("WSMNAV", {tab, sub1, sub2, sub3})
       this.$nextTick(() => {
         this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
       });

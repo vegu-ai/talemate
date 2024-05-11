@@ -386,6 +386,9 @@ export default {
             else if(message.action === 'character_deactivated' || message.action === 'character_activated') {
                 this.requestCharacterList()
             }
+            else if (message.action === 'character_details') {
+                this.characterDetails = message.data;
+            }
         },
     },
     created() {

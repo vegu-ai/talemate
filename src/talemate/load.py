@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 import talemate.events as events
 import talemate.instance as instance
-from talemate import Actor, Character, Player
+from talemate import Actor, Character, Player, Scene
 from talemate.config import load_config
 from talemate.context import SceneIsLoading
 from talemate.emit import emit
@@ -28,7 +28,7 @@ __all__ = [
     "load_conversation_log_into_scene",
     "load_character_from_image",
     "load_character_from_json",
-    "load_character_into_scene",
+    "transfer_character",
 ]
 
 log = structlog.get_logger("talemate.load")
@@ -262,7 +262,7 @@ async def load_scene_from_data(
     return scene
 
 
-async def load_character_into_scene(scene, scene_json_path, character_name):
+async def transfer_character(scene, scene_json_path, character_name):
     """
     Load a character from a scene json file and add it to the current scene.
     :param scene: The current scene.
@@ -281,6 +281,16 @@ async def load_character_into_scene(scene, scene_json_path, character_name):
         if character_data["name"] == character_name:
             # Create a Character object from the character data
             character = Character(**character_data)
+            
+            # If character has cover image, the asset needs to be copied
+            if character.cover_image:
+                other_scene = Scene()
+                other_scene.name = scene_data.get("name")
+                other_scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
+                
+                scene.assets.transfer_asset(
+                    other_scene.assets, character.cover_image
+                )
 
             # If the character is not a player, create a conversation agent for it
             if not character.is_player:

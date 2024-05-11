@@ -6,7 +6,7 @@ from typing import Union
 import pydantic
 import structlog
 
-from talemate.load import load_character_into_scene
+from talemate.load import transfer_character
 
 log = structlog.get_logger("talemate.server.character_importer")
 

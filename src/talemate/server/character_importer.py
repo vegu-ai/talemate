@@ -5,7 +5,7 @@ import os
 import pydantic
 import structlog
 
-from talemate.load import load_character_into_scene
+from talemate.load import transfer_character
 
 log = structlog.get_logger("talemate.server.character_importer")
 
@@ -64,7 +64,7 @@ class CharacterImporterServerPlugin:
 
         scene = self.websocket_handler.scene
 
-        await load_character_into_scene(
+        await transfer_character(
             scene,
             import_character_data.scene_path,
             import_character_data.character_name,

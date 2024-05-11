@@ -91,6 +91,12 @@
                                         <v-icon size="small">mdi-bullhorn</v-icon>
                                         Actor
                                     </v-tab>
+                                    <!--
+                                    <v-tab value="actor" :disabled="true">
+                                        <v-icon size="small">mdi-image</v-icon>
+                                        Images
+                                    </v-tab>
+                                    -->
                                 </v-tabs>
                             
                                 <v-card-text>

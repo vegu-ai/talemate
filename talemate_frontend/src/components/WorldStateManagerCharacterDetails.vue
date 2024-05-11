@@ -202,6 +202,13 @@ export default {
         },
 
         update(name) {
+
+            // if field is currently empty, don't send update, because that
+            // will cause a deletion
+            if (this.character.details[name] === "") {
+                return;
+            }
+
             return this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'update_character_detail',
@@ -258,8 +265,14 @@ export default {
             if (message.type !== 'world_state_manager') {
                 return;
             }
-            if (message.action === 'character_detail_updated') {
+            else if (message.action === 'character_detail_updated') {
                 this.dirty = false;
+                this.$emit('require-scene-save');
+            }
+            else if (message.action === 'character_detail_deleted') {
+                if(message.data.name === this.selected) {
+                    this.selected = null;
+                }
                 this.$emit('require-scene-save');
             }
         }

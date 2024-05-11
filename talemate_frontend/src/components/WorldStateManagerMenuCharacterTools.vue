@@ -1,30 +1,49 @@
 <template>
-
-    <!-- character list -->
-    <v-tabs direction="vertical" v-model="selected" color="secondary" class="mt-2">
-        <v-tab prepend-icon="mdi-account" v-for="character in characterList.characters" :key="character.name" :value="character.name">
-            <div class="text-left text-caption">
-                {{ character.name }}
+    <v-list density="compact" slim>
+        <v-list-subheader>
+            <v-icon color="primary" class="mr-1">mdi-tools</v-icon>
+            Tools
+        </v-list-subheader>
+        <v-list-item prepend-icon="mdi-account-plus">
+            <v-list-item-title>Create Character</v-list-item-title>
+        </v-list-item>
+        <v-list-item prepend-icon="mdi-account-arrow-right" @click.stop="openCharacterImporter">
+            <v-list-item-title>Import Character</v-list-item-title>
+        </v-list-item>
+    </v-list>
+    <v-list density="compact" slim selectable @update:selected="onSelect" active-color="primary">
+        <v-list-subheader>
+            <v-icon color="primary" class="mr-1">mdi-account-group</v-icon>
+            Characters
+        </v-list-subheader>
+        <v-list-item v-for="character in characterList.characters" prepend-icon="mdi-account" :key="character.name"
+            :value="character.name">
+            <v-list-item-title>{{ character.name }}</v-list-item-title>
+            <v-list-item-subtitle>
                 <div class="text-caption">
-                <v-chip v-if="character.is_player === true" label size="x-small"
-                    variant="tonal" color="info">Player</v-chip>
-                <v-chip v-else-if="character.is_player === false" label size="x-small"
-                    variant="tonal" color="warning">AI</v-chip>
-                <v-chip v-if="character.active === true && character.is_player === false"
-                    label size="x-small" variant="tonal" color="success"
-                    class="ml-1">Active</v-chip>
+                    <v-chip v-if="character.is_player === true" label size="x-small"
+                    :variant="selected === character.name ? 'flat' : 'tonal'" color="info" elevation="7">Player</v-chip>
+                    <v-chip v-else-if="character.is_player === false" label size="x-small"
+                        :variant="selected === character.name ? 'flat' : 'tonal'" color="warning" elevation="7">AI</v-chip>
+                    <v-chip v-if="character.active === true && character.is_player === false"
+                        label size="x-small" :variant="selected === character.name ? 'flat' : 'tonal'" color="success"
+                        class="ml-1" elevation="7">Active</v-chip>
                 </div>
-
-            </div>
-        </v-tab>
-    </v-tabs>
+            </v-list-item-subtitle>
+        </v-list-item>
+    </v-list>
+    <CharacterImporter ref="characterImporter" @import-done="requestCharacterList" />
 
 </template>
 
 <script>
+
+import CharacterImporter from './CharacterImporter.vue';
+
 export default {
     name: "WorldStateManagerMenuCharacterTools",
     components: {
+        CharacterImporter,
     },
     props: {
         scene: Object,
@@ -61,13 +80,18 @@ export default {
         'world-state-manager-navigate'
     ],
     methods: {
+        onSelect(value) {
+            this.selected = value && value.length ? value[0] : null;
+        },
         requestCharacterList() {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'get_character_list',
             }));
         },
-
+        openCharacterImporter() {
+            this.$refs.characterImporter.show();
+        },
         handleMessage(message) {
             if (message.type !== 'world_state_manager') {
                 return;

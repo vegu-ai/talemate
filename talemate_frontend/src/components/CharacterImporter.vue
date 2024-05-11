@@ -47,6 +47,9 @@ export default {
             this.selectedScene = val;
         }
     },
+    emits:[
+        'import-done',
+    ],
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'requestSceneAssets'],
     methods: {
         show() {
@@ -90,6 +93,7 @@ export default {
                 } else if(data.action === 'import_character_done') {
                     this.importing = false;
                     this.dialog = false;
+                    this.$emit('import-done', data.character);
                     return;
                 }
 

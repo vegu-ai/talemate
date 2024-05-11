@@ -1,10 +1,4 @@
 <template>
-    <v-card density="compact">
-        <v-card-title>
-            <v-icon class="mr-2" size="x-small" color="primary">{{ icon }}</v-icon>
-            {{ title }}
-        </v-card-title>
-    </v-card>
     <div v-if="tab === 'scene'">
         <CoverImage ref="coverImageScene" :target="scene" :type="'scene'" />
     </div>

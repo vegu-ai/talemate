@@ -677,7 +677,6 @@ export default {
     },
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
       this.tab = 'world';
-      console.log("WSMNAV", {tab, sub1, sub2, sub3})
       this.$nextTick(() => {
         this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
       });

@@ -6,10 +6,9 @@ import structlog
 
 from talemate.instance import get_agent
 from talemate.world_state.manager import (
-    StateReinforcementTemplate,
     WorldStateManager,
-    WorldStateTemplates,
 )
+import talemate.world_state.templates as templates
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -99,13 +98,17 @@ class RemovePinPayload(pydantic.BaseModel):
 
 
 class SaveWorldStateTemplatePayload(pydantic.BaseModel):
-    template: StateReinforcementTemplate
+    template: templates.AnnotatedTemplate
 
 
 class DeleteWorldStateTemplatePayload(pydantic.BaseModel):
-    template: StateReinforcementTemplate
+    template: templates.AnnotatedTemplate
 
-
+class ApplyWorldStateTemplatePayload(pydantic.BaseModel):
+    template: templates.AnnotatedTemplate
+    character_name: str = None,
+    run_immediately: bool = False,
+    
 class SelectiveCharacterPayload(pydantic.BaseModel):
     name: str
 
@@ -191,7 +194,7 @@ class WorldStateManagerPlugin:
             {
                 "type": "world_state_manager",
                 "action": "templates",
-                "data": templates.model_dump(),
+                "data": templates.model_dump()["templates"],
             }
         )
 
@@ -566,6 +569,29 @@ class WorldStateManagerPlugin:
         await self.signal_operation_done()
         await self.scene.load_active_pins()
         self.scene.emit_status()
+
+    async def handle_apply_template(self, data):
+        payload = ApplyWorldStateTemplatePayload(**data)
+
+        log.debug("Apply world state template", template=payload.template)
+
+        await self.world_state_manager.apply_template(
+            template = payload.template,
+            character_name = payload.character_name,
+            run_immediately = payload.run_immediately
+        )
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "template_applied",
+                "data": payload.model_dump(),
+            }
+        )
+
+        await self.handle_get_world({})
+        await self.handle_get_templates({})
+        await self.signal_operation_done()
 
     async def handle_save_template(self, data):
         payload = SaveWorldStateTemplatePayload(**data)

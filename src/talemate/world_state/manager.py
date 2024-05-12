@@ -4,10 +4,10 @@ import pydantic
 import structlog
 
 from talemate.character import activate_character, deactivate_character
-from talemate.config import StateReinforcementTemplate, WorldStateTemplates, save_config
+from talemate.config import save_config
 from talemate.instance import get_agent
 from talemate.world_state import ContextPin, InsertionMode, ManualContext, Reinforcement
-from talemate.world_state.templates import Collection
+import talemate.world_state.templates as templates
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -89,6 +89,14 @@ class WorldStateManager:
         """
         return get_agent("memory")
 
+    @property
+    def template_collection(self):
+        scene = self.scene
+        if not hasattr(scene, "_world_state_templates"):
+            scene._world_state_templates = templates.Collection.load()
+            log.debug("loaded world state templates", templates=scene._world_state_templates)
+        return scene._world_state_templates
+
     def __init__(self, scene: "Scene"):
         """
         Initializes the WorldStateManager with a given scene.
@@ -98,10 +106,6 @@ class WorldStateManager:
         """
         self.scene = scene
         self.world_state = scene.world_state
-        
-        if not hasattr(scene, "_world_state_templates"):
-            scene._world_state_templates = Collection.load()
-            log.debug("loaded world state templates", templates=scene._world_state_templates.templates)
 
     async def get_character_list(self) -> CharacterList:
         """
@@ -495,64 +499,38 @@ class WorldStateManager:
         if entry_id in self.world_state.pins:
             del self.world_state.pins[entry_id]
 
-    async def get_templates(self) -> WorldStateTemplates:
+    async def get_templates(self, types: list[str] = None) -> templates.TypedCollection:
         """
         Retrieves the current world state templates from scene configuration.
 
         Returns:
             A WorldStateTemplates object containing state reinforcement templates.
         """
-        templates = self.scene.config["game"]["world_state"]["templates"]
-        world_state_templates = WorldStateTemplates(**templates)
-        return world_state_templates
+        
+        collection = self.template_collection
+        return collection.typed(types = types)
+        
 
-    async def save_template(self, template: StateReinforcementTemplate):
+    async def save_template(self, template: templates.AnnotatedTemplate):
         """
         Saves a state reinforcement template to the scene configuration.
-
-        Arguments:
-            template: The StateReinforcementTemplate object representing the template to be saved.
 
         Note:
             If the template is set to auto-create, it will be applied immediately.
         """
-        config = self.scene.config
-
-        template_type = template.type
-
-        config["game"]["world_state"]["templates"][template_type][
-            template.name
-        ] = template.model_dump()
-
-        save_config(self.scene.config)
-
+        group = self.template_collection.find(template.group)
+        group.update(template)
         if template.auto_create:
             await self.auto_apply_template(template)
 
-    async def remove_template(self, template_type: str, template_name: str):
+        
+    async def remove_template(self, template: templates.AnnotatedTemplate):
         """
         Removes a specific state reinforcement template from scene configuration.
-
-        Arguments:
-            template_type: The type of the template to be removed.
-            template_name: The name of the template to be removed.
-
-        Note:
-            If the specified template is not found, logs a warning.
         """
-        config = self.scene.config
-
-        try:
-            del config["game"]["world_state"]["templates"][template_type][template_name]
-            save_config(self.scene.config)
-        except KeyError:
-            log.warning(
-                "world state template not found",
-                template_type=template_type,
-                template_name=template_name,
-            )
-            pass
-
+        group = self.template_collection.find(template.group)
+        group.remove(template)
+                
     async def apply_all_auto_create_templates(self):
         """
         Applies all auto-create state reinforcement templates.
@@ -560,12 +538,13 @@ class WorldStateManager:
         This method goes through the scene configuration, identifies templates set for auto-creation,
         and applies them.
         """
-        templates = self.scene.config["game"]["world_state"]["templates"]
-        world_state_templates = WorldStateTemplates(**templates)
+        
+        collection = self.template_collection
+        flat_collection = collection.flat(types=["state_reinforcement"])
 
         candidates = []
 
-        for template in world_state_templates.state_reinforcement.values():
+        for template in flat_collection.templates.values():
             if template.auto_create:
                 candidates.append(template)
 
@@ -573,7 +552,7 @@ class WorldStateManager:
             log.info("applying template", template=template)
             await self.auto_apply_template(template)
 
-    async def auto_apply_template(self, template: StateReinforcementTemplate):
+    async def auto_apply_template(self, template: templates.AnnotatedTemplate):
         """
         Automatically applies a state reinforcement template based on its type.
 
@@ -583,11 +562,16 @@ class WorldStateManager:
         Note:
             This function delegates to a specific apply function based on the template type.
         """
-        fn = getattr(self, f"auto_apply_template_{template.type}")
+        fn = getattr(self, f"auto_apply_template_{template.template_type}", None)
+        
+        if not fn:
+            log.error("unsupported template type for auto-application", template=template)
+            return
+        
         await fn(template)
 
     async def auto_apply_template_state_reinforcement(
-        self, template: StateReinforcementTemplate
+        self, template: templates.StateReinforcement
     ):
         """
         Applies a state reinforcement template to characters based on the template's state type.
@@ -613,9 +597,26 @@ class WorldStateManager:
         for character_name in characters:
             await self.apply_template_state_reinforcement(template, character_name)
 
+    async def apply_template(self, template: templates.AnnotatedTemplate, **kwargs):
+        """
+        Applies a state reinforcement template to the scene.
+
+        Arguments:
+            template: The StateReinforcementTemplate object to be applied.
+        """
+        
+        fn = getattr(self, f"apply_template_{template.template_type}", None)
+        
+        if not fn:
+            log.error("unsupported template type for application", template=template)
+            return
+        
+        await fn(template, **kwargs)
+        
+
     async def apply_template_state_reinforcement(
         self,
-        template: Union[str, StateReinforcementTemplate],
+        template: Union[str, templates.StateReinforcement],
         character_name: str = None,
         run_immediately: bool = False,
     ) -> Reinforcement:
@@ -635,7 +636,7 @@ class WorldStateManager:
         """
 
         if isinstance(template, str):
-            template = (await self.get_templates()).get_template(template)
+            template = self.template_collection.flat(types=["state_reinforcement"]).templates.get(template)
             if not template:
                 return
 

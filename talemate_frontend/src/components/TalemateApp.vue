@@ -140,6 +140,7 @@
                 <SceneTools 
                   @open-world-state-manager="onOpenWorldStateManager"
                   :messageInput="messageInput"
+                  :worldStateTemplates="worldStateTemplates"
                   :playerCharacterName="getPlayerCharacterName()"
                   :passiveCharacters="passiveCharacters"
                   :inactiveCharacters="inactiveCharacters"
@@ -308,6 +309,7 @@ export default {
       autocompletePartialInput: "",
       autocompleteCallback: null,
       autocompleteFocusElement: null,
+      worldStateTemplates: {},
     }
   },
   watch:{
@@ -420,6 +422,7 @@ export default {
           this.loading = false;
           this.sceneActive = true;
           this.requestAppConfig();
+          this.requestWorldStateTemplates();
           this.tab = 'main';
         }
         if(data.status == 'error') {
@@ -521,18 +524,22 @@ export default {
           });
         }
       }
+      
       if (data.type === 'processing_input') {
         // Disable the input field when a processing_input message comes in
         this.inputDisabled = true;
         this.waitingForInput = false;
-      }
-      if (data.type === "character" || data.type === "system") {
+      } else if (data.type === "character" || data.type === "system") {
         this.$nextTick(() => {
           if (this.$refs.messageInput && this.$refs.messageInput.$el)
             this.$refs.messageInput.$el.scrollIntoView(false);
         });
+      } else if(data.type == 'world_state_manager') {
+        if(data.action == 'templates') {
+          console.log("WORLD STATE TEMPLATES", data.data)
+          this.worldStateTemplates = data.data;
+        }
       }
-
     },
     sendMessage(event) {
 
@@ -567,6 +574,13 @@ export default {
         this.inputDisabled = true;
         this.waitingForInput = false;
       }
+    },
+
+    requestWorldStateTemplates() {
+      this.websocket.send(JSON.stringify({ 
+        type: 'world_state_manager',
+        action: 'get_templates'
+      }));
     },
 
     autocompleteRequest(param, callback, focus_element) {

@@ -14,8 +14,11 @@ if TYPE_CHECKING:
 __all__ = [
     "register",
     "Template",
+    "AnnotatedTemplate",
     "Group",
     "Collection",
+    "FlatCollection",
+    "TypedCollection"
 ]
 
 log = structlog.get_logger("world-state.templates")
@@ -32,9 +35,8 @@ class register:
         MODELS[self.template_type] = cls
         return cls
     
-class Template(pydantic.BaseModel):
-    name: str
-    template_type: str = "base"
+def name_to_id(name:str) -> str:
+    return name.replace(" ", "_").lower()
     
 def validate_template(v: Any, handler: pydantic.ValidatorFunctionWrapHandler, info: pydantic.ValidationInfo):
     if isinstance(v, dict):
@@ -46,6 +48,15 @@ def validate_template(v: Any, handler: pydantic.ValidatorFunctionWrapHandler, in
             raise ValueError(f"Template type {v.template_type} is not registered")
         return v
     return handler(v)
+
+class Template(pydantic.BaseModel):
+    name: str
+    template_type: str = "base"
+    group: str | None = None
+    
+    @property
+    def uid(self):
+        return f"{self.group}__{name_to_id(self.name)}"
 
 TemplateType = TypeVar("TemplateType", bound=Template)
 AnnotatedTemplate = Annotated[TemplateType, pydantic.WrapValidator(validate_template)]
@@ -67,8 +78,13 @@ class Group(pydantic.BaseModel):
         cleaned_name = self.name.replace(" ", "-").lower()
         return f"{cleaned_name}.yaml"
     
-    def save(self, path: str):
+    def save(self, path: str = TEMPLATE_PATH):
         path = os.path.join(path, self.filename)
+            
+        # ensure `group` is set on all templates
+        for template in self.templates.values():
+            template.group = self.name
+        
         with open(path, "w") as f:
             yaml.dump(self.model_dump(), f, sort_keys=True)
         log.debug("Worldstate template group saved", path=path)
@@ -93,7 +109,48 @@ class Group(pydantic.BaseModel):
             templates=templates
         )
                 
+    def insert(self, template:Template, save: bool = True):
         
+        uid = name_to_id(template.name)
+        
+        if uid in self.templates:
+            raise ValueError(f"Template with id {uid} already exists in group")
+        
+        self.templates[uid] = template
+        
+        if save:
+            self.save()
+            
+    def update(self, template:Template, save: bool = True):
+        
+        uid = name_to_id(template.name)
+        
+        self.templates[uid] = template
+        
+        if save:
+            self.save()
+            
+    def delete(self, template:Template, save: bool = True):
+        uid = name_to_id(template.name)
+        
+        if uid not in self.templates:
+            return
+        
+        del self.templates[uid]
+        
+        if save:
+            self.save()
+    
+    def find(self, name:str) -> Template | None:
+        uid = name_to_id(name)
+        if uid in self.templates:
+            return self.templates[uid]
+        
+        for template in self.templates.values():
+            if template.name == name:
+                return template
+        
+        return None 
 
 class Collection(pydantic.BaseModel):
     groups: list[Group] = pydantic.Field(default_factory=list)
@@ -165,8 +222,7 @@ class Collection(pydantic.BaseModel):
         
         return collection
     
-    @property
-    def templates(self) -> "FlatCollection":
+    def flat(self, types: list[str] = None) -> "FlatCollection":
         """
         merged templates from all groups
         """
@@ -176,15 +232,49 @@ class Collection(pydantic.BaseModel):
         for group in self.groups:
             group_id = group.name.replace(" ", "_").lower()
             for template_id, template in group.templates.items():
+                
+                if types and template.template_type not in types:
+                    continue
+                
                 uid = f"{group_id}__{template_id}"
                 templates[uid] = template
         
         return FlatCollection(templates=templates)
         
+    def typed(self, types: list[str] = None) -> "TypedCollection":
+        """
+        Returns a dictionary of templates grouped by their template type
+        """
+        
+        templates = {}
+        
+        for group in self.groups:
+            group_id = group.name.replace(" ", "_").lower()
+            for template_id, template in group.templates.items():
+                
+                if types and template.template_type not in types:
+                    continue
+                
+                if template.template_type not in templates:
+                    templates[template.template_type] = {}
+                uid = f"{group_id}__{template_id}"
+                templates[template.template_type][uid] = template
+                
+        return TypedCollection(templates=templates)
+    
     
     def save(self, path: str = TEMPLATE_PATH):
         for group in self.groups:
             group.save(path)
             
+    def find(self, name:str) ->  Group | None:
+        for group in self.groups:
+            if group.name == name:
+                return group
+        return None
+            
 class FlatCollection(pydantic.BaseModel):
     templates: dict[str, AnnotatedTemplate] = pydantic.Field(default_factory=dict)
+    
+class TypedCollection(pydantic.BaseModel):
+    templates: dict[str, dict[str, AnnotatedTemplate]] = pydantic.Field(default_factory=dict)

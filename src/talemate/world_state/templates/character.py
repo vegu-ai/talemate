@@ -9,12 +9,14 @@ __all__ = [
 @register("character_attribute")
 class Attribute(Template):
     name: str
+    attribute: str
     instructions: str
     template_type: str = "character_attribute"
     
 @register("character_detail")
 class Detail(Template):
     name: str
+    detail: str
     instructions: str
     template_type: str = "character_detail"
     

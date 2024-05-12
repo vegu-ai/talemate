@@ -62,7 +62,9 @@
 
             <!-- TEMPLATES -->
             <v-window-item value="templates">
-                <WorldStateManagerTemplates ref="templates" />
+                <WorldStateManagerTemplates 
+                :immutable-templates="worldStateTemplates"
+                ref="templates" />
             </v-window-item>
 
         </v-window>
@@ -97,6 +99,9 @@ export default {
             }
             return list;
         },
+    },
+    props: {
+        worldStateTemplates: Object,
     },
     data() {
         return {
@@ -178,12 +183,7 @@ export default {
             }
         },
         tab(val) {
-            if (val === 'templates') {
-                this.$nextTick(() => {
-                    this.$refs.templates.requestTemplates();
-                });
-            }
-            this.$emit('navigate-r', val, {manager:this})
+            this.emitEditorState(val)
         },
         characterDetails() {
             if (this.deferedNavigation !== null) {
@@ -216,6 +216,7 @@ export default {
             insertionModes: this.insertionModes,
             requestTemplates: this.requestTemplates,
             loadContextDBEntry: this.loadContextDBEntry,
+            emitEditorState: this.emitEditorState,
         }
     },
     inject: [
@@ -229,6 +230,11 @@ export default {
         'autocompleteInfoMessage',
     ],
     methods: {
+
+        emitEditorState(tab, meta) {
+            this.$emit('navigate-r', tab || this.tab, meta);
+        },
+
         show(tab, sub1, sub2, sub3) {
             //this.reset();
             this.requestCharacterList();
@@ -258,6 +264,10 @@ export default {
                         this.$refs.world.navigate(sub1, sub2, sub3);
                     });
                 }
+            } else if (tab == 'templates') {
+                this.$nextTick(() => {
+                    this.$refs.templates.selectTemplate(sub1);
+                });
             }
         },
         reset() {

@@ -1,6 +1,6 @@
 <template>
     <v-list density="compact" slim>
-        <v-list-subheader>
+        <v-list-subheader color="grey">
             <v-icon color="primary" class="mr-1">mdi-account-multiple-plus</v-icon>
             Create
         </v-list-subheader>
@@ -14,7 +14,7 @@
         </v-list-item>
     </v-list>
     <v-list density="compact" slim selectable @update:selected="onSelect" color="primary">
-        <v-list-subheader>
+        <v-list-subheader color="grey">
             <v-icon color="primary" class="mr-1">mdi-account-group</v-icon>
             Characters
         </v-list-subheader>

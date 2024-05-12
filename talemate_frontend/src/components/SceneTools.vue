@@ -396,7 +396,7 @@ export default {
             return characters;
         },
         worldStateReinforcementTemplates() {
-            let _templates = this.worldStateTemplates.state_reinforcement;
+            let _templates = this.worldStateTemplates.by_type.state_reinforcement;
             let templates = [];
 
             for (let key in _templates) {

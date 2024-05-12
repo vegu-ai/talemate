@@ -5,7 +5,7 @@ import yaml
 import os
 import yaml
 import structlog
-
+import uuid
 
 if TYPE_CHECKING:
     from talemate.config import Config
@@ -53,11 +53,9 @@ class Template(pydantic.BaseModel):
     name: str
     template_type: str = "base"
     group: str | None = None
+    favorite: bool = False
+    uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     
-    @property
-    def uid(self):
-        return f"{self.group}__{name_to_id(self.name)}"
-
 TemplateType = TypeVar("TemplateType", bound=Template)
 AnnotatedTemplate = Annotated[TemplateType, pydantic.WrapValidator(validate_template)]
     
@@ -65,7 +63,8 @@ class Group(pydantic.BaseModel):
     author: str
     name: str
     description: str
-    templates: dict[str, AnnotatedTemplate] = pydantic.Field(default_factory=list)
+    templates: dict[str, AnnotatedTemplate] = pydantic.Field(default_factory=dict)
+    uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     
     @classmethod
     def load(cls, path: str) -> "Group":
@@ -83,7 +82,7 @@ class Group(pydantic.BaseModel):
             
         # ensure `group` is set on all templates
         for template in self.templates.values():
-            template.group = self.name
+            template.group = self.uid
         
         with open(path, "w") as f:
             yaml.dump(self.model_dump(), f, sort_keys=True)
@@ -111,43 +110,33 @@ class Group(pydantic.BaseModel):
                 
     def insert(self, template:Template, save: bool = True):
         
-        uid = name_to_id(template.name)
+        if template.uid in self.templates:
+            raise ValueError(f"Template with id {template.uid} already exists in group")
         
-        if uid in self.templates:
-            raise ValueError(f"Template with id {uid} already exists in group")
-        
-        self.templates[uid] = template
+        self.templates[template.uid] = template
         
         if save:
             self.save()
             
     def update(self, template:Template, save: bool = True):
         
-        uid = name_to_id(template.name)
-        
-        self.templates[uid] = template
+        self.templates[template.uid] = template
         
         if save:
             self.save()
             
     def delete(self, template:Template, save: bool = True):
-        uid = name_to_id(template.name)
-        
-        if uid not in self.templates:
+        if template.uid not in self.templates:
             return
         
-        del self.templates[uid]
+        del self.templates[template.uid]
         
         if save:
             self.save()
     
-    def find(self, name:str) -> Template | None:
-        uid = name_to_id(name)
-        if uid in self.templates:
-            return self.templates[uid]
-        
+    def find(self, uid:str) -> Template | None:
         for template in self.templates.values():
-            if template.name == name:
+            if template.uid == uid:
                 return template
         
         return None 
@@ -192,19 +181,24 @@ class Collection(pydantic.BaseModel):
         
         for template_type, templates in config_templates.items():
             
-            name = f"legacy-{template_type.replace('_', '-')}"
+            name = f"legacy-{template_type.replace('_', '-')}s"
             
             if check_if_exists:
                 if os.path.exists(os.path.join(TEMPLATE_PATH, f"{name}.yaml")):
                     log.debug("template transfer from legacy config", template_type=template_type, status="skipped", reason="already exists")
                     continue
             
+            
+            converted_templates = []
+            for template in templates.values():
+                converted_templates.append(MODELS[template_type](**template))           
+            
             group = Group(
                 author="unknown",
                 name=name,
                 description=f"Auto-generated group for {template_type} templates. This group was created from the legacy templates in the main talemate config file.",
                 templates={
-                    template["name"].replace(" ","_").lower(): MODELS[template_type](**template) for template in templates.values()
+                    template.uid: template for template in converted_templates
                 }
                 #[MODELS[template_type](**template) for template in templates.values()]
             )
@@ -230,13 +224,12 @@ class Collection(pydantic.BaseModel):
         templates = {}
         
         for group in self.groups:
-            group_id = group.name.replace(" ", "_").lower()
             for template_id, template in group.templates.items():
                 
                 if types and template.template_type not in types:
                     continue
                 
-                uid = f"{group_id}__{template_id}"
+                uid = f"{group.uid}__{template_id}"
                 templates[uid] = template
         
         return FlatCollection(templates=templates)
@@ -249,7 +242,6 @@ class Collection(pydantic.BaseModel):
         templates = {}
         
         for group in self.groups:
-            group_id = group.name.replace(" ", "_").lower()
             for template_id, template in group.templates.items():
                 
                 if types and template.template_type not in types:
@@ -257,7 +249,7 @@ class Collection(pydantic.BaseModel):
                 
                 if template.template_type not in templates:
                     templates[template.template_type] = {}
-                uid = f"{group_id}__{template_id}"
+                uid = f"{group.uid}__{template_id}"
                 templates[template.template_type][uid] = template
                 
         return TypedCollection(templates=templates)
@@ -267,9 +259,9 @@ class Collection(pydantic.BaseModel):
         for group in self.groups:
             group.save(path)
             
-    def find(self, name:str) ->  Group | None:
+    def find(self, uid:str) ->  Group | None:
         for group in self.groups:
-            if group.name == name:
+            if group.uid == uid:
                 return group
         return None
             

@@ -79,7 +79,8 @@
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
             <WorldStateManagerMenu v-if="sceneActive"
             ref="worldStateManagerMenu" 
-            :scene="scene" 
+            :scene="scene"
+            :worldStateTemplates="worldStateTemplates"
             @world-state-manager-navigate="onOpenWorldStateManager" 
             />
           </v-tabs-window-item>
@@ -175,6 +176,7 @@
           <!-- WORLD -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
             <WorldStateManager 
+            :world-state-templates="worldStateTemplates"
             @navigate-r="onWorldStateManagerNavigateR"
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />
@@ -342,6 +344,7 @@ export default {
     return {
       getWebsocket: () => this.websocket,
       registerMessageHandler: this.registerMessageHandler,
+      unregisterMessageHandler: this.unregisterMessageHandler,
       isInputDisabled: () => this.isInputDisabled(),
       setInputDisabled: (disabled) => this.inputDisabled = disabled,
       isWaitingForInput: () => this.waitingForInput,
@@ -364,6 +367,7 @@ export default {
       formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
       autocompleteRequest: (partialInput, callback, focus_element) => this.autocompleteRequest(partialInput, callback, focus_element),
       autocompleteInfoMessage: (active) => this.autocompleteInfoMessage(active),
+      toLabel: (value) => this.toLabel(value),
     };
   },
   methods: {
@@ -407,6 +411,10 @@ export default {
 
     registerMessageHandler(handler) {
       this.messageHandlers.push(handler);
+    },
+
+    unregisterMessageHandler(handler) {
+      this.messageHandlers = this.messageHandlers.filter(h => h !== handler);
     },
 
     handleMessage(event) {
@@ -536,7 +544,6 @@ export default {
         });
       } else if(data.type == 'world_state_manager') {
         if(data.action == 'templates') {
-          console.log("WORLD STATE TEMPLATES", data.data)
           this.worldStateTemplates = data.data;
         }
       }
@@ -776,7 +783,10 @@ export default {
     resetViews() {
       if(this.$refs.worldStateManager)
         this.$refs.worldStateManager.reset()
-    }
+    },
+    toLabel(value) {
+        return value.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    },
   }
 }
 </script>

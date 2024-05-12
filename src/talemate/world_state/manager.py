@@ -520,7 +520,7 @@ class WorldStateManager:
         """
         group = self.template_collection.find(template.group)
         group.update(template)
-        if template.auto_create:
+        if getattr(template, "auto_create", False):
             await self.auto_apply_template(template)
 
         
@@ -529,7 +529,7 @@ class WorldStateManager:
         Removes a specific state reinforcement template from scene configuration.
         """
         group = self.template_collection.find(template.group)
-        group.remove(template)
+        group.delete(template)
                 
     async def apply_all_auto_create_templates(self):
         """

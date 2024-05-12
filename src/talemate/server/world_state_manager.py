@@ -194,7 +194,10 @@ class WorldStateManagerPlugin:
             {
                 "type": "world_state_manager",
                 "action": "templates",
-                "data": templates.model_dump()["templates"],
+                "data": {
+                    "by_type": templates.model_dump()["templates"],
+                    "managed": self.world_state_manager.template_collection.model_dump()
+                },
             }
         )
 
@@ -618,10 +621,10 @@ class WorldStateManagerPlugin:
         log.debug(
             "Delete world state template",
             template=template.name,
-            template_type=template.type,
+            template_type=template.template_type,
         )
 
-        await self.world_state_manager.remove_template(template.type, template.name)
+        await self.world_state_manager.remove_template(template)
 
         self.websocket_handler.queue_put(
             {

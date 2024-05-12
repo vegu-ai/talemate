@@ -17,7 +17,6 @@ class StateReinforcement(Template):
     description: Union[str, None] = None
     interval: int = 10
     auto_create: bool = False
-    favorite: bool = False
     template_type: str = "state_reinforcement"
     
     @pydantic.field_serializer('insert')

@@ -14,6 +14,8 @@ export default createVuetify({
         colors: {
           primary: colors.deepPurple.lighten2,
           secondary: colors.deepOrange.base,
+          delete: colors.red.darken2,
+          cancel: colors.blueGrey.lighten3,
         }
       }
     }

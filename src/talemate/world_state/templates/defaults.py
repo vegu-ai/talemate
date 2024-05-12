@@ -6,9 +6,9 @@ __all__ = [
 ]
 
 DEFAULT_GROUP = Group(
-    author="unknown",
+    author="Talemate",
     name="default",
-    description="Auto-generated group for state_reinforcement templates. This group was created from the legacy templates in the main talemate config file.",
+    description="Default world state templates.",
     templates={
         "goals": StateReinforcement(
             auto_create=False,

@@ -421,7 +421,7 @@ def save_config(config, file_path: str = "./config.yaml"):
     emit("config_saved", data=config)
 
 
-def cleanup():
+def cleanup() -> Config:
 
     log.info("cleaning up config")
 
@@ -431,6 +431,8 @@ def cleanup():
     cleanup_removed_agents(config)
 
     save_config(config)
+    
+    return config
 
 
 def cleanup_removed_clients(config: Config):

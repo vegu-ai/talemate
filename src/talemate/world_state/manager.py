@@ -7,6 +7,7 @@ from talemate.character import activate_character, deactivate_character
 from talemate.config import StateReinforcementTemplate, WorldStateTemplates, save_config
 from talemate.instance import get_agent
 from talemate.world_state import ContextPin, InsertionMode, ManualContext, Reinforcement
+from talemate.world_state.templates import Collection
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -97,6 +98,10 @@ class WorldStateManager:
         """
         self.scene = scene
         self.world_state = scene.world_state
+        
+        if not hasattr(scene, "_world_state_templates"):
+            scene._world_state_templates = Collection.load()
+            log.debug("loaded world state templates", templates=scene._world_state_templates.templates)
 
     async def get_character_list(self) -> CharacterList:
         """

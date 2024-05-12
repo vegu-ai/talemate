@@ -21,8 +21,15 @@ def run_server(args):
 
     import talemate.agents.custom
     import talemate.client.custom
+    from talemate.world_state.templates import Collection
+    from talemate.world_state.templates.defaults import create_defaults_if_empty_collection
 
-    talemate.config.cleanup()
+    config = talemate.config.cleanup()
+    
+    if not config.game.world_state.templates:
+        create_defaults_if_empty_collection(Collection.load())
+    else:
+        Collection.create_from_legacy_config(config)
 
     start_server = websockets.serve(
         websocket_endpoint, args.host, args.port, max_size=2**23

@@ -65,13 +65,13 @@
           </p>
         </v-alert>
         <v-tabs-window v-model="tab">
-        <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
             <v-alert type="warning" variant="tonal" v-if="!ready && connected">You need to configure a Talemate client before you can load scenes.</v-alert>
             <LoadScene 
             ref="loadScene" 
             :scene-loading-available="ready && connected"
             @loading="sceneStartedLoading" />
-        </v-tabs-window-item>
+          </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
             <CoverImage v-if="sceneActive" ref="coverImage" />
             <WorldState v-if="sceneActive" ref="worldState" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>

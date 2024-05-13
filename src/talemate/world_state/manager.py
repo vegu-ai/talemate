@@ -510,6 +510,28 @@ class WorldStateManager:
         collection = self.template_collection
         return collection.typed(types = types)
         
+    async def save_template_group(self, group: templates.Group):
+        """
+        Adds / Updates a new template group to the scene configuration.
+
+        Arguments:
+            group: The Group object to be added.
+        """
+        exists = self.template_collection.find(group.uid)
+        if not exists:
+            self.template_collection.groups.append(group)
+            group.save()
+        else:
+            exists.update(group)
+        
+    async def remove_template_group(self, group: templates.Group):
+        """
+        Removes a template group from the scene configuration.
+
+        Arguments:
+            group: The Group object to be removed.
+        """
+        self.template_collection.remove(group)
 
     async def save_template(self, template: templates.AnnotatedTemplate):
         """
@@ -519,7 +541,7 @@ class WorldStateManager:
             If the template is set to auto-create, it will be applied immediately.
         """
         group = self.template_collection.find(template.group)
-        group.update(template)
+        group.update_template(template)
         if getattr(template, "auto_create", False):
             await self.auto_apply_template(template)
 
@@ -529,7 +551,7 @@ class WorldStateManager:
         Removes a specific state reinforcement template from scene configuration.
         """
         group = self.template_collection.find(template.group)
-        group.delete(template)
+        group.delete_template(template)
                 
     async def apply_all_auto_create_templates(self):
         """
@@ -611,7 +633,7 @@ class WorldStateManager:
             log.error("unsupported template type for application", template=template)
             return
         
-        await fn(template, **kwargs)
+        return await fn(template, **kwargs)
         
 
     async def apply_template_state_reinforcement(

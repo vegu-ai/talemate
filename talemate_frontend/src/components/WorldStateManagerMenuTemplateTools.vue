@@ -4,7 +4,7 @@
             <v-icon color="primary" class="mr-1">mdi-plus</v-icon>
             Create
         </v-list-subheader>
-        <v-list-item prepend-icon="mdi-account-plus">
+        <v-list-item prepend-icon="mdi-account-plus" @click.stop="$emit('world-state-manager-navigate', 'templates', '$CREATE_GROUP')">
             <v-list-item-title>Create Group</v-list-item-title>
             <v-list-item-subtitle class="text-caption">Create a new template group.</v-list-item-subtitle>
         </v-list-item>
@@ -22,14 +22,13 @@
             <v-card-text class="text-grey text-caption">
                 <p><span class="text-white">Author</span> <span>{{ group.author }}</span></p>
                 {{ group.description }}
-                <v-btn variant="tonal" block color="red-darken-2" prepend-icon="mdi-close-box-outline" @click.stop="deleteGroup" size="small">Delete</v-btn>
             </v-card-text>
         </v-card>
 
         <v-list v-if="groupIsOpen(index)" slim color="secondary" density="compact" selectable @update:selected="onSelect" :selected="selected">
 
             <!-- create template -->
-            <v-list-item prepend-icon="mdi-plus" color="primary" :value="`${group.uid}__`">
+            <v-list-item prepend-icon="mdi-plus" color="primary" :value="`${group.uid}__$CREATE`">
                 <v-list-item-title>Create Template</v-list-item-title>
                 <v-list-item-subtitle class="text-caption">Create a new template in this group.</v-list-item-subtitle>
             </v-list-item>
@@ -66,11 +65,36 @@ export default {
         editor: Object,
     },
     watch:{
+        worldStateTemplates: {
+            immediate: true,
+            handler(worldStateTemplates) {
+                if(this.deferredSelectGroup) {
+                    let index = worldStateTemplates.managed.groups.findIndex(group => group.uid == this.deferredSelectGroup);
+                    if(index != -1) {
+                        this.selectedGroups = [index];
+                        this.deferredSelectGroup = null;
+                    }
+                }
+            }
+        },
         selected: {
             immediate: true,
             handler(selected) {
                 console.log("selection",selected)
                 this.$emit('world-state-manager-navigate', 'templates', selected ? selected[0] : null);
+            }
+        },
+        selectedGroups: {
+            immediate: true,
+            handler(selectedGroups) {
+                console.log("selection-groups",selectedGroups)
+                if(selectedGroups.length == 0) {
+                    this.$emit('world-state-manager-navigate', 'templates', "$DESELECTED");
+                    return;
+                }
+                let index = selectedGroups[0];
+                let group = this.worldStateTemplates.managed.groups[index];
+                this.$emit('world-state-manager-navigate', 'templates', group.uid);
             }
         }
     },
@@ -93,6 +117,7 @@ export default {
                 characters: [],
             },
             selected: null,
+            deferredSelectGroup: null,
         }
     },
     emits: [
@@ -131,6 +156,18 @@ export default {
             } else if (message.action == 'template_deleted') {
                 if (this.selected == message.data.template.uid) {
                     this.selected = null;
+                }
+            } else if (message.action == 'template_group_saved') {
+                let uid = message.data.group.uid;
+                let index = this.worldStateTemplates.managed.groups.findIndex(group => group.uid == uid);
+                if(index == -1) {
+                    this.deferredSelectGroup = uid;
+                } else {
+                    this.selectedGroups = [index]
+                }
+            } else if (message.action == 'template_group_deleted') {
+                if (this.selectedGroups == message.data.group.uid) {
+                    this.selectedGroups = null;
                 }
             }
         }

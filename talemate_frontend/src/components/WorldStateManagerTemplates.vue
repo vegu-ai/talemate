@@ -1,5 +1,70 @@
 <template>
     <!-- edit template -->
+
+        
+    <!-- group -->
+    <v-card v-if="group !== null && template === null">
+        <v-card-title>
+            <v-icon size="small" class="mr-2">mdi-group</v-icon>
+            {{ toLabel(group.name) || 'New template group' }}
+        </v-card-title>
+        <v-card-text>
+            <v-form ref="groupForm" v-model="groupFormValid">
+                <v-row>
+                    <v-col cols="4">
+                        <v-text-field 
+                        v-model="group.name" 
+                        label="Group name" 
+                        :rules="[v => !!v || 'Name is required']"
+                        required
+                        @update:model-value="queueSaveGroup"
+                        hint="No special characters allowed" 
+                        >
+                        </v-text-field>
+                    </v-col>
+                    <v-col cols="4">
+                        <v-text-field 
+                        v-model="group.author" 
+                        label="Author" 
+                        @update:model-value="queueSaveGroup"
+                        :rules="[v => !!v || 'Author is required']"
+                        required
+                        >
+                        </v-text-field>
+                    </v-col>
+                    <v-col cols="4">
+
+                    </v-col>
+                </v-row>
+                <v-row>
+                    <v-col cols="12">
+                        <v-textarea 
+                        v-model="group.description"
+                        label="Description"
+                        @update:model-value="queueSaveGroup"
+                        hint="A short description of what this group is for."
+                        auto-grow
+                        rows="3">
+                        </v-textarea>
+                    </v-col>
+                </v-row>
+            </v-form>
+        </v-card-text>
+        <v-card-actions v-if="!group.uid">
+            <v-btn rounded="sm" prepend-icon="mdi-cube-scan" color="primary" @click.stop="saveTemplateGroup(true)" >
+                Create Template Group
+            </v-btn>
+        </v-card-actions>
+        <v-card-actions v-else>
+            <ConfirmActionInline
+                :actionLabel="'Remove group'"
+                :confirmLabel="'Confirm removal'"
+                @confirm="removeTemplateGroup"
+            />
+        </v-card-actions>
+    </v-card>
+
+
     <v-card v-if="template !== null">
         <v-card-title v-if="template.uid">
             <v-icon size="small" class="mr-2">mdi-cube-scan</v-icon>
@@ -161,19 +226,11 @@
             </v-form>     
         </v-card-text>
         <v-card-actions v-if="template.uid">
-            <div v-if="deleteConfirm===false">
-                <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" color="delete" variant="text" @click.stop="deleteConfirm=true" >
-                    Remove template
-                </v-btn>
-            </div>
-            <div v-else>
-                <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" @click.stop="removeTemplate"  color="delete" variant="text">
-                    Confirm removal
-                </v-btn>
-                <v-btn class="ml-1" rounded="sm" prepend-icon="mdi-cancel" @click.stop="deleteConfirm=false" color="cancel" variant="text">
-                    Cancel
-                </v-btn>
-            </div>
+            <ConfirmActionInline
+                :actionLabel="'Remove template'"
+                :confirmLabel="'Confirm removal'"
+                @confirm="removeTemplate"
+            />
         </v-card-actions>
         <v-card-actions v-else-if="template.template_type !== null && template.name !== null">
             <v-btn rounded="sm" prepend-icon="mdi-cube-scan" color="primary" @click.stop="saveTemplate(true)" >
@@ -181,8 +238,9 @@
             </v-btn>
         </v-card-actions>
     </v-card>
+
     <!-- no template selected -->
-    <v-card v-else-if="template === null">
+    <v-card v-else-if="template === null && group === null">
         <v-alert type="info" color="grey" variant="text" icon="mdi-cube-scan">
             State reinforcement templates are used to quickly (or even automatically) setup
             common attribues and states you want to track for characters.
@@ -194,8 +252,14 @@
 </template>
 
 <script>
+
+import ConfirmActionInline from './ConfirmActionInline.vue';
+
 export default {
     name: 'WorldStateManagerTemplates',
+    components: {
+        ConfirmActionInline,
+    },
     props: {
         immutableTemplates: Object
     },
@@ -206,6 +270,7 @@ export default {
                 if(this.deferredSelect) {
                     let index = this.deferredSelect;
                     this.deferredSelect = null;
+                    console.log("deferred select", index)
                     this.selectTemplate(index);
                 }
             },
@@ -221,6 +286,7 @@ export default {
             newType: 'state_reinforcement',
             saveTimeout: null,
             deleteConfirm: false,
+            groupFormValid: false,
             formValid: false,
             dirty: false,
             templates: null,
@@ -235,29 +301,6 @@ export default {
                 { "title": 'Character attribute', "value": 'character_attribute' },
                 { "title": 'Character detail', "value": 'character_detail' },
             ],
-            baseTemplate: {
-                state_reinforcement: {
-                    name: '',
-                    query: '',
-                    state_type: "npc",
-                    insert: 'sequential',
-                    instructions: '',
-                    description: '',
-                    interval: 10,
-                    auto_create: false,
-                    favorite: false,
-                },
-                character_attribute: {
-                    name: '',
-                    attribute: '',
-                    instructions: '',
-                },
-                character_detail: {
-                    name: '',
-                    detail: '',
-                    instructions: '',
-                },
-            },
             template: null,
             group: null,
             deferredSelect: null,
@@ -289,9 +332,21 @@ export default {
 
         selectTemplate(index) {
             // index = {group name}__{template id}
+            console.log("selecting", index)
 
-
-            if(!index) {
+            if(index === '$DESELECTED') {
+                this.group = null;
+                this.template = null;
+                return;
+            } else if (index === '$CREATE_GROUP') {
+                this.group = {
+                    name: '',
+                    author: '',
+                    description: '',
+                    templates: {},
+                }
+                return;
+            } else if(!index) {
                 this.template = null;
                 return;
             }
@@ -308,35 +363,21 @@ export default {
             }
             this.group = group;
 
-            let template;
-            if(!template_id) {
+            let template = null;
+            if(template_id === '$CREATE') {
                 template = {
                     template_type: null,
                     name: '',
                     group: group.uid,
                 }
-            } else if (!group.templates[template_id]) {
+            } else if (template_id && !group.templates[template_id]) {
                 this.deferredSelect = index;
                 return;
-            } else {
+            } else if (template_id) {
                 template = group.templates[template_id] || null;
             }
 
             this.template = template;
-        },
-
-        createTemplate() {
-            if (this.newName === null || this.newName === '') {
-                return;
-            }
-
-            // copy the base template
-
-            let newTemplate = JSON.parse(JSON.stringify(this.baseTemplate.state_reinforcement));
-            newTemplate.name = this.newName;
-
-            this.templates.state_reinforcement[this.newName] = newTemplate;
-            this.selectTemplate(this.newName);
         },
 
         // queue requests
@@ -354,6 +395,23 @@ export default {
 
             this.saveTimeout = setTimeout(() => {
                 this.saveTemplate();
+            }, 1000);
+        },
+
+        queueSaveGroup() {
+
+            if(!this.group || !this.group.uid) {
+                return;
+            }
+
+            if (this.saveTimeout !== null) {
+                clearTimeout(this.saveTimeout);
+            }
+
+            this.dirty = true;
+
+            this.saveTimeout = setTimeout(() => {
+                this.saveTemplateGroup();
             }, 1000);
         },
 
@@ -377,12 +435,41 @@ export default {
             }));
         },
 
+        saveTemplateGroup(saveNew) {
+
+            if(!this.group || (!this.group.uid && !saveNew)) {
+                return;
+            }
+
+            this.$refs.groupForm.validate()
+
+            if(!this.groupFormValid) {
+                console.log("form not valid");
+                return;
+            }
+
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'save_template_group',
+                group: this.group
+            }));
+        },
+
         removeTemplate() {
             this.deleteConfirm = false;
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'delete_template',
                 template: this.template
+            }));
+        },
+
+        removeTemplateGroup() {
+            this.deleteConfirm = false;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'delete_template_group',
+                group: this.group
             }));
         },
 
@@ -398,7 +485,16 @@ export default {
             } else if (message.action == 'template_deleted') {
                 this.template = null;
                 this.requestTemplates();
-            } 
+            } else if (message.action == 'template_group_saved') {
+                this.dirty = false;
+                if(this.group && !this.group.uid) {
+                    this.group = message.data.group;
+                }
+                this.requestTemplates();
+            } else if (message.action == 'template_group_deleted') {
+                this.group = null;
+                this.requestTemplates();
+            }
         },
     },
     mounted(){

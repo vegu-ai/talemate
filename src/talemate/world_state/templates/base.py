@@ -108,7 +108,7 @@ class Group(pydantic.BaseModel):
             templates=templates
         )
                 
-    def insert(self, template:Template, save: bool = True):
+    def insert_template(self, template:Template, save: bool = True):
         
         if template.uid in self.templates:
             raise ValueError(f"Template with id {template.uid} already exists in group")
@@ -118,14 +118,14 @@ class Group(pydantic.BaseModel):
         if save:
             self.save()
             
-    def update(self, template:Template, save: bool = True):
+    def update_template(self, template:Template, save: bool = True):
         
         self.templates[template.uid] = template
         
         if save:
             self.save()
             
-    def delete(self, template:Template, save: bool = True):
+    def delete_template(self, template:Template, save: bool = True):
         if template.uid not in self.templates:
             return
         
@@ -140,6 +140,22 @@ class Group(pydantic.BaseModel):
                 return template
         
         return None 
+    
+    def delete(self, path: str = TEMPLATE_PATH):
+        path = os.path.join(path, self.filename)
+        if os.path.exists(path):
+            os.remove(path)
+            
+    def update(self, group:"Group", save: bool = True, ignore_templates: bool = True):
+        self.author = group.author
+        self.name = group.name
+        self.description = group.description
+        
+        if not ignore_templates:
+            self.templates = group.templates
+        
+        if save:
+            self.save()
 
 class Collection(pydantic.BaseModel):
     groups: list[Group] = pydantic.Field(default_factory=list)
@@ -264,6 +280,12 @@ class Collection(pydantic.BaseModel):
             if group.uid == uid:
                 return group
         return None
+            
+    def remove(self, group:Group, save: bool=True):
+        self.groups.remove(group)
+        if save:
+            group.delete()
+
             
 class FlatCollection(pydantic.BaseModel):
     templates: dict[str, AnnotatedTemplate] = pydantic.Field(default_factory=dict)

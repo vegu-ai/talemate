@@ -16,6 +16,7 @@ export default createVuetify({
           secondary: colors.deepOrange.base,
           delete: colors.red.darken2,
           cancel: colors.blueGrey.lighten3,
+          muted: colors.grey.darken1,
         }
       }
     }

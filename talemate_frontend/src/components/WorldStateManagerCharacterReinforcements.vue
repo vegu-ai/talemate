@@ -21,14 +21,14 @@
     <v-divider></v-divider>
     <v-row>
         <v-col cols="4">
-            <v-list density="compact">
-
-                <!-- add from template -->
-                <div v-if="templatesAvailable()">
-                    <v-list-item density="compact"
+            <!-- add from template -->
+            <div v-if="templatesAvailable">
+                <v-list density="compact" slim v-model:opened="templateGroupsOpen">
+                    
+                    <v-list-item density="compact"  class="text-primary"
                         @click.stop="showTemplates = !showTemplates"
                         prepend-icon="mdi-cube-scan" color="info">
-                        <v-list-item-title>
+                        <v-list-item-title class="text-primary">
                             Templates
                             <v-progress-circular class="ml-1 mr-3" size="14"
                                 indeterminate="disable-shrink" color="primary"
@@ -36,21 +36,27 @@
                         </v-list-item-title>
                     </v-list-item>
                     <div v-if="showTemplates">
-                        <v-list-item density="compact"
-                            @click.stop="addFromTemplate(template, character.name)"
-                            v-for="(template, index) in viableTemplates"
-                            :key="index" prepend-icon="mdi-cube-scan"
-                            :disabled="templateBusy">
-                            <v-list-item-title>{{ template.name
-                            }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ template.description
-                            }}</v-list-item-subtitle>
-                        </v-list-item>
+                        <v-list-group fluid v-for="(group, index) in viableTemplates" :key="index" :value="group.group.uid">
+                            <template v-slot:activator="{ props }">
+                                <v-list-item v-bind="props" class="text-caption text-muted"
+                                    :title="toLabel(group.group.name)"
+                                ></v-list-item>
+                            </template>
+                            <v-list-item 
+                                v-for="(template, uid) in group.templates"
+                                @click.stop="addFromTemplate(template, character.name)"
+                                :key="uid" 
+                                prepend-icon="mdi-cube-scan"
+                                :disabled="templateBusy">
+                                <v-list-item-title>{{ template.name }}</v-list-item-title>
+                                <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
+                            </v-list-item>
+                        </v-list-group>
                     </div>
                     <v-divider></v-divider>
-                </div>
 
-            </v-list>
+                </v-list>
+            </div>
             <v-tabs v-model="selected" direction="vertical" color="indigo-lighten-3" density="compact">
                 <v-tab v-for="(value, detail) in filteredList"
                     :key="detail"
@@ -193,6 +199,7 @@ export default {
             updateTimeout: null,
             character: null,
             showTemplates: false,
+            templateGroupsOpen: [],
             newReinforcment: {
                 interval: 10,
                 instructions: '',
@@ -206,6 +213,7 @@ export default {
         'autocompleteRequest',
         'registerMessageHandler',
         'insertionModes',
+        'toLabel',
     ],
     emits:[
         'require-scene-save'
@@ -229,11 +237,56 @@ export default {
         working() {
             return (this.busy || this.templateBusy)
         },
+        /*
         viableTemplates() {
-            return Object.values(this.templates.state_reinforcement).filter(template => {
+            return Object.values(this.templates.by_type.state_reinforcement).filter(template => {
                 return template.state_type == "character" || template.state_type == "npc" || template.state_type == "player";
             });
+        },*/
+
+        viableTemplates() {
+            
+            /* cycle through templates.managed.groups
+             * compile into dict[group.name] = [templates]
+             * only select templates that are state_reinforcement and have state_type of character, npc, or player
+             * if a group has no viable templates, don't include it in the dict
+             * 
+             * group.templates is a `dict` keyed by template uid
+             */
+
+            let viable = [];
+
+            for (let group of this.templates.managed.groups) {
+                let templates = [];
+
+                for (let template in group.templates) {
+                    if (group.templates[template].state_type == "character" || group.templates[template].state_type == "npc" || group.templates[template].state_type == "player") {
+                        templates.push(group.templates[template]);
+                    }
+                }
+
+                if (templates.length > 0) {
+                    viable.push({
+                        group: group,
+                        templates: templates
+                    })
+                }
+            }
+
+            viable.sort((a, b) => a.group.name.localeCompare(b.group.name));
+            console.log("viable", viable)
+            return viable;
+
         },
+        templatesAvailable() {
+            for (let template in this.templates.by_type.state_reinforcement) {
+                if (this.templates.by_type.state_reinforcement[template].state_type == "character" || this.templates.by_type.state_reinforcement[template].state_type == "npc" || this.templates.by_type.state_reinforcement[template].state_type == "player") {
+                    return true;
+                }
+            }
+            return false;
+        },
+
         filteredList() {
             if(!this.character) {
                 return {};
@@ -253,19 +306,16 @@ export default {
         },
     },
     methods: {
-        templatesAvailable() {
-            for (let template in this.templates.state_reinforcement) {
-                if (this.templates.state_reinforcement[template].state_type == "character" || this.templates.state_reinforcement[template].state_type == "npc" || this.templates.state_reinforcement[template].state_type == "player") {
-                    return true;
-                }
-            }
-        },
 
         addFromTemplate(template, characterName) {
             this.templateBusy = true;
             this.getWebsocket().send(JSON.stringify({
-                type: 'interact',
-                text: '!apply_world_state_template:' + template.name + ':state_reinforcement:' + characterName,
+                type: 'world_state_manager',
+                action: 'apply_template',
+                template: template,
+                run_immediately: true,
+                character_name: characterName,
+                //text: '!apply_world_state_template:' + template.name + ':state_reinforcement:' + characterName,
             }));
         },
 
@@ -364,24 +414,10 @@ export default {
 
         handleMessage(message) {
 
-            if (message.type === 'status' && message.status === 'success' && message.message === 'Auto state added.') {
-                console.log("auto state added", message);
-                if (message.data.reinforcement) {
-                    this.character.reinforcements[message.data.reinforcement.question] = message.data.reinforcement;
-                    this.selected = message.data.reinforcement.question;
-                }
-
-                this.templateBusy = false;
-                return;
-            }
-
-
             if (message.type !== 'world_state_manager') {
                 return;
-            }
-
-
-            if (message.action === 'character_detail_reinforcement_set') {
+            } 
+            else if (message.action === 'character_detail_reinforcement_set') {
                 this.dirty = false;
                 this.busy = false;
                 this.$emit('require-scene-save');
@@ -393,6 +429,14 @@ export default {
             }
             else if (message.action === 'character_detail_reinforcement_deleted') {
                 this.$emit('require-scene-save');
+            }
+            else if (message.action === 'template_applied'){
+                this.templateBusy = false;
+                if(message.result && message.result.character === this.character.name){
+                    this.character.reinforcements[message.result.question] = message.result;
+                    this.selected = message.result.question;
+                }
+                console.log("template_applied", message)
             }
         }
 

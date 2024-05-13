@@ -100,7 +100,6 @@ class RemovePinPayload(pydantic.BaseModel):
 class SaveWorldStateTemplatePayload(pydantic.BaseModel):
     template: templates.AnnotatedTemplate
 
-
 class DeleteWorldStateTemplatePayload(pydantic.BaseModel):
     template: templates.AnnotatedTemplate
 
@@ -108,6 +107,12 @@ class ApplyWorldStateTemplatePayload(pydantic.BaseModel):
     template: templates.AnnotatedTemplate
     character_name: str = None,
     run_immediately: bool = False,
+    
+class SaveWorldStateTemplateGroupPayload(pydantic.BaseModel):
+    group: templates.Group
+
+class DeleteWorldStateTemplateGroupPayload(pydantic.BaseModel):
+    group: templates.Group
     
 class SelectiveCharacterPayload(pydantic.BaseModel):
     name: str
@@ -578,7 +583,7 @@ class WorldStateManagerPlugin:
 
         log.debug("Apply world state template", template=payload.template)
 
-        await self.world_state_manager.apply_template(
+        result = await self.world_state_manager.apply_template(
             template = payload.template,
             character_name = payload.character_name,
             run_immediately = payload.run_immediately
@@ -589,6 +594,7 @@ class WorldStateManagerPlugin:
                 "type": "world_state_manager",
                 "action": "template_applied",
                 "data": payload.model_dump(),
+                "result": result.model_dump() if result else None,
             }
         )
 
@@ -636,6 +642,46 @@ class WorldStateManagerPlugin:
 
         await self.handle_get_templates({})
         await self.signal_operation_done()
+
+    async def handle_save_template_group(self, data):
+        payload = SaveWorldStateTemplateGroupPayload(**data)
+        group = payload.group
+        log.debug("Save template group", group=group)
+        
+        await self.world_state_manager.save_template_group(group)
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "template_group_saved",
+                "data": payload.model_dump(),
+            }
+        )
+        
+        await self.handle_get_templates({})
+        await self.signal_operation_done()
+        
+        
+    async def handle_delete_template_group(self, data):
+        
+        payload = DeleteWorldStateTemplateGroupPayload(**data)
+        group = payload.group
+        
+        log.debug("Remove template group", group=group)
+        
+        await self.world_state_manager.remove_template_group(group)
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "template_group_deleted",
+                "data": payload.model_dump(),
+            }
+        )
+        
+        await self.handle_get_templates({})
+        await self.signal_operation_done()
+        
 
     async def handle_generate_character_dialogue_instructions(self, data):
         payload = SelectiveCharacterPayload(**data)

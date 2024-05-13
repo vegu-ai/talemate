@@ -1,12 +1,6 @@
 <template>
     <v-row floating color="grey-darken-5">
         <v-col cols="3">
-            <v-text-field v-model="search"
-                label="Filter states" append-inner-icon="mdi-magnify"
-                clearable density="compact" variant="underlined"
-                class="ml-1 mb-1 mt-1"
-                @update:modelValue="autoSelect"></v-text-field>
-
         </v-col>
         <v-col cols="3"></v-col>
         <v-col cols="2"></v-col>
@@ -21,54 +15,49 @@
     <v-divider></v-divider>
     <v-row>
         <v-col cols="4">
-            <!-- add from template -->
-            <div v-if="templatesAvailable">
-                <v-list density="compact" slim v-model:opened="templateGroupsOpen">
-                    
-                    <v-list-item density="compact"  class="text-primary"
-                        @click.stop="showTemplates = !showTemplates"
-                        prepend-icon="mdi-cube-scan" color="info">
-                        <v-list-item-title class="text-primary">
-                            Templates
-                            <v-progress-circular class="ml-1 mr-3" size="14"
-                                indeterminate="disable-shrink" color="primary"
-                                v-if="templateBusy"></v-progress-circular>
-                        </v-list-item-title>
-                    </v-list-item>
-                    <div v-if="showTemplates">
-                        <v-list-group fluid v-for="(group, index) in viableTemplates" :key="index" :value="group.group.uid">
-                            <template v-slot:activator="{ props }">
-                                <v-list-item v-bind="props" class="text-caption text-muted"
-                                    :title="toLabel(group.group.name)"
-                                ></v-list-item>
-                            </template>
-                            <v-list-item 
-                                v-for="(template, uid) in group.templates"
-                                @click.stop="addFromTemplate(template, character.name)"
-                                :key="uid" 
-                                prepend-icon="mdi-cube-scan"
-                                :disabled="templateBusy">
-                                <v-list-item-title>{{ template.name }}</v-list-item-title>
-                                <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
-                            </v-list-item>
-                        </v-list-group>
-                    </div>
-                    <v-divider></v-divider>
 
-                </v-list>
-            </div>
-            <v-tabs v-model="selected" direction="vertical" color="indigo-lighten-3" density="compact">
-                <v-tab v-for="(value, detail) in filteredList"
-                    :key="detail"
-                    class="text-caption"
-                    :value="detail">
-                    <div class="text-left">{{ detail }}<div><v-chip size="x-small" label variant="outlined"
-                            color="info">update in {{ value.due }}
-                            turns</v-chip>
-                        </div>
-                    </div>
-                </v-tab>
-            </v-tabs>
+            <v-list density="compact" slim v-model:opened="groupsOpen">
+                <v-list-group value="templates" fluid>
+                    <template v-slot:activator="{ props }">
+                        <v-list-item  prepend-icon="mdi-cube-scan" v-bind="props">Templates</v-list-item>
+                    </template>
+                    <v-list-item>
+                        <WorldStateManagerTemplateApplicator
+                        ref="templateApplicator"
+                        :validateTemplate="validateTemplate"
+                        :templates="templates"
+                        :template-types="['state_reinforcement']"
+                        @apply-template="addFromTemplate"
+                        @apply-group="addFromGroup"
+                    />
+                    </v-list-item>
+                </v-list-group>
+                <v-list-group value="states" fluid>
+                    <template v-slot:activator="{ props }">
+                        <v-list-item prepend-icon="mdi-image-auto-adjust" v-bind="props">States</v-list-item>
+                    </template>
+                    <v-list-item>
+                        <v-text-field v-model="search" v-if="filteredList.length > 10"
+                        label="Filter" append-inner-icon="mdi-magnify"
+                        clearable density="compact" variant="underlined"
+                        class="ml-1 mb-1 mt-1"
+                        @update:modelValue="autoSelect"></v-text-field>
+                        <v-tabs v-model="selected" direction="vertical" color="indigo-lighten-3" density="compact">
+                            <v-tab v-for="(value, detail) in filteredList"
+                                :key="detail"
+                                class="text-caption"
+                                :value="detail">
+                                <div class="text-left">{{ detail }}<div><v-chip size="x-small" label variant="outlined"
+                                        color="info">update in {{ value.due }}
+                                        turns</v-chip>
+                                    </div>
+                                </div>
+                            </v-tab>
+                        </v-tabs>
+                    </v-list-item>
+
+                </v-list-group>
+            </v-list>
         </v-col>
         <v-col cols="8">
             <div v-if="selected && character.reinforcements[selected] !== undefined">
@@ -177,9 +166,12 @@
 </template>
 <script>
 
+import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
+
 export default {
     name: "WorldStateManagerCharacterReinforcements",
     components: {
+        WorldStateManagerTemplateApplicator,
     },
     props: {
         immutableCharacter: Object,
@@ -195,11 +187,11 @@ export default {
             search: null,
             dirty: false,
             busy: false,
-            templateBusy: false,
             updateTimeout: null,
             character: null,
             showTemplates: false,
-            templateGroupsOpen: [],
+            groupsOpen: ["states"],
+            templateApplicatorCallback: null,
             newReinforcment: {
                 interval: 10,
                 instructions: '',
@@ -235,58 +227,8 @@ export default {
     },
     computed: {
         working() {
-            return (this.busy || this.templateBusy)
+            return (this.busy || this.templateApplicatorCallback !== null)
         },
-        /*
-        viableTemplates() {
-            return Object.values(this.templates.by_type.state_reinforcement).filter(template => {
-                return template.state_type == "character" || template.state_type == "npc" || template.state_type == "player";
-            });
-        },*/
-
-        viableTemplates() {
-            
-            /* cycle through templates.managed.groups
-             * compile into dict[group.name] = [templates]
-             * only select templates that are state_reinforcement and have state_type of character, npc, or player
-             * if a group has no viable templates, don't include it in the dict
-             * 
-             * group.templates is a `dict` keyed by template uid
-             */
-
-            let viable = [];
-
-            for (let group of this.templates.managed.groups) {
-                let templates = [];
-
-                for (let template in group.templates) {
-                    if (group.templates[template].state_type == "character" || group.templates[template].state_type == "npc" || group.templates[template].state_type == "player") {
-                        templates.push(group.templates[template]);
-                    }
-                }
-
-                if (templates.length > 0) {
-                    viable.push({
-                        group: group,
-                        templates: templates
-                    })
-                }
-            }
-
-            viable.sort((a, b) => a.group.name.localeCompare(b.group.name));
-            console.log("viable", viable)
-            return viable;
-
-        },
-        templatesAvailable() {
-            for (let template in this.templates.by_type.state_reinforcement) {
-                if (this.templates.by_type.state_reinforcement[template].state_type == "character" || this.templates.by_type.state_reinforcement[template].state_type == "npc" || this.templates.by_type.state_reinforcement[template].state_type == "player") {
-                    return true;
-                }
-            }
-            return false;
-        },
-
         filteredList() {
             if(!this.character) {
                 return {};
@@ -307,18 +249,47 @@ export default {
     },
     methods: {
 
-        addFromTemplate(template, characterName) {
-            this.templateBusy = true;
+        addFromTemplate(template, callback) {
+            this.templateApplicatorCallback = callback;
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'apply_template',
                 template: template,
                 run_immediately: true,
-                character_name: characterName,
-                //text: '!apply_world_state_template:' + template.name + ':state_reinforcement:' + characterName,
+                character_name: this.character.name,
             }));
         },
 
+        addFromGroup(group, callback) {
+            this.templateApplicatorCallback = callback;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'apply_group',
+                group: group,
+                run_immediately: true,
+                character_name: this.character.name,
+            }));
+        },
+
+        validateTemplate(template) {
+            if (template.template_type !== 'state_reinforcement') {
+                return false;
+            }
+
+            let validStateTypes = ["character", "npc", "player"];
+
+            if (validStateTypes.includes(template.state_type)) {
+                return true;
+            }
+
+            return false;
+        },
+
+        openStates() {
+            if(!this.groupsOpen.includes("states")) {
+                this.groupsOpen.push("states");
+            }
+        },
 
         autoSelect() {
             this.selected = null
@@ -339,6 +310,7 @@ export default {
         },
 
         handleNew() {
+            this.openStates();
             this.add(this.newQuestion);
             this.update(this.newQuestion, true);
             this.selected = this.newQuestion;
@@ -431,10 +403,19 @@ export default {
                 this.$emit('require-scene-save');
             }
             else if (message.action === 'template_applied'){
-                this.templateBusy = false;
+                
+                if(this.templateApplicatorCallback) {
+                    this.templateApplicatorCallback();
+                    this.templateApplicatorCallback = null;
+                }
+
                 if(message.result && message.result.character === this.character.name){
                     this.character.reinforcements[message.result.question] = message.result;
                     this.selected = message.result.question;
+                    // make sure states group is open
+                    if (!this.groupsOpen.includes("states")) {
+                        this.groupsOpen.push("states");
+                    }
                 }
                 console.log("template_applied", message)
             }

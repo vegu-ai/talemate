@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Union, Callable
 
 import pydantic
 import structlog
@@ -618,6 +618,23 @@ class WorldStateManager:
 
         for character_name in characters:
             await self.apply_template_state_reinforcement(template, character_name)
+
+    async def apply_templates(self, templates: list[templates.AnnotatedTemplate], callback_start: Callable, callback_done: Callable, **kwargs):
+        """
+        Applies a list of state reinforcement templates to the scene.
+
+        Arguments:
+            templates: A list of StateReinforcementTemplate objects to be applied.
+            template_callback: A callback function to apply the templates.
+        """
+        
+        for template in templates:
+            is_last_template = template == templates[-1]
+            if callback_start:
+                callback_start(template, is_last_template)
+            result = await self.apply_template(template, **kwargs)
+            if result and callback_done:
+                callback_done(template, result, is_last_template)
 
     async def apply_template(self, template: templates.AnnotatedTemplate, **kwargs):
         """

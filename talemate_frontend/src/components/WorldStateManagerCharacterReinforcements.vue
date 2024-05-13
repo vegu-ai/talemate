@@ -14,7 +14,7 @@
     </v-row>
     <v-divider></v-divider>
     <v-row>
-        <v-col cols="4">
+        <v-col cols="5">
 
             <v-list density="compact" slim v-model:opened="groupsOpen">
                 <v-list-group value="templates" fluid>
@@ -26,9 +26,9 @@
                         ref="templateApplicator"
                         :validateTemplate="validateTemplate"
                         :templates="templates"
+                        :source="source"
                         :template-types="['state_reinforcement']"
-                        @apply-template="addFromTemplate"
-                        @apply-group="addFromGroup"
+                        @apply-selected="applyTemplates"
                     />
                     </v-list-item>
                 </v-list-group>
@@ -51,7 +51,7 @@
                 </v-tab>
             </v-tabs>
         </v-col>
-        <v-col cols="8">
+        <v-col cols="7">
             <div v-if="selected && character.reinforcements[selected] !== undefined">
                 <v-textarea rows="5" auto-grow max-rows="15"
                     :label="selected"
@@ -184,6 +184,7 @@ export default {
             showTemplates: false,
             groupsOpen: ["states"],
             templateApplicatorCallback: null,
+            source: "wsm.character_reinforcements",
             newReinforcment: {
                 interval: 10,
                 instructions: '',
@@ -198,6 +199,7 @@ export default {
         'registerMessageHandler',
         'insertionModes',
         'toLabel',
+        'formatWorldStateTemplateString',
     ],
     emits:[
         'require-scene-save'
@@ -241,34 +243,51 @@ export default {
     },
     methods: {
 
-        addFromTemplate(template, callback) {
+        applyTemplates(templateUIDs, callback) {
             this.templateApplicatorCallback = callback;
+
+            // collect templates
+
+            let templates = [];
+
+            for (let group of this.templates.managed.groups) {
+                for (let templateId in group.templates) {
+                    let template = group.templates[templateId];
+                    if(templateUIDs.includes(template.uid)) {
+                        templates.push(template);
+                    }
+                }
+            }
+
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
-                action: 'apply_template',
-                template: template,
+                action: 'apply_templates',
+                templates: templates,
                 run_immediately: true,
                 character_name: this.character.name,
+                source: this.source,
             }));
         },
 
-        addFromGroup(group, callback) {
-            this.templateApplicatorCallback = callback;
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'apply_group',
-                group: group,
-                run_immediately: true,
-                character_name: this.character.name,
-            }));
-        },
 
         validateTemplate(template) {
             if (template.template_type !== 'state_reinforcement') {
                 return false;
             }
 
-            let validStateTypes = ["character", "npc", "player"];
+            const formattedQuery = this.formatWorldStateTemplateString(template.query, this.character.name);
+
+            if(this.character.reinforcements[formattedQuery]) {
+                return false;
+            }
+
+            let validStateTypes = ["character"];
+
+            if(this.character.is_player) {
+                validStateTypes.push("player");
+            } else{
+                validStateTypes.push("npc");
+            }
 
             if (validStateTypes.includes(template.state_type)) {
                 return true;
@@ -389,7 +408,7 @@ export default {
             }
             else if (message.action === 'template_applied'){
                 
-                if(this.templateApplicatorCallback) {
+                if(this.templateApplicatorCallback && message.status === 'done') {
                     this.templateApplicatorCallback();
                     this.templateApplicatorCallback = null;
                 }
@@ -399,6 +418,12 @@ export default {
                     this.selected = message.result.question;
                 }
                 console.log("template_applied", message)
+            }
+            else if (message.action === 'templates_applied') {
+                if(this.templateApplicatorCallback) {
+                    this.templateApplicatorCallback();
+                    this.templateApplicatorCallback = null;
+                }
             }
         }
 

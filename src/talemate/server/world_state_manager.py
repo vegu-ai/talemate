@@ -108,6 +108,12 @@ class ApplyWorldStateTemplatePayload(pydantic.BaseModel):
     character_name: str = None,
     run_immediately: bool = False,
     
+class ApplyWorldStateTemplatesPayload(pydantic.BaseModel):
+    templates: list[templates.AnnotatedTemplate]
+    character_name: str = None,
+    run_immediately: bool = False,
+    source: str | None = None
+    
 class SaveWorldStateTemplateGroupPayload(pydantic.BaseModel):
     group: templates.Group
 
@@ -593,6 +599,7 @@ class WorldStateManagerPlugin:
             {
                 "type": "world_state_manager",
                 "action": "template_applied",
+                "status": "done",
                 "data": payload.model_dump(),
                 "result": result.model_dump() if result else None,
             }
@@ -640,6 +647,56 @@ class WorldStateManagerPlugin:
             }
         )
 
+        await self.handle_get_templates({})
+        await self.signal_operation_done()
+
+
+    async def handle_apply_templates(self, data):
+        payload = ApplyWorldStateTemplatesPayload(**data)
+
+        log.debug("Applying world state templates", templates=payload.templates)
+
+        def callback_done(template, result, last_template:bool):
+            self.websocket_handler.queue_put(
+                {
+                    "type": "world_state_manager",
+                    "action": "template_applied",
+                    "status": "done" if last_template else "running",
+                    "source": payload.source,
+                    "data": template.model_dump(),
+                    "result": result.model_dump() if result else None,
+                }
+            )
+
+        def callback_start(template, last_template:bool):
+            self.websocket_handler.queue_put(
+                {
+                    "type": "world_state_manager",
+                    "action": "template_applying",
+                    "source": payload.source,
+                    "data": template.model_dump(),
+                }
+            )
+
+
+        await self.world_state_manager.apply_templates(
+            payload.templates,
+            callback_start = callback_start,
+            callback_done = callback_done,
+            character_name = payload.character_name,
+            run_immediately = payload.run_immediately,
+        )
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "templates_applied",
+                "source": payload.source,
+                "data": payload.model_dump(),
+            }
+        )
+
+        await self.handle_get_world({})
         await self.handle_get_templates({})
         await self.signal_operation_done()
 

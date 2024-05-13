@@ -314,6 +314,7 @@ export default {
         immutableTemplates: {
             handler: function (val) {
                 this.templates = val ? {...val} : null;
+
                 if(this.deferredSelect) {
                     let index = this.deferredSelect;
                     this.deferredSelect = null;
@@ -421,8 +422,10 @@ export default {
             } else if (template_id && !group.templates[template_id]) {
                 this.deferredSelect = index;
                 return;
-            } else if (template_id) {
+            } else if (template_id && (!this.template || this.template.uid !== template_id)) {
                 template = group.templates[template_id] || null;
+            } else if (template_id && this.template && this.template.uid === template_id) {
+                template = this.template;
             }
 
             this.template = template;

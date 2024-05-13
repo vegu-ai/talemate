@@ -11,6 +11,7 @@ class Attribute(Template):
     name: str
     attribute: str
     instructions: str
+    description: str | None = None
     template_type: str = "character_attribute"
     
 @register("character_detail")
@@ -18,5 +19,6 @@ class Detail(Template):
     name: str
     detail: str
     instructions: str
+    description: str | None = None
     template_type: str = "character_detail"
     

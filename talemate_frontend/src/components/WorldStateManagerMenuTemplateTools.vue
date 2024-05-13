@@ -94,7 +94,9 @@ export default {
                 }
                 let index = selectedGroups[0];
                 let group = this.worldStateTemplates.managed.groups[index];
-                this.$emit('world-state-manager-navigate', 'templates', group.uid);
+                if(!this.selectedGroups.length || this.selectedGroups[0] != index) {
+                    this.$emit('world-state-manager-navigate', 'templates', group.uid);
+                }
             }
         }
     },

@@ -32,32 +32,24 @@
                     />
                     </v-list-item>
                 </v-list-group>
-                <v-list-group value="states" fluid>
-                    <template v-slot:activator="{ props }">
-                        <v-list-item prepend-icon="mdi-image-auto-adjust" v-bind="props">States</v-list-item>
-                    </template>
-                    <v-list-item>
-                        <v-text-field v-model="search" v-if="filteredList.length > 10"
-                        label="Filter" append-inner-icon="mdi-magnify"
-                        clearable density="compact" variant="underlined"
-                        class="ml-1 mb-1 mt-1"
-                        @update:modelValue="autoSelect"></v-text-field>
-                        <v-tabs v-model="selected" direction="vertical" color="indigo-lighten-3" density="compact">
-                            <v-tab v-for="(value, detail) in filteredList"
-                                :key="detail"
-                                class="text-caption"
-                                :value="detail">
-                                <div class="text-left">{{ detail }}<div><v-chip size="x-small" label variant="outlined"
-                                        color="info">update in {{ value.due }}
-                                        turns</v-chip>
-                                    </div>
-                                </div>
-                            </v-tab>
-                        </v-tabs>
-                    </v-list-item>
-
-                </v-list-group>
             </v-list>
+            <v-text-field v-model="search" v-if="filteredList.length > 10"
+                label="Filter" append-inner-icon="mdi-magnify"
+                clearable density="compact" variant="underlined"
+                class="ml-1 mb-1 mt-1"
+                @update:modelValue="autoSelect"></v-text-field>
+            <v-tabs v-model="selected" direction="vertical" color="indigo-lighten-3" density="compact">
+                <v-tab v-for="(value, detail) in filteredList"
+                    :key="detail"
+                    class="text-caption"
+                    :value="detail">
+                    <div class="text-left">{{ detail }}<div><v-chip size="x-small" label variant="outlined"
+                            color="info">update in {{ value.due }}
+                            turns</v-chip>
+                        </div>
+                    </div>
+                </v-tab>
+            </v-tabs>
         </v-col>
         <v-col cols="8">
             <div v-if="selected && character.reinforcements[selected] !== undefined">
@@ -285,12 +277,6 @@ export default {
             return false;
         },
 
-        openStates() {
-            if(!this.groupsOpen.includes("states")) {
-                this.groupsOpen.push("states");
-            }
-        },
-
         autoSelect() {
             this.selected = null
             // if there is only one detail in the filtered list, select it
@@ -310,7 +296,6 @@ export default {
         },
 
         handleNew() {
-            this.openStates();
             this.add(this.newQuestion);
             this.update(this.newQuestion, true);
             this.selected = this.newQuestion;
@@ -412,10 +397,6 @@ export default {
                 if(message.result && message.result.character === this.character.name){
                     this.character.reinforcements[message.result.question] = message.result;
                     this.selected = message.result.question;
-                    // make sure states group is open
-                    if (!this.groupsOpen.includes("states")) {
-                        this.groupsOpen.push("states");
-                    }
                 }
                 console.log("template_applied", message)
             }

@@ -111,6 +111,7 @@
                                             <WorldStateManagerCharacterAttributes 
                                             ref="attributes" 
                                             @require-scene-save="$emit('require-scene-save')"
+                                            :templates="templates"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
                                         <v-tabs-window-item value="details">
@@ -118,6 +119,7 @@
                                             ref="details" 
                                             @require-scene-save="$emit('require-scene-save')"
                                             @load-character-state-reinforcement="onLoadCharacterStateReinforcement"
+                                            :templates="templates"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
                                         <v-tabs-window-item value="reinforce">

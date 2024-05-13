@@ -197,18 +197,26 @@
                     <v-row>
                         <v-col cols="4">
                             <v-text-field 
-                            v-model="template.attribute" 
-                            abel="Attribute name" 
-                            :rules="[v => !!v || 'Name is required']"
-                            :color="dirty ? 'info' : ''"
-                            @update:model-value="queueSaveTemplate"
-                            required>
+                                v-model="template.attribute" 
+                                label="Attribute name" 
+                                :rules="[v => !!v || 'Name is required']"
+                                :color="dirty ? 'info' : ''"
+                                @update:model-value="queueSaveTemplate"
+                                required>
+                            </v-text-field>
+                            <v-text-field 
+                                v-model="template.description" 
+                                label="Template description" 
+                                :color="dirty ? 'info' : ''"
+                                @update:model-value="queueSaveTemplate"
+                                required>
                             </v-text-field>
                             <v-checkbox 
-                            v-model="template.favorite" 
-                            label="Favorite" 
-                            @update:model-value="queueSaveTemplate"
-                            messages="Favorited templates will be available for quick setup."></v-checkbox>
+                                v-model="template.favorite" 
+                                label="Favorite" 
+                                @update:model-value="queueSaveTemplate"
+                                messages="Favorited templates will be available for quick setup.">
+                            </v-checkbox>
                         </v-col>
                         <v-col cols="8">
                             <v-textarea 
@@ -217,6 +225,45 @@
                             @update:model-value="queueSaveTemplate"
                             auto-grow rows="5" 
                             label="Additional instructions to the AI for generating this character attribute."
+                            hint="Available template variables: {character_name}, {player_name}" 
+                            ></v-textarea>
+                        </v-col>
+                    </v-row>
+                </div>
+
+                <div v-else-if="template.template_type === 'character_detail'">
+                    <v-row>
+                        <v-col cols="4">
+                            <v-text-field 
+                                v-model="template.detail" 
+                                label="Question" 
+                                :rules="[v => !!v || 'Name is required']"
+                                :color="dirty ? 'info' : ''"
+                                @update:model-value="queueSaveTemplate"
+                                hint="Ideally phrased as a question, e.g. 'What is the character's favorite food?'. Available template variables: {character_name}, {player_name}"
+                                required>
+                            </v-text-field>
+                            <v-text-field 
+                                v-model="template.description" 
+                                label="Template description" 
+                                :color="dirty ? 'info' : ''"
+                                @update:model-value="queueSaveTemplate"
+                                required>
+                            </v-text-field>
+                            <v-checkbox 
+                                v-model="template.favorite" 
+                                label="Favorite" 
+                                @update:model-value="queueSaveTemplate"
+                                messages="Favorited templates will be available for quick setup.">
+                            </v-checkbox>
+                        </v-col>
+                        <v-col cols="8">
+                            <v-textarea 
+                            v-model="template.instructions"
+                            :color="dirty ? 'info' : ''"
+                            @update:model-value="queueSaveTemplate"
+                            auto-grow rows="5" 
+                            label="Additional instructions to the AI for generating this character detail."
                             hint="Available template variables: {character_name}, {player_name}" 
                             ></v-textarea>
                         </v-col>
@@ -345,6 +392,7 @@ export default {
                     description: '',
                     templates: {},
                 }
+                this.template = null;
                 return;
             } else if(!index) {
                 this.template = null;

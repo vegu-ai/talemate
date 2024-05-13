@@ -39,7 +39,13 @@
 
         </v-list>
     </div>
-    <div v-else></div>
+    <div v-else>
+        <v-card density="compact">
+            <v-card-text class="text-muted">
+                <p>No templates available.</p>
+            </v-card-text>
+        </v-card>
+    </div>
 </template>
 
 <script>

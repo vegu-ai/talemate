@@ -1,12 +1,6 @@
 <template>
     <v-row floating color="grey-darken-5">
         <v-col cols="3">
-            <v-text-field v-model="search"
-                label="Filter attributes" append-inner-icon="mdi-magnify"
-                clearable density="compact" variant="underlined"
-                class="ml-1 mb-1 mt-1"
-                @update:modelValue="autoSelect"></v-text-field>
-
         </v-col>
         <v-col cols="3"></v-col>
         <v-col cols="2"></v-col>
@@ -22,6 +16,30 @@
     <v-divider></v-divider>
     <v-row>
         <v-col cols="4">
+
+            <v-list density="compact" slim v-model:opened="groupsOpen">
+                <v-list-group value="templates" fluid>
+                    <template v-slot:activator="{ props }">
+                        <v-list-item  prepend-icon="mdi-cube-scan" v-bind="props">Templates</v-list-item>
+                    </template>
+                    <v-list-item>
+                        <WorldStateManagerTemplateApplicator
+                        ref="templateApplicator"
+                        :validateTemplate="validateTemplate"
+                        :templates="templates"
+                        :template-types="['character_attribute']"
+                        @apply-template="addFromTemplate"
+                        @apply-group="addFromGroup"
+                    />
+                    </v-list-item>
+                </v-list-group>
+            </v-list>
+            <v-text-field v-model="search" v-if="Object.keys(this.character.base_attributes).length > 10"
+                label="Filter" append-inner-icon="mdi-magnify"
+                clearable density="compact" variant="underlined"
+                clear-icon="mdi-close"
+                class="ml-1 mb-1 mt-1"
+                @update:modelValue="autoSelect"></v-text-field>
             <v-tabs v-model="selected" density="compact" direction="vertical" color="indigo-lighten-3">
                 <v-tab density="compact" v-for="(value, attribute) in filteredList"
                 class="text-caption"
@@ -30,6 +48,7 @@
                     {{ attribute }}
                 </v-tab>
             </v-tabs>
+
         </v-col>
         <v-col cols="8">
             <div v-if="selected !== null && character !== null && character.base_attributes[selected] !== undefined">
@@ -88,14 +107,17 @@
 </template>
 <script>
 import ContextualGenerate from './ContextualGenerate.vue';
+import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
 
 export default {
     name: 'WorldStateManagerCharacterAttributes',
     components: {
         ContextualGenerate,
+        WorldStateManagerTemplateApplicator,
     },
     props: {
-        immutableCharacter: Object
+        immutableCharacter: Object,
+        templates: Object,
     },
     data() {
         return {
@@ -108,6 +130,8 @@ export default {
             busy: false,
             updateTimeout: null,
             character: null,
+            groupsOpen: [],
+            templateApplicatorCallback: null,
         }
     },
     inject: [
@@ -157,9 +181,37 @@ export default {
     },
     methods: {
 
+        addFromTemplate(template, callback) {
+            this.templateApplicatorCallback = callback;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'apply_template',
+                template: template,
+                run_immediately: true,
+                character_name: this.character.name,
+            }));
+        },
+
+        addFromGroup(group, callback) {
+            this.templateApplicatorCallback = callback;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'apply_group',
+                group: group,
+                run_immediately: true,
+                character_name: this.character.name,
+            }));
+        },
+        
+        validateTemplate(template) {
+            return template.template_type === 'character_attribute';
+        },
+
         reset() {
             this.selected = null;
             this.character = null;
+            this.templateApplicatorCallback = null;
+            this.groupsOpen = [];
         },
 
         autoSelect() {

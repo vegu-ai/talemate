@@ -26,9 +26,9 @@
                         ref="templateApplicator"
                         :validateTemplate="validateTemplate"
                         :templates="templates"
+                        :source="source"
                         :template-types="['character_detail']"
-                        @apply-template="addFromTemplate"
-                        @apply-group="addFromGroup"
+                        @apply-selected="applyTemplates"
                     />
                     </v-list-item>
                 </v-list-group>
@@ -154,6 +154,7 @@ export default {
             character: null,
             groupsOpen: [],
             templateApplicatorCallback: null,
+            source: "wsm.character_details",
         }
     },
     inject: [
@@ -161,6 +162,8 @@ export default {
         'autocompleteInfoMessage',
         'autocompleteRequest',
         'registerMessageHandler',
+        'unregisterMessageHandler',
+        'formatWorldStateTemplateString',
     ],
     emits:[
         'require-scene-save',
@@ -203,30 +206,42 @@ export default {
         },
     },
     methods: {
-        addFromTemplate(template, callback) {
+        applyTemplates(templateUIDs, callback) {
             this.templateApplicatorCallback = callback;
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'apply_template',
-                template: template,
-                run_immediately: true,
-                character_name: this.character.name,
-            }));
-        },
 
-        addFromGroup(group, callback) {
-            this.templateApplicatorCallback = callback;
+            // collect templates
+
+            let templates = [];
+
+            for (let group of this.templates.managed.groups) {
+                for (let templateId in group.templates) {
+                    let template = group.templates[templateId];
+                    if(templateUIDs.includes(template.uid)) {
+                        templates.push(template);
+                    }
+                }
+            }
+
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
-                action: 'apply_group',
-                group: group,
+                action: 'apply_templates',
+                templates: templates,
                 run_immediately: true,
                 character_name: this.character.name,
+                source: this.source,
             }));
         },
         
         validateTemplate(template) {
-            return template.template_type === 'character_detail';
+            if(template.template_type !== 'character_detail')
+                return false;
+            const formattedDetail = this.formatWorldStateTemplateString(template.detail, this.character.name);
+
+            if(this.character.details[formattedDetail]) {
+                return false;
+            }
+
+            return true;
         },
 
         autoSelect() {
@@ -326,9 +341,10 @@ export default {
         }
     },
     mounted() {
-    },
-    created() {
         this.registerMessageHandler(this.handleMessage);
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
     }
 }
 </script>

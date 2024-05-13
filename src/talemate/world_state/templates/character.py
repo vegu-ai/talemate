@@ -10,7 +10,7 @@ __all__ = [
 class Attribute(Template):
     name: str
     attribute: str
-    instructions: str
+    instructions: str | None = None
     description: str | None = None
     template_type: str = "character_attribute"
     
@@ -18,7 +18,7 @@ class Attribute(Template):
 class Detail(Template):
     name: str
     detail: str
-    instructions: str
+    instructions: str | None = None
     description: str | None = None
     template_type: str = "character_detail"
     

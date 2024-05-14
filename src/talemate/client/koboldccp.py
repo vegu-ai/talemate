@@ -2,12 +2,13 @@ import random
 import re
 
 # import urljoin
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 import httpx
 import structlog
 
 from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults, ExtraField
 from talemate.client.registry import register
+import talemate.util as util
 
 log = structlog.get_logger("talemate.client.koboldcpp")
 
@@ -161,12 +162,43 @@ class KoboldCppClient(ClientBase):
 
         return model_name
 
+    async def tokencount(self, content:str) -> int:
+        """
+        KoboldCpp has a tokencount endpoint we can use to count tokens
+        for the prompt and response
+        
+        If the endpoint is not available, we will use the default token count estimate
+        """
+        
+        # extract scheme and host from api url
+        
+        parts = urlparse(self.api_url)
+        
+        url_tokencount = f"{parts.scheme}://{parts.netloc}/api/extra/tokencount"
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                url_tokencount,
+                json={"prompt":content},
+                timeout=None,
+                headers=self.request_headers,
+            )
+            
+            if response.status_code == 404:
+                # kobold united doesn't have tokencount endpoint
+                return util.count_tokens(content)
+            
+            tokencount = len(response.json().get("ids",[]))
+            return tokencount
+        
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
         """
 
         parameters["prompt"] = prompt.strip(" ")
+        
+        self._returned_prompt_tokens = await self.tokencount(parameters["prompt"] )
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -176,15 +208,18 @@ class KoboldCppClient(ClientBase):
                 headers=self.request_headers,
             )
             response_data = response.json()
-
             try:
                 if self.is_openai:
-                    return response_data["choices"][0]["text"]
+                    response_text = response_data["choices"][0]["text"]
                 else:
-                    return response_data["results"][0]["text"]
+                    response_text = response_data["results"][0]["text"]
             except (TypeError, KeyError) as exc:
                 log.error("Failed to generate text", exc=exc, response_data=response_data, response_status=response.status_code)
-                return ""
+                response_text = ""
+                
+            self._returned_response_tokens = await self.tokencount(response_text)
+            return response_text
+            
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

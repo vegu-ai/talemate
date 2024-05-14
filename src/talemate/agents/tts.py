@@ -138,8 +138,11 @@ class TTSAgent(Agent):
         return config_options
 
     def __init__(self, **kwargs):
-        self.is_enabled = False
-        nltk.download("punkt", quiet=True)
+        self.is_enabled = False#
+        
+        if not nltk.data.find("tokenizers/punkt"):
+            print("Downloading nltk punkt tokenizer")
+            nltk.download("punkt", quiet=True)
 
         self.voices = {
             "elevenlabs": VoiceLibrary(api="elevenlabs"),

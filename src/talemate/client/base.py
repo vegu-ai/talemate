@@ -128,6 +128,10 @@ class ClientBase:
         """
         return self.Meta().requires_prompt_template
 
+    @property
+    def max_tokens_param_name(self):
+        return "max_tokens"
+
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
 
@@ -635,7 +639,7 @@ class ClientBase:
             is_repetition, similarity_score, matched_line = util.similarity_score(
                 response, finalized_prompt.split("\n"), similarity_threshold=80
             )
-
+            
             if not is_repetition:
                 # not a repetition, return the response
 
@@ -669,7 +673,7 @@ class ClientBase:
 
                 # then we pad the max_tokens by the pad_max_tokens amount
 
-                prompt_param["max_tokens"] += pad_max_tokens
+                prompt_param[self.max_tokens_param_name] += pad_max_tokens
 
                 # send the prompt again
                 # we use the repetition_adjustment method to further encourage
@@ -691,7 +695,7 @@ class ClientBase:
 
                 # a lot of the times the response will now contain the repetition + something new
                 # so we dedupe the response to remove the repetition on sentences level
-
+                
                 response = util.dedupe_sentences(
                     response, matched_line, similarity_threshold=85, debug=True
                 )

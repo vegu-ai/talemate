@@ -57,6 +57,7 @@ Please read the documents in the `docs` folder for more advanced configuration a
     - [Ready to go](#ready-to-go)
     - [Load the introductory scenario "Infinity Quest"](#load-the-introductory-scenario-infinity-quest)
     - [Loading character cards](#loading-character-cards)
+- [Configure for hosting](#configure-for-hosting)
 - [Text-to-Speech (TTS)](docs/tts.md)
 - [Visual Generation](docs/visual.md)
 - [ChromaDB (long term memory) configuration](docs/chromadb.md)
@@ -96,14 +97,15 @@ There is also a [troubleshooting guide](docs/troubleshoot.md) that might help.
 
 1. `git clone https://github.com/vegu-ai/talemate.git`
 1. `cd talemate`
-1. `docker-compose up`
+1. `cp config.example.yaml config.yaml`
+1. `docker compose up`
 1. Navigate your browser to http://localhost:8080
 
 :warning: When connecting local APIs running on the hostmachine (e.g. text-generation-webui), you need to use `host.docker.internal` as the hostname.
 
 #### To shut down the Docker container
 
-Just closing the terminal window will not stop the Docker container. You need to run `docker-compose down` to stop the container.
+Just closing the terminal window will not stop the Docker container. You need to run `docker compose down` to stop the container.
 
 #### How to install Docker
 
@@ -251,3 +253,17 @@ Expand the "Load" menu in the top left corner and either click on "Upload a char
 Once a character is uploaded, talemate may actually take a moment because it needs to convert it to a talemate format and will also run additional LLM prompts to generate character attributes and world state.
 
 Make sure you save the scene after the character is loaded as it can then be loaded as normal talemate scenario in the future.
+
+## Configure for hosting
+
+By default talemate is configured to run locally. If you want to host it behind a reverse proxy or on a server, you will need create some environment variables in the `talemate_frontend/.env.development.local` file
+
+Start by copying `talemate_frontend/example.env.development.local` to `talemate_frontend/.env.development.local`.
+
+Then open the file and edit the `ALLOWED_HOSTS` and  `VUE_APP_TALEMATE_BACKEND_WEBSOCKET_URL` variables.
+
+```sh
+ALLOWED_HOSTS=example.com
+# wss if behind ssl, ws if not
+VUE_APP_TALEMATE_BACKEND_WEBSOCKET_URL=wss://example.com:5050
+```

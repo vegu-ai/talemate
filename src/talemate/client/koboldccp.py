@@ -274,9 +274,14 @@ class KoboldCppClient(ClientBase):
         sd_models_url = urljoin(self.url, "/sdapi/v1/sd-models")
         
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                url=sd_models_url, timeout=2
-            )
+            
+            try:
+                response = await client.get(
+                   url=sd_models_url, timeout=2
+                )
+            except Exception as exc:
+                log.error(f"Failed to fetch sd models from {sd_models_url}", exc=exc)
+                return False
             
             if response.status_code != 200:
                 return False

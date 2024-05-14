@@ -1,4 +1,16 @@
 const { defineConfig } = require('@vue/cli-service')
+
+const ALLOWED_HOSTS = process.env.ALLOWED_HOSTS || "all"
+const VUE_APP_TALEMATE_BACKEND_WEBSOCKET_URL = process.env.VUE_APP_TALEMATE_BACKEND_WEBSOCKET_URL || null
+
+// if ALLOWED_HOSTS is set and has , then split it
+if (ALLOWED_HOSTS !== "all") {
+  ALLOWED_HOSTS = ALLOWED_HOSTS.split(",")
+}
+
+console.log("ALLOWED_HOSTS", ALLOWED_HOSTS)
+console.log("VUE_APP_TALEMATE_BACKEND_WEBSOCKET_URL", VUE_APP_TALEMATE_BACKEND_WEBSOCKET_URL)
+
 module.exports = defineConfig({
   transpileDependencies: true,
 
@@ -9,7 +21,7 @@ module.exports = defineConfig({
   },
 
   devServer: {
-    allowedHosts: "all",
+    allowedHosts: ALLOWED_HOSTS,
     client: {
       overlay: {
         warnings: false,

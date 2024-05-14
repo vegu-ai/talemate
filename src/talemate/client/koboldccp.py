@@ -271,6 +271,9 @@ class KoboldCppClient(ClientBase):
         if the koboldcpp server has a SD model available
         """
         
+        if not self.connected:
+            return False
+        
         sd_models_url = urljoin(self.url, "/sdapi/v1/sd-models")
         
         async with httpx.AsyncClient() as client:

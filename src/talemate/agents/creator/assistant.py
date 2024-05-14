@@ -136,6 +136,8 @@ class AssistantMixin:
             len(character.name + ":") :
         ].strip()
 
+        response = response.replace("...","").strip()
+
         if response.startswith(input):
             response = response[len(input) :]
 
@@ -170,8 +172,9 @@ class AssistantMixin:
             },
             pad_prepended_response=False,
             dedupe_enabled=False,
-        )
-
+        ).strip()
+        response = response.replace("...","").strip()
+        
         if response.startswith(input):
             response = response[len(input) :]
 

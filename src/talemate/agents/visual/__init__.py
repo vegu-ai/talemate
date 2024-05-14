@@ -199,7 +199,6 @@ class VisualBase(Agent):
 
     async def ready_check(self):
         if not self.enabled:
-            await self.setup_check()
             return
         backend = self.backend
         fn = getattr(self, f"{backend.lower()}_ready", None)

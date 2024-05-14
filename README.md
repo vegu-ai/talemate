@@ -96,6 +96,7 @@ There is also a [troubleshooting guide](docs/troubleshoot.md) that might help.
 
 1. `git clone https://github.com/vegu-ai/talemate.git`
 1. `cd talemate`
+1. `cp config.example.yaml config.yaml`
 1. `docker compose up`
 1. Navigate your browser to http://localhost:8080
 

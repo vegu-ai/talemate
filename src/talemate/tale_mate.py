@@ -2143,7 +2143,7 @@ class Scene(Emitter):
 
     async def add_to_recent_scenes(self):
         log.debug("add_to_recent_scenes", filename=self.filename)
-        config = Config(**self.config)
+        config = load_config(as_model=True)
         config.recent_scenes.push(self)
         config.save()
 

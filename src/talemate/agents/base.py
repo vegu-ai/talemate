@@ -221,6 +221,9 @@ class Agent(ABC):
         if callback:
             await callback()
 
+    async def setup_check(self):
+        return False
+
     async def ready_check(self, task: asyncio.Task = None):
         self.ready_check_error = None
         if task:

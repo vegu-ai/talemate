@@ -28,12 +28,14 @@ SUPPORTED_MODELS = [
     "gpt-4-turbo-preview",
     "gpt-4-turbo-2024-04-09",
     "gpt-4-turbo",
+    "gpt-4o-2024-05-13",
+    "gpt-4o",
 ]
 
+# any model starting with gpt-4- is assumed to support 'json_object'
+# for others we need to explicitly state the model name
 JSON_OBJECT_RESPONSE_MODELS = [
-    "gpt-4-1106-preview",
-    "gpt-4-0125-preview",
-    "gpt-4-turbo-preview",
+    "gpt-4o",
     "gpt-3.5-turbo-0125",
 ]
 
@@ -92,7 +94,7 @@ def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0
 
 class Defaults(pydantic.BaseModel):
     max_token_length: int = 16384
-    model: str = "gpt-4-turbo"
+    model: str = "gpt-4o"
 
 
 @register()
@@ -115,7 +117,7 @@ class OpenAIClient(ClientBase):
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
 
-    def __init__(self, model="gpt-4-turbo", **kwargs):
+    def __init__(self, model="gpt-4o", **kwargs):
         self.model_name = model
         self.api_key_status = None
         self.config = load_config()

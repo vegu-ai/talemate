@@ -80,6 +80,11 @@ class VisualBase(Agent):
                     ),
                 },
             ),
+            "automatic_setup": AgentAction(
+                enabled=True,
+                label="Automatic Setup",
+                description="Automatically setup the visual agent if the selected client has an implementation of the selected backend. (Like the KoboldCpp Automatic1111 api)",
+            ),
             "automatic_generation": AgentAction(
                 enabled=False,
                 label="Automatic Generation",
@@ -187,16 +192,28 @@ class VisualBase(Agent):
         prev_ready = self.backend_ready
         self.backend_ready = False
         self.ready_check_error = str(error)
+        await self.setup_check()
         if prev_ready:
             await self.emit_status()
+        
 
     async def ready_check(self):
         if not self.enabled:
+            await self.setup_check()
             return
         backend = self.backend
         fn = getattr(self, f"{backend.lower()}_ready", None)
         task = asyncio.create_task(fn())
         await super().ready_check(task)
+
+    async def setup_check(self):
+        
+        if not self.actions["automatic_setup"].enabled:
+            return
+        
+        backend = self.backend
+        if self.client and hasattr(self.client, f"visual_{backend.lower()}_setup"):
+            await getattr(self.client, f"visual_{backend.lower()}_setup")(self)
 
     async def apply_config(self, *args, **kwargs):
 

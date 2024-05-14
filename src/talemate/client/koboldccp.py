@@ -1,5 +1,6 @@
 import random
 import re
+from typing import TYPE_CHECKING
 
 # import urljoin
 from urllib.parse import urljoin, urlparse
@@ -9,6 +10,9 @@ import structlog
 from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults, ExtraField
 from talemate.client.registry import register
 import talemate.util as util
+
+if TYPE_CHECKING:
+    from talemate.agents.visual import VisualBase
 
 log = structlog.get_logger("talemate.client.koboldcpp")
 
@@ -36,6 +40,11 @@ class KoboldCppClient(ClientBase):
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
+
+    @property
+    def url(self) -> str:
+        parts = urlparse(self.api_url)
+        return f"{parts.scheme}://{parts.netloc}"
 
     @property
     def is_openai(self) -> bool:
@@ -135,6 +144,9 @@ class KoboldCppClient(ClientBase):
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)
         self.ensure_api_endpoint_specified()
+        
+        
+        
 
     async def get_model_name(self):
         self.ensure_api_endpoint_specified()
@@ -250,3 +262,34 @@ class KoboldCppClient(ClientBase):
             self.api_key = kwargs.pop("api_key")
 
         super().reconfigure(**kwargs)
+
+
+    async def visual_automatic1111_setup(self, visual_agent:"VisualBase") -> bool:
+        
+        """
+        Automatically configure the visual agent for automatic1111
+        if the koboldcpp server has a SD model available
+        """
+        
+        sd_models_url = urljoin(self.url, "/sdapi/v1/sd-models")
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                url=sd_models_url, timeout=2
+            )
+            
+            if response.status_code != 200:
+                return False
+            
+            response_data = response.json()
+            
+            sd_model = response_data[0].get("model_name") if response_data else None
+            
+        log.info("automatic1111_setup", sd_model=sd_model)
+        if not sd_model:
+            return False
+        
+        visual_agent.actions["automatic1111"].config["api_url"].value = self.url
+        visual_agent.is_enabled = True
+        return True
+        

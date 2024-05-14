@@ -96,7 +96,7 @@ There is also a [troubleshooting guide](docs/troubleshoot.md) that might help.
 
 1. `git clone https://github.com/vegu-ai/talemate.git`
 1. `cd talemate`
-1. `docker-compose up`
+1. `docker compose up`
 1. Navigate your browser to http://localhost:8080
 
 :warning: When connecting local APIs running on the hostmachine (e.g. text-generation-webui), you need to use `host.docker.internal` as the hostname.

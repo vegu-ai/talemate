@@ -64,6 +64,13 @@ class KoboldCppClient(ClientBase):
             # join /api/v1/generate
             return urljoin(self.api_url, "generate")
 
+    @property
+    def max_tokens_param_name(self):
+        if self.is_openai:
+            return "max_tokens"
+        else:
+            return "max_length"
+
     def api_endpoint_specified(self, url: str) -> bool:
         return "/v1" in self.api_url
 
@@ -184,13 +191,16 @@ class KoboldCppClient(ClientBase):
         adjusts temperature and repetition_penalty
         by random values using the base value as a center
         """
-        
-        if self.is_openai:
-            rep_pen_key = "presence_penalty"
-        else:
-            rep_pen_key = "rep_pen"
 
         temp = prompt_config["temperature"]
+        
+        if "rep_pen" in prompt_config:
+            rep_pen_key = "rep_pen"
+        elif "frequency_penalty" in prompt_config:
+            rep_pen_key = "frequency_penalty"
+        else:
+            rep_pen_key = "repetition_penalty"
+        
         rep_pen = prompt_config[rep_pen_key]
 
         min_offset = offset * 0.3
@@ -199,7 +209,7 @@ class KoboldCppClient(ClientBase):
         prompt_config[rep_pen_key] = random.uniform(
             rep_pen + min_offset * 0.3, rep_pen + offset * 0.3
         )
-
+        
     def reconfigure(self, **kwargs):
         if "api_key" in kwargs:
             self.api_key = kwargs.pop("api_key")

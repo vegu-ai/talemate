@@ -103,7 +103,7 @@ There is also a [troubleshooting guide](docs/troubleshoot.md) that might help.
 
 #### To shut down the Docker container
 
-Just closing the terminal window will not stop the Docker container. You need to run `docker-compose down` to stop the container.
+Just closing the terminal window will not stop the Docker container. You need to run `docker compose down` to stop the container.
 
 #### How to install Docker
 

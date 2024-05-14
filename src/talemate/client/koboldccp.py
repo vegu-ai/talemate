@@ -13,6 +13,7 @@ log = structlog.get_logger("talemate.client.koboldcpp")
 
 
 class KoboldCppClientDefaults(Defaults):
+    api_url: str = "http://localhost:5001"
     api_key: str = ""
 
 

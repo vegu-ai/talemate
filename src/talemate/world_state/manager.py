@@ -675,8 +675,10 @@ class WorldStateManager:
         """
 
         if isinstance(template, str):
-            template = self.template_collection.flat(types=["state_reinforcement"]).templates.get(template)
+            template_uid = template
+            template = self.template_collection.flat(types=["state_reinforcement"]).templates.get(template_uid)
             if not template:
+                log.error("apply_template_state_reinforcement: template not found", template=template_uid)
                 return
 
         if not character_name and template.state_type in ["npc", "character", "player"]:
@@ -710,6 +712,42 @@ class WorldStateManager:
             insert=template.insert,
             run_immediately=run_immediately,
         )
+        
+    async def apply_template_character_attribute(
+        self, template: str | templates.character.Attribute, character_name: str, run_immediately: bool = False
+    ) -> str:
+    
+        if isinstance(template, str):
+            template_uid = template
+            template = self.template_collection.flat(types=["character_attribute"]).templates.get(template_uid)
+            if not template:
+                log.error("apply_template_character_attribute: template not found", template=template_uid)
+                return
+    
+        creator = get_agent("creator")
+        
+        character = self.scene.get_character(character_name)
+        
+        if not character:
+            log.error("apply_template_character_attribute: character not found", character_name=character_name)
+            return
+        
+        response = await creator.contextual_generate_from_args(
+            context = f"character attribute:{template.attribute}",
+            instructions = template.formatted("instructions", self.scene, character.name),
+            length = 100,
+            character = character.name,
+            uid = "wsm.character_attribute"
+        )
+        
+        await character.set_base_attribute(template.attribute, response)
+        
+        return templates.character.GeneratedAttribute(
+            attribute = response,
+            character = character.name,
+            template = template
+        )    
+        
 
     async def activate_character(self, character_name: str):
         """

@@ -309,6 +309,26 @@ export default {
             else if (message.action === 'operation_done') {
                 this.busy = false;
             }
+            else if (message.action === 'template_applied' && message.source === this.source){
+                
+                if(this.templateApplicatorCallback && message.status === 'done') {
+                    this.templateApplicatorCallback();
+                    this.templateApplicatorCallback = null;
+                }
+
+                if(message.result && message.result.character === this.character.name){
+                    let attributeName = message.result.template.attribute;
+                    this.character.base_attributes[attributeName] = message.result.attribute;
+                    this.selected = attributeName;
+                }
+                console.log("template_applied", message)
+            }
+            else if (message.action === 'templates_applied' && message.source === this.source) {
+                if(this.templateApplicatorCallback) {
+                    this.templateApplicatorCallback();
+                    this.templateApplicatorCallback = null;
+                }
+            }
         }
     },
     mounted() {

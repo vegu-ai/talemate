@@ -9,7 +9,8 @@ import uuid
 
 if TYPE_CHECKING:
     from talemate.config import Config
-    
+    from talemate.tale_mate import Scene
+
 
 __all__ = [
     "register",
@@ -52,9 +53,33 @@ def validate_template(v: Any, handler: pydantic.ValidatorFunctionWrapHandler, in
 class Template(pydantic.BaseModel):
     name: str
     template_type: str = "base"
+    instructions: str | None = None
     group: str | None = None
     favorite: bool = False
     uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
+    
+    
+    def formatted(self, prop_name:str, scene:"Scene", character_name:str = None) -> str:
+        """
+        Format instructions for a template.
+        """
+        value = getattr(self, prop_name)
+        
+        if not value:
+            return value
+        
+        kwargs = {}
+        
+        player_character = scene.get_player_character()
+        
+        kwargs.update(
+            player_name = player_character.name if player_character else None,
+            character_name = character_name or None,
+        )
+        
+        
+        return value.format(**kwargs)
+    
     
 TemplateType = TypeVar("TemplateType", bound=Template)
 AnnotatedTemplate = Annotated[TemplateType, pydantic.WrapValidator(validate_template)]

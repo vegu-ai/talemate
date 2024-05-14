@@ -406,7 +406,7 @@ export default {
             else if (message.action === 'character_detail_reinforcement_deleted') {
                 this.$emit('require-scene-save');
             }
-            else if (message.action === 'template_applied'){
+            else if (message.action === 'template_applied' && message.source === this.source){
                 
                 if(this.templateApplicatorCallback && message.status === 'done') {
                     this.templateApplicatorCallback();
@@ -419,7 +419,7 @@ export default {
                 }
                 console.log("template_applied", message)
             }
-            else if (message.action === 'templates_applied') {
+            else if (message.action === 'templates_applied' && message.source === this.source) {
                 if(this.templateApplicatorCallback) {
                     this.templateApplicatorCallback();
                     this.templateApplicatorCallback = null;

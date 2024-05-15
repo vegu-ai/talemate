@@ -6,6 +6,7 @@
         <WorldStateManagerMenuCharacterTools 
         ref="characterTools" 
         :scene="scene" 
+        :manager="manager"
         @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
         :character="character" />
     </div>
@@ -64,6 +65,7 @@ export default {
         return {
             tab: "characters",
             character: null,
+            manager: null,
         }
     },
     emits: [
@@ -71,7 +73,9 @@ export default {
     ],
     inject: ['getWebsocket', 'registerMessageHandler', 'isConnected', 'requestSceneAssets'],
     methods: {
-        update(tab) {
+        update(tab, meta) {
+            console.log("update", {tab, meta});
+            this.manager = meta.manager;
             this.tab = tab;
         },
         setCharacter(character) {

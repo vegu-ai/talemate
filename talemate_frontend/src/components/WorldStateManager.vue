@@ -14,6 +14,7 @@
                 @require-scene-save="requireSceneSave = true"
                 @selected-character="(character) => { $emit('selected-character', character) }"
                 :templates="templates"
+                :scene="scene"
                 :character-list="characterList" />
             </v-window-item>
 
@@ -101,6 +102,7 @@ export default {
         },
     },
     props: {
+        scene: Object,
         worldStateTemplates: Object,
     },
     data() {
@@ -222,6 +224,7 @@ export default {
     inject: [
         'getWebsocket',
         'registerMessageHandler',
+        'unregisterMessageHandler',
         'setWaitingForInput',
         'openCharacterSheet',
         'characterSheet',
@@ -232,6 +235,13 @@ export default {
     methods: {
 
         emitEditorState(tab, meta) {
+
+            if(meta === undefined) {
+                meta = {}
+            }
+
+            meta['manager'] = this;
+
             this.$emit('navigate-r', tab || this.tab, meta);
         },
 
@@ -320,6 +330,12 @@ export default {
             }));
         },
 
+        newCharacter(name) {
+            if(this.$refs.characters) {
+                this.$refs.characters.newCharacter(name)
+                this.tab = 'characters'
+            }
+        },
 
         loadCharacter(name) {
             this.requestCharacter(name);
@@ -401,8 +417,12 @@ export default {
             }
         },
     },
-    created() {
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
+    },
+    mounted() {
         this.registerMessageHandler(this.handleMessage);
+        this.emitEditorState(this.tab)
     },
 }
 </script>

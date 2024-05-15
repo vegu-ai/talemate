@@ -1,7 +1,7 @@
 <template>
     <div v-if="templatesAvailable">
         <v-list density="compact" slim v-model:opened="groupsOpen">
-            <v-list-item :disabled="busy || selectedTemplates.length === 0" @click.stop="applySelected">
+            <v-list-item v-if="!selectOnly" :disabled="busy || selectedTemplates.length === 0" @click.stop="applySelected">
                 <template v-slot:prepend>
                     <v-icon v-if="!busy">mdi-expand-all</v-icon>
                 </template>
@@ -11,7 +11,7 @@
             <div>
                 <v-list-group fluid v-for="(group, index) in viableTemplates" :key="index" :value="group.group.uid">
                     <template v-slot:activator="{ props }">
-                        <v-list-item v-bind="props" class="text-muted"
+                        <v-list-item v-bind="props" :class="(groupSelected(group) === 'all' ? 'text-primary' : 'text-muted')"
                             :title="toLabel(group.group.name)"
                         >
                             <template v-slot:prepend>
@@ -72,15 +72,25 @@ export default {
         templates: Object,
         validateTemplate: Function,
         templateTypes: Array,
+        selectOnly: Boolean,
     },
     emits: [
         'apply-selected',
+        'selected',
     ],
     inject: [
         'toLabel',
         'registerMessageHandler',
         'unregisterMessageHandler',
     ],
+    watch: {
+        selectedTemplates: {
+            immediate: true,
+            handler(selectedTemplates) {
+                this.$emit('selected', selectedTemplates);
+            }
+        }
+    },
     computed: {
         viableTemplates() {
             let viable = [];
@@ -175,6 +185,15 @@ export default {
             }
         },
         applyTemplate(template) {
+
+            // if selectOnly = true, then re-route this action to select or deselect
+            // the template
+
+            if(this.selectOnly) {
+                this.selectTemplate(template.uid);
+                return;
+            }
+
             this.busy = true;
             this.$emit('apply-selected', [template.uid], () => {
                 this.busy = false;
@@ -182,6 +201,22 @@ export default {
         },
 
         applySelected() {
+
+            // if selectOnly = true, then re-route this action to select group
+            // or deselect group
+
+            if(this.selectOnly) {
+                this.selectedTemplates = [];
+                for (let group of this.viableTemplates) {
+                    if(this.groupSelected(group) !== "all") {
+                        this.selectGroup(group);
+                    }
+                    else {
+                        this.deselectGroup(group);
+                    }
+                }
+            }
+
             this.busy = true;
             this.$emit('apply-selected', this.selectedTemplates, () => {
                 this.busy = false;

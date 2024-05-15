@@ -4,7 +4,7 @@
             <v-icon color="primary" class="mr-1">mdi-account-multiple-plus</v-icon>
             Create
         </v-list-subheader>
-        <v-list-item prepend-icon="mdi-account-plus">
+        <v-list-item prepend-icon="mdi-account-plus" @click.stop="openCharacterCreator">
             <v-list-item-title>Create Character</v-list-item-title>
             <v-list-item-subtitle class="text-caption">Add a new character to the scene.</v-list-item-subtitle>
         </v-list-item>
@@ -52,6 +52,7 @@ export default {
         character: Object,
         title: String,
         icon: String,
+        manager: Object,
     },
     watch:{
         selected: {
@@ -90,6 +91,9 @@ export default {
                 type: 'world_state_manager',
                 action: 'get_character_list',
             }));
+        },
+        openCharacterCreator() {
+            this.manager.newCharacter();
         },
         openCharacterImporter() {
             this.$refs.characterImporter.show();

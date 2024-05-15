@@ -13,10 +13,25 @@
 
             <v-divider></v-divider>
         </div>
+        <div v-else-if="character && character.is_new">
+            <v-card-title>
+                <v-icon size="small">mdi-account-plus</v-icon>
+                Create New Character
+            </v-card-title>
+            <v-divider></v-divider>
+        </div>
 
         <v-card-text>
 
-            <div v-if="selected !== null && character">
+            <div v-if="character && character.is_new">
+                <WorldStateManagerCharacterCreator
+                ref="creator"
+                @require-scene-save="$emit('require-scene-save')"
+                :scene="scene"
+                :templates="templates" />
+            </div>
+
+            <div v-else-if="selected !== null && character">
                 <v-row>
                     <v-col cols="12" md="3" xl="2">
                         <CoverImage v-if="character !== null" ref="coverImageCharacter" :target="character" :type="'character'" :allow-update="true" />
@@ -163,6 +178,7 @@ import WorldStateManagerCharacterDescription from './WorldStateManagerCharacterD
 import WorldStateManagerCharacterDetails from './WorldStateManagerCharacterDetails.vue';
 import WorldStateManagerCharacterReinforcements from './WorldStateManagerCharacterReinforcements.vue';
 import WorldStateManagerCharacterActor from './WorldStateManagerCharacterActor.vue';
+import WorldStateManagerCharacterCreator from './WorldStateManagerCharacterCreator.vue';
 
 export default {
     name: 'WorldStateManagerCharacter',
@@ -173,8 +189,10 @@ export default {
         WorldStateManagerCharacterDetails,
         WorldStateManagerCharacterReinforcements,
         WorldStateManagerCharacterActor,
+        WorldStateManagerCharacterCreator,
     },
     props: {
+        scene: Object,
         characterList: Object,
         templates: Object,
     },
@@ -219,6 +237,23 @@ export default {
                 name: name,
             }));
         },
+
+        newCharacter() {
+            this.character = {
+                is_new: true,
+                is_player: false,
+                name: '',
+                description: '',
+                attributes: [],
+                details: [],
+                reinforcements: [],
+                actor: null,
+            }
+            this.$nextTick(() => {
+                this.$refs.creator.setCharacter(this.character)
+            });
+        },
+
         loadCharacter(name) {
             this.requestCharacter(name);
             this.page = 'description';

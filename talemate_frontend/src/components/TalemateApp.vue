@@ -177,6 +177,7 @@
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
             <WorldStateManager 
             :world-state-templates="worldStateTemplates"
+            :scene="scene"
             @navigate-r="onWorldStateManagerNavigateR"
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />

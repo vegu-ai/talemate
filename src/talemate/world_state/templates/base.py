@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 
 __all__ = [
+    "log",
     "register",
     "Template",
     "AnnotatedTemplate",
@@ -58,6 +59,8 @@ class Template(pydantic.BaseModel):
     favorite: bool = False
     uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     
+    async def generate(self, **kwargs):
+        raise NotImplementedError("generate method not implemented")
     
     def formatted(self, prop_name:str, scene:"Scene", character_name:str = None) -> str:
         """

@@ -681,37 +681,7 @@ class WorldStateManager:
                 log.error("apply_template_state_reinforcement: template not found", template=template_uid)
                 return
 
-        if not character_name and template.state_type in ["npc", "character", "player"]:
-            raise ValueError("Character name required for this template type.")
-
-        player_name = self.scene.get_player_character().name
-
-        formatted_query = template.query.format(
-            character_name=character_name, player_name=player_name
-        )
-        formatted_instructions = (
-            template.instructions.format(
-                character_name=character_name, player_name=player_name
-            )
-            if template.instructions
-            else None
-        )
-
-        if character_name:
-            details = await self.get_character_details(character_name)
-
-            # if reinforcement already exists, skip
-            if formatted_query in details.reinforcements:
-                return None
-
-        return await self.add_detail_reinforcement(
-            character_name,
-            formatted_query,
-            formatted_instructions,
-            template.interval,
-            insert=template.insert,
-            run_immediately=run_immediately,
-        )
+        return (await template.generate(self.scene, character_name, run_immediately)).reinforcement
         
     async def apply_template_character_attribute(
         self, template: str | templates.character.Attribute, character_name: str, run_immediately: bool = False
@@ -724,31 +694,21 @@ class WorldStateManager:
                 log.error("apply_template_character_attribute: template not found", template=template_uid)
                 return
     
-        creator = get_agent("creator")
+        return await template.generate(self.scene, character_name)
         
-        character = self.scene.get_character(character_name)
-        
-        if not character:
-            log.error("apply_template_character_attribute: character not found", character_name=character_name)
-            return
-        
-        response = await creator.contextual_generate_from_args(
-            context = f"character attribute:{template.attribute}",
-            instructions = template.formatted("instructions", self.scene, character.name),
-            length = 100,
-            character = character.name,
-            uid = "wsm.character_attribute"
-        )
-        
-        await character.set_base_attribute(template.attribute, response)
-        
-        return templates.character.GeneratedAttribute(
-            attribute = response,
-            character = character.name,
-            template = template
-        )    
-        
-
+    async def apply_template_character_detail(
+        self, template: str | templates.character.Detail, character_name: str, **kwargs
+    ) -> str:
+    
+        if isinstance(template, str):
+            template_uid = template
+            template = self.template_collection.flat(types=["character_detail"]).templates.get(template_uid)
+            if not template:
+                log.error("apply_template_character_detail: template not found", template=template_uid)
+                return
+            
+        return await template.generate(self.scene, character_name)
+    
     async def activate_character(self, character_name: str):
         """
         Activates a character in the scene.

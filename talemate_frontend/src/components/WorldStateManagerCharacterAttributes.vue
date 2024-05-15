@@ -317,8 +317,8 @@ export default {
                 }
 
                 if(message.result && message.result.character === this.character.name){
-                    let attributeName = message.result.template.attribute;
-                    this.character.base_attributes[attributeName] = message.result.attribute;
+                    let attributeName = message.result.attribute;
+                    this.character.base_attributes[attributeName] = message.result.value;
                     this.selected = attributeName;
                 }
                 console.log("template_applied", message)

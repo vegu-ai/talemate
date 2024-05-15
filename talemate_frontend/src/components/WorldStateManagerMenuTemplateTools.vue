@@ -86,7 +86,7 @@ export default {
         },
         selectedGroups: {
             immediate: true,
-            handler(selectedGroups) {
+            handler(selectedGroups, oldSelectedGroups) {
                 console.log("selection-groups",selectedGroups)
                 if(selectedGroups.length == 0) {
                     this.$emit('world-state-manager-navigate', 'templates', "$DESELECTED");
@@ -94,7 +94,7 @@ export default {
                 }
                 let index = selectedGroups[0];
                 let group = this.worldStateTemplates.managed.groups[index];
-                if(!this.selectedGroups.length || this.selectedGroups[0] != index) {
+                if(!oldSelectedGroups.length || oldSelectedGroups[0] != index) {
                     this.$emit('world-state-manager-navigate', 'templates', group.uid);
                 }
             }

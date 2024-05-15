@@ -338,6 +338,26 @@ export default {
                 }
                 this.$emit('require-scene-save');
             }
+            else if (message.action === 'template_applied' && message.source === this.source){
+                
+                if(this.templateApplicatorCallback && message.status === 'done') {
+                    this.templateApplicatorCallback();
+                    this.templateApplicatorCallback = null;
+                }
+
+                if(message.result && message.result.character === this.character.name){
+                    let detail = message.result.detail;
+                    this.character.details[detail] = message.result.value;
+                    this.selected = detail;
+                }
+                console.log("template_applied", message)
+            }
+            else if (message.action === 'templates_applied' && message.source === this.source) {
+                if(this.templateApplicatorCallback) {
+                    this.templateApplicatorCallback();
+                    this.templateApplicatorCallback = null;
+                }
+            }
         }
     },
     mounted() {

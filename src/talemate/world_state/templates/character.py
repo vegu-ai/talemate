@@ -26,6 +26,8 @@ class Attribute(Template):
     attribute: str
     instructions: str | None = None
     description: str | None = None
+    supports_spice: bool = False
+    supports_style: bool = False
     template_type: str = "character_attribute"
     
     async def generate(
@@ -73,6 +75,8 @@ class Detail(Template):
     detail: str
     instructions: str | None = None
     description: str | None = None
+    supports_spice: bool = False
+    supports_style: bool = False
     template_type: str = "character_detail"
     
     async def generate(

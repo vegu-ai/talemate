@@ -26,9 +26,7 @@ def run_server(args):
 
     config = talemate.config.cleanup()
     
-    if not config.game.world_state.templates:
-        create_defaults_if_empty_collection(Collection.load())
-    else:
+    if config.game.world_state.templates.state_reinforcement:
         Collection.create_from_legacy_config(config)
 
     start_server = websockets.serve(

@@ -1,4 +1,4 @@
-from talemate.world_state.templates import Group, StateReinforcement, Collection
+from talemate.world_state.templates import Group, StateReinforcement, Collection, TEMPLATE_PATH_TALEMATE
 
 __all__ = [
     "DEFAULT_GROUP",
@@ -54,8 +54,9 @@ def create_defaults():
     return collection
 
 def create_defaults_if_empty_collection(collection:Collection):
-    if not collection.groups:
+    print("CREATING DEFAULTS")
+    if not collection.groups or True:
         collection.groups = [DEFAULT_GROUP]
-        collection.save()
+        collection.save(TEMPLATE_PATH_TALEMATE)
  
     return collection

@@ -20,13 +20,16 @@ __all__ = [
     "Group",
     "Collection",
     "FlatCollection",
-    "TypedCollection"
+    "TypedCollection",
+    "TEMPLATE_PATH",
+    "TEMPLATE_PATH_TALEMATE",
 ]
 
 log = structlog.get_logger("world-state.templates")
 
 MODELS = {}
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "templates", "world-state")
+TEMPLATE_PATH_TALEMATE = os.path.join(TEMPLATE_PATH, "talemate")
 
 class register:
     
@@ -126,9 +129,23 @@ class Group(pydantic.BaseModel):
         templates = {}
         
         for template_id, template in self.templates.items():
-            if template_id not in group.templates or not (self.templates[template_id] == group.templates[template_id]):
-                templates[template_id] = template
             
+            # we need to ignore the value of `group` since that
+            # is always going to be different.
+            #
+            # to do so we temporarily set the group to the same value
+            
+            try:
+                _orig_group = template.group
+                template.group = group.uid
+                
+                
+                if template_id not in group.templates or not (self.templates[template_id] == group.templates[template_id]):
+                    templates[template_id] = template
+                    
+            finally:
+                template.group = _orig_group
+                
         return Group(
             author=self.author,
             name=self.name,
@@ -199,6 +216,9 @@ class Collection(pydantic.BaseModel):
         groups = []
         
         for root, _, files in os.walk(path):
+            # loop through root and directories
+            # and load any .yaml files as groups
+            
             for file in files:
                 if file.endswith(".yaml"):
                     group = Group.load(os.path.join(root, file))
@@ -212,7 +232,6 @@ class Collection(pydantic.BaseModel):
         config:"Config", 
         save:bool=True, 
         check_if_exists:bool=True, 
-        exclude:list[Group] = None
     ) -> "Collection":
         """
         templates used to be stored in the main tailmate config as 
@@ -221,6 +240,8 @@ class Collection(pydantic.BaseModel):
         
         groups = []
         
+        collection = cls.load(TEMPLATE_PATH_TALEMATE)
+        
         config_templates = config.game.world_state.templates.model_dump()
         
         for template_type, templates in config_templates.items():
@@ -228,14 +249,16 @@ class Collection(pydantic.BaseModel):
             name = f"legacy-{template_type.replace('_', '-')}s"
             
             if check_if_exists:
-                if os.path.exists(os.path.join(TEMPLATE_PATH, f"{name}.yaml")):
+                if os.path.exists(os.path.join(TEMPLATE_PATH_TALEMATE, f"{name}.yaml")):
                     log.debug("template transfer from legacy config", template_type=template_type, status="skipped", reason="already exists")
                     continue
             
             
             converted_templates = []
             for template in templates.values():
-                converted_templates.append(MODELS[template_type](**template))           
+                _template = MODELS[template_type](**template)
+                _template.uid = f"{name_to_id(_template.name)}"
+                converted_templates.append(_template)           
             
             group = Group(
                 author="unknown",
@@ -247,14 +270,13 @@ class Collection(pydantic.BaseModel):
                 #[MODELS[template_type](**template) for template in templates.values()]
             )
             
-            if exclude:
-                for _group in exclude:
-                    group = group.diff(_group)
+            for _group in collection.groups:
+                group = group.diff(_group)
             
             groups.append(group)
             
             if save:
-                group.save(TEMPLATE_PATH)
+                group.save(TEMPLATE_PATH_TALEMATE)
             
         collection = cls(groups=groups)
         

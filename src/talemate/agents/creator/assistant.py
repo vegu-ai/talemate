@@ -93,6 +93,7 @@ class AssistantMixin:
                 "context_typ": context_typ,
                 "context_name": context_name,
                 "can_coerce": self.client.can_be_coerced,
+                "character_name": generation_context.character,
                 "character": (
                     self.scene.get_character(generation_context.character)
                     if generation_context.character

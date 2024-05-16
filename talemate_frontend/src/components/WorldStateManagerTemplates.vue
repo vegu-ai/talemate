@@ -90,7 +90,7 @@
             <v-form ref="form" v-model="formValid">
                 <div v-if="!template.uid">
                     <v-row>
-                        <v-col cols="6">
+                        <v-col cols="12" sm="6" xl="4" xxl="3">
                             <v-text-field 
                             v-model="template.name" 
                             label="Template name" 
@@ -100,9 +100,10 @@
                             >
                             </v-text-field>
                         </v-col>
-                        <v-col cols="6">
+                        <v-col cols="12" sm="6" xl="4" xxl="3">
                             <v-select 
                             v-model="template.template_type" 
+                            @update:model-value="onTemplateTypeChange"
                             :items="templateTypes"
                             label="Template type">
                             </v-select>
@@ -112,7 +113,7 @@
 
                 <div  v-if="template.template_type === 'state_reinforcement'">
                     <v-row>
-                        <v-col cols="6">
+                        <v-col cols="12" xl="8" xxl="6">
                             <v-text-field 
                             v-model="template.query" 
                             label="Question or attribute name" 
@@ -122,34 +123,38 @@
                             :color="dirty ? 'info' : ''"
                             @update:model-value="queueSaveTemplate">
                             </v-text-field>
-                        </v-col>
-                        <v-col cols="6">
+
                             <v-text-field v-model="template.description" 
                             hint="A short description of what this state is for."
                             :color="dirty ? 'info' : ''"
                             @update:model-value="queueSaveTemplate"
                             label="Description"></v-text-field>
-                        </v-col>
-                    </v-row>
-    
-                    <v-row>
-                        <v-col cols="6">
-                            <v-select 
-                            v-model="template.insert" 
-                            :items="insertionModes"
-                            :color="dirty ? 'info' : ''"
-                            @update:model-value="queueSaveTemplate"
-                            label="Context Attachment Method">
-                            </v-select>
-                        </v-col>
-                        <v-col cols="6">
-                            <v-text-field v-model="template.interval" type="number" min="1" max="100"
-                                label="Update every N turns"></v-text-field>
-                        </v-col>
-                    </v-row>
-    
-                    <v-row>
-                        <v-col cols="12">
+
+                            <v-row>
+                                <v-col cols="12" lg="4">
+                                    <v-select v-model="template.state_type"
+                                    :items="stateTypes"
+                                    :color="dirty ? 'info' : ''"
+                                    @update:model-value="queueSaveTemplate"
+                                    hint="What type of character / object is this state for?"
+                                    label="State type">
+                                    </v-select>
+                                </v-col>
+                                <v-col cols="12" lg="4">
+                                    <v-select 
+                                    v-model="template.insert" 
+                                    :items="insertionModes"
+                                    :color="dirty ? 'info' : ''"
+                                    @update:model-value="queueSaveTemplate"
+                                    label="Context Attachment Method">
+                                    </v-select>
+                                </v-col>
+                                <v-col cols="12" lg="4">
+                                    <v-text-field v-model="template.interval" type="number" min="1" max="100"
+                                    label="Update every N turns" hint="How often should this state be checked?"></v-text-field>
+                                </v-col>
+                            </v-row>
+
                             <v-textarea 
                                 v-model="template.instructions"
                                 label="Additional instructions to the AI for generating this state."
@@ -160,29 +165,12 @@
                                 rows="3">
                             </v-textarea>
                         </v-col>
-                    </v-row>
-    
-                    <!-- three cols for the checkboxes -->
-    
-                    <v-row>
-                        <v-col cols="4">
-                            <v-select v-model="template.state_type"
-                                :items="stateTypes"
-                                :color="dirty ? 'info' : ''"
-                                @update:model-value="queueSaveTemplate"
-                                hint="What type of character / object is this state for?"
-                                label="State type">
-                            </v-select>
-                        </v-col>
-                        <v-col cols="4">
+                        <v-col cols="12" xl="4" xxl="6">
                             <v-checkbox 
                             v-model="template.auto_create" 
                             label="Automatically create" 
                             @update:model-value="queueSaveTemplate"
                             messages="Automatically create instances of this template for new games / characters."></v-checkbox>
-    
-                        </v-col>
-                        <v-col cols="4">
                             <v-checkbox 
                             v-model="template.favorite" 
                             label="Favorite" 
@@ -191,11 +179,14 @@
     
                         </v-col>
                     </v-row>
+    
+    
+
                 </div>
 
                 <div v-else-if="template.template_type === 'character_attribute'">
                     <v-row>
-                        <v-col cols="4">
+                        <v-col cols="12" sm="8" xl="4">
                             <v-text-field 
                                 v-model="template.attribute" 
                                 label="Attribute name" 
@@ -211,29 +202,43 @@
                                 @update:model-value="queueSaveTemplate"
                                 required>
                             </v-text-field>
+                            <v-textarea 
+                                v-model="template.instructions"
+                                :color="dirty ? 'info' : ''"
+                                @update:model-value="queueSaveTemplate"
+                                auto-grow rows="5" 
+                                label="Additional instructions to the AI for generating this character attribute."
+                                hint="Available template variables: {character_name}, {player_name}" 
+                            ></v-textarea>
+                        </v-col>
+                        <v-col cols="12" sm="4" xl="8">
                             <v-checkbox 
                                 v-model="template.favorite" 
                                 label="Favorite" 
                                 @update:model-value="queueSaveTemplate"
                                 messages="Favorited templates will be available for quick setup.">
                             </v-checkbox>
-                        </v-col>
-                        <v-col cols="8">
-                            <v-textarea 
-                            v-model="template.instructions"
-                            :color="dirty ? 'info' : ''"
-                            @update:model-value="queueSaveTemplate"
-                            auto-grow rows="5" 
-                            label="Additional instructions to the AI for generating this character attribute."
-                            hint="Available template variables: {character_name}, {player_name}" 
-                            ></v-textarea>
+                            <v-checkbox 
+                                v-model="template.supports_spice" 
+                                label="Supports spice" 
+                                @update:model-value="queueSaveTemplate"
+                                hint="When an attribute supports spice, there is a small chance that the AI will apply a random generation affector to push the attribute in a potentially unexpected direction."
+                                messages="Randomly spice up this attribute during generation.">
+                            </v-checkbox>
+                            <v-checkbox
+                                v-model="template.supports_style"
+                                label="Supports writing style flavoring"
+                                @update:model-value="queueSaveTemplate"
+                                hint="When an attribute supports style, the AI will attempt to generate the attribute in a way that matches a selected writing style."
+                                messages="Generate this attribute in a way that matches a selected writing style.">
+                            </v-checkbox>
                         </v-col>
                     </v-row>
                 </div>
 
                 <div v-else-if="template.template_type === 'character_detail'">
                     <v-row>
-                        <v-col cols="4">
+                        <v-col cols="12" sm="8" xl="4">
                             <v-text-field 
                                 v-model="template.detail" 
                                 label="Question" 
@@ -250,22 +255,36 @@
                                 @update:model-value="queueSaveTemplate"
                                 required>
                             </v-text-field>
+                            <v-textarea 
+                                v-model="template.instructions"
+                                :color="dirty ? 'info' : ''"
+                                @update:model-value="queueSaveTemplate"
+                                auto-grow rows="5" 
+                                label="Additional instructions to the AI for generating this character detail."
+                                hint="Available template variables: {character_name}, {player_name}" 
+                            ></v-textarea>
+                        </v-col>
+                        <v-col cols="12" sm="4" xl="8">
                             <v-checkbox 
                                 v-model="template.favorite" 
                                 label="Favorite" 
                                 @update:model-value="queueSaveTemplate"
                                 messages="Favorited templates will be available for quick setup.">
                             </v-checkbox>
-                        </v-col>
-                        <v-col cols="8">
-                            <v-textarea 
-                            v-model="template.instructions"
-                            :color="dirty ? 'info' : ''"
-                            @update:model-value="queueSaveTemplate"
-                            auto-grow rows="5" 
-                            label="Additional instructions to the AI for generating this character detail."
-                            hint="Available template variables: {character_name}, {player_name}" 
-                            ></v-textarea>
+                            <v-checkbox 
+                                v-model="template.supports_spice" 
+                                label="Supports spice" 
+                                @update:model-value="queueSaveTemplate"
+                                hint="When a detail supports spice, there is a small chance that the AI will apply a random generation affector to push the detail in a potentially unexpected direction."
+                                messages="Randomly spice up this detail during generation.">
+                            </v-checkbox>
+                            <v-checkbox
+                                v-model="template.supports_style"
+                                label="Supports writing style flavoring"
+                                @update:model-value="queueSaveTemplate"
+                                hint="When a detail supports style, the AI will attempt to generate the detail in a way that matches a selected writing style."
+                                messages="Generate this detail in a way that matches a selected writing style.">
+                            </v-checkbox>
                         </v-col>
                     </v-row>
                 </div>
@@ -358,6 +377,7 @@ export default {
         'insertionModes',
         'getWebsocket',
         'registerMessageHandler',
+        'unregisterMessageHandler',
         'setWaitingForInput',
         'openCharacterSheet',
         'characterSheet',
@@ -367,6 +387,17 @@ export default {
         'emitEditorState',
     ],
     methods: {
+
+        onTemplateTypeChange() {
+            if(this.template && this.template.template_type === 'character_attribute') {
+                if(!this.template.attribute)
+                    this.template.attribute = this.template.name;
+            } else if(this.template && this.template.template_type === 'character_detail') {
+                if(!this.template.detail)
+                    this.template.detail = this.template.name;
+            }
+        },
+
         validateTemplateName(value) {
             if(value == null)
                 return true;
@@ -549,9 +580,10 @@ export default {
         },
     },
     mounted(){
-    },
-    created() {
         this.registerMessageHandler(this.handleMessage);
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
     },
 };
 </script>

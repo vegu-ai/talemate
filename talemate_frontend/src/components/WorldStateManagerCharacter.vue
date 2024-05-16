@@ -27,6 +27,7 @@
                 <WorldStateManagerCharacterCreator
                 ref="creator"
                 @require-scene-save="$emit('require-scene-save')"
+                @cancelled="reset"
                 :scene="scene"
                 :templates="templates" />
             </div>
@@ -238,25 +239,21 @@ export default {
             }));
         },
 
-        newCharacter() {
-            this.character = {
-                is_new: true,
-                is_player: false,
-                name: '',
-                description: '',
-                attributes: [],
-                details: [],
-                reinforcements: [],
-                actor: null,
-            }
+        newCharacter(character) {
+            this.character = character;
             this.$nextTick(() => {
-                this.$refs.creator.setCharacter(this.character)
+                this.$refs.creator.setCharacter(character)
             });
         },
 
         loadCharacter(name) {
             this.requestCharacter(name);
             this.page = 'description';
+            this.selected = name;
+        },
+
+        selectCharacter(name) {
+            this.loadCharacter(name);
             this.selected = name;
         },
 

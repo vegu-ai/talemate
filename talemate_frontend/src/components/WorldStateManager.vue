@@ -323,6 +323,11 @@ export default {
         },
 
         requestCharacter(name) {
+
+            if(name === "$NEW") {
+                return;
+            }
+
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'get_character_details',
@@ -330,11 +335,18 @@ export default {
             }));
         },
 
-        newCharacter(name) {
+        newCharacter(character) {
             if(this.$refs.characters) {
-                this.$refs.characters.newCharacter(name)
+                this.$refs.characters.newCharacter(character)
                 this.tab = 'characters'
             }
+        },
+
+        selectCharacter(name) {
+            this.tab = 'characters';
+            this.$nextTick(() => {
+                this.$refs.characters.selectCharacter(name)
+            });
         },
 
         loadCharacter(name) {

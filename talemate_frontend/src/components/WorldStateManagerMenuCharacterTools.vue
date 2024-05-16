@@ -4,22 +4,34 @@
             <v-icon color="primary" class="mr-1">mdi-account-multiple-plus</v-icon>
             Create
         </v-list-subheader>
-        <v-list-item prepend-icon="mdi-account-plus" @click.stop="openCharacterCreator">
+        <v-list-item :disabled="newCharacter !== null" prepend-icon="mdi-account-plus" @click.stop="openCharacterCreator(true)">
             <v-list-item-title>Create Character</v-list-item-title>
             <v-list-item-subtitle class="text-caption">Add a new character to the scene.</v-list-item-subtitle>
         </v-list-item>
+
         <v-list-item prepend-icon="mdi-account-arrow-right" @click.stop="openCharacterImporter">
             <v-list-item-title>Import Character</v-list-item-title>
             <v-list-item-subtitle class="text-caption">Import rom another scene.</v-list-item-subtitle>
         </v-list-item>
     </v-list>
-    <v-list density="compact" slim selectable @update:selected="onSelect" color="primary">
+    <v-list density="compact" slim color="primary">
         <v-list-subheader color="grey">
             <v-icon color="primary" class="mr-1">mdi-account-group</v-icon>
             Characters
         </v-list-subheader>
+        <v-list-item v-if="newCharacter !== null" prepend-icon="mdi-account-outline" class="text-unsaved" @click.stop="openCharacterCreator" value="$NEW">
+            <v-list-item-title class="font-italic">
+                {{ newCharacter.name || "New character" }}
+            </v-list-item-title>
+            <v-list-item-subtitle>
+                <div class="text-caption">
+                    <v-chip v-if="!newCharacter.is_player" label size="x-small" color="warning" elevation="7">AI</v-chip>
+                    <v-chip v-else label size="x-small" color="info" elevation="7">Player</v-chip>
+                </div>
+            </v-list-item-subtitle>
+        </v-list-item>
         <v-list-item v-for="character in characterList.characters" prepend-icon="mdi-account" :key="character.name"
-            :value="character.name">
+            :value="character.name" @click.stop="openCharacterEditor(character)">
             <v-list-item-title>{{ character.name }}</v-list-item-title>
             <v-list-item-subtitle>
                 <div class="text-caption">
@@ -77,6 +89,7 @@ export default {
                 characters: [],
             },
             selected: null,
+            newCharacter: null,
         }
     },
     emits: [
@@ -89,11 +102,38 @@ export default {
         requestCharacterList() {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
-                action: 'get_character_list',
+                action: 'get_character_list', 
             }));
         },
-        openCharacterCreator() {
-            this.manager.newCharacter();
+        openCharacterEditor(character) {
+            this.manager.selectCharacter(character.name);
+        },
+        openCharacterCreator(reset) {
+            if(!this.newCharacter || reset) {
+                this.newCharacter = {
+                    is_new: true,
+                    is_player: false,
+                    name: '',
+                    description: '',
+                    attributes: [],
+                    details: [],
+                    reinforcements: [],
+                    actor: null,
+                    generateDialogueInstructions: true,
+                    generateDialogueExamples: 0,
+                    generationEnabled: true,
+                    generationInstructions: "",
+                    generateAttributes: true,
+                    generateDetails: true,
+                    generateReinforcements: true,
+                    cancel: () => {
+                        this.newCharacter = null;
+                    },
+                }
+            }
+            this.$nextTick(() => {
+                this.manager.newCharacter(this.newCharacter);
+            });
         },
         openCharacterImporter() {
             this.$refs.characterImporter.show();

@@ -29,7 +29,7 @@ class Attribute(Template):
     supports_spice: bool = False
     supports_style: bool = False
     template_type: str = "character_attribute"
-    
+
     async def generate(
         self, 
         scene: "Scene",

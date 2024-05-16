@@ -119,13 +119,11 @@ export default {
                     details: [],
                     reinforcements: [],
                     actor: null,
-                    generateDialogueInstructions: true,
-                    generateDialogueExamples: 0,
-                    generationEnabled: true,
-                    generationInstructions: "",
-                    generateAttributes: true,
-                    generateDetails: true,
-                    generateReinforcements: true,
+
+                    generation_context: {
+                        enabled: true,
+                        instructions: "",
+                    },
                     cancel: () => {
                         this.newCharacter = null;
                     },
@@ -133,6 +131,7 @@ export default {
             }
             this.$nextTick(() => {
                 this.manager.newCharacter(this.newCharacter);
+                this.selected = "$NEW";
             });
         },
         openCharacterImporter() {

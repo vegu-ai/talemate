@@ -195,6 +195,16 @@
                                 @update:model-value="queueSaveTemplate"
                                 required>
                             </v-text-field>
+                            
+                            <v-select 
+                                v-model="template.priority" 
+                                :items="attributePriorities"
+                                label="Priority"
+                                @update:model-value="queueSaveTemplate"
+                                hint="How important is this attribute for the generation of the other attributes?"
+                                messages="Higher priority attributes will be generated first.">
+                            </v-select>
+   
                             <v-text-field 
                                 v-model="template.description" 
                                 label="Template description" 
@@ -211,13 +221,7 @@
                                 hint="Available template variables: {character_name}, {player_name}" 
                             ></v-textarea>
                         </v-col>
-                        <v-col cols="12" sm="4" xl="8">
-                            <v-checkbox 
-                                v-model="template.favorite" 
-                                label="Favorite" 
-                                @update:model-value="queueSaveTemplate"
-                                messages="Favorited templates will be available for quick setup.">
-                            </v-checkbox>
+                        <v-col cols="12" sm="4" xl="4">
                             <v-checkbox 
                                 v-model="template.supports_spice" 
                                 label="Supports spice" 
@@ -265,12 +269,6 @@
                             ></v-textarea>
                         </v-col>
                         <v-col cols="12" sm="4" xl="8">
-                            <v-checkbox 
-                                v-model="template.favorite" 
-                                label="Favorite" 
-                                @update:model-value="queueSaveTemplate"
-                                messages="Favorited templates will be available for quick setup.">
-                            </v-checkbox>
                             <v-checkbox 
                                 v-model="template.supports_spice" 
                                 label="Supports spice" 
@@ -368,6 +366,11 @@ export default {
                 { "title": 'Character attribute', "value": 'character_attribute' },
                 { "title": 'Character detail', "value": 'character_detail' },
             ],
+            attributePriorities: [
+                { "title": 'Low', "value": 1 },
+                { "title": 'Medium', "value": 2 },
+                { "title": 'High', "value": 3 },
+            ],
             template: null,
             group: null,
             deferredSelect: null,
@@ -449,6 +452,7 @@ export default {
                     template_type: null,
                     name: '',
                     group: group.uid,
+                    priority: 'medium',
                 }
             } else if (template_id && !group.templates[template_id]) {
                 this.deferredSelect = index;

@@ -1,20 +1,23 @@
 {% block rendered_context %}
 {% include "extra-context.jinja2" %}
-{% if character %}
-<|SECTION:CHARACTER|>
-{% if context_typ == 'character attribute' -%}
-{{ character.sheet_filtered(context_name) }}
-{% else -%}
-{{ character.sheet }}
-{% endif -%}
-<|CLOSE_SECTION|>
-{% endif %}
 {% endblock %}
 <|SECTION:SCENE|>
 {% for scene_context in scene.context_history(budget=max_tokens-1024-count_tokens(self.rendered_context())) -%}
 {{ scene_context }}
 {% endfor %}
 <|CLOSE_SECTION|>
+{% if character %}
+<|SECTION:CHARACTER|>
+{% if context_typ == 'character attribute' -%}
+{{ character.description }}
+
+Name: {{ character_name }}
+{{ character.sheet_filtered(context_name) }}
+{% else -%}
+{{ character.sheet }}
+{% endif -%}
+<|CLOSE_SECTION|>
+{% endif %}
 <|SECTION:TASK|>
 {#- SET TASK ACTION -#}
 {% if not generation_context.original %}

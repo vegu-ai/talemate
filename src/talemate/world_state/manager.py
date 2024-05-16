@@ -10,7 +10,7 @@ from talemate.world_state import ContextPin, InsertionMode, ManualContext, Reinf
 import talemate.world_state.templates as templates
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Scene
+    from talemate.tale_mate import Scene, Character
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -628,6 +628,9 @@ class WorldStateManager:
             template_callback: A callback function to apply the templates.
         """
         
+        # sort templates by template.priorty descending
+        templates = sorted(templates, key=lambda x: x.priority, reverse=True)
+        
         for template in templates:
             is_last_template = template == templates[-1]
             if callback_start:
@@ -726,3 +729,63 @@ class WorldStateManager:
             character_name: The name of the character to deactivate.
         """
         await deactivate_character(self.scene, character_name)
+
+    async def create_character(
+        self,
+        generate: bool = True,
+        instructions: str = None,
+        name: str = None,
+        is_player: bool = False,
+        description: str = "",
+    ) -> "Character":
+        """
+        Creates a new character in the scene.
+
+        Arguments:
+            generate: Whether to generate name and description if they are not specified; defaults to True.
+            instructions: Optional instructions for the character creation.
+            name: Optional name for the new character.
+            is_player: Whether the new character is a player character; defaults to False.
+            description: Optional description for the new character.
+
+        Returns:
+            The name of the newly created character.
+        """
+        
+        if not name and not generate:
+            raise ValueError("You need to specify a name for the character.")
+        
+        creator = get_agent("creator")
+        
+        if not name and generate:
+            name = await creator.contextual_generate_from_args(
+                context="character attribute:name",
+                instructions=f"{instructions if instructions else ''} Only respond with the character's name.",
+                length=25,
+                uid="wsm.create_character",
+                character="the character"
+            )
+            
+        if not description and generate:
+            description = await creator.contextual_generate_from_args(
+                context="character detail:description",
+                instructions=instructions,
+                length=100,
+                uid="wsm.create_character",
+                character=name
+            )
+            
+        character = self.scene.Character(
+            name = name,
+            description = description,
+            is_player=is_player
+        )
+        
+        actor = self.scene.Actor(
+            character,
+            get_agent('conversation')
+        )
+        
+        await self.scene.add_actor(actor)
+        
+        return character

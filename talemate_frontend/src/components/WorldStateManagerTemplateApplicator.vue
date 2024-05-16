@@ -234,10 +234,14 @@ export default {
             else if (message.action === 'template_applied'){
                 this.busyTemplateUID = null;
                 this.busyGroupUID = null;
+                // remove the template from selectedTemplates
+                this.selectedTemplates = this.selectedTemplates.filter(selected => selected !== message.data.uid);
             }
             else if (message.action === 'templates_applied') {
                 this.busyTemplateUID = null;
                 this.busyGroupUID = null;
+                this.selectedTemplates = [];
+                this.selectedGroups = [];
             }
         },
     },

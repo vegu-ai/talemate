@@ -105,7 +105,7 @@ class AssistantMixin:
         if not generation_context.partial:
             content = util.strip_partial_sentences(content)
 
-        return content.strip()
+        return content.strip().strip("*").strip()
 
     @set_processing
     async def autocomplete_dialogue(

@@ -123,6 +123,13 @@ class DeleteWorldStateTemplateGroupPayload(pydantic.BaseModel):
 class SelectiveCharacterPayload(pydantic.BaseModel):
     name: str
 
+class CreateCharacterPayload(pydantic.BaseModel):
+    generate: bool = True
+    instructions: str | None = None
+    name: str | None = None
+    description: str | None = None
+    is_player: bool = False
+    
 
 class WorldStateManagerPlugin:
     router = "world_state_manager"
@@ -838,5 +845,32 @@ class WorldStateManagerPlugin:
             }
         )
         
+        await self.signal_operation_done()
+        self.scene.emit_status()
+        
+    async def handle_create_character(self, data):
+        payload = CreateCharacterPayload(**data)
+        
+        character = await self.world_state_manager.create_character(
+            generate = payload.generate,
+            instructions = payload.instructions,
+            name = payload.name,
+            description = payload.description,
+            is_player = payload.is_player
+        )
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "character_created",
+                "data": {
+                    "name": character.name,
+                    "description": character.description,
+                }
+            }
+        )
+        
+        await self.handle_get_character_list({})
+        await self.handle_get_character_details({"name": character.name})
         await self.signal_operation_done()
         self.scene.emit_status()

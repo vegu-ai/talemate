@@ -6,6 +6,7 @@ import os
 import yaml
 import structlog
 import uuid
+from enum import IntEnum
 
 if TYPE_CHECKING:
     from talemate.config import Config
@@ -54,6 +55,12 @@ def validate_template(v: Any, handler: pydantic.ValidatorFunctionWrapHandler, in
         return v
     return handler(v)
 
+class Priority(IntEnum):
+    low = 1
+    medium = 2
+    high = 3
+
+
 class Template(pydantic.BaseModel):
     name: str
     template_type: str = "base"
@@ -61,6 +68,9 @@ class Template(pydantic.BaseModel):
     group: str | None = None
     favorite: bool = False
     uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
+    # priority: Priority = Priority.low
+    # Weird behavior during yaml dump with IntEnum
+    priority: int = 1
     
     async def generate(self, **kwargs):
         raise NotImplementedError("generate method not implemented")
@@ -96,12 +106,14 @@ class Group(pydantic.BaseModel):
     description: str
     templates: dict[str, AnnotatedTemplate] = pydantic.Field(default_factory=dict)
     uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
+    path: str | None = None
     
     @classmethod
     def load(cls, path: str) -> "Group":
         with open(path, "r") as f:
             data = yaml.safe_load(f)
-            return cls(**data)
+            data.pop("path", None)
+            return cls(path=path, **data)
         
     @property
     def filename(self):
@@ -109,14 +121,20 @@ class Group(pydantic.BaseModel):
         return f"{cleaned_name}.yaml"
     
     def save(self, path: str = TEMPLATE_PATH):
-        path = os.path.join(path, self.filename)
+        
+        path = self.path
+        
+        if not path:
+            path = os.path.join(path, self.filename)
             
         # ensure `group` is set on all templates
         for template in self.templates.values():
             template.group = self.uid
         
         with open(path, "w") as f:
-            yaml.dump(self.model_dump(), f, sort_keys=True)
+            group_data = self.model_dump()
+            group_data.pop("path", None)
+            yaml.dump(group_data, f, sort_keys=True)
         log.debug("Worldstate template group saved", path=path)
         
     def diff(self, group:"Group") -> "Group":
@@ -342,3 +360,13 @@ class FlatCollection(pydantic.BaseModel):
     
 class TypedCollection(pydantic.BaseModel):
     templates: dict[str, dict[str, AnnotatedTemplate]] = pydantic.Field(default_factory=dict)
+    
+    
+@register("spice")
+class Spices(Template):
+    spices: list[str]
+    description: str | None = None
+    
+@register("writing_style")
+class WritingStyle(Template):
+    description: str | None = None

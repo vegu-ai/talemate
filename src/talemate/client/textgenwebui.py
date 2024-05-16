@@ -76,6 +76,10 @@ class TextGeneratorWebuiClient(ClientBase):
         return prompt, True
 
     def finalize_YI(self, parameters: dict, prompt: str) -> tuple[str, bool]:
+        
+        if not self.model_name:
+            return prompt, False
+        
         model_name = self.model_name.lower()
         # regex match for yi encased by non-word characters
         if not bool(re.search(r"[\-_]yi[\-_]", model_name)):

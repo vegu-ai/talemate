@@ -279,6 +279,8 @@ export default {
                     this.$refs.templates.selectTemplate(sub1);
                 });
             }
+
+            this.emitEditorState(tab)
         },
         reset() {
             this.characterList = {

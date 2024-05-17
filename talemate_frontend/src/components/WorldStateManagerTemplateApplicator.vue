@@ -31,8 +31,7 @@
                         :disabled="busy">
                         <template v-slot:prepend>
                             <v-progress-circular v-if="busyTemplateUID === template.uid" indeterminate="disable-shrink" color="primary" size="20" class="mr-5"></v-progress-circular>
-                            <v-icon @click.stop="deselectTemplate(template.uid)" color="primary" v-else-if="templateSelected(template.uid)">mdi-check-circle-outline</v-icon>
-                            <v-icon @click.stop="selectTemplate(template.uid)" v-else>mdi-circle-outline</v-icon>
+                            <v-icon @click.stop="toggleTemplate(template.uid)" :color="selectIconColorForTemplate(template)" v-else>{{ selectIconForTemplate(template) }}</v-icon>
                         </template>
                         <v-list-item-title>{{ template.name }}</v-list-item-title>
                         <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
@@ -95,6 +94,8 @@ export default {
         viableTemplates() {
             let viable = [];
 
+            let favorites = [];
+
             for (let group of this.templates.managed.groups) {
                 let templates = [];
 
@@ -102,18 +103,57 @@ export default {
                     let template = group.templates[templateId];
                     if(this.validateTemplate(template)) {
                         templates.push(template);
+                        if(template.favorite) {
+                            favorites.push(template);
+                        }
                     }
                 }
 
                 if (templates.length > 0) {
+
+                    // sort templates by favorite, then by name
+
+                    templates.sort((a, b) => {
+                        if(a.favorite && !b.favorite) {
+                            return -1;
+                        }
+                        if(!a.favorite && b.favorite) {
+                            return 1;
+                        }
+                        return a.name.localeCompare(b.name);
+                    });
+
                     viable.push({
                         group: group,
                         templates: templates
                     })
                 }
+
             }
+
+            
             viable.sort((a, b) => a.group.name.localeCompare(b.group.name));
             console.log("viable", viable)
+
+            // if there are favorites add a Favorite group to the beginning
+
+            if(favorites.length > 0) {
+
+                // sort favorites by name
+
+                favorites.sort((a, b) => {
+                    return a.name.localeCompare(b.name);
+                });
+                let favoriteGroup = {
+                    uid: "$FAVORITES",
+                    name: "Favorites",
+                };
+                viable.unshift({
+                    group: favoriteGroup,
+                    templates: favorites
+                });
+            }
+            
             return viable;
 
         },
@@ -131,6 +171,35 @@ export default {
 
     },
     methods: {
+
+        selectIconForTemplate(template) {
+            if(template.favorite) {
+                if(this.templateSelected(template.uid)) {
+                    return "mdi-star";
+                } else {
+                    return "mdi-star-outline";
+                }
+            } else {
+                if(this.templateSelected(template.uid)) {
+                    return "mdi-check-circle-outline";
+                } else {
+                    return "mdi-circle-outline";
+                }
+            }
+        },
+
+        selectIconColorForTemplate(template) {
+
+            if(!this.templateSelected(template.uid)) {
+                return null;
+            }
+
+            if(template.favorite) {
+                return "favorite";
+            } else {
+                return "primary";
+            }
+        },
 
         selectGroup(group) {
             // adds all templates in group to selectedTemplates
@@ -177,7 +246,7 @@ export default {
             this.selectedTemplates = this.selectedTemplates.filter(selected => selected !== uid);
         },
 
-        selectTemplate(uid) {
+        toggleTemplate(uid) {
             if (this.selectedTemplates.includes(uid)) {
                 this.selectedTemplates = this.selectedTemplates.filter(selected => selected !== uid);
             } else {
@@ -190,7 +259,7 @@ export default {
             // the template
 
             if(this.selectOnly) {
-                this.selectTemplate(template.uid);
+                this.toggleTemplate(template.uid);
                 return;
             }
 

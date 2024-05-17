@@ -67,7 +67,7 @@
 
     <v-card v-if="template !== null">
         <v-card-title v-if="template.uid">
-            <v-icon size="small" class="mr-2">mdi-cube-scan</v-icon>
+            <v-icon size="small" class="mr-2">{{ iconForTemplate(template) }}</v-icon>
             {{ template.name  }}
             <v-chip label size="x-small" color="primary" class="ml-1">
                 <strong class="mr-2 text-deep-purple-lighten-3">Group</strong>{{ toLabel(group.name) }}
@@ -77,7 +77,7 @@
             </v-chip>
         </v-card-title>
         <v-card-title v-else>
-            <v-icon size="small" class="mr-2">mdi-cube-scan</v-icon>
+            <v-icon size="small" class="mr-2">{{ iconForTemplate(template) }}</v-icon>
             New Template
             <v-chip label size="x-small" color="primary" class="ml-1">
                 <strong class="mr-2 text-deep-purple-lighten-3">Group</strong>{{ toLabel(group.name) }}
@@ -236,6 +236,12 @@
                                 hint="When an attribute supports style, the AI will attempt to generate the attribute in a way that matches a selected writing style."
                                 messages="Generate this attribute in a way that matches a selected writing style.">
                             </v-checkbox>
+                            <v-checkbox 
+                                v-model="template.favorite" 
+                                label="Favorite" 
+                                @update:model-value="queueSaveTemplate"
+                                messages="Favorited templates will appear on the top of the list.">
+                            </v-checkbox>
                         </v-col>
                     </v-row>
                 </div>
@@ -283,8 +289,135 @@
                                 hint="When a detail supports style, the AI will attempt to generate the detail in a way that matches a selected writing style."
                                 messages="Generate this detail in a way that matches a selected writing style.">
                             </v-checkbox>
+                            <v-checkbox 
+                                v-model="template.favorite" 
+                                label="Favorite" 
+                                @update:model-value="queueSaveTemplate"
+                                messages="Favorited templates will appear on the top of the list.">
+                            </v-checkbox>
                         </v-col>
                     </v-row>
+                </div>
+
+                <div v-else-if="template.template_type === 'spices'">
+                    
+                    <!-- 
+                        - `name`
+                        - `description`
+                        - `spices` (array of text instructions)
+                    -->
+                    
+                    <v-row>
+                        <v-col cols="12" sm="8" xl="4">
+ 
+                            <v-text-field 
+                                v-model="template.description" 
+                                label="Template description" 
+                                :color="dirty ? 'info' : ''"
+                                @update:model-value="queueSaveTemplate"
+                                required>
+                            </v-text-field>
+                            
+                            <v-textarea 
+                                v-model="template.instructions"
+                                :color="dirty ? 'info' : ''"
+                                @update:model-value="queueSaveTemplate"
+                                auto-grow rows="3" 
+                                placeholder="Make it {spice}."
+                                label="Additional instructions to the AI for applying the spice."
+                                hint="Available template variables: {character_name}, {player_name}, {spice}. If left empty will default to simply `{spice}`."
+                            ></v-textarea>
+
+                            <v-card elevation="7" density="compact">
+                                <v-card-title>
+                                    <v-icon size="small" class="mr-2">mdi-chili-mild</v-icon>
+                                    Spices
+                                </v-card-title>
+                                <v-list slim>
+                                    <v-list-item v-for="(spice, index) in template.spices" :key="index">
+                                        <template v-slot:prepend>
+                                            <v-icon color="delete" @click.stop="removeSpice(index)">mdi-delete</v-icon>
+                                        </template>
+                                        <v-list-item-title>{{ spice }}</v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item>
+                                        <v-text-field 
+                                            variant="underlined"
+                                            v-model="newSpice" 
+                                            label="New spice" 
+                                            placeholder="Make it dark and gritty."
+                                            hint="An instruction or label to push the generated content into a specific direction."
+                                            :color="dirty ? 'info' : ''"
+                                            @keydown.enter="addSpice">
+                                            <template v-slot:append>
+                                                <v-btn @click="addSpice" color="primary" icon>
+                                                    <v-icon>mdi-plus</v-icon>
+                                                </v-btn>
+                                            </template>
+                                        </v-text-field>
+                                    </v-list-item>
+                                </v-list>
+                            </v-card>
+
+
+                        </v-col>
+                        <v-col cols="12" sm="4" xl="8">
+                            <v-checkbox 
+                                v-model="template.favorite" 
+                                label="Favorite" 
+                                @update:model-value="queueSaveTemplate"
+                                messages="Favorited spice collections will appear on the top of the list.">
+                            </v-checkbox>
+                        </v-col>
+                    </v-row>
+
+                </div>
+
+                <div v-else-if="template.template_type === 'writing_style'">
+
+                    <!--
+                        - `name`
+                        - `description`
+                        - `instructions`
+                    -->
+
+                    <v-row>
+                        <v-col cols="12" sm="8" xl="4">
+                            <v-text-field 
+                                v-model="template.name" 
+                                label="Writing style name" 
+                                :rules="[v => !!v || 'Name is required']"
+                                :color="dirty ? 'info' : ''"
+                                @update:model-value="queueSaveTemplate"
+                                required>
+                            </v-text-field>
+                            <v-text-field 
+                                v-model="template.description" 
+                                label="Template description" 
+                                :color="dirty ? 'info' : ''"
+                                @update:model-value="queueSaveTemplate"
+                                required>
+                            </v-text-field>
+                            <v-textarea 
+                                v-model="template.instructions"
+                                :color="dirty ? 'info' : ''"
+                                @update:model-value="queueSaveTemplate"
+                                auto-grow rows="5" 
+                                placeholder="Use a narrative writing style that reminds of mid 90s point and click adventure games."
+                                label="Writing style instructions"
+                                hint="Instructions for the AI on how to apply this writing style to the generated content."
+                            ></v-textarea>
+                        </v-col>
+                        <v-col cols="12" sm="4" xl="8">
+                            <v-checkbox 
+                                v-model="template.favorite" 
+                                label="Favorite" 
+                                @update:model-value="queueSaveTemplate"
+                                messages="Favorited writing styles will appear on the top of the list.">
+                            </v-checkbox>
+                        </v-col>
+                    </v-row>
+
                 </div>
 
             </v-form>     
@@ -355,6 +488,7 @@ export default {
             formValid: false,
             dirty: false,
             templates: null,
+            newSpice: '',
             stateTypes: [
                 { "title": 'All characters', "value": 'character' },
                 { "title": 'Non-player characters', "value": 'npc' },
@@ -365,6 +499,8 @@ export default {
                 { "title": 'State reinforcement', "value": 'state_reinforcement' },
                 { "title": 'Character attribute', "value": 'character_attribute' },
                 { "title": 'Character detail', "value": 'character_detail' },
+                { "title": "Spice collection", "value": 'spices'},
+                { "title": "Writing style", "value": 'writing_style'}
             ],
             attributePriorities: [
                 { "title": 'Low', "value": 1 },
@@ -390,7 +526,34 @@ export default {
         'emitEditorState',
     ],
     methods: {
-
+        iconForTemplate(template) {
+            if (template.template_type == 'character_attribute') {
+                return 'mdi-badge-account';
+            } else if (template.template_type == 'character_detail') {
+                return 'mdi-account-details';            
+            } else if (template.template_type == 'state_reinforcement') {
+                return 'mdi-image-auto-adjust';
+            } else if (template.template_type == 'spices') {
+                return 'mdi-chili-mild';
+            } else if (template.template_type == 'writing_style') {
+                return 'mdi-script-text';
+            }
+            return 'mdi-cube-scan';
+        },
+        colorForTemplate(template) {
+            if (template.template_type == 'character_attribute') {
+                return 'indigo-lighten-3';
+            } else if (template.template_type == 'character_detail') {
+                return 'purple-lighten-3';
+            } else if (template.template_type == 'state_reinforcement') {
+                return 'light-green-lighten-3';
+            } else if (template.template_type == 'spices') {
+                return 'red-darken-1';
+            } else if (template.template_type == 'writing_style') {
+                return 'amber-lighten-3';
+            }
+            return 'grey';
+        },
         onTemplateTypeChange() {
             if(this.template && this.template.template_type === 'character_attribute') {
                 if(!this.template.attribute)
@@ -453,6 +616,7 @@ export default {
                     name: '',
                     group: group.uid,
                     priority: 1,
+                    spices: [],
                 }
             } else if (template_id && !group.templates[template_id]) {
                 this.deferredSelect = index;
@@ -557,6 +721,19 @@ export default {
                 action: 'delete_template_group',
                 group: this.group
             }));
+        },
+
+        addSpice() {
+            if(this.newSpice) {
+                this.template.spices.push(this.newSpice);
+                this.newSpice = '';
+                this.queueSaveTemplate();
+            }
+        },
+
+        removeSpice(index) {
+            this.template.spices.splice(index, 1);
+            this.queueSaveTemplate();
         },
 
         // responses

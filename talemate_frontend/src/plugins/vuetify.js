@@ -18,6 +18,7 @@ export default createVuetify({
           cancel: colors.blueGrey.lighten3,
           muted: colors.grey.darken1,
           unsaved: colors.amber.lighten2,
+          favorite: colors.amber.accent2,
         }
       }
     }

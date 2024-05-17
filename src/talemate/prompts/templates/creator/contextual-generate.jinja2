@@ -79,6 +79,8 @@ Use a simple, easy to read writing format.
 {%- endif -%}
 {% endif %}
 {% if generation_context.instructions %}Additional instructions: {{ generation_context.instructions }}{% endif %}
+{{ generation_context.spice }}
+{{ generation_context.style }}
 <|CLOSE_SECTION|>
 {% if can_coerce -%}
 {{ bot_token }}

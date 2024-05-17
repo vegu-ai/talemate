@@ -1,12 +1,14 @@
 import asyncio
 from typing import TYPE_CHECKING, Tuple, Union
-
+import random
 import pydantic
 
 import talemate.util as util
 from talemate.agents.base import set_processing
 from talemate.emit import emit
 from talemate.prompts import Prompt
+from talemate.world_state.templates import AnnotatedTemplate, Spices, WritingStyle
+from talemate.instance import get_agent
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -20,16 +22,62 @@ class ContentGenerationContext(pydantic.BaseModel):
     context: str
     instructions: str = ""
     length: int = 100
-    character: Union[str, None] = None
-    original: Union[str, None] = None
+    character: str | None = None
+    original: str | None = None
     partial: str = ""
-    uid: Union[str, None] = None
+    uid: str | None = None
+    writing_style: WritingStyle | None = None
+    spices: Spices | None = None
+    spice_level: float = 0.0
+    template: AnnotatedTemplate | None = None
 
     @property
     def computed_context(self) -> Tuple[str, str]:
         typ, context = self.context.split(":", 1)
         return typ, context
 
+    @property
+    def scene(self) -> "Scene":
+        return get_agent("creator").scene
+
+    @property
+    def spice(self):
+        
+        if self.template and not getattr(self.template, "supports_spice", False):
+            # template supplied that doesn't support spice
+            return ""
+        
+        if self.spice_level == 0:
+            # no spice
+            return ""
+        
+        if not self.spices:
+            # no spices
+            return ""
+        
+        # randomly determine if we should add spice (0.0 - 1.0)
+        if random.random() > self.spice_level:
+            return ""
+        
+        return self.spices.render(
+            self.scene, self.character
+        )
+        
+    @property
+    def style(self):
+        
+        if self.template and not getattr(self.template, "supports_style", False):
+            # template supplied that doesn't support style
+            return ""
+        
+        if not self.writing_style:
+            # no writing style
+            return ""
+        
+        return self.writing_style.render(
+            self.scene, self.character
+        )        
+        
 
 class AssistantMixin:
     """
@@ -41,10 +89,14 @@ class AssistantMixin:
         context: str,
         instructions: str = "",
         length: int = 100,
-        character: Union[str, None] = None,
-        original: Union[str, None] = None,
+        character: str | None = None,
+        original: str | None = None,
         partial: str = "",
-        uid: Union[str, None] = None,
+        uid: str | None = None,
+        writing_style: WritingStyle | None = None,
+        spices: Spices | None = None,
+        spice_level: float = 0.0,
+        template: AnnotatedTemplate | None = None
     ):
         """
         Request content from the assistant.
@@ -58,6 +110,10 @@ class AssistantMixin:
             original=original,
             partial=partial,
             uid=uid,
+            writing_style=writing_style,
+            spices=spices,
+            spice_level=spice_level,
+            template=template,
         )
 
         return await self.contextual_generate(generation_context)
@@ -99,6 +155,9 @@ class AssistantMixin:
                     if generation_context.character
                     else None
                 ),
+                "spices": generation_context.spices,
+                "writing_style": generation_context.writing_style,
+                "template": generation_context.template,
             },
         )
 

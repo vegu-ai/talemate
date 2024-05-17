@@ -38,9 +38,21 @@
 
     <v-sheet class="text-right">
         <v-spacer></v-spacer>
+        <span class="text-caption mr-2 text-muted">Generation Settings</span>
+        <v-chip size="small" label class="mr-2" color="muted">
+            <strong class="mr-1">Style</strong>
+            {{ generationOptions.style || "Default" }}
+        </v-chip>
+        <v-chip size="small" label class="mr-2" color="muted">
+            <template v-slot:prepend>
+                <v-icon>mdi-chili-off</v-icon>
+            </template>
+            <strong class="mr-1">Spice</strong>
+            {{ generationOptions.spice || "None" }}
+        </v-chip>
         <v-tooltip class="pre-wrap" :text="tooltipText" >
             <template v-slot:activator="{ props }">
-                <v-btn v-bind="props" color="primary" @click.stop="open" variant="text" size="x-small" prepend-icon="mdi-auto-fix">Generate</v-btn>
+                <v-btn v-bind="props" color="primary" @click.stop="open" variant="text" prepend-icon="mdi-auto-fix">Generate</v-btn>
             </template>
         </v-tooltip>
     </v-sheet>
@@ -79,6 +91,11 @@ export default {
             instructions: "",
             withInstructions: false,
             withOriginal: false,
+            generationOptions: {
+                style: null,
+                spice: null,
+                spiceLevel: 0,
+            },
             busy: false,
             uid: null,
         }

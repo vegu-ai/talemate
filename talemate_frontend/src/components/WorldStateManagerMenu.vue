@@ -14,6 +14,7 @@
         <WorldStateManagerMenuTemplateTools 
         ref="templates" 
         :scene="scene" 
+        :manager="manager"
         :world-state-templates="worldStateTemplates"
         @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
         />

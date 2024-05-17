@@ -247,6 +247,12 @@ export default {
             this.$emit('navigate-r', tab || this.tab, meta);
         },
 
+        getEditor(refName) {
+            if(this.$refs[refName]) {
+                return this.$refs[refName];
+            }
+        },
+
         show(tab, sub1, sub2, sub3) {
             //this.reset();
             this.requestCharacterList();

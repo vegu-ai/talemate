@@ -75,7 +75,7 @@ class Template(pydantic.BaseModel):
     async def generate(self, **kwargs):
         raise NotImplementedError("generate method not implemented")
     
-    def formatted(self, prop_name:str, scene:"Scene", character_name:str = None) -> str:
+    def formatted(self, prop_name:str, scene:"Scene", character_name:str = None, **vars) -> str:
         """
         Format instructions for a template.
         """
@@ -91,6 +91,7 @@ class Template(pydantic.BaseModel):
         kwargs.update(
             player_name = player_character.name if player_character else None,
             character_name = character_name or None,
+            **vars,
         )
         
         
@@ -361,12 +362,3 @@ class FlatCollection(pydantic.BaseModel):
 class TypedCollection(pydantic.BaseModel):
     templates: dict[str, dict[str, AnnotatedTemplate]] = pydantic.Field(default_factory=dict)
     
-    
-@register("spice")
-class Spices(Template):
-    spices: list[str]
-    description: str | None = None
-    
-@register("writing_style")
-class WritingStyle(Template):
-    description: str | None = None

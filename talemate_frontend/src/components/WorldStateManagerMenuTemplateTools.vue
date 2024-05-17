@@ -34,7 +34,10 @@
             </v-list-item>
 
             <!-- templates -->
-            <v-list-item v-for="(template, uid) in group.templates" :key="uid" :value="`${template.group}__${uid}`" prepend-icon="mdi-cube-scan">
+            <v-list-item v-for="(template, uid) in group.templates" :key="uid" :value="`${template.group}__${uid}`">
+                <template v-slot:prepend>
+                    <v-icon :color="colorForTemplate(template)">{{ iconForTemplate(template) }}</v-icon>
+                </template>
                 <v-list-item-title>{{ template.name }}</v-list-item-title>
                 <v-list-item-subtitle class="text-caption">
                     {{ toLabel(template.template_type) }}
@@ -62,7 +65,7 @@ export default {
         title: String,
         icon: String,
         worldStateTemplates: Object,
-        editor: Object,
+        manager: Object,
     },
     watch:{
         worldStateTemplates: {
@@ -126,6 +129,18 @@ export default {
         'world-state-manager-navigate'
     ],
     methods: {
+        iconForTemplate(template) {
+            if(this.manager && this.manager.getEditor('templates')) {
+                return this.manager.getEditor('templates').iconForTemplate(template);
+            }
+            return 'mdi-cube-scan';
+        },
+        colorForTemplate(template) {
+            if(this.manager && this.manager.getEditor('templates')) {
+                return this.manager.getEditor('templates').colorForTemplate(template);
+            }
+            return null;
+        },
         toLabel(value) {
             return value.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
         },

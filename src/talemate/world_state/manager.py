@@ -141,6 +141,10 @@ class WorldStateManager:
         """
 
         character = self.scene.get_character(character_name)
+        
+        if not character:
+            log.warning("character not found", character_name=character_name)
+            return None
 
         details = CharacterDetails(
             name=character.name,
@@ -737,6 +741,7 @@ class WorldStateManager:
         name: str = None,
         is_player: bool = False,
         description: str = "",
+        active: bool = False,
     ) -> "Character":
         """
         Creates a new character in the scene.
@@ -760,7 +765,7 @@ class WorldStateManager:
         if not name and generate:
             name = await creator.contextual_generate_from_args(
                 context="character attribute:name",
-                instructions=f"{instructions if instructions else ''} Only respond with the character's name.",
+                instructions=f"You are creating: {instructions if instructions else 'A new character'}. Only respond with the character's name.",
                 length=25,
                 uid="wsm.create_character",
                 character="the character"
@@ -787,5 +792,8 @@ class WorldStateManager:
         )
         
         await self.scene.add_actor(actor)
+        
+        if not active:
+            await deactivate_character(self.scene, name)
         
         return character

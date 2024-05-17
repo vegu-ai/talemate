@@ -39,12 +39,21 @@ export default {
         allowUpdate: Boolean,
     },
     watch: {
+        asset_id: {
+            immediate: true,
+            handler(value) {
+                if(value) {
+                    console.trace("CoverImage asset_id", value);
+                }
+            }
+        },
         target: {
             immediate: true,
             handler(value) {
-                console.log("watch target", value)
                 if(!value) {
                     this.asset_id = null;
+                    this.base64 = null;
+                    this.media_type = null;
                 } else if(this.type === 'scene' && value.data.assets.cover_image !== this.asset_id) {
                     this.asset_id = value.data.assets.cover_image;
                     if(this.asset_id)
@@ -53,7 +62,12 @@ export default {
                     this.asset_id = value.cover_image;
                     if(this.asset_id)
                         this.requestSceneAssets([value.cover_image]);
+                } else if(this.type === 'character' && value.cover_image === null) {
+                    this.asset_id = null;
+                    this.base64 = null;
+                    this.media_type = null;
                 }
+                console.log({value, asset_id: this.asset_id, base64: this.base64, media_type: this.media_type})
             }
         },
     },
@@ -94,7 +108,7 @@ export default {
         },
         handleMessage(data) {
 
-            if(data.type === "scene_status" && data.status == "started") {
+            if(data.type === "scene_status" && data.status == "started" && this.type !== 'character') {
                 let assets = data.data.assets;
                 if(assets.cover_image !== null) {
                     if(assets.cover_image != this.asset_id) {
@@ -115,6 +129,7 @@ export default {
                 }
             }
             if(data.type === "scene_asset_character_cover_image") {
+                console.log("COVER IMAGE", "scene_asset_character_cover_image", data)
                 this.asset_id = data.asset_id;
                 this.base64 = data.asset;
                 this.media_type = data.media_type;

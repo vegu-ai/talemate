@@ -591,6 +591,10 @@ class ClientBase:
             )
 
             return response
+        except Exception as e:
+            self.log.error("send_prompt error", e=e)
+            emit("status", message="Error during generation (check logs)", status="error")
+            return ""
         finally:
             self.emit_status(processing=False)
             self._returned_prompt_tokens = None

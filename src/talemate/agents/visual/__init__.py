@@ -286,16 +286,16 @@ class VisualBase(Agent):
         log.debug("apply_image", image=image[:100], context=context)
 
         if context.vis_type == VIS_TYPES.CHARACTER:
-            await self.apply_image_character(image, context.character_name)
+            await self.apply_image_character(image, context.character_name, replace=context.replace)
 
-    async def apply_image_character(self, image: str, character_name: str):
+    async def apply_image_character(self, image: str, character_name: str, replace: bool = False):
         character = self.scene.get_character(character_name)
 
         if not character:
             log.error("character not found", character_name=character_name)
             return
 
-        if character.cover_image:
+        if character.cover_image and not replace:
             log.info("character cover image already set", character_name=character_name)
             return
 
@@ -455,11 +455,13 @@ class VisualBase(Agent):
         self,
         character_name: str,
         instructions: str = None,
+        replace: bool = False,
     ):
         with VisualContext(
             vis_type=VIS_TYPES.CHARACTER,
             character_name=character_name,
             instructions=instructions,
+            replace=replace,
         ):
             await self.generate(format="portrait")
 

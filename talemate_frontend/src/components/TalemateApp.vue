@@ -178,6 +178,7 @@
             <WorldStateManager 
             :world-state-templates="worldStateTemplates"
             :scene="scene"
+            :agent-status="agentStatus"
             @navigate-r="onWorldStateManagerNavigateR"
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />
@@ -313,6 +314,7 @@ export default {
       autocompleteCallback: null,
       autocompleteFocusElement: null,
       worldStateTemplates: {},
+      agentStatus: {},
     }
   },
   watch:{
@@ -444,6 +446,15 @@ export default {
 
       if(data.type == 'status') {
         this.notificatioonBusy = (data.status == 'busy');
+      }
+      
+      if (data.type === 'agent_status') {
+        this.agentStatus[data.name] = {
+          busy: data.status === 'busy_bg' || data.status === 'busy',
+          available: data.status === 'idle' || data.status === 'busy' || data.status === 'busy_bg',
+          ready: data.status === 'idle',
+        }
+        return;
       }
 
       if (data.type == "scene_status") {

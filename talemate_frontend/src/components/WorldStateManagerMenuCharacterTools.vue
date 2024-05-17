@@ -14,12 +14,12 @@
             <v-list-item-subtitle class="text-caption">Import rom another scene.</v-list-item-subtitle>
         </v-list-item>
     </v-list>
-    <v-list density="compact" slim color="primary">
+    <v-list density="compact" slim selectable color="primary" v-model:selected="selected">
         <v-list-subheader color="grey">
             <v-icon color="primary" class="mr-1">mdi-account-group</v-icon>
             Characters
         </v-list-subheader>
-        <v-list-item v-if="newCharacter !== null" prepend-icon="mdi-account-outline" class="text-unsaved" @click.stop="openCharacterCreator" value="$NEW">
+        <v-list-item v-if="newCharacter !== null" prepend-icon="mdi-account-outline" class="text-unsaved" @click.stop="openCharacterCreator()" value="$NEW">
             <v-list-item-title class="font-italic">
                 {{ newCharacter.name || "New character" }}
             </v-list-item-title>
@@ -71,7 +71,12 @@ export default {
             immediate: true,
             handler(selected) {
                 console.log("selection",selected)
-                this.$emit('world-state-manager-navigate', 'characters', selected, 'description');
+                let characterName = selected ? selected[0] : null;
+                if(characterName === "$NEW") {
+                    return;
+                }
+
+                this.$emit('world-state-manager-navigate', 'characters', characterName, 'description');
             }
         }
     },
@@ -127,11 +132,15 @@ export default {
                     cancel: () => {
                         this.newCharacter = null;
                     },
+                    created: () => {
+                        this.newCharacter = null;
+                        this.requestCharacterList();
+                    }
                 }
             }
             this.$nextTick(() => {
                 this.manager.newCharacter(this.newCharacter);
-                this.selected = "$NEW";
+                this.selected = ["$NEW"];
             });
         },
         openCharacterImporter() {

@@ -7,11 +7,17 @@
                         <v-card-text>
                             <v-checkbox :disabled="busy" v-model="character.generation_context.enabled" label="Enable AI Generation"></v-checkbox>
                             <div v-if="character.generation_context.enabled">
-                                <v-textarea :disabled="busy" v-model="character.generation_context.instructions" label="AI Generation Instructions" auto-grow rows="3" placeholder="A young man ..." hint="Briefly describe the character you want to generate.">
+                                <v-textarea 
+                                    :disabled="busy" 
+                                    v-model="character.generation_context.instructions" 
+                                    label="AI Generation Instructions" 
+                                    auto-grow rows="3" 
+                                    placeholder="A young man ..." 
+                                    hint="Briefly describe the character you want to generate.">
                                 </v-textarea>
                             </div>
 
-                            <v-text-field v-model="character.name" label="Name"></v-text-field>
+                            <v-text-field :disabled="busy" v-model="character.name" label="Name"></v-text-field>
         
                             <v-textarea 
                                 v-model="character.description" 
@@ -41,10 +47,14 @@
         </v-card-text>
 
         <v-card-actions>
-            <ConfirmActionInline action-label="Discard new character" confirm-label="Confirm" @confirm="cancel">Discard new character</ConfirmActionInline>
+            <ConfirmActionInline :disabled="busy" action-label="Discard new character" confirm-label="Confirm" @confirm="cancel">Discard new character</ConfirmActionInline>
             <v-spacer></v-spacer>
             <v-btn color="primary" @click="createCharacter" :disabled="(!character.name && !character.generation_context.enabled) || busy">Create Character</v-btn>
         </v-card-actions>
+
+        <p v-if="busy">
+            <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
+        </p>
     </v-card>
 </template>
 
@@ -145,8 +155,12 @@ export default {
             else if (message.action === 'character_created') {
                 this.busy = false;
                 this.$emit('character-created', message.data)
+                this.character.created(message.data);
             }
             else if (message.action === 'operation_done') {
+                this.busy = false;
+            }
+            else if (message.type === 'error') {
                 this.busy = false;
             }
         },

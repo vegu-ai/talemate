@@ -1,6 +1,6 @@
 <template>
     <div v-if="confirming===false">
-        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" color="delete" variant="text" @click.stop="initiateAction" >
+        <v-btn :disabled="disabled" rounded="sm" prepend-icon="mdi-close-box-outline" color="delete" variant="text" @click.stop="initiateAction" >
             {{ actionLabel}}
         </v-btn>
     </div>
@@ -20,6 +20,7 @@ export default {
     props:{
         actionLabel: String,
         confirmLabel: String,
+        disabled: Boolean,
     },
     emits: ['confirm', 'cancel'],
     data(){

@@ -28,6 +28,7 @@
                 ref="creator"
                 @require-scene-save="$emit('require-scene-save')"
                 @cancelled="reset"
+                @character-created="onCharacterCreated"
                 :scene="scene"
                 :templates="templates" />
             </div>
@@ -36,9 +37,26 @@
                 <v-row>
                     <v-col cols="12" md="3" xl="2">
                         <CoverImage v-if="character !== null" ref="coverImageCharacter" :target="character" :type="'character'" :allow-update="true" />
+                        <p v-if="coverImageBusy">
+                            <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
+                        </p>
+                        <v-list v-if="character !== null">
+                            
+                            <!-- GENERATE COVER IMAGE -->
 
+                            <v-list-item>
+                                <v-tooltip max-width="300" :text="`Generate a new cover image for ${character.name}. This will be used as the main image for the character.`">
+                                    <template v-slot:activator="{ props }">
+                                        <v-btn :disabled="!agentStatus.visual || !agentStatus.visual.ready" @click.stop="visualizeCharacter" v-bind="props" variant="tonal" block color="primary" prepend-icon="mdi-image-filter-center-focus">Generate Image</v-btn>
+                                    </template>
+                                </v-tooltip>
+                            </v-list-item>
+
+                        </v-list>
+                            
                         <v-list v-if="character !== null && !character.is_player">
                             
+
                             <!-- DEACTIVATE CHARACTER -->
                     
                             <v-list-item v-if="character.active">
@@ -196,6 +214,7 @@ export default {
         scene: Object,
         characterList: Object,
         templates: Object,
+        agentStatus: Object,
     },
     inject: [
         'getWebsocket',
@@ -208,6 +227,7 @@ export default {
             character: null,
             confirmDelete: null,
             deleteBusy: false,
+            coverImageBusy: false,
         }
     },
     emits:[
@@ -228,6 +248,12 @@ export default {
             this.page = 'reinforce'
             this.$nextTick(() => {
                 this.$refs.reinforcements.loadWithRequire(name);
+            });
+        },
+
+        onCharacterCreated(character) {
+            this.$nextTick(() => {
+                this.selected = character.name;
             });
         },
 
@@ -281,9 +307,26 @@ export default {
                 name: this.character.name,
             }));
         },
+        visualizeCharacter() {
+            this.coverImageBusy = true;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'visual',
+                action: 'visualize_character',
+                context: {
+                    character_name: this.character.name,
+                    replace: true,
+                }
+            }));
+        },
 
         handleMessage(message) {
-            if (message.type !== 'world_state_manager') {
+            if(message.type == "image_generated") {
+                this.coverImageBusy = false;
+                if(message.data.context.character_name === this.character.name) {
+                    this.loadCharacter(this.character.name);
+                }
+            }
+            else if (message.type !== 'world_state_manager') {
                 return;
             }
             else if (message.action === 'character_details') {
@@ -299,7 +342,7 @@ export default {
                 if(this.selected === message.data.name) {
                     this.loadCharacter(this.selected)
                 }
-            }
+            } 
         },
     },
     created() {

@@ -1,5 +1,13 @@
 {% block rendered_context %}
 {% include "extra-context.jinja2" %}
+{% if context_typ == 'character attribute' or context_typ == 'character detail' -%}
+  {% for other_character in scene.get_characters() -%}
+    {% if other_character.name != character_name %}
+<|SECTION:{{ other_character.name }}|>
+{{ other_character.description|condensed }}
+    {% endif %}
+  {%- endfor -%}
+{% endif %}
 {% endblock %}
 <|SECTION:SCENE|>
 {% for scene_context in scene.context_history(budget=max_tokens-1024-count_tokens(self.rendered_context())) -%}
@@ -7,11 +15,11 @@
 {% endfor %}
 <|CLOSE_SECTION|>
 {% if character %}
-<|SECTION:CHARACTER|>
+<|SECTION:{{ character.name }}|>
 {% if context_typ == 'character attribute' -%}
 {{ character.description }}
 
-Name: {{ character_name }}
+{% if not character or not character.name %}name: {{ character_name }}{% endif -%}
 {{ character.sheet_filtered(context_name) }}
 {% else -%}
 {{ character.sheet }}

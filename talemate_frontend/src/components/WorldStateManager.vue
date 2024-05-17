@@ -15,6 +15,7 @@
                 @selected-character="(character) => { $emit('selected-character', character) }"
                 :templates="templates"
                 :scene="scene"
+                :agent-status="agentStatus"
                 :character-list="characterList" />
             </v-window-item>
 
@@ -104,6 +105,7 @@ export default {
     props: {
         scene: Object,
         worldStateTemplates: Object,
+        agentStatus: Object,
     },
     data() {
         return {

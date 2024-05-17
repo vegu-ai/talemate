@@ -452,7 +452,7 @@ export default {
                     template_type: null,
                     name: '',
                     group: group.uid,
-                    priority: 'medium',
+                    priority: 1,
                 }
             } else if (template_id && !group.templates[template_id]) {
                 this.deferredSelect = index;

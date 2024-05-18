@@ -42,7 +42,7 @@ class ContentGenerationContext(pydantic.BaseModel):
         return get_agent("creator").scene
 
     @property
-    def spice(self):
+    def spice(self) -> str:
         
         spice_level = self.generation_options.spice_level
         
@@ -62,9 +62,24 @@ class ContentGenerationContext(pydantic.BaseModel):
         if random.random() > spice_level:
             return ""
         
-        return self.generation_options.spices.render(
+        spice = self.generation_options.spices.render(
             self.scene, self.character
         )
+        
+        log.debug("spice_applied", spice=spice, uid=self.uid, character=self.character, context=self.computed_context)
+        
+        emit(
+            'spice_applied',
+            websocket_passthrough=True, 
+            data={
+                "spice": spice, 
+                "uid": self.uid, 
+                "character": self.character, 
+                "context": self.computed_context
+            }
+        )
+        
+        return spice
         
     @property
     def style(self):

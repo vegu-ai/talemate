@@ -22,7 +22,7 @@ export default createVuetify({
           highlight1: colors.indigo.lighten3,
           highlight2: colors.purple.lighten3,
           highlight3: colors.lightGreen.lighten3,
-          highlight4: colors.deepOrange.accent2,
+          highlight4: colors.red.lighten1,
           highlight5: colors.amber.lighten3,
         }
       }

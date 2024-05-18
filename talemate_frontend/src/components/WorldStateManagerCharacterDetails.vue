@@ -58,6 +58,7 @@
             <div v-if="selected && character.details[selected] !== undefined">
 
                 <ContextualGenerate 
+                    ref="contextualGenerate"
                     :context="'character detail:'+selected" 
 
                     :original="character.details[selected]"
@@ -133,6 +134,13 @@
 
         </v-col>
     </v-row>
+    <v-snackbar color="grey-darken-4" location="top" position v-model="spiceApplied" :timeout="5000" max-width="400" multi-line>
+        <div class="text-caption text-highlight4">
+            <v-icon color="highlight4">mdi-chili-mild</v-icon>
+            Spice applied!
+        </div>
+        {{ spiceApplied }}
+    </v-snackbar>
 </template>
 
 <script>
@@ -166,6 +174,7 @@ export default {
             templateApplicatorCallback: null,
             source: "wsm.character_details",
             generationOptions: {},
+            spiceApplied: null,
         }
     },
     inject: [
@@ -337,9 +346,13 @@ export default {
         },
 
         handleMessage(message) {
-            if (message.type !== 'world_state_manager') {
+            if (message.type === 'spice_applied' && (message.data.uid === this.$refs.contextualGenerate.uid || message.data.uid === 'wsm.character_detail')) {
+                console.log("SPICE APPLIED", message.data);
+                this.spiceApplied = `${message.data.context[1]}: ${message.data.spice}`;
+            } else if (message.type !== 'world_state_manager') {
                 return;
             }
+            
             else if (message.action === 'character_detail_updated') {
                 this.dirty = false;
                 this.$emit('require-scene-save');

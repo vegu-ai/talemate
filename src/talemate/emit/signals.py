@@ -38,6 +38,8 @@ ImageGenerated = signal("image_generated")
 
 AutocompleteSuggestion = signal("autocomplete_suggestion")
 
+SpiceApplied = signal("spice_applied")
+
 handlers = {
     "system": SystemMessage,
     "narrator": NarratorMessage,
@@ -66,4 +68,5 @@ handlers = {
     "status": StatusMessage,
     "image_generated": ImageGenerated,
     "autocomplete_suggestion": AutocompleteSuggestion,
+    "spice_applied": SpiceApplied,
 }

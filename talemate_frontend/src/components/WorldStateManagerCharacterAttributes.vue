@@ -64,7 +64,6 @@
                     :context="'character attribute:'+selected" 
 
                     :original="character.base_attributes[selected]"
-
                     :character="character.name"
                     :templates="templates"
                     :generationOptions="generationOptions"

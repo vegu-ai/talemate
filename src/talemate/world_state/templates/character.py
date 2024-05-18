@@ -38,6 +38,7 @@ class Attribute(Template):
         character_name: str,
         apply: bool = True,
         generation_options: GenerationOptions | None = None,
+        **kwargs
     ) -> GeneratedAttribute:
     
         creator = get_agent("creator")
@@ -93,6 +94,7 @@ class Detail(Template):
         character_name: str,
         apply: bool = True,
         generation_options: GenerationOptions | None = None,
+        **kwargs
     ) -> GeneratedDetail:
     
         creator = get_agent("creator")

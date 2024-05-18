@@ -1,10 +1,21 @@
 <template>
-    <ContextualGenerate 
-        :context="'character detail:description'" 
-        :original="character.description"
-        :character="character.name"
-        @generate="content => setAndUpdate(content)"
-    />
+
+    <v-row>
+        <v-col cols="12" md="10" lg="8">
+            <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { generationOptions = opt }" />
+        </v-col>
+        <v-col cols="12" md="2" lg="4">
+            <ContextualGenerate 
+                :context="'character detail:description'" 
+                :original="character.description"
+                :character="character.name"
+                :generationOptions="generationOptions"
+                @generate="content => setAndUpdate(content)"
+            />
+        </v-col>
+    </v-row>
+
+
 
     <v-textarea ref="description" rows="5" auto-grow v-model="character.description"
         :color="dirty ? 'info' : ''"
@@ -20,14 +31,17 @@
 <script>
 
 import ContextualGenerate from './ContextualGenerate.vue';
+import GenerationOptions from './GenerationOptions.vue';
 
 export default {
     name: 'WorldStateManagerCharacterDescription',
     components: {
         ContextualGenerate,
+        GenerationOptions,
     },
     props: {
-        immutableCharacter: Object
+        immutableCharacter: Object,
+        templates: Object,
     },
     inject: [
         'getWebsocket',
@@ -44,6 +58,7 @@ export default {
             dirty: false,
             busy: false,
             updateTimeout: null,
+            generationOptions: {},
         }
     },
     watch: {

@@ -8,7 +8,7 @@ from talemate.instance import get_agent
 from talemate.world_state.manager import (
     WorldStateManager,
 )
-import talemate.world_state.templates as templates
+import talemate.world_state.templates as world_state_templates
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -96,29 +96,30 @@ class UpdatePinPayload(pydantic.BaseModel):
 class RemovePinPayload(pydantic.BaseModel):
     entry_id: str
 
-
+    
 class SaveWorldStateTemplatePayload(pydantic.BaseModel):
-    template: templates.AnnotatedTemplate
+    template: world_state_templates.AnnotatedTemplate
 
 class DeleteWorldStateTemplatePayload(pydantic.BaseModel):
-    template: templates.AnnotatedTemplate
+    template: world_state_templates.AnnotatedTemplate
 
 class ApplyWorldStateTemplatePayload(pydantic.BaseModel):
-    template: templates.AnnotatedTemplate
+    template: world_state_templates.AnnotatedTemplate
     character_name: str = None,
     run_immediately: bool = False,
     
 class ApplyWorldStateTemplatesPayload(pydantic.BaseModel):
-    templates: list[templates.AnnotatedTemplate]
+    templates: list[world_state_templates.AnnotatedTemplate]
     character_name: str = None,
     run_immediately: bool = False,
     source: str | None = None
+    generation_options: world_state_templates.GenerationOptions | None = None
     
 class SaveWorldStateTemplateGroupPayload(pydantic.BaseModel):
-    group: templates.Group
+    group: world_state_templates.Group
 
 class DeleteWorldStateTemplateGroupPayload(pydantic.BaseModel):
-    group: templates.Group
+    group: world_state_templates.Group
     
 class SelectiveCharacterPayload(pydantic.BaseModel):
     name: str
@@ -692,6 +693,7 @@ class WorldStateManagerPlugin:
             callback_done = callback_done,
             character_name = payload.character_name,
             run_immediately = payload.run_immediately,
+            generation_options = payload.generation_options,
         )
         
         self.websocket_handler.queue_put(

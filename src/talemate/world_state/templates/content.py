@@ -1,11 +1,13 @@
 from typing import TYPE_CHECKING
 from talemate.world_state.templates.base import Template, register, log
 import random
+import pydantic
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
     
 __all__ = [
+    "GenerationOptions",
     "Spices",
     "WritingStyle"
 ]
@@ -30,3 +32,8 @@ class WritingStyle(Template):
         return self.formatted(
             "instructions", scene, character_name
         )
+        
+class GenerationOptions(pydantic.BaseModel):
+    spices: Spices | None = None
+    spice_level: float = 0.0
+    writing_style: WritingStyle | None = None

@@ -139,6 +139,7 @@
                                             <WorldStateManagerCharacterDescription 
                                             ref="description" 
                                             @require-scene-save="$emit('require-scene-save')"
+                                            :templates="templates"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
                                         <v-tabs-window-item value="attributes">

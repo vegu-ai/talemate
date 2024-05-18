@@ -38,58 +38,6 @@
 
     <v-sheet class="text-right">
         <v-spacer></v-spacer>
-        <span class="text-caption mr-2 text-muted">Generation Settings</span>
-
-
-        <v-menu>
-            <template v-slot:activator="{ props }">
-                <v-chip size="small"  v-bind="props" label class="mr-2" :color="(generationOptions.writingStyle ? 'highlight5' : 'muted')">
-                    <template v-slot:prepend>
-                        <v-icon class="mr-1">mdi-script-text</v-icon>
-                    </template>
-                    <template v-slot:append>
-                        <v-icon class="ml-1" v-if="generationOptions.writingStyle !== null" @click.stop="generationOptions.writingStyle = null">mdi-close-circle-outline</v-icon>
-                    </template>
-                    {{ generationOptions.writingStyle ? generationOptions.writingStyle.name : "None"}}
-                </v-chip>
-            </template>
-
-            <v-list slim density="compact">
-                <v-list-subheader>Writing Styles</v-list-subheader>
-                <v-list-item v-for="(template, index) in styleTemplates" :key="index" @click="generationOptions.writingStyle = template" :prepend-icon="template.favorite ? 'mdi-star' : 'mdi-script-text'">
-                    <v-list-item-title>{{ template.name }}</v-list-item-title>
-                    <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
-                </v-list-item>
-            </v-list>
-        </v-menu>
-
-        <v-menu>
-            <template v-slot:activator="{ props }">
-                <v-chip size="small" v-bind="props" label class="mr-2" :color="(generationOptions.spices ? 'highlight4': 'muted')">
-                    <template v-slot:prepend>
-                        <v-icon class="mr-1" v-if="generationOptions.spiceLevel == 0.0">mdi-chili-off</v-icon>
-                        <v-icon class="mr-1" v-else-if="generationOptions.spiceLevel >= 0.6">mdi-chili-hot</v-icon>
-                        <v-icon class="mr-1" v-else-if="generationOptions.spiceLevel >= 0.2">mdi-chili-medium</v-icon>
-                        <v-icon class="mr-1" v-else-if="generationOptions.spiceLevel >= 0.0">mdi-chili-mild</v-icon>
-                    </template>
-                    <template v-slot:append>
-                        <v-icon class="ml-3" v-if="generationOptions.spices !== null" @click.stop="generationOptions.spices = null">mdi-close-circle-outline</v-icon>
-                    </template>
-                    {{ generationOptions.spices ? generationOptions.spices.name : "None"}}
-                    <span v-if="generationOptions.spices" class="ml-1 mr-3">{{ spiceLevelFormat(generationOptions.spiceLevel) }}</span>
-                    <v-icon v-if="generationOptions.spices" @click.stop="decreaseSpiceLevel">mdi-minus</v-icon>
-                    <v-icon v-if="generationOptions.spices" @click.stop="increaseSpiceLevel">mdi-plus</v-icon>
-                </v-chip>
-            </template>
-            <v-list slim density="compact">
-                <v-list-subheader>Select spice</v-list-subheader>
-                <v-list-item v-for="(template, index) in spiceTemplates" :key="index" @click="generationOptions.spices = template" :prepend-icon="template.favorite ? 'mdi-star' : 'mdi-chili-mild'">
-                    <v-list-item-title>{{ template.name }}</v-list-item-title>
-                    <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
-                </v-list-item>
-            </v-list>
-        </v-menu>
-
         <v-tooltip class="pre-wrap" :text="tooltipText" >
             <template v-slot:activator="{ props }">
                 <v-btn v-bind="props" color="primary" @click.stop="open" variant="text" prepend-icon="mdi-auto-fix">Generate</v-btn>
@@ -103,6 +51,7 @@ export default {
     name: 'ContextualGenerate',
     props: {
         templates: Object,
+        generationOptions: Object,
         context: {
             type: String,
             required: true
@@ -132,17 +81,16 @@ export default {
             instructions: "",
             withInstructions: false,
             withOriginal: false,
-            generationOptions: {
-                writingStyle: null,
-                spices: null,
-                spiceLevel: 0.1,
-            },
             busy: false,
             uid: null,
         }
     },
     emits: ["generate"],
-    inject: ["getWebsocket", "registerMessageHandler"],
+    inject: [
+        "getWebsocket", 
+        "registerMessageHandler",
+        "unregisterMessageHandler",
+    ],
     computed: {
         tooltipText() {
             if(this.rewriteEnabled)
@@ -150,49 +98,8 @@ export default {
             else
                 return "Generate "+this.context+"\n[+ctrl to provide instructions]";
         },
-        spiceTemplates() {
-
-            if(!this.templates || !this.templates.by_type.spices)
-                return [];
-
-            // return all templates where template_type == 'spices'
-            const templates = Object.values(this.templates.by_type.spices)
-            // order by `favorite`, `name` (double sort)
-            return templates.sort((a, b) => a.favorite == b.favorite ? a.name.localeCompare(b.name) : b.favorite - a.favorite);
-        },
-        styleTemplates() {
-
-            if(!this.templates || !this.templates.by_type.writing_style)
-                return [];
-
-            // return all templates where template_type == 'writing_style'
-            const templates =  Object.values(this.templates.by_type.writing_style)
-            // order by `favorite`, `name` (double sort)
-            return templates.sort((a, b) => a.favorite == b.favorite ? a.name.localeCompare(b.name) : b.favorite - a.favorite);
-        }
     },
     methods: {
-
-        spiceLevelFormat(value) {
-            // render as %
-            return Math.round(value * 100) + "%";
-        },
-
-        increaseSpiceLevel() {
-            this.generationOptions.spiceLevel += 0.1;
-            if(this.generationOptions.spiceLevel > 1)
-                this.generationOptions.spiceLevel = 1;
-            // to two decimal places
-            this.generationOptions.spiceLevel = Math.round(this.generationOptions.spiceLevel * 100) / 100;
-        },
-
-        decreaseSpiceLevel() {
-            this.generationOptions.spiceLevel -= 0.1;
-            if(this.generationOptions.spiceLevel <= 0)
-                this.generationOptions.spiceLevel = 0.1;
-            // to two decimal places
-            this.generationOptions.spiceLevel = Math.round(this.generationOptions.spiceLevel * 100) / 100;
-        },
 
         open(event) {
             this.dialog = true;
@@ -221,6 +128,7 @@ export default {
                 length: this.length,
                 instructions: this.withInstructions ? this.instructions : "",
                 original: this.withOriginal ? this.original : null,
+                generation_options: this.generationOptions,
             }));
         },
 
@@ -240,11 +148,14 @@ export default {
         }
 
     },
-    created() {
+    mounted() {
         this.registerMessageHandler(this.handleMessage);
-        // uuid
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
+    },
+    created() {
         this.uid = uuidv4();
-        // hook click event on child v-textarea
     },
 }
 

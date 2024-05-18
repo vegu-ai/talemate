@@ -14,6 +14,13 @@
         </v-col>
     </v-row>
     <v-divider></v-divider>
+
+    <v-row>
+        <v-col cols="12">
+            <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { generationOptions = opt }" />
+        </v-col>
+    </v-row>
+
     <v-row>
         <v-col cols="4">
 
@@ -60,6 +67,7 @@
 
                     :character="character.name"
                     :templates="templates"
+                    :generationOptions="generationOptions"
 
                     @generate="content => setAndUpdate(selected, content)"
                 />
@@ -109,12 +117,14 @@
 <script>
 import ContextualGenerate from './ContextualGenerate.vue';
 import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
+import GenerationOptions from './GenerationOptions.vue';
 
 export default {
     name: 'WorldStateManagerCharacterAttributes',
     components: {
         ContextualGenerate,
         WorldStateManagerTemplateApplicator,
+        GenerationOptions,
     },
     props: {
         immutableCharacter: Object,
@@ -134,6 +144,7 @@ export default {
             groupsOpen: [],
             source: "wsm.character_attributes",
             templateApplicatorCallback: null,
+            generationOptions: {},
         }
     },
     inject: [
@@ -208,6 +219,7 @@ export default {
                 run_immediately: true,
                 character_name: this.character.name,
                 source: this.source,
+                generation_options: this.generationOptions,
             }));
         },
         

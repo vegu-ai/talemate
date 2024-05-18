@@ -5,8 +5,8 @@
                 <template v-slot:prepend>
                     <v-icon v-if="!busy">mdi-expand-all</v-icon>
                 </template>
-                <v-list-item-title>Apply Selected</v-list-item-title>
-                <v-list-item-subtitle>Apply all selected templates.</v-list-item-subtitle>
+                <v-list-item-title>Generate Selected</v-list-item-title>
+                <v-list-item-subtitle>Generate all selected templates.</v-list-item-subtitle>
             </v-list-item>
             <div>
                 <v-list-group fluid v-for="(group, index) in viableTemplates" :key="index" :value="group.group.uid">

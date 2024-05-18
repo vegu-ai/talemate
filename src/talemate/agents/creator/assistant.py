@@ -2,17 +2,20 @@ import asyncio
 from typing import TYPE_CHECKING, Tuple, Union
 import random
 import pydantic
+import structlog
 
 import talemate.util as util
 from talemate.agents.base import set_processing
 from talemate.emit import emit
 from talemate.prompts import Prompt
-from talemate.world_state.templates import AnnotatedTemplate, Spices, WritingStyle
+from talemate.world_state.templates import AnnotatedTemplate, Spices, WritingStyle, GenerationOptions
 from talemate.instance import get_agent
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
 
+
+log = structlog.get_logger("talemate.creator.assistant")
 
 class ContentGenerationContext(pydantic.BaseModel):
     """
@@ -26,9 +29,7 @@ class ContentGenerationContext(pydantic.BaseModel):
     original: str | None = None
     partial: str = ""
     uid: str | None = None
-    writing_style: WritingStyle | None = None
-    spices: Spices | None = None
-    spice_level: float = 0.0
+    generation_options: GenerationOptions = pydantic.Field(default_factory=GenerationOptions)
     template: AnnotatedTemplate | None = None
 
     @property
@@ -43,23 +44,25 @@ class ContentGenerationContext(pydantic.BaseModel):
     @property
     def spice(self):
         
+        spice_level = self.generation_options.spice_level
+        
         if self.template and not getattr(self.template, "supports_spice", False):
             # template supplied that doesn't support spice
             return ""
         
-        if self.spice_level == 0:
+        if spice_level == 0:
             # no spice
             return ""
         
-        if not self.spices:
+        if not self.generation_options.spices:
             # no spices
             return ""
         
         # randomly determine if we should add spice (0.0 - 1.0)
-        if random.random() > self.spice_level:
+        if random.random() > spice_level:
             return ""
         
-        return self.spices.render(
+        return self.generation_options.spices.render(
             self.scene, self.character
         )
         
@@ -70,11 +73,11 @@ class ContentGenerationContext(pydantic.BaseModel):
             # template supplied that doesn't support style
             return ""
         
-        if not self.writing_style:
+        if not self.generation_options.writing_style:
             # no writing style
             return ""
         
-        return self.writing_style.render(
+        return self.generation_options.writing_style.render(
             self.scene, self.character
         )        
         
@@ -102,6 +105,12 @@ class AssistantMixin:
         Request content from the assistant.
         """
 
+        generation_options = GenerationOptions(
+            spices=spices,
+            spice_level=spice_level,
+            writing_style=writing_style,
+        )
+
         generation_context = ContentGenerationContext(
             context=context,
             instructions=instructions,
@@ -110,9 +119,7 @@ class AssistantMixin:
             original=original,
             partial=partial,
             uid=uid,
-            writing_style=writing_style,
-            spices=spices,
-            spice_level=spice_level,
+            generation_options=generation_options,
             template=template,
         )
 
@@ -138,6 +145,8 @@ class AssistantMixin:
         else:
             kind = "create"
 
+        log.debug(f"Contextual generate: {context_typ} - {context_name}", generation_context=generation_context)
+
         content = await Prompt.request(
             f"creator.contextual-generate",
             self.client,
@@ -155,8 +164,6 @@ class AssistantMixin:
                     if generation_context.character
                     else None
                 ),
-                "spices": generation_context.spices,
-                "writing_style": generation_context.writing_style,
                 "template": generation_context.template,
             },
         )

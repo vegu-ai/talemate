@@ -336,9 +336,18 @@
                                 <v-list slim>
                                     <v-list-item v-for="(spice, index) in template.spices" :key="index">
                                         <template v-slot:prepend>
-                                            <v-icon color="delete" @click.stop="removeSpice(index)">mdi-delete</v-icon>
+                                            <v-icon color="delete" @click.stop="removeSpice(index)">mdi-close-box-outline</v-icon>
                                         </template>
-                                        <v-list-item-title>{{ spice }}</v-list-item-title>
+                                        <v-list-item-title>
+                                            <v-text-field 
+                                                v-model="template.spices[index]" 
+                                                variant="underlined"
+                                                density="compact"
+                                                hide-details
+                                                :color="dirty ? 'info' : ''"
+                                                @update:model-value="queueSaveTemplate">
+                                            </v-text-field>
+                                        </v-list-item-title>
                                     </v-list-item>
                                     <v-list-item>
                                         <v-text-field 

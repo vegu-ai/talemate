@@ -1,7 +1,9 @@
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union
 import pydantic
 from talemate.world_state.templates.base import Template, register, log
+from talemate.world_state.templates.content import Spices, WritingStyle, GenerationOptions
 from talemate.instance import get_agent
+
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -35,6 +37,7 @@ class Attribute(Template):
         scene: "Scene",
         character_name: str,
         apply: bool = True,
+        generation_options: GenerationOptions | None = None,
     ) -> GeneratedAttribute:
     
         creator = get_agent("creator")
@@ -45,12 +48,17 @@ class Attribute(Template):
             log.error("apply_template_character_attribute: character not found", character_name=character_name)
             return
         
+        if not generation_options:
+            generation_options = GenerationOptions()
+        
         response = await creator.contextual_generate_from_args(
             context = f"character attribute:{self.attribute}",
             instructions = self.formatted("instructions", scene, character.name),
             length = 100,
             character = character.name,
-            uid = "wsm.character_attribute"
+            uid = "wsm.character_attribute",
+            template = self,
+            **generation_options.model_dump()
         )
         
         if apply:
@@ -84,6 +92,7 @@ class Detail(Template):
         scene: "Scene",
         character_name: str,
         apply: bool = True,
+        generation_options: GenerationOptions | None = None,
     ) -> GeneratedDetail:
     
         creator = get_agent("creator")
@@ -94,12 +103,17 @@ class Detail(Template):
             log.error("apply_template_character_detail: character not found", character_name=character_name)
             return
         
+        if not generation_options:
+            generation_options = GenerationOptions()
+        
         response = await creator.contextual_generate_from_args(
             context = f"character detail:{self.detail}",
             instructions = self.formatted("instructions", scene, character.name),
             length = 100,
             character = character.name,
-            uid = "wsm.character_detail"
+            uid = "wsm.character_detail",
+            template = self,
+            **generation_options.model_dump()
         )
         
         if apply:

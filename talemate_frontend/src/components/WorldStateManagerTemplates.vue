@@ -542,15 +542,15 @@ export default {
         },
         colorForTemplate(template) {
             if (template.template_type == 'character_attribute') {
-                return 'indigo-lighten-3';
+                return 'highlight1';
             } else if (template.template_type == 'character_detail') {
-                return 'purple-lighten-3';
+                return 'highlight2';
             } else if (template.template_type == 'state_reinforcement') {
-                return 'light-green-lighten-3';
+                return 'highlight3';
             } else if (template.template_type == 'spices') {
-                return 'red-darken-1';
+                return 'highlight4';
             } else if (template.template_type == 'writing_style') {
-                return 'amber-lighten-3';
+                return 'highlight5';
             }
             return 'grey';
         },

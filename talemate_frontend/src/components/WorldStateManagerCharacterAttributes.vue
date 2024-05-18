@@ -59,6 +59,7 @@
                     :original="character.base_attributes[selected]"
 
                     :character="character.name"
+                    :templates="templates"
 
                     @generate="content => setAndUpdate(selected, content)"
                 />

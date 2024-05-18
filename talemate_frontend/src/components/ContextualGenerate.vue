@@ -73,14 +73,12 @@
                         <v-icon class="mr-1" v-else-if="generationOptions.spiceLevel >= 0.0">mdi-chili-mild</v-icon>
                     </template>
                     <template v-slot:append>
-                        <v-icon class="ml-1" v-if="generationOptions.spices !== null" @click.stop="generationOptions.spices = null">mdi-close-circle-outline</v-icon>
+                        <v-icon class="ml-3" v-if="generationOptions.spices !== null" @click.stop="generationOptions.spices = null">mdi-close-circle-outline</v-icon>
                     </template>
                     {{ generationOptions.spices ? generationOptions.spices.name : "None"}}
-                    <span v-if="generationOptions.spices" class="ml-1">
-                        <span class="mr-3">{{ spiceLevelFormat(generationOptions.spiceLevel) }}</span>
-                        <v-icon @click.stop="decreaseSpiceLevel">mdi-minus</v-icon>
-                        <v-icon @click.stop="increaseSpiceLevel">mdi-plus</v-icon>
-                    </span>
+                    <span v-if="generationOptions.spices" class="ml-1 mr-3">{{ spiceLevelFormat(generationOptions.spiceLevel) }}</span>
+                    <v-icon v-if="generationOptions.spices" @click.stop="decreaseSpiceLevel">mdi-minus</v-icon>
+                    <v-icon v-if="generationOptions.spices" @click.stop="increaseSpiceLevel">mdi-plus</v-icon>
                 </v-chip>
             </template>
             <v-list slim density="compact">

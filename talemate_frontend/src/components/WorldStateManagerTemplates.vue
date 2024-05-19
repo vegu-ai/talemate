@@ -111,6 +111,12 @@
                     </v-row>
                 </div>
 
+                
+                <v-alert v-if="template && helpMessages[template.template_type] !== undefined" icon="mdi-information" color="muted" variant="text" density="compact" class="mt-2 mb-2">
+                    {{ helpMessages[template.template_type] }}
+                </v-alert>
+
+
                 <div  v-if="template.template_type === 'state_reinforcement'">
                     <v-row>
                         <v-col cols="12" xl="8" xxl="6">
@@ -251,7 +257,7 @@
                         <v-col cols="12" sm="8" xl="4">
                             <v-text-field 
                                 v-model="template.detail" 
-                                label="Question" 
+                                label="Question / Statement" 
                                 :rules="[v => !!v || 'Name is required']"
                                 :color="dirty ? 'info' : ''"
                                 @update:model-value="queueSaveTemplate"
@@ -429,7 +435,8 @@
 
                 </div>
 
-            </v-form>     
+            </v-form>
+
         </v-card-text>
         <v-card-actions v-if="template.uid">
             <ConfirmActionInline
@@ -446,15 +453,28 @@
     </v-card>
 
     <!-- no template selected -->
-    <v-card v-else-if="template === null && group === null">
-        <v-alert type="info" color="grey" variant="text" icon="mdi-cube-scan">
-            State reinforcement templates are used to quickly (or even automatically) setup
-            common attribues and states you want to track for characters.
-            <br><br>
-            Templates are stored outside of individual games and will be available for all
-            games you run.
-        </v-alert>
-    </v-card>
+    <div v-else-if="template === null && group === null">
+        <v-card>
+            <v-alert type="info" color="grey" variant="text" icon="mdi-cube-scan">
+                Here you can manage templates for the world state manager. Templates are used to faciliate the generation of content for your game. They can be used to define character attributes, character details, writing styles, and automated world or character state tracking.
+                <br><br>
+                Templates are managed in <span class="text-primary"><v-icon size="small">mdi-group</v-icon> groups.</span> Each group can contain multiple templates. When starting out, start by creating a new group and then add templates to it.
+                <br><br>
+                Templates are stored outside of individual games and will be available for all
+                games you run.
+            </v-alert>
+        </v-card>
+        <v-card elevation="7" density="compact" class="mt-2" v-for="(helpMessage, templateType) in helpMessages" :key="templateType">
+            <v-card-title>
+                <v-icon size="small" class="mr-2" :color="colorForTemplate({template_type: templateType})">{{ iconForTemplate({template_type: templateType}) }}</v-icon>
+                {{ toLabel(templateType) }}
+            </v-card-title>
+            <v-card-text class="text-muted">
+                {{ helpMessage }}
+            </v-card-text>
+        </v-card>
+    </div>
+
 </template>
 
 <script>
@@ -519,6 +539,13 @@ export default {
             template: null,
             group: null,
             deferredSelect: null,
+            helpMessages: {
+                state_reinforcement: "State reinforcement templates are used to quickly (or even automatically) setup common attribues and states you want to track for characters or the world itself. They revolve around a question, statement or attribute name that you want to track for a character. The AI will use this template to generate content that matches the query, based on the current progression of the scene.",
+                character_attribute: "Character attribute templates are used to define attributes that a character can have. They can be used to define character traits, skills, or other properties. The AI will use this template to generate content that matches the attribute, based on the current progression of the scene or their backstory.",
+                character_detail: "Character detail templates are used to define details about a character. They generally are longer form questions or statements that can be used to flesh out a character's backstory or personality. The AI will use this template to generate content that matches the detail, based on the current progression of the scene or their backstory.",
+                spices: "Spice collections are used to define a set of instructions that can be applied during the generation of character attributes or details. They can be used to add a bit of randomness or unexpectedness. A template must explicitly upport spice to be able to use a spice collection.",
+                writing_style: "Writing style templates are used to define a writing style that can be applied to the generated content. They can be used to add a specific flavor or tone. A template must explicitly support writing styles to be able to use a writing style template."
+            }
         };
     },
     inject: [

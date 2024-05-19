@@ -1,4 +1,4 @@
-{% block rendered_context %}
+{% if context_aware %}{% block rendered_context %}
 {% include "extra-context.jinja2" %}
 {% if context_typ == 'character attribute' or context_typ == 'character detail' -%}
   {% for other_character in scene.get_characters() -%}
@@ -25,7 +25,7 @@
 {{ character.sheet }}
 {% endif -%}
 <|CLOSE_SECTION|>
-{% endif %}
+{% endif %}{# /character #}{% else %}Content Type: {{ scene.context }}{% endif %}{# /context_aware #}
 <|SECTION:TASK|>
 {#- SET TASK ACTION -#}
 {% if not generation_context.original %}
@@ -34,8 +34,18 @@
   {%- set action_task = "Rewrite the existing" -%}
   Original {{ context_name }}: {{ generation_context.original }}
 {% endif %}
+{# LIST CONTEXT -#}
+{% if context_typ == "list" -%}
+{% if generation_context.original and generation_context.instructions -%}
+  {# determine whether user wants to replace or add to the list -#}
+  {% if query_text_eval("Does the user want to add to the existing list", generation_context.instructions) -%}
+  {% set action_task = "Add to the existing" -%}
+  {% set _ = generation_context.set_state('extend', true) %}
+  {% endif -%}
+{% endif -%}
+{{ action_task }} list of 20 items. The list MUST BE plain text numbered list with one item per line.
 {#- CHARACTER ATTRIBUTE -#}
-{% if context_typ == "character attribute" %}
+{% elif context_typ == "character attribute" %}
 {{ action_task }} "{{ context_name }}" attribute for {{ character_name }}. This must be a general description and not a continuation of the current narrative. Keep it short, similar length to {{ character_name }}'s other attributes in the sheet.
 
 YOUR RESPONSE MUST ONLY CONTAIN THE NEW ATTRIBUTE TEXT.
@@ -59,7 +69,9 @@ Exisiting Dialogue Examples:
 {% for line in character.example_dialogue %}
 {{ line }}
 {% endfor %}
+{#- GENERATE A LIST -#}
 {%- endif %}
+
 
 You must only respond with the generated dialogue example.
 Always contain actions in asterisks. For example, *{{ character_name}} smiles*.
@@ -81,7 +93,13 @@ Use a simple, easy to read writing format.
 {{ generation_context.spice }}
 {{ generation_context.style }}
 <|CLOSE_SECTION|>
-{% if can_coerce -%}
+{% if context_typ == "list" and can_coerce -%}
+  {% if action_task == "Add to the existing" -%}
+{{ set_prepared_response('additional items:\n1.') }}
+  {%- else -%}
+{{ set_prepared_response('items:\n1.') }}
+  {%- endif -%}
+{% elif can_coerce -%}
 {{ bot_token }}
 {%- if context_typ == 'character attribute' -%}
 {{ character_name }}'s {{ context_name }}:{{ generation_context.partial }}

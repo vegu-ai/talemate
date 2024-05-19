@@ -339,6 +339,8 @@
                                     <v-icon size="small" class="mr-2">mdi-chili-mild</v-icon>
                                     Spices
                                 </v-card-title>
+
+
                                 <v-list slim>
                                     <v-list-item v-for="(spice, index) in template.spices" :key="index">
                                         <template v-slot:prepend>
@@ -372,6 +374,28 @@
                                         </v-text-field>
                                     </v-list-item>
                                 </v-list>
+
+                                <v-card-actions>
+                                    <ConfirmActionInline
+                                        v-if="template.spices.length > 0"
+                                        actionLabel="Clear all spices"
+                                        confirmLabel="Confirm removal"
+                                        @confirm="clearSpices"
+                                    />
+                                    <v-spacer></v-spacer>
+                                    <ContextualGenerate 
+                                        ref="contextualGenerateSpices"
+                                        context="list:spices" 
+                                        response-format="json"
+                                        instructions-placeholder="A list of ..."
+                                        default-instructions="Keep it short and simple"
+                                        :requires-instructions="true"
+                                        :context-aware="false"
+                                        :original="template.spices.join('\n')"
+                                        :templates="templates"
+                                        @generate="onSpicesGenerated"
+                                    />
+                                </v-card-actions> 
                             </v-card>
 
 
@@ -480,11 +504,13 @@
 <script>
 
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import ContextualGenerate from './ContextualGenerate.vue';
 
 export default {
     name: 'WorldStateManagerTemplates',
     components: {
         ConfirmActionInline,
+        ContextualGenerate,
     },
     props: {
         immutableTemplates: Object
@@ -505,6 +531,7 @@ export default {
         }
     },
     computed: {
+
     },
     data() {
         return {
@@ -562,6 +589,26 @@ export default {
         'emitEditorState',
     ],
     methods: {
+
+        onSpicesGenerated(spices, context_generation) {
+            if(context_generation.state.extend) {
+                console.log("extending", {spices})
+                // add values that are not already in the list
+                spices.forEach(spice => {
+                    if(!this.template.spices.includes(spice)) {
+                        this.template.spices.push(spice);
+                    }
+                });
+            } else {
+                console.log("replacing", {spices})
+                this.template.spices = spices;
+            }
+            this.queueSaveTemplate();
+        },
+        clearSpices() {
+            this.template.spices = [];
+            this.queueSaveTemplate();
+        },
         iconForTemplate(template) {
             if (template.template_type == 'character_attribute') {
                 return 'mdi-badge-account';

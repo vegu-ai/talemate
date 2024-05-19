@@ -3,8 +3,10 @@ from typing import TYPE_CHECKING, Tuple, Union
 import random
 import pydantic
 import structlog
+import json
 
 import talemate.util as util
+from talemate.util.response import extract_list
 from talemate.agents.base import set_processing
 from talemate.emit import emit
 from talemate.prompts import Prompt
@@ -31,6 +33,8 @@ class ContentGenerationContext(pydantic.BaseModel):
     uid: str | None = None
     generation_options: GenerationOptions = pydantic.Field(default_factory=GenerationOptions)
     template: AnnotatedTemplate | None = None
+    context_aware: bool = True
+    state: dict[str, int | str | float | bool] = pydantic.Field(default_factory=dict)
 
     @property
     def computed_context(self) -> Tuple[str, str]:
@@ -94,7 +98,10 @@ class ContentGenerationContext(pydantic.BaseModel):
         
         return self.generation_options.writing_style.render(
             self.scene, self.character
-        )        
+        )
+        
+    def set_state(self, key: str, value: str | int | float | bool):
+        self.state[key] = value   
         
 
 class AssistantMixin:
@@ -114,7 +121,8 @@ class AssistantMixin:
         writing_style: WritingStyle | None = None,
         spices: Spices | None = None,
         spice_level: float = 0.0,
-        template: AnnotatedTemplate | None = None
+        template: AnnotatedTemplate | None = None,
+        context_aware: bool = True,
     ):
         """
         Request content from the assistant.
@@ -136,6 +144,7 @@ class AssistantMixin:
             uid=uid,
             generation_options=generation_options,
             template=template,
+            context_aware=context_aware,
         )
 
         return await self.contextual_generate(generation_context)
@@ -174,6 +183,7 @@ class AssistantMixin:
                 "context_name": context_name,
                 "can_coerce": self.client.can_be_coerced,
                 "character_name": generation_context.character,
+                "context_aware": generation_context.context_aware,
                 "character": (
                     self.scene.get_character(generation_context.character)
                     if generation_context.character
@@ -185,6 +195,13 @@ class AssistantMixin:
 
         if not generation_context.partial:
             content = util.strip_partial_sentences(content)
+            
+        if generation_context.computed_context[0] == 'list':
+            try:
+                content = json.dumps(extract_list(content), indent=2)
+            except Exception as e:
+                log.warning("Failed to extract list", error=e)
+                content = "[]"
 
         return content.strip().strip("*").strip()
 

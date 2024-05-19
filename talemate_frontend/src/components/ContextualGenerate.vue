@@ -26,8 +26,8 @@
                    </div>
                 </v-alert>
 
-                <v-textarea class="mt-1" v-model="instructions" rows="2" label="Instructions"
-                    hint="Additional instructions for the AI on how to generate the requested content" v-if="withInstructions"  :disabled="busy"></v-textarea>
+                <v-textarea class="mt-1" ref="instructions" v-model="instructions" rows="2" label="Instructions"
+                    hint="Additional instructions for the AI on how to generate the requested content" v-if="withInstructions"  :disabled="busy" :placeholder="instructionsPlaceholder"></v-textarea>
             </v-card-text>
             <v-card-actions>
                 <v-spacer></v-spacer>
@@ -73,6 +73,31 @@ export default {
             type: Boolean,
             required: false,
             default: true
+        },
+        defaultInstructions: {
+            type: String,
+            required: false,
+            default: ""
+        },
+        requiresInstructions: {
+            type: Boolean,
+            required: false,
+            default: false
+        },
+        instructionsPlaceholder: {
+            type: String,
+            required: false,
+            default: ""
+        },
+        responseFormat: {
+            type: String,
+            required: false,
+            default: "text"
+        },
+        contextAware: {
+            type: Boolean,
+            required: false,
+            default: true
         }
     },
     data() {
@@ -106,7 +131,7 @@ export default {
             this.busy = false;
             
             // if ctrl key is pressed, open with instructions
-            this.withInstructions = event.ctrlKey;
+            this.withInstructions = event.ctrlKey || this.requiresInstructions;
             
             // if alt key is pressed, open with original
             this.withOriginal = event.altKey && this.rewriteEnabled;
@@ -114,11 +139,29 @@ export default {
             if (!this.withInstructions) {
 
                 this.generate();
+            } else {
+                this.$nextTick(() => {
+                    this.$refs.instructions.focus();
+                });
             }
         },
 
         generate() {
             this.busy = true;
+
+            let instructions = "";
+
+
+            if(this.withInstructions)
+                instructions =  this.instructions;
+            if(this.defaultInstructions && instructions !== "" && this.instructions !== this.defaultInstructions)
+                instructions = instructions + "\n" + this.defaultInstructions;
+            else if(this.defaultInstructions)
+                instructions = this.defaultInstructions;
+
+            console.log("WITH INSTRUCTIONS", {withInstructions: this.withInstructions, instructions: this.instructions, defaultInstructions: this.defaultInstructions, final: instructions})
+
+
             this.getWebsocket().send(JSON.stringify({
                 type: "assistant",
                 action: "contextual_generate",
@@ -126,9 +169,10 @@ export default {
                 context: this.context,
                 character: this.character,
                 length: this.length,
-                instructions: this.withInstructions ? this.instructions : "",
+                instructions: instructions,
                 original: this.withOriginal ? this.original : null,
                 generation_options: this.generationOptions,
+                context_aware: this.contextAware,
             }));
         },
 
@@ -146,7 +190,14 @@ export default {
 
                 // split message.data.context by : into type and context
 
-                this.$emit("generate", message.data.generated_content);
+                let response = message.data.generated_content;
+
+                if(this.responseFormat === "text") {
+                    this.$emit("generate", response, message.data);
+                } else if(this.responseFormat === "json") {
+                    console.log("EMITTING JSON", JSON.parse(response))
+                    this.$emit("generate", JSON.parse(response), message.data);
+                }
             }
         }
 

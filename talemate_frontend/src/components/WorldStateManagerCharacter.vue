@@ -1,4 +1,5 @@
 <template>
+
     <v-card flat>
 
         <div v-if="selected !== null && character">
@@ -8,7 +9,17 @@
                 <v-chip size="x-small" v-if="character.is_player === false" color="warning" label>AI</v-chip>
                 <v-chip size="x-small" v-if="character.is_player === true" color="info" label>Player</v-chip>
                 <v-chip size="x-small" class="ml-1" v-if="character.active === true && character.is_player === false" color="success" label>Active</v-chip>
-        
+                
+                <v-tooltip text="Change the name color for this character.">
+                    <template v-slot:activator="{ props }">
+                        <v-chip v-bind="props" size="x-small" label class="ml-1" :style="`color: ${character.color}`" prepend-icon="mdi-brush" @click.stop="characterColorPicker=true" variant="tonal">{{  character.color  }}</v-chip>
+                    </template>
+                </v-tooltip>
+
+
+                <v-dialog v-model="characterColorPicker" scrollable width="300">
+                    <v-color-picker v-model="character.color" @update:model-value="onCharacterColorChange"></v-color-picker>
+                </v-dialog>
             </v-card-title>
 
             <v-divider></v-divider>
@@ -229,6 +240,7 @@ export default {
             confirmDelete: null,
             deleteBusy: false,
             coverImageBusy: false,
+            characterColorPicker: false,
         }
     },
     emits:[
@@ -236,7 +248,6 @@ export default {
         'selected-character',
     ],
     methods: {
-
         reset() {
             this.selected = null;
             this.character = null;
@@ -256,6 +267,15 @@ export default {
             this.$nextTick(() => {
                 this.selected = character.name;
             });
+        },
+
+        onCharacterColorChange() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'update_character_color',
+                name: this.character.name,
+                color: this.character.color,
+            }));
         },
 
         requestCharacter(name) {

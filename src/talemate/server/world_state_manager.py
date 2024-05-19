@@ -24,6 +24,9 @@ class UpdateCharacterDetailPayload(pydantic.BaseModel):
     detail: str
     value: str
 
+class UpdateCharacterColorPayload(pydantic.BaseModel):
+    name: str
+    color: str
 
 class SetCharacterDetailReinforcementPayload(pydantic.BaseModel):
     name: str
@@ -221,6 +224,26 @@ class WorldStateManagerPlugin:
                 },
             }
         )
+
+    async def handle_update_character_color(self, data):
+        payload = UpdateCharacterColorPayload(**data)
+
+        await self.world_state_manager.update_character_color(
+            payload.name, payload.color
+        )
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "character_color_updated",
+                "data": payload.model_dump(),
+            }
+        )
+
+        # resend character details
+        await self.handle_get_character_details({"name": payload.name})
+        await self.signal_operation_done()
+        self.scene.emit_status()
 
     async def handle_update_character_attribute(self, data):
         payload = UpdateCharacterAttributePayload(**data)

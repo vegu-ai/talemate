@@ -46,6 +46,7 @@ class CharacterDetails(pydantic.BaseModel):
     reinforcements: dict[str, Reinforcement] = {}
     actor: CharacterActor = pydantic.Field(default_factory=CharacterActor)
     cover_image: Union[str, None] = None
+    color: Union[str, None] = None
 
 
 class World(pydantic.BaseModel):
@@ -156,6 +157,7 @@ class WorldStateManager:
                 dialogue_instructions=character.dialogue_instructions,
             ),
             cover_image=character.cover_image,
+            color=character.color,
         )
 
         # sorted base attributes
@@ -292,6 +294,22 @@ class WorldStateManager:
         """
         character = self.scene.get_character(character_name)
         await character.set_description(description)
+
+    async def update_character_color(self, character_name: str, color: str):
+        """
+        Updates the color of a character to a new value.
+
+        Arguments:
+            character_name: The name of the character whose color is to be updated.
+            color: The new color value for the character.
+        """
+        character = self.scene.get_character(character_name)
+        
+        if not character:
+            log.error("character not found", character_name=character_name)
+            return
+        
+        character.set_color(color)
 
     async def update_character_actor(
         self,

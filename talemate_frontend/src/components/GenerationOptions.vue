@@ -39,14 +39,22 @@
                     </template>
                     {{ generationOptions.spices ? generationOptions.spices.name : "Spice"}}
                     <span v-if="generationOptions.spices" class="ml-1 mr-3">{{ spiceLevelFormat(generationOptions.spice_level) }}</span>
-                    <v-icon v-if="generationOptions.spices" @click.stop="decreaseSpiceLevel">mdi-minus</v-icon>
-                    <v-icon v-if="generationOptions.spices" @click.stop="increaseSpiceLevel">mdi-plus</v-icon>
+                    <v-tooltip text="ctrl+click to reduce spice chance to minimum" v-if="generationOptions.spices" location="top">
+                        <template v-slot:activator="{ props }">
+                            <v-icon v-bind="props" @click.ctrl.stop="generationOptions.spice_level = 0.1" @click.stop="decreaseSpiceLevel">mdi-minus</v-icon>
+                        </template>
+                    </v-tooltip>
+                    <v-tooltip text="ctrl+click to increase spice chance to maximum" v-if="generationOptions.spices" location="top">
+                        <template v-slot:activator="{ props }">
+                            <v-icon v-bind="props" @click.ctrl.stop="generationOptions.spice_level = 1" @click.stop="increaseSpiceLevel">mdi-plus</v-icon>
+                        </template>
+                    </v-tooltip>
                 </v-chip>
             </template>
             <v-list slim density="compact">
                 <v-list-subheader>Select spice</v-list-subheader>
                 <p class="text-caption text-muted mb-2 ml-4 mr-4">Spice collections can be added in <v-chip size="small" variant="text" class="text-primary" @click="showManagerEditor('templates')" prepend-icon="mdi-cube-scan">templates</v-chip></p>
-                <v-list-item v-for="(template, index) in spiceTemplates" :key="index" @click="generationOptions.spices = template" :prepend-icon="template.favorite ? 'mdi-star' : 'mdi-chili-mild'">
+                <v-list-item v-for="(template, index) in spiceTemplates" :key="index" @click="generationOptions.spices = template" :prepend-icon="template.favorite ? 'mdi-star' : 'mdi-chili-mild'" @click.ctrl="generationOptions.spice_level = 1">
                     <v-list-item-title>{{ template.name }}</v-list-item-title>
                     <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
                 </v-list-item>

@@ -6,10 +6,12 @@
         </v-col>
         <v-col cols="12" md="2" lg="4">
             <ContextualGenerate 
+                ref="contextualGenerate"
                 :context="'character detail:description'" 
                 :original="character.description"
                 :character="character.name"
                 :generationOptions="generationOptions"
+                :templates="templates"
                 @generate="content => setAndUpdate(content)"
             />
         </v-col>
@@ -26,7 +28,17 @@
 
         @update:model-value="queueUpdate"
         label="Description"
-        :hint="'A short description of the character. '+autocompleteInfoMessage(busy)"></v-textarea>
+        :hint="'A short description of the character. '+autocompleteInfoMessage(busy)">
+    </v-textarea>
+
+    <v-snackbar color="grey-darken-4" location="top" v-model="spiceApplied" :timeout="5000" max-width="400" multi-line>
+        <div class="text-caption text-highlight4">
+            <v-icon color="highlight4">mdi-chili-mild</v-icon>
+            Spice applied!
+        </div>
+        {{ spiceAppliedDetail }}
+    </v-snackbar>
+
 </template>
 <script>
 
@@ -48,6 +60,7 @@ export default {
         'autocompleteInfoMessage',
         'autocompleteRequest',
         'registerMessageHandler',
+        'unregisterMessageHandler',
     ],
     emits:[
         'require-scene-save'
@@ -59,6 +72,8 @@ export default {
             busy: false,
             updateTimeout: null,
             generationOptions: {},
+            spiceApplied: false,
+            spiceAppliedDetail: null,
         }
     },
     watch: {
@@ -114,17 +129,24 @@ export default {
         },
 
         handleMessage(message) {
-            if (message.type !== 'world_state_manager') {
+            if (message.type === 'spice_applied' && message.data.uid === this.$refs.contextualGenerate.uid) {
+                this.spiceAppliedDetail = `${message.data.context[1]}: ${message.data.spice}`;
+                this.spiceApplied = true;
+            } else if (message.type !== 'world_state_manager') {
                 return;
             }
+
             if (message.action === 'character_description_updated') {
                 this.dirty = false;
                 this.$emit('require-scene-save');
             }
         }
     },
-    created() {
+    mounted() {
         this.registerMessageHandler(this.handleMessage);
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
     }
 }
 

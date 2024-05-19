@@ -134,12 +134,12 @@
 
         </v-col>
     </v-row>
-    <v-snackbar color="grey-darken-4" location="top" position v-model="spiceApplied" :timeout="5000" max-width="400" multi-line>
+    <v-snackbar color="grey-darken-4" location="top" v-model="spiceApplied" :timeout="5000" max-width="400" multi-line>
         <div class="text-caption text-highlight4">
             <v-icon color="highlight4">mdi-chili-mild</v-icon>
             Spice applied!
         </div>
-        {{ spiceApplied }}
+        {{ spiceAppliedDetail }}
     </v-snackbar>
 </template>
 
@@ -174,7 +174,8 @@ export default {
             templateApplicatorCallback: null,
             source: "wsm.character_details",
             generationOptions: {},
-            spiceApplied: null,
+            spiceApplied: false,
+            spiceAppliedDetail: null,
         }
     },
     inject: [
@@ -348,7 +349,8 @@ export default {
         handleMessage(message) {
             if (message.type === 'spice_applied' && (message.data.uid === this.$refs.contextualGenerate.uid || message.data.uid === 'wsm.character_detail')) {
                 console.log("SPICE APPLIED", message.data);
-                this.spiceApplied = `${message.data.context[1]}: ${message.data.spice}`;
+                this.spiceAppliedDetail = `${message.data.context[1]}: ${message.data.spice}`;
+                this.spiceApplied = true;
             } else if (message.type !== 'world_state_manager') {
                 return;
             }

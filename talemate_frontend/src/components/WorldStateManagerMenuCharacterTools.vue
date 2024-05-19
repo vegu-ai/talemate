@@ -128,6 +128,7 @@ export default {
                     generation_context: {
                         enabled: true,
                         instructions: "",
+                        generateAttributes: true,
                     },
                     cancel: () => {
                         this.newCharacter = null;

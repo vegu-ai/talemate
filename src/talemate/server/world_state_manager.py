@@ -130,6 +130,8 @@ class CreateCharacterPayload(pydantic.BaseModel):
     name: str | None = None
     description: str | None = None
     is_player: bool = False
+    generate_attributes: bool = False
+    generation_options: world_state_templates.GenerationOptions | None = None
     
 
 class WorldStateManagerPlugin:
@@ -858,7 +860,9 @@ class WorldStateManagerPlugin:
             instructions = payload.instructions,
             name = payload.name,
             description = payload.description,
-            is_player = payload.is_player
+            is_player = payload.is_player,
+            generate_attributes = payload.generate_attributes,
+            generation_options=payload.generation_options,
         )
         
         self.websocket_handler.queue_put(

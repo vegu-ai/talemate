@@ -151,6 +151,26 @@ class Character:
             return ""
 
         return random.choice(self.example_dialogue)
+        
+    def set_color(self, color:str = None):
+        # if no color provided, chose a random color
+        
+        if color is None:
+            color = random.choice(
+                [
+                    "#F08080",
+                    "#FFD700",
+                    "#90EE90",
+                    "#ADD8E6",
+                    "#DDA0DD",
+                    "#FFB6C1",
+                    "#FAFAD2",
+                    "#D3D3D3",
+                    "#B0E0E6",
+                    "#FFDEAD",
+                ]
+            )
+        self.color = color
 
     def set_cover_image(self, asset_id: str, initial_only: bool = False):
         if self.cover_image and initial_only:

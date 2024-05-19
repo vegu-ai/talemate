@@ -7,6 +7,8 @@
                         <v-card-text>
                             <v-checkbox :disabled="busy" v-model="character.generation_context.enabled" label="Enable AI Generation"></v-checkbox>
                             <div v-if="character.generation_context.enabled">
+                                <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { character.generationOptions = opt }" />
+
                                 <v-textarea 
                                     :disabled="busy" 
                                     v-model="character.generation_context.instructions" 
@@ -28,9 +30,15 @@
                                 :hint="autocompleteInfoMessage(busy)"
                                 @keyup.ctrl.enter.stop="sendAutocompleteRequest"
                                 ></v-textarea>
-                            <v-checkbox density="compact" :disabled="!canBePlayer || busy" v-model="character.is_player" label="Controlled by the player"></v-checkbox>
+
+                            <div v-if="character.generation_context.enabled">
+                                <v-checkbox  density="compact" :disabled="busy" v-model="character.generation_context.generateAttributes" label="Generate attributes" messages="Generate a few attributes based on the instructions and the description."></v-checkbox>
+                            </div>
+
+                            <v-checkbox density="compact" :disabled="!canBePlayer || busy" v-model="character.is_player" label="Controlled by the player" hide-details></v-checkbox>
+
                             <p class="text-caption text-muted" v-if="!canBePlayer">
-                                There already is a player character in this scene. Currently only one player character is supported. (May change in the future.)
+                                There already is a player character in this scene. Currently only one player character is supported. (Will change in the future.)
                             </p>
                         </v-card-text>
                     </v-card>
@@ -61,11 +69,13 @@
 <script>
 
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import GenerationOptions from './GenerationOptions.vue';
 
 export default {
     name: "WorldStateManagerCharacterCreator",
     components: {
         ConfirmActionInline,
+        GenerationOptions,
     },
     props: {
         scene: Object,
@@ -91,9 +101,13 @@ export default {
                 generation_context: {
                     enabled: true,
                     instructions: "",
+                    generateAttributes: true,
                 },
                 description: "",
                 name: "",
+                generationOptions: {
+                    spice_level: 1.0,
+                },
             },
         }
     },
@@ -145,7 +159,9 @@ export default {
                 name: this.character.name,
                 description: this.character.description,
                 is_player: this.character.is_player,
+                generate_attributes: this.character.generation_context.generateAttributes,
                 instructions: this.character.generation_context.instructions,
+                generation_options: this.character.generationOptions,
             }));
         },
         handleMessage(message) {

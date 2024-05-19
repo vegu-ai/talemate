@@ -19,6 +19,14 @@
                     {{ context }}
                 </v-alert>
 
+                <v-alert v-if="generationOptions.writing_style" density="compact" icon="mdi-script-text" variant="text" color="grey">
+                    Writing Style: {{ generationOptions.writing_style.name }}
+                </v-alert>
+
+                <v-alert v-if="generationOptions.spices && generationOptions.spices.spices.length > 0" density="compact" icon="mdi-chili-mild" variant="text" color="grey">
+                    Spice collection: {{ generationOptions.spices.name }}
+                </v-alert>
+
                 <v-alert dense icon="mdi-pencil" variant="text" color="grey" v-if="original && withOriginal">
                    <div class="original-overflow">
                      <span class="text-grey-lighten-2">[Rewriting]</span> {{ original }}

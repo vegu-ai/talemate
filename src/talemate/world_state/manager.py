@@ -746,6 +746,8 @@ class WorldStateManager:
         is_player: bool = False,
         description: str = "",
         active: bool = False,
+        generate_attributes: bool = True,
+        generation_options: world_state_templates.GenerationOptions = None,
     ) -> "Character":
         """
         Creates a new character in the scene.
@@ -765,6 +767,10 @@ class WorldStateManager:
             raise ValueError("You need to specify a name for the character.")
         
         creator = get_agent("creator")
+        world_state = get_agent("world_state")
+        
+        if not generation_options:
+            generation_options = world_state_templates.GenerationOptions()
         
         if not name and generate:
             name = await creator.contextual_generate_from_args(
@@ -772,7 +778,7 @@ class WorldStateManager:
                 instructions=f"You are creating: {instructions if instructions else 'A new character'}. Only respond with the character's name.",
                 length=25,
                 uid="wsm.create_character",
-                character="the character"
+                character="the character",
             )
             
         if not description and generate:
@@ -781,14 +787,27 @@ class WorldStateManager:
                 instructions=instructions,
                 length=100,
                 uid="wsm.create_character",
-                character=name
+                character=name,
+                **generation_options.model_dump()
             )
-            
+        
+        if generate_attributes:
+            base_attributes = await world_state.extract_character_sheet(
+                name=name, text=description
+            )
+        else:
+            base_attributes = {}
+        
+        # create character instance
         character = self.scene.Character(
             name = name,
             description = description,
+            base_attributes=base_attributes,
             is_player=is_player
         )
+        
+        # set random color for their name
+        character.set_color()
         
         actor = self.scene.Actor(
             character,

@@ -143,6 +143,9 @@ export default {
 
                 this.dialog = false;
                 console.log("GENERATED", message)
+
+                // split message.data.context by : into type and context
+
                 this.$emit("generate", message.data.generated_content);
             }
         }

@@ -94,7 +94,7 @@ class WorldStateManager:
         scene = self.scene
         if not hasattr(scene, "_world_state_templates"):
             scene._world_state_templates = world_state_templates.Collection.load()
-            log.debug("loaded world state templates", templates=scene._world_state_templates)
+            # log.debug("loaded world state templates", templates=scene._world_state_templates)
         return scene._world_state_templates
 
     def __init__(self, scene: "Scene"):

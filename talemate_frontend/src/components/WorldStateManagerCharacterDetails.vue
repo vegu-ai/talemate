@@ -294,6 +294,11 @@ export default {
                 return;
             }
 
+            // if value == "$DELETE", blank it out
+            if (this.character.details[name] === "$DELETE") {
+                this.character.details[name] = "";
+            }
+
             return this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'update_character_detail',
@@ -304,6 +309,7 @@ export default {
         },
 
         setAndUpdate(name, value) {
+            console.log("Setting and updating", name, value)
             this.character.details[name] = value;
             this.update(name);
         },
@@ -320,7 +326,7 @@ export default {
 
         remove(name) {
             // set value to blank
-            this.character.details[name] = "";
+            this.character.details[name] = "$DELETE";
             this.removeConfirm = false;
             // send update
             this.update(name);

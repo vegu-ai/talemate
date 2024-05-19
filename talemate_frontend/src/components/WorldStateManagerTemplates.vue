@@ -112,7 +112,7 @@
                 </div>
 
                 
-                <v-alert v-if="template && helpMessages[template.template_type] !== undefined" icon="mdi-information" color="muted" variant="text" density="compact" class="mt-2 mb-2">
+                <v-alert v-if="template && helpMessages[template.template_type] !== undefined" :icon="iconForTemplate(template)" color="muted" variant="text" density="compact" class="mt-2 mb-2">
                     {{ helpMessages[template.template_type] }}
                 </v-alert>
 

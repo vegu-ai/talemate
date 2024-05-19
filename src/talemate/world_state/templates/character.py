@@ -51,10 +51,13 @@ class Attribute(Template):
         
         if not generation_options:
             generation_options = GenerationOptions()
+            
+        formatted_attribute = self.formatted("attribute", scene, character.name)
+        formatted_instructions = self.formatted("instructions", scene, character.name)
         
         response = await creator.contextual_generate_from_args(
-            context = f"character attribute:{self.attribute}",
-            instructions = self.formatted("instructions", scene, character.name),
+            context = f"character attribute:{formatted_attribute}",
+            instructions = formatted_instructions,
             length = 100,
             character = character.name,
             uid = "wsm.character_attribute",
@@ -63,10 +66,10 @@ class Attribute(Template):
         )
         
         if apply:
-            await character.set_base_attribute(self.attribute, response)
+            await character.set_base_attribute(formatted_attribute, response)
         
         return GeneratedAttribute(
-            attribute = self.formatted("attribute", scene, character.name),
+            attribute = formatted_attribute,
             value = response,
             character = character.name,
             template = self
@@ -108,9 +111,12 @@ class Detail(Template):
         if not generation_options:
             generation_options = GenerationOptions()
         
+        formatted_detail = self.formatted("detail", scene, character.name)
+        formatted_instructions = self.formatted("instructions", scene, character.name)
+        
         response = await creator.contextual_generate_from_args(
-            context = f"character detail:{self.detail}",
-            instructions = self.formatted("instructions", scene, character.name),
+            context = f"character detail:{formatted_detail}",
+            instructions = formatted_instructions,
             length = 100,
             character = character.name,
             uid = "wsm.character_detail",
@@ -119,10 +125,10 @@ class Detail(Template):
         )
         
         if apply:
-            await character.set_detail(self.detail, response)
+            await character.set_detail(formatted_detail, response)
         
         return GeneratedDetail(
-            detail = self.formatted("detail", scene, character.name),
+            detail = formatted_detail,
             value = response,
             character = character.name,
             template = self

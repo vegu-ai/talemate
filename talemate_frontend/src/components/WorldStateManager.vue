@@ -221,6 +221,7 @@ export default {
             requestTemplates: this.requestTemplates,
             loadContextDBEntry: this.loadContextDBEntry,
             emitEditorState: this.emitEditorState,
+            showManagerEditor: this.show,
         }
     },
     inject: [

@@ -17,6 +17,7 @@
 
             <v-list slim density="compact">
                 <v-list-subheader>Writing Styles</v-list-subheader>
+                <p class="text-caption text-muted mb-2 ml-4 mr-4">Writing styles can be added in <v-chip size="small" variant="text" class="text-primary" @click="showManagerEditor('templates')" prepend-icon="mdi-cube-scan">templates</v-chip></p>
                 <v-list-item v-for="(template, index) in styleTemplates" :key="index" @click="generationOptions.writing_style = template" :prepend-icon="template.favorite ? 'mdi-star' : 'mdi-script-text'">
                     <v-list-item-title>{{ template.name }}</v-list-item-title>
                     <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
@@ -44,6 +45,7 @@
             </template>
             <v-list slim density="compact">
                 <v-list-subheader>Select spice</v-list-subheader>
+                <p class="text-caption text-muted mb-2 ml-4 mr-4">Spice collections can be added in <v-chip size="small" variant="text" class="text-primary" @click="showManagerEditor('templates')" prepend-icon="mdi-cube-scan">templates</v-chip></p>
                 <v-list-item v-for="(template, index) in spiceTemplates" :key="index" @click="generationOptions.spices = template" :prepend-icon="template.favorite ? 'mdi-star' : 'mdi-chili-mild'">
                     <v-list-item-title>{{ template.name }}</v-list-item-title>
                     <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
@@ -69,7 +71,7 @@ export default {
         }
     },
     emits: ["change"],
-    inject: ["getWebsocket", "registerMessageHandler", "unregisterMessageHandler"],
+    inject: ["getWebsocket", "registerMessageHandler", "unregisterMessageHandler", "showManagerEditor"],
     watch:{
         generationOptions: {
             deep: true,
@@ -119,6 +121,9 @@ export default {
         }
     },
     methods: {
+        openTemplates() {
+            this.showManagerEditor("templates");
+        },
         spiceLevelFormat(value) {
             // render as %
             return Math.round(value * 100) + "%";

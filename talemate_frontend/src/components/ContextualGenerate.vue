@@ -59,7 +59,11 @@ export default {
     name: 'ContextualGenerate',
     props: {
         templates: Object,
-        generationOptions: Object,
+        generationOptions: {
+            type: Object,
+            required: false,
+            default: () => ({})
+        },
         context: {
             type: String,
             required: true

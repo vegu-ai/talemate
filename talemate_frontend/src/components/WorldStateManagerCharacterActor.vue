@@ -47,12 +47,24 @@
             </div>
 
             <div v-else-if="tab == 'examples'">
-                <ContextualGenerate 
-                    :context="'character dialogue:'" 
-                    :character="character.name"
-                    :rewrite-enabled="false"
-                    @generate="content => { dialogueExamples.push(content); queueUpdateCharacterActor(); }"
-                />
+
+                <v-row no-gutters>
+                    <v-col cols="12" md="9">
+                        <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { generationOptions = opt }" />
+                    </v-col>
+                    <v-col cols="12" md="3">
+                        <ContextualGenerate 
+                            ref="contextualGenerate"
+                            :context="'character dialogue:'" 
+                            :character="character.name"
+                            :rewrite-enabled="false"
+                            :generation-options="generationOptions"
+                            @generate="content => { dialogueExamples.push(content); queueUpdateCharacterActor(); }"
+                        />
+                    </v-col>
+                </v-row>
+
+
                 <v-text-field v-model="dialogueExample" label="Add Dialogue Example" @keyup.enter="dialogueExamples.push(dialogueExample); dialogueExample = ''; queueUpdateCharacterActor();" dense></v-text-field>
                 <v-list density="compact" nav>
                     <v-list-item v-for="(example, index) in dialogueExamplesWithNameStripped" :key="index">
@@ -70,16 +82,25 @@
 
         </v-col>
     </v-row>
+    <v-snackbar color="grey-darken-4" location="top" v-model="spiceApplied" :timeout="5000" max-width="400" multi-line>
+        <div class="text-caption text-highlight4">
+            <v-icon color="highlight4">mdi-chili-mild</v-icon>
+            Spice applied!
+        </div>
+        {{ spiceAppliedDetail }}
+    </v-snackbar>
 </template>
 
 <script>
 
 import ContextualGenerate from './ContextualGenerate.vue';
+import GenerationOptions from './GenerationOptions.vue';
 
 export default {
     name: 'WorldStateManagerCharacterActor',
     components: {
         ContextualGenerate,
+        GenerationOptions,
     },
     data() {
         return {
@@ -90,6 +111,9 @@ export default {
             dialogueInstructionsDirty: false,
             dialogueInstructionsBusy: false,
             updateCharacterActorTimeout: null,
+            generationOptions: {},
+            spiceApplied: false,
+            spiceAppliedDetail: "",
         }
     },
     computed: {
@@ -104,6 +128,7 @@ export default {
     },
     props: {
         character: Object,
+        templates: Object,
     },
     inject: ['getWebsocket', 'registerMessageHandler'],
     methods: {
@@ -136,8 +161,11 @@ export default {
         },
         
         handleMessage(data) {
+            if (data.type === 'spice_applied' && data.data.uid === this.$refs.contextualGenerate.uid) {
+                this.spiceAppliedDetail = `${data.data.spice}`;
+                this.spiceApplied = true;
+            }
             if(data.type === 'world_state_manager') {
-                console.log("WORLD STATE MANAGER", data);
                 if(data.action === 'character_actor_updated') {
                     this.dialogueInstructionsDirty = false;
                 } else if (data.action === 'character_dialogue_instructions_generated') {

@@ -179,6 +179,7 @@
                                             <WorldStateManagerCharacterActor
                                             ref="reinforcements" 
                                             @require-scene-save="$emit('require-scene-save')"
+                                            :templates="templates"
                                             :character="character" />
                                         </v-tabs-window-item>
                                     </v-tabs-window>

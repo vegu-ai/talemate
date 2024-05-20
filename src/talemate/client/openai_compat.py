@@ -20,6 +20,7 @@ class Defaults(pydantic.BaseModel):
     max_token_length: int = 8192
     model: str = ""
     api_handles_prompt_template: bool = False
+    double_coercion: str = None
 
 
 class ClientConfig(BaseClientConfig):
@@ -121,8 +122,6 @@ class OpenAICompatibleClient(ClientBase):
         """
         Generates text from the given prompt and parameters.
         """
-        human_message = {"role": "user", "content": prompt.strip()}
-
         self.log.debug("generate", prompt=prompt[:128] + " ...", parameters=parameters)
         
         parameters["prompt"] = prompt
@@ -157,6 +156,12 @@ class OpenAICompatibleClient(ClientBase):
             self.api_key = kwargs["api_key"]
         if "api_handles_prompt_template" in kwargs:
             self.api_handles_prompt_template = kwargs["api_handles_prompt_template"]
+        # TODO: why isn't this calling super()?
+        if "enabled" in kwargs:
+            self.enabled = bool(kwargs["enabled"])
+
+        if "double_coercion" in kwargs:
+            self.double_coercion = kwargs["double_coercion"]
 
         log.warning("reconfigure", kwargs=kwargs)
 

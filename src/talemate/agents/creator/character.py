@@ -140,6 +140,12 @@ class CharacterCreatorMixin:
         example_callback: Callable = lambda example: None,
         rules_callback: Callable = lambda rules: None,
     ):
+        """
+        All of this functionality has been moved to ContextualGenerate
+        Keeping this here for now for backwards compatibility with
+        the legacy creative toolset.
+        """
+        
         dialogue_rules = await Prompt.request(
             f"creator.character-dialogue-rules",
             self.client,

@@ -183,6 +183,11 @@ class WorldStateManagerPlugin:
         character_details = await self.world_state_manager.get_character_details(
             data["name"]
         )
+        
+        if not character_details:
+            log.error("Character not found", name=data["name"])
+            return
+        
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",

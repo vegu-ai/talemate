@@ -10,7 +10,7 @@
                 <v-chip size="x-small" v-if="character.is_player === true" color="info" label>Player</v-chip>
                 <v-chip size="x-small" class="ml-1" v-if="character.active === true && character.is_player === false" color="success" label>Active</v-chip>
                 
-                <v-tooltip text="Change the name color for this character.">
+                <v-tooltip text="Change the name color for this character." v-if="!character.is_new">
                     <template v-slot:activator="{ props }">
                         <v-chip v-bind="props" size="x-small" label class="ml-1" :style="`color: ${character.color}`" prepend-icon="mdi-brush" @click.stop="characterColorPicker=true" variant="tonal">{{  character.color  }}</v-chip>
                     </template>

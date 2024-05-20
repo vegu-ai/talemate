@@ -127,6 +127,9 @@ export default {
         character: Object,
         templates: Object,
     },
+    emits: [
+        'require-scene-save'
+    ],
     inject: ['getWebsocket', 'registerMessageHandler'],
     methods: {
 

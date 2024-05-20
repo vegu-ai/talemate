@@ -196,12 +196,22 @@ class AssistantMixin:
         if not generation_context.partial:
             content = util.strip_partial_sentences(content)
             
-        if generation_context.computed_context[0] == 'list':
+        
+            
+            
+        if context_typ == 'list':
             try:
                 content = json.dumps(extract_list(content), indent=2)
             except Exception as e:
                 log.warning("Failed to extract list", error=e)
                 content = "[]"
+        elif context_typ == 'character dialogue':
+            if not content.startswith(generation_context.character + ":"):
+                content = generation_context.character + ": " + content
+            content = util.strip_partial_sentences(content)
+            content = util.ensure_dialog_format(content, talking_character=generation_context.character)
+            return content
+
 
         return content.strip().strip("*").strip()
 

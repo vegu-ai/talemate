@@ -1,5 +1,5 @@
 import urllib
-
+import random
 import pydantic
 import structlog
 from openai import AsyncOpenAI, NotFoundError, PermissionDeniedError
@@ -83,13 +83,17 @@ class OpenAICompatibleClient(ClientBase):
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
 
-        keys = list(parameters.keys())
+        if "repetition_penalty" in parameters:
+            parameters["presence_penalty"] = parameters.pop(
+                "repetition_penalty"
+            )
 
-        valid_keys = ["temperature", "top_p", "max_tokens"]
+        allowed_params = ["max_tokens", "presence_penalty", "top_p", "temperature"]
 
-        for key in keys:
-            if key not in valid_keys:
-                del parameters[key]
+        # drop unsupported params
+        for param in list(parameters.keys()):
+            if param not in allowed_params:
+                del parameters[param]
 
     def prompt_template(self, system_message: str, prompt: str):
 
@@ -120,13 +124,16 @@ class OpenAICompatibleClient(ClientBase):
         human_message = {"role": "user", "content": prompt.strip()}
 
         self.log.debug("generate", prompt=prompt[:128] + " ...", parameters=parameters)
+        
+        parameters["prompt"] = prompt
 
         try:
-            response = await self.client.chat.completions.create(
-                model=self.model_name, messages=[human_message], **parameters
+            response = await self.client.completions.create(
+                model=self.model_name, **parameters
             )
 
-            return response.choices[0].message.content
+            log.debug("generate response", response=response)
+            return response.choices[0].text
         except PermissionDeniedError as e:
             self.log.error("generate error", e=e)
             emit("status", message="Client API: Permission Denied", status="error")
@@ -155,3 +162,25 @@ class OpenAICompatibleClient(ClientBase):
         log.warning("reconfigure", kwargs=kwargs)
 
         self.set_client(**kwargs)
+
+    def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
+        """
+        adjusts temperature and repetition_penalty
+        by random values using the base value as a center
+        """
+
+        temp = prompt_config["temperature"]
+        
+        if "frequency_penalty" in prompt_config:
+            rep_pen_key = "frequency_penalty"
+        else:
+            rep_pen_key = "repetition_penalty"
+        
+        rep_pen = prompt_config[rep_pen_key]
+
+        min_offset = offset * 0.3
+
+        prompt_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
+        prompt_config[rep_pen_key] = random.uniform(
+            rep_pen + min_offset * 0.3, rep_pen + offset * 0.3
+        )

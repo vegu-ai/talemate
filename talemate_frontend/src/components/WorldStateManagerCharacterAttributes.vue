@@ -62,6 +62,7 @@
 
                 <ContextualGenerate 
                     ref="contextualGenerate"
+                    uid="wsm.character_attribute"
                     :context="'character attribute:'+selected" 
 
                     :original="character.base_attributes[selected]"
@@ -113,18 +114,14 @@
             </v-row>
         </v-col>
     </v-row>
-    <v-snackbar color="grey-darken-4" location="top" v-model="spiceApplied" :timeout="5000" max-width="400" multi-line>
-        <div class="text-caption text-highlight4">
-            <v-icon color="highlight4">mdi-chili-mild</v-icon>
-            Spice applied!
-        </div>
-        {{ spiceAppliedDetail }}
-    </v-snackbar>
+    <SpiceAppliedNotification :uids="['wsm.character_attribute']"></SpiceAppliedNotification>
 </template>
 <script>
+
 import ContextualGenerate from './ContextualGenerate.vue';
 import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
 import GenerationOptions from './GenerationOptions.vue';
+import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 
 export default {
     name: 'WorldStateManagerCharacterAttributes',
@@ -132,6 +129,7 @@ export default {
         ContextualGenerate,
         WorldStateManagerTemplateApplicator,
         GenerationOptions,
+        SpiceAppliedNotification,
     },
     props: {
         immutableCharacter: Object,
@@ -152,8 +150,6 @@ export default {
             source: "wsm.character_attributes",
             templateApplicatorCallback: null,
             generationOptions: {},
-            spiceApplied: false,
-            spiceAppliedDetail: null,
         }
     },
     inject: [
@@ -204,7 +200,6 @@ export default {
         },
     },
     methods: {
-
         applyTemplates(templateUIDs, callback) {
             this.templateApplicatorCallback = callback;
 
@@ -321,13 +316,6 @@ export default {
         },
         
         handleMessage(message) {
-
-            if (message.type === 'spice_applied' && (message.data.uid === this.$refs.contextualGenerate.uid || message.data.uid === 'wsm.character_attribute')) {
-                this.spiceAppliedDetail = `${message.data.context[1]}: ${message.data.spice}`;
-                this.spiceApplied = true;
-            } else if (message.type !== 'world_state_manager') {
-                return;
-            }
 
             if (message.action === 'character_attribute_updated') {
                 this.dirty = false;

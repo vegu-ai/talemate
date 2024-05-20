@@ -55,7 +55,9 @@
                     <v-col cols="12" md="3">
                         <ContextualGenerate 
                             ref="contextualGenerate"
+                            uid="wsm.character_dialogue"
                             :context="'character dialogue:'" 
+                            :instructions-placeholder="`An example of what ${character.name} would say when...`"
                             :character="character.name"
                             :rewrite-enabled="false"
                             :generation-options="generationOptions"
@@ -82,25 +84,22 @@
 
         </v-col>
     </v-row>
-    <v-snackbar color="grey-darken-4" location="top" v-model="spiceApplied" :timeout="5000" max-width="400" multi-line>
-        <div class="text-caption text-highlight4">
-            <v-icon color="highlight4">mdi-chili-mild</v-icon>
-            Spice applied!
-        </div>
-        {{ spiceAppliedDetail }}
-    </v-snackbar>
+    <SpiceAppliedNotification :uids="['wsm.character_dialogue']"></SpiceAppliedNotification>
+
 </template>
 
 <script>
 
 import ContextualGenerate from './ContextualGenerate.vue';
 import GenerationOptions from './GenerationOptions.vue';
+import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 
 export default {
     name: 'WorldStateManagerCharacterActor',
     components: {
         ContextualGenerate,
         GenerationOptions,
+        SpiceAppliedNotification,
     },
     data() {
         return {
@@ -112,8 +111,6 @@ export default {
             dialogueInstructionsBusy: false,
             updateCharacterActorTimeout: null,
             generationOptions: {},
-            spiceApplied: false,
-            spiceAppliedDetail: "",
         }
     },
     computed: {
@@ -161,10 +158,6 @@ export default {
         },
         
         handleMessage(data) {
-            if (data.type === 'spice_applied' && data.data.uid === this.$refs.contextualGenerate.uid) {
-                this.spiceAppliedDetail = `${data.data.spice}`;
-                this.spiceApplied = true;
-            }
             if(data.type === 'world_state_manager') {
                 if(data.action === 'character_actor_updated') {
                     this.dialogueInstructionsDirty = false;

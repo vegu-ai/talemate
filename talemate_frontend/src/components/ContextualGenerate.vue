@@ -58,6 +58,11 @@ import { v4 as uuidv4 } from 'uuid';
 export default {
     name: 'ContextualGenerate',
     props: {
+        uid: {
+            type: String,
+            required: false,
+            default: uuidv4()
+        },
         templates: Object,
         generationOptions: {
             type: Object,
@@ -119,7 +124,6 @@ export default {
             withInstructions: false,
             withOriginal: false,
             busy: false,
-            uid: null,
         }
     },
     emits: ["generate"],
@@ -219,9 +223,6 @@ export default {
     },
     unmounted() {
         this.unregisterMessageHandler(this.handleMessage);
-    },
-    created() {
-        this.uid = uuidv4();
     },
 }
 

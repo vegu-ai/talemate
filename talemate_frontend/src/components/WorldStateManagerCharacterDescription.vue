@@ -7,6 +7,7 @@
         <v-col cols="12" md="2" lg="4">
             <ContextualGenerate 
                 ref="contextualGenerate"
+                uid="wsm.character_description"
                 :context="'character detail:description'" 
                 :original="character.description"
                 :character="character.name"
@@ -31,25 +32,21 @@
         :hint="'A short description of the character. '+autocompleteInfoMessage(busy)">
     </v-textarea>
 
-    <v-snackbar color="grey-darken-4" location="top" v-model="spiceApplied" :timeout="5000" max-width="400" multi-line>
-        <div class="text-caption text-highlight4">
-            <v-icon color="highlight4">mdi-chili-mild</v-icon>
-            Spice applied!
-        </div>
-        {{ spiceAppliedDetail }}
-    </v-snackbar>
+    <SpiceAppliedNotification :uids="['wsm.character_description']"></SpiceAppliedNotification>
 
 </template>
 <script>
 
 import ContextualGenerate from './ContextualGenerate.vue';
 import GenerationOptions from './GenerationOptions.vue';
+import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 
 export default {
     name: 'WorldStateManagerCharacterDescription',
     components: {
         ContextualGenerate,
         GenerationOptions,
+        SpiceAppliedNotification,
     },
     props: {
         immutableCharacter: Object,
@@ -73,7 +70,7 @@ export default {
             updateTimeout: null,
             generationOptions: {},
             spiceApplied: false,
-            spiceAppliedDetail: null,
+            spiceAppliedDetail: null, 
         }
     },
     watch: {
@@ -129,14 +126,10 @@ export default {
         },
 
         handleMessage(message) {
-            if (message.type === 'spice_applied' && message.data.uid === this.$refs.contextualGenerate.uid) {
-                this.spiceAppliedDetail = `${message.data.context[1]}: ${message.data.spice}`;
-                this.spiceApplied = true;
-            } else if (message.type !== 'world_state_manager') {
+            if (message.type !== 'world_state_manager') {
                 return;
             }
-
-            if (message.action === 'character_description_updated') {
+            else if (message.action === 'character_description_updated') {
                 this.dirty = false;
                 this.$emit('require-scene-save');
             }

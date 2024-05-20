@@ -59,6 +59,7 @@
 
                 <ContextualGenerate 
                     ref="contextualGenerate"
+                    uid="wsm.character_detail"
                     :context="'character detail:'+selected" 
 
                     :original="character.details[selected]"
@@ -134,19 +135,15 @@
 
         </v-col>
     </v-row>
-    <v-snackbar color="grey-darken-4" location="top" v-model="spiceApplied" :timeout="5000" max-width="400" multi-line>
-        <div class="text-caption text-highlight4">
-            <v-icon color="highlight4">mdi-chili-mild</v-icon>
-            Spice applied!
-        </div>
-        {{ spiceAppliedDetail }}
-    </v-snackbar>
+    <SpiceAppliedNotification :uids="['wsm.character_detail']"></SpiceAppliedNotification>
+
 </template>
 
 <script>
 import ContextualGenerate from './ContextualGenerate.vue';
 import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
 import GenerationOptions from './GenerationOptions.vue';
+import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 
 export default {
     name: 'WorldStateManagerCharacterDetails',
@@ -154,6 +151,7 @@ export default {
         ContextualGenerate,
         WorldStateManagerTemplateApplicator,
         GenerationOptions,
+        SpiceAppliedNotification,
     },
     props: {
         immutableCharacter: Object,
@@ -174,8 +172,6 @@ export default {
             templateApplicatorCallback: null,
             source: "wsm.character_details",
             generationOptions: {},
-            spiceApplied: false,
-            spiceAppliedDetail: null,
         }
     },
     inject: [
@@ -353,11 +349,7 @@ export default {
         },
 
         handleMessage(message) {
-            if (message.type === 'spice_applied' && (message.data.uid === this.$refs.contextualGenerate.uid || message.data.uid === 'wsm.character_detail')) {
-                console.log("SPICE APPLIED", message.data);
-                this.spiceAppliedDetail = `${message.data.context[1]}: ${message.data.spice}`;
-                this.spiceApplied = true;
-            } else if (message.type !== 'world_state_manager') {
+            if (message.type !== 'world_state_manager') {
                 return;
             }
             

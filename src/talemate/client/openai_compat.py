@@ -132,7 +132,6 @@ class OpenAICompatibleClient(ClientBase):
                 model=self.model_name, **parameters
             )
 
-            log.debug("generate response", response=response)
             return response.choices[0].text
         except PermissionDeniedError as e:
             self.log.error("generate error", e=e)

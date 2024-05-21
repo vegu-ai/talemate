@@ -22,14 +22,12 @@
                 </v-dialog>
             </v-card-title>
 
-            <v-divider></v-divider>
         </div>
         <div v-else-if="character && character.is_new">
             <v-card-title>
                 <v-icon size="small">mdi-account-plus</v-icon>
                 Create New Character
             </v-card-title>
-            <v-divider></v-divider>
         </div>
 
         <v-card-text>
@@ -47,7 +45,7 @@
             <div v-else-if="selected !== null && character">
                 <v-row>
                     <v-col cols="12" md="3" xl="2">
-                        <CoverImage v-if="character !== null" ref="coverImageCharacter" :target="character" :type="'character'" :allow-update="true" />
+                        <CoverImage v-if="character !== null" ref="coverImageCharacter" :target="character" :type="'character'" :allow-update="true" :collapsable="false" />
                         <p v-if="coverImageBusy">
                             <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
                         </p>
@@ -143,6 +141,8 @@
                                     </v-tab>
                                     -->
                                 </v-tabs>
+
+                                <v-divider></v-divider>
                             
                                 <v-card-text>
                                     <v-tabs-window v-model="page">
@@ -192,13 +192,57 @@
                 </v-row>
             </div>
             <v-alert v-else type="info" color="grey" variant="text" icon="mdi-account">
-                Manage character attributes and add extra details.
-                <br><br>
-                You can also set up automatic reinforcement of character states. This will cause the
-                AI to regularly re-evaluate the state and update the detail accordingly.
-                <br><br>
-                Select a character from the list on the left to get started.
+                <p>
+                    Manage existing characters or add new ones to the scene. Characters can be AI or player controlled.
+                </p>
+                <p class="mt-2">
+                    You can set up character attributes, descriptions, and details. 
+                    You can also set up automatic reinforcement of character states. This will cause the
+                    AI to regularly re-evaluate the state and update the detail accordingly.
+                </p>
+                <p class="mt-2">
+                    Select a character from the list on the left to get started.
+                </p>
             </v-alert>
+        </v-card-text>
+    </v-card>
+
+    <v-card class="mt-4" density="compact" v-if="character === null">
+        <v-card-title>Overview</v-card-title>
+        <v-card-text class="text-grey">
+            <p class="mt-4">
+                <!-- Attribute description -->
+                <strong class="text-grey-lighten-1">
+                    <v-icon size="small" class="mr-2" color="highlight1">mdi-badge-account</v-icon>Attributes
+                </strong> are low to medium detail information about the character. They range from physical attributes to personality traits.
+            </p>
+            <p class="mt-4">
+                <!-- Details description -->
+                <strong class="text-grey-lighten-1">
+                    <v-icon size="small" class="mr-2" color="highlight2">mdi-account-details</v-icon>Details
+                </strong> are low to high detail information about the character. They could contain information about the character's background, history, or other relevant information.
+            </p>
+            <p class="mt-2 text-muted">
+                When a <v-icon size="small" class="mr-2" color="highlight3">mdi-image-auto-adjust</v-icon><span class="text-highlight3">state reinforcment</span> is updated the value is set to the corresponding detail.
+            </p>
+            <p class="mt-4">
+                <!-- Character description description -->
+                <strong class="text-grey-lighten-1">
+                    <v-icon size="small" class="mr-2" color="grey">mdi-text-account</v-icon>Description
+                </strong> is a description of the character. A summarization of their appearance, personality, and other relevant information as it relates to the scene.
+            </p>
+            <p class="mt-4">
+                <!-- Reinforcement description -->
+                <strong class="text-grey-lighten-1">
+                    <v-icon size="small" class="mr-2" color="highlight3">mdi-image-auto-adjust</v-icon>States
+                </strong> are the reinforcement states for the character. This is where you can set up automatic reinforcement of character states. This will cause the AI to regularly re-evaluate the state and update the detail accordingly.
+            </p>
+            <p class="mt-4">
+                <!-- Actor description -->
+                <strong class="text-grey-lighten-1">
+                    <v-icon size="small" class="mr-2" color="highlight5">mdi-bullhorn</v-icon>Actor
+                </strong> management lets you define acting and speaking patterns for the character via dialogue instructions and examples. This is only available for AI characters.
+            </p>
         </v-card-text>
     </v-card>
 </template>

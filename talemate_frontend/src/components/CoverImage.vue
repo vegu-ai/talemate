@@ -37,6 +37,10 @@ export default {
         type: String,
         target: Object,
         allowUpdate: Boolean,
+        collapsable: {
+            type: Boolean,
+            default: true
+        }
     },
     watch: {
         asset_id: {
@@ -75,6 +79,10 @@ export default {
     methods: {
 
         toggle() {
+            if(!this.collapsable) {
+                this.expanded = true;
+                return;
+            }
             this.expanded = !this.expanded;
         },
         onDrop(e) {

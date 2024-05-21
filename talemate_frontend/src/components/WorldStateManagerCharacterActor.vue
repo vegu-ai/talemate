@@ -13,6 +13,7 @@
         </v-col>
         <v-col cols="9">
 
+
             <div v-if="tab == 'instructions'">
                 <v-sheet class="text-right">
                     <v-spacer></v-spacer>
@@ -81,7 +82,6 @@
                     </v-list-item>
                 </v-list>
             </div>
-
         </v-col>
     </v-row>
     <SpiceAppliedNotification :uids="['wsm.character_dialogue']"></SpiceAppliedNotification>

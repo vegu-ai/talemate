@@ -44,9 +44,9 @@ class OpenAICompatibleClient(ClientBase):
             "api_handles_prompt_template": ExtraField(
                 name="api_handles_prompt_template",
                 type="bool",
-                label="Chat completions (API handles prompt template)",
+                label="API handles prompt template (chat/completions)",
                 required=False,
-                description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored. It's recommended to let Talemate handle the prompt template if possible (as long as you know which prompt is appropriate for the model).",
+                description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored. This is not recommended and should only be used if the API does not support the `completions` andpoint or you don't know which prompt template to use.",
             )
         }
 

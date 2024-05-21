@@ -44,9 +44,9 @@ class OpenAICompatibleClient(ClientBase):
             "api_handles_prompt_template": ExtraField(
                 name="api_handles_prompt_template",
                 type="bool",
-                label="API Handles Prompt Template",
+                label="Chat completions (API handles prompt template)",
                 required=False,
-                description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored.",
+                description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored. It's recommended to let Talemate handle the prompt template if possible (as long as you know which prompt is appropriate for the model).",
             )
         }
 
@@ -122,16 +122,27 @@ class OpenAICompatibleClient(ClientBase):
         """
         Generates text from the given prompt and parameters.
         """
-        self.log.debug("generate", prompt=prompt[:128] + " ...", parameters=parameters)
-        
-        parameters["prompt"] = prompt
 
         try:
-            response = await self.client.completions.create(
-                model=self.model_name, **parameters
-            )
-
-            return response.choices[0].text
+            if self.api_handles_prompt_template:
+                # OpenAI API handles prompt template
+                # Use the chat completions endpoint
+                self.log.debug("generate (chat/completions)", prompt=prompt[:128] + " ...", parameters=parameters)
+                human_message = {"role": "user", "content": prompt.strip()}
+                response = await self.client.chat.completions.create(
+                    model=self.model_name, messages=[human_message], **parameters
+                )
+                response = response.choices[0].message.content
+                return self.process_response_for_indirect_coercion(prompt, response)
+            else:
+                # Talemate handles prompt template
+                # Use the completions endpoint
+                self.log.debug("generate (completions)", prompt=prompt[:128] + " ...", parameters=parameters)
+                parameters["prompt"] = prompt
+                response = await self.client.completions.create(
+                    model=self.model_name, **parameters
+                )
+                return response.choices[0].text
         except PermissionDeniedError as e:
             self.log.error("generate error", e=e)
             emit("status", message="Client API: Permission Denied", status="error")

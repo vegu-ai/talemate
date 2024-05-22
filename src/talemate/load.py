@@ -177,7 +177,6 @@ async def load_scene_from_data(
     scene.name = scene_data.get("name", "Unknown Scene")
     scene.environment = scene_data.get("environment", "scene")
     scene.filename = None
-    scene.goals = scene_data.get("goals", [])
     scene.immutable_save = scene_data.get("immutable_save", False)
     scene.experimental = scene_data.get("experimental", False)
     scene.help = scene_data.get("help", "")
@@ -187,13 +186,11 @@ async def load_scene_from_data(
     # reset = True
 
     if not reset:
-        scene.goal = scene_data.get("goal", 0)
         scene.memory_id = scene_data.get("memory_id", scene.memory_id)
         scene.saved_memory_session_id = scene_data.get("saved_memory_session_id", None)
         scene.memory_session_id = scene_data.get("memory_session_id", None)
         scene.history = _load_history(scene_data["history"])
         scene.archived_history = scene_data["archived_history"]
-        scene.character_states = scene_data.get("character_states", {})
         scene.world_state = WorldState(**scene_data.get("world_state", {}))
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.context = scene_data.get("context", "")
@@ -234,9 +231,6 @@ async def load_scene_from_data(
         "inactive_characters", {}
     ).items():
         scene.inactive_characters[character_name] = Character(**character_data)
-
-    for character_name, cs in scene.character_states.items():
-        scene.set_character_state(character_name, cs)
 
     for character_data in scene_data["characters"]:
         character = Character(**character_data)
@@ -434,6 +428,5 @@ def creative_environment():
         "environment": "creative",
         "history": [],
         "archived_history": [],
-        "character_states": {},
         "characters": [],
     }

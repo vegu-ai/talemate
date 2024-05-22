@@ -766,8 +766,6 @@ class Scene(Emitter):
         self.helpers = []
         self.history = []
         self.archived_history = []
-        self.goals = []
-        self.character_states = {}
         self.inactive_characters = {}
         self.assets = SceneAssets(scene=self)
         self.description = ""
@@ -801,7 +799,6 @@ class Scene(Emitter):
         self.context = ""
         self.commands = commands.Manager(self)
         self.environment = "scene"
-        self.goal = None
         self.world_state = WorldState()
         self.game_state = GameState()
         self.ts = "PT0S"
@@ -821,7 +818,6 @@ class Scene(Emitter):
             "player_message": signal("player_message"),
             "history_add": signal("history_add"),
             "archive_add": signal("archive_add"),
-            "character_state": signal("character_state"),
             "game_loop": async_signals.get("game_loop"),
             "game_loop_start": async_signals.get("game_loop_start"),
             "game_loop_actor_iter": async_signals.get("game_loop_actor_iter"),
@@ -985,17 +981,6 @@ class Scene(Emitter):
                 break
 
         return recent_history
-
-    def set_character_state(self, character_name: str, state: str):
-        self.character_states[character_name] = state
-        self.signals["character_state"].send(
-            events.CharacterStateEvent(
-                scene=self,
-                event_type="character_state",
-                state=state,
-                character_name=character_name,
-            )
-        )
 
     def push_history(self, messages: list[SceneMessage]):
         """
@@ -2127,14 +2112,11 @@ class Scene(Emitter):
             "history": scene.history,
             "environment": scene.environment,
             "archived_history": scene.archived_history,
-            "character_states": scene.character_states,
             "characters": [actor.character.serialize for actor in scene.actors],
             "inactive_characters": {
                 name: character.serialize
                 for name, character in scene.inactive_characters.items()
             },
-            "goal": scene.goal,
-            "goals": scene.goals,
             "context": scene.context,
             "world_state": scene.world_state.model_dump(),
             "game_state": scene.game_state.model_dump(),
@@ -2186,9 +2168,6 @@ class Scene(Emitter):
                 )
             )
             await asyncio.sleep(0)
-
-        for character_name, cs in self.character_states.items():
-            self.set_character_state(character_name, cs)
 
         for character in self.characters:
             await character.commit_to_memory(memory)
@@ -2245,14 +2224,11 @@ class Scene(Emitter):
             "history": scene.history,
             "environment": scene.environment,
             "archived_history": scene.archived_history,
-            "character_states": scene.character_states,
             "characters": [actor.character.serialize for actor in scene.actors],
             "inactive_characters": {
                 name: character.serialize
                 for name, character in scene.inactive_characters.items()
             },
-            "goal": scene.goal,
-            "goals": scene.goals,
             "context": scene.context,
             "world_state": scene.world_state.model_dump(),
             "game_state": scene.game_state.model_dump(),

@@ -84,11 +84,6 @@ class OpenAICompatibleClient(ClientBase):
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
 
-        if "repetition_penalty" in parameters:
-            parameters["presence_penalty"] = parameters.pop(
-                "repetition_penalty"
-            )
-
         allowed_params = ["max_tokens", "presence_penalty", "top_p", "temperature"]
 
         # drop unsupported params
@@ -180,26 +175,20 @@ class OpenAICompatibleClient(ClientBase):
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """
-        adjusts temperature and repetition_penalty
+        adjusts temperature and presence penalty
         by random values using the base value as a center
         """
 
         temp = prompt_config["temperature"]
-        
-        if "presence_penalty" in prompt_config:
-            rep_pen_key = "presence_penalty"
-        else:
-            rep_pen_key = "repetition_penalty"
-        
     
         min_offset = offset * 0.3
         
         prompt_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
         
         try:
-            rep_pen = prompt_config[rep_pen_key]
-            prompt_config[rep_pen_key] = random.uniform(
-                rep_pen + min_offset * 0.3, rep_pen + offset * 0.3
+            presence_penalty = prompt_config["presence_penalty"]
+            prompt_config["presence_penalty"] = random.uniform(
+                presence_penalty + 0.1, presence_penalty + offset
             )
         except KeyError:
             pass

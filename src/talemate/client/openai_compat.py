@@ -186,16 +186,20 @@ class OpenAICompatibleClient(ClientBase):
 
         temp = prompt_config["temperature"]
         
-        if "frequency_penalty" in prompt_config:
-            rep_pen_key = "frequency_penalty"
+        if "presence_penalty" in prompt_config:
+            rep_pen_key = "presence_penalty"
         else:
             rep_pen_key = "repetition_penalty"
         
-        rep_pen = prompt_config[rep_pen_key]
-
+    
         min_offset = offset * 0.3
-
+        
         prompt_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
-        prompt_config[rep_pen_key] = random.uniform(
-            rep_pen + min_offset * 0.3, rep_pen + offset * 0.3
-        )
+        
+        try:
+            rep_pen = prompt_config[rep_pen_key]
+            prompt_config[rep_pen_key] = random.uniform(
+                rep_pen + min_offset * 0.3, rep_pen + offset * 0.3
+            )
+        except KeyError:
+            pass

@@ -5,7 +5,7 @@ import json
 import re
 import textwrap
 from typing import List, Union
-
+import struct
 import isodate
 import structlog
 from colorama import Back, Fore, Style, init
@@ -179,6 +179,29 @@ def color_emotes(text: str, color: str = "blue") -> str:
 def extract_metadata(img_path, img_format):
     return chara_read(img_path)
 
+def read_metadata_from_png_text(image_path:str) -> dict:
+    
+    """
+    Reads the character metadata from the tEXt chunk of a PNG image.
+    """
+    
+    # Read the image
+    with open(image_path, 'rb') as f:
+        png_data = f.read()
+    
+    # Split the PNG data into chunks
+    offset = 8  # Skip the PNG signature
+    while offset < len(png_data):
+        length = struct.unpack('!I', png_data[offset:offset+4])[0]
+        chunk_type = png_data[offset+4:offset+8]
+        chunk_data = png_data[offset+8:offset+8+length]
+        if chunk_type == b'tEXt':
+            keyword, text_data = chunk_data.split(b'\x00', 1)
+            if keyword == b'chara':
+                return json.loads(base64.b64decode(text_data).decode('utf-8'))
+        offset += 12 + length
+    
+    raise ValueError('No character metadata found.')
 
 def chara_read(img_url, input_format=None):
     if input_format is None:
@@ -194,7 +217,6 @@ def chara_read(img_url, input_format=None):
         image = Image.open(io.BytesIO(image_data))
 
     exif_data = image.getexif()
-
     if format == "webp":
         try:
             if 37510 in exif_data:
@@ -235,7 +257,15 @@ def chara_read(img_url, input_format=None):
                 return base64_decoded_data
             else:
                 log.warn("chara_load", msg="No chara data found in PNG image.")
-                return False
+                log.warn("chara_load", msg="Trying to read from PNG text.")
+                
+                try:
+                    return read_metadata_from_png_text(img_url)
+                except ValueError:
+                    return False
+                except Exception as exc:
+                    log.error("chara_load", msg="Error reading metadata from PNG text.", exc_info=exc)
+                    return False
     else:
         return None
 

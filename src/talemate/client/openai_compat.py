@@ -187,8 +187,8 @@ class OpenAICompatibleClient(ClientBase):
         
         try:
             presence_penalty = prompt_config["presence_penalty"]
-            prompt_config["presence_penalty"] = random.uniform(
+            prompt_config["presence_penalty"] = round(random.uniform(
                 presence_penalty + 0.1, presence_penalty + offset
-            )
+            ),1)
         except KeyError:
             pass

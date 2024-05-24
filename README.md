@@ -95,6 +95,8 @@ There is also a [troubleshooting guide](docs/troubleshoot.md) that might help.
 
 ### Docker
 
+:warning: Some users currently experience issues with missing dependencies inside the docker container, issue tracked at [#114](https://github.com/vegu-ai/talemate/issues/114)
+
 1. `git clone https://github.com/vegu-ai/talemate.git`
 1. `cd talemate`
 1. `cp config.example.yaml config.yaml`
@@ -171,14 +173,7 @@ In the case for `bartowski_Nous-Hermes-2-Mistral-7B-DPO-exl2_8_0` that is `ChatM
 
 ### Recommended Models 
 
-As of 2024.05.06 my personal regular drivers (the ones i test with) are:
-
-- meta-llama_Meta-Llama-3-8B-Instruct
-- brucethemoose_Yi-34B-200K-RPMerge
-- rAIfle_Verdict-8x7B
-- meta-llama_Meta-Llama-3-70B-Instruct
-
-That said, any of the top models in any of the size classes here should work well (i wouldn't recommend going lower than 7B):
+Any of the top models in any of the size classes here should work well (i wouldn't recommend going lower than 7B):
 
 [https://oobabooga.github.io/benchmark.html](https://oobabooga.github.io/benchmark.html)
 

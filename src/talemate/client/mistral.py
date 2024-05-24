@@ -25,12 +25,16 @@ SUPPORTED_MODELS = [
     "mistral-large-latest",
 ]
 
-JSON_OBJECT_RESPONSE_MODELS = SUPPORTED_MODELS
-
+JSON_OBJECT_RESPONSE_MODELS = [
+    "open-mixtral-8x22b",
+    "mistral-small-latest",
+    "mistral-medium-latest",
+    "mistral-large-latest",
+]
 
 class Defaults(pydantic.BaseModel):
     max_token_length: int = 16384
-    model: str = "open-mixtral-8x7b"
+    model: str = "open-mixtral-8x22b"
 
 
 @register()
@@ -53,7 +57,7 @@ class MistralAIClient(ClientBase):
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
 
-    def __init__(self, model="open-mixtral-8x7b", **kwargs):
+    def __init__(self, model="open-mixtral-8x22b", **kwargs):
         self.model_name = model
         self.api_key_status = None
         self.config = load_config()
@@ -116,7 +120,7 @@ class MistralAIClient(ClientBase):
             return
 
         if not self.model_name:
-            self.model_name = "open-mixtral-8x7b"
+            self.model_name = "open-mixtral-8x22b"
 
         if max_token_length and not isinstance(max_token_length, int):
             max_token_length = int(max_token_length)

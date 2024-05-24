@@ -769,3 +769,29 @@ class ClientBase:
                 new_lines.append(line)
 
         return "\n".join(new_lines)
+
+
+    def process_response_for_indirect_coercion(self, prompt:str, response:str) -> str:
+        
+        """
+        A lot of remote APIs don't let us control the prompt template and we cannot directly
+        append the beginning of the desired response to the prompt. 
+        
+        With indirect coercion we tell the LLM what the beginning of the response should be
+        and then hopefully it will adhere to it and we can strip it off the actual response.
+        """
+        
+        _, right = prompt.split("\nStart your response with: ")
+        expected_response = right.strip()
+        if (
+            expected_response
+            and expected_response.startswith("{")
+        ):
+            if response.startswith("```json") and response.endswith("```"):
+                response = response[7:-3].strip()
+
+        if right and response.startswith(right):
+            response = response[len(right) :].strip()
+            
+        return response
+        

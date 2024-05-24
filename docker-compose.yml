@@ -23,5 +23,5 @@ services:
       dockerfile: Dockerfile.frontend
     ports:
       - "8080:8080"
-    volumes:
-      - ./talemate_frontend:/app
+    #volumes:
+    #  - ./talemate_frontend:/app

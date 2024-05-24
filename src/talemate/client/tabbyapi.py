@@ -187,8 +187,10 @@ class TabbyAPIClient(ClientBase):
         
         try:
             presence_penalty = prompt_config["presence_penalty"]
-            prompt_config["presence_penalty"] = round(random.uniform(
+            adjusted_presence_penalty = round(random.uniform(
                 presence_penalty + 0.1, presence_penalty + offset
             ),1)
+            # Ensure presence_penalty does not exceed 0.5 and does not fall below 0.1
+            prompt_config["presence_penalty"] = min(0.5, max(0.1, adjusted_presence_penalty))
         except KeyError:
             pass

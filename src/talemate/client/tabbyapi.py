@@ -15,7 +15,7 @@ EXPERIMENTAL_DESCRIPTION = """Use this client to use all of TabbyAPI's features"
 
 
 class Defaults(pydantic.BaseModel):
-    api_url: str = "http://localhost:5000"
+    api_url: str = "http://localhost:5000/v1/"
     api_key: str = ""
     max_token_length: int = 8192
     model: str = ""

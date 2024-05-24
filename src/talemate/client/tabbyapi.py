@@ -17,7 +17,7 @@ EXPERIMENTAL_DESCRIPTION = """Use this client to use all of TabbyAPI's features"
 class Defaults(pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
     api_key: str = ""
-    max_token_length: int = 8192  # TODO: we are using rope on tabby so we can increase this variably
+    max_token_length: int = 8192
     model: str = ""
     api_handles_prompt_template: bool = False
     double_coercion: str = None
@@ -83,8 +83,10 @@ class TabbyAPIClient(ClientBase):
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
-        # TODO: for min_p to work, temperature must be LAST! Need to figure out how that works.
-        allowed_params = ["max_tokens", "presence_penalty", "top_p", "temperature", "frequency_penalty"]
+        # We need repetition_penalty_range so presence_penalty works, otherwise it's disabled
+        # In order for min_p to work correctly, temp needs to be last as a sampler but there is a 
+        # parameter that can be passed to ensure  this called "temp_last"
+        allowed_params = ["max_tokens", "presence_penalty", "frequency_penalty", "repetition_penalty_range", "min_p", "top_p", "temp_last", "temperature"]
 
         # drop unsupported params
         for param in list(parameters.keys()):
@@ -185,10 +187,15 @@ class TabbyAPIClient(ClientBase):
         
         prompt_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
         
+        # keep min_p in a tight range to avoid unwanted tokens
+        prompt_config["min_p"] = random.uniform(0.05, 0.15)
+
         try:
             presence_penalty = prompt_config["presence_penalty"]
-            prompt_config["presence_penalty"] = round(random.uniform(
+            adjusted_presence_penalty = round(random.uniform(
                 presence_penalty + 0.1, presence_penalty + offset
             ),1)
+            # Ensure presence_penalty does not exceed 0.5 and does not fall below 0.1
+            prompt_config["presence_penalty"] = min(0.5, max(0.1, adjusted_presence_penalty))
         except KeyError:
             pass

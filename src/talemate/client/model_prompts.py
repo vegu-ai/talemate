@@ -136,13 +136,15 @@ class ModelPrompt:
         """
 
         matches = []
+        
+        cleaned_model_name = model_name.replace("/", "__")
 
         # Iterate over all templates in the loader's directory
         for template_name in self.env.list_templates():
             # strip extension
             template_name_match = os.path.splitext(template_name)[0]
             # Check if the model name is in the template filename
-            if template_name_match.lower() in model_name.lower():
+            if template_name_match.lower() in cleaned_model_name.lower():
                 matches.append(template_name)
 
         # If there are no matches, return None
@@ -163,16 +165,17 @@ class ModelPrompt:
         """
 
         template_name = template_name.split(".jinja2")[0]
+        
+        cleaned_model_name = model_name.replace("/", "__")
 
         shutil.copyfile(
             os.path.join(STD_TEMPLATE_PATH, template_name + ".jinja2"),
-            os.path.join(USER_TEMPLATE_PATH, model_name + ".jinja2"),
+            os.path.join(USER_TEMPLATE_PATH, cleaned_model_name + ".jinja2"),
         )
 
-        return os.path.join(USER_TEMPLATE_PATH, model_name + ".jinja2")
+        return os.path.join(USER_TEMPLATE_PATH, cleaned_model_name + ".jinja2")
 
     def query_hf_for_prompt_template_suggestion(self, model_name: str):
-        print("query_hf_for_prompt_template_suggestion", model_name)
         api = huggingface_hub.HfApi()
 
         try:

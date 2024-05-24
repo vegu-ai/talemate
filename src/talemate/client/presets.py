@@ -19,12 +19,17 @@ import logging
 
 PRESENCE_PENALTY_BASE = 0.2
 FREQUENCY_PENALTY_BASE = 0.2
+MIN_P_BASE = 0.1  # range of 0.05-0.15 is reasonable
+TEMP_LAST = True
 
 PRESET_TALEMATE_CONVERSATION = {
     "temperature": 0.65,
     "top_p": 0.47,
     "top_k": 42,
     "presence_penalty": PRESENCE_PENALTY_BASE,
+    "frequency_penalty": FREQUENCY_PENALTY_BASE,
+    "min_p": MIN_P_BASE,
+    "temp_last": TEMP_LAST,
     "repetition_penalty": 1.18,
     "repetition_penalty_range": 2048,
 }
@@ -35,6 +40,8 @@ PRESET_TALEMATE_CONVERSATION_FIXED = {
     "top_k": 0,
     "presence_penalty": PRESENCE_PENALTY_BASE,
     "frequency_penalty": FREQUENCY_PENALTY_BASE,
+    "min_p": MIN_P_BASE,
+    "temp_last": TEMP_LAST,
     "repetition_penalty": 1.1,
     "repetition_penalty_range": 2048,
 }
@@ -45,6 +52,8 @@ PRESET_TALEMATE_CREATOR = {
     "top_k": 20,
     "presence_penalty": PRESENCE_PENALTY_BASE,
     "frequency_penalty": FREQUENCY_PENALTY_BASE,
+    "min_p": MIN_P_BASE,
+    "temp_last": TEMP_LAST,
     "repetition_penalty": 1.15,
     "repetition_penalty_range": 512,
 }
@@ -127,19 +136,19 @@ def preset_for_kind(kind: str, client=None):
     elif "analytical" in kind:
         return PRESET_ANALYTICAL
     elif kind == "conversation":
-        if client == "openai_compat":
+        if client == "tabbyapi":
             return PRESET_TALEMATE_CONVERSATION_FIXED
         return PRESET_TALEMATE_CONVERSATION
     elif kind == "conversation_old":
-        if client == "openai_compat":
+        if client == "tabbyapi":
             return PRESET_TALEMATE_CONVERSATION_FIXED
         return PRESET_TALEMATE_CONVERSATION # Assuming old conversation uses the same preset
     elif kind == "conversation_long":
-        if client == "openai_compat":
+        if client == "tabbyapi":
             return PRESET_TALEMATE_CONVERSATION_FIXED
         return PRESET_TALEMATE_CONVERSATION  # Assuming long conversation uses the same preset
     elif kind == "conversation_select_talking_actor":
-        if client == "openai_compat":
+        if client == "tabbyapi":
             return PRESET_TALEMATE_CONVERSATION_FIXED
         return PRESET_TALEMATE_CONVERSATION # Assuming select talking actor uses the same preset
     elif kind == "summarize":

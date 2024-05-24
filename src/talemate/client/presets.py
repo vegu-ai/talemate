@@ -13,10 +13,23 @@ __all__ = [
 
 # TODO: refactor abstraction and make configurable
 
+from http import client
+import logging
+
+
 PRESENCE_PENALTY_BASE = 0.2
 FREQUENCY_PENALTY_BASE = 0.2
 
 PRESET_TALEMATE_CONVERSATION = {
+    "temperature": 0.65,
+    "top_p": 0.47,
+    "top_k": 42,
+    "presence_penalty": PRESENCE_PENALTY_BASE,
+    "repetition_penalty": 1.18,
+    "repetition_penalty_range": 2048,
+}
+
+PRESET_TALEMATE_CONVERSATION_FIXED = {
     "temperature": 1,
     "top_p": 1,
     "top_k": 0,
@@ -78,11 +91,11 @@ PRESET_ANALYTICAL = {
 }
 
 
-def configure(config: dict, kind: str, total_budget: int):
+def configure(config: dict, kind: str, total_budget: int, client=None):
     """
     Sets the config based on the kind of text to generate.
     """
-    set_preset(config, kind)
+    set_preset(config, kind, client)
     set_max_tokens(config, kind, total_budget)
     return config
 
@@ -95,14 +108,14 @@ def set_max_tokens(config: dict, kind: str, total_budget: int):
     return config
 
 
-def set_preset(config: dict, kind: str):
+def set_preset(config: dict, kind: str, client=None):
     """
     Sets the preset in the config based on the kind of text to generate.
     """
-    config.update(preset_for_kind(kind))
+    config.update(preset_for_kind(kind, client))
 
 
-def preset_for_kind(kind: str):
+def preset_for_kind(kind: str, client=None):
 
     # tag based
     if "deterministic" in kind:
@@ -114,13 +127,22 @@ def preset_for_kind(kind: str):
     elif "analytical" in kind:
         return PRESET_ANALYTICAL
     elif kind == "conversation":
+       # logging.info(f" Client: {client}")
+        if client == "TabbyAPI":
+            return PRESET_TALEMATE_CONVERSATION_FIXED
         return PRESET_TALEMATE_CONVERSATION
     elif kind == "conversation_old":
-        return PRESET_TALEMATE_CONVERSATION  # Assuming old conversation uses the same preset
+        if client == "TabbyAPI":
+            return PRESET_TALEMATE_CONVERSATION_FIXED
+        return PRESET_TALEMATE_CONVERSATION # Assuming old conversation uses the same preset
     elif kind == "conversation_long":
+        if client == "TabbyAPI":
+            return PRESET_TALEMATE_CONVERSATION_FIXED
         return PRESET_TALEMATE_CONVERSATION  # Assuming long conversation uses the same preset
     elif kind == "conversation_select_talking_actor":
-        return PRESET_TALEMATE_CONVERSATION  # Assuming select talking actor uses the same preset
+        if client == "TabbyAPI":
+            return PRESET_TALEMATE_CONVERSATION_FIXED
+        return PRESET_TALEMATE_CONVERSATION # Assuming select talking actor uses the same preset
     elif kind == "summarize":
         return PRESET_LLAMA_PRECISE
     elif kind == "analyze":

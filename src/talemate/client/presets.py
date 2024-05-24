@@ -11,10 +11,15 @@ __all__ = [
     "PRESET_SIMPLE_1",
 ]
 
+# TODO: refactor abstraction and make configurable
+
+PRESENCE_PENALTY_BASE = 0.2
+
 PRESET_TALEMATE_CONVERSATION = {
     "temperature": 0.65,
     "top_p": 0.47,
     "top_k": 42,
+    "presence_penalty": PRESENCE_PENALTY_BASE,
     "repetition_penalty": 1.18,
     "repetition_penalty_range": 2048,
 }
@@ -23,6 +28,7 @@ PRESET_TALEMATE_CREATOR = {
     "temperature": 0.7,
     "top_p": 0.9,
     "top_k": 20,
+    "presence_penalty": PRESENCE_PENALTY_BASE,
     "repetition_penalty": 1.15,
     "repetition_penalty_range": 512,
 }
@@ -31,6 +37,7 @@ PRESET_LLAMA_PRECISE = {
     "temperature": 0.7,
     "top_p": 0.1,
     "top_k": 40,
+    "presence_penalty": PRESENCE_PENALTY_BASE,
     "repetition_penalty": 1.18,
 }
 
@@ -45,6 +52,7 @@ PRESET_DIVINE_INTELLECT = {
     "temperature": 1.31,
     "top_p": 0.14,
     "top_k": 49,
+    "presence_penalty": PRESENCE_PENALTY_BASE,
     "repetition_penalty_range": 1024,
     "repetition_penalty": 1.17,
 }
@@ -53,6 +61,7 @@ PRESET_SIMPLE_1 = {
     "temperature": 0.7,
     "top_p": 0.9,
     "top_k": 20,
+    "presence_penalty": PRESENCE_PENALTY_BASE,
     "repetition_penalty": 1.15,
 }
 

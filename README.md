@@ -125,7 +125,7 @@ On the right hand side click the "Add Client" button. If there is no button, you
 
 The setup is the same for all three, the example below is for OpenAI.
 
-If you want to add an OpenAI client, just change the client type and select the apropriate model.
+If you want to add an OpenAI client, just change the client type and select the appropriate model.
 
 ![Add client modal](docs/img/0.21.0/openai-setup.png)
 

@@ -14,13 +14,15 @@ __all__ = [
 # TODO: refactor abstraction and make configurable
 
 PRESENCE_PENALTY_BASE = 0.2
+FREQUENCY_PENALTY_BASE = 0.2
 
 PRESET_TALEMATE_CONVERSATION = {
-    "temperature": 0.65,
-    "top_p": 0.47,
-    "top_k": 42,
+    "temperature": 1,
+    "top_p": 1,
+    "top_k": 0,
     "presence_penalty": PRESENCE_PENALTY_BASE,
-    "repetition_penalty": 1.18,
+    "frequency_penalty": FREQUENCY_PENALTY_BASE,
+    "repetition_penalty": 1.1,
     "repetition_penalty_range": 2048,
 }
 
@@ -29,6 +31,7 @@ PRESET_TALEMATE_CREATOR = {
     "top_p": 0.9,
     "top_k": 20,
     "presence_penalty": PRESENCE_PENALTY_BASE,
+    "frequency_penalty": FREQUENCY_PENALTY_BASE,
     "repetition_penalty": 1.15,
     "repetition_penalty_range": 512,
 }
@@ -38,6 +41,7 @@ PRESET_LLAMA_PRECISE = {
     "top_p": 0.1,
     "top_k": 40,
     "presence_penalty": PRESENCE_PENALTY_BASE,
+    "frequency_penalty": FREQUENCY_PENALTY_BASE,
     "repetition_penalty": 1.18,
 }
 
@@ -53,6 +57,7 @@ PRESET_DIVINE_INTELLECT = {
     "top_p": 0.14,
     "top_k": 49,
     "presence_penalty": PRESENCE_PENALTY_BASE,
+    "frequency_penalty": FREQUENCY_PENALTY_BASE,
     "repetition_penalty_range": 1024,
     "repetition_penalty": 1.17,
 }
@@ -62,6 +67,7 @@ PRESET_SIMPLE_1 = {
     "top_p": 0.9,
     "top_k": 20,
     "presence_penalty": PRESENCE_PENALTY_BASE,
+    "frequency_penalty": FREQUENCY_PENALTY_BASE,
     "repetition_penalty": 1.15,
 }
 

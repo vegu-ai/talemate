@@ -6,6 +6,14 @@
         </v-tabs>
         <v-window v-model="tab">
 
+            <!-- SCENE -->
+
+            <v-window-item value="scene">
+                <WorldStateManagerScene ref="scene" 
+                :app-config="appConfig"
+                :scene="scene ? scene.data : null" />
+            </v-window-item>
+
             <!-- CHARACTERS -->
 
             <v-window-item value="characters">
@@ -83,6 +91,7 @@ import WorldStateManagerWorld from './WorldStateManagerWorld.vue';
 import WorldStateManagerCharacter from './WorldStateManagerCharacter.vue';
 import WorldStateManagerContextDB from './WorldStateManagerContextDB.vue';
 import WorldStateManagerPins from './WorldStateManagerPins.vue';
+import WorldStateManagerScene from './WorldStateManagerScene.vue';
 
 export default {
     name: 'WorldStateManager',
@@ -92,6 +101,7 @@ export default {
         WorldStateManagerCharacter,
         WorldStateManagerContextDB,
         WorldStateManagerPins,
+        WorldStateManagerScene,
     },
     computed: {
         characterStateReinforcementsList() {
@@ -106,11 +116,12 @@ export default {
         scene: Object,
         worldStateTemplates: Object,
         agentStatus: Object,
+        appConfig: Object,
     },
     data() {
         return {
             // general
-            tab: 'characters',
+            tab: 'scene',
             tabs: [
                 {
                     name: "scene",
@@ -147,12 +158,6 @@ export default {
                     name: "templates",
                     title: "Templates",
                     icon: "mdi-cube-scan"
-                },
-                {
-                    name: "game",
-                    title: "Game Master",
-                    icon: "mdi-dice-multiple",
-                    disabled: true,
                 },
             ],
             requireSceneSave: false,
@@ -287,7 +292,13 @@ export default {
                 this.$nextTick(() => {
                     this.$refs.templates.selectTemplate(sub1);
                 });
-            }
+            } else if (tab == 'contextdb') {
+                if (sub1 != null) {
+                    this.$nextTick(() => {
+                        this.loadContextDBEntry(sub1);
+                    });
+                }
+            } 
 
             this.emitEditorState(tab)
         },

@@ -42,8 +42,6 @@
   
       <v-spacer></v-spacer>
 
-      <v-app-bar-nav-icon v-if="sceneActive" @click="returnToStartScreen()"><v-icon>mdi-home</v-icon></v-app-bar-nav-icon>
-
       <VisualQueue ref="visualQueue" />
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
@@ -179,6 +177,7 @@
             :world-state-templates="worldStateTemplates"
             :scene="scene"
             :agent-status="agentStatus"
+            :app-config="appConfig"
             @navigate-r="onWorldStateManagerNavigateR"
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />
@@ -654,14 +653,7 @@ export default {
         this.debugDrawer = !this.debugDrawer;
     },
     returnToStartScreen() {
-
-      if(this.sceneActive && !this.scene.saved) {
-        let confirm = window.confirm("Are you sure you want to return to the start screen? You will lose any unsaved progress.");
-        if(!confirm)
-          return;
-      }
-      // reload
-      document.location.reload();
+      this.tab = 'home';
     },
     getClients() {
       if (!this.$refs.aiClient) {

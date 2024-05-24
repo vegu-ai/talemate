@@ -128,12 +128,6 @@ class KoboldCppClient(ClientBase):
                 "stop_sequence",
             ]
         else:
-            # adjustments for openai api
-            if "repetition_penalty" in parameters:
-                parameters["presence_penalty"] = parameters.pop(
-                    "repetition_penalty"
-                )
-
             allowed_params = ["max_tokens", "presence_penalty", "top_p", "temperature"]
 
         # drop unsupported params
@@ -243,8 +237,8 @@ class KoboldCppClient(ClientBase):
         
         if "rep_pen" in prompt_config:
             rep_pen_key = "rep_pen"
-        elif "frequency_penalty" in prompt_config:
-            rep_pen_key = "frequency_penalty"
+        elif "presence_penalty" in prompt_config:
+            rep_pen_key = "presence_penalty"
         else:
             rep_pen_key = "repetition_penalty"
         
@@ -253,9 +247,12 @@ class KoboldCppClient(ClientBase):
         min_offset = offset * 0.3
 
         prompt_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
-        prompt_config[rep_pen_key] = random.uniform(
-            rep_pen + min_offset * 0.3, rep_pen + offset * 0.3
-        )
+        try:
+            prompt_config[rep_pen_key] = random.uniform(
+                rep_pen + min_offset * 0.3, rep_pen + offset * 0.3
+            )
+        except KeyError:
+            pass
         
     def reconfigure(self, **kwargs):
         if "api_key" in kwargs:

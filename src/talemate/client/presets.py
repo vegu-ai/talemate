@@ -127,20 +127,19 @@ def preset_for_kind(kind: str, client=None):
     elif "analytical" in kind:
         return PRESET_ANALYTICAL
     elif kind == "conversation":
-       # logging.info(f" Client: {client}")
-        if client == "TabbyAPI":
+        if client == "openai_compat":
             return PRESET_TALEMATE_CONVERSATION_FIXED
         return PRESET_TALEMATE_CONVERSATION
     elif kind == "conversation_old":
-        if client == "TabbyAPI":
+        if client == "openai_compat":
             return PRESET_TALEMATE_CONVERSATION_FIXED
         return PRESET_TALEMATE_CONVERSATION # Assuming old conversation uses the same preset
     elif kind == "conversation_long":
-        if client == "TabbyAPI":
+        if client == "openai_compat":
             return PRESET_TALEMATE_CONVERSATION_FIXED
         return PRESET_TALEMATE_CONVERSATION  # Assuming long conversation uses the same preset
     elif kind == "conversation_select_talking_actor":
-        if client == "TabbyAPI":
+        if client == "openai_compat":
             return PRESET_TALEMATE_CONVERSATION_FIXED
         return PRESET_TALEMATE_CONVERSATION # Assuming select talking actor uses the same preset
     elif kind == "summarize":

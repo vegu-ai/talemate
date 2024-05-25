@@ -84,8 +84,8 @@ class OpenAICompatibleClient(ClientBase):
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
 
-        allowed_params = ["max_tokens", "presence_penalty", "top_p", "temperature", "frequency_penalty"]
-
+        allowed_params = ["max_tokens", "presence_penalty", "top_p", "temperature"]
+        
         # drop unsupported params
         for param in list(parameters.keys()):
             if param not in allowed_params:

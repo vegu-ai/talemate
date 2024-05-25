@@ -128,12 +128,6 @@ class KoboldCppClient(ClientBase):
                 "stop_sequence",
             ]
         else:
-            # adjustments for openai api
-            if "repetition_penalty" in parameters:
-                parameters["presence_penalty"] = parameters.pop(
-                    "repetition_penalty"
-                )
-
             allowed_params = ["max_tokens", "presence_penalty", "top_p", "temperature"]
 
         # drop unsupported params
@@ -243,19 +237,27 @@ class KoboldCppClient(ClientBase):
         
         if "rep_pen" in prompt_config:
             rep_pen_key = "rep_pen"
-        elif "frequency_penalty" in prompt_config:
-            rep_pen_key = "frequency_penalty"
+        elif "presence_penalty" in prompt_config:
+            rep_pen_key = "presence_penalty"
         else:
             rep_pen_key = "repetition_penalty"
         
-        rep_pen = prompt_config[rep_pen_key]
-
         min_offset = offset * 0.3
 
         prompt_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
-        prompt_config[rep_pen_key] = random.uniform(
-            rep_pen + min_offset * 0.3, rep_pen + offset * 0.3
-        )
+        try:
+            if rep_pen_key == "presence_penalty":
+                presence_penalty = prompt_config["presence_penalty"]
+                prompt_config["presence_penalty"] = round(random.uniform(
+                    presence_penalty + 0.1, presence_penalty + offset
+                ),1)
+            else:
+                rep_pen = prompt_config[rep_pen_key]
+                prompt_config[rep_pen_key] = random.uniform(
+                    rep_pen + min_offset * 0.3, rep_pen + offset * 0.3
+                )
+        except KeyError:
+            pass
         
     def reconfigure(self, **kwargs):
         if "api_key" in kwargs:
@@ -293,9 +295,10 @@ class KoboldCppClient(ClientBase):
             
             sd_model = response_data[0].get("model_name") if response_data else None
             
-        log.info("automatic1111_setup", sd_model=sd_model)
         if not sd_model:
             return False
+        
+        log.info("automatic1111_setup", sd_model=sd_model)
         
         visual_agent.actions["automatic1111"].config["api_url"].value = self.url
         visual_agent.is_enabled = True

@@ -428,7 +428,7 @@ class ClientBase:
     def generate_prompt_parameters(self, kind: str):
         parameters = {}
         self.tune_prompt_parameters(
-            presets.configure(parameters, kind, self.max_token_length), kind
+            presets.configure(parameters, kind, self.max_token_length, client=self.client_type), kind
         )
         return parameters
 

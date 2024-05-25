@@ -20,7 +20,7 @@ import logging
 PRESENCE_PENALTY_BASE = 0.2
 FREQUENCY_PENALTY_BASE = 0.2
 MIN_P_BASE = 0.1  # range of 0.05-0.15 is reasonable
-TEMP_LAST = True
+TEMPERATURE_LAST = True
 
 PRESET_TALEMATE_CONVERSATION = {
     "temperature": 0.65,
@@ -29,7 +29,7 @@ PRESET_TALEMATE_CONVERSATION = {
     "presence_penalty": PRESENCE_PENALTY_BASE,
     "frequency_penalty": FREQUENCY_PENALTY_BASE,
     "min_p": MIN_P_BASE,
-    "temp_last": TEMP_LAST,
+    "temperature_last": TEMPERATURE_LAST,
     "repetition_penalty": 1.18,
     "repetition_penalty_range": 2048,
 }
@@ -41,7 +41,7 @@ PRESET_TALEMATE_CONVERSATION_FIXED = {
     "presence_penalty": PRESENCE_PENALTY_BASE,
     "frequency_penalty": FREQUENCY_PENALTY_BASE,
     "min_p": MIN_P_BASE,
-    "temp_last": TEMP_LAST,
+    "temperature_last": TEMPERATURE_LAST,
     "repetition_penalty": 1.1,
     "repetition_penalty_range": 2048,
 }
@@ -53,7 +53,7 @@ PRESET_TALEMATE_CREATOR = {
     "presence_penalty": PRESENCE_PENALTY_BASE,
     "frequency_penalty": FREQUENCY_PENALTY_BASE,
     "min_p": MIN_P_BASE,
-    "temp_last": TEMP_LAST,
+    "temperature_last": TEMPERATURE_LAST,
     "repetition_penalty": 1.15,
     "repetition_penalty_range": 512,
 }
@@ -64,6 +64,8 @@ PRESET_LLAMA_PRECISE = {
     "top_k": 40,
     "presence_penalty": PRESENCE_PENALTY_BASE,
     "frequency_penalty": FREQUENCY_PENALTY_BASE,
+    "min_p": MIN_P_BASE,
+    "temperature_last": TEMPERATURE_LAST,
     "repetition_penalty": 1.18,
 }
 
@@ -80,6 +82,8 @@ PRESET_DIVINE_INTELLECT = {
     "top_k": 49,
     "presence_penalty": PRESENCE_PENALTY_BASE,
     "frequency_penalty": FREQUENCY_PENALTY_BASE,
+    "min_p": MIN_P_BASE,
+    "temperature_last": TEMPERATURE_LAST,
     "repetition_penalty_range": 1024,
     "repetition_penalty": 1.17,
 }
@@ -90,6 +94,8 @@ PRESET_SIMPLE_1 = {
     "top_k": 20,
     "presence_penalty": PRESENCE_PENALTY_BASE,
     "frequency_penalty": FREQUENCY_PENALTY_BASE,
+    "min_p": MIN_P_BASE,
+    "temperature_last": TEMPERATURE_LAST,
     "repetition_penalty": 1.15,
 }
 

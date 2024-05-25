@@ -13,6 +13,9 @@ __all__ = [
 
 # TODO: refactor abstraction and make configurable
 
+import token
+
+
 PRESENCE_PENALTY_BASE = 0.2
 FREQUENCY_PENALTY_BASE = 0.2
 MIN_P_BASE = 0.1  # range of 0.05-0.15 is reasonable
@@ -216,10 +219,10 @@ def max_tokens_for_kind(kind: str, total_budget: int) -> int:
     token_value = TOKEN_MAPPING.get(kind)
     if callable(token_value):
         return token_value(total_budget)
-    elif token_value is not None:
-        return token_value
     # If no exact match, check for substrings (order of original elifs)
     for substring, value in TOKEN_SUBSTRING_MAPPINGS.items():
         if substring in kind:
             return value
+    if token_value is not None:
+        return token_value
     return 150  # Default value if none of the kinds match

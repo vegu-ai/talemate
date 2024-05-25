@@ -130,151 +130,90 @@ def set_preset(config: dict, kind: str, client=None):
     config.update(preset_for_kind(kind, client))
 
 
+PRESET_MAPPING = {
+    "deterministic": PRESET_DETERMINISTIC,
+    "creative": PRESET_DIVINE_INTELLECT,
+    "simple": PRESET_SIMPLE_1,
+    "analytical": PRESET_ANALYTICAL,
+    "conversation": PRESET_TALEMATE_CONVERSATION,
+    "conversation_old": PRESET_TALEMATE_CONVERSATION,
+    "conversation_long": PRESET_TALEMATE_CONVERSATION,
+    "conversation_select_talking_actor": PRESET_TALEMATE_CONVERSATION,
+    "summarize": PRESET_LLAMA_PRECISE,
+    "analyze": PRESET_SIMPLE_1,
+    "analyze_creative": PRESET_DIVINE_INTELLECT,
+    "analyze_long": PRESET_SIMPLE_1,
+    "analyze_freeform": PRESET_LLAMA_PRECISE,
+    "analyze_freeform_short": PRESET_LLAMA_PRECISE,
+    "narrate": PRESET_LLAMA_PRECISE,
+    "story": PRESET_DIVINE_INTELLECT,
+    "create": PRESET_TALEMATE_CREATOR,
+    "create_concise": PRESET_TALEMATE_CREATOR,
+    "create_precise": PRESET_LLAMA_PRECISE,
+    "director": PRESET_SIMPLE_1,
+    "director_short": PRESET_SIMPLE_1,
+    "director_yesno": PRESET_SIMPLE_1,
+    "edit_dialogue": PRESET_DIVINE_INTELLECT,
+    "edit_add_detail": PRESET_DIVINE_INTELLECT,
+    "edit_fix_exposition": PRESET_DETERMINISTIC,
+    "edit_fix_continuity": PRESET_DETERMINISTIC,
+    "visualize": PRESET_SIMPLE_1,
+}
+
+
 def preset_for_kind(kind: str, client=None):
+    # Handle client-specific presets
+    if kind.startswith("conversation") and client == "tabbyapi":
+        return PRESET_TALEMATE_CONVERSATION_FIXED
 
-    # tag based
-    if "deterministic" in kind:
-        return PRESET_DETERMINISTIC
-    elif "creative" in kind:
-        return PRESET_DIVINE_INTELLECT
-    elif "simple" in kind:
-        return PRESET_SIMPLE_1
-    elif "analytical" in kind:
-        return PRESET_ANALYTICAL
-    elif kind == "conversation":
-        if client == "tabbyapi":
-            return PRESET_TALEMATE_CONVERSATION_FIXED
-        return PRESET_TALEMATE_CONVERSATION
-    elif kind == "conversation_old":
-        if client == "tabbyapi":
-            return PRESET_TALEMATE_CONVERSATION_FIXED
-        return PRESET_TALEMATE_CONVERSATION # Assuming old conversation uses the same preset
-    elif kind == "conversation_long":
-        if client == "tabbyapi":
-            return PRESET_TALEMATE_CONVERSATION_FIXED
-        return PRESET_TALEMATE_CONVERSATION  # Assuming long conversation uses the same preset
-    elif kind == "conversation_select_talking_actor":
-        if client == "tabbyapi":
-            return PRESET_TALEMATE_CONVERSATION_FIXED
-        return PRESET_TALEMATE_CONVERSATION # Assuming select talking actor uses the same preset
-    elif kind == "summarize":
-        return PRESET_LLAMA_PRECISE
-    elif kind == "analyze":
-        return PRESET_SIMPLE_1
-    elif kind == "analyze_creative":
-        return PRESET_DIVINE_INTELLECT
-    elif kind == "analyze_long":
-        return PRESET_SIMPLE_1  # Assuming long analysis uses the same preset as simple
-    elif kind == "analyze_freeform":
-        return PRESET_LLAMA_PRECISE
-    elif kind == "analyze_freeform_short":
-        return PRESET_LLAMA_PRECISE  # Assuming short freeform analysis uses the same preset as precise
-    elif kind == "narrate":
-        return PRESET_LLAMA_PRECISE
-    elif kind == "story":
-        return PRESET_DIVINE_INTELLECT
-    elif kind == "create":
-        return PRESET_TALEMATE_CREATOR
-    elif kind == "create_concise":
-        return PRESET_TALEMATE_CREATOR  # Assuming concise creation uses the same preset as creator
-    elif kind == "create_precise":
-        return PRESET_LLAMA_PRECISE
-    elif kind == "director":
-        return PRESET_SIMPLE_1
-    elif kind == "director_short":
-        return (
-            PRESET_SIMPLE_1  # Assuming short direction uses the same preset as simple
-        )
-    elif kind == "director_yesno":
-        return (
-            PRESET_SIMPLE_1  # Assuming yes/no direction uses the same preset as simple
-        )
-    elif kind == "edit_dialogue":
-        return PRESET_DIVINE_INTELLECT
-    elif kind == "edit_add_detail":
-        return PRESET_DIVINE_INTELLECT  # Assuming adding detail uses the same preset as divine intellect
-    elif kind == "edit_fix_exposition":
-        return PRESET_DETERMINISTIC  # Assuming fixing exposition uses the same preset as divine intellect
-    elif kind == "edit_fix_continuity":
-        return PRESET_DETERMINISTIC
-    elif kind == "visualize":
-        return PRESET_SIMPLE_1
+    # Default to PRESET_SIMPLE_1 if kind is not found
+    return PRESET_MAPPING.get(kind, PRESET_SIMPLE_1)
 
-    else:
-        return PRESET_SIMPLE_1  # Default preset if none of the kinds match
+
+TOKEN_MAPPING = {
+    "conversation": 75,
+    "conversation_old": 75,
+    "conversation_long": 300,
+    "conversation_select_talking_actor": 30,
+    "summarize": 500,
+    "analyze": 500,
+    "analyze_creative": 1024,
+    "analyze_long": 2048,
+    "analyze_freeform": 500,
+    "analyze_freeform_medium": 192,
+    "analyze_freeform_medium_short": 128,
+    "analyze_freeform_short": 10,
+    "narrate": 500,
+    "story": 300,
+    "create": lambda total_budget: min(1024, int(total_budget * 0.35)),
+    "create_concise": lambda total_budget: min(400, int(total_budget * 0.25)),
+    "create_precise": lambda total_budget: min(400, int(total_budget * 0.25)),
+    "create_short": 25,
+    "director": lambda total_budget: min(192, int(total_budget * 0.25)),
+    "director_short": 25,
+    "director_yesno": 2,
+    "edit_dialogue": 100,
+    "edit_add_detail": 200,
+    "edit_fix_exposition": 1024,
+    "edit_fix_continuity": 512,
+    "visualize": 150,
+    "extensive": 2048,
+    "long": 1024,
+    "medium2": 512,
+    "medium": 192,
+    "short2": 128,
+    "short": 75,
+    "tiny2": 25,
+    "tiny": 10,
+    "yesno": 2,
+}
 
 
 def max_tokens_for_kind(kind: str, total_budget: int):
-    if kind == "conversation":
-        return 75
-    elif kind == "conversation_old":
-        return 75
-    elif kind == "conversation_long":
-        return 300
-    elif kind == "conversation_select_talking_actor":
-        return 30
-    elif kind == "summarize":
-        return 500
-    elif kind == "analyze":
-        return 500
-    elif kind == "analyze_creative":
-        return 1024
-    elif kind == "analyze_long":
-        return 2048
-    elif kind == "analyze_freeform":
-        return 500
-    elif kind == "analyze_freeform_medium":
-        return 192
-    elif kind == "analyze_freeform_medium_short":
-        return 128
-    elif kind == "analyze_freeform_short":
-        return 10
-    elif kind == "narrate":
-        return 500
-    elif kind == "story":
-        return 300
-    elif kind == "create":
-        return min(1024, int(total_budget * 0.35))
-    elif kind == "create_concise":
-        return min(400, int(total_budget * 0.25))
-    elif kind == "create_precise":
-        return min(400, int(total_budget * 0.25))
-    elif kind == "create_short":
-        return 25
-    elif kind == "director":
-        return min(192, int(total_budget * 0.25))
-    elif kind == "director_short":
-        return 25
-    elif kind == "director_yesno":
-        return 2
-    elif kind == "edit_dialogue":
-        return 100
-    elif kind == "edit_add_detail":
-        return 200
-    elif kind == "edit_fix_exposition":
-        return 1024
-    elif kind == "edit_fix_continuity":
-        return 512
-    elif kind == "visualize":
-        return 150
-    # tag based
-    elif "extensive" in kind:
-        return 2048
-    elif "long" in kind:
-        return 1024
-    elif "medium2" in kind:
-        return 512
-    elif "medium" in kind:
-        return 192
-    elif "short2" in kind:
-        return 128
-    elif "short" in kind:
-        return 75
-    elif "tiny2" in kind:
-        return 25
-    elif "tiny" in kind:
-        return 10
-    elif "yesno" in kind:
-        return 2
+    token_value = TOKEN_MAPPING.get(kind)
+    if callable(token_value):
+        return token_value(total_budget)
+    elif token_value is not None:
+        return token_value
     else:
         return 150  # Default value if none of the kinds match

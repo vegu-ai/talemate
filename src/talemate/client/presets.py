@@ -13,9 +13,7 @@ __all__ = [
 
 # TODO: refactor abstraction and make configurable
 
-import token
-
-
+# Default values for the presets
 PRESENCE_PENALTY_BASE = 0.2
 FREQUENCY_PENALTY_BASE = 0.2
 MIN_P_BASE = 0.1  # range of 0.05-0.15 is reasonable

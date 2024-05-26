@@ -41,6 +41,7 @@ class PromptData(pydantic.BaseModel):
     time: Union[float, int]
     agent_stack: list[str] = pydantic.Field(default_factory=list)
     generation_parameters: dict = pydantic.Field(default_factory=dict)
+    inference_preset: str = None
 
 
 class ErrorAction(pydantic.BaseModel):
@@ -236,8 +237,6 @@ class ClientBase:
 
             if "narrate" in kind:
                 return system_prompts.NARRATOR
-            if "story" in kind:
-                return system_prompts.NARRATOR
             if "director" in kind:
                 return system_prompts.DIRECTOR
             if "create" in kind:
@@ -268,8 +267,6 @@ class ClientBase:
         else:
 
             if "narrate" in kind:
-                return system_prompts.NARRATOR_NO_DECENSOR
-            if "story" in kind:
                 return system_prompts.NARRATOR_NO_DECENSOR
             if "director" in kind:
                 return system_prompts.DIRECTOR_NO_DECENSOR
@@ -428,7 +425,7 @@ class ClientBase:
     def generate_prompt_parameters(self, kind: str):
         parameters = {}
         self.tune_prompt_parameters(
-            presets.configure(parameters, kind, self.max_token_length, client=self.client_type), kind
+            presets.configure(parameters, kind, self.max_token_length, self), kind
         )
         return parameters
 
@@ -577,6 +574,7 @@ class ClientBase:
                     client_type=self.client_type,
                     time=time_end - time_start,
                     generation_parameters=prompt_param,
+                    inference_preset=client_context_attribute("inference_preset"),
                 ).model_dump(),
             )
 

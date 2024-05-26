@@ -1,3 +1,12 @@
+from typing import TYPE_CHECKING
+from talemate.config import load_config
+from talemate.emit.signals import handlers
+from talemate.client.context import set_client_context_attribute
+import structlog
+
+if TYPE_CHECKING:
+    from talemate.client.base import ClientBase
+    
 __all__ = [
     "configure",
     "set_max_tokens",
@@ -11,100 +20,34 @@ __all__ = [
     "PRESET_SIMPLE_1",
 ]
 
-# TODO: refactor abstraction and make configurable
+log = structlog.get_logger("talemate.client.presets")
 
-# Default values for the presets
-PRESENCE_PENALTY_BASE = 0.2
-FREQUENCY_PENALTY_BASE = 0.2
-MIN_P_BASE = 0.1  # range of 0.05-0.15 is reasonable
-TEMPERATURE_LAST = True
-
-PRESET_TALEMATE_CONVERSATION = {
-    "temperature": 0.65,
-    "top_p": 0.47,
-    "top_k": 42,
-    "presence_penalty": PRESENCE_PENALTY_BASE,
-    "frequency_penalty": FREQUENCY_PENALTY_BASE,
-    "min_p": MIN_P_BASE,
-    "temperature_last": TEMPERATURE_LAST,
-    "repetition_penalty": 1.18,
-    "repetition_penalty_range": 2048,
-}
-
-# Fixed value template for experimentation
-PRESET_TALEMATE_CONVERSATION_FIXED = {
-    "temperature": 1,
-    "top_p": 1,
-    "top_k": 0,
-    "presence_penalty": PRESENCE_PENALTY_BASE,
-    "frequency_penalty": FREQUENCY_PENALTY_BASE,
-    "min_p": MIN_P_BASE,
-    "temperature_last": TEMPERATURE_LAST,
-    "repetition_penalty": 1.1,
-    "repetition_penalty_range": 2048,
-}
-
-PRESET_TALEMATE_CREATOR = {
-    "temperature": 0.7,
-    "top_p": 0.9,
-    "top_k": 20,
-    "presence_penalty": PRESENCE_PENALTY_BASE,
-    "frequency_penalty": FREQUENCY_PENALTY_BASE,
-    "min_p": MIN_P_BASE,
-    "temperature_last": TEMPERATURE_LAST,
-    "repetition_penalty": 1.15,
-    "repetition_penalty_range": 512,
-}
-
-PRESET_LLAMA_PRECISE = {
-    "temperature": 0.7,
-    "top_p": 0.1,
-    "top_k": 40,
-    "presence_penalty": PRESENCE_PENALTY_BASE,
-    "frequency_penalty": FREQUENCY_PENALTY_BASE,
-    "min_p": MIN_P_BASE,
-    "temperature_last": TEMPERATURE_LAST,
-    "repetition_penalty": 1.18,
-}
-
-PRESET_DETERMINISTIC = {
-    "temperature": 0.1,
-    "top_p": 1,
-    "top_k": 0,
-    "repetition_penalty": 1.0,
-}
-
-PRESET_DIVINE_INTELLECT = {
-    "temperature": 1.31,
-    "top_p": 0.14,
-    "top_k": 49,
-    "presence_penalty": PRESENCE_PENALTY_BASE,
-    "frequency_penalty": FREQUENCY_PENALTY_BASE,
-    "min_p": MIN_P_BASE,
-    "temperature_last": TEMPERATURE_LAST,
-    "repetition_penalty_range": 1024,
-    "repetition_penalty": 1.17,
-}
-
-PRESET_SIMPLE_1 = {
-    "temperature": 0.7,
-    "top_p": 0.9,
-    "top_k": 20,
-    "presence_penalty": PRESENCE_PENALTY_BASE,
-    "frequency_penalty": FREQUENCY_PENALTY_BASE,
-    "min_p": MIN_P_BASE,
-    "temperature_last": TEMPERATURE_LAST,
-    "repetition_penalty": 1.15,
-}
-
-PRESET_ANALYTICAL = {
-    "temperature": 0.1,
-    "top_p": 0.9,
-    "top_k": 20,
+# Load the config
+STATE = {
+    "CONFIG": load_config(),
 }
 
 
-def configure(config: dict, kind: str, total_budget: int, client=None):
+# Sync the config when it is saved
+def sync_config(event):
+    STATE["CONFIG"] = event.data
+    log.debug("PRESETS - Synced config")
+handlers["config_saved"].connect(sync_config)
+
+
+def get_inference_parameters(preset_name: str) -> dict:
+    """
+    Returns the inference parameters for the given preset name.
+    """
+    
+    presets = STATE["CONFIG"]["presets"]["inference"]
+    if preset_name in presets:
+        return presets[preset_name]
+    
+    raise ValueError(f"Preset name {preset_name} not found in presets.inference")
+
+
+def configure(config: dict, kind: str, total_budget: int, client: "ClientBase"):
     """
     Sets the config based on the kind of text to generate.
     """
@@ -121,64 +64,66 @@ def set_max_tokens(config: dict, kind: str, total_budget: int):
     return config
 
 
-def set_preset(config: dict, kind: str, client=None):
+def set_preset(config: dict, kind: str, client: "ClientBase"):
     """
     Sets the preset in the config based on the kind of text to generate.
     """
     config.update(preset_for_kind(kind, client))
 
 
+# TODO: can this just be checking all keys in CONFIG["presets"]["inference"]?
 PRESET_SUBSTRING_MAPPINGS = {
-    "deterministic": PRESET_DETERMINISTIC,
-    "creative": PRESET_DIVINE_INTELLECT,
-    "simple": PRESET_SIMPLE_1,
-    "analytical": PRESET_ANALYTICAL
+    "deterministic": "deterministic",
+    "creative": "creative",
+    "analytical": "analytical",
 }
 
 PRESET_MAPPING = {
-    "conversation": PRESET_TALEMATE_CONVERSATION,
-    "conversation_old": PRESET_TALEMATE_CONVERSATION,
-    "conversation_long": PRESET_TALEMATE_CONVERSATION,
-    "conversation_select_talking_actor": PRESET_TALEMATE_CONVERSATION,
-    "summarize": PRESET_LLAMA_PRECISE,
-    "analyze": PRESET_SIMPLE_1,
-    "analyze_creative": PRESET_DIVINE_INTELLECT,
-    "analyze_long": PRESET_SIMPLE_1,
-    "analyze_freeform": PRESET_LLAMA_PRECISE,
-    "analyze_freeform_short": PRESET_LLAMA_PRECISE,
-    "narrate": PRESET_LLAMA_PRECISE,
-    "story": PRESET_DIVINE_INTELLECT,
-    "create": PRESET_TALEMATE_CREATOR,
-    "create_concise": PRESET_TALEMATE_CREATOR,
-    "create_precise": PRESET_LLAMA_PRECISE,
-    "director": PRESET_SIMPLE_1,
-    "director_short": PRESET_SIMPLE_1,
-    "director_yesno": PRESET_SIMPLE_1,
-    "edit_dialogue": PRESET_DIVINE_INTELLECT,
-    "edit_add_detail": PRESET_DIVINE_INTELLECT,
-    "edit_fix_exposition": PRESET_DETERMINISTIC,
-    "edit_fix_continuity": PRESET_DETERMINISTIC,
-    "visualize": PRESET_SIMPLE_1,
+    "conversation": "conversation",
+    "conversation_select_talking_actor": "analytical",
+    "summarize": "summarization",
+    "analyze": "analytical",
+    "analyze_long": "analytical",
+    "analyze_freeform": "analytical",
+    "analyze_freeform_short": "analytical",
+    "narrate": "creative",
+    "create": "creative_instruction",
+    "create_short": "creative_instruction",
+    "create_concise": "creative_instruction",
+    "director": "scene_direction",
+    "edit_add_detail": "creative",
+    "edit_fix_exposition": "deterministic",
+    "edit_fix_continuity": "deterministic",
+    "visualize": "creative_instruction",
 }
 
 
-def preset_for_kind(kind: str) -> dict:
+def preset_for_kind(kind: str, client: "ClientBase") -> dict:
     # Check the substrings first(based on order of the original elifs)
+    
+    preset_name = None
+    
     for substring, value in PRESET_SUBSTRING_MAPPINGS.items():
         if substring in kind:
-            return value
-    # Default to PRESET_SIMPLE_1 if kind is not found
-    return PRESET_MAPPING.get(kind, PRESET_SIMPLE_1)
+            preset_name = value
+    
+    if not preset_name:
+        preset_name = PRESET_MAPPING.get(kind)
+        
+    if not preset_name:
+        log.warning(f"No preset found for kind {kind}, defaulting to 'scene_direction'", presets=STATE["CONFIG"]["presets"]["inference"])
+        preset_name = "scene_direction"
+    
+    set_client_context_attribute("inference_preset", preset_name)
+    
+    return get_inference_parameters(preset_name)
 
 
 TOKEN_MAPPING = {
     "conversation": 75,
-    "conversation_old": 75,
-    "conversation_long": 300,
     "conversation_select_talking_actor": 30,
     "summarize": 500,
     "analyze": 500,
-    "analyze_creative": 1024,
     "analyze_long": 2048,
     "analyze_freeform": 500,
     "analyze_freeform_medium": 192,
@@ -188,12 +133,8 @@ TOKEN_MAPPING = {
     "story": 300,
     "create": lambda total_budget: min(1024, int(total_budget * 0.35)),
     "create_concise": lambda total_budget: min(400, int(total_budget * 0.25)),
-    "create_precise": lambda total_budget: min(400, int(total_budget * 0.25)),
     "create_short": 25,
     "director": lambda total_budget: min(192, int(total_budget * 0.25)),
-    "director_short": 25,
-    "director_yesno": 2,
-    "edit_dialogue": 100,
     "edit_add_detail": 200,
     "edit_fix_exposition": 1024,
     "edit_fix_continuity": 512,

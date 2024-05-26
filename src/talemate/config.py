@@ -192,6 +192,66 @@ class RecentScene(BaseModel):
     date: str
     cover_image: Union[Asset, None] = None
 
+class InferenceParameters(BaseModel):
+    temperature: float = 1.0
+    temperature_last: bool = True
+    top_p: float | None = 1.0
+    top_k: int | None = 0
+    min_p: float | None = 0.1
+    presence_penalty: float | None = 0.2
+    frequency_penalty: float | None = 0.2
+    repetition_penalty: float | None= 1.1
+    repetition_penalty_range: int | None = 1024
+
+
+class InferencePresets(BaseModel):
+
+    analytical: InferenceParameters = InferenceParameters(
+        temperature=0.7, 
+        top_p=0.1, 
+        top_k=40,
+    )
+    conversation: InferenceParameters = InferenceParameters(
+        temperature=0.85, 
+        top_p=0.47,
+        top_k=42, 
+        repetition_penalty_range=2048
+    )
+    creative: InferenceParameters = InferenceParameters(
+        temperature=1.31, 
+        top_p=0.14, 
+        top_k=49, 
+        repetition_penalty=1.17
+    )
+    creative_instruction: InferenceParameters = InferenceParameters(
+        temperature=0.7, 
+        top_p=0.9, 
+        top_k=20, 
+        repetition_penalty=1.15, 
+        repetition_penalty_range=512
+    )
+    deterministic: InferenceParameters = InferenceParameters(
+        temperature=0.1, 
+        top_p=1, 
+        top_k=0, 
+        repetition_penalty=1.0
+    )
+    scene_direction: InferenceParameters = InferenceParameters(
+        temperature=0.7, 
+        top_p=0.9, 
+        top_k=20, 
+        repetition_penalty=1.15
+    )
+    summarization: InferenceParameters = InferenceParameters(
+        temperature=0.7, 
+        top_p=0.1, 
+        top_k=40,
+    )
+
+class Presets(BaseModel):
+    inference: InferencePresets = InferencePresets()
+
+
 
 def gnerate_intro_scenes():
     """
@@ -353,6 +413,8 @@ class Config(BaseModel):
     tts: TTSConfig = TTSConfig()
 
     recent_scenes: RecentScenes = RecentScenes()
+    
+    presets: Presets = Presets()
 
     class Config:
         extra = "ignore"

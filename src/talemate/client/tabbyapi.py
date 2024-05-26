@@ -9,6 +9,7 @@ from talemate.client.base import ClientBase, ExtraField
 from talemate.client.registry import register
 from talemate.config import Client as BaseClientConfig
 from talemate.emit import emit
+from talemate.client.utils import urljoin
 
 log = structlog.get_logger("talemate.client.tabbyapi")
 
@@ -18,9 +19,25 @@ class CustomAPIClient:
     def __init__(self, base_url, api_key):
         self.base_url = base_url
         self.api_key = api_key
+        
+    async def get_model_name(self):
+        url = urljoin(self.base_url, "model")
+        headers = {
+            "x-api-key": self.api_key,
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as response:
+                if response.status != 200:
+                    raise Exception(f"Request failed: {response.status}")
+                response_data = await response.json()
+                model_name = response_data.get("id")
+                # split by "/" and take last
+                if model_name:
+                    model_name = model_name.split("/")[-1]
+                return model_name
 
     async def create_chat_completion(self, model, messages, **parameters):
-        url = f"{self.base_url}/chat/completions"
+        url = urljoin(self.base_url, "chat/completions")
         headers = {
             "x-api-key": self.api_key,
             "Content-Type": "application/json",
@@ -37,7 +54,7 @@ class CustomAPIClient:
                 return await response.json()
 
     async def create_completion(self, model, **parameters):
-        url = f"{self.base_url}/completions"
+        url = urljoin(self.base_url, "completions")
         headers = {
             "x-api-key": self.api_key,
             "Content-Type": "application/json",
@@ -76,7 +93,7 @@ class TabbyAPIClient(ClientBase):
         name_prefix: str = "TabbyAPI"
         experimental: str = EXPERIMENTAL_DESCRIPTION
         enable_api_auth: bool = True
-        manual_model: bool = True
+        manual_model: bool = False
         defaults: Defaults = Defaults()
         extra_fields: dict[str, ExtraField] = {
             "api_handles_prompt_template": ExtraField(
@@ -108,8 +125,7 @@ class TabbyAPIClient(ClientBase):
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)
         self.api_handles_prompt_template = kwargs.get("api_handles_prompt_template", self.api_handles_prompt_template)
-        url = self.api_url
-        self.client = CustomAPIClient(base_url=url, api_key=self.api_key)
+        self.client = CustomAPIClient(base_url=self.api_url, api_key=self.api_key)
         self.model_name = kwargs.get("model") or kwargs.get("model_name") or self.model_name
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
@@ -141,7 +157,7 @@ class TabbyAPIClient(ClientBase):
         return prompt
 
     async def get_model_name(self):
-        return self.model_name
+        return await self.client.get_model_name()
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """

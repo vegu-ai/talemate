@@ -4,9 +4,9 @@
         <p>
             This interface is a work in progress and right now serves as a very basic way to edit inference parameter presets.
         </p>
-        <p>
-            Note that not all clients support all parameters, and generally it is assumed that the client implementation
-            handles the parameters correctly, especially if values are passed for all of them.
+        <p class="text-caption text-grey">
+            Not all clients support all parameters, and generally it is assumed that the client implementation
+            handles the parameters correctly, especially if values are passed for all of them. <span class="text-primary">All presets are used</span> and will be selected depending on the action the agent is performing. If you don't know what these mean, it is recommended to leave them as they are.
         </p>
     </v-alert>
 
@@ -52,7 +52,7 @@
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].frequency_penalty" min="0.1" max="1.0" step="0.1" label="Frequency Penalty"></v-slider>
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].repetition_penalty" min="0.1" max="2.0" step="0.1" label="Repetition Penalty"></v-slider>
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].repetition_penalty_range" min="0" max="1024" step="256" label="Repetition Penalty Range"></v-slider>
-                            <v-checkbox v-model="config.inference[selected[0]].temperature_last" label="Temperature Last"></v-checkbox>
+                            <v-checkbox density="compact" v-model="config.inference[selected[0]].temperature_last" label="Temperature Last"></v-checkbox>
 
 
                         </v-card-text>

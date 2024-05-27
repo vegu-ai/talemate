@@ -249,6 +249,7 @@ class InferencePresets(BaseModel):
     )
 
 class Presets(BaseModel):
+    inference_defaults: InferencePresets = InferencePresets()
     inference: InferencePresets = InferencePresets()
 
 

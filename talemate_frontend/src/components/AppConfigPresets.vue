@@ -47,7 +47,7 @@
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].temperature" min="0.1" max="2.0" step="0.05" label="Temperature"></v-slider>
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].top_p" min="0.1" max="1.0" step="0.1" label="Top P"></v-slider>
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].top_k" min="0" max="1024" step="1" label="Top K"></v-slider>
-                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].min_p" min="0" max="1.0" step="0.05" label="Min P"></v-slider>
+                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].min_p" min="0" max="1.0" step="0.01" label="Min P"></v-slider>
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].presence_penalty" min="0.1" max="1.0" step="0.1" label="Presence Penalty"></v-slider>
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].frequency_penalty" min="0.1" max="1.0" step="0.1" label="Frequency Penalty"></v-slider>
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].repetition_penalty" min="1.0" max="1.20" step="0.01" label="Repetition Penalty"></v-slider>

@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING
-from talemate.config import load_config
+from talemate.config import load_config, InferencePresets
 from talemate.emit.signals import handlers
 from talemate.client.context import set_client_context_attribute
 import structlog
@@ -22,16 +22,20 @@ __all__ = [
 
 log = structlog.get_logger("talemate.client.presets")
 
+config = load_config(as_model=True)
+
 # Load the config
-STATE = {
-    "CONFIG": load_config(),
+CONFIG = {
+    "inference": config.presets.inference,
 }
 
 
 # Sync the config when it is saved
 def sync_config(event):
-    STATE["CONFIG"] = event.data
-    log.debug("PRESETS - Synced config")
+    CONFIG["inference"] = InferencePresets(
+        **event.data.get("presets", {}).get("inference", {})
+    )
+    
 handlers["config_saved"].connect(sync_config)
 
 
@@ -40,7 +44,8 @@ def get_inference_parameters(preset_name: str) -> dict:
     Returns the inference parameters for the given preset name.
     """
     
-    presets = STATE["CONFIG"]["presets"]["inference"]
+    
+    presets = CONFIG["inference"].model_dump()
     if preset_name in presets:
         return presets[preset_name]
     
@@ -71,7 +76,7 @@ def set_preset(config: dict, kind: str, client: "ClientBase"):
     config.update(preset_for_kind(kind, client))
 
 
-# TODO: can this just be checking all keys in CONFIG["presets"]["inference"]?
+# TODO: can this just be checking all keys in inference.presets.inference?
 PRESET_SUBSTRING_MAPPINGS = {
     "deterministic": "deterministic",
     "creative": "creative",
@@ -111,7 +116,7 @@ def preset_for_kind(kind: str, client: "ClientBase") -> dict:
         preset_name = PRESET_MAPPING.get(kind)
         
     if not preset_name:
-        log.warning(f"No preset found for kind {kind}, defaulting to 'scene_direction'", presets=STATE["CONFIG"]["presets"]["inference"])
+        log.warning(f"No preset found for kind {kind}, defaulting to 'scene_direction'", presets=CONFIG["inference"])
         preset_name = "scene_direction"
     
     set_client_context_attribute("inference_preset", preset_name)

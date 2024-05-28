@@ -2,7 +2,7 @@ import pydantic
 import structlog
 from cohere import AsyncClient
 
-from talemate.client.base import ClientBase, ErrorAction
+from talemate.client.base import ClientBase, ErrorAction, ParameterReroute
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
@@ -37,6 +37,16 @@ class CohereClient(ClientBase):
     conversation_retries = 0
     auto_break_repetition_enabled = False
     decensor_enabled = True
+
+    supported_parameters = [
+        "temperature", 
+        ParameterReroute(talemate_parameter="top_p", client_parameter="p"),
+        ParameterReroute(talemate_parameter="top_k", client_parameter="k"),
+        ParameterReroute(talemate_parameter="stopping_strings",  client_parameter="stop_sequences"),
+        "frequency_penalty",
+        "presence_penalty",
+        "max_tokens",
+    ]
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "Cohere"
@@ -160,18 +170,22 @@ class CohereClient(ClientBase):
 
         return prompt
 
-    def tune_prompt_parameters(self, parameters: dict, kind: str):
-        super().tune_prompt_parameters(parameters, kind)
-        keys = list(parameters.keys())
-        valid_keys = ["temperature", "max_tokens"]
-        for key in keys:
-            if key not in valid_keys:
-                del parameters[key]
-
+    def clean_prompt_parameters(self, parameters: dict):
+        
+        super().clean_prompt_parameters(parameters)
+        
         # if temperature is set, it needs to be clamped between 0 and 1.0
         if "temperature" in parameters:
             parameters["temperature"] = max(0.0, min(1.0, parameters["temperature"]))
-
+            
+        # if stop_sequences is set, max 5 items
+        if "stop_sequences" in parameters:
+            parameters["stop_sequences"] = parameters["stop_sequences"][:5]
+            
+        # if both frequency_penalty and presence_penalty are set, drop frequency_penalty
+        if "presence_penalty" in parameters and "frequency_penalty" in parameters:
+            del parameters["frequency_penalty"]
+            
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.

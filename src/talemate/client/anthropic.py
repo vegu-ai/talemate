@@ -38,6 +38,13 @@ class AnthropicClient(ClientBase):
     # TODO: make this configurable?
     decensor_enabled = False
 
+    supported_parameters = [
+        "temperature", 
+        "top_p",
+        "top_k",
+        "max_tokens",
+    ]
+
     class Meta(ClientBase.Meta):
         name_prefix: str = "Anthropic"
         title: str = "Anthropic"
@@ -159,14 +166,6 @@ class AnthropicClient(ClientBase):
                 prompt = prompt.replace("<|BOT|>", "")
 
         return prompt
-
-    def tune_prompt_parameters(self, parameters: dict, kind: str):
-        super().tune_prompt_parameters(parameters, kind)
-        keys = list(parameters.keys())
-        valid_keys = ["temperature", "top_p", "max_tokens"]
-        for key in keys:
-            if key not in valid_keys:
-                del parameters[key]
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """

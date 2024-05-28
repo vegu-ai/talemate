@@ -109,6 +109,13 @@ class OpenAIClient(ClientBase):
     # TODO: make this configurable?
     decensor_enabled = False
 
+    supported_parameters = [
+        "temperature", 
+        "top_p", 
+        "presence_penalty",
+        "max_tokens",
+    ]
+
     class Meta(ClientBase.Meta):
         name_prefix: str = "OpenAI"
         title: str = "OpenAI"
@@ -240,26 +247,6 @@ class OpenAIClient(ClientBase):
                 prompt = prompt.replace("<|BOT|>", "")
 
         return prompt
-
-    def tune_prompt_parameters(self, parameters: dict, kind: str):
-        super().tune_prompt_parameters(parameters, kind)
-
-        keys = list(parameters.keys())
-
-        valid_keys = ["temperature", "top_p"]
-
-        # GPT-3.5 models tend to run away with the generated
-        # response size so we allow talemate to set the max_tokens
-        #
-        # GPT-4 on the other hand seems to benefit from letting it
-        # decide the generation length naturally and it will generally
-        # produce reasonably sized responses
-        if self.model_name.startswith("gpt-3.5-"):
-            valid_keys.append("max_tokens")
-
-        for key in keys:
-            if key not in valid_keys:
-                del parameters[key]
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """

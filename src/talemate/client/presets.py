@@ -79,6 +79,7 @@ PRESET_SUBSTRING_MAPPINGS = {
     "deterministic": "deterministic",
     "creative": "creative",
     "analytical": "analytical",
+    "analyze": "analytical",
 }
 
 PRESET_MAPPING = {
@@ -106,12 +107,12 @@ def preset_for_kind(kind: str, client: "ClientBase") -> dict:
     
     preset_name = None
     
-    for substring, value in PRESET_SUBSTRING_MAPPINGS.items():
-        if substring in kind:
-            preset_name = value
+    preset_name = PRESET_MAPPING.get(kind)
     
     if not preset_name:
-        preset_name = PRESET_MAPPING.get(kind)
+        for substring, value in PRESET_SUBSTRING_MAPPINGS.items():
+            if substring in kind:
+                preset_name = value
         
     if not preset_name:
         log.warning(f"No preset found for kind {kind}, defaulting to 'scene_direction'", presets=CONFIG["inference"])

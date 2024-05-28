@@ -23,13 +23,5 @@ class RemoteServiceMixin:
         self.config = config
         self.set_client(max_token_length=self.max_token_length)
 
-    def tune_prompt_parameters(self, parameters: dict, kind: str):
-        super().tune_prompt_parameters(parameters, kind)
-        keys = list(parameters.keys())
-        valid_keys = ["temperature", "max_tokens"]
-        for key in keys:
-            if key not in valid_keys:
-                del parameters[key]
-
     async def status(self):
         self.emit_status()

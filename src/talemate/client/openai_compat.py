@@ -32,7 +32,14 @@ class OpenAICompatibleClient(ClientBase):
     client_type = "openai_compat"
     conversation_retries = 0
     config_cls = ClientConfig
-
+    
+    supported_parameters = [
+        "temperature", 
+        "top_p", 
+        "presence_penalty",
+        "max_tokens",
+    ]
+    
     class Meta(ClientBase.Meta):
         title: str = "OpenAI Compatible API"
         name_prefix: str = "OpenAI Compatible API"
@@ -80,16 +87,6 @@ class OpenAICompatibleClient(ClientBase):
         self.model_name = (
             kwargs.get("model") or kwargs.get("model_name") or self.model_name
         )
-
-    def tune_prompt_parameters(self, parameters: dict, kind: str):
-        super().tune_prompt_parameters(parameters, kind)
-
-        allowed_params = ["max_tokens", "presence_penalty", "top_p", "temperature"]
-        
-        # drop unsupported params
-        for param in list(parameters.keys()):
-            if param not in allowed_params:
-                del parameters[param]
 
     def prompt_template(self, system_message: str, prompt: str):
 

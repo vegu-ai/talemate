@@ -4,7 +4,7 @@ from mistralai.async_client import MistralAsyncClient
 from mistralai.exceptions import MistralAPIStatusException
 from mistralai.models.chat_completion import ChatMessage
 
-from talemate.client.base import ClientBase, ErrorAction
+from talemate.client.base import ClientBase, ErrorAction, ParameterReroute
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
@@ -48,6 +48,12 @@ class MistralAIClient(ClientBase):
     auto_break_repetition_enabled = False
     # TODO: make this configurable?
     decensor_enabled = True
+
+    supported_parameters = [
+        "temperature", 
+        "top_p",
+        "max_tokens",
+    ]
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "MistralAI"
@@ -171,17 +177,10 @@ class MistralAIClient(ClientBase):
 
         return prompt
 
-    def tune_prompt_parameters(self, parameters: dict, kind: str):
-        super().tune_prompt_parameters(parameters, kind)
-        keys = list(parameters.keys())
-        valid_keys = ["temperature", "top_p", "max_tokens"]
-        for key in keys:
-            if key not in valid_keys:
-                del parameters[key]
-
+    def clean_prompt_parameters(self, parameters: dict):
+        super().clean_prompt_parameters(parameters)
         # clamp temperature to 0.1 and 1.0
         # Unhandled Error: Status: 422. Message: {"object":"error","message":{"detail":[{"type":"less_than_equal","loc":["body","temperature"],"msg":"Input should be less than or equal to 1","input":1.31,"ctx":{"le":1.0},"url":"https://errors.pydantic.dev/2.6/v/less_than_equal"}]},"type":"invalid_request_error","param":null,"code":null}
-
         if "temperature" in parameters:
             parameters["temperature"] = min(1.0, max(0.1, parameters["temperature"]))
 

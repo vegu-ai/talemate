@@ -64,6 +64,20 @@ class ExtraField(pydantic.BaseModel):
     required: bool
     description: str
 
+class ParameterReroute(pydantic.BaseModel):
+    talemate_parameter: str
+    client_parameter: str
+    
+    def reroute(self, parameters: dict):
+        if self.talemate_parameter in parameters:
+            parameters[self.client_parameter] = parameters[self.talemate_parameter]
+            del parameters[self.talemate_parameter]
+
+    def __str__(self):
+        return self.client_parameter
+
+    def __eq__(self, other):
+        return str(self) == str(other)
 
 class ClientBase:
     api_url: str
@@ -82,6 +96,12 @@ class ClientBase:
     finalizers: list[str] = []
     double_coercion: Union[str, None] = None
     client_type = "base"
+    
+    # each client should define the supported parameters
+    supported_parameters = [
+        "temperature",
+        "max_tokens",
+    ]
 
     class Meta(pydantic.BaseModel):
         experimental: Union[None, str] = None
@@ -470,7 +490,16 @@ class ClientBase:
         """
         Does some final adjustments to the prompt parameters before sending
         """
-        pass
+        
+        # apply any parameter reroutes
+        for param in self.supported_parameters:
+            if isinstance(param, ParameterReroute):
+                param.reroute(parameters)
+        
+        # drop any parameters that are not supported by the client
+        for key in list(parameters.keys()):
+            if key not in self.supported_parameters:
+                del parameters[key]
 
     def finalize(self, parameters: dict, prompt: str):
 
@@ -481,8 +510,6 @@ class ClientBase:
             prompt, applied = fn(parameters, prompt)
             if applied:
                 return prompt
-    
-        self.clean_prompt_parameters(parameters)        
     
         return prompt
 
@@ -543,6 +570,8 @@ class ClientBase:
 
             time_start = time.time()
             extra_stopping_strings = prompt_param.pop("extra_stopping_strings", [])
+            
+            self.clean_prompt_parameters(prompt_param)        
 
             self.log.debug(
                 "send_prompt",

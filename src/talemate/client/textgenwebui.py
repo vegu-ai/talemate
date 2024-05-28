@@ -79,11 +79,6 @@ class TextGeneratorWebuiClient(ClientBase):
         # is this needed?
         parameters["max_new_tokens"] = parameters["max_tokens"]
         parameters["stop"] = parameters["stopping_strings"]
-        
-         # drop unsupported params
-        for param in list(parameters.keys()):
-            if param not in self.supported_parameters:
-                del parameters[param]
 
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)

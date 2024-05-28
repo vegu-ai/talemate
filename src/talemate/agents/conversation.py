@@ -21,6 +21,7 @@ from talemate.emit import emit
 from talemate.events import GameLoopEvent
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage, DirectorMessage
+from talemate.exceptions import LLMAccuracyError
 
 from .base import (
     Agent,
@@ -661,6 +662,11 @@ class ConversationAgent(Agent):
                 empty_result_count += 1
                 if empty_result_count >= 2:
                     break
+                
+                
+        # if result is empty, raise an error
+        if not total_result:
+            raise LLMAccuracyError("Received empty response from AI")
 
         result = result.replace(" :", ":")
 

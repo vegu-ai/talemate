@@ -87,6 +87,17 @@ class TabbyAPIClient(ClientBase):
     client_type = "tabbyapi"
     conversation_retries = 0
     config_cls = ClientConfig
+    
+    supported_parameters = [
+        "max_tokens", 
+        "presence_penalty", 
+        "frequency_penalty", 
+        "repetition_penalty_range", 
+        "min_p",
+        "top_p",
+        "temperature_last",
+        "temperature"
+    ]
 
     class Meta(ClientBase.Meta):
         title: str = "TabbyAPI"
@@ -127,15 +138,6 @@ class TabbyAPIClient(ClientBase):
         self.api_handles_prompt_template = kwargs.get("api_handles_prompt_template", self.api_handles_prompt_template)
         self.client = CustomAPIClient(base_url=self.api_url, api_key=self.api_key)
         self.model_name = kwargs.get("model") or kwargs.get("model_name") or self.model_name
-
-    def tune_prompt_parameters(self, parameters: dict, kind: str):
-        super().tune_prompt_parameters(parameters, kind)
-        allowed_params = ["max_tokens", "presence_penalty", "frequency_penalty", "repetition_penalty_range", "min_p", "top_p", "temperature_last", "temperature"]
-
-        # drop unsupported params
-        for param in list(parameters.keys()):
-            if param not in allowed_params:
-                del parameters[param]
 
     def prompt_template(self, system_message: str, prompt: str):
 

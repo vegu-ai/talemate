@@ -466,6 +466,12 @@ class ClientBase:
         else:
             parameters["extra_stopping_strings"] = dialog_stopping_strings
 
+    def clean_prompt_parameters(self, parameters: dict):
+        """
+        Does some final adjustments to the prompt parameters before sending
+        """
+        pass
+
     def finalize(self, parameters: dict, prompt: str):
 
         prompt = util.replace_special_tokens(prompt)
@@ -475,6 +481,9 @@ class ClientBase:
             prompt, applied = fn(parameters, prompt)
             if applied:
                 return prompt
+    
+        self.clean_prompt_parameters(parameters)        
+    
         return prompt
 
     async def generate(self, prompt: str, parameters: dict, kind: str):

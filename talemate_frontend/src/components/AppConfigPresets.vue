@@ -45,7 +45,7 @@
                                     {{ toLabel(selected[0]) }}
                                 </v-col>
                                 <v-col cols="4" class="text-right">
-                                    <v-btn variant="text" size="small" color="warning" prepend-icon="mdi-refresh" @click="config.inference[selected[0]] = immutableConfig.presets.inference_defaults[selected[0]]">Reset</v-btn>
+                                    <v-btn variant="text" size="small" color="warning" prepend-icon="mdi-refresh" @click="config.inference[selected[0]] = {...immutableConfig.presets.inference_defaults[selected[0]]}">Reset</v-btn>
                                 </v-col>
                             </v-row>
                         </v-card-title>

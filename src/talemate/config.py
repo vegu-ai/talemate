@@ -202,6 +202,9 @@ class InferenceParameters(BaseModel):
     frequency_penalty: float | None = 0.2
     repetition_penalty: float | None= 1.1
     repetition_penalty_range: int | None = 1024
+    # this determines whether or not it should be persisted
+    # to the config file
+    changed: bool = False
 
 
 class InferencePresets(BaseModel):
@@ -248,10 +251,10 @@ class InferencePresets(BaseModel):
         top_k=40,
     )
 
+
 class Presets(BaseModel):
     inference_defaults: InferencePresets = InferencePresets()
     inference: InferencePresets = InferencePresets()
-
 
 
 def gnerate_intro_scenes():
@@ -479,11 +482,15 @@ def save_config(config, file_path: str = "./config.yaml"):
 
     # we dont want to persist the following, so we drop them:
     # - presets.inference_defaults
-    
     try:
         config["presets"].pop("inference_defaults")
     except KeyError:
         pass
+    
+    # for normal presets we only want to persist if they have changed
+    for preset_name, preset in list(config["presets"]["inference"].items()):
+        if not preset.get("changed"):
+            config["presets"]["inference"].pop(preset_name)
 
     with open(file_path, "w") as file:
         yaml.dump(config, file)

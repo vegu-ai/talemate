@@ -477,6 +477,14 @@ def save_config(config, file_path: str = "./config.yaml"):
             log.error("config validation", error=e)
             return None
 
+    # we dont want to persist the following, so we drop them:
+    # - presets.inference_defaults
+    
+    try:
+        config["presets"].pop("inference_defaults")
+    except KeyError:
+        pass
+
     with open(file_path, "w") as file:
         yaml.dump(config, file)
 

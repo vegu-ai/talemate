@@ -14,18 +14,21 @@ class Defaults(pydantic.BaseModel):
 class LMStudioClient(ClientBase):
     auto_determine_prompt_template: bool = True
     client_type = "lmstudio"
-    supported_parameters = [
-        "temperature",
-        "top_p",
-        "frequency_penalty",
-        "presence_penalty",
-        ParameterReroute(talemate_parameter="stopping_strings", client_parameter="stop"),
-    ]
-
+    
     class Meta(ClientBase.Meta):
         name_prefix: str = "LMStudio"
         title: str = "LMStudio"
         defaults: Defaults = Defaults()
+
+    @property
+    def supported_parameters(self):
+        return [
+            "temperature",
+            "top_p",
+            "frequency_penalty",
+            "presence_penalty",
+            ParameterReroute(talemate_parameter="stopping_strings", client_parameter="stop"),
+        ]
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")

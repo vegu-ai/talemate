@@ -24,34 +24,6 @@ class TextGeneratorWebuiClient(ClientBase):
     ]
 
     client_type = "textgenwebui"
-    
-    # textgenwebui does not error on unsupported parameters
-    # but we should still drop them so they don't get passed to the API
-    # and show up in our prompt debugging tool.
-
-    # note that this is not the full list of their supported parameters
-    # but only those we send.
-    supported_parameters = [
-        "temperature",
-        "top_p",
-        "top_k",
-        "min_p",
-        "frequency_penalty",
-        "presence_penalty",
-        "repetition_penalty",
-        "repetition_penalty_range",
-        "stopping_strings",
-        "skip_special_tokens",
-        "max_tokens",
-        "stream",
-        # arethese needed?
-        "max_new_tokens",
-        "stop",
-        # talemate internal
-        # These will be removed before sending to the API
-        # but we keep them here since they are used during the prompt finalization
-        "extra_stopping_strings",
-    ]
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "TextGenWebUI"
@@ -66,6 +38,36 @@ class TextGeneratorWebuiClient(ClientBase):
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
+
+    @property
+    def supported_parameters(self):
+        # textgenwebui does not error on unsupported parameters
+        # but we should still drop them so they don't get passed to the API
+        # and show up in our prompt debugging tool.
+
+        # note that this is not the full list of their supported parameters
+        # but only those we send.
+        return [
+            "temperature",
+            "top_p",
+            "top_k",
+            "min_p",
+            "frequency_penalty",
+            "presence_penalty",
+            "repetition_penalty",
+            "repetition_penalty_range",
+            "stopping_strings",
+            "skip_special_tokens",
+            "max_tokens",
+            "stream",
+            # arethese needed?
+            "max_new_tokens",
+            "stop",
+            # talemate internal
+            # These will be removed before sending to the API
+            # but we keep them here since they are used during the prompt finalization
+            "extra_stopping_strings",
+        ]
 
     def __init__(self, **kwargs):
         self.api_key = kwargs.pop("api_key", "")

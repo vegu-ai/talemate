@@ -40,15 +40,6 @@ class GroqClient(ClientBase):
     # TODO: make this configurable?
     decensor_enabled = True
 
-    supported_parameters = [
-        "temperature",
-        "top_p",
-        "presence_penalty",
-        "frequency_penalty",
-        ParameterReroute(talemate_parameter="stopping_strings",  client_parameter="stop"),
-        "max_tokens",
-    ]
-
     class Meta(ClientBase.Meta):
         name_prefix: str = "Groq"
         title: str = "Groq"
@@ -68,6 +59,17 @@ class GroqClient(ClientBase):
     @property
     def groq_api_key(self):
         return self.config.get("groq", {}).get("api_key")
+
+    @property
+    def supported_parameters(self):
+        return [
+            "temperature",
+            "top_p",
+            "presence_penalty",
+            "frequency_penalty",
+            ParameterReroute(talemate_parameter="stopping_strings",  client_parameter="stop"),
+            "max_tokens",
+        ]
 
     def emit_status(self, processing: bool = None):
         error_action = None

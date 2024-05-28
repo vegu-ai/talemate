@@ -38,16 +38,6 @@ class CohereClient(ClientBase):
     auto_break_repetition_enabled = False
     decensor_enabled = True
 
-    supported_parameters = [
-        "temperature", 
-        ParameterReroute(talemate_parameter="top_p", client_parameter="p"),
-        ParameterReroute(talemate_parameter="top_k", client_parameter="k"),
-        ParameterReroute(talemate_parameter="stopping_strings",  client_parameter="stop_sequences"),
-        "frequency_penalty",
-        "presence_penalty",
-        "max_tokens",
-    ]
-
     class Meta(ClientBase.Meta):
         name_prefix: str = "Cohere"
         title: str = "Cohere"
@@ -67,6 +57,18 @@ class CohereClient(ClientBase):
     @property
     def cohere_api_key(self):
         return self.config.get("cohere", {}).get("api_key")
+
+    @property
+    def supported_parameters(self):
+        return [
+            "temperature", 
+            ParameterReroute(talemate_parameter="top_p", client_parameter="p"),
+            ParameterReroute(talemate_parameter="top_k", client_parameter="k"),
+            ParameterReroute(talemate_parameter="stopping_strings",  client_parameter="stop_sequences"),
+            "frequency_penalty",
+            "presence_penalty",
+            "max_tokens",
+        ]
 
     def emit_status(self, processing: bool = None):
         error_action = None

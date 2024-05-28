@@ -56,14 +56,6 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
     decensor_enabled = True
     config_cls = ClientConfig
     
-    supported_parameters = [
-        "temperature", 
-        "top_p",
-        "top_k",
-        ParameterReroute(talemate_parameter="max_tokens", client_parameter="max_output_tokens"),
-        ParameterReroute(talemate_parameter="stopping_strings",  client_parameter="stop_sequences"),
-    ]
-
     class Meta(ClientBase.Meta):
         name_prefix: str = "Google"
         title: str = "Google"
@@ -148,6 +140,16 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         ]
 
         return safety_settings
+
+    @property
+    def supported_parameters(self):
+        return [
+            "temperature", 
+            "top_p",
+            "top_k",
+            ParameterReroute(talemate_parameter="max_tokens", client_parameter="max_output_tokens"),
+            ParameterReroute(talemate_parameter="stopping_strings",  client_parameter="stop_sequences"),
+        ]
 
     def emit_status(self, processing: bool = None):
         error_action = None

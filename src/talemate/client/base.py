@@ -97,11 +97,6 @@ class ClientBase:
     double_coercion: Union[str, None] = None
     client_type = "base"
     
-    # each client should define the supported parameters
-    supported_parameters = [
-        "temperature",
-        "max_tokens",
-    ]
 
     class Meta(pydantic.BaseModel):
         experimental: Union[None, str] = None
@@ -146,6 +141,15 @@ class ClientBase:
     @property
     def max_tokens_param_name(self):
         return "max_tokens"
+
+    @property
+    def supported_parameters(self):
+        # each client should override this with the parameters it supports
+        return [
+            "temperature",
+            "max_tokens",
+        ]
+
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")

@@ -33,13 +33,6 @@ class OpenAICompatibleClient(ClientBase):
     conversation_retries = 0
     config_cls = ClientConfig
     
-    supported_parameters = [
-        "temperature", 
-        "top_p", 
-        "presence_penalty",
-        "max_tokens",
-    ]
-    
     class Meta(ClientBase.Meta):
         title: str = "OpenAI Compatible API"
         name_prefix: str = "OpenAI Compatible API"
@@ -76,6 +69,15 @@ class OpenAICompatibleClient(ClientBase):
         to predefine partial LLM output in the prompt)
         """
         return not self.api_handles_prompt_template
+
+    @property
+    def supported_parameters(self):
+        return [
+            "temperature", 
+            "top_p", 
+            "presence_penalty",
+            "max_tokens",
+        ]
 
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)

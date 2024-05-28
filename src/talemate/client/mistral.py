@@ -49,12 +49,6 @@ class MistralAIClient(ClientBase):
     # TODO: make this configurable?
     decensor_enabled = True
 
-    supported_parameters = [
-        "temperature", 
-        "top_p",
-        "max_tokens",
-    ]
-
     class Meta(ClientBase.Meta):
         name_prefix: str = "MistralAI"
         title: str = "MistralAI"
@@ -74,6 +68,14 @@ class MistralAIClient(ClientBase):
     @property
     def mistralai_api_key(self):
         return self.config.get("mistralai", {}).get("api_key")
+
+    @property
+    def supported_parameters(self):
+        return [
+            "temperature", 
+            "top_p",
+            "max_tokens",
+        ]
 
     def emit_status(self, processing: bool = None):
         error_action = None

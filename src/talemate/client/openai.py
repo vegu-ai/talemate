@@ -109,13 +109,6 @@ class OpenAIClient(ClientBase):
     # TODO: make this configurable?
     decensor_enabled = False
 
-    supported_parameters = [
-        "temperature", 
-        "top_p", 
-        "presence_penalty",
-        "max_tokens",
-    ]
-
     class Meta(ClientBase.Meta):
         name_prefix: str = "OpenAI"
         title: str = "OpenAI"
@@ -135,6 +128,15 @@ class OpenAIClient(ClientBase):
     @property
     def openai_api_key(self):
         return self.config.get("openai", {}).get("api_key")
+
+    @property
+    def supported_parameters(self):
+        return [
+            "temperature", 
+            "top_p", 
+            "presence_penalty",
+            "max_tokens",
+        ]
 
     def emit_status(self, processing: bool = None):
         error_action = None

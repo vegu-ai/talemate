@@ -87,17 +87,6 @@ class TabbyAPIClient(ClientBase):
     client_type = "tabbyapi"
     conversation_retries = 0
     config_cls = ClientConfig
-    
-    supported_parameters = [
-        "max_tokens", 
-        "presence_penalty", 
-        "frequency_penalty", 
-        "repetition_penalty_range", 
-        "min_p",
-        "top_p",
-        "temperature_last",
-        "temperature"
-    ]
 
     class Meta(ClientBase.Meta):
         title: str = "TabbyAPI"
@@ -132,6 +121,19 @@ class TabbyAPIClient(ClientBase):
         Determines whether or not this client can pass LLM coercion. (e.g., is able to predefine partial LLM output in the prompt)
         """
         return not self.api_handles_prompt_template
+
+    @property
+    def supported_parameters(self):
+        return [
+            "max_tokens", 
+            "presence_penalty", 
+            "frequency_penalty", 
+            "repetition_penalty_range", 
+            "min_p",
+            "top_p",
+            "temperature_last",
+            "temperature"
+        ]
 
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)

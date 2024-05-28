@@ -43,8 +43,6 @@ def get_inference_parameters(preset_name: str) -> dict:
     """
     Returns the inference parameters for the given preset name.
     """
-    
-    
     presets = CONFIG["inference"].model_dump()
     if preset_name in presets:
         return presets[preset_name]

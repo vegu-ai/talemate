@@ -200,7 +200,7 @@ class InferenceParameters(BaseModel):
     min_p: float | None = 0.1
     presence_penalty: float | None = 0.2
     frequency_penalty: float | None = 0.2
-    repetition_penalty: float | None= 1.1
+    repetition_penalty: float | None= 1.0
     repetition_penalty_range: int | None = 1024
     # this determines whether or not it should be persisted
     # to the config file
@@ -211,44 +211,32 @@ class InferencePresets(BaseModel):
 
     analytical: InferenceParameters = InferenceParameters(
         temperature=0.7, 
-        top_p=0.1, 
-        top_k=40,
+        presence_penalty=0,
+        frequency_penalty=0,
+        repetition_penalty=1.0,
+        min_p=0,
     )
     conversation: InferenceParameters = InferenceParameters(
-        temperature=0.85, 
-        top_p=0.47,
-        top_k=42, 
+        temperature=0.85,
         repetition_penalty_range=2048
     )
-    creative: InferenceParameters = InferenceParameters(
-        temperature=1.31, 
-        top_p=0.14, 
-        top_k=49, 
-        repetition_penalty=1.17
-    )
+    creative: InferenceParameters = InferenceParameters()
     creative_instruction: InferenceParameters = InferenceParameters(
-        temperature=0.7, 
-        top_p=0.9, 
-        top_k=20, 
-        repetition_penalty=1.15, 
+        temperature=0.85, 
         repetition_penalty_range=512
     )
     deterministic: InferenceParameters = InferenceParameters(
         temperature=0.1, 
         top_p=1, 
         top_k=0, 
-        repetition_penalty=1.0
+        repetition_penalty=1.0,
+        min_p=0,
     )
     scene_direction: InferenceParameters = InferenceParameters(
-        temperature=0.7, 
-        top_p=0.9, 
-        top_k=20, 
-        repetition_penalty=1.15
+        temperature=0.85, 
     )
     summarization: InferenceParameters = InferenceParameters(
         temperature=0.7, 
-        top_p=0.1, 
-        top_k=40,
     )
 
 
@@ -491,6 +479,10 @@ def save_config(config, file_path: str = "./config.yaml"):
     for preset_name, preset in list(config["presets"]["inference"].items()):
         if not preset.get("changed"):
             config["presets"]["inference"].pop(preset_name)
+            
+    # if presets is empty, remove it
+    if not config["presets"]["inference"]:
+        config.pop("presets")
 
     with open(file_path, "w") as file:
         yaml.dump(config, file)

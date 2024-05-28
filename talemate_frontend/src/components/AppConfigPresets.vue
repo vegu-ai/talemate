@@ -6,7 +6,7 @@
         </p>
         <p class="text-caption text-grey">
             Not all clients support all parameters, and generally it is assumed that the client implementation
-            handles the parameters correctly, especially if values are passed for all of them. <span class="text-primary">All presets are used</span> and will be selected depending on the action the agent is performing. If you don't know what these mean, it is recommended to leave them as they are.
+            handles the parameters in a sane way, especially if values are passed for all of them. <span class="text-primary">All presets are used</span> and will be selected depending on the action the agent is performing. If you don't know what these mean, it is recommended to leave them as they are.
         </p>
     </v-alert>
 

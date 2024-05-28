@@ -13,8 +13,8 @@
     <v-row>
         <v-col cols="4">
             <!-- list with all presets by key, read from `config` -->
-            <v-list selectable v-model:selected="selected" color="primary">
-                <v-list-item v-for="(preset, preset_key) in config.inference" :key="preset_key" :value="preset_key">
+            <v-list slim selectable v-model:selected="selected" color="primary">
+                <v-list-item v-for="(preset, preset_key) in config.inference" :key="preset_key" :value="preset_key" prepend-icon="mdi-tune">
                     <v-list-item-title>{{ toLabel(preset_key) }}</v-list-item-title>
                 </v-list-item>
             </v-list>

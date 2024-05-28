@@ -52,28 +52,28 @@ def get_inference_parameters(preset_name: str) -> dict:
     raise ValueError(f"Preset name {preset_name} not found in presets.inference")
 
 
-def configure(config: dict, kind: str, total_budget: int, client: "ClientBase"):
+def configure(parameters: dict, kind: str, total_budget: int, client: "ClientBase"):
     """
     Sets the config based on the kind of text to generate.
     """
-    set_preset(config, kind, client)
-    set_max_tokens(config, kind, total_budget)
-    return config
+    set_preset(parameters, kind, client)
+    set_max_tokens(parameters, kind, total_budget)
+    return parameters
 
 
-def set_max_tokens(config: dict, kind: str, total_budget: int):
+def set_max_tokens(parameters: dict, kind: str, total_budget: int):
     """
     Sets the max_tokens in the config based on the kind of text to generate.
     """
-    config["max_tokens"] = max_tokens_for_kind(kind, total_budget)
-    return config
+    parameters["max_tokens"] = max_tokens_for_kind(kind, total_budget)
+    return parameters
 
 
-def set_preset(config: dict, kind: str, client: "ClientBase"):
+def set_preset(parameters: dict, kind: str, client: "ClientBase"):
     """
     Sets the preset in the config based on the kind of text to generate.
     """
-    config.update(preset_for_kind(kind, client))
+    parameters.update(preset_for_kind(kind, client))
 
 
 # TODO: can this just be checking all keys in inference.presets.inference?

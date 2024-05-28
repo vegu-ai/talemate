@@ -53,7 +53,7 @@
                         <v-card-text>
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].temperature" min="0.1" max="2.0" step="0.05" label="Temperature" @update:model-value="setPresetChanged(selected[0])"></v-slider>
 
-                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].top_p" min="0.1" max="1.0" step="0.1" label="Top P" @update:model-value="setPresetChanged(selected[0])"></v-slider>
+                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].top_p" min="0.1" max="1.0" step="0.05" label="Top P" @update:model-value="setPresetChanged(selected[0])"></v-slider>
 
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].top_k" min="0" max="1024" step="1" label="Top K" @update:model-value="setPresetChanged(selected[0])"></v-slider>
 

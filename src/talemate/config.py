@@ -199,7 +199,7 @@ class InferenceParameters(BaseModel):
     top_k: int | None = 0
     min_p: float | None = 0.1
     presence_penalty: float | None = 0.2
-    frequency_penalty: float | None = 0.2
+    frequency_penalty: float | None = 0.05
     repetition_penalty: float | None= 1.0
     repetition_penalty_range: int | None = 1024
     # this determines whether or not it should be persisted

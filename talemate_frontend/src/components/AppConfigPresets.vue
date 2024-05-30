@@ -59,9 +59,9 @@
 
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].min_p" min="0" max="1.0" step="0.01" label="Min P" @update:model-value="setPresetChanged(selected[0])"></v-slider>
 
-                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].presence_penalty" min="0" max="1.0" step="0.1" label="Presence Penalty" @update:model-value="setPresetChanged(selected[0])"></v-slider>
+                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].presence_penalty" min="0" max="1.0" step="0.01" label="Presence Penalty" @update:model-value="setPresetChanged(selected[0])"></v-slider>
 
-                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].frequency_penalty" min="0" max="1.0" step="0.1" label="Frequency Penalty" @update:model-value="setPresetChanged(selected[0])"></v-slider>
+                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].frequency_penalty" min="0" max="1.0" step="0.01" label="Frequency Penalty" @update:model-value="setPresetChanged(selected[0])"></v-slider>
 
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].repetition_penalty" min="1.0" max="1.20" step="0.01" label="Repetition Penalty" @update:model-value="setPresetChanged(selected[0])"></v-slider>
 

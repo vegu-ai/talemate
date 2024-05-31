@@ -19,6 +19,7 @@ Supported self-hosted APIs:
 - [KoboldCpp](https://koboldai.org/cpp) ([Local](https://koboldai.org/cpp), [Runpod](https://koboldai.org/runpodcpp), [VastAI](https://koboldai.org/vastcpp), also includes image gen support)
 - [oobabooga/text-generation-webui](https://github.com/oobabooga/text-generation-webui) (local or with runpod support)
 - [LMStudio](https://lmstudio.ai/)
+- [TabbyAPI](https://github.com/theroyallab/tabbyAPI/)
 
 Generic OpenAI api implementations (tested and confirmed working):
 - [DeepInfra](https://deepinfra.com/)
@@ -39,7 +40,7 @@ Generic OpenAI api implementations (tested and confirmed working):
 
 # Instructions
 
-Please read the documents in the `docs` folder for more advanced configuration and usage.
+:warning: This software is in early stages of development. Certain aspects may be unpolished and highly experimental.
 
 - [Quickstart](#quickstart)
     - [Installation](#installation)
@@ -63,6 +64,8 @@ Please read the documents in the `docs` folder for more advanced configuration a
 - [ChromaDB (long term memory) configuration](docs/chromadb.md)
 - [Runpod Integration](docs/runpod.md)
 - [Prompt template overrides](docs/templates.md)
+
+Please read the documents in the `docs` folder for more advanced configuration and usage.
 
 # Quickstart
 

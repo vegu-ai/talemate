@@ -193,6 +193,58 @@ class RecentScene(BaseModel):
     date: str
     cover_image: Union[Asset, None] = None
 
+class InferenceParameters(BaseModel):
+    temperature: float = 1.0
+    temperature_last: bool = True
+    top_p: float | None = 1.0
+    top_k: int | None = 0
+    min_p: float | None = 0.1
+    presence_penalty: float | None = 0.2
+    frequency_penalty: float | None = 0.05
+    repetition_penalty: float | None= 1.0
+    repetition_penalty_range: int | None = 1024
+    # this determines whether or not it should be persisted
+    # to the config file
+    changed: bool = False
+
+
+class InferencePresets(BaseModel):
+
+    analytical: InferenceParameters = InferenceParameters(
+        temperature=0.7, 
+        presence_penalty=0,
+        frequency_penalty=0,
+        repetition_penalty=1.0,
+        min_p=0,
+    )
+    conversation: InferenceParameters = InferenceParameters(
+        temperature=0.85,
+        repetition_penalty_range=2048
+    )
+    creative: InferenceParameters = InferenceParameters()
+    creative_instruction: InferenceParameters = InferenceParameters(
+        temperature=0.85, 
+        repetition_penalty_range=512
+    )
+    deterministic: InferenceParameters = InferenceParameters(
+        temperature=0.1, 
+        top_p=1, 
+        top_k=0, 
+        repetition_penalty=1.0,
+        min_p=0,
+    )
+    scene_direction: InferenceParameters = InferenceParameters(
+        temperature=0.85, 
+    )
+    summarization: InferenceParameters = InferenceParameters(
+        temperature=0.7, 
+    )
+
+
+class Presets(BaseModel):
+    inference_defaults: InferencePresets = InferencePresets()
+    inference: InferencePresets = InferencePresets()
+
 
 def gnerate_intro_scenes():
     """
@@ -354,6 +406,8 @@ class Config(BaseModel):
     tts: TTSConfig = TTSConfig()
 
     recent_scenes: RecentScenes = RecentScenes()
+    
+    presets: Presets = Presets()
 
     class Config:
         extra = "ignore"
@@ -414,6 +468,22 @@ def save_config(config, file_path: str = "./config.yaml"):
         except pydantic.ValidationError as e:
             log.error("config validation", error=e)
             return None
+
+    # we dont want to persist the following, so we drop them:
+    # - presets.inference_defaults
+    try:
+        config["presets"].pop("inference_defaults")
+    except KeyError:
+        pass
+    
+    # for normal presets we only want to persist if they have changed
+    for preset_name, preset in list(config["presets"]["inference"].items()):
+        if not preset.get("changed"):
+            config["presets"]["inference"].pop(preset_name)
+            
+    # if presets is empty, remove it
+    if not config["presets"]["inference"]:
+        config.pop("presets")
 
     with open(file_path, "w") as file:
         yaml.dump(config, file)

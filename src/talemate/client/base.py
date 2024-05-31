@@ -46,6 +46,7 @@ class PromptData(pydantic.BaseModel):
     time: Union[float, int]
     agent_stack: list[str] = pydantic.Field(default_factory=list)
     generation_parameters: dict = pydantic.Field(default_factory=dict)
+    inference_preset: str = None
 
 
 class ErrorAction(pydantic.BaseModel):
@@ -68,6 +69,20 @@ class ExtraField(pydantic.BaseModel):
     required: bool
     description: str
 
+class ParameterReroute(pydantic.BaseModel):
+    talemate_parameter: str
+    client_parameter: str
+    
+    def reroute(self, parameters: dict):
+        if self.talemate_parameter in parameters:
+            parameters[self.client_parameter] = parameters[self.talemate_parameter]
+            del parameters[self.talemate_parameter]
+
+    def __str__(self):
+        return self.client_parameter
+
+    def __eq__(self, other):
+        return str(self) == str(other)
 
 class ClientBase:
     api_url: str
@@ -86,6 +101,7 @@ class ClientBase:
     finalizers: list[str] = []
     double_coercion: Union[str, None] = None
     client_type = "base"
+    
 
     class Meta(pydantic.BaseModel):
         experimental: Union[None, str] = None
@@ -131,6 +147,15 @@ class ClientBase:
     @property
     def max_tokens_param_name(self):
         return "max_tokens"
+
+    @property
+    def supported_parameters(self):
+        # each client should override this with the parameters it supports
+        return [
+            "temperature",
+            "max_tokens",
+        ]
+
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
@@ -242,8 +267,6 @@ class ClientBase:
 
             if "narrate" in kind:
                 return system_prompts.NARRATOR
-            if "story" in kind:
-                return system_prompts.NARRATOR
             if "director" in kind:
                 return system_prompts.DIRECTOR
             if "create" in kind:
@@ -274,8 +297,6 @@ class ClientBase:
         else:
 
             if "narrate" in kind:
-                return system_prompts.NARRATOR_NO_DECENSOR
-            if "story" in kind:
                 return system_prompts.NARRATOR_NO_DECENSOR
             if "director" in kind:
                 return system_prompts.DIRECTOR_NO_DECENSOR
@@ -435,7 +456,7 @@ class ClientBase:
     def generate_prompt_parameters(self, kind: str):
         parameters = {}
         self.tune_prompt_parameters(
-            presets.configure(parameters, kind, self.max_token_length), kind
+            presets.configure(parameters, kind, self.max_token_length, self), kind
         )
         return parameters
 
@@ -476,6 +497,21 @@ class ClientBase:
         else:
             parameters["extra_stopping_strings"] = dialog_stopping_strings
 
+    def clean_prompt_parameters(self, parameters: dict):
+        """
+        Does some final adjustments to the prompt parameters before sending
+        """
+        
+        # apply any parameter reroutes
+        for param in self.supported_parameters:
+            if isinstance(param, ParameterReroute):
+                param.reroute(parameters)
+        
+        # drop any parameters that are not supported by the client
+        for key in list(parameters.keys()):
+            if key not in self.supported_parameters:
+                del parameters[key]
+
     def finalize(self, parameters: dict, prompt: str):
 
         prompt = util.replace_special_tokens(prompt)
@@ -485,6 +521,7 @@ class ClientBase:
             prompt, applied = fn(parameters, prompt)
             if applied:
                 return prompt
+    
         return prompt
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
@@ -547,6 +584,8 @@ class ClientBase:
 
             time_start = time.time()
             extra_stopping_strings = prompt_param.pop("extra_stopping_strings", [])
+            
+            self.clean_prompt_parameters(prompt_param)        
 
             self.log.debug(
                 "send_prompt",
@@ -587,6 +626,7 @@ class ClientBase:
                     client_type=self.client_type,
                     time=time_end - time_start,
                     generation_parameters=prompt_param,
+                    inference_preset=client_context_attribute("inference_preset"),
                 ).model_dump(),
             )
 

@@ -7,7 +7,7 @@ from urllib.parse import urljoin, urlparse
 import httpx
 import structlog
 
-from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults, ExtraField
+from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults, ParameterReroute
 from talemate.client.registry import register
 import talemate.util as util
 
@@ -81,6 +81,33 @@ class KoboldCppClient(ClientBase):
         else:
             return "max_length"
 
+        
+    @property
+    def supported_parameters(self):
+        if not self.is_openai:
+            # koboldcpp united api
+
+            return [
+                ParameterReroute(talemate_parameter="max_tokens", client_parameter="max_length"),
+                "max_context_length",
+                ParameterReroute(talemate_parameter="repetition_penalty", client_parameter="rep_pen"),
+                ParameterReroute(talemate_parameter="repetition_penalty_range", client_parameter="rep_pen_range"),
+                "top_p",
+                "top_k",
+                ParameterReroute(talemate_parameter="stopping_strings", client_parameter="stop_sequence"),
+                "temperature",
+            ]
+
+        else:
+            # openai api
+            
+            return [
+                "max_tokens",
+                "presence_penalty",
+                "top_p",
+                "temperature",
+            ]
+
     def api_endpoint_specified(self, url: str) -> bool:
         return "/v1" in self.api_url
 
@@ -97,51 +124,11 @@ class KoboldCppClient(ClientBase):
         super().__init__(**kwargs)
         self.ensure_api_endpoint_specified()
 
-    def tune_prompt_parameters(self, parameters: dict, kind: str):
-        super().tune_prompt_parameters(parameters, kind)
-        if not self.is_openai:
-            # adjustments for united api
-            parameters["max_length"] = parameters.pop("max_tokens")
-            parameters["max_context_length"] = self.max_token_length
-            if "repetition_penalty_range" in parameters:
-                parameters["rep_pen_range"] = parameters.pop("repetition_penalty_range")
-            if "repetition_penalty" in parameters:
-                parameters["rep_pen"] = parameters.pop("repetition_penalty")
-            if parameters.get("stop_sequence"):
-                parameters["stop_sequence"] = parameters.pop("stopping_strings")
-                
-            if parameters.get("extra_stopping_strings"):
-                if "stop_sequence" in parameters:
-                    parameters["stop_sequence"] += parameters.pop("extra_stopping_strings")
-                else:
-                    parameters["stop_sequence"] = parameters.pop("extra_stopping_strings")
-                
-                
-            allowed_params = [
-                "max_length",
-                "max_context_length",
-                "rep_pen",
-                "rep_pen_range",
-                "top_p",
-                "top_k",
-                "temperature",
-                "stop_sequence",
-            ]
-        else:
-            allowed_params = ["max_tokens", "presence_penalty", "top_p", "temperature"]
-
-        # drop unsupported params
-        for param in list(parameters.keys()):
-            if param not in allowed_params:
-                del parameters[param]
 
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)
         self.ensure_api_endpoint_specified()
         
-        
-        
-
     async def get_model_name(self):
         self.ensure_api_endpoint_specified()
         async with httpx.AsyncClient() as client:

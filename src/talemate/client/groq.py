@@ -2,7 +2,7 @@ import pydantic
 import structlog
 from groq import AsyncGroq, PermissionDeniedError
 
-from talemate.client.base import ClientBase, ErrorAction
+from talemate.client.base import ClientBase, ErrorAction, ParameterReroute
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
@@ -59,6 +59,17 @@ class GroqClient(ClientBase):
     @property
     def groq_api_key(self):
         return self.config.get("groq", {}).get("api_key")
+
+    @property
+    def supported_parameters(self):
+        return [
+            "temperature",
+            "top_p",
+            "presence_penalty",
+            "frequency_penalty",
+            ParameterReroute(talemate_parameter="stopping_strings",  client_parameter="stop"),
+            "max_tokens",
+        ]
 
     def emit_status(self, processing: bool = None):
         error_action = None
@@ -165,14 +176,6 @@ class GroqClient(ClientBase):
                 prompt = prompt.replace("<|BOT|>", "")
 
         return prompt
-
-    def tune_prompt_parameters(self, parameters: dict, kind: str):
-        super().tune_prompt_parameters(parameters, kind)
-        keys = list(parameters.keys())
-        valid_keys = ["temperature", "top_p", "max_tokens"]
-        for key in keys:
-            if key not in valid_keys:
-                del parameters[key]
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """

@@ -432,7 +432,9 @@ export default {
           this.sceneActive = true;
           this.requestAppConfig();
           this.requestWorldStateTemplates();
-          this.tab = 'main';
+          this.$nextTick(() => {
+            this.tab = 'main';
+          });
         }
         if(data.status == 'error') {
           this.errorNotification = true;
@@ -701,19 +703,20 @@ export default {
     },
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
       this.tab = 'world';
+      console.trace("onOpenWorldStateManager", {tab, sub1, sub2, sub3})
       this.$nextTick(() => {
         this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
       });
     },
     onWorldStateManagerNavigateR(tab, meta) {
-      console.log("onWorldStateManagerNavigateR", {tab, meta})
+      console.trace("onWorldStateManagerNavigateR", {tab, meta})
       this.$nextTick(() => {
         if(this.$refs.worldStateManagerMenu)
           this.$refs.worldStateManagerMenu.update(tab, meta);
       });
     },
     onWorldStateManagerSelectedCharacter(character) {
-      console.log("onWorldStateManagerSelectedCharacter", character)
+      console.trace("onWorldStateManagerSelectedCharacter", character)
       this.$nextTick(() => {
         if(this.$refs.worldStateManagerMenu)
           this.$refs.worldStateManagerMenu.setCharacter(character)

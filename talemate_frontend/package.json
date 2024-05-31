@@ -1,6 +1,6 @@
 {
   "name": "talemate_frontend",
-  "version": "0.25.5",
+  "version": "0.25.6",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",

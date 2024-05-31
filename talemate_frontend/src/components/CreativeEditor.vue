@@ -50,7 +50,7 @@ export default {
         },
         handleMessage(data) {
             if(data.type === 'world_state') {
-                console.log("world_state");
+                return;
             }
         },
         openCharacterCreator() {

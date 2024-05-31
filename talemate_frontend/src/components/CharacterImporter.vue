@@ -102,7 +102,6 @@ export default {
             if (!this.sceneSearchInput)
                 return
             this.sceneSearchLoading = true;
-            console.log("Fetching scenes", this.sceneSearchInput)
             this.getWebsocket().send(JSON.stringify({ type: 'request_scenes_list', query: this.sceneSearchInput }));
         },
         fetchCharacters() {

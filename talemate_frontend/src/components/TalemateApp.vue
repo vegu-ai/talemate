@@ -332,7 +332,6 @@ export default {
     },
   },
   mounted() {
-    console.log("mounted!")
     this.connect();
   },
   beforeUnmount() {
@@ -423,8 +422,6 @@ export default {
 
     handleMessage(event) {
       const data = JSON.parse(event.data);
-
-      //console.log(data);
 
       this.messageHandlers.forEach(handler => handler(data));
 

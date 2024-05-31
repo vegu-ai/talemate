@@ -124,8 +124,6 @@ export default {
       this.$emit('update:dialog', false);
     },
     save(delayed = false) {
-      console.log("save", delayed);
-
       if(this.selectedClient != null) {
         if(typeof(this.agent.client) === 'object') {
           if(this.agent.client.client != null)

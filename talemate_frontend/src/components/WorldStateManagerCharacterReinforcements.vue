@@ -417,7 +417,6 @@ export default {
                     this.character.reinforcements[message.result.question] = message.result;
                     this.selected = message.result.question;
                 }
-                console.log("template_applied", message)
             }
             else if (message.action === 'templates_applied' && message.source === this.source) {
                 if(this.templateApplicatorCallback) {

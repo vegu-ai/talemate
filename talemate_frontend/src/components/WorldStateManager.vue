@@ -197,7 +197,6 @@ export default {
         characterDetails() {
             if (this.deferedNavigation !== null) {
                 const deferedNavigation = {...this.deferedNavigation}
-                console.log("DEFERED", deferedNavigation)
                 if (deferedNavigation[0] === 'characters') {
 
                     this.$refs.characters.selected = deferedNavigation[1];

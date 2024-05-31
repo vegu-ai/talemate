@@ -71,7 +71,6 @@ export default {
                     this.base64 = null;
                     this.media_type = null;
                 }
-                console.log({value, asset_id: this.asset_id, base64: this.base64, media_type: this.media_type})
             }
         },
     },
@@ -137,7 +136,6 @@ export default {
                 }
             }
             if(data.type === "scene_asset_character_cover_image") {
-                console.log("COVER IMAGE", "scene_asset_character_cover_image", data)
                 this.asset_id = data.asset_id;
                 this.base64 = data.asset;
                 this.media_type = data.media_type;

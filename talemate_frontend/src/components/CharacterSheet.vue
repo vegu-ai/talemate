@@ -94,7 +94,6 @@ export default {
             }
         },
         openForCharacterName(name) {
-            console.log("openForCharacterName", name, this.characters)
             for (let character of this.characters) {
                 if (name.toLowerCase().indexOf(character.name.toLowerCase()) !== -1 || character.name.toLowerCase().indexOf(name.toLowerCase()) !== -1) {
                     this.openForCharacter(character);
@@ -124,9 +123,7 @@ export default {
             }
 
             if(data.type === "scene_asset_character_cover_image") {
-                console.log("scene_asset_character_cover_image", data)
                 if(data.character == this.name) {
-                    console.log("setting cover image", data.asset_id)
                     this.cover_image = null;
                     this.$nextTick(() => {
                         this.base64 = data.asset;

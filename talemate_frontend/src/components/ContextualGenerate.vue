@@ -175,9 +175,6 @@ export default {
             else if(this.defaultInstructions)
                 instructions = this.defaultInstructions;
 
-            console.log("WITH INSTRUCTIONS", {withInstructions: this.withInstructions, instructions: this.instructions, defaultInstructions: this.defaultInstructions, final: instructions})
-
-
             this.getWebsocket().send(JSON.stringify({
                 type: "assistant",
                 action: "contextual_generate",
@@ -202,8 +199,6 @@ export default {
                 // update the slot with the generated text
 
                 this.dialog = false;
-                console.log("GENERATED", message)
-
                 // split message.data.context by : into type and context
 
                 let response = message.data.generated_content;
@@ -211,7 +206,6 @@ export default {
                 if(this.responseFormat === "text") {
                     this.$emit("generate", response, message.data);
                 } else if(this.responseFormat === "json") {
-                    console.log("EMITTING JSON", JSON.parse(response))
                     this.$emit("generate", JSON.parse(response), message.data);
                 }
             }

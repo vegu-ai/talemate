@@ -108,7 +108,6 @@ export default {
         },
 
         setAndUpdate(value) {
-            console.log("Setting and updating DESCRIPTION?!?!?!?!", value)
             this.character.description = value;
             this.update();
         },

@@ -81,14 +81,6 @@ export default {
         scene: Object,
         templates: Object,
     },
-    watch: {
-        scene: {
-            immediate: true,
-            handler(scene) {
-                console.log({scene})
-            }
-        }
-    },
     emits:[
         'character-created',
         'cancelled'

@@ -75,7 +75,6 @@ export default {
     inject: ['getWebsocket', 'registerMessageHandler', 'isConnected', 'requestSceneAssets'],
     methods: {
         update(tab, meta) {
-            console.log("update", {tab, meta});
             this.manager = meta.manager;
             this.tab = tab;
         },

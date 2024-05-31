@@ -83,14 +83,12 @@ export default {
         selected: {
             immediate: true,
             handler(selected) {
-                console.log("selection",selected)
                 this.$emit('world-state-manager-navigate', 'templates', selected ? selected[0] : null);
             }
         },
         selectedGroups: {
             immediate: true,
             handler(selectedGroups, oldSelectedGroups) {
-                console.log("selection-groups",selectedGroups)
                 if(selectedGroups.length == 0) {
                     this.$emit('world-state-manager-navigate', 'templates', "$DESELECTED");
                     return;
@@ -167,7 +165,6 @@ export default {
             }  else if (message.action == 'template_saved') {
                 let uid = message.data.template.uid;
                 let group = message.data.template.group;
-                console.log("template_saved", group, uid)
                 this.selectedGroups = [this.worldStateTemplates.managed.groups.findIndex(group => group.uid == message.data.template.group)]
                 this.selected = [`${group}__${uid}`]
             } else if (message.action == 'template_deleted') {

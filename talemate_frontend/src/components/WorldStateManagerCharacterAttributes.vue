@@ -336,7 +336,6 @@ export default {
                     this.character.base_attributes[attributeName] = message.result.value;
                     this.selected = attributeName;
                 }
-                console.log("template_applied", message)
             }
             else if (message.action === 'templates_applied' && message.source === this.source) {
                 if(this.templateApplicatorCallback) {

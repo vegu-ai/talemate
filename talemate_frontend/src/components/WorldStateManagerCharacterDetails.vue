@@ -305,7 +305,6 @@ export default {
         },
 
         setAndUpdate(name, value) {
-            console.log("Setting and updating", name, value)
             this.character.details[name] = value;
             this.update(name);
         },
@@ -375,7 +374,6 @@ export default {
                     this.character.details[detail] = message.result.value;
                     this.selected = detail;
                 }
-                console.log("template_applied", message)
             }
             else if (message.action === 'templates_applied' && message.source === this.source) {
                 if(this.templateApplicatorCallback) {

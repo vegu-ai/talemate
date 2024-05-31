@@ -70,7 +70,6 @@ export default {
         selected: {
             immediate: true,
             handler(selected) {
-                console.log("selection",selected)
                 let characterName = selected ? selected[0] : null;
                 if(characterName === "$NEW") {
                     return;

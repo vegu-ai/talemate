@@ -523,7 +523,6 @@ export default {
                 if(this.deferredSelect) {
                     let index = this.deferredSelect;
                     this.deferredSelect = null;
-                    console.log("deferred select", index)
                     this.selectTemplate(index);
                 }
             },
@@ -592,7 +591,6 @@ export default {
 
         onSpicesGenerated(spices, context_generation) {
             if(context_generation.state.extend) {
-                console.log("extending", {spices})
                 // add values that are not already in the list
                 spices.forEach(spice => {
                     if(!this.template.spices.includes(spice)) {
@@ -600,7 +598,6 @@ export default {
                     }
                 });
             } else {
-                console.log("replacing", {spices})
                 this.template.spices = spices;
             }
             this.queueSaveTemplate();
@@ -659,9 +656,6 @@ export default {
         },
 
         selectTemplate(index) {
-            // index = {group name}__{template id}
-            console.log("selecting", index)
-
             if(index === '$DESELECTED') {
                 this.group = null;
                 this.template = null;
@@ -777,7 +771,6 @@ export default {
             this.$refs.groupForm.validate()
 
             if(!this.groupFormValid) {
-                console.log("form not valid");
                 return;
             }
 

@@ -82,7 +82,7 @@ export default {
     },
     methods:{
         handleMessage(message) {
-            console.log("WorldStateManagerScene handleMessage", message);
+            return message;
         }
     },
     mounted(){

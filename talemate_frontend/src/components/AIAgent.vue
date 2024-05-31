@@ -169,10 +169,6 @@ export default {
                 const agent = this.state.agents.find(agent => agent.name === data.name);
                 if (agent) {
 
-                    if(agent.name == 'tts') {
-                        console.log("agents: agent_status TTS", data)
-                    }
-
                     // Update the model name of the client
                     agent.client = data.client;
                     agent.data = data.data;

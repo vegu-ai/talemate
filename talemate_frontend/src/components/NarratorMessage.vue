@@ -109,7 +109,6 @@ export default {
     },
 
     cancelEdit() {
-      console.log('cancelEdit', this.message_id);
       this.editing = false;
     },
     startEdit() {
@@ -120,12 +119,10 @@ export default {
       });
     },
     submitEdit() {
-      console.log('submitEdit', this.message_id, this.editing_text);
       this.getWebsocket().send(JSON.stringify({ type: 'edit_message', id: this.message_id, text: this.editing_text }));
       this.editing = false;
     },
     deleteMessage() {
-      console.log('deleteMessage', this.message_id);
       this.requestDeleteMessage(this.message_id);
     }
   }

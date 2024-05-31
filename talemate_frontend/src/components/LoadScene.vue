@@ -99,7 +99,6 @@ export default {
             if (!this.sceneSearchInput)
                 return
             this.sceneSearchLoading = true;
-            console.log("Fetching scenes", this.sceneSearchInput)
             this.getWebsocket().send(JSON.stringify({ type: 'request_scenes_list', query: this.sceneSearchInput }));
         },
         loadCreative() {
@@ -209,10 +208,8 @@ export default {
     },
     created() {
         this.registerMessageHandler(this.handleMessage);
-        //this.getWebsocket().send(JSON.stringify({ type: 'request_config' })); // Request the current app configuration
     },
     mounted() {
-        console.log("Websocket", this.getWebsocket()); // Check if websocket is available
     }
 }
 </script>

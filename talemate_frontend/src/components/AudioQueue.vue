@@ -27,7 +27,6 @@ export default {
   methods: {
     handleMessage(data) {
       if (data.type === 'audio_queue') {
-        console.log('Received audio queue message', data)
         this.addToQueue(data.data.audio_data);
       }
     },

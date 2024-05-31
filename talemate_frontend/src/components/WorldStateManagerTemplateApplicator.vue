@@ -133,7 +133,6 @@ export default {
 
             
             viable.sort((a, b) => a.group.name.localeCompare(b.group.name));
-            console.log("viable", viable)
 
             // if there are favorites add a Favorite group to the beginning
 
@@ -296,7 +295,6 @@ export default {
                 return;
             }  
             else if (message.action === 'template_applying') {
-                console.log("template_applying", message.data.uid, message.data.group, {message})
                 this.busyTemplateUID = message.data.uid;
                 this.busyGroupUID = message.data.group;
             }

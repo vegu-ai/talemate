@@ -175,7 +175,6 @@ export default {
         this.registerMessageHandler(this.handleMessage);
     },
     mounted() {
-        console.log("MOUNTED", this.character)
         this.dialogueInstructions = this.character.actor.dialogue_instructions;
         this.dialogueExamples = this.character.actor.dialogue_examples;
     },

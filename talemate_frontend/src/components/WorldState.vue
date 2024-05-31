@@ -246,10 +246,8 @@ export default {
         },
         availableHeight() {
             // screen height - $refs.worldStateContainer top offset
-            console.log("REFS", this.$refs)
             if(this.$refs.charactersContainer == null) return "500px";
             let maxHeight = (window.innerHeight - this.$refs.charactersContainer.getBoundingClientRect().top - 50)+"px";
-            console.log("MAX HEIGHT", maxHeight, this.$refs.charactersContainer.getBoundingClientRect().top);
             return maxHeight;
         },
         truncatedPinText(pin) {

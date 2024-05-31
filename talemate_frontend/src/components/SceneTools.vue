@@ -657,7 +657,6 @@ export default {
         },
 
         rerun(event) {
-            console.log("EVENT", event)
             // if ctrl is pressed use directed rerun
             let withDirection = event.ctrlKey;
             let method = event.altKey || event.metaKey ? "edit" : "replace";
@@ -709,7 +708,6 @@ export default {
                 this.sceneHelp = data.data.help;
                 this.sceneExperimental = data.data.experimental;
                 this.sceneName = data.name;
-                console.log({autoSave: this.autoSave, autoProgress: this.autoProgress});
 
                 // collect npc characters
                 this.npc_characters = [];
@@ -730,7 +728,6 @@ export default {
 
     },
     mounted() {
-        console.log("Websocket", this.getWebsocket()); // Check if websocket is available
     },
     created() {
         this.registerMessageHandler(this.handleMessage);

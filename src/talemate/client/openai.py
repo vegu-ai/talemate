@@ -94,7 +94,7 @@ def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0
 
 class Defaults(pydantic.BaseModel):
     max_token_length: int = 16384
-    model: str = "gpt-4-turbo"
+    model: str = "gpt-4o"
 
 
 @register()
@@ -117,7 +117,7 @@ class OpenAIClient(ClientBase):
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
 
-    def __init__(self, model="gpt-4-turbo", **kwargs):
+    def __init__(self, model="gpt-4o", **kwargs):
         self.model_name = model
         self.api_key_status = None
         self.config = load_config()
@@ -128,6 +128,15 @@ class OpenAIClient(ClientBase):
     @property
     def openai_api_key(self):
         return self.config.get("openai", {}).get("api_key")
+
+    @property
+    def supported_parameters(self):
+        return [
+            "temperature", 
+            "top_p", 
+            "presence_penalty",
+            "max_tokens",
+        ]
 
     def emit_status(self, processing: bool = None):
         error_action = None
@@ -240,26 +249,6 @@ class OpenAIClient(ClientBase):
                 prompt = prompt.replace("<|BOT|>", "")
 
         return prompt
-
-    def tune_prompt_parameters(self, parameters: dict, kind: str):
-        super().tune_prompt_parameters(parameters, kind)
-
-        keys = list(parameters.keys())
-
-        valid_keys = ["temperature", "top_p"]
-
-        # GPT-3.5 models tend to run away with the generated
-        # response size so we allow talemate to set the max_tokens
-        #
-        # GPT-4 on the other hand seems to benefit from letting it
-        # decide the generation length naturally and it will generally
-        # produce reasonably sized responses
-        if self.model_name.startswith("gpt-3.5-"):
-            valid_keys.append("max_tokens")
-
-        for key in keys:
-            if key not in valid_keys:
-                del parameters[key]
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """

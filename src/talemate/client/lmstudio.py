@@ -1,7 +1,7 @@
 import pydantic
 from openai import AsyncOpenAI
 
-from talemate.client.base import ClientBase
+from talemate.client.base import ClientBase, ParameterReroute
 from talemate.client.registry import register
 
 
@@ -14,25 +14,24 @@ class Defaults(pydantic.BaseModel):
 class LMStudioClient(ClientBase):
     auto_determine_prompt_template: bool = True
     client_type = "lmstudio"
-
+    
     class Meta(ClientBase.Meta):
         name_prefix: str = "LMStudio"
         title: str = "LMStudio"
         defaults: Defaults = Defaults()
 
+    @property
+    def supported_parameters(self):
+        return [
+            "temperature",
+            "top_p",
+            "frequency_penalty",
+            "presence_penalty",
+            ParameterReroute(talemate_parameter="stopping_strings", client_parameter="stop"),
+        ]
+
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
-
-    def tune_prompt_parameters(self, parameters: dict, kind: str):
-        super().tune_prompt_parameters(parameters, kind)
-
-        keys = list(parameters.keys())
-
-        valid_keys = ["temperature", "top_p"]
-
-        for key in keys:
-            if key not in valid_keys:
-                del parameters[key]
 
     async def get_model_name(self):
         model_name = await super().get_model_name()

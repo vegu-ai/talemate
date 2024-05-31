@@ -38,6 +38,7 @@ class ContextModel(BaseModel):
     nuke_repetition: float = Field(0.0, ge=0.0, le=3.0)
     conversation: ConversationContext = Field(default_factory=ConversationContext)
     length: int = 96
+    inference_preset: str = None
 
 
 # Define the context variable as an empty dictionary

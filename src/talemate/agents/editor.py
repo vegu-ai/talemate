@@ -134,6 +134,10 @@ class EditorAgent(Agent):
 
         if not self.actions["fix_exposition"].enabled:
             return content
+        
+        # if not content was generated, return it as is
+        if not content:
+            return content
 
         if not character.is_player:
             if '"' not in content and "*" not in content:

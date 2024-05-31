@@ -11,6 +11,10 @@
                     <v-icon start>mdi-application</v-icon>
                     Application
                 </v-tab>
+                <v-tab value="presets">
+                    <v-icon start>mdi-tune</v-icon>
+                    Presets
+                </v-tab>
                 <v-tab value="creator">
                     <v-icon start>mdi-palette-outline</v-icon>
                     Creator
@@ -263,6 +267,12 @@
                     </v-card>
                 </v-window-item>
 
+                <!-- PRESETS -->
+
+                <v-window-item value="presets">
+                    <AppConfigPresets :immutable-config="app_config" ref="presets"></AppConfigPresets>
+                </v-window-item>
+
                 <!-- CREATOR -->
 
                 <v-window-item value="creator">
@@ -325,8 +335,13 @@
 </template>
 <script>
 
+import AppConfigPresets from './AppConfigPresets.vue';
+
 export default {
     name: 'AppConfig',
+    components: {
+        AppConfigPresets,
+    },
     data() {
         return {
             tab: 'game',
@@ -431,6 +446,13 @@ export default {
         },
 
         saveConfig() {
+
+            // check if presets component is present
+            if(this.$refs.presets) {
+                // update app_config.presets from $refs.presets.config
+                this.app_config.presets = this.$refs.presets.config;
+            }
+
             this.sendRequest({
                 action: 'save',
                 config: this.app_config,

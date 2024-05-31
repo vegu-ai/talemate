@@ -39,6 +39,36 @@ class TextGeneratorWebuiClient(ClientBase):
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
+    @property
+    def supported_parameters(self):
+        # textgenwebui does not error on unsupported parameters
+        # but we should still drop them so they don't get passed to the API
+        # and show up in our prompt debugging tool.
+
+        # note that this is not the full list of their supported parameters
+        # but only those we send.
+        return [
+            "temperature",
+            "top_p",
+            "top_k",
+            "min_p",
+            "frequency_penalty",
+            "presence_penalty",
+            "repetition_penalty",
+            "repetition_penalty_range",
+            "stopping_strings",
+            "skip_special_tokens",
+            "max_tokens",
+            "stream",
+            # arethese needed?
+            "max_new_tokens",
+            "stop",
+            # talemate internal
+            # These will be removed before sending to the API
+            # but we keep them here since they are used during the prompt finalization
+            "extra_stopping_strings",
+        ]
+
     def __init__(self, **kwargs):
         self.api_key = kwargs.pop("api_key", "")
         super().__init__(**kwargs)
@@ -51,39 +81,6 @@ class TextGeneratorWebuiClient(ClientBase):
         # is this needed?
         parameters["max_new_tokens"] = parameters["max_tokens"]
         parameters["stop"] = parameters["stopping_strings"]
-        
-        
-        # textgenwebui does not error on unsupported parameters
-        # but we should still drop them so they don't get passed to the API
-        # and show up in our prompt debugging tool.
-        
-        # note that this is not the full list of their supported parameters
-        # but only those we send.
-        
-        allowed_params = [
-            "temperature",
-            "top_p",
-            "top_k",
-            "max_tokens",
-            "repetition_penalty",
-            "repetition_penalty_range",
-            "max_tokens",
-            "stopping_strings",
-            "skip_special_tokens",
-            "stream",
-            # is this needed?
-            "max_new_tokens",
-            "stop",
-            # talemate internal
-            # These will be removed before sending to the API
-            # but we keep them here since they are used during the prompt finalization
-            "extra_stopping_strings",
-        ]
-
-        # drop unsupported params
-        for param in list(parameters.keys()):
-            if param not in allowed_params:
-                del parameters[param]
 
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)

@@ -99,6 +99,7 @@ export default {
                     time: parseInt(data.data.time),
                     num: this.total++,
                     generation_parameters: data.data.generation_parameters,
+                    inference_preset: data.data.inference_preset,
                     // immutable copy of original generation parameters
                     original_generation_parameters: JSON.parse(JSON.stringify(data.data.generation_parameters)),
                     original_prompt: data.data.prompt,

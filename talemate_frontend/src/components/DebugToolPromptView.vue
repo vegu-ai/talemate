@@ -5,9 +5,9 @@
             <v-card-title>
                 #{{ prompt.num }}
                 <v-chip color="grey-lightne-1" variant="text">{{ prompt.agent_name }}</v-chip>
-                <v-chip color="grey" variant="text">{{ prompt.agent_action }}</v-chip>
-                <v-divider vertical></v-divider>
-                <v-chip color="grey" variant="text">{{ prompt.kind }}</v-chip>
+                <v-chip size="small" label class="mr-1" color="primary" variant="tonal"><strong class="mr-1">action</strong>{{ prompt.agent_action }}</v-chip>
+                <v-chip class="mr-1" size="small" color="grey" label variant="tonal"><strong class="mr-1">task</strong> {{ prompt.kind }}</v-chip>
+                <v-chip size="small" color="grey" label variant="tonal"><strong class="mr-1">preset</strong> {{ prompt.inference_preset }}</v-chip>
                 <v-chip size="small" color="primary" variant="text" label>{{ prompt.prompt_tokens }}<v-icon size="14"
                 class="ml-1">mdi-arrow-down-bold</v-icon></v-chip>
                 <v-chip size="small" color="secondary" variant="text" label>{{ prompt.response_tokens }}<v-icon size="14"

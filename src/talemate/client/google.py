@@ -10,9 +10,10 @@ from vertexai.generative_models import (
     GenerativeModel,
     ResponseValidationError,
     SafetySetting,
+    GenerationConfig,
 )
 
-from talemate.client.base import ClientBase, ErrorAction, ExtraField
+from talemate.client.base import ClientBase, ErrorAction, ExtraField, ParameterReroute
 from talemate.client.registry import register
 from talemate.client.remote import RemoteServiceMixin
 from talemate.config import Client as BaseClientConfig
@@ -54,7 +55,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
     auto_break_repetition_enabled = False
     decensor_enabled = True
     config_cls = ClientConfig
-
+    
     class Meta(ClientBase.Meta):
         name_prefix: str = "Google"
         title: str = "Google"
@@ -139,6 +140,16 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         ]
 
         return safety_settings
+
+    @property
+    def supported_parameters(self):
+        return [
+            "temperature", 
+            "top_p",
+            "top_k",
+            ParameterReroute(talemate_parameter="max_tokens", client_parameter="max_output_tokens"),
+            ParameterReroute(talemate_parameter="stopping_strings",  client_parameter="stop_sequences"),
+        ]
 
     def emit_status(self, processing: bool = None):
         error_action = None
@@ -237,11 +248,19 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         if "disable_safety_settings" in kwargs:
             self.disable_safety_settings = kwargs["disable_safety_settings"]
 
+    def clean_prompt_parameters(self, parameters: dict):
+        super().clean_prompt_parameters(parameters)
+        
+        log.warning("clean_prompt_parameters", parameters=parameters)
+        # if top_k is 0, remove it
+        if "top_k" in parameters and parameters["top_k"] == 0:
+            del parameters["top_k"]
+
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
         """
-
+        
         if not self.ready:
             raise Exception("Google cloud setup incomplete")
 
@@ -268,10 +287,11 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         try:
 
             chat = self.model_instance.start_chat()
-
+            
             response = await chat.send_message_async(
                 human_message,
                 safety_settings=self.safety_settings,
+                generation_config=parameters,
             )
 
             self._returned_prompt_tokens = self.prompt_tokens(prompt)

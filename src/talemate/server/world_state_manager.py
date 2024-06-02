@@ -141,6 +141,14 @@ class SceneOutlinePayload(pydantic.BaseModel):
     description: str | None = None
     intro: str | None = None
     context: str | None = None
+    
+class SceneSettingsPayload(pydantic.BaseModel):
+    experimental: bool = False
+    immutable_save: bool = False
+    
+
+class SaveScenePayload(pydantic.BaseModel):
+    copy: str | None = None
 
 class WorldStateManagerPlugin:
     router = "world_state_manager"
@@ -920,13 +928,8 @@ class WorldStateManagerPlugin:
     async def handle_update_scene_outline(self, data):
         payload = SceneOutlinePayload(**data)
         
-        log.debug("Update scene outline", title=payload.title, description=payload.description, intro=payload.intro, context=payload.context)
-        
         await self.world_state_manager.update_scene_outline(
-            title = payload.title,
-            description = payload.description,
-            intro = payload.intro,
-            context = payload.context,
+            **payload.model_dump()
         )
         
         self.websocket_handler.queue_put(
@@ -938,4 +941,31 @@ class WorldStateManagerPlugin:
         )
         
         await self.signal_operation_done()
+        self.scene.emit_status()
+        
+        
+    async def handle_update_scene_settings(self, data):
+        payload = SceneSettingsPayload(**data)
+        
+        await self.world_state_manager.update_scene_settings(
+            **payload.model_dump()
+        )
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "scene_settings_updated",
+                "data": payload.model_dump(),
+            }
+        )
+        
+        await self.signal_operation_done()
+        self.scene.emit_status()
+        
+    async def handle_save_scene(self, data):
+        payload = SaveScenePayload(**data)
+        
+        log.debug("Save scene", copy=payload.copy)
+        
+        await self.scene.save(auto=False, force=True, copy_name=payload.copy)
         self.scene.emit_status()

@@ -5,10 +5,28 @@
             </v-tab>
         </v-tabs>
 
-        <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1">
+        <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1" v-if="tab !== 'templates'">
 
-            <v-btn size="small" v-if="!scene.saved" variant="text" color="warning" prepend-icon="mdi-content-save" @click="saveScene">Save Changes</v-btn>
+            <RequestInput ref="requestSaveCopyName" title="Save Copy As" @continue="(name) => { saveScene(name) }" /> 
 
+            <v-menu>
+                <template v-slot:activator="{ props }">
+                    <v-btn v-bind="props" :disabled="isInputDisabled()" icon :color="scene.saved ? 'muted' : 'secondary'">
+                        <v-icon>mdi-content-save</v-icon>
+                    </v-btn>
+                </template>
+                <v-list slim density="compact">
+                    <v-list-item @click="saveScene()" prepend-icon="mdi-content-save">
+                        <v-list-item-title>Save</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item @click="saveScene(true)" prepend-icon="mdi-content-save-all">
+                        <v-list-item-title>Save Copy ...</v-list-item-title>
+                    </v-list-item>
+                </v-list>
+            </v-menu>
+
+            <span v-if="!scene.saved" class="text-muted text-caption mr-1">Unsaved changes.</span>
+            <v-chip size="x-small" prepend-icon="mdi-file" label class="text-caption text-muted">{{ scene.data.filename }}</v-chip>
             <v-spacer></v-spacer>
             <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { generationOptions = opt }" />
         </v-toolbar>
@@ -105,6 +123,7 @@ import WorldStateManagerContextDB from './WorldStateManagerContextDB.vue';
 import WorldStateManagerPins from './WorldStateManagerPins.vue';
 import WorldStateManagerScene from './WorldStateManagerScene.vue';
 import GenerationOptions from './GenerationOptions.vue';
+import RequestInput from './RequestInput.vue';
 
 export default {
     name: 'WorldStateManager',
@@ -116,6 +135,7 @@ export default {
         WorldStateManagerPins,
         WorldStateManagerScene,
         GenerationOptions,
+        RequestInput,
     },
     computed: {
         characterStateReinforcementsList() {
@@ -348,8 +368,18 @@ export default {
             //this.getWebsocket().send(JSON.stringify({ type: 'interact', text: "!save" }));
         },
 
-        saveScene() {
-            this.getWebsocket().send(JSON.stringify({ type: 'interact', text: "!save" }));
+        saveScene(copy) {
+
+            if(copy === true) {
+                this.$refs.requestSaveCopyName.openDialog();
+                return;
+            }
+
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'save_scene',
+                copy: copy,
+            }));
         },
 
         // characters

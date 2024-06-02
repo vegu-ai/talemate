@@ -847,12 +847,25 @@ class WorldStateManager:
         description: str | None = None,
         intro: str | None = None,
         context: str | None = None,
-    ):
+    ) -> "Scene":
         
         scene = self.scene
         scene.title = title
         scene.description = description
         scene.intro = intro
         scene.context = context
+        
+        return scene
+    
+    
+    async def update_scene_settings(
+        self,
+        immutable_save: bool = False,
+        experimental: bool = False,
+    ) -> "Scene":
+        
+        scene = self.scene
+        scene.immutable_save = immutable_save
+        scene.experimental = experimental
         
         return scene

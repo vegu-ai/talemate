@@ -1667,6 +1667,8 @@ class Scene(Emitter):
             self.name,
             status="started",
             data={
+                "path": self.full_path,
+                "filename": self.filename,
                 "title": self.title or self.name,
                 "environment": self.environment,
                 "scene_config": self.scene_config,
@@ -2065,17 +2067,20 @@ class Scene(Emitter):
         )
         self.emit_status()
 
-    async def save(self, save_as: bool = False, auto: bool = False):
+    async def save(self, save_as: bool = False, auto: bool = False, force: bool = False, copy_name: str = None):
         """
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
         scene = self
 
-        if self.immutable_save and not save_as:
+        if self.immutable_save and not save_as and not force:
+            save_as = True
+
+        if copy_name:
             save_as = True
 
         if save_as:
-            self.filename = None
+            self.filename = copy_name
 
         if not self.name and not auto:
             self.name = await wait_for_input("Enter scenario name: ")
@@ -2084,6 +2089,9 @@ class Scene(Emitter):
         elif not self.filename and not auto:
             self.filename = await wait_for_input("Enter save name: ")
             self.filename = self.filename.replace(" ", "-").lower() + ".json"
+            
+        if self.filename and not self.filename.endswith(".json"):
+            self.filename = f"{self.filename}.json"
 
         elif not self.filename or not self.name and auto:
             # scene has never been saved, don't auto save

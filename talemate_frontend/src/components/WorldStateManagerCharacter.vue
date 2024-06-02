@@ -38,6 +38,7 @@
                 @require-scene-save="$emit('require-scene-save')"
                 @cancelled="reset"
                 @character-created="onCharacterCreated"
+                :generation-options="generationOptions"
                 :scene="scene"
                 :templates="templates" />
             </div>

@@ -7,8 +7,6 @@
                         <v-card-text>
                             <v-checkbox :disabled="busy" v-model="character.generation_context.enabled" label="Enable AI Generation"></v-checkbox>
                             <div v-if="character.generation_context.enabled">
-                                <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { character.generationOptions = opt }" />
-
                                 <v-textarea 
                                     :disabled="busy" 
                                     v-model="character.generation_context.instructions" 
@@ -69,17 +67,16 @@
 <script>
 
 import ConfirmActionInline from './ConfirmActionInline.vue';
-import GenerationOptions from './GenerationOptions.vue';
 
 export default {
     name: "WorldStateManagerCharacterCreator",
     components: {
         ConfirmActionInline,
-        GenerationOptions,
     },
     props: {
         scene: Object,
         templates: Object,
+        generationOptions: Object,
     },
     emits:[
         'character-created',
@@ -97,9 +94,6 @@ export default {
                 },
                 description: "",
                 name: "",
-                generationOptions: {
-                    spice_level: 1.0,
-                },
             },
         }
     },
@@ -153,7 +147,7 @@ export default {
                 is_player: this.character.is_player,
                 generate_attributes: this.character.generation_context.generateAttributes,
                 instructions: this.character.generation_context.instructions,
-                generation_options: this.character.generationOptions,
+                generation_options: this.generationOptions,
             }));
         },
         handleMessage(message) {

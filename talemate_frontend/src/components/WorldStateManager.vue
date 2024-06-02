@@ -6,6 +6,9 @@
         </v-tabs>
 
         <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1">
+
+            <v-btn size="small" v-if="!scene.saved" variant="text" color="warning" prepend-icon="mdi-content-save" @click="saveScene">Save Changes</v-btn>
+
             <v-spacer></v-spacer>
             <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { generationOptions = opt }" />
         </v-toolbar>
@@ -343,6 +346,10 @@ export default {
                 return;
             }
             //this.getWebsocket().send(JSON.stringify({ type: 'interact', text: "!save" }));
+        },
+
+        saveScene() {
+            this.getWebsocket().send(JSON.stringify({ type: 'interact', text: "!save" }));
         },
 
         // characters

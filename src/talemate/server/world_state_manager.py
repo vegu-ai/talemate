@@ -173,6 +173,9 @@ class WorldStateManagerPlugin:
 
         if self.scene.auto_save:
             await self.scene.save(auto=True)
+        else:
+            self.scene.saved = False
+            self.scene.emit_status()
 
     async def handle_get_character_list(self, data):
         character_list = await self.world_state_manager.get_character_list()

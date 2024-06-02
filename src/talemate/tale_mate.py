@@ -1689,6 +1689,9 @@ class Scene(Emitter):
                 "game_state": self.game_state.model_dump(),
                 "active_pins": [pin.model_dump() for pin in self.active_pins],
                 "experimental": self.experimental,
+                "immutable_save": self.immutable_save,
+                "description": self.description,
+                "intro": self.intro,
                 "help": self.help,
             },
         )

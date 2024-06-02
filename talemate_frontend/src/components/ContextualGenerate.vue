@@ -115,7 +115,12 @@ export default {
             type: Boolean,
             required: false,
             default: true
-        }
+        },
+        historyAware: {
+            type: Boolean,
+            required: false,
+            default: true
+        },
     },
     data() {
         return {
@@ -186,6 +191,7 @@ export default {
                 original: this.withOriginal ? this.original : null,
                 generation_options: this.generationOptions,
                 context_aware: this.contextAware,
+                history_aware: this.historyAware,
             }));
         },
 

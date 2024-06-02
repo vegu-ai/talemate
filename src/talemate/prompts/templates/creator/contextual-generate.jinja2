@@ -1,6 +1,6 @@
 {% if context_aware %}{% block rendered_context %}
 {% include "extra-context.jinja2" %}
-{% if context_typ == 'character attribute' or context_typ == 'character detail' -%}
+{% if context_typ == 'character attribute' or context_typ == 'character detail' or context_typ == 'scene intro' -%}
   {% for other_character in scene.get_characters() -%}
     {% if other_character.name != character_name %}
 <|SECTION:{{ other_character.name }}|>
@@ -8,12 +8,19 @@
     {% endif %}
   {%- endfor -%}
 {% endif %}
+{% if context_typ == 'scene intro' %}
+<|SECTION:SCENE DESCRIPTION|>
+{{ scene.description }}
+<|CLOSE_SECTION|>
+{% endif %}
 {% endblock %}
+{% if history_aware %}
 <|SECTION:SCENE|>
 {% for scene_context in scene.context_history(budget=max_tokens-1024-count_tokens(self.rendered_context())) -%}
 {{ scene_context }}
 {% endfor %}
 <|CLOSE_SECTION|>
+{% endif %}
 {% if character %}
 <|SECTION:{{ character.name }}|>
 {% if context_typ == 'character attribute' -%}
@@ -26,13 +33,17 @@
 {% endif -%}
 <|CLOSE_SECTION|>
 {% endif %}{# /character #}{% else %}Content Type: {{ scene.context }}{% endif %}{# /context_aware #}
+{% if generation_context.original %}
+<|SECTION:ORIGINAL {{ context_name }}|>
+{{ generation_context.original }}
+<|CLOSE_SECTION|>
+{% endif %}
 <|SECTION:TASK|>
 {#- SET TASK ACTION -#}
 {% if not generation_context.original %}
   {%- set action_task = "Generate the" -%}
 {% else %}
   {%- set action_task = "Rewrite the existing" -%}
-  Original {{ context_name }}: {{ generation_context.original }}
 {% endif %}
 {# LIST CONTEXT -#}
 {% if context_typ == "list" -%}
@@ -70,7 +81,6 @@ Generate a new line of example dialogue for {{ character_name }}.
 {{ line }}
 
 {% endfor %}
-{#- GENERATE A LIST -#}
 {%- endif %}
 
 ### Rules for generating dialogue:
@@ -84,13 +94,16 @@ You must only generate one line of example dialogue for {{ character_name }}.
 {{ character.dialogue_instructions }}
 
 {% endif -%}
+{#- SCENE INTRO -#}
+{% elif context_typ == "scene intro" %}
+{{ action_task }} introduction for the scene. This is the first text that is shown to {{ scene.get_player_character().name }} when they enter the scene. It must setup an interesting entry point for them to participate in the scene and interact with {% if scene.num_npc_characters() %}the other characters and the environment.{% else %}the environment.{% endif %}
 {#- GENERAL CONTEXT -#}
 {% else %}
 {% if context_name.endswith("?") -%}
 {{ action_task }} answer to the question "{{ context_name }}". This must be a general description and not a continuation of the current narrative.
 {%- else -%}
 {{ action_task }} new narrative content for {{ context_name }}
-Use a simple, easy to read writing format.
+{% if not generation_context.style %}Use a simple, easy to read writing format.{% endif %}
 {%- endif -%}
 {% endif %}
 {{ generation_context.spice }}

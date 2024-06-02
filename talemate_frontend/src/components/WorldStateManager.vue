@@ -4,14 +4,22 @@
             <v-tab v-for="tab in tabs" :disabled="tab.disabled" :key="tab.name" :text="tab.title" :prepend-icon="tab.icon" :value="tab.name">
             </v-tab>
         </v-tabs>
+
+        <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1">
+            <v-spacer></v-spacer>
+            <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { generationOptions = opt }" />
+        </v-toolbar>
+
         <v-window v-model="tab">
 
             <!-- SCENE -->
 
             <v-window-item value="scene">
                 <WorldStateManagerScene ref="scene" 
+                :templates="templates"
                 :app-config="appConfig"
-                :scene="scene ? scene.data : null" />
+                :generation-options="generationOptions"
+                :scene="scene ? scene : null" />
             </v-window-item>
 
             <!-- CHARACTERS -->
@@ -92,6 +100,7 @@ import WorldStateManagerCharacter from './WorldStateManagerCharacter.vue';
 import WorldStateManagerContextDB from './WorldStateManagerContextDB.vue';
 import WorldStateManagerPins from './WorldStateManagerPins.vue';
 import WorldStateManagerScene from './WorldStateManagerScene.vue';
+import GenerationOptions from './GenerationOptions.vue';
 
 export default {
     name: 'WorldStateManager',
@@ -102,6 +111,7 @@ export default {
         WorldStateManagerContextDB,
         WorldStateManagerPins,
         WorldStateManagerScene,
+        GenerationOptions,
     },
     computed: {
         characterStateReinforcementsList() {
@@ -178,7 +188,7 @@ export default {
             characterDetails: {},
             worldContext: {},
             pins: {},
-
+            generationOptions: {},
         }
     },
     emits: [

@@ -838,3 +838,21 @@ class WorldStateManager:
             await deactivate_character(self.scene, name)
         
         return character
+    
+    
+
+    async def update_scene_outline(
+        self,
+        title: str,
+        description: str | None = None,
+        intro: str | None = None,
+        context: str | None = None,
+    ):
+        
+        scene = self.scene
+        scene.title = title
+        scene.description = description
+        scene.intro = intro
+        scene.context = context
+        
+        return scene

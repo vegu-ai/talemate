@@ -12,7 +12,7 @@ def handle_endofline_special_delimiter(content: str) -> str:
     # but it will be missing one or more spaces, so we need to
     # to normalize to -- endofline -- before we can split on it
     
-    content = re.sub(r"--\s*endofline\s*--", "-- endofline --", content)
+    content = re.sub(r"--\s*end\s*of\s*line\s*--", "-- endofline --", content)
     content = content.rsplit("-- endofline --", 1)[0]
     content = content.replace("-- endofline --", "")
     content = content.strip()

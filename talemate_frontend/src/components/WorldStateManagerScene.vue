@@ -4,7 +4,7 @@
             <v-card-title>
                 {{ title }}
                 <div class="text-muted text-caption">
-                    {{ scene.context }}
+                    {{ scene.data.context }}
                 </div>
             </v-card-title>
             <v-card-text>
@@ -13,19 +13,15 @@
                         <v-icon size="small" class="mr-1">mdi-script-text</v-icon>
                         Outline
                     </v-tab>
-                    <v-tab value="messages">
-                        <v-icon size="small" class="mr-1">mdi-message-text</v-icon>
-                        Messages
-                    </v-tab>
-                    <v-tab value="time">
-                        <v-icon size="small" class="mr-1">mdi-clock</v-icon>
-                        Time
-                    </v-tab>
                     <v-tab value="director">
                         <v-icon size="small" class="mr-1">mdi-dice-multiple</v-icon>
-                        Game Director
+                        Direction
                     </v-tab>
-                    <v-tab>
+                    <v-tab value="messages">
+                        <v-icon size="small" class="mr-1">mdi-tools</v-icon>
+                        Utilities
+                    </v-tab>
+                    <v-tab value="settings">
                         <v-icon size="small" class="mr-1">mdi-cogs</v-icon>
                         Settings
                     </v-tab>
@@ -35,10 +31,21 @@
                     <v-window-item value="outline">
                         <WorldStateManagerSceneOutline 
                             :app-config="appConfig"
+                            :templates="templates"
+                            :generation-options="generationOptions"
                             :immutableScene="scene">
                         </WorldStateManagerSceneOutline>
                     </v-window-item>
+
+                    <v-window-item value="settings">
+                        <WorldStateManagerSceneSettings 
+                            :app-config="appConfig"
+                            :generation-options="generationOptions"
+                            :immutableScene="scene">
+                        </WorldStateManagerSceneSettings>
+                    </v-window-item>
                 </v-window> 
+
             </v-card-text>
         </v-card>
     </div>
@@ -49,15 +56,19 @@
 <script>
 
 import WorldStateManagerSceneOutline from './WorldStateManagerSceneOutline.vue';
+import WorldStateManagerSceneSettings from './WorldStateManagerSceneSettings.vue';
 
 export default {
     name: "WorldStateManagerScene",
     components: {
         WorldStateManagerSceneOutline,
+        WorldStateManagerSceneSettings,
     },
     props: {
         scene: Object,
         appConfig: Object,
+        templates: Object,
+        generationOptions: Object,
     },
     inject:[
         'getWebsocket',

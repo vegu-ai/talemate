@@ -316,7 +316,11 @@ export default {
         },
         
         handleMessage(message) {
+            if (message.type !== 'world_state_manager') {
+                return;
+            }
 
+            
             if (message.action === 'character_attribute_updated') {
                 this.dirty = false;
                 this.$emit('require-scene-save');

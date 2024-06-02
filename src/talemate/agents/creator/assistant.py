@@ -34,6 +34,8 @@ class ContentGenerationContext(pydantic.BaseModel):
     generation_options: GenerationOptions = pydantic.Field(default_factory=GenerationOptions)
     template: AnnotatedTemplate | None = None
     context_aware: bool = True
+    history_aware: bool = True
+    allow_partial: bool = True
     state: dict[str, int | str | float | bool] = pydantic.Field(default_factory=dict)
 
     @property
@@ -123,6 +125,7 @@ class AssistantMixin:
         spice_level: float = 0.0,
         template: AnnotatedTemplate | None = None,
         context_aware: bool = True,
+        history_aware: bool = True,
     ):
         """
         Request content from the assistant.
@@ -145,6 +148,7 @@ class AssistantMixin:
             generation_options=generation_options,
             template=template,
             context_aware=context_aware,
+            history_aware=history_aware,
         )
 
         return await self.contextual_generate(generation_context)
@@ -171,6 +175,8 @@ class AssistantMixin:
 
         log.debug(f"Contextual generate: {context_typ} - {context_name}", generation_context=generation_context)
 
+        
+
         content = await Prompt.request(
             f"creator.contextual-generate",
             self.client,
@@ -184,6 +190,7 @@ class AssistantMixin:
                 "can_coerce": self.client.can_be_coerced,
                 "character_name": generation_context.character,
                 "context_aware": generation_context.context_aware,
+                "history_aware": generation_context.history_aware,
                 "character": (
                     self.scene.get_character(generation_context.character)
                     if generation_context.character

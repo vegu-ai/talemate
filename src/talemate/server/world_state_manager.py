@@ -136,6 +136,11 @@ class CreateCharacterPayload(pydantic.BaseModel):
     generate_attributes: bool = False
     generation_options: world_state_templates.GenerationOptions | None = None
     
+class SceneOutlinePayload(pydantic.BaseModel):
+    title: str
+    description: str | None = None
+    intro: str | None = None
+    context: str | None = None
 
 class WorldStateManagerPlugin:
     router = "world_state_manager"
@@ -906,5 +911,28 @@ class WorldStateManagerPlugin:
         
         await self.handle_get_character_list({})
         await self.handle_get_character_details({"name": character.name})
+        await self.signal_operation_done()
+        self.scene.emit_status()
+        
+    async def handle_update_scene_outline(self, data):
+        payload = SceneOutlinePayload(**data)
+        
+        log.debug("Update scene outline", title=payload.title, description=payload.description, intro=payload.intro, context=payload.context)
+        
+        await self.world_state_manager.update_scene_outline(
+            title = payload.title,
+            description = payload.description,
+            intro = payload.intro,
+            context = payload.context,
+        )
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "scene_outline_updated",
+                "data": payload.model_dump(),
+            }
+        )
+        
         await self.signal_operation_done()
         self.scene.emit_status()

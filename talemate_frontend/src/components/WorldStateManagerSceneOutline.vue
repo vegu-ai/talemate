@@ -18,7 +18,7 @@
                     v-model="scene.data.context"
                     @update:model-value="update()"
                     :items="appConfig ? appConfig.creator.content_context: []"
-                    hint="This can strongly influence the type of content that is generated, during narration, dialogue and world building."
+                    messages="This can strongly influence the type of content that is generated, during narration, dialogue and world building."
                     label="Content context"
                 ></v-combobox>
             </v-col>
@@ -38,7 +38,7 @@
                     rows="4"
                     auto-grow
                     max-rows="32"
-                    hint="This will not be directly displayed to the user, but can be used to provide additional context to the scene, its goals and general information."
+                    hint="This will not be directly displayed to the user, but can be used to provide additional context to the scene, its goals and general information. This should not be used for lore dumps."
                 ></v-textarea>
             </v-col>
         </v-row>

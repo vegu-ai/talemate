@@ -49,23 +49,16 @@
 
             <div v-else-if="tab == 'examples'">
 
-                <v-row no-gutters>
-                    <v-col cols="12" md="9">
-                        <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { generationOptions = opt }" />
-                    </v-col>
-                    <v-col cols="12" md="3">
-                        <ContextualGenerate 
-                            ref="contextualGenerate"
-                            uid="wsm.character_dialogue"
-                            :context="'character dialogue:'" 
-                            :instructions-placeholder="`An example of what ${character.name} would say when...`"
-                            :character="character.name"
-                            :rewrite-enabled="false"
-                            :generation-options="generationOptions"
-                            @generate="content => { dialogueExamples.push(content); queueUpdateCharacterActor(); }"
-                        />
-                    </v-col>
-                </v-row>
+                <ContextualGenerate 
+                    ref="contextualGenerate"
+                    uid="wsm.character_dialogue"
+                    :context="'character dialogue:'" 
+                    :instructions-placeholder="`An example of what ${character.name} would say when...`"
+                    :character="character.name"
+                    :rewrite-enabled="false"
+                    :generation-options="generationOptions"
+                    @generate="content => { dialogueExamples.push(content); queueUpdateCharacterActor(); }"
+                />
 
 
                 <v-text-field v-model="dialogueExample" label="Add Dialogue Example" @keyup.enter="dialogueExamples.push(dialogueExample); dialogueExample = ''; queueUpdateCharacterActor();" dense></v-text-field>
@@ -91,14 +84,12 @@
 <script>
 
 import ContextualGenerate from './ContextualGenerate.vue';
-import GenerationOptions from './GenerationOptions.vue';
 import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 
 export default {
     name: 'WorldStateManagerCharacterActor',
     components: {
         ContextualGenerate,
-        GenerationOptions,
         SpiceAppliedNotification,
     },
     data() {
@@ -110,7 +101,6 @@ export default {
             dialogueInstructionsDirty: false,
             dialogueInstructionsBusy: false,
             updateCharacterActorTimeout: null,
-            generationOptions: {},
         }
     },
     computed: {
@@ -126,6 +116,7 @@ export default {
     props: {
         character: Object,
         templates: Object,
+        generationOptions: Object,
     },
     emits: [
         'require-scene-save'

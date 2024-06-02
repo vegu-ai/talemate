@@ -1,24 +1,15 @@
 <template>
 
-    <v-row>
-        <v-col cols="12" md="10" lg="8">
-            <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { generationOptions = opt }" />
-        </v-col>
-        <v-col cols="12" md="2" lg="4">
-            <ContextualGenerate 
-                ref="contextualGenerate"
-                uid="wsm.character_description"
-                :context="'character detail:description'" 
-                :original="character.description"
-                :character="character.name"
-                :generationOptions="generationOptions"
-                :templates="templates"
-                @generate="content => setAndUpdate(content)"
-            />
-        </v-col>
-    </v-row>
-
-
+    <ContextualGenerate 
+        ref="contextualGenerate"
+        uid="wsm.character_description"
+        :context="'character detail:description'" 
+        :original="character.description"
+        :character="character.name"
+        :generationOptions="generationOptions"
+        :templates="templates"
+        @generate="content => setAndUpdate(content)"
+    />
 
     <v-textarea ref="description" rows="5" auto-grow v-model="character.description"
         :color="dirty ? 'info' : ''"
@@ -38,19 +29,18 @@
 <script>
 
 import ContextualGenerate from './ContextualGenerate.vue';
-import GenerationOptions from './GenerationOptions.vue';
 import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 
 export default {
     name: 'WorldStateManagerCharacterDescription',
     components: {
         ContextualGenerate,
-        GenerationOptions,
         SpiceAppliedNotification,
     },
     props: {
         immutableCharacter: Object,
         templates: Object,
+        generationOptions: Object,
     },
     inject: [
         'getWebsocket',
@@ -68,7 +58,6 @@ export default {
             dirty: false,
             busy: false,
             updateTimeout: null,
-            generationOptions: {},
             spiceApplied: false,
             spiceAppliedDetail: null, 
         }

@@ -150,6 +150,7 @@
                                             <WorldStateManagerCharacterDescription 
                                             ref="description" 
                                             @require-scene-save="$emit('require-scene-save')"
+                                            :generation-options="generationOptions"
                                             :templates="templates"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
@@ -157,6 +158,7 @@
                                             <WorldStateManagerCharacterAttributes 
                                             ref="attributes" 
                                             @require-scene-save="$emit('require-scene-save')"
+                                            :generation-options="generationOptions"
                                             :templates="templates"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
@@ -165,6 +167,7 @@
                                             ref="details" 
                                             @require-scene-save="$emit('require-scene-save')"
                                             @load-character-state-reinforcement="onLoadCharacterStateReinforcement"
+                                            :generation-options="generationOptions"
                                             :templates="templates"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
@@ -179,6 +182,7 @@
                                             <WorldStateManagerCharacterActor
                                             ref="reinforcements" 
                                             @require-scene-save="$emit('require-scene-save')"
+                                            :generation-options="generationOptions"
                                             :templates="templates"
                                             :character="character" />
                                         </v-tabs-window-item>
@@ -272,6 +276,7 @@ export default {
         characterList: Object,
         templates: Object,
         agentStatus: Object,
+        generationOptions: Object,
     },
     inject: [
         'getWebsocket',

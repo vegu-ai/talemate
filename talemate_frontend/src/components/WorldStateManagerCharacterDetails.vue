@@ -16,12 +16,6 @@
     <v-divider></v-divider>
 
     <v-row>
-        <v-col cols="12">
-            <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { generationOptions = opt }" />
-        </v-col>
-    </v-row>
-
-    <v-row>
         <v-col cols="4">
             <v-list density="compact" slim v-model:opened="groupsOpen">
                 <v-list-group value="templates" fluid>
@@ -142,7 +136,6 @@
 <script>
 import ContextualGenerate from './ContextualGenerate.vue';
 import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
-import GenerationOptions from './GenerationOptions.vue';
 import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 
 export default {
@@ -150,12 +143,12 @@ export default {
     components: {
         ContextualGenerate,
         WorldStateManagerTemplateApplicator,
-        GenerationOptions,
         SpiceAppliedNotification,
     },
     props: {
         immutableCharacter: Object,
         templates: Object,
+        generationOptions: Object,
     },
     data() {
         return {
@@ -171,7 +164,6 @@ export default {
             groupsOpen: [],
             templateApplicatorCallback: null,
             source: "wsm.character_details",
-            generationOptions: {},
         }
     },
     inject: [

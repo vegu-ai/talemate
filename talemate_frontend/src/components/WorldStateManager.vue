@@ -29,6 +29,7 @@
                 ref="characters" 
                 @require-scene-save="requireSceneSave = true"
                 @selected-character="(character) => { $emit('selected-character', character) }"
+                :generation-options="generationOptions"
                 :templates="templates"
                 :scene="scene"
                 :agent-status="agentStatus"

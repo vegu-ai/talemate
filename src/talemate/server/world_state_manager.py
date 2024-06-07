@@ -108,12 +108,12 @@ class DeleteWorldStateTemplatePayload(pydantic.BaseModel):
 
 class ApplyWorldStateTemplatePayload(pydantic.BaseModel):
     template: world_state_templates.AnnotatedTemplate
-    character_name: str = None,
+    character_name: str | None = None,
     run_immediately: bool = False,
     
 class ApplyWorldStateTemplatesPayload(pydantic.BaseModel):
     templates: list[world_state_templates.AnnotatedTemplate]
-    character_name: str = None,
+    character_name: str | None  = None,
     run_immediately: bool = False,
     source: str | None = None
     generation_options: world_state_templates.GenerationOptions | None = None
@@ -651,11 +651,11 @@ class WorldStateManagerPlugin:
     async def handle_apply_template(self, data):
         payload = ApplyWorldStateTemplatePayload(**data)
 
-        log.debug("Apply world state template", template=payload.template)
+        log.debug("Apply world state template", payload=payload)
 
         result = await self.world_state_manager.apply_template(
             template = payload.template,
-            character_name = payload.character_name,
+            character_name = payload.character_name or "",
             run_immediately = payload.run_immediately
         )
 

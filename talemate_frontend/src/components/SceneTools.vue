@@ -565,6 +565,7 @@ export default {
 
         handleClickWorldStateTemplate(template, character_name) {
 
+
             let query = this.formatWorldStateTemplateString(template.query, character_name);
 
             // if state is active, clicking should open the world state manager
@@ -592,6 +593,7 @@ export default {
                         type: "world_state_manager",
                         action: "apply_template",
                         template: template,
+                        character_name: null,
                         run_immidiately: true,
                     }));
                 }

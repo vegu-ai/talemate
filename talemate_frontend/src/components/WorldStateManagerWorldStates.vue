@@ -1,5 +1,5 @@
 <template>
-    <div  v-if="state != null">
+    <div v-if="state != null">
         <v-form v-model="formValid" ref="form">
             <v-row>
                 <v-col cols="12">
@@ -31,7 +31,7 @@
             </v-row>
 
             <v-row>
-                <v-col cols="6">
+                <v-col cols="6" xl="3">
                     <v-text-field 
                     v-model="state.interval" 
                     label="Re-inforce / Update detail every N turns" 
@@ -44,7 +44,7 @@
                     @update:modelValue="queueSave" :color="dirty ? 'info' : ''">
                     </v-text-field>
                 </v-col>
-                <v-col cols="6">
+                <v-col cols="6" xl="3">
                     <v-select 
                         v-model="state.insert" :items="insertionModes" 
                         label="Context Attachment Method" 

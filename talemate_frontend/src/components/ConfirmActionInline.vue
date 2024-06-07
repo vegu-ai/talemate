@@ -1,11 +1,11 @@
 <template>
     <div v-if="confirming===false">
-        <v-btn :disabled="disabled" rounded="sm" prepend-icon="mdi-close-box-outline" color="delete" variant="text" @click.stop="initiateAction" >
+        <v-btn :disabled="disabled" rounded="sm" :prepend-icon="icon" :color="color" variant="text" @click.stop="initiateAction" >
             {{ actionLabel}}
         </v-btn>
     </div>
     <div v-else>
-        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline" @click.stop="confirmAction"  color="delete" variant="text">
+        <v-btn rounded="sm" :prepend-icon="icon" @click.stop="confirmAction"  :color="color" variant="text">
             {{ confirmLabel }}
         </v-btn>
         <v-btn class="ml-1" rounded="sm" prepend-icon="mdi-cancel" @click.stop="cancelAction" color="cancel" variant="text">
@@ -21,6 +21,14 @@ export default {
         actionLabel: String,
         confirmLabel: String,
         disabled: Boolean,
+        icon: {
+            type: String,
+            default: 'mdi-close-box-outline'
+        },
+        color: {
+            type: String,
+            default: 'delete'
+        }
     },
     emits: ['confirm', 'cancel'],
     data(){

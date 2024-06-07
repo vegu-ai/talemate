@@ -473,7 +473,7 @@ class WorldStateManagerPlugin:
             update_state=payload.update_state,
         )
 
-        await self.world_state_manager.add_detail_reinforcement(
+        reinforcement = await self.world_state_manager.add_detail_reinforcement(
             None,
             payload.question,
             payload.instructions,
@@ -487,7 +487,7 @@ class WorldStateManagerPlugin:
             {
                 "type": "world_state_manager",
                 "action": "world_state_reinforcement_set",
-                "data": payload.model_dump(),
+                "data": reinforcement.model_dump(),
             }
         )
 
@@ -501,14 +501,24 @@ class WorldStateManagerPlugin:
         await self.world_state_manager.run_detail_reinforcement(
             None, payload.question, payload.reset
         )
+        
+        _, reinforcement = await self.world_state_manager.world_state.find_reinforcement(
+            payload.question, None
+        )
+        
+        if not reinforcement:
+            log.error("Reinforcement not found", question=payload.question)
+            await self.signal_operation_done()
+            return
 
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
                 "action": "world_state_reinforcement_ran",
-                "data": payload.model_dump(),
+                "data": reinforcement.model_dump(),
             }
         )
+
 
         # resend world
         await self.handle_get_world({})

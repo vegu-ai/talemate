@@ -64,6 +64,9 @@
                 @request-sync="onRequestSync"
                 @load-pin="onLoadPin"
                 @add-pin="onAddPin"
+                :generation-options="generationOptions"
+                :entries="worldEntries"
+                :states="worldStates"
                 :pins="pins"
                 />
             </v-window-item>
@@ -213,6 +216,8 @@ export default {
             worldContext: {},
             pins: {},
             generationOptions: {},
+            worldEntries: {},
+            worldStates: {},
         }
     },
     emits: [
@@ -227,6 +232,11 @@ export default {
         },
         tab(val) {
             this.emitEditorState(val)
+            if(val === 'world') {
+                this.$nextTick(() => {
+                    this.requestWorld()
+                });
+            }
         },
         characterDetails() {
             if (this.deferedNavigation !== null) {
@@ -260,6 +270,7 @@ export default {
             loadContextDBEntry: this.loadContextDBEntry,
             emitEditorState: this.emitEditorState,
             showManagerEditor: this.show,
+            requestWorld: this.requestWorld,
         }
     },
     inject: [
@@ -297,6 +308,7 @@ export default {
             this.requestCharacterList();
             this.requestPins();
             this.requestTemplates();
+            this.requestWorld();
 
             this.dialog = true;
             if (tab) {
@@ -460,6 +472,15 @@ export default {
             }));
         },
 
+        // world
+
+        requestWorld: function () {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'get_world',
+            }));
+        },
+
         // websocket
 
         requestTemplates: function () {
@@ -495,6 +516,10 @@ export default {
             }
             else if (message.action === 'character_details') {
                 this.characterDetails = message.data;
+            }
+            else if (message.action === 'world') {
+                this.worldEntries = message.data.entries;
+                this.worldStates = message.data.reinforcements;
             }
         },
     },

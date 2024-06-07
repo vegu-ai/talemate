@@ -13,6 +13,7 @@
                         <v-icon size="small" class="mr-1">mdi-script-text</v-icon>
                         Outline
                     </v-tab>
+                    <!--
                     <v-tab value="director">
                         <v-icon size="small" class="mr-1">mdi-dice-multiple</v-icon>
                         Direction
@@ -21,6 +22,7 @@
                         <v-icon size="small" class="mr-1">mdi-tools</v-icon>
                         Utilities
                     </v-tab>
+                    -->
                     <v-tab value="settings">
                         <v-icon size="small" class="mr-1">mdi-cogs</v-icon>
                         Settings

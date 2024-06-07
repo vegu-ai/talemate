@@ -19,6 +19,15 @@
         @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
         />
     </div>
+    <div v-else-if="tab === 'world'">
+        <WorldStateManagerMenuWorldTools 
+        ref="worldTools" 
+        :scene="scene" 
+        :manager="manager"
+        :world-state-templates="worldStateTemplates"
+        @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
+        />
+    </div>
 </template>
 
 
@@ -28,6 +37,7 @@ import CoverImage from './CoverImage.vue';
 
 import WorldStateManagerMenuCharacterTools from './WorldStateManagerMenuCharacterTools.vue';
 import WorldStateManagerMenuTemplateTools from './WorldStateManagerMenuTemplateTools.vue';
+import WorldStateManagerMenuWorldTools from './WorldStateManagerMenuWorldTools.vue';
 
 export default {
     name: 'WorldStateManagerMenu',
@@ -35,6 +45,7 @@ export default {
         CoverImage,
         WorldStateManagerMenuCharacterTools,
         WorldStateManagerMenuTemplateTools,
+        WorldStateManagerMenuWorldTools,
     },
     props: {
         scene: Object,

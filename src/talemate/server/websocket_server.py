@@ -738,6 +738,7 @@ class WebsocketHandler(Receiver):
 
         if asset_upload.scene_cover_image:
             self.scene.assets.cover_image = asset.id
+            self.scene.saved = False
             self.scene.emit_status()
         if asset_upload.character_cover_image:
             character = self.scene.get_character(asset_upload.character_cover_image)
@@ -748,6 +749,7 @@ class WebsocketHandler(Receiver):
                 or old_cover_image == self.scene.assets.cover_image
             ):
                 self.scene.assets.cover_image = asset.id
+            self.scene.saved = False
             self.scene.emit_status()
             self.request_scene_assets([character.cover_image])
             self.queue_put(

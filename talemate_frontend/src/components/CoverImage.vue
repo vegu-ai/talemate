@@ -4,10 +4,13 @@
         <div class="empty-portrait" v-else>
             <v-img  src="@/assets/logo-13.1-backdrop.png" cover v-on:drop="onDrop" v-on:dragover.prevent></v-img>
         </div>
-        <div v-if="allowUpdate && type === 'character' && target">
+        <div v-if="allowUpdate && target">
             <v-card density="compact">
-                <v-card-text class="text-caption text-grey">
+                <v-card-text class="text-caption text-grey" v-if="type === 'character'">
                     Drag and drop an image to update <span class="text-primary">{{ target.name }}</span>'s main image.
+                </v-card-text>
+                <v-card-text class="text-caption text-grey" v-else>
+                    Drag and drop an image to update <span class="text-primary">the scene's</span> cover image.
                 </v-card-text>
             </v-card>
             <v-divider></v-divider>
@@ -74,6 +77,11 @@ export default {
             }
         },
     },
+    computed: {
+        isScene() {
+            return this.type === 'scene';
+        }
+    },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'requestSceneAssets'],
     methods: {
 
@@ -103,13 +111,10 @@ export default {
             if(!this.allowUpdate)
                 return
             
-            if(this.type !== 'character')
-                return
-
             this.getWebsocket().send(JSON.stringify({ 
                 type: 'upload_scene_asset', 
-                scene_cover_image: false,
-                character_cover_image: this.target.name,
+                scene_cover_image: this.isScene,
+                character_cover_image: this.isScene ? null : this.target.name,
                 content: image_file_base64,
             }));
         },

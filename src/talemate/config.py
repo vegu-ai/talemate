@@ -422,7 +422,7 @@ class SceneConfig(BaseModel):
 
 class SceneAssetUpload(BaseModel):
     scene_cover_image: bool
-    character_cover_image: str = None
+    character_cover_image: str | None = None
     content: str = None
 
 

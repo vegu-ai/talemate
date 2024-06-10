@@ -26,7 +26,7 @@
             </v-menu>
 
             <span v-if="!scene.saved" class="text-muted text-caption mr-1">Unsaved changes.</span>
-            <v-chip size="x-small" prepend-icon="mdi-file" label class="text-caption text-muted">{{ scene.data.filename }}</v-chip>
+            <v-chip v-if="scene && scene.data != null" size="x-small" prepend-icon="mdi-file" label class="text-caption text-muted">{{ scene.data.filename }}</v-chip>
             <v-spacer></v-spacer>
             <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { generationOptions = opt }" />
         </v-toolbar>

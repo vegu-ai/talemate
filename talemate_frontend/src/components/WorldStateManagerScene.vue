@@ -1,5 +1,5 @@
 <template>
-    <div v-if="scene !== null">
+    <div v-if="scene !== null && scene.data != null">
         <v-card>
             <v-card-title>
                 {{ title }}
@@ -52,7 +52,9 @@
         </v-card>
     </div>
     <div v-else>
-
+        <v-alert color="muted" density="compact" variant="text">
+            No scene active.. 
+        </v-alert>
     </div>
 </template>
 <script>

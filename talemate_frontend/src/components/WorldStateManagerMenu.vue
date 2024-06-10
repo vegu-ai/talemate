@@ -1,6 +1,12 @@
 <template>
     <div v-if="tab === 'scene'">
-        <CoverImage ref="coverImageScene" :target="scene" :type="'scene'" />
+        <WorldStateManagerMenuSceneTools 
+        ref="sceneTools" 
+        :scene="scene" 
+        :manager="manager"
+        :world-state-templates="worldStateTemplates"
+        @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
+        />
     </div>
     <div v-else-if="tab === 'characters'">
         <WorldStateManagerMenuCharacterTools 
@@ -33,19 +39,18 @@
 
 <script>
 
-import CoverImage from './CoverImage.vue';
-
 import WorldStateManagerMenuCharacterTools from './WorldStateManagerMenuCharacterTools.vue';
 import WorldStateManagerMenuTemplateTools from './WorldStateManagerMenuTemplateTools.vue';
 import WorldStateManagerMenuWorldTools from './WorldStateManagerMenuWorldTools.vue';
+import WorldStateManagerMenuSceneTools from './WorldStateManagerMenuSceneTools.vue';
 
 export default {
     name: 'WorldStateManagerMenu',
     components: {
-        CoverImage,
         WorldStateManagerMenuCharacterTools,
         WorldStateManagerMenuTemplateTools,
         WorldStateManagerMenuWorldTools,
+        WorldStateManagerMenuSceneTools,
     },
     props: {
         scene: Object,

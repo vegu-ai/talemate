@@ -802,6 +802,7 @@ class Scene(Emitter):
         self.world_state = WorldState()
         self.game_state = GameState()
         self.ts = "PT0S"
+        self.active = False
 
         self.Actor = Actor
         self.Character = Character

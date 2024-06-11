@@ -4,8 +4,27 @@ Utilities for managing the scene history.
 Most of these currently exist as mehtods on the Scene object, but i am in the process of moving them here.
 """
 
-from talemate.scene_message import SceneMessage
+from typing import TYPE_CHECKING, Callable
 
+import structlog
+import asyncio
+
+from talemate.scene_message import SceneMessage
+from talemate.instance import get_agent
+from talemate.emit import emit
+from talemate.util import iso8601_diff_to_human
+from talemate.world_state.templates import GenerationOptions
+
+if TYPE_CHECKING:
+    from talemate.tale_mate import Scene
+
+__all__ = [
+    "history_with_relative_time",
+    "pop_history",
+    "rebuild_history",
+]
+
+log = structlog.get_logger()
 
 def pop_history(
     history: list[SceneMessage],
@@ -41,3 +60,84 @@ def pop_history(
 
     for message in to_remove:
         history.remove(message)
+
+def history_with_relative_time(history: list[str], scene_time: str) -> list[dict]:
+    """
+    Cycles through a list of Archived History entries and runs iso8601_diff_to_human
+    
+    Will return a list of dictionaries with the following keys
+    
+    - text `str`: the history text
+    - ts `str `: the original timestamp
+    - time `str`: the human readable time
+    """
+
+    return [
+        {
+            "text": entry["text"],
+            "ts": entry["ts"],
+            "time": iso8601_diff_to_human(scene_time, entry["ts"]),
+        }
+        for entry in history
+    ]
+    
+async def rebuild_history(
+    scene: "Scene",
+    callback: Callable | None = None,
+    generation_options: GenerationOptions | None = None
+):
+    """
+    rebuilds all history for a scene
+    """
+
+    # clear out archived history, but keep pre-established history
+    scene.archived_history = [
+        ah for ah in scene.archived_history if ah.get("end") is None
+    ]
+    
+    scene.saved = False
+    
+    scene.ts = (
+        scene.archived_history[-1].ts
+        if scene.archived_history
+        else "PT0S"
+    )
+
+    summarizer = get_agent("summarizer")
+
+    entries = 0
+    total_entries = summarizer.estimated_entry_count
+    
+    try:
+        while True:
+            
+            if not scene.active:
+                # scene is no longer active
+                log.warning("Scene is no longer active, aborting rebuild of history")
+                emit("status", message="Rebuilding of archive aborted", status="info")
+                return
+            
+            emit(
+                "status",
+                message=f"Rebuilding historical archive... {entries}/~{total_entries}",
+                status="busy",
+            )
+
+            more = await summarizer.build_archive(scene, generation_options=generation_options)
+            
+            scene.ts = scene.archived_history[-1]["ts"]
+            
+            if callback:
+                callback()
+            
+            entries += 1
+            if not more:
+                break
+    except Exception as e:
+        log.exception("Error rebuilding historical archive", error=e)
+        emit("status", message="Error rebuilding historical archive", status="error")
+        return
+
+    scene.sync_time()
+    await scene.commit_to_memory()
+    emit("status", message="Historical archive rebuilt", status="success")

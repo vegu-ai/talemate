@@ -36,6 +36,10 @@ log = structlog.get_logger("talemate.server.websocket_server")
 
 AGENT_INSTANCES = {}
 
+STATE = {
+    "scene": None,
+}
+
 
 class WebsocketHandler(Receiver):
     def __init__(self, socket, out_queue, llm_clients=dict()):
@@ -88,6 +92,12 @@ class WebsocketHandler(Receiver):
         # self.request_scenes_list()
 
         # instance.emit_clients_status()
+
+    def reset(self):
+        active_scene = STATE.get("scene")
+        if active_scene:
+            active_scene.active = False
+            active_scene.disconnect()
 
     def set_agent_routers(self):
 
@@ -179,6 +189,7 @@ class WebsocketHandler(Receiver):
             if self.scene:
                 instance.get_agent("memory").close_db(self.scene)
                 self.scene.disconnect()
+                self.scene.active = False
 
             scene = self.init_scene()
 
@@ -193,9 +204,12 @@ class WebsocketHandler(Receiver):
             )
 
             self.scene = scene
+            scene.active = True
 
             if callback:
                 await callback()
+
+            STATE["scene"] = scene
 
             await scene.start()
         except Exception:

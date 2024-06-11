@@ -5,6 +5,7 @@ import pydantic
 import structlog
 
 from talemate.instance import get_agent
+from talemate.history import history_with_relative_time, rebuild_history
 from talemate.world_state.manager import (
     WorldStateManager,
 )
@@ -149,6 +150,9 @@ class SceneSettingsPayload(pydantic.BaseModel):
 
 class SaveScenePayload(pydantic.BaseModel):
     copy: str | None = None
+
+class RegenerateHistoryPayload(pydantic.BaseModel):
+    generation_options: world_state_templates.GenerationOptions | None = None
 
 class WorldStateManagerPlugin:
     router = "world_state_manager"
@@ -979,3 +983,48 @@ class WorldStateManagerPlugin:
         
         await self.scene.save(auto=False, force=True, copy_name=payload.copy)
         self.scene.emit_status()
+        
+    async def handle_request_scene_history(self, data):
+        history = history_with_relative_time(
+            self.scene.archived_history, self.scene.ts
+        )
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "scene_history",
+                "data": history
+            }
+        )
+        
+    async def handle_regenerate_history(self, data):
+        
+        payload = RegenerateHistoryPayload(**data)
+        def callback():
+            self.websocket_handler.queue_put(
+                {
+                    "type": "world_state_manager",
+                    "action": "history_entry_added",
+                    "data": history_with_relative_time(
+                        self.scene.archived_history, self.scene.ts
+                    )
+                }
+            )
+        
+        await rebuild_history(
+            self.scene,
+            callback=callback,
+            generation_options=payload.generation_options
+        )
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "history_regenerated",
+                "data": payload.model_dump()
+            }
+        )
+        
+        await self.signal_operation_done()
+        await self.handle_request_scene_history(data)
+        

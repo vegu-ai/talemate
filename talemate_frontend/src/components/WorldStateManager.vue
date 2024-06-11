@@ -74,13 +74,9 @@
             <!-- HISTORY -->
 
             <v-window-item value="history">
-                <v-card flat>
-                    <v-card-text>
-                        <div>
-                            <!-- Placeholder for History content -->
-                        </div>
-                    </v-card-text>
-                </v-card>
+                <WorldStateManagerHistory ref="history" 
+                :generation-options="generationOptions"
+                />
             </v-window-item>
 
             <!-- CONTEXT DB -->
@@ -125,6 +121,7 @@ import WorldStateManagerCharacter from './WorldStateManagerCharacter.vue';
 import WorldStateManagerContextDB from './WorldStateManagerContextDB.vue';
 import WorldStateManagerPins from './WorldStateManagerPins.vue';
 import WorldStateManagerScene from './WorldStateManagerScene.vue';
+import WorldStateManagerHistory from './WorldStateManagerHistory.vue';
 import GenerationOptions from './GenerationOptions.vue';
 import RequestInput from './RequestInput.vue';
 
@@ -137,6 +134,7 @@ export default {
         WorldStateManagerContextDB,
         WorldStateManagerPins,
         WorldStateManagerScene,
+        WorldStateManagerHistory,
         GenerationOptions,
         RequestInput,
     },
@@ -179,7 +177,6 @@ export default {
                     name: "history",
                     title: "History",
                     icon: "mdi-clock",
-                    disabled: true,
                 },
                 {
                     name: "contextdb",
@@ -235,6 +232,10 @@ export default {
             if(val === 'world') {
                 this.$nextTick(() => {
                     this.requestWorld()
+                });
+            } else if(val === 'history') {
+                this.$nextTick(() => {
+                    this.$refs.history.requestSceneHistory()
                 });
             }
         },
@@ -368,6 +369,9 @@ export default {
             }
             if(this.$refs.pins) {
                 this.$refs.pins.reset()
+            }
+            if(this.$refs.history) {
+                this.$refs.history.reset()
             }
         },
         exit() {

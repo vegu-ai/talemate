@@ -34,6 +34,15 @@
         @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
         />
     </div>
+    <div v-else-if="tab === 'history'">
+        <WorldStateManagerMenuHistoryTools 
+        ref="historyTools" 
+        :scene="scene" 
+        :manager="manager"
+        :world-state-templates="worldStateTemplates"
+        @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
+        />
+    </div>
 </template>
 
 
@@ -43,6 +52,7 @@ import WorldStateManagerMenuCharacterTools from './WorldStateManagerMenuCharacte
 import WorldStateManagerMenuTemplateTools from './WorldStateManagerMenuTemplateTools.vue';
 import WorldStateManagerMenuWorldTools from './WorldStateManagerMenuWorldTools.vue';
 import WorldStateManagerMenuSceneTools from './WorldStateManagerMenuSceneTools.vue';
+import WorldStateManagerMenuHistoryTools from './WorldStateManagerMenuHistoryTools.vue';
 
 export default {
     name: 'WorldStateManagerMenu',
@@ -51,6 +61,7 @@ export default {
         WorldStateManagerMenuTemplateTools,
         WorldStateManagerMenuWorldTools,
         WorldStateManagerMenuSceneTools,
+        WorldStateManagerMenuHistoryTools,
     },
     props: {
         scene: Object,

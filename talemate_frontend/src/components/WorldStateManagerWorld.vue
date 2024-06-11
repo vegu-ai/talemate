@@ -53,6 +53,9 @@ export default {
         }
     },
     methods: {
+        reset() {
+            this.tab = 'info';
+        },
         navigate(selection) {
             if(selection === '$NEW_ENTRY') {
                 this.tab = 'entries';

@@ -23,6 +23,12 @@ async def websocket_endpoint(websocket, path):
     scene_task = None
 
     log.info("frontend connected")
+    
+    # resets the handler state
+    # and deactivates a previously active scene
+    # This is a temporary solution, eventually we will
+    # probably want it to re-attach to the scene
+    handler.reset()
 
     try:
         # Create a task to send messages from the queue
@@ -157,12 +163,13 @@ async def websocket_endpoint(websocket, path):
         starlette.websockets.WebSocketDisconnect,
         RuntimeError,
     ):
-        log.info("frontend disconnected")
+        log.warning("frontend disconnected")
         send_messages_task.cancel()
         send_status_task.cancel()
         send_client_bootstraps_task.cancel()
         handler.disconnect()
         if handler.scene:
+            handler.scene.active = False
             handler.scene.continue_scene = False
             if scene_task:
                 scene_task.cancel()

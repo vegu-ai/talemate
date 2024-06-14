@@ -1,15 +1,12 @@
 import asyncio
-import os
 from typing import TYPE_CHECKING, Any
 
-import nest_asyncio
 import pydantic
 import structlog
 
 from talemate.agents.director import DirectorAgent
 from talemate.agents.memory import MemoryAgent
 from talemate.instance import get_agent
-from talemate.prompts.base import PrependTemplateDirectories, Prompt
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene

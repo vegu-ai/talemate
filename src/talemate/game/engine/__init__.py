@@ -1,10 +1,7 @@
-import asyncio
-import importlib
 import os
-from typing import TYPE_CHECKING, Coroutine
+from typing import TYPE_CHECKING
 
 import nest_asyncio
-import pydantic
 import structlog
 from RestrictedPython import compile_restricted, safe_globals
 from RestrictedPython.Eval import default_guarded_getitem, default_guarded_getiter
@@ -13,8 +10,10 @@ from RestrictedPython.Guards import guarded_iter_unpack_sequence, safer_getattr
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
-from talemate.game.scope import GameInstructionScope, OpenScopedContext
 from talemate.prompts.base import PrependTemplateDirectories, Prompt
+
+from talemate.game.scope import OpenScopedContext, GameInstructionScope
+import talemate.game.engine.api.exceptions as api_exceptions
 
 log = structlog.get_logger("talemate.game.engine")
 nest_asyncio.apply()
@@ -42,9 +41,11 @@ def compile_scene_module(module_code: str, **kwargs):
     restricted_globals["getattr"] = safer_getattr
     restricted_globals["_write_"] = lambda x: x
     restricted_globals["hasattr"] = hasattr
+    restricted_globals["exceptions"] = api_exceptions
 
     # Execute the compiled code with the restricted globals
     exec(compiled_code, restricted_globals, safe_locals)
+    
     return safe_locals.get("game")
 
 
@@ -151,11 +152,10 @@ class GameInstructionsMixin:
         module_path = self.scene_module_path
 
         # read thje file into _module property
-
         with open(module_path, "r") as f:
             module_code = f.read()
             scene._module = GameInstructionScope(
-                agent=self,
+                director=self,
                 log=log,
                 scene=scene,
                 module_function=compile_scene_module(module_code),

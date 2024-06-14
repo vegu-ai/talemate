@@ -581,7 +581,7 @@ export default {
                         action: "apply_template",
                         template: template,
                         character_name: character_name,
-                        run_immidiately: true,
+                        run_immediately: true,
                     }));
                 }
             } else {
@@ -594,7 +594,7 @@ export default {
                         action: "apply_template",
                         template: template,
                         character_name: null,
-                        run_immidiately: true,
+                        run_immediately: true,
                     }));
                 }
             }

@@ -323,7 +323,7 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         content: str = None,
         attributes: str = None,
         determine_name: bool = True,
-    ):
+    ) -> Character:
         world_state = instance.get_agent("world_state")
         creator = instance.get_agent("creator")
 

@@ -17,6 +17,8 @@ import talemate.client.presets as presets
 import talemate.client.system_prompts as system_prompts
 import talemate.instance as instance
 import talemate.util as util
+from talemate.exceptions import SceneInactiveError
+from talemate.context import active_scene
 from talemate.agents.context import active_agent
 from talemate.client.context import client_context_attribute
 from talemate.client.model_prompts import model_prompt
@@ -559,6 +561,14 @@ class ClientBase:
         :param prompt: The text prompt to send.
         :return: The AI's response text.
         """
+        
+        if not active_scene.get():
+            log.error("SceneInactiveError", scene=active_scene.get())
+            raise SceneInactiveError("No active scene context")
+        
+        if not active_scene.get().active:
+            log.error("SceneInactiveError", scene=active_scene.get())
+            raise SceneInactiveError("Scene is no longer active")
         
         if not self.enabled:
             raise ClientDisabledError(self)

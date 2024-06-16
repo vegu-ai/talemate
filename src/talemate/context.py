@@ -1,19 +1,20 @@
 from contextvars import ContextVar
-
 import structlog
 
 __all__ = [
     "scene_is_loading",
     "rerun_context",
+    "active_scene",
     "SceneIsLoading",
     "RerunContext",
+    "ActiveScene",
 ]
 
 log = structlog.get_logger(__name__)
 
 scene_is_loading = ContextVar("scene_is_loading", default=None)
 rerun_context = ContextVar("rerun_context", default=None)
-
+active_scene = ContextVar("active_scene", default=None)
 
 class SceneIsLoading:
     def __init__(self, scene):
@@ -25,6 +26,20 @@ class SceneIsLoading:
     def __exit__(self, *args):
         scene_is_loading.reset(self.token)
 
+
+class ActiveScene:
+    def __init__(self, scene):
+        self.scene = scene
+        scene.active = True
+        log.info("scene active", scene=scene)
+
+    def __enter__(self):
+        self.token = active_scene.set(self.scene)
+
+    def __exit__(self, *args):
+        self.scene.active = False
+        active_scene.reset(self.token)
+        log.info("scene inactive", scene=self.scene)
 
 class RerunContext:
     def __init__(self, scene, direction=None, method="replace", message: str = None):

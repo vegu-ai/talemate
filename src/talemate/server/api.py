@@ -24,12 +24,6 @@ async def websocket_endpoint(websocket, path):
 
     log.info("frontend connected")
     
-    # resets the handler state
-    # and deactivates a previously active scene
-    # This is a temporary solution, eventually we will
-    # probably want it to re-attach to the scene
-    handler.reset()
-
     try:
         # Create a task to send messages from the queue
         async def send_messages():

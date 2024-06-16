@@ -13,9 +13,8 @@ from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 from talemate.files import list_scenes_directory
 from talemate.load import (
     load_scene,
-    load_scene_from_character_card,
-    load_scene_from_data,
 )
+from talemate.context import ActiveScene, active_scene
 from talemate.scene_assets import Asset
 from talemate.server import (
     assistant,
@@ -35,11 +34,6 @@ __all__ = [
 log = structlog.get_logger("talemate.server.websocket_server")
 
 AGENT_INSTANCES = {}
-
-STATE = {
-    "scene": None,
-}
-
 
 class WebsocketHandler(Receiver):
     def __init__(self, socket, out_queue, llm_clients=dict()):
@@ -92,12 +86,6 @@ class WebsocketHandler(Receiver):
         # self.request_scenes_list()
 
         # instance.emit_clients_status()
-
-    def reset(self):
-        active_scene = STATE.get("scene")
-        if active_scene:
-            active_scene.active = False
-            active_scene.disconnect()
 
     def set_agent_routers(self):
 
@@ -204,14 +192,12 @@ class WebsocketHandler(Receiver):
             )
 
             self.scene = scene
-            scene.active = True
 
             if callback:
                 await callback()
 
-            STATE["scene"] = scene
-
-            await scene.start()
+            with ActiveScene(scene):
+                await scene.start()
         except Exception:
             log.error("load_scene", error=traceback.format_exc())
 

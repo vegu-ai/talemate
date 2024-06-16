@@ -190,9 +190,9 @@ def game(TM):
                 # or the simulation from the previous narration
                 is_initial_narration = TM.game_state.get_var("instr.intro_narration", False)
                 if not is_initial_narration:
-                    TM.scene.set_description(str(narration))
-                    TM.scene.set_intro(str(narration))
-                    TM.log.debug("SIMULATION SUITE: initial narration", intro=str(narration))
+                    TM.scene.set_description(narration.raw)
+                    TM.scene.set_intro(narration.raw)
+                    TM.log.debug("SIMULATION SUITE: initial narration", intro=narration.raw)
                     TM.scene.pop_history(typ="narrator", all=True, reverse=True)
                     TM.scene.pop_history(typ="director", all=True, reverse=True)
                     TM.game_state.set_var("instr.intro_narration", True, commit=False)

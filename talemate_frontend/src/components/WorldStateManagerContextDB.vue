@@ -102,7 +102,7 @@
 
             <!-- results -->
             <div v-else>
-                <v-table height="600px" v-if="contextDB.entries.length > 0">
+                <v-table v-if="contextDB.entries.length > 0">
                     <thead>
                         <tr>
                             <th class="text-left"></th>
@@ -159,7 +159,7 @@
                     icon="mdi-information-outline">
                     No results
                 </v-alert>
-                <v-alert v-else dense type="info" variant="text" icon="mdi-magnify">
+                <v-alert v-else dense color="muted" variant="text" icon="mdi-magnify">
                     Enter a query to search the context database.
                 </v-alert>
             </div>

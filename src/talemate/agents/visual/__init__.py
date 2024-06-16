@@ -449,8 +449,6 @@ class VisualBase(Agent):
         with VisualContext(vis_type=VIS_TYPES.ENVIRONMENT, instructions=instructions):
             await self.generate(format="landscape")
 
-    generate_environment_background.exposed = True
-
     async def generate_character_portrait(
         self,
         character_name: str,
@@ -464,8 +462,6 @@ class VisualBase(Agent):
             replace=replace,
         ):
             await self.generate(format="portrait")
-
-    generate_character_portrait.exposed = True
 
 
 # apply mixins to the agent (from HANDLERS dict[str, cls])

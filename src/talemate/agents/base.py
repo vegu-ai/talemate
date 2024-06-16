@@ -90,8 +90,6 @@ def set_processing(fn):
                     # not sure why this happens
                     # some concurrency error?
                     log.error("error emitting agent status", exc=exc)
-
-    wrapper.exposed = True
     return wrapper
 
 

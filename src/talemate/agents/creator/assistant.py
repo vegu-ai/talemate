@@ -153,8 +153,6 @@ class AssistantMixin:
 
         return await self.contextual_generate(generation_context)
 
-    contextual_generate_from_args.exposed = True
-
     @set_processing
     async def contextual_generate(
         self,

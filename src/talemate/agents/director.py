@@ -412,8 +412,6 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         self.scene.push_history(message)
         emit("director", message)
 
-    log_action.exposed = True
-
     def inject_prompt_paramters(
         self, prompt_param: dict, kind: str, agent_function_name: str
     ):

@@ -4,14 +4,20 @@
             <v-tabs-window v-model="tab">
                 <v-tabs-window-item value="entries">
                     <WorldStateManagerWorldEntries ref="entries" 
+
+                    @load-pin="(ev, pin) => $emit('load-pin', ev, pin)"
+                    @add-pin="(ev, pin) => $emit('add-pin', ev, pin)"
+
                     :immutable-entries="entries"
                     :templates="templates" 
+                    :pins="pins"
                     :generation-options="generationOptions" />
                 </v-tabs-window-item>
                 <v-tabs-window-item value="states">
                     <WorldStateManagerWorldStates ref="states"
                     :templates="templates"
                     :immutable-states="states"
+                    :pins="pins"
                     :generation-options="generationOptions" />
                 </v-tabs-window-item>
                 <v-tabs-window-item value="info">
@@ -46,12 +52,17 @@ export default {
         generationOptions: Object,
         entries: Object,
         states: Object,
+        pins: Object,
     },
     data() {
         return {
             tab: 'info',
         }
     },
+    emits: [
+        'load-pin',
+        'add-pin',
+    ],
     methods: {
         reset() {
             this.tab = 'info';

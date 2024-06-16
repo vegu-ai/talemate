@@ -237,6 +237,18 @@ export default {
                 this.$nextTick(() => {
                     this.$refs.history.requestSceneHistory()
                 });
+            } else if(val === 'pins') {
+                this.$nextTick(() => {
+                    this.requestPins()
+                });
+            } else if(val === 'characters') {
+                this.$nextTick(() => {
+                    this.requestCharacterList()
+                });
+            } else if(val === 'templates') {
+                this.$nextTick(() => {
+                    this.requestTemplates()
+                });
             }
         },
         characterDetails() {
@@ -267,10 +279,11 @@ export default {
     provide() {
         return {
             insertionModes: this.insertionModes,
-            requestTemplates: this.requestTemplates,
             loadContextDBEntry: this.loadContextDBEntry,
             emitEditorState: this.emitEditorState,
             showManagerEditor: this.show,
+            requestPins: this.requestPins,
+            requestTemplates: this.requestTemplates,
             requestWorld: this.requestWorld,
         }
     },

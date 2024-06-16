@@ -3,12 +3,12 @@
         <v-card-text>
             <v-row>
                 <v-col cols="3">
-                    <v-list dense v-if="pinsExist()">
+                    <v-list dense v-if="pinsExist">
                         <v-list-item prepend-icon="mdi-help" @click.stop="selected = null">
                             <v-list-item-title>Information</v-list-item-title>
                         </v-list-item>
                         <v-list-item v-for="pin in pins" :key="pin.pin.entry_id"
-                            @click.stop="selected = pin"
+                            @click.stop="selectPin(pin.pin.entry_id)"
                             :prepend-icon="pin.pin.active ? 'mdi-pin' : 'mdi-pin-off'"
                             :class="pin.pin.active ? '' : 'inactive'">
                             <v-list-item-title>{{ pin.text }}</v-list-item-title>
@@ -24,37 +24,23 @@
                     </v-card>
                 </v-col>
                 <v-col cols="9">
-                    <v-row v-if="selected != null">
+                    <v-row v-if="selected != null && selectedPin != null">
                         <v-col cols="7">
                             <v-card>
-                                <v-checkbox hide-details dense v-model="selected.pin.active"
+                                <v-checkbox hide-details dense v-model="pins[selected].pin.active"
                                     label="Pin active" @change="update(selected)"></v-checkbox>
                                 <v-alert class="mb-2 pre-wrap" variant="text" color="grey"
                                     icon="mdi-book-open-page-variant">
-                                    {{ selected.text }}
-
+                                    <div class="formatted-text">
+                                        {{ selectedPin.text }}
+                                    </div>
                                 </v-alert>
                                 <v-card-actions>
-                                    <v-btn v-if="removeConfirm === false" rounded="sm"
-                                        prepend-icon="mdi-close-box-outline" color="error" variant="text"
-                                        @click.stop="removeConfirm = true">
-                                        Remove Pin
-                                    </v-btn>
-                                    <span v-else>
-                                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
-                                            @click.stop="remove(selected.pin.entry_id)" color="error"
-                                            variant="text">
-                                            Confirm removal
-                                        </v-btn>
-                                        <v-btn class="ml-1" rounded="sm" prepend-icon="mdi-cancel"
-                                            @click.stop="removeConfirm = false" color="info"
-                                            variant="text">
-                                            Cancel
-                                        </v-btn>
-                                    </span>
+                                    <ConfirmActionInline action-label="Remove pin" confirm-label="Confirm removal"
+                                        @confirm="remove(selected)" />
                                     <v-spacer></v-spacer>
                                     <v-btn variant="text" color="primary"
-                                        @click.stop="loadContextDBEntry(selected.pin.entry_id)"
+                                        @click.stop="loadContextDBEntry(selected)"
                                         prepend-icon="mdi-book-open-page-variant">View in context DB</v-btn>
                                 </v-card-actions>
                             </v-card>
@@ -64,12 +50,12 @@
                                 <v-card-title><v-icon size="small">mdi-robot</v-icon> Conditional auto
                                     pinning</v-card-title>
                                 <v-card-text>
-                                    <v-textarea rows="1" auto-grow v-model="selected.pin.condition"
+                                    <v-textarea rows="1" auto-grow v-model="pins[selected].condition"
                                         label="Condition question prompt for auto pinning"
                                         hint="The condition that must be met for the pin to be active. Prompt will be evaluated by the AI (World State agent) regularly. This should be a question that the AI can answer with a yes or no."
                                         @update:model-value="queueUpdate(selected)">
                                     </v-textarea>
-                                    <v-checkbox hide-details dense v-model="selected.pin.condition_state"
+                                    <v-checkbox hide-details dense v-model="pins[selected].condition_state"
                                         label="Current condition evaluation"
                                         @change="update(selected)"></v-checkbox>
                                 </v-card-text>
@@ -110,14 +96,18 @@
 
 <script>
 
+import ConfirmActionInline from './ConfirmActionInline.vue';
+
 export default {
     name: 'WorldStateManagerPins',
+    components: {
+        ConfirmActionInline,
+    },
     data() {
         return {
             pins: {},
             selected: null,
             updateTimeout: null,
-            removeConfirm: false,
         }
     },
     emits:[
@@ -138,6 +128,19 @@ export default {
             }
         }
     },
+    computed: {
+        selectedPin() {
+
+            if (this.selected === null) {
+                return null;
+            }
+
+            return this.pins[this.selected];
+        },
+        pinsExist() {
+            return Object.keys(this.pins).length > 0;
+        },
+    },
     inject: [
         'getWebsocket',
         'registerMessageHandler',
@@ -150,10 +153,6 @@ export default {
             this.pins = {};
         },
 
-        pinsExist() {
-            return Object.keys(this.pins).length > 0;
-        },
-
         entryHasPin(entryId) {
             return this.pins[entryId] !== undefined;
         },
@@ -163,7 +162,7 @@ export default {
         },
 
         selectPin(entryId) {
-            this.selected = this.pins[entryId];
+            this.selected = entryId
         },
 
         add(entryId) {
@@ -179,7 +178,7 @@ export default {
             };
             this.selectPin(entryId);
 
-            this.update(this.pins[entryId]);
+            this.update(entryId);
         },
 
         remove(entryId) {
@@ -193,7 +192,14 @@ export default {
             this.removeConfirm = false;
         },
 
-        update(pin) {
+        update(entryId) {
+
+            let pin = this.pins[entryId];
+
+            if(pin === undefined) {
+                return;
+            }
+
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'set_pin',
@@ -217,9 +223,6 @@ export default {
             if (message.type !== 'world_state_manager') {
                 return;
             }
-            else if (message.action === 'pins') {
-                this.pins = message.data.pins;
-            }
         },
     },
     created() {
@@ -228,3 +231,9 @@ export default {
 }
 
 </script>
+
+<style scoped>
+.formatted-text {
+    white-space: pre-wrap;
+}
+</style>

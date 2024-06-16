@@ -21,6 +21,7 @@
                 :color="dirty ? 'info' : ''"
                 @update:model-value="queueSave"
                 auto-grow
+                max-rows="24"
                 rows="5">
             </v-textarea>
             <v-checkbox v-model="entry.meta['pin_only']" 
@@ -39,6 +40,9 @@
         </v-card-actions>
         <v-card-actions v-else>
             <ConfirmActionInline @confirm="remove" action-label="Remove Entry" confirm-label="Confirm removal" />
+            <v-spacer></v-spacer>
+            <v-btn v-if="entryHasPin" @click="$emit('load-pin', entry.id)" color="primary" prepend-icon="mdi-pin">View pin</v-btn>
+            <v-btn v-else @click="$emit('add-pin', entry.id)" color="primary" prepend-icon="mdi-pin">Add pin</v-btn>
         </v-card-actions>
     </div>
 
@@ -67,6 +71,7 @@ export default {
         ConfirmActionInline,
     },
     props: {
+        pins: Object,
         templates: Object,
         generationOptions: Object,
         immutableEntries: Object,
@@ -74,6 +79,9 @@ export default {
     computed: {
         isNewEntry() {
             return this.entry && this.entry.isNew;
+        },
+        entryHasPin() {
+            return this.entry && this.pins[this.entry.id];
         },
     },
     data() {

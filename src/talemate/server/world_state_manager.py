@@ -218,7 +218,6 @@ class WorldStateManagerPlugin:
 
     async def handle_get_world(self, data):
         world = await self.world_state_manager.get_world()
-        log.debug("World", world=world)
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",

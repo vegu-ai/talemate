@@ -234,10 +234,14 @@ class InferencePresets(BaseModel):
         min_p=0,
     )
     scene_direction: InferenceParameters = InferenceParameters(
-        temperature=0.85, 
+        temperature=0.85,
+        min_p=0.0,
+        presence_penalty=0.0,
     )
     summarization: InferenceParameters = InferenceParameters(
         temperature=0.7, 
+        min_p=0.0,
+        presence_penalty=0.0,
     )
 
 

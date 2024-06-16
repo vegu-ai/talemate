@@ -938,6 +938,8 @@ class Scene(Emitter):
         disconnect scenes from signals
         """
         handlers["config_saved"].disconnect(self.on_config_saved)
+        get_agent("memory").close_db(self)
+        
 
     def __del__(self):
         self.disconnect()

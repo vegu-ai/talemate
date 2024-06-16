@@ -30,16 +30,12 @@ class SceneIsLoading:
 class ActiveScene:
     def __init__(self, scene):
         self.scene = scene
-        scene.active = True
-        log.info("scene active", scene=scene)
 
     def __enter__(self):
         self.token = active_scene.set(self.scene)
 
     def __exit__(self, *args):
-        self.scene.active = False
         active_scene.reset(self.token)
-        log.info("scene inactive", scene=self.scene)
 
 class RerunContext:
     def __init__(self, scene, direction=None, method="replace", message: str = None):

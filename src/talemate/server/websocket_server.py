@@ -195,11 +195,15 @@ class WebsocketHandler(Receiver):
 
             if callback:
                 await callback()
+                
+            scene.active = True
 
             with ActiveScene(scene):
                 await scene.start()
         except Exception:
             log.error("load_scene", error=traceback.format_exc())
+        finally:
+            self.scene.active = False
 
     def queue_put(self, data):
         # Get the current event loop

@@ -8,12 +8,12 @@ import structlog
 import websockets
 
 import talemate.instance as instance
-from talemate import VERSION, Scene
+from talemate import VERSION
 from talemate.config import load_config
-from talemate.load import load_scene
 from talemate.server.websocket_server import WebsocketHandler
 
 log = structlog.get_logger("talemate")
+from talemate.context import ActiveScene
 
 
 async def websocket_endpoint(websocket, path):
@@ -72,84 +72,85 @@ async def websocket_endpoint(websocket, path):
 
             log.debug("frontend message", action_type=action_type)
 
-            if action_type == "load_scene":
-                if scene_task:
-                    handler.scene.continue_scene = False
-                    scene_task.cancel()
+            with ActiveScene(handler.scene):
+                if action_type == "load_scene":
+                    if scene_task:
+                        handler.scene.continue_scene = False
+                        scene_task.cancel()
 
-                file_path = data.get("file_path")
-                scene_data = data.get("scene_data")
-                filename = data.get("filename")
-                reset = data.get("reset", False)
+                    file_path = data.get("file_path")
+                    scene_data = data.get("scene_data")
+                    filename = data.get("filename")
+                    reset = data.get("reset", False)
 
-                async def scene_loading_done():
+                    async def scene_loading_done():
+                        await message_queue.put(
+                            {
+                                "type": "system",
+                                "message": "Scene file loaded ...",
+                                "id": "scene.loaded",
+                                "status": "success",
+                                "data": {"hidden": True},
+                            }
+                        )
+
+                    if scene_data and filename:
+                        file_path = handler.handle_character_card_upload(
+                            scene_data, filename
+                        )
+
+                    log.info("load_scene", file_path=file_path, reset=reset)
+
+                    # Create a task to load the scene in the background
+                    scene_task = asyncio.create_task(
+                        handler.load_scene(
+                            file_path, reset=reset, callback=scene_loading_done
+                        )
+                    )
+
+                elif action_type == "interact":
+                    log.debug("interact", data=data)
+                    text = data.get("text")
+                    if handler.waiting_for_input:
+                        handler.send_input(text)
+
+                elif action_type == "request_scenes_list":
+                    query = data.get("query", "")
+                    handler.request_scenes_list(query)
+                elif action_type == "configure_clients":
+                    await handler.configure_clients(data.get("clients"))
+                elif action_type == "configure_agents":
+                    await handler.configure_agents(data.get("agents"))
+                elif action_type == "request_client_status":
+                    await handler.request_client_status()
+                elif action_type == "delete_message":
+                    handler.delete_message(data.get("id"))
+                elif action_type == "scene_config":
+                    log.info("scene_config", data=data)
+                    handler.apply_scene_config(data.get("scene_config"))
+                elif action_type == "request_scene_assets":
+                    log.info("request_scene_assets", data=data)
+                    handler.request_scene_assets(data.get("asset_ids"))
+                elif action_type == "upload_scene_asset":
+                    log.info("upload_scene_asset")
+                    handler.add_scene_asset(data=data)
+                elif action_type == "request_scene_history":
+                    log.info("request_scene_history")
+                    handler.request_scene_history()
+                elif action_type == "request_assets":
+                    log.info("request_assets")
+                    handler.request_assets(data.get("assets"))
+                elif action_type == "edit_message":
+                    log.info("edit_message", data=data)
+                    handler.edit_message(data.get("id"), data.get("text"))
+                elif action_type == "request_app_config":
+                    log.info("request_app_config")
                     await message_queue.put(
-                        {
-                            "type": "system",
-                            "message": "Scene file loaded ...",
-                            "id": "scene.loaded",
-                            "status": "success",
-                            "data": {"hidden": True},
-                        }
+                        {"type": "app_config", "data": load_config(), "version": VERSION}
                     )
-
-                if scene_data and filename:
-                    file_path = handler.handle_character_card_upload(
-                        scene_data, filename
-                    )
-
-                log.info("load_scene", file_path=file_path, reset=reset)
-
-                # Create a task to load the scene in the background
-                scene_task = asyncio.create_task(
-                    handler.load_scene(
-                        file_path, reset=reset, callback=scene_loading_done
-                    )
-                )
-
-            elif action_type == "interact":
-                log.debug("interact", data=data)
-                text = data.get("text")
-                if handler.waiting_for_input:
-                    handler.send_input(text)
-
-            elif action_type == "request_scenes_list":
-                query = data.get("query", "")
-                handler.request_scenes_list(query)
-            elif action_type == "configure_clients":
-                await handler.configure_clients(data.get("clients"))
-            elif action_type == "configure_agents":
-                await handler.configure_agents(data.get("agents"))
-            elif action_type == "request_client_status":
-                await handler.request_client_status()
-            elif action_type == "delete_message":
-                handler.delete_message(data.get("id"))
-            elif action_type == "scene_config":
-                log.info("scene_config", data=data)
-                handler.apply_scene_config(data.get("scene_config"))
-            elif action_type == "request_scene_assets":
-                log.info("request_scene_assets", data=data)
-                handler.request_scene_assets(data.get("asset_ids"))
-            elif action_type == "upload_scene_asset":
-                log.info("upload_scene_asset")
-                handler.add_scene_asset(data=data)
-            elif action_type == "request_scene_history":
-                log.info("request_scene_history")
-                handler.request_scene_history()
-            elif action_type == "request_assets":
-                log.info("request_assets")
-                handler.request_assets(data.get("assets"))
-            elif action_type == "edit_message":
-                log.info("edit_message", data=data)
-                handler.edit_message(data.get("id"), data.get("text"))
-            elif action_type == "request_app_config":
-                log.info("request_app_config")
-                await message_queue.put(
-                    {"type": "app_config", "data": load_config(), "version": VERSION}
-                )
-            else:
-                log.info("Routing to sub-handler", action_type=action_type)
-                await handler.route(data)
+                else:
+                    log.info("Routing to sub-handler", action_type=action_type)
+                    await handler.route(data)
 
     # handle disconnects
     except (

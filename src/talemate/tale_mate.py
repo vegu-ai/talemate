@@ -938,8 +938,6 @@ class Scene(Emitter):
         disconnect scenes from signals
         """
         handlers["config_saved"].disconnect(self.on_config_saved)
-        get_agent("memory").close_db(self)
-        
 
     def __del__(self):
         self.disconnect()
@@ -1806,6 +1804,7 @@ class Scene(Emitter):
         """
         automated_action.initialize_for_scene(self)
 
+        await self.ensure_memory_db()
         await self.load_active_pins()
 
         self.emit_status()
@@ -1828,8 +1827,17 @@ class Scene(Emitter):
             first_loop = False
 
             await asyncio.sleep(0.01)
+            
+    async def ensure_memory_db(self):
+        memory = self.get_helper("memory").agent
+        if not memory.db:
+            await memory.set_db()
+        
 
     async def _run_game_loop(self, init: bool = True):
+
+        await self.ensure_memory_db()        
+
         if init:
             emit("clear_screen", "")
 
@@ -1896,15 +1904,13 @@ class Scene(Emitter):
         
         # if loop sets this to True, we skip to the player
         skip_to_player = False
-            
-        while continue_scene:
+        
+        while continue_scene and self.active:
             log.debug(
                 "game loop", auto_save=self.auto_save, auto_progress=self.auto_progress
             )
-            
-
-
             try:
+                await self.ensure_memory_db()        
                 await self.load_active_pins()
                 game_loop = events.GameLoopEvent(
                     scene=self, event_type="game_loop", had_passive_narration=False

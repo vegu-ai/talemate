@@ -357,14 +357,14 @@ class TTSAgent(Agent):
 
         api_changed = api != self.api
 
-        log.debug(
-            "apply_config",
-            api=api,
-            api_changed=api != self.api,
-            current_api=self.api,
-            args=args,
-            kwargs=kwargs,
-        )
+        #log.debug(
+        #    "apply_config",
+        #    api=api,
+        #    api_changed=api != self.api,
+        #    current_api=self.api,
+        #    args=args,
+        #    kwargs=kwargs,
+        #)
 
         try:
             self.preselect_voice = kwargs["actions"]["_config"]["config"]["voice_id"][

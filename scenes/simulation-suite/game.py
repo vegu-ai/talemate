@@ -503,13 +503,13 @@ def game(TM):
             
             player_character = TM.scene.get_player_character()
             
-            explicit_command = TM.client.query_text_eval("has the player explicitly asked to end the simulation?", self.player_message.raw)
+            explicit_command = TM.agents.world_state.answer_query_true_or_false("has the player explicitly asked to end the simulation?", self.player_message.raw)
             
             if explicit_command:
                 TM.signals.status("busy", "Simulation suite ending current simulation.", as_scene_message=True)
                 TM.agents.narrator.action_to_narration(
                     action_name="progress_story",
-                    narrative_direction=f"Narrate the computer ending the simulation, dissolving the environment and all artificial characters, erasing all memory of it and finally returning the player to the inactive simulation suite. List of artificial characters: {', '.join(TM.scene.npc_character_names())}. The player is also transformed back to their normal, non-descript persona as the form of {player_character.name} ceases to exist.",
+                    narrative_direction=f"Narrate the computer ending the simulation, dissolving the environment and all artificial characters, erasing all memory of it and finally returning the player to the inactive simulation suite. List of artificial characters: {', '.join(TM.scene.npc_character_names)}. The player is also transformed back to their normal, non-descript persona as the form of {player_character.name} ceases to exist.",
                     emit_message=True
                 )
                 TM.scene.restore()

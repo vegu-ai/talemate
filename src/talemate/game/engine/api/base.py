@@ -29,6 +29,5 @@ class ScopedAPI:
         
         if name != "assert_scene_active" and hasattr(self, "assert_scene_active"):
             self.assert_scene_active()
-            print("assert_scene_active called")
             
         return super().__getattribute__(name)

@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 import pydantic
-from talemate.game.engine.api.base import ScopedAPI
+from talemate.game.engine.api.base import ScopedAPI, run_async
 import talemate.game.engine.api.schema as schema
 from talemate.game.engine.api.exceptions import UnknownCharacter, SceneInactive
 
@@ -200,7 +200,7 @@ def create(scene: "Scene") -> "ScopedAPI":
             The scene needs to have its `restore_from` property specified
             """
             
-            scene.restore()
+            run_async(scene.restore())
 
         def set_content_context(self, context:str):
             

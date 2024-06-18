@@ -280,7 +280,7 @@ class MemoryAgent(Agent):
         max_tokens: int = 1000,
         filter: Callable = lambda x: True,
         **where,
-    ):
+    ) -> str | None:
         """
         Get the character memory context for a given character
         """

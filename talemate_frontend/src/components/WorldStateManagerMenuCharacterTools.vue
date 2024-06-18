@@ -11,7 +11,7 @@
 
         <v-list-item prepend-icon="mdi-account-arrow-right" @click.stop="openCharacterImporter">
             <v-list-item-title>Import Character</v-list-item-title>
-            <v-list-item-subtitle class="text-caption">Import rom another scene.</v-list-item-subtitle>
+            <v-list-item-subtitle class="text-caption">Import from another scene.</v-list-item-subtitle>
         </v-list-item>
     </v-list>
     <v-list density="compact" slim selectable color="primary" v-model:selected="selected">

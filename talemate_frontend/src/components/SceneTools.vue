@@ -95,7 +95,7 @@
                             <v-icon>mdi-cancel</v-icon>
                             
                         </v-btn>
-                        <v-label v-text="this.commandName" class="mr-3 ml-3"></v-label>
+                        <span class="mr-3 ml-3 text-caption text-muted">{{ commandName }}</span>
                     </template>
                 </v-tooltip>
             </v-card-actions>

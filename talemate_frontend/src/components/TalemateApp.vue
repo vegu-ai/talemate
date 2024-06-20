@@ -83,7 +83,6 @@
             />
           </v-tabs-window-item>
         </v-tabs-window>
-        <CreativeEditor v-if="sceneActive" ref="creativeEditor" @open-world-state-manager="onOpenWorldStateManager"  />
       </v-navigation-drawer>
       <!-- right side navigation drawer -->
       <v-navigation-drawer v-model="drawer" app location="right" width="300" disable-resize-watcher>
@@ -133,6 +132,17 @@
           <!-- SCENE -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main" style="height: 100%;">
             <div style="display: flex; flex-direction: column; height: 100%">
+
+              <div v-if="sceneActive && scene.environment === 'creative' && !scene.data.intro">
+                <v-alert color="muted" class="mb-2" variant="text">
+                  <v-alert-title>New Scene</v-alert-title>
+                  You're editing a new scene. Select the <v-btn @click="onOpenWorldStateManager('scene')" variant="text" size="small" color="primary" prepend-icon="mdi-earth-box">World Editor</v-btn> to add characters and scene details. You are currently operating in the creative environment. Once you have added at least one player character you may switch back and forth between creative and gameplay mode at any point using the <v-icon color="primary" size="small">mdi-gamepad-square</v-icon> button at the bottom.
+                  <p class="mt-4">
+                    You can still use the world editor while in gameplay mode as well.
+                  </p>
+                </v-alert>
+              </div>
+
               <SceneMessages ref="sceneMessages" />
               <div style="flex-shrink: 0;">
       
@@ -207,7 +217,6 @@ import WorldState from './WorldState.vue';
 import CoverImage from './CoverImage.vue';
 import CharacterSheet from './CharacterSheet.vue';
 import SceneHistory from './SceneHistory.vue';
-import CreativeEditor from './CreativeEditor.vue';
 import AppConfig from './AppConfig.vue';
 import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
@@ -229,7 +238,6 @@ export default {
     CoverImage,
     CharacterSheet,
     SceneHistory,
-    CreativeEditor,
     AppConfig,
     DebugTools,
     AudioQueue,

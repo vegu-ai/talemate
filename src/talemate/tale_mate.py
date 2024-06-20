@@ -2029,8 +2029,11 @@ class Scene(Emitter):
 
         if init:
             emit("clear_screen", "")
-            self.narrator_message(self.description)
+            intro = self.get_intro()
 
+            if intro:
+                self.narrator_message(intro)
+                
         continue_scene = True
         self.commands = command = commands.Manager(self)
 

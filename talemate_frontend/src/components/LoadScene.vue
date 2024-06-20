@@ -29,13 +29,23 @@
                     v-model="sceneFile" 
                     @change="loadScene" 
                     label="Drag and Drop file."
-                    style="height:300px"
                     outlined accept="image/*" 
                     variant="solo-filled" 
                     messages="Upload a talemate scene or a character card"
                     ></v-file-input>
                 
                 </div>
+            </v-card-text>
+        </v-card>
+        <v-divider class="mt-3 mb-3"></v-divider>
+        <!-- create new scene -->
+        <v-list-subheader>
+            <v-icon class="mr-1" color="primary">mdi-plus</v-icon>
+            Create new scene
+        </v-list-subheader>
+        <v-card variant="text">
+            <v-card-text>
+                <v-btn class="mt-2" variant="tonal" block :disabled="loading" @click="loadCreative" append-icon="mdi-plus" color="primary">Create</v-btn>
             </v-card-text>
         </v-card>
     </div>
@@ -109,7 +119,7 @@ export default {
             }
 
             this.loading = true;
-            this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: "environment:creative" }));
+            this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: "$NEW_SCENE$" }));
         },
         loadCanceled() {
             console.log("Load canceled");

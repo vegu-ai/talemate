@@ -91,7 +91,7 @@ export default {
     },
     data() {
         return {
-            tab: "characters",
+            tab: "scene",
             character: null,
             manager: null,
         }

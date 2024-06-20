@@ -90,7 +90,7 @@ async def websocket_endpoint(websocket, path):
                                 "message": "Scene file loaded ...",
                                 "id": "scene.loaded",
                                 "status": "success",
-                                "data": {"hidden": True},
+                                "data": {"hidden": True, "environment": handler.scene.environment},
                             }
                         )
 

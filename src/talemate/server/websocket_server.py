@@ -18,12 +18,10 @@ from talemate.context import ActiveScene, active_scene
 from talemate.scene_assets import Asset
 from talemate.server import (
     assistant,
-    character_creator,
     character_importer,
     config,
     devtools,
     quick_settings,
-    scene_creator,
     world_state_manager,
 )
 
@@ -62,13 +60,7 @@ class WebsocketHandler(Receiver):
 
         self.routes = {
             assistant.AssistantPlugin.router: assistant.AssistantPlugin(self),
-            character_creator.CharacterCreatorServerPlugin.router: character_creator.CharacterCreatorServerPlugin(
-                self
-            ),
             character_importer.CharacterImporterServerPlugin.router: character_importer.CharacterImporterServerPlugin(
-                self
-            ),
-            scene_creator.SceneCreatorServerPlugin.router: scene_creator.SceneCreatorServerPlugin(
                 self
             ),
             config.ConfigPlugin.router: config.ConfigPlugin(self),

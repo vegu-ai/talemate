@@ -43,9 +43,9 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
 
     try:
         with SceneIsLoading(scene):
-            if file_path == "environment:creative":
+            if file_path == "$NEW_SCENE$":
                 return await load_scene_from_data(
-                    scene, creative_environment(), conv_client, reset=True
+                    scene, new_scene(), conv_client, reset=True, empty=True
                 )
 
             ext = os.path.splitext(file_path)[1].lower()
@@ -165,7 +165,7 @@ async def load_scene_from_character_card(scene, file_path):
 
 
 async def load_scene_from_data(
-    scene, scene_data, conv_client, reset: bool = False, name=None
+    scene, scene_data, conv_client, reset: bool = False, name: str | None = None, empty:bool = False
 ):
     loading_status = LoadingStatus(1)
     reset_message_id()
@@ -247,7 +247,7 @@ async def load_scene_from_data(
 
     # if there is nio player character, add the default player character
 
-    if not scene.get_player_character():
+    if not scene.get_player_character() and not empty:
         await scene.add_actor(default_player_character())
 
     # the scene has been saved before (since we just loaded it), so we set the saved flag to True
@@ -421,7 +421,7 @@ def _prepare_legacy_history(entry):
     return cls(entry)
 
 
-def creative_environment():
+def new_scene():
     return {
         "description": "",
         "name": "New scenario",

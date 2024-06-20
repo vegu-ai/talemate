@@ -7,7 +7,7 @@
 
         <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1" v-if="tab !== 'templates'">
 
-            <RequestInput ref="requestSaveCopyName" title="Save Copy As" @continue="(name) => { saveScene(name) }" /> 
+            <RequestInput ref="requestSaveCopyName" title="Save Scene As" @continue="(name) => { saveScene(name) }" /> 
 
             <v-menu>
                 <template v-slot:activator="{ props }">
@@ -16,7 +16,7 @@
                     </v-btn>
                 </template>
                 <v-list slim density="compact">
-                    <v-list-item @click="saveScene()" prepend-icon="mdi-content-save">
+                    <v-list-item @click="saveScene(!scene.data.filename)" prepend-icon="mdi-content-save">
                         <v-list-item-title>Save</v-list-item-title>
                     </v-list-item>
                     <v-list-item @click="saveScene(true)" prepend-icon="mdi-content-save-all">
@@ -357,7 +357,11 @@ export default {
                         this.loadContextDBEntry(sub1);
                     });
                 }
-            } 
+            }  else if (tab == 'history') {
+                this.$nextTick(() => {
+                    this.$refs.history.requestSceneHistory()
+                });
+            }
 
             this.emitEditorState(tab)
         },
@@ -369,7 +373,7 @@ export default {
             this.pins = {};
             this.deferSelectedCharacter = null;
             this.deferedNavigation = null;
-            this.tab = 'characters';
+            this.tab = 'scene';
 
             if(this.$refs.characters) {
                 this.$refs.characters.reset()
@@ -407,7 +411,7 @@ export default {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'save_scene',
-                copy: copy,
+                copy: copy ? copy : null,
             }));
         },
 

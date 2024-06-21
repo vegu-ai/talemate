@@ -61,7 +61,7 @@ export default {
                     this.asset_id = null;
                     this.base64 = null;
                     this.media_type = null;
-                } else if(this.type === 'scene' && value.data.assets.cover_image !== this.asset_id) {
+                } else if(this.type === 'scene' && value.data && value.data.assets.cover_image !== this.asset_id) {
                     this.asset_id = value.data.assets.cover_image;
                     if(this.asset_id)
                         this.requestSceneAssets([value.data.assets.cover_image]);

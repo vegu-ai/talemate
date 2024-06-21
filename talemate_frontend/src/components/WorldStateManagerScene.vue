@@ -27,6 +27,10 @@
                         <v-icon size="small" class="mr-1">mdi-cogs</v-icon>
                         Settings
                     </v-tab>
+                    <v-tab value="export">
+                        <v-icon size="small" class="mr-1">mdi-export</v-icon>
+                        Export
+                    </v-tab>
                 </v-tabs>
                 <v-divider></v-divider>
                 <v-window v-model="page">
@@ -46,6 +50,12 @@
                             :immutableScene="scene">
                         </WorldStateManagerSceneSettings>
                     </v-window-item>
+
+                    <v-window-item value="export">
+                        <WorldStateManagerSceneExport 
+                            :scene="scene">
+                        </WorldStateManagerSceneExport>
+                    </v-window-item>
                 </v-window> 
 
             </v-card-text>
@@ -61,12 +71,14 @@
 
 import WorldStateManagerSceneOutline from './WorldStateManagerSceneOutline.vue';
 import WorldStateManagerSceneSettings from './WorldStateManagerSceneSettings.vue';
+import WorldStateManagerSceneExport from './WorldStateManagerSceneExport.vue';
 
 export default {
     name: "WorldStateManagerScene",
     components: {
         WorldStateManagerSceneOutline,
         WorldStateManagerSceneSettings,
+        WorldStateManagerSceneExport,
     },
     props: {
         scene: Object,

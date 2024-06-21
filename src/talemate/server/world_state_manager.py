@@ -3,12 +3,14 @@ from typing import Any, Union
 
 import pydantic
 import structlog
+import base64
 
 from talemate.instance import get_agent
 from talemate.history import history_with_relative_time, rebuild_history
 from talemate.world_state.manager import (
     WorldStateManager,
 )
+from talemate.export import ExportOptions, export
 import talemate.world_state.templates as world_state_templates
 
 log = structlog.get_logger("talemate.server.world_state_manager")
@@ -974,7 +976,20 @@ class WorldStateManagerPlugin:
         
         await self.signal_operation_done()
         self.scene.emit_status()
+    
+    async def handle_export_scene(self, data):
+        payload = ExportOptions(**data)
+        scene_data = await export(self.scene, payload)
         
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "scene_exported",
+                "data": scene_data
+            }
+        )
+        await self.signal_operation_done()
+    
     async def handle_save_scene(self, data):
         payload = SaveScenePayload(**data)
         

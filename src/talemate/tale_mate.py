@@ -743,7 +743,6 @@ class Player(Actor):
 
         return message
 
-
 class Scene(Emitter):
     """
     A scene containing one ore more AI driven actors to interact with.
@@ -2198,10 +2197,17 @@ class Scene(Emitter):
         await self.world_state.commit_to_memory(memory)
 
     def reset(self):
+        # remove messages 
         self.history = []
-        self.archived_history = []
+        
+        # clear out archived history, but keep pre-established history
+        self.archived_history = [
+            ah for ah in self.archived_history if ah.get("end") is None
+        ]
+        
+        self.world_state.reset()
+        
         self.filename = ""
-        self.goal = None
 
     async def remove_all_actors(self):
         for actor in self.actors:

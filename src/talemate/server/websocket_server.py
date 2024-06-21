@@ -179,16 +179,18 @@ class WebsocketHandler(Receiver):
 
             conversation_helper = scene.get_helper("conversation")
 
-            scene = await load_scene(
-                scene, path_or_data, conversation_helper.agent.client, reset=reset
-            )
+            scene.active = True
+            
+            with ActiveScene(scene):
+                scene = await load_scene(
+                    scene, path_or_data, conversation_helper.agent.client, reset=reset
+                )
 
             self.scene = scene
 
             if callback:
                 await callback()
                 
-            scene.active = True
 
             with ActiveScene(scene):
                 await scene.start()

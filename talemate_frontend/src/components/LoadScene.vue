@@ -10,7 +10,7 @@
                 <v-autocomplete :disabled="loading" v-model="sceneInput" :items="scenes"
                 label="Search scenes" outlined @update:search="updateSearchInput" item-title="label" item-value="path" :loading="sceneSearchLoading" messages="Load previously saved scenes.">
                 </v-autocomplete>
-                <v-btn class="mt-2" variant="tonal" block :disabled="loading" @click="loadScene" append-icon="mdi-folder" color="primary">Load</v-btn>
+                <v-btn class="mt-2" variant="tonal" block :disabled="loading" @click="loadScene('path')" append-icon="mdi-folder" color="primary">Load</v-btn>
             </v-card-text>
         </v-card>
         <v-divider class="mt-3 mb-3"></v-divider>
@@ -27,7 +27,7 @@
                     :disabled="loading" 
                     prepend-icon="" 
                     v-model="sceneFile" 
-                    @change="loadScene" 
+                    @change="loadScene('file')" 
                     label="Drag and Drop file."
                     outlined accept="image/*" 
                     variant="solo-filled" 
@@ -127,7 +127,7 @@ export default {
             this.sceneFile = [];
         },
 
-        loadScene() {
+        loadScene(inputMethod) {
 
             if(this.sceneSaved === false) {
                 if(!confirm("The current scene is not saved. Are you sure you want to load a new scene?")) {
@@ -135,7 +135,13 @@ export default {
                 }
             }
 
+            if(inputMethod) {
+                this.inputMethod = inputMethod;
+            }
+
             this.sceneSaved = null;
+
+            console.log("Loading scene", this.inputMethod, this.sceneFile, this.sceneInput)
 
             if (this.inputMethod === 'file' && this.sceneFile.length > 0) { // Check if the input method is "file" and there is at least one file
             
@@ -152,6 +158,9 @@ export default {
                 // Convert the uploaded file to base64
                 const reader = new FileReader();
                 reader.readAsDataURL(this.sceneFile[0]); // Access the first file in the array
+
+                console.log("Loading scene from file")
+
                 reader.onload = () => {
                     //const base64File = reader.result.split(',')[1];
                     this.$emit("loading", true)

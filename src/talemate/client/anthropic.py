@@ -18,12 +18,13 @@ SUPPORTED_MODELS = [
     "claude-3-haiku-20240307",
     "claude-3-sonnet-20240229",
     "claude-3-opus-20240229",
+    "claude-3-5-sonnet-20240620",
 ]
 
 
 class Defaults(pydantic.BaseModel):
     max_token_length: int = 16384
-    model: str = "claude-3-sonnet-20240229"
+    model: str = "claude-3-5-sonnet-20240620"
 
 
 @register()
@@ -46,7 +47,7 @@ class AnthropicClient(ClientBase):
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
 
-    def __init__(self, model="claude-3-sonnet-20240229", **kwargs):
+    def __init__(self, model="claude-3-5-sonnet-20240620", **kwargs):
         self.model_name = model
         self.api_key_status = None
         self.config = load_config()

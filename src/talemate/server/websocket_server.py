@@ -8,6 +8,7 @@ import structlog
 import talemate.instance as instance
 from talemate import Helper, Scene
 from talemate.client.registry import CLIENT_CLASSES
+from talemate.client.base import ClientBase
 from talemate.config import SceneAssetUpload, load_config, save_config
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 from talemate.files import list_scenes_directory
@@ -131,17 +132,38 @@ class WebsocketHandler(Receiver):
             except TypeError as e:
                 client = None
 
-            if not client:
-                # select first client
-                client = list(self.llm_clients.values())[0]["client"]
-                agent_config["client"] = client.name
+            if not client or not client.enabled:
+                # select first enabled client
+                try:
+                    client = self.get_first_enabled_client()
+                    agent_config["client"] = client.name
+                except IndexError:
+                    client = None
+                    
+                if not client:
+                    agent_config["client"] = None
 
-            log.debug("Linked agent", agent_typ=agent_typ, client=client.name)
+            if client:
+                log.debug("Linked agent", agent_typ=agent_typ, client=client.name)
+            else:
+                log.warning("No client available for agent", agent_typ=agent_typ)
+                
             agent = instance.get_agent(agent_typ, client=client)
             agent.client = client
             await agent.apply_config(**agent_config)
 
         instance.emit_agents_status()
+
+    def get_first_enabled_client(self) -> ClientBase:
+        """
+        Will return the first enabled client available
+        
+        If no enabled clients are available, an IndexError will be raised
+        """
+        for client in self.llm_clients.values():
+            if client and client["client"].enabled:
+                return client["client"]
+        raise IndexError("No enabled clients available")
 
     def init_scene(self):
         # Setup scene

@@ -59,7 +59,8 @@ class AgentAction(pydantic.BaseModel):
     description: str = ""
     config: Union[dict[str, AgentActionConfig], None] = None
     condition: Union[AgentActionConditional, None] = None
-
+    container: bool = False
+    icon: Union[str, None] = None
 
 class AgentDetail(pydantic.BaseModel):
     value: Union[str, None] = None

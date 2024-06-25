@@ -52,7 +52,6 @@ from talemate.world_state.manager import WorldStateManager
 
 __all__ = [
     "Character",
-    "TestCharacter",
     "Actor",
     "Scene",
     "Helper",
@@ -627,28 +626,6 @@ class Helper:
     @property
     def agent_type(self):
         return self.agent.agent_type
-
-
-class TestCharacter(Character):
-    """
-    A test character with a name, description, and greeting text.
-    """
-
-    def __init__(self):
-        super().__init__(
-            name="Magical Fairy",
-            description="A female magical Fairy. About as big as a human hand. She is not very powerful, but she is very mischievous.",
-            color="magenta",
-            greeting_text="*winking* I am a magical fairy and i am contractually bound to grant you 3 wishes. Tee hee! What is your desire?",
-        )
-
-        self.example_dialogue = [
-            "*giggling* Oh, dear human, I see you've misplaced your keys again! Would you like a little hint, or should I let you search just a bit longer? Tee-hee!",
-            "*fluttering around playfully* Why, hello there! I couldn't help but notice you're feeling a bit glum. How about I cheer you up by turning those frowns into flowers? But be warned, they may tickle!",
-            "*twirling her wand* A touch of magic, a sprinkle of mischief, and voilà! You'll find your shoes swapped with your neighbor's. Don't worry, it's all in good fun!",
-            "*winking* Shall we play a little game, my human friend? I'll hide three enchanted acorns in your garden, and if you find them all, I'll grant you a single wish. But beware, my hiding spots can be quite tricky!",
-            "*fluttering her wings* Oh, what a lovely day for a bit of harmless pranking! How about we turn this plain old rock into a singing stone? Your friends won't know what hit them when it starts belting out tunes!",
-        ]
 
 
 class Actor:

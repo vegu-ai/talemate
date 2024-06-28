@@ -5,12 +5,13 @@
                 <span class="headline">{{ title }}</span>
             </v-card-title>
             <v-card-text>
-                <v-form>
+                <v-form @submit.prevent="proceed" ref="form" v-model="valid">
                     <v-row v-if="inputType === 'multiline'">
                         <v-col cols="12">
                             <v-textarea
                                 v-model="input"
                                 :label="title"
+                                :rules="[rules.required]"
                             ></v-textarea>
                         </v-col>
                     </v-row>
@@ -19,6 +20,7 @@
                             <v-text-field
                                 v-model="input"
                                 :label="title"
+                                :rules="[rules.required]"
                             ></v-text-field>
                         </v-col>
                     </v-row>
@@ -51,13 +53,22 @@ export default {
     data() {
         return {
             open: false,
+            valid: false,
             input: '',
+            rules: {
+                required: value => !!value || 'Required.',
+            }
         }
     },
     emits: ['continue', 'cancel'],
 
     methods: {
         proceed() {
+            this.$refs.form.validate()
+            if(!this.valid) {
+                return;
+            }
+
             this.$emit('continue', this.input);
             this.open = false;
         },

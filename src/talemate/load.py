@@ -1,5 +1,6 @@
 import json
 import os
+import enum
 
 import structlog
 from dotenv import load_dotenv
@@ -22,6 +23,8 @@ from talemate.scene_message import (
 from talemate.status import LoadingStatus, set_loading
 from talemate.world_state import WorldState
 from talemate.character import deactivate_character
+from talemate.exceptions import UnknownDataSpec
+from talemate.util import extract_metadata
 
 __all__ = [
     "load_scene",
@@ -34,6 +37,11 @@ __all__ = [
 
 log = structlog.get_logger("talemate.load")
 
+class ImportSpec(str, enum.Enum):
+    talemate = "talemate"
+    chara_card_v2 = "chara_card_v2"
+    chara_card_v1 = "chara_card_v1"
+    
 
 @set_loading("Loading scene...")
 async def load_scene(scene, file_path, conv_client, reset: bool = False):
@@ -49,18 +57,42 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
                 )
 
             ext = os.path.splitext(file_path)[1].lower()
-
+            
+            # an image was uploaded, we don't have the scene data yet
+            # go directly to loading a character card
             if ext in [".jpg", ".png", ".jpeg", ".webp"]:
                 return await load_scene_from_character_card(scene, file_path)
 
+            # a json file was uploaded, load the scene data
             with open(file_path, "r") as f:
                 scene_data = json.load(f)
 
+            # check if the data is a character card
+            # this will also raise an exception if the data is not recognized
+            spec = identify_import_spec(scene_data)
+            
+            # if it is a character card, load it
+            if spec in [ImportSpec.chara_card_v1, ImportSpec.chara_card_v2]:
+                return await load_scene_from_character_card(scene, file_path)
+
+            # if it is a talemate scene, load it
             return await load_scene_from_data(
                 scene, scene_data, conv_client, reset, name=file_path
             )
     finally:
         await scene.add_to_recent_scenes()
+
+def identify_import_spec(data:dict) -> ImportSpec:
+    if "game_state" in data and "world_state" in data:
+        return ImportSpec.talemate
+    
+    if data.get("spec") == "chara_card_v2":
+        return ImportSpec.chara_card_v2
+    
+    if data.get("spec") == "chara_card_v1":
+        return ImportSpec.chara_card_v1
+    
+    raise UnknownDataSpec(data)
 
 
 async def load_scene_from_character_card(scene, file_path):
@@ -340,20 +372,94 @@ def load_character_from_image(image_path: str, file_format: str) -> Character:
     :param file_format: Image file format ('png' or 'webp').
     :return: Character loaded from the image metadata.
     """
-    character = Character("", "", "")
-    character.load_from_image_metadata(image_path, file_format)
-    return character
+    metadata = extract_metadata(image_path, file_format)
+    spec = identify_import_spec(metadata)
+    
+    if spec == ImportSpec.chara_card_v2:
+        return character_from_chara_data(metadata["data"])
+    elif spec == ImportSpec.chara_card_v1:
+        return character_from_chara_data(metadata)
+    
+    raise UnknownDataSpec(metadata)
 
 
-# New function to load a character from a json file
 def load_character_from_json(json_path: str) -> Character:
     """
     Load a character from a json file and return it.
     :param json_path: Path to the json file.
     :return: Character loaded from the json file.
     """
-    return Character.load(json_path)
+    
+    with open(json_path, "r") as f:
+        data = json.load(f)
+        
+    spec = identify_import_spec(data)
+    
+    if spec == ImportSpec.chara_card_v2:
+        return character_from_chara_data(data["data"])
+    elif spec == ImportSpec.chara_card_v1:
+        return character_from_chara_data(data)
+    
+    raise UnknownDataSpec(data)
 
+
+def character_from_chara_data(data: dict) -> Character:
+    
+    """
+    Generates a barebones character from a character card data dictionary.
+    """
+    
+    character = Character("", "", "")
+    character.color = "red"
+    if "name" in data:
+        character.name = data["name"]
+
+    # loop through the metadata and set the character name everywhere {{char}}
+    # occurs
+
+    for key in data:
+        if isinstance(data[key], str):
+            data[key] = data[key].replace("{{char}}", character.name)
+
+    if "description" in data:
+        character.description = data["description"]
+    if "scenario" in data:
+        character.description += "\n" + data["scenario"]
+    if "first_mes" in data:
+        character.greeting_text = data["first_mes"]
+    if "gender" in data:
+        character.gender = data["gender"]
+    if "color" in data:
+        character.color = data["color"]
+    if "mes_example" in data:
+        new_line_match = "\r\n" if "\r\n" in data["mes_example"] else "\n"
+        for message in data["mes_example"].split("<START>"):
+            if message.strip(new_line_match):
+                character.example_dialogue.extend(
+                    [m for m in message.split(new_line_match) if m]
+                )
+                
+    return character
+
+
+def load_from_image_metadata(image_path: str, file_format: str):
+    """
+    Load character data from an image file's metadata using the extract_metadata function.
+
+    Args:
+    image_path (str): The path to the image file.
+    file_format (str): The image file format ('png' or 'webp').
+
+    Returns:
+    None
+    """
+
+    metadata = extract_metadata(image_path, file_format)
+
+    if metadata.get("spec") == "chara_card_v2":
+        metadata = metadata["data"]
+    
+    return character_from_chara_data(metadata)
 
 def default_player_character():
     """

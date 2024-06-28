@@ -231,47 +231,6 @@ class Character:
 
         return "\n".join(sheet_list)
 
-    def save(self, file_path: str):
-        """
-        Save this Character instance properties to a json file at the given file path.
-
-        Args:
-        file_path (str): The path to the output json file.
-
-        Returns:
-        None
-        """
-
-        with open(file_path, "w") as output_file:
-            json.dump(self.serialize, output_file, indent=2)
-
-    @classmethod
-    def load(cls, file_path: str) -> "Character":
-        """
-        Load a Character instance properties from a json file at the given file path.
-
-        Args:
-        file_path (str): The path to the input json file.
-
-        Returns:
-        Character: The loaded Character instance.
-        """
-
-        with open(file_path, "r") as input_file:
-            character_dict = json.load(input_file)
-
-        character = cls(
-            name=character_dict["name"],
-            description=character_dict["description"],
-            greeting_text=character_dict["greeting_text"],
-            gender=character_dict["gender"],
-            color=character_dict["color"],
-        )
-
-        character.example_dialogue = character_dict["example_dialogue"]
-
-        return character
-
     def rename(self, new_name: str):
         """
         Rename the character.
@@ -299,54 +258,6 @@ class Character:
         for i, v in list(self.details.items()):
             self.details[i] = v.replace(f"{orig_name}", self.name)
         self.memory_dirty = True
-
-    def load_from_image_metadata(self, image_path: str, file_format: str):
-        """
-        Load character data from an image file's metadata using the extract_metadata function.
-
-        Args:
-        image_path (str): The path to the image file.
-        file_format (str): The image file format ('png' or 'webp').
-
-        Returns:
-        None
-        """
-
-        metadata = extract_metadata(image_path, file_format)
-
-        # check if v2 card spec
-
-        if metadata.get("spec") == "chara_card_v2":
-            metadata = metadata["data"]
-
-        self.color = "red"
-        if "name" in metadata:
-            self.name = metadata["name"]
-
-        # loop through the metadata and set the character name everywhere {{char}}
-        # occurs
-
-        for key in metadata:
-            if isinstance(metadata[key], str):
-                metadata[key] = metadata[key].replace("{{char}}", self.name)
-
-        if "description" in metadata:
-            self.description = metadata["description"]
-        if "scenario" in metadata:
-            self.description += "\n" + metadata["scenario"]
-        if "first_mes" in metadata:
-            self.greeting_text = metadata["first_mes"]
-        if "gender" in metadata:
-            self.gender = metadata["gender"]
-        if "color" in metadata:
-            self.color = metadata["color"]
-        if "mes_example" in metadata:
-            new_line_match = "\r\n" if "\r\n" in metadata["mes_example"] else "\n"
-            for message in metadata["mes_example"].split("<START>"):
-                if message.strip(new_line_match):
-                    self.example_dialogue.extend(
-                        [m for m in message.split(new_line_match) if m]
-                    )
 
     def introduce_main_character(self, character):
         """

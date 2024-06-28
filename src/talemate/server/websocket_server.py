@@ -610,6 +610,7 @@ class WebsocketHandler(Receiver):
                 "message": message,
                 "character": emission.character.name if emission.character else "",
                 "data": emission.data,
+                "reason": emission.data.get("reason", "") if emission.data else None,
             }
         )
 

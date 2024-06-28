@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 import structlog
 
 from talemate.scene_message import SceneMessage
+from talemate.context import interaction
 
 from .signals import handlers
 
@@ -88,11 +89,25 @@ async def wait_for_input(
     character: Character = None,
     scene: Scene = None,
     data: dict = None,
-):
+    return_struct: bool = False,
+) -> str | dict:
+    """
+    Wait for input from the user.
+    
+    Arguments:
+    
+    - message: The message to display to the user.
+    - character: The character related to the input.
+    - scene: The scene related to the input.
+    - data: Additional data to pass to the frontend.
+    - return_struct: If True, return the entire input structure.
+    """
+    
     input_received = {"message": None}
 
     def input_receiver(emission: Emission):
         input_received["message"] = emission.message
+        input_received["interaction"] = interaction.get()
 
     handlers["receive_input"].connect(input_receiver)
 
@@ -114,6 +129,8 @@ async def wait_for_input(
     if input_received["message"] == "!abort":
         raise AbortCommand()
 
+    if return_struct:
+        return input_received
     return input_received["message"]
 
 

@@ -24,6 +24,7 @@ export default createVuetify({
           highlight3: colors.lightGreen.lighten3,
           highlight4: colors.red.lighten1,
           highlight5: colors.amber.lighten3,
+          cornflowerblue: "#6495ED",
         }
       }
     }

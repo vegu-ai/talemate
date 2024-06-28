@@ -23,7 +23,7 @@ import talemate.save as save
 import talemate.util as util
 from talemate.client.context import ClientContext, ConversationContext
 from talemate.config import Config, SceneConfig, load_config
-from talemate.context import rerun_context
+from talemate.context import rerun_context, interaction
 from talemate.emit import Emission, Emitter, emit, wait_for_input
 from talemate.emit.signals import ConfigSaved, ImageGenerated, handlers
 from talemate.exceptions import (
@@ -67,6 +67,12 @@ async_signals.register("game_loop")
 async_signals.register("game_loop_actor_iter")
 async_signals.register("game_loop_new_message")
 
+class ActedAsCharacter(Exception):
+    """
+    Raised when the user acts as another character
+    than the main player character
+    """
+    pass
 
 class Character:
     """
@@ -603,15 +609,20 @@ class Player(Actor):
                 self.agent = self.scene.get_helper("conversation").agent
 
             return await super().talk()
+        
+        act_as = None
 
         if not message:
             # Display scene history length before the player character name
             history_length = self.scene.history_length()
 
             name = colored_text(self.character.name + ": ", self.character.color)
-            message = await wait_for_input(
-                f"[{history_length}] {name}", character=self.character
+            input = await wait_for_input(
+                f"[{history_length}] {name}", character=self.character, data={"reason":"talk"},
+                return_struct=True
             )
+            message = input["message"]
+            act_as = input["interaction"].act_as
 
         if not message:
             return
@@ -621,13 +632,26 @@ class Player(Actor):
                 message = f'"{message}"'
 
             message = util.ensure_dialog_format(message)
+            
+            log.warning("player_message", message=message, act_as=act_as)
+            
+            if act_as:
+                # acting as another character
+                character = self.scene.get_character(act_as)
+                if not character:
+                    raise TalemateError(f"Character {act_as} not found")
+                character_message = CharacterMessage(f"{character.name}: {message}")
+                self.scene.push_history(character_message)
+                self.scene.process_npc_dialogue(character.actor, [character_message])
+                raise ActedAsCharacter()
+            else:
+                # acting as the main player character
+                self.message = message
 
-            self.message = message
-
-            self.scene.push_history(
-                CharacterMessage(f"{self.character.name}: {message}", source="player")
-            )
-            emit("character", self.history[-1], character=self.character)
+                self.scene.push_history(
+                    CharacterMessage(f"{self.character.name}: {message}", source="player")
+                )
+                emit("character", self.history[-1], character=self.character)
 
         return message
 
@@ -1567,6 +1591,10 @@ class Scene(Emitter):
                 "context": self.context,
                 "assets": self.assets.dict(),
                 "characters": [actor.character.serialize for actor in self.actors],
+                "character_colors": {
+                    character.name: character.color
+                    for character in self.get_characters()
+                },
                 "scene_time": (
                     util.iso8601_duration_to_human(self.ts, suffix="")
                     if self.ts
@@ -1844,7 +1872,11 @@ class Scene(Emitter):
                     if not actor.character.is_player:
                         await self.call_automated_actions()
 
-                    message = await actor.talk()
+                    try:
+                        message = await actor.talk()
+                    except ActedAsCharacter:
+                        signal_game_loop = False
+                        break
 
                     if not message:
                         continue

@@ -156,16 +156,16 @@
                   :activeCharacters="activeCharacters" />
                 <CharacterSheet ref="characterSheet" />
                 <SceneHistory ref="sceneHistory" />
-      
                 <v-textarea
                   v-model="messageInput" 
-                  :label="inputHint" 
+                  :label="messageInputHint()" 
                   rows="1"
                   auto-grow
                   outlined 
                   ref="messageInput" 
                   @keydown.enter.prevent="sendMessage"
-                  hint="Ctrl+Enter to autocomplete, Shift+Enter for newline"
+                  @keydown.tab.prevent="cycleActAsCharacter"
+                  hint="Ctrl+Enter to autocomplete, Shift+Enter for newline, Tab to act as another character"
                   :disabled="isInputDisabled()" 
                   :loading="autocompleting"
                   :prepend-inner-icon="messageInputIcon()"
@@ -299,6 +299,7 @@ export default {
       websocket: null,
       inputDisabled: false,
       waitingForInput: false,
+      inputRequestInfo: null,
       connectTimeout: null,
       connected: false,
       connecting: false,
@@ -307,7 +308,6 @@ export default {
       errorNotification: false,
       notificatioonBusy: false,
       ready: false,
-      inputHint: 'Enter your text...',
       messageInput: '',
       reconnectInterval: 3000,
       passiveCharacters: [],
@@ -315,6 +315,7 @@ export default {
       activeCharacters: [],
       messageHandlers: [],
       scene: {},
+      actAs: null,
       appConfig: {},
       autocompleting: false,
       autocompletePartialInput: "",
@@ -531,6 +532,7 @@ export default {
       if (data.type === 'request_input') {
 
         this.waitingForInput = true;
+        this.inputRequestInfo = data;
 
         if (data.data && data.data["input_type"] == "select") {
           // If the input_type is 'choice', send the data to SceneMessages
@@ -538,13 +540,6 @@ export default {
         } else {
           // Enable the input field when a request_input message comes in
           this.inputDisabled = false;
-          if (data.message) {
-            // Update the input field hint when a request_input message with a value comes in
-            this.inputHint = data.message;
-          } else if (data.character) {
-            // Reset the input field hint when a request_input message without a value comes in
-            this.inputHint = `${data.character}:`;
-          }
           this.$nextTick(() => {
             if (this.$refs.messageInput)
               // Highlight the user text input element when a request_input message comes in
@@ -556,6 +551,7 @@ export default {
       if (data.type === 'processing_input') {
         // Disable the input field when a processing_input message comes in
         this.inputDisabled = true;
+        this.inputRequestInfo = null;
         this.waitingForInput = false;
       } else if (data.type === "character" || data.type === "system") {
         this.$nextTick(() => {
@@ -596,7 +592,7 @@ export default {
       }
 
       if (!this.inputDisabled) {
-        this.websocket.send(JSON.stringify({ type: 'interact', text: this.messageInput }));
+        this.websocket.send(JSON.stringify({ type: 'interact', text: this.messageInput, act_as: this.actAs}));
         this.messageInput = '';
         this.inputDisabled = true;
         this.waitingForInput = false;
@@ -621,8 +617,35 @@ export default {
       param_copy.action = "autocomplete";
 
       this.websocket.send(JSON.stringify(param_copy));
+    },
 
-      //this.websocket.send(JSON.stringify({ type: 'interact', text: `!autocomplete:${JSON.stringify(param)}` }));
+    cycleActAsCharacter() {
+
+      // will cycle through activeCharacters, which is a dict of character names
+      // and set actAs to the next character name in the list
+      //
+      // if actAs is null it means the player is acting as themselves
+
+      const playerCharacterName = this.getPlayerCharacterName();
+
+      let selectedCharacter = null;
+
+      for(let characterName of this.activeCharacters) {
+        if(this.actAs === null && characterName === playerCharacterName)  {
+          continue;
+        }
+        if(this.actAs === characterName) {
+          continue;
+        }
+        selectedCharacter = characterName;
+        break;
+      }
+
+      if(selectedCharacter === null || selectedCharacter === playerCharacterName) {
+        this.actAs = null;
+      } else {
+        this.actAs = selectedCharacter;
+      }
     },
 
     autocompleteInfoMessage(active) {
@@ -775,9 +798,24 @@ export default {
       return templateString;
     },
 
+    messageInputHint() {
+      if(this.waitingForInput) {
+
+        if(this.inputRequestInfo.reason === "talk") {
+
+          let characterName = this.actAs ? this.actAs : this.scene.player_character_name;
+
+          return `${characterName}:`;
+        }
+
+        return this.inputRequestInfo.message;
+      }
+      return "";
+    },
+
     messageInputIcon() {
       if (this.waitingForInput) {
-        if (this.inputHint != this.scene.player_character_name+":") {
+        if (this.inputRequestInfo.reason != "talk") {
           return 'mdi-information-outline';
         } else {
           return 'mdi-comment-outline';
@@ -785,12 +823,21 @@ export default {
       }
       return 'mdi-cancel';
     },
+
     messageInputColor() {
       if (this.waitingForInput) {
-        if (this.inputHint != this.scene.player_character_name+":") {
+        if (this.inputRequestInfo.reason != "talk") {
           return 'warning';
         } else {
-          return 'deep-purple-lighten-2';
+
+          if(!this.scene || !this.scene.data || !this.scene.data.character_colors || !this.scene.data.character_colors[this.scene.player_character_name]) {
+            return "primary";
+          }
+
+          if(this.actAs) {
+            return this.scene.data.character_colors[this.actAs];
+          }
+          return this.scene.data.character_colors[this.scene.player_character_name];
         }
       }
       return null;

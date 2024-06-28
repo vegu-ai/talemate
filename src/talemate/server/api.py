@@ -13,7 +13,7 @@ from talemate.config import load_config
 from talemate.server.websocket_server import WebsocketHandler
 
 log = structlog.get_logger("talemate")
-from talemate.context import ActiveScene
+from talemate.context import ActiveScene, Interaction
 
 
 async def websocket_endpoint(websocket, path):
@@ -111,8 +111,9 @@ async def websocket_endpoint(websocket, path):
                 elif action_type == "interact":
                     log.debug("interact", data=data)
                     text = data.get("text")
-                    if handler.waiting_for_input:
-                        handler.send_input(text)
+                    with Interaction(act_as=data.get("act_as")):
+                        if handler.waiting_for_input:
+                            handler.send_input(text)
 
                 elif action_type == "request_scenes_list":
                     query = data.get("query", "")

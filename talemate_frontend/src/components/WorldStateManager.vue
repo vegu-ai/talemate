@@ -411,7 +411,7 @@ export default {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'save_scene',
-                copy: copy ? copy : null,
+                save_as: copy ? copy : null,
             }));
         },
 

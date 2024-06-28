@@ -151,7 +151,7 @@ class SceneSettingsPayload(pydantic.BaseModel):
     
 
 class SaveScenePayload(pydantic.BaseModel):
-    copy: str | None = None
+    save_as: str | None = None
 
 class RegenerateHistoryPayload(pydantic.BaseModel):
     generation_options: world_state_templates.GenerationOptions | None = None
@@ -993,9 +993,9 @@ class WorldStateManagerPlugin:
     async def handle_save_scene(self, data):
         payload = SaveScenePayload(**data)
         
-        log.debug("Save scene", copy=payload.copy)
+        log.debug("Save scene", copy=payload.save_as)
         
-        await self.scene.save(auto=False, force=True, copy_name=payload.copy)
+        await self.scene.save(auto=False, force=True, copy_name=payload.save_as)
         self.scene.emit_status()
         
     async def handle_request_scene_history(self, data):

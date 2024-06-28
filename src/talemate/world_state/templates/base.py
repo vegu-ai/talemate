@@ -123,10 +123,10 @@ class Group(pydantic.BaseModel):
     
     def save(self, path: str = TEMPLATE_PATH):
         
-        path = self.path
-        
-        if not path:
+        if not self.path:
             path = os.path.join(path, self.filename)
+        else:
+            path = self.path
             
         # ensure `group` is set on all templates
         for template in self.templates.values():

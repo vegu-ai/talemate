@@ -422,3 +422,19 @@ class ZephyrIdentifier(TemplateIdentifier):
             and "<|user|>" in content
             and "<|assistant|>" in content
         )
+
+@register_template_identifier
+class Phi3Identifier(TemplateIdentifier):
+    template_str = "Phi-3"
+
+    def __call__(self, content: str):
+        """
+        <|user|>
+        {{ system_message }}
+
+        {{ user_message }}<|end|>
+        <|assistant|>
+        {{ coercion_message }}
+        """
+
+        return "<|user|>" in content and "<|assistant|>" in content and "<|end|>" in content

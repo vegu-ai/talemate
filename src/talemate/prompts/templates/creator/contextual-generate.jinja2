@@ -1,80 +1,129 @@
-{% block rendered_context %}
+{% if context_aware %}{% block rendered_context %}
 {% include "extra-context.jinja2" %}
-{% if character %}
-<|SECTION:CHARACTER|>
-{% if context_typ == 'character attribute' -%}
-{{ character.sheet_filtered(context_name) }}
-{% else -%}
-{{ character.sheet }}
-{% endif -%}
+{% if context_typ == 'character attribute' or context_typ == 'character detail' or context_typ == 'scene intro' -%}
+  {% for other_character in scene.get_characters() -%}
+    {% if other_character.name != character_name %}
+<|SECTION:{{ other_character.name }}|>
+{{ other_character.description|condensed }}
+    {% endif %}
+  {%- endfor -%}
+{% endif %}
+{% if context_typ == 'scene intro' %}
+<|SECTION:SCENE DESCRIPTION|>
+{{ scene.description }}
 <|CLOSE_SECTION|>
 {% endif %}
 {% endblock %}
+{% if history_aware %}
 <|SECTION:SCENE|>
 {% for scene_context in scene.context_history(budget=max_tokens-1024-count_tokens(self.rendered_context())) -%}
 {{ scene_context }}
 {% endfor %}
 <|CLOSE_SECTION|>
+{% endif %}
+{% if character %}
+<|SECTION:{{ character.name }}|>
+{% if context_typ == 'character attribute' -%}
+{{ character.description }}
+
+{% if not character or not character.name %}name: {{ character_name }}{% endif -%}
+{{ character.sheet_filtered(context_name) }}
+{% else -%}
+{{ character.sheet }}
+{% endif -%}
+<|CLOSE_SECTION|>
+{% endif %}{# /character #}{% else %}Content Type: {{ scene.context }}{% endif %}{# /context_aware #}
+{% if generation_context.original %}
+<|SECTION:ORIGINAL {{ context_name }}|>
+{{ generation_context.original }}
+<|CLOSE_SECTION|>
+{% endif %}
 <|SECTION:TASK|>
 {#- SET TASK ACTION -#}
 {% if not generation_context.original %}
   {%- set action_task = "Generate the" -%}
 {% else %}
   {%- set action_task = "Rewrite the existing" -%}
-  Original {{ context_name }}: {{ generation_context.original }}
 {% endif %}
+{# LIST CONTEXT -#}
+{% if context_typ == "list" -%}
+{% if generation_context.original and generation_context.instructions -%}
+  {# determine whether user wants to replace or add to the list -#}
+  {% if query_text_eval("Does the user want to add to the existing list", generation_context.instructions) -%}
+  {% set action_task = "Add to the existing" -%}
+  {% set _ = generation_context.set_state('extend', true) %}
+  {% endif -%}
+{% endif -%}
+{{ action_task }} list of 20 items. The list MUST BE plain text numbered list with one item per line.
 {#- CHARACTER ATTRIBUTE -#}
-{% if context_typ == "character attribute" %}
-{{ action_task }} "{{ context_name }}" attribute for {{ character.name }}. This must be a general description and not a continuation of the current narrative. Keep it short, similar length to {{ character.name }}'s other attributes in the sheet.
+{% elif context_typ == "character attribute" %}
+{{ action_task }} "{{ context_name }}" attribute for {{ character_name }}. This must be a general description and not a continuation of the current narrative. Keep it short, similar length to {{ character_name }}'s other attributes in the sheet.
 
 YOUR RESPONSE MUST ONLY CONTAIN THE NEW ATTRIBUTE TEXT.
 {#- CHARACTER DETAIL -#}
 {% elif context_typ == "character detail" %}
 {% if context_name.endswith("?") -%}
-{{ action_task }} answer to "{{ context_name }}" for {{ character.name }}. This must be a general description and not a continuation of the current narrative.
+{{ action_task }} answer to "{{ context_name }}" for {{ character_name }}. This must be a general description and not a continuation of the current narrative.
 
 YOUR RESPONSE MUST ONLY CONTAIN THE ANSWER.
 {% else -%}
-{{ action_task }} "{{ context_name }}" detail for {{ character.name }}. This must be a general description and not a continuation of the current narrative. Use paragraphs to separate different details.
+{{ action_task }} "{{ context_name }}" detail for {{ character_name }}. This must be a general description and not a continuation of the current narrative. Use paragraphs to separate different details.
 
 YOUR RESPONSE MUST ONLY CONTAIN THE NEW DETAIL TEXT.
 {% endif -%}
-Use a simple, easy to read writing format.
 {#- CHARACTER EXAMPLE DIALOGUE -#}
 {% elif context_typ == "character dialogue" %}
-Generate a new line of example dialogue for {{ character.name }}.
+Generate a new line of example dialogue for {{ character_name }}.
 
-{%- if character.example_dialogue -%}
-Exisiting Dialogue Examples:
-{% for line in character.example_dialogue %}
+{% if character.example_dialogue %}
+### Exisiting Dialogue Examples:
+{% for line in character.example_dialogue -%}
 {{ line }}
+
 {% endfor %}
 {%- endif %}
 
+### Rules for generating dialogue:
 You must only respond with the generated dialogue example.
-Always contain actions in asterisks. For example, *{{ character.name}} smiles*.
-Always contain dialogue in quotation marks. For example, {{ character.name}}: "Hello!"
+Always contain actions in asterisks. For example, *{{ character_name}} smiles*.
+Always contain dialogue in quotation marks. For example, {{ character_name}}: "Hello!"
+You must only generate one line of example dialogue for {{ character_name }}.
 
 {% if character.dialogue_instructions %}
-Dialogue instructions for {{ character.name }}: {{ character.dialogue_instructions }}
+### Dialogue instructions for {{ character_name }}:
+{{ character.dialogue_instructions }}
+
 {% endif -%}
+{#- SCENE INTRO -#}
+{% elif context_typ == "scene intro" %}
+{{ action_task }} introduction for the scene. This is the first text that is shown to {{ scene.get_player_character().name }} when they enter the scene. It must setup an interesting entry point for them to participate in the scene and interact with {% if scene.num_npc_characters() %}the other characters and the environment.{% else %}the environment.{% endif %}
 {#- GENERAL CONTEXT -#}
 {% else %}
 {% if context_name.endswith("?") -%}
 {{ action_task }} answer to the question "{{ context_name }}". This must be a general description and not a continuation of the current narrative.
 {%- else -%}
 {{ action_task }} new narrative content for {{ context_name }}
-Use a simple, easy to read writing format.
+{% if not generation_context.style %}Use a simple, easy to read writing format.{% endif %}
 {%- endif -%}
 {% endif %}
+{{ generation_context.spice }}
+
+{{ generation_context.style }}
+
 {% if generation_context.instructions %}Additional instructions: {{ generation_context.instructions }}{% endif %}
 <|CLOSE_SECTION|>
-{% if can_coerce -%}
+{% if context_typ == "list" and can_coerce -%}
+  {% if action_task == "Add to the existing" -%}
+{{ set_prepared_response('additional items:\n1.') }}
+  {%- else -%}
+{{ set_prepared_response('items:\n1.') }}
+  {%- endif -%}
+{% elif can_coerce -%}
 {{ bot_token }}
 {%- if context_typ == 'character attribute' -%}
-{{ character.name }}'s {{ context_name }}:{{ generation_context.partial }}
+{{ character_name }}'s {{ context_name }}:{{ generation_context.partial }}
 {%- elif context_typ == 'character dialogue' -%}
-{{ character.name }}:{{ generation_context.partial }}
+{{ character_name }}:{{ generation_context.partial }}
 {%- else -%}
 {{ context_name }}:{{ generation_context.partial }}
 {%- endif -%}
@@ -87,9 +136,9 @@ Continue this text: {{ generation_context.partial }}
 {%- else -%}
 {{ bot_token }}
 {%- if context_typ == 'character attribute' -%}
-{{ character.name }}'s {{ context_name }}:
+{{ character_name }}'s {{ context_name }}:
 {%- elif context_typ == 'character dialogue' -%}
-{{ character.name }}:
+{{ character_name }}:
 {%- else -%}
 {{ context_name }}:
 {%- endif -%}

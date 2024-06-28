@@ -93,9 +93,6 @@ export default {
     watch: {
         immutableConfig: {
             handler: function(newVal) {
-
-                console.log("immutableConfig changed", newVal)
-
                 if(!newVal) {
                     this.config = {};
                     return;
@@ -122,7 +119,6 @@ export default {
 
         setPresetChanged(presetName) {
             // this ensures that the change gets saved
-            console.log("setPresetChanged", presetName)
             this.config.inference[presetName].changed = true;
         },
 

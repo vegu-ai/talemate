@@ -145,11 +145,13 @@ class ComfyUIMixin:
     EXTEND_ACTIONS = {
         "comfyui": AgentAction(
             enabled=True,
+            container=True,
+            icon="mdi-server-outline",
             condition=AgentActionConditional(
                 attribute="_config.config.backend", value="comfyui"
             ),
-            label="ComfyUI Settings",
-            description="Setting overrides for the comfyui backend",
+            label="ComfyUI",
+            description="Settings for the currently selected ComfyUI backend.",
             config={
                 "api_url": AgentActionConfig(
                     type="text",

@@ -95,6 +95,40 @@ class VisualBase(Agent):
                 label="Process in Background",
                 description="Process renders in the background",
             ),
+            "_prompts": AgentAction(
+                enabled=True,
+                container=True,
+                label="Prompts",
+                icon="mdi-text-box",
+                description="Prompt configuration",
+                config={
+                    "positive_prefix": AgentActionConfig(
+                        type="text",
+                        value="",
+                        label="Positive prompt prefix",
+                        description="This will be prepended to ALL positive prompts",
+                    ),
+                    "negative_prefix": AgentActionConfig(
+                        type="text",
+                        value="",
+                        label="Negative prompt prefix",
+                        description="This will be prepended to ALL negative prompts",
+                    ),
+                    "positive_suffix": AgentActionConfig(
+                        type="text",
+                        value="",
+                        label="Positive prompt suffix",
+                        description="This will be appended to ALL positive prompts",
+                    ),
+                    "negative_suffix": AgentActionConfig(
+                        type="text",
+                        value="",
+                        label="Negative prompt suffix",
+                        description="This will be appended to ALL negative prompts",
+                    ),
+                },
+                
+            )
         }
 
         for action_name, action in self.ACTIONS.items():
@@ -268,6 +302,20 @@ class VisualBase(Agent):
 
         if styles:
             prompt_style.prepend(*styles)
+            
+        # Apply prefixes and suffixes
+        
+        if self.actions["_prompts"].config["positive_prefix"].value.strip():
+            prompt_style.prepend(Style().load(self.actions["_prompts"].config["positive_prefix"].value))
+        
+        if self.actions["_prompts"].config["negative_prefix"].value.strip():
+            prompt_style.prepend(Style().load("", negative_prompt=self.actions["_prompts"].config["negative_prefix"].value))
+            
+        if self.actions["_prompts"].config["positive_suffix"].value.strip():
+            prompt_style.append(Style().load(self.actions["_prompts"].config["positive_suffix"].value))
+        
+        if self.actions["_prompts"].config["negative_suffix"].value.strip():
+            prompt_style.append(Style().load("", negative_prompt=self.actions["_prompts"].config["negative_suffix"].value))
 
         return prompt_style
 
@@ -286,16 +334,16 @@ class VisualBase(Agent):
         log.debug("apply_image", image=image[:100], context=context)
 
         if context.vis_type == VIS_TYPES.CHARACTER:
-            await self.apply_image_character(image, context.character_name)
+            await self.apply_image_character(image, context.character_name, replace=context.replace)
 
-    async def apply_image_character(self, image: str, character_name: str):
+    async def apply_image_character(self, image: str, character_name: str, replace: bool = False):
         character = self.scene.get_character(character_name)
 
         if not character:
             log.error("character not found", character_name=character_name)
             return
 
-        if character.cover_image:
+        if character.cover_image and not replace:
             log.info("character cover image already set", character_name=character_name)
             return
 
@@ -449,21 +497,19 @@ class VisualBase(Agent):
         with VisualContext(vis_type=VIS_TYPES.ENVIRONMENT, instructions=instructions):
             await self.generate(format="landscape")
 
-    generate_environment_background.exposed = True
-
     async def generate_character_portrait(
         self,
         character_name: str,
         instructions: str = None,
+        replace: bool = False,
     ):
         with VisualContext(
             vis_type=VIS_TYPES.CHARACTER,
             character_name=character_name,
             instructions=instructions,
+            replace=replace,
         ):
             await self.generate(format="portrait")
-
-    generate_character_portrait.exposed = True
 
 
 # apply mixins to the agent (from HANDLERS dict[str, cls])

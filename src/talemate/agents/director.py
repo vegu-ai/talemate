@@ -323,7 +323,7 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         content: str = None,
         attributes: str = None,
         determine_name: bool = True,
-    ):
+    ) -> Character:
         world_state = instance.get_agent("world_state")
         creator = instance.get_agent("creator")
 
@@ -411,8 +411,6 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         message = DirectorMessage(message=action_description, action=action)
         self.scene.push_history(message)
         emit("director", message)
-
-    log_action.exposed = True
 
     def inject_prompt_paramters(
         self, prompt_param: dict, kind: str, agent_function_name: str

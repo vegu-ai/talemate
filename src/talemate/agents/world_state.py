@@ -213,8 +213,6 @@ class WorldStateAgent(Agent):
         self.next_update = 0
         await scene.world_state.request_update()
 
-    update_world_state.exposed = True
-
     @set_processing
     async def request_world_state(self):
         t1 = time.time()
@@ -405,6 +403,18 @@ class WorldStateAgent(Agent):
         )
 
         return response
+
+    @set_processing
+    async def answer_query_true_or_false(
+        self,
+        query: str,
+        text: str,
+    ) -> bool:
+        query = f"{query} Answer with a yes or no."
+        response = await self.analyze_text_and_answer_question(
+            query=query, text=text, short=True
+        )
+        return response.lower().startswith("y")
 
     @set_processing
     async def identify_characters(

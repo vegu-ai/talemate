@@ -23,7 +23,7 @@ class ObjectState(BaseModel):
     snapshot: Union[str, None] = None
 
 
-class InsertionMode(Enum):
+class InsertionMode(str, Enum):
     sequential = "sequential"
     conversation_context = "conversation-context"
     all_context = "all-context"

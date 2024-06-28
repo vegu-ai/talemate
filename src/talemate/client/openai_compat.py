@@ -168,6 +168,9 @@ class OpenAICompatibleClient(ClientBase):
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
 
+        if "enabled" in kwargs:
+            self.enabled = bool(kwargs["enabled"])
+            
         log.warning("reconfigure", kwargs=kwargs)
 
         self.set_client(**kwargs)

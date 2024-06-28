@@ -189,7 +189,6 @@ export default {
 
                 for (i = 0; i < this.messages.length; i++) {
                     if (this.messages[i].id == data.id) {
-                        console.log("message_edited!", i , data.id, data.message, this.messages[i].type, data)
                         if (this.messages[i].type == "character") {
                             this.messages[i].text = data.message.split(':')[1].trim();
                         } else {
@@ -200,6 +199,18 @@ export default {
                 }
 
                 return
+            }
+
+            if (data.type === 'world_state_manager' && data.action === 'character_color_updated') {
+                // find the message by id and update the color
+                for (i = 0; i < this.messages.length; i++) {
+                    let message = this.messages[i];
+                    if (message.character == data.data.name && message.type == 'character') {
+                        message.color = data.data.color;
+                        break;
+                    }
+                }
+                return;
             }
             
             if (data.message) {

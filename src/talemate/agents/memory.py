@@ -225,15 +225,9 @@ class MemoryAgent(Agent):
             self.add(event.text, uid=event.memory_id, ts=event.ts, typ="history")
         )
 
-    def on_character_state(self, event: events.CharacterStateEvent):
-        asyncio.ensure_future(
-            self.add(event.state, uid=f"description-{event.character_name}")
-        )
-
     def connect(self, scene):
         super().connect(scene)
         scene.signals["archive_add"].connect(self.on_archive_add)
-        scene.signals["character_state"].connect(self.on_character_state)
 
     def add_chunks(self, lines: list[str], chunk_size=200):
         current_chunk = []
@@ -286,7 +280,7 @@ class MemoryAgent(Agent):
         max_tokens: int = 1000,
         filter: Callable = lambda x: True,
         **where,
-    ):
+    ) -> str | None:
         """
         Get the character memory context for a given character
         """
@@ -692,7 +686,8 @@ class ChromaDBMemoryAgent(MemoryAgent):
             where["$and"].append({k: v})
 
         if character and not character_filtered:
-            where["$and"].append({"character": character.name})
+            character_name = character if isinstance(character, str) else character.name
+            where["$and"].append({"character": character_name})
 
         if len(where["$and"]) == 1:
             where = where["$and"][0]
@@ -703,9 +698,9 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         _results = self.db.query(query_texts=[text], where=where, n_results=limit)
 
-        # import json
-        # print(json.dumps(_results["ids"], indent=2))
-        # print(json.dumps(_results["distances"], indent=2))
+        #import json
+        #print(json.dumps(_results["ids"], indent=2))
+        #print(json.dumps(_results["distances"], indent=2))
 
         results = []
 

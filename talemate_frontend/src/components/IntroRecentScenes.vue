@@ -1,6 +1,7 @@
 <template>
-    <v-card flat variant="text" v-if="hasRecentScenes()">
-        <v-card-title>
+    <v-card variant="text" v-if="hasRecentScenes()">
+        <v-card-title class="ml-2">
+            <v-icon size="x-small" class="mr-1" color="primary">mdi-folder</v-icon>
             Quick load
         </v-card-title>
         <!-- 

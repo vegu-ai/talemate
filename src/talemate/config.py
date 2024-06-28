@@ -36,8 +36,9 @@ class Client(BaseModel):
     model: Union[str, None] = None
     api_url: Union[str, None] = None
     api_key: Union[str, None] = None
-    max_token_length: int = 4096
+    max_token_length: int = 8192
     double_coercion: Union[str, None] = None
+    enabled: bool = True
 
     class Config:
         extra = "ignore"
@@ -233,10 +234,14 @@ class InferencePresets(BaseModel):
         min_p=0,
     )
     scene_direction: InferenceParameters = InferenceParameters(
-        temperature=0.85, 
+        temperature=0.85,
+        min_p=0.0,
+        presence_penalty=0.0,
     )
     summarization: InferenceParameters = InferenceParameters(
         temperature=0.7, 
+        min_p=0.0,
+        presence_penalty=0.0,
     )
 
 
@@ -421,7 +426,7 @@ class SceneConfig(BaseModel):
 
 class SceneAssetUpload(BaseModel):
     scene_cover_image: bool
-    character_cover_image: str = None
+    character_cover_image: str | None = None
     content: str = None
 
 
@@ -490,7 +495,7 @@ def save_config(config, file_path: str = "./config.yaml"):
     emit("config_saved", data=config)
 
 
-def cleanup():
+def cleanup() -> Config:
 
     log.info("cleaning up config")
 
@@ -500,6 +505,8 @@ def cleanup():
     cleanup_removed_agents(config)
 
     save_config(config)
+    
+    return config
 
 
 def cleanup_removed_clients(config: Config):

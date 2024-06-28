@@ -1,64 +1,6 @@
 <template>
   <v-app>
 
-
-    <!-- scene navigation drawer -->
-    <v-navigation-drawer v-model="sceneDrawer" app>
-      <v-list>
-        <v-alert v-if="!connected" type="error" variant="tonal">
-          Not connected to Talemate backend
-          <p class="text-body-2" color="white">
-            Make sure the backend process is running.
-          </p>
-        </v-alert>
-        <LoadScene 
-        ref="loadScene" 
-        :scene-loading-available="ready && connected"
-        @loading="sceneStartedLoading" />
-        <v-divider></v-divider>
-        <div :style="(sceneActive && scene.environment === 'scene' ? 'display:block' : 'display:none')">
-          <!-- <GameOptions v-if="sceneActive" ref="gameOptions" /> -->
-          <v-divider></v-divider>
-          <CoverImage v-if="sceneActive" ref="coverImage" />
-          <WorldState v-if="sceneActive" ref="worldState" @passive-characters="(characters) => { passiveCharacters = characters }" />
-        </div>
-            <CreativeEditor v-if="sceneActive" ref="creativeEditor" @open-world-state-manager="onOpenWorldStateManager"  />
-      </v-list>
-
-    </v-navigation-drawer>
-
-    <!-- settings navigation drawer -->
-    <v-navigation-drawer v-model="drawer" app location="right" width="300">
-      <v-alert v-if="!connected" type="error" variant="tonal">
-        Not connected to Talemate backend
-        <p class="text-body-2" color="white">
-          Make sure the backend process is running.
-        </p>
-      </v-alert>
-
-      <v-list>
-        <v-list-subheader class="text-uppercase"><v-icon>mdi-network-outline</v-icon>
-          Clients</v-list-subheader>
-        <v-list-item>
-          <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig"></AIClient>
-        </v-list-item>
-        <v-divider></v-divider>
-        <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
-        <v-list-item>
-          <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents"></AIAgent>
-        </v-list-item>
-        <!-- More sections can be added here -->
-      </v-list>
-    </v-navigation-drawer>
-
-    <!-- debug tools navigation drawer -->
-    <v-navigation-drawer v-model="debugDrawer" app location="right" width="400">
-      <v-list>
-        <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
-        <DebugTools ref="debugTools"></DebugTools>
-      </v-list>
-    </v-navigation-drawer>
-
     <!-- system bar -->
     <v-system-bar>
       <v-icon icon="mdi-network-outline"></v-icon>
@@ -85,34 +27,20 @@
     </v-system-bar>
 
     <!-- app bar -->
-    <v-app-bar app>
+    <v-app-bar app density="compact">
       <v-app-bar-nav-icon size="x-small" @click="toggleNavigation('game')">
         <v-icon v-if="sceneDrawer">mdi-arrow-collapse-left</v-icon>
         <v-icon v-else>mdi-arrow-collapse-right</v-icon>
       </v-app-bar-nav-icon>
       
-      <v-toolbar-title v-if="scene.name !== undefined">
-        {{ scene.title || 'Untitled Scenario' }}
-        <span v-if="scene.saved === false" class="text-red">*</span>
-        <v-chip size="x-small" v-if="scene.environment === 'creative'" class="ml-2"><v-icon text="Creative" size="14"
-            class="mr-1">mdi-palette-outline</v-icon>Creative Mode</v-chip>
-        <v-chip size="x-small" v-else-if="scene.environment === 'scene'" class="ml-1"><v-icon text="Play" size="14"
-            class="mr-1">mdi-gamepad-square</v-icon>Game Mode</v-chip>
-
-        <v-tooltip :text="scene.scene_time" v-if="scene.scene_time !== undefined">
-          <template v-slot:activator="{ props }">
-            <v-btn v-bind="props" v-if="scene.environment === 'scene'" class="ml-1" @click="openSceneHistory()"><v-icon size="14"
-            class="mr-1">mdi-clock</v-icon>History</v-btn>
-          </template>
-        </v-tooltip>
-
-      </v-toolbar-title>
-      <v-toolbar-title v-else>
-        Talemate
-      </v-toolbar-title>
+      <v-tabs v-model="tab" color="primary">
+        <v-tab v-for="tab in availableTabs" :key="tab" :value="tab.value" @click.stop="tab.click">
+          <v-icon class="mr-1">{{ tab.icon() }}</v-icon>
+          {{ tab.title() }}
+        </v-tab>
+      </v-tabs>
+  
       <v-spacer></v-spacer>
-
-      <v-app-bar-nav-icon v-if="sceneActive" @click="returnToStartScreen()"><v-icon>mdi-home</v-icon></v-app-bar-nav-icon>
 
       <VisualQueue ref="visualQueue" />
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
@@ -123,50 +51,149 @@
         v-else><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
 
     </v-app-bar>
+
     <v-main style="height: 100%; display: flex; flex-direction: column;">
-      <v-container :class="(sceneActive ? '' : 'backdrop')" style="display: flex; flex-direction: column; height: 100%;">
 
-        <SceneMessages ref="sceneMessages" v-if="sceneActive" />
+      <!-- left side navigation drawer -->
+      <v-navigation-drawer v-model="sceneDrawer" app width="300">
+        <v-alert v-if="!connected" type="error" variant="tonal">
+          Not connected to Talemate backend
+          <p class="text-body-2" color="white">
+            Make sure the backend process is running.
+          </p>
+        </v-alert>
+        <v-tabs-window v-model="tab">
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
+            <v-alert type="warning" variant="tonal" v-if="!ready && connected">You need to configure a Talemate client before you can load scenes.</v-alert>
+            <LoadScene 
+            ref="loadScene" 
+            :scene-loading-available="ready && connected"
+            @loading="sceneStartedLoading" />
+          </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
+            <CoverImage v-if="sceneActive" ref="coverImage" />
+            <WorldState v-if="sceneActive" ref="worldState" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
+          </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
+            <WorldStateManagerMenu v-if="sceneActive"
+            ref="worldStateManagerMenu" 
+            :scene="scene"
+            :worldStateTemplates="worldStateTemplates"
+            @world-state-manager-navigate="onOpenWorldStateManager" 
+            />
+          </v-tabs-window-item>
+        </v-tabs-window>
+      </v-navigation-drawer>
+      <!-- right side navigation drawer -->
+      <v-navigation-drawer v-model="drawer" app location="right" width="300" disable-resize-watcher>
+        <v-alert v-if="!connected" type="error" variant="tonal">
+          Not connected to Talemate backend
+          <p class="text-body-2" color="white">
+            Make sure the backend process is running.
+          </p>
+        </v-alert>
 
-        <div style="flex-shrink: 0;" v-if="sceneActive">
+        <v-list>
+          <v-list-subheader class="text-uppercase"><v-icon>mdi-network-outline</v-icon>
+            Clients</v-list-subheader>
+          <v-list-item>
+            <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig"></AIClient>
+          </v-list-item>
+          <v-divider></v-divider>
+          <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
+          <v-list-item>
+            <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents"></AIAgent>
+          </v-list-item>
+          <!-- More sections can be added here -->
+        </v-list>
+      </v-navigation-drawer>
 
-          <SceneTools 
-            @open-world-state-manager="onOpenWorldStateManager"
-            :messageInput="messageInput"
-            :playerCharacterName="getPlayerCharacterName()"
-            :passiveCharacters="passiveCharacters"
-            :inactiveCharacters="inactiveCharacters"
-            :activeCharacters="activeCharacters" />
-          <CharacterSheet ref="characterSheet" />
-          <SceneHistory ref="sceneHistory" />
+      <!-- debug tools navigation drawer -->
+      <v-navigation-drawer v-model="debugDrawer" app location="right" width="400" disable-resize-watcher>
+        <v-list>
+          <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
+          <DebugTools ref="debugTools"></DebugTools>
+        </v-list>
+      </v-navigation-drawer>
 
-          <v-textarea
-            v-model="messageInput" 
-            :label="inputHint" 
-            rows="1"
-            auto-grow
-            outlined 
-            ref="messageInput" 
-            @keydown.enter.prevent="sendMessage"
-            hint="Ctrl+Enter to autocomplete, Shift+Enter for newline"
-            :disabled="isInputDisabled()" 
-            :loading="autocompleting"
-            :prepend-inner-icon="messageInputIcon()"
-            :color="messageInputColor()">
-            <template v-slot:append>
-              <v-btn @click="sendMessage" color="primary" icon>
-                <v-icon v-if="messageInput">mdi-send</v-icon>
-                <v-icon v-else>mdi-skip-next</v-icon>
-              </v-btn>
-            </template>
-          </v-textarea>
-        </div>
 
-        <IntroView v-else 
-        @request-scene-load="(path) => { $refs.loadScene.loadJsonSceneFromPath(path); }"
-        :version="version" 
-        :scene-loading-available="ready && connected"
-        :config="appConfig" />
+      <v-container :class="(sceneActive ? '' : 'backdrop')" fluid style="height: 100%;">
+
+        <v-tabs-window v-model="tab" style="height: 100%;">
+          <!-- HOME -->
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
+            <IntroView
+            ref="introView"
+            @request-scene-load="(path) => {  resetViews(); $refs.loadScene.loadJsonSceneFromPath(path); }"
+            :version="version" 
+            :scene-loading-available="ready && connected"
+            :config="appConfig" />
+          </v-tabs-window-item>
+          <!-- SCENE -->
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main" style="height: 100%;">
+            <div style="display: flex; flex-direction: column; height: 100%">
+
+              <div v-if="sceneActive && scene.environment === 'creative' && !scene.data.intro">
+                <v-alert color="muted" class="mb-2" variant="text">
+                  <v-alert-title>New Scene</v-alert-title>
+                  You're editing a new scene. Select the <v-btn @click="onOpenWorldStateManager('scene')" variant="text" size="small" color="primary" prepend-icon="mdi-earth-box">World Editor</v-btn> to add characters and scene details. You are currently operating in the creative environment. Once you have added at least one player character you may switch back and forth between creative and gameplay mode at any point using the <v-icon color="primary" size="small">mdi-gamepad-square</v-icon> button at the bottom.
+                  <p class="mt-4">
+                    You can still use the world editor while in gameplay mode as well.
+                  </p>
+                </v-alert>
+              </div>
+
+              <SceneMessages ref="sceneMessages" />
+              <div style="flex-shrink: 0;">
+      
+                <SceneTools 
+                  @open-world-state-manager="onOpenWorldStateManager"
+                  :messageInput="messageInput"
+                  :worldStateTemplates="worldStateTemplates"
+                  :playerCharacterName="getPlayerCharacterName()"
+                  :passiveCharacters="passiveCharacters"
+                  :inactiveCharacters="inactiveCharacters"
+                  :activeCharacters="activeCharacters" />
+                <CharacterSheet ref="characterSheet" />
+                <SceneHistory ref="sceneHistory" />
+                <v-textarea
+                  v-model="messageInput" 
+                  :label="messageInputHint()" 
+                  rows="1"
+                  auto-grow
+                  outlined 
+                  ref="messageInput" 
+                  @keydown.enter.prevent="sendMessage"
+                  @keydown.tab.prevent="cycleActAsCharacter"
+                  hint="Ctrl+Enter to autocomplete, Shift+Enter for newline, Tab to act as another character"
+                  :disabled="isInputDisabled()" 
+                  :loading="autocompleting"
+                  :prepend-inner-icon="messageInputIcon()"
+                  :color="messageInputColor()">
+                  <template v-slot:append>
+                    <v-btn @click="sendMessage" color="primary" icon>
+                      <v-icon v-if="messageInput">mdi-send</v-icon>
+                      <v-icon v-else>mdi-skip-next</v-icon>
+                    </v-btn>
+                  </template>
+                </v-textarea>
+              </div>
+            </div>
+
+          </v-tabs-window-item>
+          <!-- WORLD -->
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
+            <WorldStateManager 
+            :world-state-templates="worldStateTemplates"
+            :scene="scene"
+            :agent-status="agentStatus"
+            :app-config="appConfig"
+            @navigate-r="onWorldStateManagerNavigateR"
+            @selected-character="onWorldStateManagerSelectedCharacter"
+            ref="worldStateManager" />
+          </v-tabs-window-item>
+
+        </v-tabs-window>
 
       </v-container>
     </v-main>
@@ -190,13 +217,13 @@ import WorldState from './WorldState.vue';
 import CoverImage from './CoverImage.vue';
 import CharacterSheet from './CharacterSheet.vue';
 import SceneHistory from './SceneHistory.vue';
-import CreativeEditor from './CreativeEditor.vue';
 import AppConfig from './AppConfig.vue';
 import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 import VisualQueue from './VisualQueue.vue';
-
+import WorldStateManager from './WorldStateManager.vue';
+import WorldStateManagerMenu from './WorldStateManagerMenu.vue';
 import IntroView from './IntroView.vue';
 
 export default {
@@ -211,17 +238,58 @@ export default {
     CoverImage,
     CharacterSheet,
     SceneHistory,
-    CreativeEditor,
     AppConfig,
     DebugTools,
     AudioQueue,
     StatusNotification,
     IntroView,
     VisualQueue,
+    WorldStateManager,
+    WorldStateManagerMenu,
   },
   name: 'TalemateApp',
   data() {
     return {
+      tab: 'home',
+      tabs: [
+        {
+          title: () => {
+            return this.scene.title || 'Untitled Scenario';
+          }, 
+          condition: () => { return this.sceneActive },
+          icon: () => { return 'mdi-script' },
+          click: () => {
+            // on next tick, scroll to the bottom of the message list
+            this.$nextTick(() => {
+              this.$refs.messageInput.$el.scrollIntoView(false);
+            });
+          },
+          value: 'main'
+        },
+        { 
+          title: () => { return 'World Editor' },
+          condition: () => { return this.sceneActive },
+          icon: () => { return 'mdi-earth-box' },
+          click: () => { 
+            this.$nextTick(() => {
+              this.onOpenWorldStateManager();
+            });
+          },
+          value: 'world' 
+        },
+        {
+          title: () => { return 'Home' },
+          condition: () => { return true },
+          icon: () => { return 'mdi-home' },
+          click: () => {
+            // on next tick, scroll to the top
+            this.$nextTick(() => {
+              window.scrollTo(0, 0);
+            });
+          },
+          value: 'home'
+        },
+      ],
       version: null,
       loading: false,
       sceneActive: false,
@@ -231,6 +299,7 @@ export default {
       websocket: null,
       inputDisabled: false,
       waitingForInput: false,
+      inputRequestInfo: null,
       connectTimeout: null,
       connected: false,
       connecting: false,
@@ -239,7 +308,6 @@ export default {
       errorNotification: false,
       notificatioonBusy: false,
       ready: false,
-      inputHint: 'Enter your text...',
       messageInput: '',
       reconnectInterval: 3000,
       passiveCharacters: [],
@@ -247,15 +315,32 @@ export default {
       activeCharacters: [],
       messageHandlers: [],
       scene: {},
+      actAs: null,
       appConfig: {},
       autocompleting: false,
       autocompletePartialInput: "",
       autocompleteCallback: null,
       autocompleteFocusElement: null,
+      worldStateTemplates: {},
+      agentStatus: {},
     }
   },
+  watch:{
+    availableTabs(tabs) {
+      // check if tab still exists
+      // in tabs
+      // if not select first tab
+      if(!tabs.find(tab => tab.value == this.tab)) {
+        this.tab = tabs[0].value;
+      }
+    }
+  },
+  computed: {
+    availableTabs() {
+      return this.tabs.filter(tab => tab.condition());
+    },
+  },
   mounted() {
-    console.log("mounted!")
     this.connect();
   },
   beforeUnmount() {
@@ -269,6 +354,7 @@ export default {
     return {
       getWebsocket: () => this.websocket,
       registerMessageHandler: this.registerMessageHandler,
+      unregisterMessageHandler: this.unregisterMessageHandler,
       isInputDisabled: () => this.isInputDisabled(),
       setInputDisabled: (disabled) => this.inputDisabled = disabled,
       isWaitingForInput: () => this.waitingForInput,
@@ -291,6 +377,7 @@ export default {
       formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
       autocompleteRequest: (partialInput, callback, focus_element) => this.autocompleteRequest(partialInput, callback, focus_element),
       autocompleteInfoMessage: (active) => this.autocompleteInfoMessage(active),
+      toLabel: (value) => this.toLabel(value),
     };
   },
   methods: {
@@ -338,10 +425,12 @@ export default {
       this.messageHandlers.push(handler);
     },
 
+    unregisterMessageHandler(handler) {
+      this.messageHandlers = this.messageHandlers.filter(h => h !== handler);
+    },
+
     handleMessage(event) {
       const data = JSON.parse(event.data);
-
-      //console.log(data);
 
       this.messageHandlers.forEach(handler => handler(data));
 
@@ -351,6 +440,10 @@ export default {
           this.loading = false;
           this.sceneActive = true;
           this.requestAppConfig();
+          this.requestWorldStateTemplates();
+          this.$nextTick(() => {
+            this.tab = 'main';
+          });
         }
         if(data.status == 'error') {
           this.errorNotification = true;
@@ -361,6 +454,15 @@ export default {
       if(data.type == 'status') {
         this.notificatioonBusy = (data.status == 'busy');
       }
+      
+      if (data.type === 'agent_status') {
+        this.agentStatus[data.name] = {
+          busy: data.status === 'busy_bg' || data.status === 'busy',
+          available: data.status === 'idle' || data.status === 'busy' || data.status === 'busy_bg',
+          ready: data.status === 'idle',
+        }
+        return;
+      }
 
       if (data.type == "scene_status") {
         this.scene = {
@@ -370,6 +472,7 @@ export default {
           scene_time: data.data.scene_time,
           saved: data.data.saved,
           player_character_name: data.data.player_character_name,
+          data: {...data.data},
         }
         this.sceneActive = true;
         this.inactiveCharacters = data.data.inactive_characters;
@@ -389,7 +492,8 @@ export default {
 
       if (data.type === 'app_config') {
         this.appConfig = data.data;
-        this.version = data.version;
+        if(data.version)
+          this.version = data.version;
         return;
       }
 
@@ -428,6 +532,7 @@ export default {
       if (data.type === 'request_input') {
 
         this.waitingForInput = true;
+        this.inputRequestInfo = data;
 
         if (data.data && data.data["input_type"] == "select") {
           // If the input_type is 'choice', send the data to SceneMessages
@@ -435,13 +540,6 @@ export default {
         } else {
           // Enable the input field when a request_input message comes in
           this.inputDisabled = false;
-          if (data.message) {
-            // Update the input field hint when a request_input message with a value comes in
-            this.inputHint = data.message;
-          } else if (data.character) {
-            // Reset the input field hint when a request_input message without a value comes in
-            this.inputHint = `${data.character}:`;
-          }
           this.$nextTick(() => {
             if (this.$refs.messageInput)
               // Highlight the user text input element when a request_input message comes in
@@ -449,18 +547,22 @@ export default {
           });
         }
       }
+      
       if (data.type === 'processing_input') {
         // Disable the input field when a processing_input message comes in
         this.inputDisabled = true;
+        this.inputRequestInfo = null;
         this.waitingForInput = false;
-      }
-      if (data.type === "character" || data.type === "system") {
+      } else if (data.type === "character" || data.type === "system") {
         this.$nextTick(() => {
           if (this.$refs.messageInput && this.$refs.messageInput.$el)
             this.$refs.messageInput.$el.scrollIntoView(false);
         });
+      } else if(data.type == 'world_state_manager') {
+        if(data.action == 'templates') {
+          this.worldStateTemplates = data.data;
+        }
       }
-
     },
     sendMessage(event) {
 
@@ -490,11 +592,18 @@ export default {
       }
 
       if (!this.inputDisabled) {
-        this.websocket.send(JSON.stringify({ type: 'interact', text: this.messageInput }));
+        this.websocket.send(JSON.stringify({ type: 'interact', text: this.messageInput, act_as: this.actAs}));
         this.messageInput = '';
         this.inputDisabled = true;
         this.waitingForInput = false;
       }
+    },
+
+    requestWorldStateTemplates() {
+      this.websocket.send(JSON.stringify({ 
+        type: 'world_state_manager',
+        action: 'get_templates'
+      }));
     },
 
     autocompleteRequest(param, callback, focus_element) {
@@ -508,8 +617,35 @@ export default {
       param_copy.action = "autocomplete";
 
       this.websocket.send(JSON.stringify(param_copy));
+    },
 
-      //this.websocket.send(JSON.stringify({ type: 'interact', text: `!autocomplete:${JSON.stringify(param)}` }));
+    cycleActAsCharacter() {
+
+      // will cycle through activeCharacters, which is a dict of character names
+      // and set actAs to the next character name in the list
+      //
+      // if actAs is null it means the player is acting as themselves
+
+      const playerCharacterName = this.getPlayerCharacterName();
+
+      let selectedCharacter = null;
+
+      for(let characterName of this.activeCharacters) {
+        if(this.actAs === null && characterName === playerCharacterName)  {
+          continue;
+        }
+        if(this.actAs === characterName) {
+          continue;
+        }
+        selectedCharacter = characterName;
+        break;
+      }
+
+      if(selectedCharacter === null || selectedCharacter === playerCharacterName) {
+        this.actAs = null;
+      } else {
+        this.actAs = selectedCharacter;
+      }
     },
 
     autocompleteInfoMessage(active) {
@@ -547,14 +683,7 @@ export default {
         this.debugDrawer = !this.debugDrawer;
     },
     returnToStartScreen() {
-
-      if(this.sceneActive && !this.scene.saved) {
-        let confirm = window.confirm("Are you sure you want to return to the start screen? You will lose any unsaved progress.");
-        if(!confirm)
-          return;
-      }
-      // reload
-      document.location.reload();
+      this.tab = 'home';
     },
     getClients() {
       if (!this.$refs.aiClient) {
@@ -604,7 +733,26 @@ export default {
       this.$refs.sceneHistory.open();
     },
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
-      this.$refs.worldState.openWorldStateManager(tab, sub1, sub2, sub3);
+      this.tab = 'world';
+      console.log("onOpenWorldStateManager", {tab, sub1, sub2, sub3})
+      console.trace("onOpenWorldStateManager", {tab, sub1, sub2, sub3})
+      this.$nextTick(() => {
+        this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
+      });
+    },
+    onWorldStateManagerNavigateR(tab, meta) {
+      console.trace("onWorldStateManagerNavigateR", {tab, meta})
+      this.$nextTick(() => {
+        if(this.$refs.worldStateManagerMenu)
+          this.$refs.worldStateManagerMenu.update(tab, meta);
+      });
+    },
+    onWorldStateManagerSelectedCharacter(character) {
+      console.trace("onWorldStateManagerSelectedCharacter", character)
+      this.$nextTick(() => {
+        if(this.$refs.worldStateManagerMenu)
+          this.$refs.worldStateManagerMenu.setCharacter(character)
+      });
     },
     openAppConfig(tab, page) {
       this.$refs.appConfig.show(tab, page);
@@ -650,9 +798,24 @@ export default {
       return templateString;
     },
 
+    messageInputHint() {
+      if(this.waitingForInput) {
+
+        if(this.inputRequestInfo.reason === "talk") {
+
+          let characterName = this.actAs ? this.actAs : this.scene.player_character_name;
+
+          return `${characterName}:`;
+        }
+
+        return this.inputRequestInfo.message;
+      }
+      return "";
+    },
+
     messageInputIcon() {
       if (this.waitingForInput) {
-        if (this.inputHint != this.scene.player_character_name+":") {
+        if (this.inputRequestInfo.reason != "talk") {
           return 'mdi-information-outline';
         } else {
           return 'mdi-comment-outline';
@@ -660,16 +823,32 @@ export default {
       }
       return 'mdi-cancel';
     },
+
     messageInputColor() {
       if (this.waitingForInput) {
-        if (this.inputHint != this.scene.player_character_name+":") {
+        if (this.inputRequestInfo.reason != "talk") {
           return 'warning';
         } else {
-          return 'deep-purple-lighten-2';
+
+          if(!this.scene || !this.scene.data || !this.scene.data.character_colors || !this.scene.data.character_colors[this.scene.player_character_name]) {
+            return "primary";
+          }
+
+          if(this.actAs) {
+            return this.scene.data.character_colors[this.actAs];
+          }
+          return this.scene.data.character_colors[this.scene.player_character_name];
         }
       }
       return null;
-    }
+    },
+    resetViews() {
+      if(this.$refs.worldStateManager)
+        this.$refs.worldStateManager.reset()
+    },
+    toLabel(value) {
+        return value.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    },
   }
 }
 </script>

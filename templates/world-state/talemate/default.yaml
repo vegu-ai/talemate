@@ -1,0 +1,81 @@
+author: Talemate
+description: Default world state templates.
+name: default
+templates:
+  0802e774-74d5-4d41-9e7a-78744e66f09e:
+    description: 90s point and click adventure game.
+    favorite: false
+    group: talemate_default_467c7fe3
+    instructions: Use a narrative writing style that reminds of mid 90s point and
+      click adventure games.
+    name: Adventure Game
+    priority: 1
+    template_type: writing_style
+    uid: 0802e774-74d5-4d41-9e7a-78744e66f09e
+  4e4aea77-c414-47c8-ab65-2955e0bbbd17:
+    description: Default Talemate spice mix.
+    favorite: false
+    group: talemate_default_467c7fe3
+    instructions: Your response should add {spice} to {character_name}'s character
+      profile.
+    name: Spice Mix
+    priority: 1
+    spices:
+    - some sadness
+    - some darkness
+    - some humor
+    - a little silliness
+    - some grit
+    - an unlikeable trait
+    - a likeable trait
+    - a charming side
+    - a rude side
+    - some cuteness
+    - some weirdness
+    - a quirky trait
+    template_type: spices
+    uid: 4e4aea77-c414-47c8-ab65-2955e0bbbd17
+  goals:
+    auto_create: false
+    description: Long term and short term goals
+    favorite: true
+    group: talemate_default_467c7fe3
+    insert: conversation-context
+    instructions: Create a long term goal and two short term goals for {character_name}.
+      Your response must only be the long terms and two short term goals.
+    interval: 20
+    name: Goals
+    priority: 1
+    query: Goals
+    state_type: npc
+    template_type: state_reinforcement
+    uid: goals
+  physical_health:
+    auto_create: false
+    description: Keep track of health.
+    favorite: true
+    group: talemate_default_467c7fe3
+    insert: sequential
+    instructions: ''
+    interval: 10
+    name: Physical Health
+    priority: 1
+    query: What is {character_name}'s current physical health status?
+    state_type: character
+    template_type: state_reinforcement
+    uid: physical_health
+  time_of_day:
+    auto_create: false
+    description: Track night / day cycle
+    favorite: true
+    group: talemate_default_467c7fe3
+    insert: sequential
+    instructions: ''
+    interval: 10
+    name: Time of day
+    priority: 1
+    query: What is the current time of day?
+    state_type: world
+    template_type: state_reinforcement
+    uid: time_of_day
+uid: talemate_default_467c7fe3

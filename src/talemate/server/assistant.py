@@ -38,6 +38,7 @@ class AssistantPlugin:
                 "action": "contextual_generate_done",
                 "data": {
                     "generated_content": content,
+                    "uid": payload.uid,
                     **payload.model_dump(),
                 },
             }

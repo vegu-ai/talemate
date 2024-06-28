@@ -160,7 +160,6 @@ export default {
                     this.selectedImage = image;
                     this.selectOnGenerate = false;
                 }
-                console.log("Received image", image);
             } else if(message.type === "agent_status" && message.name === "visual") {
                 this.generating = message.status === "busy_bg" || message.status === "busy";
             }

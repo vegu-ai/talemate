@@ -113,6 +113,11 @@ STYLE_MAP["graphic_novel"] = Style(
     ),
 )
 
+STYLE_MAP["photo"] = Style(
+    keywords="photo, photograph, RAW photo, DLSS".split(", "),
+    negative_keywords="digital art, drawing, illustration, painting, concept art".split(", "),
+)
+
 STYLE_MAP["character_portrait"] = Style(keywords="solo, looking at viewer".split(", "))
 
 STYLE_MAP["environment"] = Style(
@@ -121,11 +126,12 @@ STYLE_MAP["environment"] = Style(
 )
 
 MAJOR_STYLES = [
-    {"value": "digital_art", "label": "Digital Art"},
-    {"value": "concept_art", "label": "Concept Art"},
-    {"value": "ink_illustration", "label": "Ink Illustration"},
     {"value": "anime", "label": "Anime"},
+    {"value": "concept_art", "label": "Concept Art"},
+    {"value": "digital_art", "label": "Digital Art"},
     {"value": "graphic_novel", "label": "Graphic Novel"},
+    {"value": "ink_illustration", "label": "Ink Illustration"},
+    {"value": "photo", "label": "Photo"},
 ]
 
 

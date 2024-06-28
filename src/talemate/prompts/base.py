@@ -550,11 +550,12 @@ class Prompt:
             if not as_question_answer:
                 return loop.run_until_complete(memory.query(query, **kwargs))
 
+            answer = loop.run_until_complete(memory.query(query, **kwargs))
+
             return "\n".join(
                 [
                     f"Question: {query}",
-                    f"Answer: "
-                    + loop.run_until_complete(memory.query(query, **kwargs)),
+                    f"Answer: {answer if answer else 'Unknown'}",
                 ]
             )
         else:

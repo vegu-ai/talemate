@@ -29,11 +29,13 @@ class Automatic1111Mixin:
     EXTEND_ACTIONS = {
         "automatic1111": AgentAction(
             enabled=True,
+            container=True,
             condition=AgentActionConditional(
                 attribute="_config.config.backend", value="automatic1111"
             ),
-            label="Automatic1111 Settings",
-            description="Setting overrides for the automatic1111 backend",
+            icon="mdi-server-outline",
+            label="AUTOMATIC1111",
+            description="Settings for the currently selected AUTOMATIC1111 backend.",
             config={
                 "api_url": AgentActionConfig(
                     type="text",

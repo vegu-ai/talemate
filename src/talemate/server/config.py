@@ -7,6 +7,7 @@ from talemate.client.registry import CLIENT_CLASSES
 from talemate.config import Config as AppConfigData
 from talemate.config import load_config, save_config
 from talemate.emit import emit
+from talemate.instance import get_client, emit_clients_status
 
 log = structlog.get_logger("talemate.server.config")
 
@@ -30,6 +31,10 @@ class SetLLMTemplatePayload(pydantic.BaseModel):
 class DetermineLLMTemplatePayload(pydantic.BaseModel):
     model: str
 
+
+class ToggleClientPayload(pydantic.BaseModel):
+    name: str
+    state: bool
 
 class ConfigPlugin:
     router = "config"
@@ -188,3 +193,25 @@ class ConfigPlugin:
                 "data": clients,
             }
         )
+
+
+    async def handle_toggle_client(self, data):
+        payload = ToggleClientPayload(**data)
+
+        log.info("Toggling client", name=payload.name, state=payload.state)
+        client = get_client(payload.name)
+        
+        client.enabled = payload.state
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "config",
+                "action": "toggle_client_complete",
+                "data": {
+                    "name": payload.name,
+                    "state": payload.state,
+                },
+            }
+        )
+        
+        await emit_clients_status()

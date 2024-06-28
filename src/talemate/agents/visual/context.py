@@ -28,6 +28,7 @@ class VisualContextState(pydantic.BaseModel):
     prompt: Union[str, None] = None
     prepared_prompt: Union[str, None] = None
     format: Union[str, None] = None
+    replace: bool = False
 
 
 class VisualContext:

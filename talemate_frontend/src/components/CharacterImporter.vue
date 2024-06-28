@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="dialog" scrollable max-width="50%">
+    <v-dialog v-model="dialog" scrollable max-width="500">
         <v-window>
             <v-card>
                 <v-card-title>
@@ -47,6 +47,9 @@ export default {
             this.selectedScene = val;
         }
     },
+    emits:[
+        'import-done',
+    ],
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'requestSceneAssets'],
     methods: {
         show() {
@@ -86,14 +89,12 @@ export default {
 
                 if(data.action === 'list_characters') {
                     this.characters = data.characters;
-                    return;
                 } else if(data.action === 'import_character_done') {
                     this.importing = false;
                     this.dialog = false;
-                    return;
+                    this.$emit('import-done', data.character);
                 }
 
-                return;
             }
 
         },
@@ -101,7 +102,6 @@ export default {
             if (!this.sceneSearchInput)
                 return
             this.sceneSearchLoading = true;
-            console.log("Fetching scenes", this.sceneSearchInput)
             this.getWebsocket().send(JSON.stringify({ type: 'request_scenes_list', query: this.sceneSearchInput }));
         },
         fetchCharacters() {

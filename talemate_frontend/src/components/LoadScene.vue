@@ -1,52 +1,56 @@
 <template>
-    <v-list-subheader v-if="appConfig !== null" @click="toggle()" class="text-uppercase"><v-icon>mdi-script-text-outline</v-icon> Load
-        <v-progress-circular v-if="loading" indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular>
-        <v-icon v-if="expanded" icon="mdi-chevron-down"></v-icon>
-        <v-icon v-else icon="mdi-chevron-up"></v-icon>
-    </v-list-subheader>
-    <v-list-subheader class="text-uppercase" v-else>
-        <v-progress-circular indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular> Waiting for config...
-    </v-list-subheader>
-    <div v-if="!loading && isConnected() && expanded && sceneLoadingAvailable && appConfig !== null">
-        <v-list-item>
-            <div class="mb-3">
-                <!-- Toggle buttons for switching between file upload and path input -->
-                <v-btn-toggle density="compact" class="mb-3" v-model="inputMethod" mandatory>
-                    <v-btn value="file">
-                        <v-icon>mdi-file-upload</v-icon>
-                    </v-btn>
-                    <v-btn value="path">
-                        <v-icon>mdi-file-document-outline</v-icon>
-                    </v-btn>
-                    <v-btn value="creative">
-                        <v-icon>mdi-palette-outline</v-icon>
-                    </v-btn>
-                </v-btn-toggle>
-                <!-- File input for file upload -->
-                <div  v-if="inputMethod === 'file' && !loading">
-                    <v-file-input prepend-icon="" style="height:200px" density="compact" v-model="sceneFile"  @change="loadScene" label="Upload a character card"
-                    outlined accept="image/*" variant="solo-filled"></v-file-input>
-                </div>
-                <!-- Text field for path input -->
-                <v-autocomplete v-else-if="inputMethod === 'path' && !loading" v-model="sceneInput" :items="scenes"
-                    label="Search scenes" outlined @update:search="updateSearchInput" item-title="label" item-value="path" :loading="sceneSearchLoading">
+<v-list density="compact">
+    <div v-if="isConnected() && sceneLoadingAvailable && appConfig !== null">
+        <v-list-subheader>
+            <v-icon class="mr-1" color="primary">mdi-folder</v-icon>
+            Load
+        </v-list-subheader>
+        <v-card variant="text">
+            <v-card-text>
+                <v-autocomplete :disabled="loading" v-model="sceneInput" :items="scenes"
+                label="Search scenes" outlined @update:search="updateSearchInput" item-title="label" item-value="path" :loading="sceneSearchLoading" messages="Load previously saved scenes.">
                 </v-autocomplete>
-                <!-- Upload/Load button -->
-                <v-btn v-if="!loading && inputMethod === 'path'" @click="loadScene" color="primary" block class="mb-3">
-                    <v-icon left>mdi-folder</v-icon>
-                    Load
-                </v-btn>
-                <v-btn v-else-if="!loading && inputMethod === 'creative'" @click="loadCreative" color="primary" block class="mb-3">
-                    <v-icon left>mdi-palette-outline</v-icon>
-                    Creative Mode
-                </v-btn>
-            </div>
-        </v-list-item>
-    </div>
-    <div v-else-if="!sceneLoadingAvailable">
-        <v-alert type="warning" variant="tonal">You need to configure a Talemate client before you can load scenes.</v-alert>
+                <v-btn class="mt-2" variant="tonal" block :disabled="loading" @click="loadScene('path')" append-icon="mdi-folder" color="primary">Load</v-btn>
+            </v-card-text>
+        </v-card>
+        <v-divider class="mt-3 mb-3"></v-divider>
+        <v-list-subheader>
+            <v-icon class="mr-1" color="primary">mdi-upload</v-icon>
+            Upload
+        </v-list-subheader>
+        <v-card variant="text">
+            <v-card-text>
+                <!-- File input for file upload -->
+                <div class="fixed-file-input-size">
+                    
+                    <v-file-input 
+                    :disabled="loading" 
+                    prepend-icon="" 
+                    v-model="sceneFile" 
+                    @change="loadScene('file')" 
+                    label="Drag and Drop file."
+                    outlined accept="image/*" 
+                    variant="solo-filled" 
+                    messages="Upload a talemate scene or a character card"
+                    ></v-file-input>
+                
+                </div>
+            </v-card-text>
+        </v-card>
+        <v-divider class="mt-3 mb-3"></v-divider>
+        <!-- create new scene -->
+        <v-list-subheader>
+            <v-icon class="mr-1" color="primary">mdi-plus</v-icon>
+            Create new scene
+        </v-list-subheader>
+        <v-card variant="text">
+            <v-card-text>
+                <v-btn class="mt-2" variant="tonal" block :disabled="loading" @click="loadCreative" append-icon="mdi-plus" color="primary">Create</v-btn>
+            </v-card-text>
+        </v-card>
     </div>
     <DefaultCharacter ref="defaultCharacterModal" @save="loadScene" @cancel="loadCanceled"></DefaultCharacter>
+</v-list>
 </template>
   
 
@@ -60,6 +64,14 @@ export default {
     },
     props: {
         sceneLoadingAvailable: Boolean
+    },
+    computed: {
+      cols () {
+        const { lg, sm } = this.$vuetify.display
+        return lg ? [2, 2]
+          : sm ? [4, 4]
+            : [6, 6]
+      },
     },
     data() {
         return {
@@ -97,7 +109,6 @@ export default {
             if (!this.sceneSearchInput)
                 return
             this.sceneSearchLoading = true;
-            console.log("Fetching scenes", this.sceneSearchInput)
             this.getWebsocket().send(JSON.stringify({ type: 'request_scenes_list', query: this.sceneSearchInput }));
         },
         loadCreative() {
@@ -108,7 +119,7 @@ export default {
             }
 
             this.loading = true;
-            this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: "environment:creative" }));
+            this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: "$NEW_SCENE$" }));
         },
         loadCanceled() {
             console.log("Load canceled");
@@ -116,7 +127,7 @@ export default {
             this.sceneFile = [];
         },
 
-        loadScene() {
+        loadScene(inputMethod) {
 
             if(this.sceneSaved === false) {
                 if(!confirm("The current scene is not saved. Are you sure you want to load a new scene?")) {
@@ -124,7 +135,13 @@ export default {
                 }
             }
 
+            if(inputMethod) {
+                this.inputMethod = inputMethod;
+            }
+
             this.sceneSaved = null;
+
+            console.log("Loading scene", this.inputMethod, this.sceneFile, this.sceneInput)
 
             if (this.inputMethod === 'file' && this.sceneFile.length > 0) { // Check if the input method is "file" and there is at least one file
             
@@ -141,6 +158,9 @@ export default {
                 // Convert the uploaded file to base64
                 const reader = new FileReader();
                 reader.readAsDataURL(this.sceneFile[0]); // Access the first file in the array
+
+                console.log("Loading scene from file")
+
                 reader.onload = () => {
                     //const base64File = reader.result.split(',')[1];
                     this.$emit("loading", true)
@@ -207,14 +227,14 @@ export default {
     },
     created() {
         this.registerMessageHandler(this.handleMessage);
-        //this.getWebsocket().send(JSON.stringify({ type: 'request_config' })); // Request the current app configuration
     },
     mounted() {
-        console.log("Websocket", this.getWebsocket()); // Check if websocket is available
     }
 }
 </script>
 
-<style scoped>
-/* styles for LoadScene component */
+<style>
+.fixed-file-input-size div.v-input__details {
+    align-items: flex-start !important;
+}
 </style>

@@ -180,6 +180,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         data = {
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
+            "enabled": self.enabled,
         }
 
         self.populate_extra_fields(data)
@@ -189,7 +190,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
             message=self.client_type,
             id=self.name,
             details=model_name,
-            status=status,
+            status=status if self.enabled else "disabled",
             data=data,
         )
 
@@ -247,6 +248,9 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
 
         if "disable_safety_settings" in kwargs:
             self.disable_safety_settings = kwargs["disable_safety_settings"]
+
+        if "enabled" in kwargs:
+            self.enabled = bool(kwargs["enabled"])
 
     def clean_prompt_parameters(self, parameters: dict):
         super().clean_prompt_parameters(parameters)

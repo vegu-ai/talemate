@@ -24,7 +24,6 @@
 1. Download Node.js from the official site https://nodejs.org/en/download/.
 2. Run the installer (the .msi installer is recommended).
 3. Follow the prompts in the installer (Accept the license agreement, click the NEXT button a bunch of times and accept the default installation settings).
-4. Restart your computer. You won’t be able to run Node.js® until you restart your computer.
 
 ### Usage of the Supplied bat Files
 

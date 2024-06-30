@@ -1,0 +1,5 @@
+nav:
+    - Anthropic: anthropic.md
+    - OpenAI: openai.md
+    - Text-Generation-WebUI: text-generation-webui.md
+    - ...

@@ -9,9 +9,9 @@ Welcome to the usage and development documentation for [Talemate](https://github
 
 ### Installation
 
-- [Windows](manual/installation/windows.md)
-- [Linux](manual/installation/linux.md)
-- [Docker](manual/installation/docker.md)
+- [Windows](getting-started/installation/windows.md)
+- [Linux](getting-started/installation/linux.md)
+- [Docker](getting-started/installation/docker.md)
 
 ## Advanced topics
 

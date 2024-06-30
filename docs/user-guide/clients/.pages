@@ -1,0 +1,6 @@
+nav:
+    - Overview: index.md
+    - Prompt Templates: prompt-templates.md
+    - Recommended Local Models: recommended-models.md
+    - Client Types: types
+    - ...

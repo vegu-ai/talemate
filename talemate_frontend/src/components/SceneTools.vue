@@ -321,10 +321,12 @@
                 </v-tooltip>
 
                 <!-- visualizer actions -->
-                
+             
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled() || !visualAgentReady" color="primary" icon>
+                        <v-progress-circular class="ml-1 mr-3" size="24" v-if="agentStatus.visual && !agentStatus.visual.ready" indeterminate="disable-shrink"
+                        color="secondary"></v-progress-circular>   
+                        <v-btn v-else class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled() || !visualAgentReady" color="primary" icon>
                             <v-icon>mdi-image-frame</v-icon>
                         </v-btn>
                     </template>
@@ -383,6 +385,7 @@ export default {
         playerCharacterName: String,
         messageInput: String,
         worldStateTemplates: Object,
+        agentStatus: Object,
     },
     computed: {
         deactivatableCharacters() {

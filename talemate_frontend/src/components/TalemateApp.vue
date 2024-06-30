@@ -149,6 +149,7 @@
                 <SceneTools 
                   @open-world-state-manager="onOpenWorldStateManager"
                   :messageInput="messageInput"
+                  :agent-status="agentStatus"
                   :worldStateTemplates="worldStateTemplates"
                   :playerCharacterName="getPlayerCharacterName()"
                   :passiveCharacters="passiveCharacters"

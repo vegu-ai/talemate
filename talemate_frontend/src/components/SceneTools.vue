@@ -324,7 +324,7 @@
              
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-progress-circular class="ml-1 mr-3" size="24" v-if="agentStatus.visual && !agentStatus.visual.ready" indeterminate="disable-shrink"
+                        <v-progress-circular class="ml-1 mr-3" size="24" v-if="agentStatus.visual && agentStatus.visual.busy" indeterminate="disable-shrink"
                         color="secondary"></v-progress-circular>   
                         <v-btn v-else class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled() || !visualAgentReady" color="primary" icon>
                             <v-icon>mdi-image-frame</v-icon>

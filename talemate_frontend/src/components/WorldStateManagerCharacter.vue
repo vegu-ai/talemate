@@ -64,27 +64,28 @@
 
                         </v-list>
                             
-                        <v-list v-if="character !== null && !character.is_player">
+                        <v-list v-if="character !== null">
                             
 
                             <!-- DEACTIVATE CHARACTER -->
-                    
-                            <v-list-item v-if="character.active">
-                                <v-tooltip max-width="300" :text="`Immediately deactivate ${character.name}. This will remove the character from the scene, but it will still be available in the character list, and can be recalled at any point.`">
-                                    <template v-slot:activator="{ props }">
-                                        <v-btn @click.stop="deactivateCharacter" v-bind="props" variant="tonal" block color="secondary" prepend-icon="mdi-exit-run">Deactivate</v-btn>
-                    
-                                    </template>
-                                </v-tooltip>
-                            </v-list-item>
-                    
-                            <v-list-item v-else>
-                                <v-tooltip max-width="300" :text="`Immediately activate ${character.name}. This will re-add them to the scene and allow to participate in it.`">
-                                    <template v-slot:activator="{ props }">
-                                        <v-btn @click.stop="activateCharacter" v-bind="props" variant="tonal" block color="primary" prepend-icon="mdi-human-greeting">Activate</v-btn>
-                                    </template>
-                                </v-tooltip>
-                            </v-list-item>
+                            <div v-if="!character.is_player">
+                                <v-list-item v-if="character.active">
+                                    <v-tooltip max-width="300" :text="`Immediately deactivate ${character.name}. This will remove the character from the scene, but it will still be available in the character list, and can be recalled at any point.`">
+                                        <template v-slot:activator="{ props }">
+                                            <v-btn @click.stop="deactivateCharacter" v-bind="props" variant="tonal" block color="secondary" prepend-icon="mdi-exit-run">Deactivate</v-btn>
+                        
+                                        </template>
+                                    </v-tooltip>
+                                </v-list-item>
+                        
+                                <v-list-item v-else>
+                                    <v-tooltip max-width="300" :text="`Immediately activate ${character.name}. This will re-add them to the scene and allow to participate in it.`">
+                                        <template v-slot:activator="{ props }">
+                                            <v-btn @click.stop="activateCharacter" v-bind="props" variant="tonal" block color="primary" prepend-icon="mdi-human-greeting">Activate</v-btn>
+                                        </template>
+                                    </v-tooltip>
+                                </v-list-item>
+                            </div>
                     
                             <v-divider></v-divider>
                     

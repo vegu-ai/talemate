@@ -131,7 +131,11 @@ export default {
       // otherwise, return the action that matches the tab name
       let actions = {}
       if (this.tab === "_config") {
-        actions["_config"] = this.agent.actions["_config"];
+        
+        if(this.agent.actions["_config"]){
+          actions["_config"] = this.agent.actions["_config"];
+
+        }
         for (let key in this.agent.actions) {
           let action = this.agent.actions[key];
           if (!action.container) {

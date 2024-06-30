@@ -1,19 +1,21 @@
-## RunPod integration
+!!! note
+    These instructions have not been updated in a while and RunPod has changed somewhat. I will update this as soon as I can. The general idea should still be the same.
 
 RunPod allows you to quickly set up and run text-generation-webui instances on powerful GPUs, remotely. If you want to run the significantly larger models (like 70B parameters) with reasonable speeds, this is probably the best way to do it.
 
-### Create / grab your RunPod API key and add it to the talemate config
+### Get a RunPod API key and add it to the talemate config
 
 You can manage your RunPod api keys at [https://www.runpod.io/console/user/settings](https://www.runpod.io/console/user/settings)
 
-Add the key to your Talemate config file (config.yaml):
+Once you have your key you can open the settings in talemate.
 
-```yaml
-runpod:
-    api_key: <your api key>
-```
+![Open settings](../../img/0.26.0/open-settings.png)
 
-Then restart Talemate.
+Then click the `APPLICATION` tab and then the `RUNPOD` category. Here you can add your RunPod API key.
+
+![Runpod settings](../../img/0.26.0/runpod-api-key-setting.png)
+
+Setting the runpod api key requires a restart of the backend, so make sure to save your changes and restart the backend.
 
 ### Create a RunPod instance
 
@@ -35,7 +37,8 @@ Pick the GPU you want to use, for 70B models you want at least 48GB of VRAM and 
 
 When choosing the template for your pod, choose the `RunPod TheBloke LLMs` template. This template is pre-configured with all the dependencies needed to run text-generation-webui. There are other text-generation-webui templates, but they are usually out of date and this one i found to be consistently good.
 
-> :warning: The name of your pod is important and ensures that Talemate will be able to find it. Talemate will only be able to find pods that have the word `thebloke llms` or `textgen` in their name. (case insensitive)
+!!! warning
+    The name of your pod is important and ensures that Talemate will be able to find it. Talemate will only be able to find pods that have the word `thebloke llms` or `textgen` in their name. (case insensitive)
 
 Once your pod is deployed and has finished setup and is running, the client will automatically appear in the Talemate client list, making it available for you to use like you would use a locally hosted text-generation-webui instance.
 

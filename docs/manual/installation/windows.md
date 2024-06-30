@@ -1,4 +1,18 @@
-### How to Install Python 3.10
+## Quick install instructions
+
+!!! warning
+    python 3.12 and node.js v21 are currently not supported.
+
+1. Download and install Python 3.10 or Python 3.11 from the [official Python website](https://www.python.org/downloads/windows/).
+1. Download and install Node.js v20 from the [official Node.js website](https://nodejs.org/en/download/). This will also install npm.
+1. Download the Talemate project to your local machine. Download from [the Releases page](https://github.com/vegu-ai/talemate/releases).
+1. Unpack the download and run `install.bat` by double clicking it. This will set up the project on your local machine.
+1. Once the installation is complete, you can start the backend and frontend servers by running `start.bat`.
+1. Navigate your browser to http://localhost:8080
+
+## Additional Information
+
+### How to Install Python 3.10 or 3.11
 
 1. Visit the official Python website's download page for Windows at https://www.python.org/downloads/windows/.
 2. Click on the link for the Latest Python 3 Release - Python 3.10.x.

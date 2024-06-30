@@ -1,23 +1,7 @@
-# Talemate Text-to-Speech (TTS) Configuration
+# Local TTS
 
-Talemate supports Text-to-Speech (TTS) functionality, allowing users to convert text into spoken audio. This document outlines the steps required to configure TTS for Talemate using different providers, including ElevenLabs, Coqui, and a local TTS API.
-
-## Configuring ElevenLabs TTS
-
-To use ElevenLabs TTS with Talemate, follow these steps:
-
-1. Visit [ElevenLabs](https://elevenlabs.com) and create an account if you don't already have one.
-2. Click on your profile in the upper right corner of the Eleven Labs website to access your API key.
-3. In the `config.yaml` file, under the `elevenlabs` section, set the `api_key` field with your ElevenLabs API key.
-
-Example configuration snippet:
-
-```yaml
-elevenlabs:
-  api_key: <YOUR_ELEVENLABS_API_KEY>
-```
-
-## Configuring Local TTS API
+!!! warning
+    This has not been tested in a while and may not work as expected. It will likely be replaced with something different in the future. If this approach is currently broken its likely to remain so until it is replaced.
 
 For running a local TTS API, Talemate requires specific dependencies to be installed.
 

@@ -4,7 +4,7 @@ Talemate uses ChromaDB to maintain long-term memory. The default embeddings used
 
 In my testing so far, instructor-xl has proved to be the most accurate (even more-so than openai)
 
-## Local instructor embeddings
+### Local instructor embeddings
 
 If you want chromaDB to use the more accurate (but much slower) instructor embeddings add the following to `config.yaml`:
 
@@ -58,5 +58,3 @@ chromadb:
     embeddings: openai
     openai_model: text-embedding-3-small
 ```
-
-**Note**: As with everything openai, using this isn't free. It's way cheaper than their text completion though. Always monitor your usage on their dashboard.

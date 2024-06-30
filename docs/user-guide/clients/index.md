@@ -10,7 +10,9 @@ Unlike other, similar projects, Talemate supports and encourages use of multiple
 
 It is however, perfectly fine to just use a single client for all tasks if you prefer.
 
-## Officially supported APIs
+## Client setup instructions
+
+### Officially supported APIs
 
 ##### Remote APIs
 
@@ -27,7 +29,7 @@ It is however, perfectly fine to just use a single client for all tasks if you p
 - [Text-Generation-WebUI](/user-guide/clients/types/text-generation-webui/) 
 - [LMStudio](/user-guide/clients/types/lmstudio/)
 
-## APIs functional via OpenAI compatible client
+### APIs functional via OpenAI compatible client
 
 !!! note
     These APIs do not have a talemate client, but the OpenAI compatible client can be used to connect to them.

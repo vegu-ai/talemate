@@ -923,7 +923,7 @@ class WorldStateManagerPlugin:
             is_player = payload.is_player,
             generate_attributes = payload.generate_attributes,
             generation_options=payload.generation_options,
-            active = payload.is_player,
+            active = payload.is_player or not self.scene.has_active_npcs
         )
         
         self.websocket_handler.queue_put(
@@ -960,6 +960,7 @@ class WorldStateManagerPlugin:
         
         await self.signal_operation_done()
         self.scene.emit_status()
+        await self.scene.emit_history()
         
         
     async def handle_update_scene_settings(self, data):

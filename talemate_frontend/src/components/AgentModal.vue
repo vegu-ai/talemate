@@ -1,8 +1,4 @@
 <template>
-
-
-
-
   <v-dialog v-model="localDialog" max-width="912px">
     <v-card>
       <v-card-title>
@@ -11,11 +7,12 @@
             <v-icon>mdi-transit-connection-variant</v-icon>
             {{ agent.label }}
           </v-col>
-          <v-col cols="3" class="text-right">
+          <v-col cols="3" class="text-right checkbox-right">
             <v-checkbox :label="enabledLabel()" hide-details density="compact" color="green" v-model="agent.enabled"
               v-if="agent.data.has_toggle" @update:modelValue="save(false)"></v-checkbox>
           </v-col>
         </v-row>
+
       </v-card-title>
 
 
@@ -43,10 +40,16 @@
         
                 <v-sheet v-for="(action, key) in actionsForTab" :key="key" density="compact">
                   <div v-if="testActionConditional(action)">
-                    <v-card-subtitle>
-                      <v-checkbox v-if="!actionAlwaysEnabled(key) && !action.container" :label="agent.data.actions[key].label" :messages="agent.data.actions[key].description" density="compact" color="green" v-model="action.enabled" @update:modelValue="save(false)"></v-checkbox>
+                    <div>
+                      <v-checkbox v-if="!actionAlwaysEnabled(key) && !action.container" :label="agent.data.actions[key].label" :messages="agent.data.actions[key].description" density="compact" color="primary" v-model="action.enabled" @update:modelValue="save(false)">
+                        <!-- template details slot -->
+                        <template v-slot:message="{ message }">
+                          <span class="text-caption text-grey">{{ message }}</span>
+                        </template>
+
+                      </v-checkbox>
                       <p v-else-if="action.container">{{ agent.data.actions[key].description }}</p>
-                    </v-card-subtitle>
+                    </div>
                     <div class="mt-2">
                       <div v-for="(action_config, config_key) in agent.data.actions[key].config" :key="config_key">
                         <div v-if="action.enabled || actionAlwaysEnabled(key)">
@@ -55,9 +58,16 @@
 
                           <v-autocomplete v-else-if="action_config.type === 'text' && action_config.choices !== null" v-model="action.config[config_key].value" :items="action_config.choices" :label="action_config.label" :hint="action_config.description" density="compact" item-title="label" item-value="value" @update:modelValue="save(false)"></v-autocomplete>
 
-                          <v-slider v-if="action_config.type === 'number' && action_config.step !== null" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" :min="action_config.min" :max="action_config.max" :step="action_config.step" density="compact" thumb-label @update:modelValue="save(true)"></v-slider>
+                          <v-slider v-if="action_config.type === 'number' && action_config.step !== null" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" :min="action_config.min" :max="action_config.max" :step="action_config.step" density="compact" thumb-label @update:modelValue="save(true)" color="primary"></v-slider>
 
-                          <v-checkbox v-if="action_config.type === 'bool'" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" density="compact" @update:modelValue="save(false)"></v-checkbox>
+                          <v-checkbox v-if="action_config.type === 'bool'" v-model="action.config[config_key].value" :label="action_config.label" :messages="action_config.description" density="compact" @update:modelValue="save(false)" color="primary">
+                            <!-- template details slot -->
+                            <template v-slot:message="{ message }">
+                              <span class="text-caption text-grey">{{ message }}</span>
+                            </template>
+
+
+                          </v-checkbox>
                             
                           <v-alert v-if="action_config.note != null" variant="outlined" density="compact" color="grey-darken-1" icon="mdi-information">
                             {{ action_config.note }}
@@ -218,5 +228,10 @@ export default {
   overflow-y: auto;
   max-height: 70vh;
   padding-right: 16px;
+}
+
+.checkbox-right {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

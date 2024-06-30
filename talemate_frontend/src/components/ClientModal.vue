@@ -69,9 +69,9 @@
                     </v-col>
                     <v-col cols="8"
                       v-if="!typeEditable() && client.data && client.data.prompt_template_example !== null && client.model_name && clientMeta().requires_prompt_template && !client.data.api_handles_prompt_template">
-                      <v-combobox ref="promptTemplateComboBox" :label="'Prompt Template for ' + client.model_name"
+                      <v-autocomplete ref="promptTemplateComboBox" :label="'Prompt Template for ' + client.model_name"
                         v-model="client.data.template_file" @update:model-value="setPromptTemplate"
-                        :items="promptTemplates"></v-combobox>
+                        :items="promptTemplates"></v-autocomplete>
                       <v-card elevation="3" :color="(client.data.has_prompt_template ? 'primary' : 'warning')"
                         variant="tonal">
 

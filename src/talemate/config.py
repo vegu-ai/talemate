@@ -381,7 +381,7 @@ AnnotatedClient = Annotated[
 class Config(BaseModel):
     clients: Dict[str, AnnotatedClient] = {}
 
-    game: Game
+    game: Game = Game()
 
     agents: Dict[str, Agent] = {}
 

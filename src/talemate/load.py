@@ -83,16 +83,14 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
         await scene.add_to_recent_scenes()
 
 def identify_import_spec(data:dict) -> ImportSpec:
-    if "game_state" in data and "world_state" in data:
-        return ImportSpec.talemate
-    
     if data.get("spec") == "chara_card_v2":
         return ImportSpec.chara_card_v2
     
     if data.get("spec") == "chara_card_v1":
         return ImportSpec.chara_card_v1
     
-    raise UnknownDataSpec(data)
+    # TODO: probably should actually check for valid talemate scene data
+    return ImportSpec.talemate
 
 
 async def load_scene_from_character_card(scene, file_path):

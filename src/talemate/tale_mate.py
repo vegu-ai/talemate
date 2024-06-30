@@ -754,6 +754,10 @@ class Scene(Emitter):
     @property
     def npc_character_names(self):
         return [character.name for character in self.get_npc_characters()]
+    
+    @property
+    def has_active_npcs(self):
+        return bool(list(self.get_npc_characters()))
 
     @property
     def log(self):
@@ -1748,7 +1752,33 @@ class Scene(Emitter):
         memory = self.get_helper("memory").agent
         if not memory.db:
             await memory.set_db()
-        
+    
+    async def emit_history(self):
+        emit("clear_screen", "")
+
+        self.game_state.init(self)
+
+        await self.signals["scene_init"].send(
+            events.SceneStateEvent(scene=self, event_type="scene_init")
+        )
+        self.narrator_message(self.get_intro())
+
+        for actor in self.actors:
+            if (
+                not isinstance(actor, Player)
+                and actor.character.introduce_main_character
+            ):
+                actor.character.introduce_main_character(
+                    self.main_character.character
+                )
+
+            if (
+                actor.character.greeting_text
+                and actor.character.greeting_text != self.get_intro()
+            ):
+                item = f"{actor.character.name}: {actor.character.greeting_text}"
+                emit("character", item, character=actor.character)
+
 
     async def _run_game_loop(self, init: bool = True):
 
@@ -1947,13 +1977,8 @@ class Scene(Emitter):
     async def _run_creative_loop(self, init: bool = True):
         emit("status", message="Switched to scene editor", status="info")
 
-        if init:
-            emit("clear_screen", "")
-            intro = self.get_intro()
+        await self.emit_history()
 
-            if intro:
-                self.narrator_message(intro)
-                
         continue_scene = True
         self.commands = command = commands.Manager(self)
 

@@ -16,7 +16,7 @@
             <v-col cols="12" md="8" lg="6" xl="6">
                 <v-combobox
                     v-model="scene.data.context"
-                    @update:model-value="update()"
+                    @update:model-value="queueUpdate('context')"
                     :items="appConfig ? appConfig.creator.content_context: []"
                     messages="This can strongly influence the type of content that is generated, during narration, dialogue and world building."
                     label="Content context"
@@ -52,7 +52,7 @@
                     :templates="templates"
                     :generation-options="generationOptions"
                     :history-aware="false"
-                    @generate="content => scene.data.intro = content"
+                    @generate="content => setIntroAndQueueUpdate(content)"
                 />
                 <v-textarea
                     class="mt-1"
@@ -141,6 +141,11 @@ export default {
             this.character = null;
             this.templateApplicatorCallback = null;
             this.groupsOpen = [];
+        },
+
+        setIntroAndQueueUpdate(value) {
+            this.scene.data.intro = value;
+            this.queueUpdate('intro');
         },
 
         queueUpdate(name) {

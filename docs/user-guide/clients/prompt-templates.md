@@ -1,6 +1,6 @@
 # Prompt Templates
 
-For clients that are in complete control of thje prompt generation, such as the Text-Generation-WebUI client, it is important to understand the concept of prompt templates.
+For clients that are in complete control of the prompt generation, such as the KoboldCpp or the Text-Generation-WebUI client, it is important to understand the concept of prompt templates.
 
 ## Clients that support prompt templates
 
@@ -13,7 +13,7 @@ For clients that are in complete control of thje prompt generation, such as the 
 
 For good results it is **vital** that the correct prompt template is specified for whichever model you have loaded.
 
-Talemate does come with a set of pre-defined templates for some popular models, and has recently implemented automatic detection of the template via Huggingface's model metadata. This does not however always work, so understanding and specifying the correct prompt template is something you should familiarize yourself with.
+Talemate does come with a set of pre-defined templates for some popular models, and has recently implemented automatic detection of the template via Huggingface's model metadata. However this does not always work, so understanding and specifying the correct prompt template is something you should familiarize yourself with.
 
 If a client shows a yellow triangle next to it, it means that the prompt template is not set, and it is currently using the default `Alpaca` style prompt template.
 

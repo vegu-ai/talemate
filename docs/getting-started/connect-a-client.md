@@ -28,21 +28,21 @@ We have support for multiple local and remote APIs. You can choose to use one or
 
 - [OpenAI](/user-guide/clients/types/openai/)
 - [Anthropic](/user-guide/clients/types/anthropic/)
-- [mistral.ai](https://mistral.ai/)
-- [Cohere](https://www.cohere.com/)
-- [Groq](https://www.groq.com/)
-- [Google Gemini](https://console.cloud.google.com/)
+- [mistral.ai](/user-guide/clients/types/mistral/)
+- [Cohere](/user-guide/clients/types/cohere/)
+- [Groq](/user-guide/clients/types/groq/)
+- [Google Gemini](/user-guide/clients/types/google/)
 
 ##### Local APIs
 
-- [KoboldCpp](https://koboldai.org/cpp)
+- [KoboldCpp](/user-guide/clients/types/koboldcpp/)
 - [Text-Generation-WebUI](/user-guide/clients/types/text-generation-webui/) 
-- [LMStudio](https://lmstudio.ai/)
+- [LMStudio](/user-guide/clients/types/lmstudio/)
 
 ##### Unofficial OpenAI API implementations
 
-- [DeepInfra](https://deepinfra.com/)
-- [llamacpp](https://github.com/ggerganov/llama.cpp) with the `api_like_OAI.py` wrapper
+- [DeepInfra](/user-guide/clients/types/openai-compatible/#deepinfra)
+- llamacpp with the `api_like_OAI.py` wrapper
 
 ## Assign the client to the agents
 

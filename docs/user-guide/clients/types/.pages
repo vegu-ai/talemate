@@ -1,5 +1,13 @@
 nav:
     - Anthropic: anthropic.md
+    - Cohere: cohere.md
+    - Google: google.md
+    - Groq: groq.md
+    - KoboldCpp: koboldcpp.md
+    - LMStudio: lmstudio.md
+    - Mistral.ai: mistral.md
     - OpenAI: openai.md
+    - OpenAI Compatible: openai-compatible.md
+    - TabbyAPI: tabbyapi.md
     - Text-Generation-WebUI: text-generation-webui.md
     - ...

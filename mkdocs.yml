@@ -1,5 +1,7 @@
 site_name: Talemate Documentation
 theme:
+  features:
+    - content.code.copy
   name: material
   palette:
     scheme: slate

@@ -1,5 +1,6 @@
 nav:
     - agents
-    - Configure external APIs: apis
+    - Configure Services: apis
+    - Clients: clients
     - integrations
     - ...

@@ -205,10 +205,12 @@ class TTSAgent(Agent):
             ),
             "openai": AgentAction(
                 enabled=True,
+                container=True,
+                icon="mdi-server-outline",
                 condition=AgentActionConditional(
                     attribute="_config.config.api", value="openai"
                 ),
-                label="OpenAI Settings",
+                label="OpenAI",
                 config={
                     "model": AgentActionConfig(
                         type="text",

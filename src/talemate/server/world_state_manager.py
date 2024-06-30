@@ -863,6 +863,7 @@ class WorldStateManagerPlugin:
             
         await self.scene.remove_actor(character.actor)
         await self.signal_operation_done()
+        await self.handle_get_character_list({})
         self.scene.emit_status()
         
     async def handle_activate_character(self, data):
@@ -922,6 +923,7 @@ class WorldStateManagerPlugin:
             is_player = payload.is_player,
             generate_attributes = payload.generate_attributes,
             generation_options=payload.generation_options,
+            active = payload.is_player,
         )
         
         self.websocket_handler.queue_put(
@@ -938,6 +940,7 @@ class WorldStateManagerPlugin:
         await self.handle_get_character_list({})
         await self.handle_get_character_details({"name": character.name})
         await self.signal_operation_done()
+        
         self.scene.emit_status()
         
     async def handle_update_scene_outline(self, data):

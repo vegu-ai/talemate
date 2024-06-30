@@ -827,7 +827,12 @@ class WorldStateManager:
         # set random color for their name
         character.set_color()
         
-        actor = self.scene.Actor(
+        if is_player:
+            ActorCls = self.scene.Player
+        else:
+            ActorCls = self.scene.Actor
+        
+        actor = ActorCls(
             character,
             get_agent('conversation')
         )

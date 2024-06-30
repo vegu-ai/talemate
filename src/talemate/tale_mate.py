@@ -716,6 +716,7 @@ class Scene(Emitter):
         self.active = False
 
         self.Actor = Actor
+        self.Player = Player
         self.Character = Character
 
         # TODO: deprecate

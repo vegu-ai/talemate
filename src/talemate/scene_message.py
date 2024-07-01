@@ -101,6 +101,8 @@ class SceneMessage:
         self.flags &= ~Flags.HIDDEN
 
     def as_format(self, format: str, **kwargs) -> str:
+        if format == "movie_script":
+            return self.message.rstrip("\n") + "\n"
         return self.message
 
 
@@ -148,8 +150,7 @@ class CharacterMessage(SceneMessage):
 class NarratorMessage(SceneMessage):
     source: str = "progress_story"
     typ = "narrator"
-
-
+    
 @dataclass
 class DirectorMessage(SceneMessage):
     action: str = "actor_instruction"

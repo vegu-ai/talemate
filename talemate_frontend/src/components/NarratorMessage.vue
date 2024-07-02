@@ -1,5 +1,5 @@
 <template>
-  <v-alert variant="text" type="info" icon="mdi-script-text-outline" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
+  <v-alert variant="text" color="narrator" icon="mdi-script-text-outline" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
     <template v-slot:close>
       <v-btn size="x-small" icon @click="deleteMessage">
         <v-icon>mdi-close</v-icon>
@@ -22,7 +22,7 @@
         @keydown.escape.prevent="cancelEdit()">
       </v-textarea>
       <div v-else class="narrator-text" @dblclick="startEdit()">
-        <span v-for="(part, index) in parts" :key="index" :class="{ highlight: part.isNarrative }">
+        <span v-for="(part, index) in parts" :key="index" :class="{ highlight: part.isNarrative, 'text-narrator': part.isNarrative }">
           {{ part.text }}
         </span>
       </div>
@@ -131,7 +131,6 @@ export default {
   
 <style scoped>
 .highlight {
-  color: #9FA8DA;
   font-style: italic;
   margin-left: 2px;
   margin-right: 2px;

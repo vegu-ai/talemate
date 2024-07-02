@@ -12,6 +12,7 @@ export default createVuetify({
     themes: {
       dark: {
         colors: {
+          // theme colors
           primary: colors.deepPurple.lighten2,
           secondary: colors.deepOrange.base,
           delete: colors.red.darken2,
@@ -24,6 +25,12 @@ export default createVuetify({
           highlight3: colors.lightGreen.lighten3,
           highlight4: colors.red.lighten1,
           highlight5: colors.amber.lighten3,
+
+          // messages
+          narrator: colors.deepPurple.lighten3,
+          character: colors.grey.darken1,
+
+          // html colors
           cornflowerblue: "#6495ED",
         }
       }

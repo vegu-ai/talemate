@@ -165,7 +165,7 @@
                   outlined 
                   ref="messageInput" 
                   @keydown.enter.prevent="sendMessage"
-                  @keydown.tab.prevent="cycleActAsCharacter"
+                  @keydown.tab.prevent="cycleActAs"
                   hint="Ctrl+Enter to autocomplete, Shift+Enter for newline, Tab to act as another character"
                   :disabled="isInputDisabled()" 
                   :loading="autocompleting"
@@ -620,7 +620,7 @@ export default {
       this.websocket.send(JSON.stringify(param_copy));
     },
 
-    cycleActAsCharacter() {
+    cycleActAs() {
 
       // will cycle through activeCharacters, which is a dict of character names
       // and set actAs to the next character name in the list
@@ -628,6 +628,12 @@ export default {
       // if actAs is null it means the player is acting as themselves
 
       const playerCharacterName = this.getPlayerCharacterName();
+
+      // if current actAs is $narrator, set actAs to the first character in the list
+      if(this.actAs === "$narrator") {
+        this.actAs = null;
+        return;
+      }
 
       let selectedCharacter = null;
 
@@ -643,7 +649,7 @@ export default {
       }
 
       if(selectedCharacter === null || selectedCharacter === playerCharacterName) {
-        this.actAs = null;
+        this.actAs = "$narrator";
       } else {
         this.actAs = selectedCharacter;
       }
@@ -806,6 +812,9 @@ export default {
 
           let characterName = this.actAs ? this.actAs : this.scene.player_character_name;
 
+          if(characterName === "$narrator")
+            return "Narrator:";
+
           return `${characterName}:`;
         }
 
@@ -836,6 +845,10 @@ export default {
           }
 
           if(this.actAs) {
+
+            if(this.actAs === "$narrator")
+              return "info";
+
             return this.scene.data.character_colors[this.actAs];
           }
           return this.scene.data.character_colors[this.scene.player_character_name];

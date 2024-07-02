@@ -635,7 +635,12 @@ class Player(Actor):
             
             log.warning("player_message", message=message, act_as=act_as)
             
-            if act_as:
+            if act_as == "$narrator":
+                # acting as the narrator
+                self.scene.narrator_message(message)
+                self.scene.push_history(NarratorMessage(message))  
+                raise ActedAsCharacter()
+            elif act_as:
                 # acting as another character
                 character = self.scene.get_character(act_as)
                 if not character:

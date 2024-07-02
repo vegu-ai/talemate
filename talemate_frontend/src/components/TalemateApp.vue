@@ -828,6 +828,8 @@ export default {
         if (this.inputRequestInfo.reason != "talk") {
           return 'mdi-information-outline';
         } else {
+          if(this.actAs === '$narrator')
+            return 'mdi-script-text-outline';
           return 'mdi-comment-outline';
         }
       }
@@ -847,7 +849,7 @@ export default {
           if(this.actAs) {
 
             if(this.actAs === "$narrator")
-              return "info";
+              return "narrator";
 
             return this.scene.data.character_colors[this.actAs];
           }

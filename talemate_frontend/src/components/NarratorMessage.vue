@@ -9,7 +9,9 @@
       <v-textarea 
         ref="textarea" 
         v-if="editing" 
-        v-model="editing_text" 
+        v-model="editing_text"
+        color="narrator"
+        bg-color="black"
 
         auto-grow
 
@@ -151,5 +153,4 @@ export default {
 .narrator-message {
   display: flex;
   flex-direction: row;
-  color: #26A69A;
 }</style>

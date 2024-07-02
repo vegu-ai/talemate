@@ -16,6 +16,9 @@
         ref="textarea" 
         v-if="editing"
         v-model="editing_text"
+        variant="outlined"
+        class="text-normal"
+        :color="color"
 
         auto-grow
 
@@ -159,6 +162,7 @@ export default {
   flex-direction: row;
   text-shadow: 2px 2px 4px #000000;
 }
+
 
 .character-name {
   font-weight: bold;

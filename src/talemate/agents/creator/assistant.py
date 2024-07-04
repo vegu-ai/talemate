@@ -286,8 +286,8 @@ class AssistantMixin:
             },
             pad_prepended_response=False,
             dedupe_enabled=False,
-        ).strip()
-        response = response.replace("...","").strip()
+        )
+        response = response.strip().replace("...","").strip()
         
         if response.startswith(input):
             response = response[len(input) :]

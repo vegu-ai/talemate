@@ -571,10 +571,22 @@ export default {
       if (event.ctrlKey && event.key === 'Enter') {
         this.autocompleting = true
         this.inputDisabled = true;
+
+        let context = "dialogue:player";
+
+        if(this.actAs) {
+          if(this.actAs === "$narrator") {
+            context = `narrative:`;
+          } else {
+            context = `dialogue:${this.actAs}`;
+          }
+        }
+
         this.autocompleteRequest(
           {
             partial: this.messageInput,
-            context: "dialogue:player"
+            context: context,
+            character: this.actAs,
           }, 
           (completion) => {
             this.inputDisabled = false

@@ -166,8 +166,8 @@
                   ref="messageInput" 
                   @keydown.enter.prevent="sendMessage"
                   @keydown.tab.prevent="cycleActAs"
-                  hint="Ctrl+Enter to autocomplete, Shift+Enter for newline, Tab to act as another character"
-                  :disabled="isInputDisabled()" 
+                  :hint="messageInputLongHint()"
+                  :disabled="isInputDisabled()"
                   :loading="autocompleting"
                   :prepend-inner-icon="messageInputIcon()"
                   :color="messageInputColor()">
@@ -565,10 +565,20 @@ export default {
         }
       }
     },
+
+    isWaitingForDialogInput() {
+      return this.waitingForInput && this.inputRequestInfo && this.inputRequestInfo.reason === "talk";
+    },
+
     sendMessage(event) {
 
       // if ctrl+enter is pressed, request autocomplete
       if (event.ctrlKey && event.key === 'Enter') {
+
+        if(!this.isWaitingForDialogInput()) {
+          return;
+        }
+
         this.autocompleting = true
         this.inputDisabled = true;
 
@@ -831,6 +841,17 @@ export default {
         }
 
         return this.inputRequestInfo.message;
+      }
+      return "";
+    },
+
+    messageInputLongHint() {
+      const DIALOG_HINT = "Ctrl+Enter to autocomplete, Shift+Enter for newline, Tab to act as another character";
+
+      if(this.waitingForInput) {
+        if(this.inputRequestInfo.reason === "talk") {
+          return DIALOG_HINT;
+        }
       }
       return "";
     },

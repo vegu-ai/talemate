@@ -28,6 +28,9 @@ markdown_extensions:
   - admonition
   - pymdownx.details
   - pymdownx.superfences
+  - pymdownx.snippets
+  - pymdownx.critic
   - md_in_html
 plugins:
   - awesome-pages
+  - glightbox

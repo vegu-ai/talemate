@@ -60,6 +60,7 @@ pytest = "^6.2"
 mypy = "^0.910"
 mkdocs-material = ">=9.5.27"
 mkdocs-awesome-pages-plugin = ">=2.9.2"
+mkdocs-glightbox = ">=0.4.0"
 
 [tool.poetry.scripts]
 talemate = "talemate:cli.main"

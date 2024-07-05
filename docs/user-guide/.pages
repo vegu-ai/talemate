@@ -1,6 +1,7 @@
 nav:
-    - agents
-    - Configure Services: apis
+    - Agents: agents
     - Clients: clients
-    - Other Integrations: integrations
+    - Playing: playing
+    - Third Party APIs: apis
+    - Third Party Integrations: integrations
     - ...

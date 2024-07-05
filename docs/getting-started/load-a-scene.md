@@ -14,6 +14,8 @@ After a moment of loading, you will see the scenario's introductory message and 
 
 Its time to send the first message.
 
+Spoken words should go into `"` and actions should be written in `*`. Talemate will automatically supply the other if you supply one. 
+
 ![Getting started first interaction](/img/0.26.0/getting-started-first-interaction.png)
 
 Once sent, its not the AI's turn to respond, give it a moment, depending on the service and model selected it can take a a moment.

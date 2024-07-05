@@ -8,8 +8,6 @@
 In the :material-earth: **World** editor, in the left panel, click the :material-image-auto-adjust: **New State Reinforcement** button.
 
 <!-- --8<-- [start:new-state] -->
-Then select the :material-image-auto-adjust: **States** tab.
-
 ![World states tab](/img/0.26.0/world-editor-world-state-new-1.png)
 
 ### Question or State description

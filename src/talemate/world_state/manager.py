@@ -254,7 +254,6 @@ class WorldStateManager:
             annotated_pin = AnnotatedContextPin(
                 pin=pin, text=text, time_aware_text=time_aware_text, title=title
             )
-
             _pins[pin.entry_id] = annotated_pin
 
         return ContextPins(pins=_pins)

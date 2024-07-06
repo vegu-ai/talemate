@@ -17,11 +17,14 @@ from talemate.scene_message import SceneMessage
 from talemate.util.dialogue import *
 from talemate.util.prompt import *
 
+import tiktoken
+
 log = structlog.get_logger("talemate.util")
 
 # Initialize colorama
 init(autoreset=True)
 
+TIKTOKEN_ENCODING = tiktoken.encoding_for_model("gpt-4-turbo")
 
 def fix_unquoted_keys(s):
     unquoted_key_pattern = r"(?<!\\)(?:(?<=\{)|(?<=,))\s*(\w+)\s*:"
@@ -276,7 +279,13 @@ def count_tokens(source):
         for s in source:
             t += count_tokens(s)
     elif isinstance(source, (str, SceneMessage)):
-        t = int(len(source) / 3.6)
+        # FIXME: there is currently no good way to determine 
+        # the model loaded in the client, so we are using the
+        # TIKTOKEN_ENCODING for now.
+        #
+        # So counts through this function are at best an approximation
+        
+        t = len(TIKTOKEN_ENCODING.encode(str(source)))
     else:
         log.warn("count_tokens", msg="Unknown type: " + str(type(source)))
         t = 0

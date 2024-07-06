@@ -44,7 +44,6 @@ Allows you to specify extra instructions to give to the AI for the generation of
 For our example, we want to know the state of the ship, so we could add:
 
 `Is the ship functional? Keep track of changes to the Starlight Nomad as an environment.`
-<!-- --8<-- [end:new-state] -->
 
 ### Create the state
 
@@ -62,7 +61,7 @@ This may take a moment, once it's done you will see the new state in the list of
     ![Generated state](/img/0.26.0/world-editor-world-list.png)
 
     It has generated both a state entry (controlling how the state is tracked) and a world info entry holding the current value of the state.
-
+<!-- --8<-- [end:new-state] -->
 ## Managing the state
 
 ### :material-refresh: Reset State Reinforcement

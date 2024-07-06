@@ -9,7 +9,7 @@ Some examples could be, tracking a characters physical state, time of day, or th
 <!--- --8<-- [end:what-is-a-tracked-state] -->
 ## Track a character's state
 
-### 1. Open the character editor
+### Character states are managed in the character editor
 
 The fastest way to get to the character editor for a specific character, is to click on the character's name in the world state.
 
@@ -17,11 +17,7 @@ The fastest way to get to the character editor for a specific character, is to c
 
 Click the :material-book-open-page-variant: **Manage Character** button.
 
-### 2. Add a new state
---8<-- "docs/user-guide/playing/world-editor/characters/states.md:new-state"
-
-!!! info "More about character states"
-    For more information about character states, see the [Character States](/user-guide/playing/world-editor/characters/states) section of the user guide.
+Then follow the instructions at [Tracking a character state](/user-guide/playing/world-editor/characters/states).
 
 ### Inspect the state value
 
@@ -33,9 +29,11 @@ Once the state has been generated, you can see the current value in the world st
 
 When tracking a world state, we mean the state of anything that is not a character. This could be the time of day, the current location, or the state of an object.
 
-### 1. Open the world editor
+### World states are managed in the world editor
 
 In the top navigation bar, click :material-earth-box: **World Editor** tab.
+
+Then follow the instructions at [Tracking a world state](/user-guide/playing/world-editor/world/states).
 
 ## Quickly apply often tracked states via templates
 

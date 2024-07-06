@@ -50,12 +50,12 @@
                                 <v-card-title><v-icon size="small">mdi-robot</v-icon> Conditional auto
                                     pinning</v-card-title>
                                 <v-card-text>
-                                    <v-textarea rows="1" auto-grow v-model="pins[selected].condition"
+                                    <v-textarea rows="1" auto-grow v-model="pins[selected].pin.condition"
                                         label="Condition question prompt for auto pinning"
                                         hint="The condition that must be met for the pin to be active. Prompt will be evaluated by the AI (World State agent) regularly. This should be a question that the AI can answer with a yes or no."
                                         @update:model-value="queueUpdate(selected)">
                                     </v-textarea>
-                                    <v-checkbox hide-details dense v-model="pins[selected].condition_state"
+                                    <v-checkbox hide-details dense v-model="pins[selected].pin.condition_state"
                                         label="Current condition evaluation"
                                         @change="update(selected)"></v-checkbox>
                                 </v-card-text>

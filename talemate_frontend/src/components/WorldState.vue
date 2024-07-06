@@ -64,7 +64,7 @@
                             </v-tooltip>
                             <v-tooltip v-else text="Make this character real, adding it to the scene as an actor.">
                                 <template v-slot:activator="{ props }">
-                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(name)" icon="mdi-chat-plus-outline"></v-btn>
+                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(name)" icon="mdi-human-greeting"></v-btn>
 
                                 </template>
                             </v-tooltip>

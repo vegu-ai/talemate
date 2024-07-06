@@ -92,6 +92,7 @@ YOU MUST ONLY WRITE NEW DIALOGUE FOR {{ talking_character.name.upper() }}.
 {# ACTIVE PINS #}
 <|SECTION:IMPORTANT CONTEXT|>
 {%- for pin in scene.active_pins %}
+### {{ pin.title }}
 {{ pin.time_aware_text|condensed }}
 
 {% endfor %}

@@ -73,6 +73,7 @@ class AnnotatedContextPin(pydantic.BaseModel):
     pin: ContextPin
     text: str
     time_aware_text: str
+    title: str | None = None
 
 
 class ContextPins(pydantic.BaseModel):
@@ -247,9 +248,11 @@ class WorldStateManager:
             else:
                 text = documents[pin.entry_id].raw
                 time_aware_text = str(documents[pin.entry_id])
-
+                
+            title = pin.entry_id.replace(".", " - ")
+            
             annotated_pin = AnnotatedContextPin(
-                pin=pin, text=text, time_aware_text=time_aware_text
+                pin=pin, text=text, time_aware_text=time_aware_text, title=title
             )
 
             _pins[pin.entry_id] = annotated_pin

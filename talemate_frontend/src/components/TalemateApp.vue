@@ -793,6 +793,9 @@ export default {
     sceneStartedLoading() {
       this.loading = true;
       this.sceneActive = false;
+
+      if(this.$refs.sceneMessages)
+        this.$refs.sceneMessages.clear();
     },
 
     getPlayerCharacterName() {

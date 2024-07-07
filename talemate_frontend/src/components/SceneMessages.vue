@@ -94,6 +94,10 @@ export default {
     },
     methods: {
 
+        clear() {
+            this.messages = [];
+        },
+
         createPin(message_id){
             this.getWebsocket().send(JSON.stringify({ type: 'interact', text:'!ws_sap:'+message_id}));
         },
@@ -181,6 +185,12 @@ export default {
                 this.messages = newMessages;
 
                 return
+            }
+
+            if (data.type == "system" && data.id == "scene.looading") {
+                // scene started loaded, clear messages
+                this.messages = [];
+                return;
             }
 
             if (data.type == "message_edited") {

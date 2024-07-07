@@ -82,6 +82,15 @@ async def websocket_endpoint(websocket, path):
                     scene_data = data.get("scene_data")
                     filename = data.get("filename")
                     reset = data.get("reset", False)
+                    
+                    await message_queue.put(
+                        {
+                            "type": "system",
+                            "message": "Loading scene file ...",
+                            "id": "scene.loading",
+                            "status": "loading",
+                        }
+                    )
 
                     async def scene_loading_done():
                         await message_queue.put(

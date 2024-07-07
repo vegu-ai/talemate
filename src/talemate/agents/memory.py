@@ -568,7 +568,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             if "Collection not found" not in str(exc):
                 raise
 
-    def close_db(self, scene):
+    def close_db(self, scene, remove_unsaved_memory:bool = True):
         if not self.db:
             return
 
@@ -590,7 +590,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 log.error(
                     "chromadb agent", error="failed to delete collection", details=exc
                 )
-        elif not scene.saved:
+        elif not scene.saved and remove_unsaved_memory:
             # scene was saved but memory was never persisted
             # so we need to remove the memory from the db
             self._remove_unsaved_memory()

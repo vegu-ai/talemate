@@ -2059,15 +2059,15 @@ class Scene(Emitter):
             # scene has never been saved, don't auto save
             return
 
-        self.set_new_memory_session_id()
 
         if save_as:
             self.immutable_save = False
             memory_agent = self.get_helper("memory").agent
             memory_agent.close_db(self)
             self.memory_id = str(uuid.uuid4())[:10]
-            await memory_agent.set_db()
-            await self.commit_to_memory()
+            await self.commit_to_memory()        
+        
+        self.set_new_memory_session_id()
 
         saves_dir = self.save_dir
 

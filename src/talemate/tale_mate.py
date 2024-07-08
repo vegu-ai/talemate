@@ -1232,17 +1232,29 @@ class Scene(Emitter):
         """
         self.description = description
 
-    def get_intro(self):
+    def get_intro(self) -> str:
         """
         Returns the intro text of the scene
         """
         try:
             player_name = self.get_player_character().name
-            return self.intro.replace("{{user}}", player_name).replace(
+            intro = self.intro.replace("{{user}}", player_name).replace(
                 "{{char}}", player_name
             )
         except AttributeError:
-            return self.intro
+            intro = self.intro
+
+        if intro and (not intro.startswith("*") or not intro.startswith('"')):
+            
+            # if intro is not already italicized or quoted, italicize it
+            
+            intro = f'*{intro}*'
+            
+        else:
+            
+            intro = util.ensure_dialog_format(intro)
+
+        return intro
 
     def history_length(self):
         """

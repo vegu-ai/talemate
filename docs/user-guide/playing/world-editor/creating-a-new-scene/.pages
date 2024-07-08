@@ -1,0 +1,6 @@
+nav:
+    - create-empty-scene.md
+    - create-player-character.md
+    - create-npc.md
+    - test.md
+    - ...

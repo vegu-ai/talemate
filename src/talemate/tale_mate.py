@@ -637,8 +637,9 @@ class Player(Actor):
             
             if act_as == "$narrator":
                 # acting as the narrator
+                message = NarratorMessage(message, source="player")
+                self.scene.push_history(message)  
                 self.scene.narrator_message(message)
-                self.scene.push_history(NarratorMessage(message))  
                 raise ActedAsCharacter()
             elif act_as:
                 # acting as another character
@@ -1448,7 +1449,7 @@ class Scene(Emitter):
         if isinstance(message, CharacterMessage):
             self.history.pop()
             await self._rerun_character_message(message)
-        elif isinstance(message, NarratorMessage):
+        elif isinstance(message, NarratorMessage) and message.source != "player":
             self.history.pop()
             await self._rerun_narrator_message(message)
         elif isinstance(message, DirectorMessage):

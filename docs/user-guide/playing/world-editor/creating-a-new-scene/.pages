@@ -1,6 +1,6 @@
 nav:
-    - create-empty-scene.md
-    - create-player-character.md
-    - create-npc.md
-    - test.md
+    - 1. Create new scene: create-empty-scene.md
+    - 2. Add a player character: create-player-character.md
+    - 3. Add an AI character: create-npc.md
+    - 4. Test your scene: test.md
     - ...

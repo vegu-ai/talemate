@@ -5,7 +5,7 @@
 
 The world state snapshot is a summary of the current scene state. It will contain characters and objects mentioned in the scene.
 
-If there are [tracked states](/user-guide/playing/tracking-a-state) in the scene, they will also be displayed here.
+If there are [tracked states](/user-guide/tracking-a-state) in the scene, they will also be displayed here.
 
 ![world state 1](/img/0.26.0/world-state-snapshot-1.png)
 
@@ -35,7 +35,7 @@ Beneath the description there are additional shortcuts.
 
 ### :material-image-auto-adjust: Character State
 
-If the character has [tracked states](/user-guide/playing/tracking-a-state) they will be displayed at the bottom of the expanded character entry.
+If the character has [tracked states](/user-guide/tracking-a-state) they will be displayed at the bottom of the expanded character entry.
 
 Mouse over to show the current value of the state.
 
@@ -57,7 +57,7 @@ Beneath the description there are additional shortcuts.
 
 ## :material-earth: Tracked world states
 
-If there are [tracked states](/user-guide/playing/tracking-a-state) in the scene, that track objects or other non-character entities, they will be displayed at the bottom of the world state snapshot in a separate section.
+If there are [tracked states](/user-guide/tracking-a-state) in the scene, that track objects or other non-character entities, they will be displayed at the bottom of the world state snapshot in a separate section.
 
 ![world state 5](/img/0.26.0/world-state-snapshot-5.png)
 

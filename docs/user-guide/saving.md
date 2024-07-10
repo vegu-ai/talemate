@@ -3,7 +3,7 @@
 
 ## Saving from the scene
 
-To save while looking at the scene, click the :material-content-save: **Save** button on the right of the [Scene tools](/user-guide/playing/scenario-tools) toolbar.
+To save while looking at the scene, click the :material-content-save: **Save** button on the right of the [Scene tools](/user-guide/scenario-tools) toolbar.
 
 ![Scene save](/img/0.26.0/scene-save.png)
 

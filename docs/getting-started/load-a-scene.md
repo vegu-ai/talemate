@@ -39,7 +39,7 @@ These contain tools to, for example:
 - save the current scene state
 - and more ...
 
-Find out more about the tools in the [Scenario Tools](/user-guide/playing/scenario-tools) section of the user guide.
+Find out more about the tools in the [Scenario Tools](/user-guide/scenario-tools) section of the user guide.
 
 ### World state
 
@@ -51,4 +51,4 @@ Each item can be expanded for more information.
 
 ![getting started world state 2](/img/0.26.0/getting-started-world-state-2.png)
 
-Find out more about the world state in the [World State](/user-guide/playing/world-state) section of the user guide.
+Find out more about the world state in the [World State](/user-guide/world-state) section of the user guide.

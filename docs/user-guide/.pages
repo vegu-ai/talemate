@@ -1,7 +1,4 @@
 nav:
-    - Agents: agents
-    - Clients: clients
-    - Playing: playing
+    - ...
     - Third Party APIs: apis
     - Third Party Integrations: integrations
-    - ...

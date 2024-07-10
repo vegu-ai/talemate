@@ -110,9 +110,9 @@ Allows you to quickly set up tracked character and world states.
 
 !!! info "What is a tracked state?"
 
-    --8<-- "docs/user-guide/playing/tracking-a-state.md:what-is-a-tracked-state"
+    --8<-- "docs/user-guide/tracking-a-state.md:what-is-a-tracked-state"
 
-Please refer to the [World State](/user-guide/playing/world-state) section for more information on how set up custom states to track.
+Please refer to the [World State](/user-guide/world-state) section for more information on how set up custom states to track.
 <!--- --8<-- [start:quick-apply-favorite-state] -->
 Any favorited state will be shown in the :material-earth: world state context menu. *Your list may be different than the one shown here, depending on what you have favorited.*
 

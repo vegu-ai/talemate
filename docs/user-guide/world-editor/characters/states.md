@@ -2,7 +2,7 @@
 
 !!! info "What is a tracked state?"
 
-    --8<-- "docs/user-guide/playing/tracking-a-state.md:what-is-a-tracked-state"
+    --8<-- "docs/user-guide/tracking-a-state.md:what-is-a-tracked-state"
     
 ## Setting up a new state
 In the :material-account-group: **Character** editor select the character you want to add a new state to. 
@@ -43,7 +43,7 @@ By default it will be `10` turns, but you can change this to any number you like
 
 ### Context Attachment Method
 
---8<-- "docs/user-guide/playing/tracking-a-state.md:context-attachment-method"
+--8<-- "docs/user-guide/tracking-a-state.md:context-attachment-method"
 
 ### Additional Instructions
 

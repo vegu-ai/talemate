@@ -55,4 +55,4 @@ You can turn this off by disabling the auto progress setting, either in the game
 
 ![Tool bar](/img/0.26.0/getting-started-ui-element-tools.png)
 
-A set of tools to help you interact with the scenario. Find out more about the various actions in the [Scene Tools](/user-guide/playing/scenario-tools) section of the user guide.
+A set of tools to help you interact with the scenario. Find out more about the various actions in the [Scene Tools](/user-guide/scenario-tools) section of the user guide.

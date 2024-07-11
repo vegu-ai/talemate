@@ -1,0 +1,12 @@
+nav:
+    - Overview: index.md
+    - Activate / Deactivate: deactivate.md
+    - Actor management: actor.md
+    - Attributes: attributes.md
+    - Create new character: create.md
+    - Delete a character: delete.md
+    - Description: description.md
+    - Details: details.md
+    - Import a character: import.md
+    - Tracked states: states.md
+    - ...

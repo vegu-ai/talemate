@@ -16,7 +16,7 @@ A `New character` entry will appear in the list.
 
 ## Generate the player character
 
-In the :materrial-account-plus: **Create New Character** dialog toggle on **Enable AI Generation**.
+In the :material-account-plus: **Create New Character** dialog toggle on **Enable AI Generation**.
 
 Then in the `AI Generation Instructions` field type in something like this:
 
@@ -37,7 +37,7 @@ This will start the generation process, which may take a few moments and then th
 ![world-editor-create-player-character-3](/img/0.26.0/world-editor-create-player-character-3.png)
 
 !!! tip "Related Resources"
-    - [Character Editor](/user-guide/world-editor/characters/index) - learn more about the character editor.
+    - [Character Editor](/user-guide/world-editor/characters) - learn more about the character editor.
     - [Generation Settings](/user-guide/world-editor/generation-settings) - see how you can influence the AI's output.
 
 ## Save the scene

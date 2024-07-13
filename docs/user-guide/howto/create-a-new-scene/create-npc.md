@@ -48,7 +48,7 @@ For our example it generated
 Which seems good enough for our purposes. 
 
 !!! tip "Related Resources"
-    - [Character Editor](/user-guide/world-editor/characters/index) - learn more about the character editor.
+    - [Character Editor](/user-guide/world-editor/characters) - learn more about the character editor.
     - [Generation Settings](/user-guide/world-editor/generation-settings) - see how you can influence the AI's output.
 
 ## Save the scene

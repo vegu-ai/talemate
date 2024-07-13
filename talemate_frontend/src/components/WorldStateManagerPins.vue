@@ -83,7 +83,7 @@
 
                         <br><br>
                         <v-btn color="primary" variant="text" prepend-icon="mdi-plus"
-                            @click.stop="tab = 'contextdb'">Add new pins through the context
+                            @click.stop="loadContextDBEntry()">Add new pins through the context
                             manager.</v-btn>
 
                     </v-alert>
@@ -111,7 +111,7 @@ export default {
         }
     },
     emits:[
-        'require-scene-save'
+        'require-scene-save',
     ],
     props: {
         immutablePins: Object,

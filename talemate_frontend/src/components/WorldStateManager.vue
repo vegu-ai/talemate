@@ -480,7 +480,9 @@ export default {
         loadContextDBEntry(entryId) {
             this.tab = 'contextdb';
             this.$nextTick(() => {
-                this.$refs.contextdb.load(entryId);
+                if(entryId) {
+                    this.$refs.contextdb.load(entryId);
+                }
             });
         },
 

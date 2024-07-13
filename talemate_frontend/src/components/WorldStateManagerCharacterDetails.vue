@@ -65,7 +65,7 @@
                 />
 
 
-                <v-textarea rows="5" max-rows="10" auto-grow
+                <v-textarea rows="5" max-rows="18" auto-grow
                     ref="detail"
                     :color="dirty ? 'info' : ''"
 

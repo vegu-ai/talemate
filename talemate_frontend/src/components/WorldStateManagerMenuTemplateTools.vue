@@ -4,7 +4,7 @@
             <v-icon color="primary" class="mr-1">mdi-plus</v-icon>
             Create
         </v-list-subheader>
-        <v-list-item prepend-icon="mdi-account-plus" @click.stop="$emit('world-state-manager-navigate', 'templates', '$CREATE_GROUP')">
+        <v-list-item prepend-icon="mdi-plus" @click.stop="$emit('world-state-manager-navigate', 'templates', '$CREATE_GROUP')">
             <v-list-item-title>Create Group</v-list-item-title>
             <v-list-item-subtitle class="text-caption">Create a new template group.</v-list-item-subtitle>
         </v-list-item>

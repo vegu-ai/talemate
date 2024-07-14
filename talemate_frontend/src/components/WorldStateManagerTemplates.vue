@@ -51,6 +51,7 @@
             </v-form>
         </v-card-text>
         <v-card-actions v-if="!group.uid">
+            <v-spacer></v-spacer>
             <v-btn rounded="sm" prepend-icon="mdi-cube-scan" color="primary" @click.stop="saveTemplateGroup(true)" >
                 Create Template Group
             </v-btn>
@@ -480,7 +481,7 @@
     <div v-else-if="template === null && group === null">
         <v-card>
             <v-alert type="info" color="grey" variant="text" icon="mdi-cube-scan">
-                Here you can manage templates for the world state manager. Templates are used to faciliate the generation of content for your game. They can be used to define character attributes, character details, writing styles, and automated world or character state tracking.
+                Here you can manage templates for the world state manager. Templates are used to facilitate the generation of content for your game. They can be used to define character attributes, character details, writing styles, and automated world or character state tracking.
                 <br><br>
                 Templates are managed in <span class="text-primary"><v-icon size="small">mdi-group</v-icon> groups.</span> Each group can contain multiple templates. When starting out, start by creating a new group and then add templates to it.
                 <br><br>

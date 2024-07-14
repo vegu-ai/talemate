@@ -1,6 +1,6 @@
 # Settings
 
-![Editor agent settings](../../../img/0.26.0/editor-agent-settings.png)
+![Editor agent settings](/img/0.26.0/editor-agent-settings.png)
 
 ##### Fix exposition
 

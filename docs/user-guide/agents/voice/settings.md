@@ -1,6 +1,6 @@
 # Settings
 
-![Voice agent settings](../../../img/0.26.0/voice-agent-settings.png)
+![Voice agent settings](/img/0.26.0/voice-agent-settings.png)
 
 ##### API
 
@@ -14,7 +14,7 @@ The TTS API to use for voice generation.
 
 The voice to use for narration. Each API will come with its own set of voices.
 
-![Narrator voice](../../../img/0.26.0/voice-agent-select-voice.png)
+![Narrator voice](/img/0.26.0/voice-agent-select-voice.png)
 
 !!! note "Local TTS"
     For local TTS, you will have to provide voice samples yourself. See [Local TTS Instructions](local_tts.md) for more information.

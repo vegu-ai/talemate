@@ -2,7 +2,7 @@
 
 Once Talemate is up and running and you are connected, you will see a notification in the corner instructing you to configured a client.
 
-![no clients](../../img/0.26.0/no-clients.png)
+![no clients](/img/0.26.0/no-clients.png)
 
 Talemate uses client(s) to connect to local or remote AI text generation APIs like koboldcpp, text-generation-webui or OpenAI.
 
@@ -10,19 +10,24 @@ Talemate uses client(s) to connect to local or remote AI text generation APIs li
 
 On the right hand side click the "Add Client" button. If there is no button, you may need to toggle the client options by clicking this button
 
-![open clients](../../img/0.26.0/open-clients.png)
+![open clients](/img/0.26.0/open-clients.png)
 
-Then click the `Add Client` button.
+Then click the **:material-plus-box: ADD CLIENT** button.
 
-![connect a client add client](../../img/0.26.0/connect-a-client-add-client.png)
+![connect a client add client](/img/0.26.0/connect-a-client-add-client.png)
 
-Which will open the client configuration dialog.
+The client configuration modal will appear. Here you can choose the type of client you want to add.
 
 ![connect a client add client modal](/img/0.26.0/connect-a-client-add-client-modal.png)
 
 ## Choose an API / Client Type
 
 We have support for multiple local and remote APIs. You can choose to use one or more of them.
+
+!!! note "Local vs remote"
+    A local API runs on your machine, while a remote API runs on a server somewhere else. 
+
+Select the API you want to use and click through to follow the instructions to configure a client for it:
 
 ##### Remote APIs
 
@@ -56,6 +61,6 @@ You can tell the client is assigned to the agent by checking the tag beneath the
 
 ## Its not assigned!
 
-If for some reason the client is not assigned to the agent, you can manually assign it to all agents by clicking the `Assign to all agents` button.
+If for some reason the client is not assigned to the agent, you can manually assign it to all agents by clicking the **:material-transit-connection-variant: Assign to all agents** button.
 
 ![Connect a client assign to all agents](/img/0.26.0/connect-a-client-assign-to-all-agents.png)

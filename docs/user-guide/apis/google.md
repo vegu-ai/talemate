@@ -6,9 +6,9 @@ Please follow their [instructions for setup](https://cloud.google.com/vertex-ai/
 
 Once you have downloaded the credentials, copy the JSON file into the talemate directory. You can rename it to something that's easier to remember, like `creds.json`.
 
-![Open settings](../../img/0.26.0/open-settings.png)
+![Open settings](/img/0.26.0/open-settings.png)
 
-![Set Google creds](../../img/0.26.0/google-settings.png)
+![Set Google creds](/img/0.26.0/google-settings.png)
 
 Then click `Save` to save your changes.
 

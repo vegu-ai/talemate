@@ -1,0 +1,5 @@
+nav:
+    - Welcome: index.md
+    - Getting started: getting-started
+    - User guide: user-guide
+    - Developer guide: dev

@@ -1,6 +1,6 @@
 # Load a scenario
 
-Once you've set up a client and assigned it to all the agents, you will be presented with the `Home` screen. From here, you can load talemate scenarios and character cards.
+Once you've set up a client and assigned it to all the agents, you will be presented with the `Home` screen. From here, you can load talemate scenarios and upload character cards.
 
 To load the introductory `Infinity Quest` scenario, simply click on its entry in the `Quick Load` section.
 
@@ -18,7 +18,7 @@ Spoken words should go into `"` and actions should be written in `*`. Talemate w
 
 ![Getting started first interaction](/img/0.26.0/getting-started-first-interaction.png)
 
-Once sent, its not the AI's turn to respond, give it a moment, depending on the service and model selected it can take a a moment.
+Once sent, its now the AI's turn to respond - depending on the service and model selected this can take a a moment.
 
 ![Getting started first ai response](/img/0.26.0/getting-started-first-ai-response.png)
 
@@ -39,7 +39,7 @@ These contain tools to, for example:
 - save the current scene state
 - and more ...
 
-Find out more about the tools in the [Scenario Tools](/user-guide/scenario-tools) section of the user guide.
+A full guide can be found in the [Scenario Tools](/user-guide/scenario-tools) section of the user guide.
 
 ### World state
 

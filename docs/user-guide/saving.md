@@ -28,4 +28,4 @@ Some scenes start out with a locked save file. This is so that this particular s
 
 
 !!! info
-    Alternatively you can also unlock the save file through the [Scene editor](/user-guide/world-editor/scene-editor).
+    Alternatively you can also unlock the save file through the [Scene editor](/user-guide/world-editor/scene/settings) found in **:material-earth-box: World Editor** :material-arrow-right: **:material-script: Scene** :material-arrow-right: **:material-cogs: Settings**.

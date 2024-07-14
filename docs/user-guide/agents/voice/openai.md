@@ -2,13 +2,13 @@
 
 If you are using OpenAI for voice generation, you will need to provide an API key.
 
-![no api token](../../../img/0.26.0/no-api-token.png)
+![no api token](/img/0.26.0/no-api-token.png)
 
-See the [OpenAI API setup](../../apis/openai.md) for instructions on how to set up the API key.
+See the [OpenAI API setup](/apis/openai.md) for instructions on how to set up the API key.
 
 ## Settings
 
-![Voice agent openai settings](../../../img/0.26.0/voice-agent-openai-settings.png)
+![Voice agent openai settings](/img/0.26.0/voice-agent-openai-settings.png)
 
 ##### Model
 

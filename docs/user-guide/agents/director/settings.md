@@ -1,6 +1,6 @@
 # Settings
 
-![Director agent settings](../../../img/0.26.0/director-agent-settings.png)
+![Director agent settings](/img/0.26.0/director-agent-settings.png)
 
 ##### Direct
 

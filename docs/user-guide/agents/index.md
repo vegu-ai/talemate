@@ -12,7 +12,7 @@ Used for creative tasks like scene and character generation
 
 ### Director
 
-Will eventually become a Game Master type agent. Right now used for some very rudimentary scene direction. Allows complex scene control via the [Scoped Scene API](../../dev/scoped-scene-api/index.md)
+Will eventually become a Game Master type agent. Right now used for some very rudimentary scene direction. Allows complex scene control via the scoped api scripting.
 
 ### Long-term Memory
 

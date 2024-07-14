@@ -95,7 +95,7 @@ Will narrate the current state of a character, without progressing the story.
 Opens a context menu with options to advance time in the scene, ranging from 5 minutes to 10 years.
 
 
-By default the [Narrator Agent](/user-guide/agents/narrator) will narrate the time jump, but you can disable this in the [Narrator Agent Settings](/user-guide/agents/narrator).
+By default the [Narrator Agent](/user-guide/agents/narrator) will narrate the time jump, but you can disable this in the [Narrator Agent Settings](/user-guide/agents/narrator/settings/).
 
 
 !!! note "Summarization"
@@ -219,7 +219,7 @@ Will generate a stable diffusion prompt and send it to the visualizer agent to g
 
 The generated image can be viewed by clicking on the :material-image-multiple-outline: **New images** button on the top right of the screen.
 
-![Images ready](../../../img/0.20.0/visualze-new-images.png)
+![Images ready](/img/0.20.0/visualze-new-images.png)
 
 !!! note "Early Development"
     At this early stage of development, all you can do with this generated image is to view it. Future versions will allow you to set it as the background image for the scene.

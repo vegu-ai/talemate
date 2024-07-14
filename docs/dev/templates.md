@@ -1,4 +1,7 @@
-# Template Overrides in Talemate
+# Template Overrides
+
+!!! warning "Old documentation"
+    This is old documentation and needs to be updated, however may still contain useful information.
 
 ## Introduction to Templates
 
@@ -23,9 +26,9 @@ The creator agent templates allow for the creation of new characters within the 
 
 ### Example Templates
 
-- [Character Attributes Human Template](src/talemate/prompts/templates/creator/character-attributes-human.jinja2)
-- [Character Details Human Template](src/talemate/prompts/templates/creator/character-details-human.jinja2)
-- [Character Example Dialogue Human Template](src/talemate/prompts/templates/creator/character-example-dialogue-human.jinja2)
+- `src/talemate/prompts/templates/creator/character-attributes-human.jinja2`
+- `src/talemate/prompts/templates/creator/character-details-human.jinja2`
+- `src/talemate/prompts/templates/creator/character-example-dialogue-human.jinja2`
 
 These example templates can serve as a guide for users to create their own custom templates for the character creator.
 

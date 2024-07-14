@@ -13,6 +13,8 @@ Welcome to the usage and development documentation for [Talemate](https://github
 - [Linux](getting-started/installation/linux.md)
 - [Docker](getting-started/installation/docker.md)
 
-## Advanced topics
+### First steps
 
-## Developers
+- [Connect a client](getting-started/connect-a-client.md)
+- [Load a scene](getting-started/load-a-scene.md)
+- [Interact with the scene](user-guide/interacting)

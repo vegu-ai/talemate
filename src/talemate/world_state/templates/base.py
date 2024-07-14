@@ -206,9 +206,8 @@ class Group(pydantic.BaseModel):
         return None 
     
     def delete(self, path: str = TEMPLATE_PATH):
-        path = os.path.join(path, self.filename)
-        if os.path.exists(path):
-            os.remove(path)
+        if os.path.exists(self.path):
+            os.remove(self.path)
             
     def update(self, group:"Group", save: bool = True, ignore_templates: bool = True):
         self.author = group.author

@@ -26,3 +26,28 @@
 
     Some examples could be, tracking a characters physical state, time of day, or the current location of a character.
 <!--- --8<-- [end:tracked_state] -->
+
+<!--- --8<-- [start:spice_collections] -->
+!!! tip "What are spice collections?"
+    Spice collections are used to define a set of instructions that can be applied during AI directed generation of content. They are used to add a bit of randomness or unexpectedness. 
+    
+    A template must explicitly support spice to be able to use a spice collection.
+
+    Find out more about how to use spice collections in the [Generation settings](/user-guide/world-editor/generation-settings) section.
+<!--- --8<-- [end:spice_collections] -->
+
+<!--- --8<-- [start:writing_styles] -->
+!!! tip "What are writing styles?"
+    Writing style templates are used to define a writing style that can be applied to the generated content. They can be used to add a specific flavor or tone. 
+    
+    A template must explicitly support writing styles to be able to use a writing style template.
+
+    Find out more about how to use writing styles in the [Generation settings](/user-guide/world-editor/generation-settings) section.
+<!--- --8<-- [end:writing_styles] -->
+
+<!--- --8<-- [start:what_is_a_tracked_state] -->
+!!! info "What is a tracked state?"
+    Tracked states occassionally re-inforce the state of the world or a character. This re-inforcement is kept in the context sent to the AI during generation, giving it a better understanding about the current truth of the world.
+
+    Some examples could be, tracking a characters physical state, time of day, or the current location of a character.
+<!--- --8<-- [end:what_is_a_tracked_state] -->

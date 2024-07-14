@@ -329,6 +329,12 @@ class Agent(ABC):
                     agent=self.agent_type,
                     exc=fut.exception(),
                 )
+                
+                error_handler = getattr(self, "on_background_processing_error", None)
+                
+                if error_handler:
+                    await error_handler(fut.exception())
+                
                 await self.emit_status()
                 return
 

@@ -398,7 +398,10 @@ export default {
                 if(message.data.context.character_name === this.character.name) {
                     this.loadCharacter(this.character.name);
                 }
-            }
+            } 
+            else if (message.type === 'image_generation_failed'){
+                this.coverImageBusy = false;
+            } 
             else if (message.type !== 'world_state_manager') {
                 return;
             }

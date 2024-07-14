@@ -230,6 +230,14 @@ class VisualBase(Agent):
         if prev_ready:
             await self.emit_status()
         
+    async def on_background_processing_error(self, error):
+        emit(
+            "image_generation_failed",
+            websocket_passthrough=True,
+            data={"error": str(error)},
+        )
+        emit("status", "Image generation failed.", status="error")
+            
 
     async def ready_check(self):
         if not self.enabled:

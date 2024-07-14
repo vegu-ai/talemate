@@ -35,6 +35,7 @@ MessageEdited = signal("message_edited")
 ConfigSaved = signal("config_saved")
 
 ImageGenerated = signal("image_generated")
+ImageGenerationFailed = signal("image_generation_failed")
 
 AutocompleteSuggestion = signal("autocomplete_suggestion")
 
@@ -67,6 +68,7 @@ handlers = {
     "config_saved": ConfigSaved,
     "status": StatusMessage,
     "image_generated": ImageGenerated,
+    "image_generation_failed": ImageGenerationFailed,
     "autocomplete_suggestion": AutocompleteSuggestion,
     "spice_applied": SpiceApplied,
 }

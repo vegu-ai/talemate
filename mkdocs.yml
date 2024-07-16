@@ -1,4 +1,5 @@
 site_name: Talemate Documentation
+site_url: https://vegu-ai.github.io/talemate
 theme:
   features:
     - content.code.copy

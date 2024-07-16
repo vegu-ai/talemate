@@ -39,4 +39,5 @@ Generic OpenAI api implementations (tested and confirmed working):
 
 ## Documentation
 
-Please refer to the new [User Guide](#) for detailed information on how to use Talemate.
+- [Installation and Getting started](https://vegu-ai.github.io/talemate/)
+- [User Guide](https://vegu-ai.github.io/talemate/)

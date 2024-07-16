@@ -6,11 +6,11 @@
 
 If you wish to alter the inference parameters sent with the generation requests for text-generation you can do in the settings interface.
 
-![open settings](/img/0.26.0/open-settings.png)
+![open settings](/talemate/img/0.26.0/open-settings.png)
 
 Navigate to the :material-tune: **Presets** tab then select the preset you wish to edit.
 
-![selected preset](/img/0.26.0/inference-presets-1.png)
+![selected preset](/talemate/img/0.26.0/inference-presets-1.png)
 
 !!! warning
     Not all clients support all parameters, and generally it is assumed that the client implementation handles the parameters in a sane way, especially if values are passed for all of them. All presets are used and will be selected depending on the action the agent is performing. If you don't know what these mean, it is recommended to leave them as they are.

@@ -1,6 +1,6 @@
 # Settings
 
-![Conversation agent settings](/img/0.26.0/conversation-agent-settings.png)
+![Conversation agent settings](/talemate/img/0.26.0/conversation-agent-settings.png)
 
 !!! note "Inference perameters"
     Inference parameters are NOT configured through any individual agent.

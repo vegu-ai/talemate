@@ -13,7 +13,7 @@ The search will look for the entered text based on relevancy using embeddings. W
 
 See [Memory Agent - ChromaDB Setup](/user-guide/agents/memory/chromadb) for more information on how to improve the search accuracy.
 
-![world editor history](/img/0.26.0/world-editor-history.png)
+![world editor history](/talemate/img/0.26.0/world-editor-history.png)
 
 ## Adding an entry
 

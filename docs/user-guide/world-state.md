@@ -7,7 +7,7 @@ The world state snapshot is a summary of the current scene state. It will contai
 
 If there are [tracked states](/user-guide/tracking-a-state) in the scene, they will also be displayed here.
 
-![world state 1](/img/0.26.0/world-state-snapshot-1.png)
+![world state 1](/talemate/img/0.26.0/world-state-snapshot-1.png)
 
 Characters are indicated by the :material-account: icon, objects by the :material-cube: icon.
 
@@ -19,7 +19,7 @@ Each character entry will display the current emotional state next to the charac
 
 When expanded it will also show a description of what the character is currently doing.
 
-![world state 2](/img/0.26.0/world-state-snapshot-2.png)
+![world state 2](/talemate/img/0.26.0/world-state-snapshot-2.png)
 
 ### Action shortcuts
 
@@ -39,7 +39,7 @@ If the character has [tracked states](/user-guide/tracking-a-state) they will be
 
 Mouse over to show the current value of the state.
 
-![world state 3](/img/0.26.0/world-state-snapshot-3.png)
+![world state 3](/talemate/img/0.26.0/world-state-snapshot-3.png)
 
 ## :material-cube: Objects
 
@@ -47,7 +47,7 @@ Objects currently do not have an active managed state in Talemate, however the s
 
 Like characters you can click on the object to expand it and see more information.
 
-![world state 4](/img/0.26.0/world-state-snapshot-4.png)
+![world state 4](/talemate/img/0.26.0/world-state-snapshot-4.png)
 
 ### Action shortcuts
 
@@ -59,7 +59,7 @@ Beneath the description there are additional shortcuts.
 
 If there are [tracked states](/user-guide/tracking-a-state) in the scene, that track objects or other non-character entities, they will be displayed at the bottom of the world state snapshot in a separate section.
 
-![world state 5](/img/0.26.0/world-state-snapshot-5.png)
+![world state 5](/talemate/img/0.26.0/world-state-snapshot-5.png)
 
 ## :material-refresh: Force Update
 

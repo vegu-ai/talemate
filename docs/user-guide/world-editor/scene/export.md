@@ -6,7 +6,7 @@ Currently only talemate format is supported, but we also want to support charact
 
 Exported scenes can be lupoaded into Talemate from the :material-home: Home screen.
 
-![World editor scene export 1](/img/0.26.0/world-editor-scene-export-1.png)
+![World editor scene export 1](/talemate/img/0.26.0/world-editor-scene-export-1.png)
 
 ### Export format
 

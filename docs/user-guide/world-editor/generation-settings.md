@@ -4,7 +4,7 @@ Through out the :material-earth-box: **World Editor** you will find several oppo
 
 On top of the world editor interface you can configure some settings for this type of content generation.
 
-![world editor generation settings 1](/img/0.26.0/world-editor-generation-settings-1.png)
+![world editor generation settings 1](/talemate/img/0.26.0/world-editor-generation-settings-1.png)
 
 ## Applying a writing style
 
@@ -12,7 +12,7 @@ Writing styles are managed through [templates](/user-guide/world-editor/template
 
 Once there is a writing style template you can select it from the dropdown list.
 
-![world editor generation settings 1](/img/0.26.0/world-editor-generation-settings-2.png)
+![world editor generation settings 1](/talemate/img/0.26.0/world-editor-generation-settings-2.png)
 
 ## Applying spice
 
@@ -22,7 +22,7 @@ Spices are managed through [templates](/user-guide/world-editor/templates/).
 
 Once there is a spice template you can select it from the dropdown list.
 
-![world editor generation settings 1](/img/0.26.0/world-editor-generation-settings-3.png)
+![world editor generation settings 1](/talemate/img/0.26.0/world-editor-generation-settings-3.png)
 
 By default it will set a `10%` chance for spice to be applied to the generated content. You can click the :material-minus: and :material-plus: buttons to adjust the spice chance.
 

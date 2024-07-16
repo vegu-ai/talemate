@@ -6,7 +6,7 @@ All templates are stored in groups. Each group can contain multiple templates an
 
 To create a group, find the **:material-plus: Create Group** button in the left sidebar and click it. 
 
-![world editor templates create group 1](/img/0.26.0/world-editor-templates-create-group-1.png)
+![world editor templates create group 1](/talemate/img/0.26.0/world-editor-templates-create-group-1.png)
 
 In the form that appears, enter a name, author, and description for the group.
 
@@ -24,7 +24,7 @@ A longer description of the group. What templates are in it? What is the purpose
 
 Once you've filled out the form, click the **:material-cube-scan: Create Template Group** button to create the group.
 
-![world editor templates create group 2](/img/0.26.0/world-editor-templates-create-group-2.png)
+![world editor templates create group 2](/talemate/img/0.26.0/world-editor-templates-create-group-2.png)
 
 ## Deleting a group
 

@@ -8,7 +8,7 @@
 In the :material-earth: **World** editor, in the left panel, click the :material-image-auto-adjust: **New State Reinforcement** button.
 
 <!-- --8<-- [start:new-state] -->
-![World states tab](/img/0.26.0/world-editor-world-state-new-1.png)
+![World states tab](/talemate/img/0.26.0/world-editor-world-state-new-1.png)
 
 ### Question or State description
 
@@ -54,11 +54,11 @@ This will create the state, but also immediately generate its current value.
 This may take a moment, once it's done you will see the new state in the list of states and the current value in the world state.
 
 
-![Generated state](/img/0.26.0/world-editor-world-state-new-2.png)
+![Generated state](/talemate/img/0.26.0/world-editor-world-state-new-2.png)
 
 !!! note "Tracked world states consist of the state and the world info"
 
-    ![Generated state](/img/0.26.0/world-editor-world-list.png)
+    ![Generated state](/talemate/img/0.26.0/world-editor-world-list.png)
 
     It has generated both a state entry (controlling how the state is tracked) and a world info entry holding the current value of the state.
 <!-- --8<-- [end:new-state] -->

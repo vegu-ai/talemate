@@ -10,7 +10,7 @@ Fist, if you have not done so, [create a template group](/user-guide/world-edito
 
 Then select the group you want to add the template to and click the **:material-plus: Create Template** button.
 
-![world editor templates create detail template 1](/img/0.26.0/world-editor-templates-create-attribute-template-1.png)
+![world editor templates create detail template 1](/talemate/img/0.26.0/world-editor-templates-create-attribute-template-1.png)
 
 
 Next enter a template name and select **Character detail** as a template type.
@@ -25,7 +25,7 @@ Specify the type of template you are creating. In this case, select **Character 
 
 Once the template type is selected, the form will update to show the fields required for a character detail template.
 
-![world editor templates create detail template 2](/img/0.26.0/world-editor-templates-create-detail-template-2.png)
+![world editor templates create detail template 2](/talemate/img/0.26.0/world-editor-templates-create-detail-template-2.png)
 
 ### Question / Statement
 
@@ -83,7 +83,7 @@ Mark the template as a favorite to make it easier to find in the list of templat
 
 Favorited templates will be shown at the top of the list of templates.
 
-![world editor templates create detail template 3](/img/0.26.0/world-editor-templates-create-detail-template-3.png)
+![world editor templates create detail template 3](/talemate/img/0.26.0/world-editor-templates-create-detail-template-3.png)
 
 ## Create the template
 
@@ -93,13 +93,13 @@ When you have filled out the form, click the **:material-cube-scan: Create Templ
 
 The template will be added to the group and will be available for use in the [Character Editor - Details](/user-guide/world-editor/characters/details) section of the World Editor.
 
-![world editor templates create detail template 4](/img/0.26.0/world-editor-templates-create-detail-template-4.png)
+![world editor templates create detail template 4](/talemate/img/0.26.0/world-editor-templates-create-detail-template-4.png)
 
 And when we click it, the AI will generate content based on the template.
 
-![world editor templates create detail template 5](/img/0.26.0/world-editor-templates-create-detail-template-5.png)
+![world editor templates create detail template 5](/talemate/img/0.26.0/world-editor-templates-create-detail-template-5.png)
 
-![world editor templates create detail template 6](/img/0.26.0/world-editor-templates-create-detail-template-6.png)
+![world editor templates create detail template 6](/talemate/img/0.26.0/world-editor-templates-create-detail-template-6.png)
 
 ## Editing a character detail template
 

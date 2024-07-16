@@ -16,7 +16,7 @@ Once your ComfyUI API is running (check with your browser) you can set the Visua
 
 ## Settings
 
-![Visual agent comfyui settings](/img/0.26.0/visual-agent-comfyui-settings.png)
+![Visual agent comfyui settings](/talemate/img/0.26.0/visual-agent-comfyui-settings.png)
 
 ##### API URL
 
@@ -46,4 +46,4 @@ When creating custom workflows for ideal compatibility with Talemate, ensure the
 - A `ClipTextEncode` node named `Talemate Negative Prompt`
 - A `SaveImage` node at the end of the workflow.
 
-![ComfyUI Base workflow example](/img/0.20.0/comfyui-base-workflow.png)
+![ComfyUI Base workflow example](/talemate/img/0.20.0/comfyui-base-workflow.png)

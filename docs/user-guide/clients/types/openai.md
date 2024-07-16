@@ -2,7 +2,7 @@
 
 If you want to add an OpenAI client, change the `Client Type` to `OpenAI`.
 
-![Client OpenAI](/img/0.26.0/client-openai.png)
+![Client OpenAI](/talemate/img/0.26.0/client-openai.png)
 
 Click `Save` to add the client.
 
@@ -10,19 +10,19 @@ Click `Save` to add the client.
 
 The client should appear in the clients list. If you haven't setup OpenAI before, you will see a warning that the API key is missing.
 
-![Client openai no api key](/img/0.26.0/client-openai-no-api-key.png)
+![Client openai no api key](/talemate/img/0.26.0/client-openai-no-api-key.png)
 
 Click the `SET API KEY` button. This will open the api settings window where you can add your OpenAI API key.
 
 For additional instructions on obtaining and setting your OpenAI API key, see [OpenAI API instructions](/user-guide/apis/openai/).
 
-![OpenAI settings](/img/0.26.0/openai-settings.png)
+![OpenAI settings](/talemate/img/0.26.0/openai-settings.png)
 
 Click `Save` and after a moment the client should have a green dot next to it, indicating that it is ready to go.
 
 ### Ready to use
 
-![Client OpenAI Ready](/img/0.26.0/client-openai-ready.png)
+![Client OpenAI Ready](/talemate/img/0.26.0/client-openai-ready.png)
 
 ### Settings
 

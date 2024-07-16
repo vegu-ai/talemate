@@ -1,6 +1,6 @@
 # Settings
 
-![Visual agent settings](/img/0.26.0/visual-agent-settings.png)
+![Visual agent settings](/talemate/img/0.26.0/visual-agent-settings.png)
 
 ##### Client
 

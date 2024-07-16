@@ -13,7 +13,7 @@ Some examples could be, tracking a characters physical state, time of day, or th
 
 The fastest way to get to the character editor for a specific character, is to click on the character's name in the world state.
 
-![track-a-state-character-1](/img/0.26.0/track-a-state-character-1.png)
+![track-a-state-character-1](/talemate/img/0.26.0/track-a-state-character-1.png)
 
 Click the :material-book-open-page-variant: **Manage Character** button.
 
@@ -23,7 +23,7 @@ Then follow the instructions at [Tracking a character state](/user-guide/world-e
 
 Once the state has been generated, you can see the current value in the world state entry for the character.
 
-![track-a-state-character-2](/img/0.26.0/track-a-state-character-state-inspect.png)
+![track-a-state-character-2](/talemate/img/0.26.0/track-a-state-character-state-inspect.png)
 
 ## Track a world state
 

@@ -2,7 +2,7 @@
 
 The `Settings` tab allows you to configure various settings for the scene.
 
-![World editor scene settings 1](/img/0.26.0/world-editor-scene-settings-1.png)
+![World editor scene settings 1](/talemate/img/0.26.0/world-editor-scene-settings-1.png)
 
 ### Locked save file
 

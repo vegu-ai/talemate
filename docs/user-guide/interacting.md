@@ -8,7 +8,7 @@ Whenever the input element at the bottom of the screen is available, it means it
 
 By default the main player character will be selected, but you can act as any active character or even the narrator. [See the section on acting as another character](#acting-as-another-character).
 
-![Dialogue input](/img/0.26.0/interacting-input-request.png)
+![Dialogue input](/talemate/img/0.26.0/interacting-input-request.png)
 
 Write a message and hit `enter` to send it to the scene.
 
@@ -30,9 +30,9 @@ You can use linebreaks in your messages, to do so press `shift+enter` to create 
 
 Version `0.26` introduces a new `act-as` feature, which allows you to act as another character in the scene. This can be done by hitting the `tab` key while the input is focused. It will cycle through all active characters and finally the narrator before returning to the main player character.
 
-![Dialogue input - act as other character](/img/0.26.0/interacting-input-act-as-character.png)
+![Dialogue input - act as other character](/talemate/img/0.26.0/interacting-input-act-as-character.png)
 
-![Dialogue input - act as narrator](/img/0.26.0/interacting-input-act-as-narrator.png)
+![Dialogue input - act as narrator](/talemate/img/0.26.0/interacting-input-act-as-narrator.png)
 
 ### Autocomplete
 
@@ -49,10 +49,10 @@ By default Talemate will give the next turn to the AI after you have sent a mess
 
 You can turn this off by disabling the auto progress setting, either in the game settings or with the shortcut by the interaction input.
 
-![auto progress off](/img/0.26.0/auto-progress-off.png)
+![auto progress off](/talemate/img/0.26.0/auto-progress-off.png)
 
 ## Scene Actions
 
-![Tool bar](/img/0.26.0/getting-started-ui-element-tools.png)
+![Tool bar](/talemate/img/0.26.0/getting-started-ui-element-tools.png)
 
 A set of tools to help you interact with the scenario. Find out more about the various actions in the [Scene Tools](/user-guide/scenario-tools) section of the user guide.

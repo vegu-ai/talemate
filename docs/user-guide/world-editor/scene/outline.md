@@ -6,7 +6,7 @@ Click on the :material-earth-box: **World Editor** to open the world editor.
 
 In the world editor the :material-script: **Scene** tab should be selected, if not, click on it.
 
-![World editor scene outline 1](/img/0.26.0/world-editor-scene-outline-1.png)
+![World editor scene outline 1](/talemate/img/0.26.0/world-editor-scene-outline-1.png)
 
 ### Title
 

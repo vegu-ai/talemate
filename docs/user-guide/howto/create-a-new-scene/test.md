@@ -12,8 +12,8 @@ Exit the :material-earth-box: **World Editor** by clicking on `The Forgotten Hou
 
 Currently you are probably still in the `Creative` mode, which is not what we want. Click on the :material-gamepad-square: button near the bottom of the screen to switch to `Play` mode.
 
-![toggle game mode](/img/0.26.0/toggle-game-mode.png)
+![toggle game mode](/talemate/img/0.26.0/toggle-game-mode.png)
 
 If everything is set up correctly, the scene will now be active and you should be in control of Annabelle.
 
-![create-new-scene-test](/img/0.26.0/create-new-scene-test.png)
+![create-new-scene-test](/talemate/img/0.26.0/create-new-scene-test.png)

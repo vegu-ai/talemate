@@ -10,7 +10,7 @@ Allows you to use Talemate with a service that exposes an openai-like API.
 
 If you want to add a DeepInfra client, change the `Client Type` to `DeepInfra`.
 
-![Client DeepInfra](/img/0.26.0/client-deepinfra.png)
+![Client DeepInfra](/talemate/img/0.26.0/client-deepinfra.png)
 
 ### Settings
 
@@ -64,7 +64,7 @@ Click `Save` to add the client.
 
 Once it is added, the client should appear in the clients list and should display the currently loaded model.
 
-![Client DeepInfra Ready](/img/0.26.0/client-deepinfra-ready.png)
+![Client DeepInfra Ready](/talemate/img/0.26.0/client-deepinfra-ready.png)
 
 ### Common issues
 

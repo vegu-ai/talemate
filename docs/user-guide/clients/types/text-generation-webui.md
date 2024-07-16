@@ -6,7 +6,7 @@
 
 If you want to add an Text-Generation-WebUI client, change the `Client Type` to `Text-Generation-WebUI (ooba)`.
 
-![Client Text-Generation-WebUI](/img/0.26.0/client-ooba.png)
+![Client Text-Generation-WebUI](/talemate/img/0.26.0/client-ooba.png)
 
 !!! note "Should work out of the box with a local Text-Generation-WebUI instance"
     The default values should work with a local Text-Generation-WebUI instance if you have followed their setup instructions and are running the server on the default port.
@@ -17,7 +17,7 @@ Click `Save` to add the client.
 
 Once it is added, the client should appear in the clients list and should display the currently loaded model.
 
-![Client Text-Generation-WebUI Ready](/img/0.26.0/client-ooba-ready.png)
+![Client Text-Generation-WebUI Ready](/talemate/img/0.26.0/client-ooba-ready.png)
 
 ### Settings
 
@@ -45,12 +45,12 @@ Make sure the [correct prompt template is assigned](/user-guide/clients/prompt-t
 
 #### No model loaded
 
-![Client ooba no model loaded](/img/0.26.0/client-ooba-no-model-loaded.png)
+![Client ooba no model loaded](/talemate/img/0.26.0/client-ooba-no-model-loaded.png)
 
 If your client displays a `No model loaded` message, it means that you haven't loaded a model yet. Go to your Text-Generation-WebUI instance and load a model.
 
 #### Could not connect
 
-![Client ooba could not connect](/img/0.26.0/client-ooba-could-not-connect.png)
+![Client ooba could not connect](/talemate/img/0.26.0/client-ooba-could-not-connect.png)
 
 This means that either your Text-Generation-WebUI instance is not running, the url is incorrect, or the connection is somehow blocked. (For example, by a firewall)

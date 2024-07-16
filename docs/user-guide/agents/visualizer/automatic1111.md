@@ -15,7 +15,7 @@ Once your AUTOAMTIC1111 API is running (check with your browser) you can set the
 
 ## Settings
 
-![Visual agent automatic1111 settings](/img/0.26.0/visual-agent-a1111-settings.png)
+![Visual agent automatic1111 settings](/talemate/img/0.26.0/visual-agent-a1111-settings.png)
 
 ##### API URL
 

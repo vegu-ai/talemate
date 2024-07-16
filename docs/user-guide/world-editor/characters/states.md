@@ -7,12 +7,12 @@
 ## Setting up a new state
 In the :material-account-group: **Character** editor select the character you want to add a new state to. 
 
-![Select character](/img/0.26.0/world-editor-character-select.png)
+![Select character](/talemate/img/0.26.0/world-editor-character-select.png)
 
 <!-- --8<-- [start:new-state] -->
 Then select the :material-image-auto-adjust: **States** tab.
 
-![Character states tab](/img/0.26.0/world-editor-character-state-new-1.png)
+![Character states tab](/talemate/img/0.26.0/world-editor-character-state-new-1.png)
 
 Next find the `New state` input field in the upper right and enter the name of the new state.
 
@@ -22,7 +22,7 @@ Next find the `New state` input field in the upper right and enter the name of t
 
 For this example we will use "What is Kaira's mental state?".
 
-![New state input](/img/0.26.0/world-editor-character-state-new-2.png)
+![New state input](/talemate/img/0.26.0/world-editor-character-state-new-2.png)
 
 Hit `enter` to create the new state.
 
@@ -30,7 +30,7 @@ This will not only add the state, but also begin immediately generating its curr
 
 Once the generation is complete, you will see the new state in the list of states.
 
-![New state generated](/img/0.26.0/world-editor-character-state-new-3.png)
+![New state generated](/talemate/img/0.26.0/world-editor-character-state-new-3.png)
 <!-- --8<-- [end:new-state] -->
 
 ## Editing the state properties
@@ -53,7 +53,7 @@ For our example, if we wanted it to particularly track how scared Kaira is, we c
 
 `Track how scared Kaira is. Is she calm or panicking?`
 
-![Generation instructions](/img/0.26.0/world-editor-character-state-new-4.png)
+![Generation instructions](/talemate/img/0.26.0/world-editor-character-state-new-4.png)
 
 Then click the :material-refresh: **Refresh State** button to re-generate the state with the new instructions.
 

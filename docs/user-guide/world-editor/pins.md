@@ -11,7 +11,7 @@ Entries are pinned through the [Context DB](/user-guide/world-editor/context-db)
 
 Find the entry you want to pin and click the :material-pin: **Pin** button.
 
-![world editor pins](/img/0.26.0/world-editor-pins.png)
+![world editor pins](/talemate/img/0.26.0/world-editor-pins.png)
 
 ## Set pin active or inactive
 

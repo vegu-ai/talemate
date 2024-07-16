@@ -2,7 +2,7 @@
 
 **Actor management** lets you define acting and speaking patterns for the character via dialogue instructions and examples. This is only available for AI characters.
 
-![World editor characters actor 1](/img/0.26.0/world-editor-characters-actor-1.png)
+![World editor characters actor 1](/talemate/img/0.26.0/world-editor-characters-actor-1.png)
 
 ### Dialogue Instructions
 
@@ -37,4 +37,4 @@ Here it can be especially helpful to run the generation with instructions. To do
 
 A small window will pop up where you can provide the instructions for the AI to follow.
 
-![World editor characters generate dialogue example](/img/0.26.0/world-editor-characters-actor-generate-dialogue-example.png)
+![World editor characters generate dialogue example](/talemate/img/0.26.0/world-editor-characters-actor-generate-dialogue-example.png)

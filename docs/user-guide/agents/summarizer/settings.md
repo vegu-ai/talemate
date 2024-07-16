@@ -1,6 +1,6 @@
 # Settings
 
-![Summarizer agent settings](/img/0.26.0/summarizer-agent-settings.png)
+![Summarizer agent settings](/talemate/img/0.26.0/summarizer-agent-settings.png)
 
 ##### Summarize to long term memory archive
 

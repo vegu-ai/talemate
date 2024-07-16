@@ -1,6 +1,6 @@
 # Settings
 
-![Narrator agent settings](/img/0.26.0/narrator-agent-settings.png)
+![Narrator agent settings](/talemate/img/0.26.0/narrator-agent-settings.png)
 
 ##### Client
 

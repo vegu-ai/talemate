@@ -6,7 +6,7 @@ Then click on the :material-account-plus: **Create Character** button on the lef
 
 A `New character` entry will appear in the list.
 
-![world-editor-create-player-character-1](/img/0.26.0/world-editor-create-player-character-1.png)
+![world-editor-create-player-character-1](/talemate/img/0.26.0/world-editor-create-player-character-1.png)
 
 ### Enable AI Generation
 

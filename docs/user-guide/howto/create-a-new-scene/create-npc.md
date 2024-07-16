@@ -21,11 +21,11 @@ Then in the `AI Generation Instructions` field type in something like
 
 Then leave everything else as is and click the **Create Character** button.
 
-![world-editor-create-npc-1](/img/0.26.0/world-editor-create-npc-1.png)
+![world-editor-create-npc-1](/talemate/img/0.26.0/world-editor-create-npc-1.png)
 
 This will start the generation process, which may take a few moments and then the character will be added to the scene.
 
-![world-editor-create-npc-2](/img/0.26.0/world-editor-create-npc-2.png)
+![world-editor-create-npc-2](/talemate/img/0.26.0/world-editor-create-npc-2.png)
 
 ## Refining the character
 
@@ -39,7 +39,7 @@ However one thing that's always good to do is switch to :material-bullhorn: **Ac
 
 On top of the `Acting instructions` field is a :material-auto-fix: **Generate** button, click on it to have the AI generate some instructions for you. You can then edit them as needed.
 
-![world-editor-create-npc-3](/img/0.26.0/world-editor-create-npc-3.png)
+![world-editor-create-npc-3](/talemate/img/0.26.0/world-editor-create-npc-3.png)
 
 For our example it generated
 
@@ -53,6 +53,6 @@ Which seems good enough for our purposes.
 
 ## Save the scene
 
-![world editor unsaved changes](/img/0.26.0/world-editor-unsaved-changes.png)
+![world editor unsaved changes](/talemate/img/0.26.0/world-editor-unsaved-changes.png)
 
 Once you are happy with the character, click on the :material-content-save: **Save** button to save the scene.

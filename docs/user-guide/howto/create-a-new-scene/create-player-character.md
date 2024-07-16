@@ -12,7 +12,7 @@ Find the :material-account-plus: **Create Character** button and click on it.
 
 A `New character` entry will appear in the list.
 
-![world-editor-create-player-character-1](/img/0.26.0/world-editor-create-player-character-1.png)
+![world-editor-create-player-character-1](/talemate/img/0.26.0/world-editor-create-player-character-1.png)
 
 ## Generate the player character
 
@@ -28,13 +28,13 @@ You can leave the `Description` field empty, as the AI will generate a descripti
 
 Toggle on the **Controlled by Player** switch.
 
-![world-editor-create-player-character-2](/img/0.26.0/world-editor-create-player-character-2.png)
+![world-editor-create-player-character-2](/talemate/img/0.26.0/world-editor-create-player-character-2.png)
 
 Finally click the **Create Character** button.
 
 This will start the generation process, which may take a few moments and then the character will be added to the scene.
 
-![world-editor-create-player-character-3](/img/0.26.0/world-editor-create-player-character-3.png)
+![world-editor-create-player-character-3](/talemate/img/0.26.0/world-editor-create-player-character-3.png)
 
 !!! tip "Related Resources"
     - [Character Editor](/user-guide/world-editor/characters) - learn more about the character editor.
@@ -42,7 +42,7 @@ This will start the generation process, which may take a few moments and then th
 
 ## Save the scene
 
-![world editor unsaved changes](/img/0.26.0/world-editor-unsaved-changes.png)
+![world editor unsaved changes](/talemate/img/0.26.0/world-editor-unsaved-changes.png)
 
 Once you are happy with the character, click on the :material-content-save: **Save** button to save the scene.
 

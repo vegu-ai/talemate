@@ -6,7 +6,7 @@ You will need to have an API key and set it in the application config. See [here
 
 ## Settings
 
-![Visual agent openai settings](/img/0.26.0/visual-agent-openai-settings.png)
+![Visual agent openai settings](/talemate/img/0.26.0/visual-agent-openai-settings.png)
 
 ##### Model type
 

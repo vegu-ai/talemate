@@ -17,11 +17,11 @@ Talemate does come with a set of pre-defined templates for some popular models, 
 
 If a client shows a yellow triangle next to it, it means that the prompt template is not set, and it is currently using the default `Alpaca` style prompt template.
 
-![Client unknown prompt template](/img/0.26.0/client-unknown-prompt-template.png)
+![Client unknown prompt template](/talemate/img/0.26.0/client-unknown-prompt-template.png)
 
 Click the two cogwheels to the right of the triangle to open the client settings.
 
-![Client unknown prompt template modal](/img/0.26.0/client-unknown-prompt-template-modal.png)
+![Client unknown prompt template modal](/talemate/img/0.26.0/client-unknown-prompt-template-modal.png)
 
 You can first try by clicking the `DETERMINE VIA HUGGINGFACE` button. This doesn't always work, it requires either the model's `README.md` to contain an example or for the template to be set in the tokenizer_config.json file.
 
@@ -29,7 +29,7 @@ If that doesn't work, you can manually select the prompt template from the dropd
 
 In the case for `Phi-3-medium-128k-instruct-Q8_0` that is `Phi3` - select it from the dropdown and click `Save`.
 
-![Client assigned prompt template](/img/0.26.0/client-assigned-prompt-template.png)
+![Client assigned prompt template](/talemate/img/0.26.0/client-assigned-prompt-template.png)
 
 ## Adding a new prompt template
 

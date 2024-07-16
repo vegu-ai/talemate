@@ -6,7 +6,7 @@
 
 If you want to add a TabbyAPI client, change the `Client Type` to `TabbyAPI`.
 
-![Client TabbyAPI](/img/0.26.0/client-tabbyapi.png)
+![Client TabbyAPI](/talemate/img/0.26.0/client-tabbyapi.png)
 
 !!! note "Should work out of the box with a local TabbyAPI instance"
     The default values should work with a local TabbyAPI instance if you have followed their setup instructions and are running the server on the default port.
@@ -17,7 +17,7 @@ Click `Save` to add the client.
 
 Once it is added, the client should appear in the clients list and should display the currently loaded model.
 
-![Client TabbyAPI Ready](/img/0.26.0/client-tabbyapi-ready.png)
+![Client TabbyAPI Ready](/talemate/img/0.26.0/client-tabbyapi-ready.png)
 
 ### Settings
 
@@ -51,7 +51,7 @@ Make sure the [correct prompt template is assigned](/user-guide/clients/prompt-t
 
 #### Could not connect
 
-![Client tabbyapi could not connect](/img/0.26.0/client-tabbyapi-could-not-connect.png)
+![Client tabbyapi could not connect](/talemate/img/0.26.0/client-tabbyapi-could-not-connect.png)
 
 Possible reasons:
 

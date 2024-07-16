@@ -5,9 +5,9 @@ To use ElevenLabs TTS with Talemate, follow these steps:
 
 In Talemate open the settings and click the `APPLICATION` tab and then the `ELEVENLABS` category. Here you can add your ElevenLabs API key.
 
-![Open settings](/img/0.26.0/open-settings.png)
+![Open settings](/talemate/img/0.26.0/open-settings.png)
 
-![Runpod settings](/img/0.26.0/elevenlabs-settings.png)
+![Runpod settings](/talemate/img/0.26.0/elevenlabs-settings.png)
 
 Click `Save` to save your changes.
 

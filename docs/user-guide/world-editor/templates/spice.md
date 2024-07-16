@@ -8,7 +8,7 @@ Fist, if you have not done so, [create a template group](/user-guide/world-edito
 
 Then select the group you want to add the template to and click the **:material-plus: Create Template** button.
 
-![world editor templates create attribute template 1](/img/0.26.0/world-editor-templates-create-attribute-template-1.png)
+![world editor templates create attribute template 1](/talemate/img/0.26.0/world-editor-templates-create-attribute-template-1.png)
 
 Next enter a template name and select **Spice collection** as a template type.
 
@@ -22,7 +22,7 @@ Specify the type of template you are creating. In this case, select **Spice coll
 
 Once the template type is selected, the form will update to show the fields required for a spice collection template.
 
-![world editor templates create spice template 1](/img/0.26.0/world-editor-templates-create-spice-template-1.png)
+![world editor templates create spice template 1](/talemate/img/0.26.0/world-editor-templates-create-spice-template-1.png)
 
 ### Template description
 
@@ -60,7 +60,7 @@ The list of spice values in the collection.
 
 In the **New spice** field enter a value and hit enter or the **:material-plus** button.
 
-![world editor templates create spice template 2](/img/0.26.0/world-editor-templates-create-spice-template-2.png)
+![world editor templates create spice template 2](/talemate/img/0.26.0/world-editor-templates-create-spice-template-2.png)
 
 #### Generating spices
 
@@ -74,11 +74,11 @@ Click the **:material-auto-fix: Generate** button beneath the spices list and in
 > 
 > {character_name} likes to
 
-![world editor templates create spice template 3](/img/0.26.0/world-editor-templates-create-spice-template-3.png)
+![world editor templates create spice template 3](/talemate/img/0.26.0/world-editor-templates-create-spice-template-3.png)
 
 After a moment the list should be populated with the generated spices.
 
-![world editor templates create spice template 4](/img/0.26.0/world-editor-templates-create-spice-template-4.png)
+![world editor templates create spice template 4](/talemate/img/0.26.0/world-editor-templates-create-spice-template-4.png)
 
 !!! warning "This is hit and miss"
     May require a few attempts to get the desired results.
@@ -105,31 +105,31 @@ For this example it will be the `Likes` attribute, which holds a list of things 
 
 If you don't have a `Likes` attribute, add it.
 
-![world editor templates create spice template 5](/img/0.26.0/world-editor-templates-create-spice-template-5.png)
+![world editor templates create spice template 5](/talemate/img/0.26.0/world-editor-templates-create-spice-template-5.png)
 
 In the **:material-auto-fix: Generation Settings** on top of the world editor, click the **:material-chili-mild: Spice** button and select the **Hobbies** spice collection template. (if you followed this example so far)
 
-![world editor templates create spice template 6](/img/0.26.0/world-editor-templates-create-spice-template-6.png)
+![world editor templates create spice template 6](/talemate/img/0.26.0/world-editor-templates-create-spice-template-6.png)
 
 This applies the `Hobbies` spice collection to any future generation.
 
-![world editor templates create spice template 7](/img/0.26.0/world-editor-templates-create-spice-template-7.png)
+![world editor templates create spice template 7](/talemate/img/0.26.0/world-editor-templates-create-spice-template-7.png)
 
 However, by default, it will be configured with a very low chance of being applied. (10%)
 
 We want it to be applied 100% when we generate the new `Likes` attribute. So `ctrl` click the `+` button to increase the chance to 100%.
 
-![world editor templates create spice template 8](/img/0.26.0/world-editor-templates-create-spice-template-8.png)
+![world editor templates create spice template 8](/talemate/img/0.26.0/world-editor-templates-create-spice-template-8.png)
 
 Back at the `Likes` attribute, click the **:material-auto-fix: Generate** button to generate the content.
 
 You should see a small popup confirming that some spice was applied to the generation.
 
-![world editor templates create spice template 9](/img/0.26.0/world-editor-templates-create-spice-template-9.png)
+![world editor templates create spice template 9](/talemate/img/0.26.0/world-editor-templates-create-spice-template-9.png)
 
 And the generated content should reflect the spice applied.
 
-![world editor templates create spice template 10](/img/0.26.0/world-editor-templates-create-spice-template-10.png)
+![world editor templates create spice template 10](/talemate/img/0.26.0/world-editor-templates-create-spice-template-10.png)
 
 ## Editing a spice collection template
 

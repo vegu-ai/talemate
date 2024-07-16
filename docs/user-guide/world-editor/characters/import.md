@@ -8,6 +8,6 @@ Click the :material-account-arrow-right: **Import character** button.
 
 A "Import character" dialog will appear. Select the scene you want to import the character from, then select the character you want to import.
 
-![World editor characters import character](/img/0.26.0/world-editor-characters-import.png)
+![World editor characters import character](/talemate/img/0.26.0/world-editor-characters-import.png)
 
 Then click the **Import** button to import the character.

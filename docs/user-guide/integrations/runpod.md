@@ -9,11 +9,11 @@ You can manage your RunPod api keys at [https://www.runpod.io/console/user/setti
 
 Once you have your key you can open the settings in talemate.
 
-![Open settings](/img/0.26.0/open-settings.png)
+![Open settings](/talemate/img/0.26.0/open-settings.png)
 
 Then click the `APPLICATION` tab and then the `RUNPOD` category. Here you can add your RunPod API key.
 
-![Runpod settings](/img/0.26.0/runpod-api-key-setting.png)
+![Runpod settings](/talemate/img/0.26.0/runpod-api-key-setting.png)
 
 Setting the runpod api key requires a restart of the backend, so make sure to save your changes and restart the backend.
 
@@ -42,7 +42,7 @@ When choosing the template for your pod, choose the `RunPod TheBloke LLMs` templ
 
 Once your pod is deployed and has finished setup and is running, the client will automatically appear in the Talemate client list, making it available for you to use like you would use a locally hosted text-generation-webui instance.
 
-![RunPod client](/img/runpod-docs-1.png)
+![RunPod client](/talemate/img/runpod-docs-1.png)
 
 ### Connecting to the text-generation-webui UI
 

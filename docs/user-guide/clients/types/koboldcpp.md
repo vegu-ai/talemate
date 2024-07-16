@@ -9,7 +9,7 @@
 
 If you want to add an KoboldCpp client, change the `Client Type` to `KoboldCpp`.
 
-![Client KoboldCpp](/img/0.26.0/client-koboldcpp.png)
+![Client KoboldCpp](/talemate/img/0.26.0/client-koboldcpp.png)
 
 !!! note "Should work out of the box with a local KoboldCpp instance"
     The default values should work with a local KoboldCpp instance if you have followed their setup instructions and are running the server on the default port.
@@ -20,7 +20,7 @@ Click `Save` to add the client.
 
 Once it is added, the client should appear in the clients list and should display the currently loaded model.
 
-![Client KoboldCpp Ready](/img/0.26.0/client-koboldcpp-ready.png)
+![Client KoboldCpp Ready](/talemate/img/0.26.0/client-koboldcpp-ready.png)
 
 ### Settings
 
@@ -52,6 +52,6 @@ Make sure the [correct prompt template is assigned](/user-guide/clients/prompt-t
 
 #### Could not connect
 
-![Client koboldcpp could not connect](/img/0.26.0/client-koboldcpp-could-not-connect.png)
+![Client koboldcpp could not connect](/talemate/img/0.26.0/client-koboldcpp-could-not-connect.png)
 
 This means that either your KoboldCpp instance is not running, the url is incorrect, or the connection is somehow blocked. (For example, by a firewall)

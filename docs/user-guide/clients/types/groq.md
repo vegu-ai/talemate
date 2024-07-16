@@ -2,7 +2,7 @@
 
 If you want to add an Groq client, change the `Client Type` to `Groq`.
 
-![Client Groq](/img/0.26.0/client-groq.png)
+![Client Groq](/talemate/img/0.26.0/client-groq.png)
 
 Click `Save` to add the client.
 
@@ -10,19 +10,19 @@ Click `Save` to add the client.
 
 The client should appear in the clients list. If you haven't setup Groq before, you will see a warning that the API key is missing.
 
-![Client groq no api key](/img/0.26.0/client-groq-no-api-key.png)
+![Client groq no api key](/talemate/img/0.26.0/client-groq-no-api-key.png)
 
 Click the `SET API KEY` button. This will open the api settings window where you can add your Groq API key.
 
 For additional instructions on obtaining and setting your Groq API key, see [Groq API instructions](/user-guide/apis/groq/).
 
-![Groq settings](/img/0.26.0/groq-settings.png)
+![Groq settings](/talemate/img/0.26.0/groq-settings.png)
 
 Click `Save` and after a moment the client should have a green dot next to it, indicating that it is ready to go.
 
 ### Ready to use
 
-![Client Groq Ready](/img/0.26.0/client-groq-ready.png)
+![Client Groq Ready](/talemate/img/0.26.0/client-groq-ready.png)
 
 ### Settings
 

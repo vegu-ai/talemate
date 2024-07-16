@@ -11,7 +11,7 @@ Fist, if you have not done so, [create a template group](/user-guide/world-edito
 
 Then select the group you want to add the template to and click the **:material-plus: Create Template** button.
 
-![world editor templates create detail template 1](/img/0.26.0/world-editor-templates-create-attribute-template-1.png)
+![world editor templates create detail template 1](/talemate/img/0.26.0/world-editor-templates-create-attribute-template-1.png)
 
 
 Next enter a template name and select **Character detail** as a template type.
@@ -26,7 +26,7 @@ Specify the type of template you are creating. In this case, select **Character 
 
 Once the template type is selected, the form will update to show the fields required for a state reinforcement template.
 
-![world editor templates create state template 1](/img/0.26.0/world-editor-templates-create-state-template-1.png)
+![world editor templates create state template 1](/talemate/img/0.26.0/world-editor-templates-create-state-template-1.png)
 
 #### Question or Attribute name
 
@@ -87,7 +87,7 @@ Mark the template as a favorite to make it easier to find in the list of templat
 
 Favorited templates will be shown at the top of the list of templates.
 
-![world editor templates create state template 2](/img/0.26.0/world-editor-templates-create-state-template-2.png)
+![world editor templates create state template 2](/talemate/img/0.26.0/world-editor-templates-create-state-template-2.png)
 
 ## Create the template
 
@@ -101,13 +101,13 @@ Then select the **:material-image-auto-adjust: States** tab.
 
 In The **:material-cube-scan: Templates** list, find the template you just added and click it.
 
-![world editor templates create state template 3](/img/0.26.0/world-editor-templates-create-state-template-3.png)
+![world editor templates create state template 3](/talemate/img/0.26.0/world-editor-templates-create-state-template-3.png)
 
-![world editor templates create state template 4](/img/0.26.0/world-editor-templates-create-state-template-4.png)
+![world editor templates create state template 4](/talemate/img/0.26.0/world-editor-templates-create-state-template-4.png)
 
 After a moment the state should be generated and added to the character.
 
-![world editor templates create state template 5](/img/0.26.0/world-editor-templates-create-state-template-5.png)
+![world editor templates create state template 5](/talemate/img/0.26.0/world-editor-templates-create-state-template-5.png)
 
 ## Editing a state reinforcement template
 

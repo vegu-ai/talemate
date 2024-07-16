@@ -26,6 +26,5 @@ jobs:
           path: .cache
           restore-keys: |
             mkdocs-material-
-      - run: pip install poetry
-      - run: poetry install
+      - run: pip install mkdocs-material mkdocs-awesome-pages-plugin mkdocs-glightbox
       - run: mkdocs gh-deploy --force

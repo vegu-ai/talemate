@@ -14,6 +14,7 @@ log = structlog.get_logger("talemate.agents.creator.character")
 
 DEFAULT_CONTENT_CONTEXT = "a fun and engaging adventure aimed at an adult audience."
 
+
 class CharacterCreatorMixin:
 
     @set_processing

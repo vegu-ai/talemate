@@ -17,12 +17,12 @@ import talemate.client.presets as presets
 import talemate.client.system_prompts as system_prompts
 import talemate.instance as instance
 import talemate.util as util
-from talemate.exceptions import SceneInactiveError
-from talemate.context import active_scene
 from talemate.agents.context import active_agent
 from talemate.client.context import client_context_attribute
 from talemate.client.model_prompts import model_prompt
+from talemate.context import active_scene
 from talemate.emit import emit
+from talemate.exceptions import SceneInactiveError
 
 # Set up logging level for httpx to WARNING to suppress debug logs.
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -31,11 +31,13 @@ log = structlog.get_logger("client.base")
 
 STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 
+
 class ClientDisabledError(OSError):
     def __init__(self, client: "ClientBase"):
         self.client = client
         self.message = f"Client {client.name} is disabled"
         super().__init__(self.message)
+
 
 class PromptData(pydantic.BaseModel):
     kind: str
@@ -71,10 +73,11 @@ class ExtraField(pydantic.BaseModel):
     required: bool
     description: str
 
+
 class ParameterReroute(pydantic.BaseModel):
     talemate_parameter: str
     client_parameter: str
-    
+
     def reroute(self, parameters: dict):
         if self.talemate_parameter in parameters:
             parameters[self.client_parameter] = parameters[self.talemate_parameter]
@@ -85,6 +88,7 @@ class ParameterReroute(pydantic.BaseModel):
 
     def __eq__(self, other):
         return str(self) == str(other)
+
 
 class ClientBase:
     api_url: str
@@ -103,7 +107,6 @@ class ClientBase:
     finalizers: list[str] = []
     double_coercion: Union[str, None] = None
     client_type = "base"
-    
 
     class Meta(pydantic.BaseModel):
         experimental: Union[None, str] = None
@@ -157,7 +160,6 @@ class ClientBase:
             "temperature",
             "max_tokens",
         ]
-
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
@@ -363,7 +365,10 @@ class ClientBase:
             # only attempt to determine the prompt template once per model and
             # only if the model does not already have a prompt template
 
-            if hasattr(self, "model_name") and self.auto_determine_prompt_template_attempt != self.model_name:
+            if (
+                hasattr(self, "model_name")
+                and self.auto_determine_prompt_template_attempt != self.model_name
+            ):
                 log.info("auto_determine_prompt_template", model_name=self.model_name)
                 self.auto_determine_prompt_template_attempt = self.model_name
                 self.determine_prompt_template()
@@ -503,12 +508,12 @@ class ClientBase:
         """
         Does some final adjustments to the prompt parameters before sending
         """
-        
+
         # apply any parameter reroutes
         for param in self.supported_parameters:
             if isinstance(param, ParameterReroute):
                 param.reroute(parameters)
-        
+
         # drop any parameters that are not supported by the client
         for key in list(parameters.keys()):
             if key not in self.supported_parameters:
@@ -523,7 +528,7 @@ class ClientBase:
             prompt, applied = fn(parameters, prompt)
             if applied:
                 return prompt
-    
+
         return prompt
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
@@ -561,15 +566,15 @@ class ClientBase:
         :param prompt: The text prompt to send.
         :return: The AI's response text.
         """
-        
+
         if not active_scene.get():
             log.error("SceneInactiveError", scene=active_scene.get())
             raise SceneInactiveError("No active scene context")
-        
+
         if not active_scene.get().active:
             log.error("SceneInactiveError", scene=active_scene.get())
             raise SceneInactiveError("Scene is no longer active")
-        
+
         if not self.enabled:
             raise ClientDisabledError(self)
 
@@ -594,8 +599,8 @@ class ClientBase:
 
             time_start = time.time()
             extra_stopping_strings = prompt_param.pop("extra_stopping_strings", [])
-            
-            self.clean_prompt_parameters(prompt_param)        
+
+            self.clean_prompt_parameters(prompt_param)
 
             self.log.debug(
                 "send_prompt",
@@ -643,7 +648,9 @@ class ClientBase:
             return response
         except Exception as e:
             self.log.error("send_prompt error", e=e)
-            emit("status", message="Error during generation (check logs)", status="error")
+            emit(
+                "status", message="Error during generation (check logs)", status="error"
+            )
             return ""
         finally:
             self.emit_status(processing=False)
@@ -693,7 +700,7 @@ class ClientBase:
             is_repetition, similarity_score, matched_line = util.similarity_score(
                 response, finalized_prompt.split("\n"), similarity_threshold=80
             )
-            
+
             if not is_repetition:
                 # not a repetition, return the response
 
@@ -749,7 +756,7 @@ class ClientBase:
 
                 # a lot of the times the response will now contain the repetition + something new
                 # so we dedupe the response to remove the repetition on sentences level
-                
+
                 response = util.dedupe_sentences(
                     response, matched_line, similarity_threshold=85, debug=True
                 )
@@ -820,28 +827,22 @@ class ClientBase:
 
         return "\n".join(new_lines)
 
-
-    def process_response_for_indirect_coercion(self, prompt:str, response:str) -> str:
-        
+    def process_response_for_indirect_coercion(self, prompt: str, response: str) -> str:
         """
         A lot of remote APIs don't let us control the prompt template and we cannot directly
-        append the beginning of the desired response to the prompt. 
-        
+        append the beginning of the desired response to the prompt.
+
         With indirect coercion we tell the LLM what the beginning of the response should be
         and then hopefully it will adhere to it and we can strip it off the actual response.
         """
-        
+
         _, right = prompt.split("\nStart your response with: ")
         expected_response = right.strip()
-        if (
-            expected_response
-            and expected_response.startswith("{")
-        ):
+        if expected_response and expected_response.startswith("{"):
             if response.startswith("```json") and response.endswith("```"):
                 response = response[7:-3].strip()
 
         if right and response.startswith(right):
             response = response[len(right) :].strip()
-            
+
         return response
-        

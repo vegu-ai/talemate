@@ -61,10 +61,12 @@ class CohereClient(ClientBase):
     @property
     def supported_parameters(self):
         return [
-            "temperature", 
+            "temperature",
             ParameterReroute(talemate_parameter="top_p", client_parameter="p"),
             ParameterReroute(talemate_parameter="top_k", client_parameter="k"),
-            ParameterReroute(talemate_parameter="stopping_strings",  client_parameter="stop_sequences"),
+            ParameterReroute(
+                talemate_parameter="stopping_strings", client_parameter="stop_sequences"
+            ),
             "frequency_penalty",
             "presence_penalty",
             "max_tokens",
@@ -106,7 +108,7 @@ class CohereClient(ClientBase):
             data={
                 "error_action": error_action.model_dump() if error_action else None,
                 "meta": self.Meta().model_dump(),
-                "enabled": self.enabled
+                "enabled": self.enabled,
             },
         )
 
@@ -177,21 +179,21 @@ class CohereClient(ClientBase):
         return prompt
 
     def clean_prompt_parameters(self, parameters: dict):
-        
+
         super().clean_prompt_parameters(parameters)
-        
+
         # if temperature is set, it needs to be clamped between 0 and 1.0
         if "temperature" in parameters:
             parameters["temperature"] = max(0.0, min(1.0, parameters["temperature"]))
-            
+
         # if stop_sequences is set, max 5 items
         if "stop_sequences" in parameters:
             parameters["stop_sequences"] = parameters["stop_sequences"][:5]
-            
+
         # if both frequency_penalty and presence_penalty are set, drop frequency_penalty
         if "presence_penalty" in parameters and "frequency_penalty" in parameters:
             del parameters["frequency_penalty"]
-            
+
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.

@@ -1,9 +1,10 @@
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union
-from talemate.world_state import InsertionMode
-from talemate.world_state.templates.base import Template, register
-from talemate.instance import get_agent
+
 import pydantic
-from talemate.world_state import Reinforcement
+
+from talemate.instance import get_agent
+from talemate.world_state import InsertionMode, Reinforcement
+from talemate.world_state.templates.base import Template, register
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -12,11 +13,13 @@ __all__ = [
     "StateReinforcement",
 ]
 
+
 class GeneratedStateReinforcement(pydantic.BaseModel):
     query: str
     reinforcement: "Reinforcement"
     character: str
     template: "StateReinforcement"
+
 
 @register("state_reinforcement")
 class StateReinforcement(Template):
@@ -29,11 +32,11 @@ class StateReinforcement(Template):
     interval: int = 10
     auto_create: bool = False
     template_type: str = "state_reinforcement"
-    
-    @pydantic.field_serializer('insert')
+
+    @pydantic.field_serializer("insert")
     def serialize_insert(self, value: InsertionMode, _info) -> str:
         return value.value
-    
+
     async def generate(
         self,
         scene: "Scene",
@@ -57,11 +60,13 @@ class StateReinforcement(Template):
 
         if not character_name and self.state_type in ["npc", "character", "player"]:
             raise ValueError("Character name required for this template type.")
-        
+
         world_state = scene.world_state
         world_state_agent = get_agent("world_state")
         question = self.formatted("query", scene, character_name=character_name)
-        instructions = self.formatted("instructions", scene, character_name=character_name) 
+        instructions = self.formatted(
+            "instructions", scene, character_name=character_name
+        )
 
         reinforcement = await world_state.add_reinforcement(
             question,
@@ -70,13 +75,13 @@ class StateReinforcement(Template):
             self.interval,
             insert=self.insert,
         )
-        
+
         if run_immediately:
             await world_state_agent.update_reinforcement(question, character_name)
-        
+
         return GeneratedStateReinforcement(
-            query = question,
-            reinforcement = reinforcement,
-            character = character_name,
-            template = self
+            query=question,
+            reinforcement=reinforcement,
+            character=character_name,
+            template=self,
         )

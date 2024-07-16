@@ -1,6 +1,6 @@
+import enum
 import json
 import os
-import enum
 
 import structlog
 from dotenv import load_dotenv
@@ -8,9 +8,11 @@ from dotenv import load_dotenv
 import talemate.events as events
 import talemate.instance as instance
 from talemate import Actor, Character, Player, Scene
+from talemate.character import deactivate_character
 from talemate.config import load_config
 from talemate.context import SceneIsLoading
 from talemate.emit import emit
+from talemate.exceptions import UnknownDataSpec
 from talemate.game.state import GameState
 from talemate.scene_message import (
     MESSAGES,
@@ -21,10 +23,8 @@ from talemate.scene_message import (
     reset_message_id,
 )
 from talemate.status import LoadingStatus, set_loading
-from talemate.world_state import WorldState
-from talemate.character import deactivate_character
-from talemate.exceptions import UnknownDataSpec
 from talemate.util import extract_metadata
+from talemate.world_state import WorldState
 
 __all__ = [
     "load_scene",
@@ -37,11 +37,12 @@ __all__ = [
 
 log = structlog.get_logger("talemate.load")
 
+
 class ImportSpec(str, enum.Enum):
     talemate = "talemate"
     chara_card_v2 = "chara_card_v2"
     chara_card_v1 = "chara_card_v1"
-    
+
 
 @set_loading("Loading scene...")
 async def load_scene(scene, file_path, conv_client, reset: bool = False):
@@ -57,7 +58,7 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
                 )
 
             ext = os.path.splitext(file_path)[1].lower()
-            
+
             # an image was uploaded, we don't have the scene data yet
             # go directly to loading a character card
             if ext in [".jpg", ".png", ".jpeg", ".webp"]:
@@ -70,7 +71,7 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
             # check if the data is a character card
             # this will also raise an exception if the data is not recognized
             spec = identify_import_spec(scene_data)
-            
+
             # if it is a character card, load it
             if spec in [ImportSpec.chara_card_v1, ImportSpec.chara_card_v2]:
                 return await load_scene_from_character_card(scene, file_path)
@@ -82,13 +83,14 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
     finally:
         await scene.add_to_recent_scenes()
 
-def identify_import_spec(data:dict) -> ImportSpec:
+
+def identify_import_spec(data: dict) -> ImportSpec:
     if data.get("spec") == "chara_card_v2":
         return ImportSpec.chara_card_v2
-    
+
     if data.get("spec") == "chara_card_v1":
         return ImportSpec.chara_card_v1
-    
+
     # TODO: probably should actually check for valid talemate scene data
     return ImportSpec.talemate
 
@@ -195,7 +197,12 @@ async def load_scene_from_character_card(scene, file_path):
 
 
 async def load_scene_from_data(
-    scene, scene_data, conv_client, reset: bool = False, name: str | None = None, empty:bool = False
+    scene,
+    scene_data,
+    conv_client,
+    reset: bool = False,
+    name: str | None = None,
+    empty: bool = False,
 ):
     loading_status = LoadingStatus(1)
     reset_message_id()
@@ -306,16 +313,16 @@ async def transfer_character(scene, scene_json_path, character_name):
         if character_data["name"] == character_name:
             # Create a Character object from the character data
             character = Character(**character_data)
-            
+
             # If character has cover image, the asset needs to be copied
             if character.cover_image:
                 other_scene = Scene()
                 other_scene.name = scene_data.get("name")
-                other_scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
-                
-                scene.assets.transfer_asset(
-                    other_scene.assets, character.cover_image
+                other_scene.assets.load_assets(
+                    scene_data.get("assets", {}).get("assets", {})
                 )
+
+                scene.assets.transfer_asset(other_scene.assets, character.cover_image)
 
             # If the character is not a player, create a conversation agent for it
             if not character.is_player:
@@ -325,10 +332,10 @@ async def transfer_character(scene, scene_json_path, character_name):
 
             # Add the character actor to the current scene
             await scene.add_actor(actor)
-            
+
             # deactivate the character
             await deactivate_character(scene, character.name)
-            
+
             break
     else:
         raise ValueError(
@@ -372,12 +379,12 @@ def load_character_from_image(image_path: str, file_format: str) -> Character:
     """
     metadata = extract_metadata(image_path, file_format)
     spec = identify_import_spec(metadata)
-    
+
     if spec == ImportSpec.chara_card_v2:
         return character_from_chara_data(metadata["data"])
     elif spec == ImportSpec.chara_card_v1:
         return character_from_chara_data(metadata)
-    
+
     raise UnknownDataSpec(metadata)
 
 
@@ -387,26 +394,25 @@ def load_character_from_json(json_path: str) -> Character:
     :param json_path: Path to the json file.
     :return: Character loaded from the json file.
     """
-    
+
     with open(json_path, "r") as f:
         data = json.load(f)
-        
+
     spec = identify_import_spec(data)
-    
+
     if spec == ImportSpec.chara_card_v2:
         return character_from_chara_data(data["data"])
     elif spec == ImportSpec.chara_card_v1:
         return character_from_chara_data(data)
-    
+
     raise UnknownDataSpec(data)
 
 
 def character_from_chara_data(data: dict) -> Character:
-    
     """
     Generates a barebones character from a character card data dictionary.
     """
-    
+
     character = Character("", "", "")
     character.color = "red"
     if "name" in data:
@@ -436,7 +442,7 @@ def character_from_chara_data(data: dict) -> Character:
                 character.example_dialogue.extend(
                     [m for m in message.split(new_line_match) if m]
                 )
-                
+
     return character
 
 
@@ -456,8 +462,9 @@ def load_from_image_metadata(image_path: str, file_format: str):
 
     if metadata.get("spec") == "chara_card_v2":
         metadata = metadata["data"]
-    
+
     return character_from_chara_data(metadata)
+
 
 def default_player_character():
     """

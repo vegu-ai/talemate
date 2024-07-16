@@ -22,10 +22,12 @@ def run_server(args):
     import talemate.agents.custom
     import talemate.client.custom
     from talemate.world_state.templates import Collection
-    from talemate.world_state.templates.defaults import create_defaults_if_empty_collection
+    from talemate.world_state.templates.defaults import (
+        create_defaults_if_empty_collection,
+    )
 
     config = talemate.config.cleanup()
-    
+
     if config.game.world_state.templates.state_reinforcement:
         Collection.create_from_legacy_config(config)
 

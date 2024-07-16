@@ -20,7 +20,6 @@ class RemoteServiceMixin:
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
 
-
     def on_config_saved(self, event):
         config = event.data
         self.config = config

@@ -62,6 +62,7 @@ class SceneInactiveError(TalemateError):
 
     pass
 
+
 class UnknownDataSpec(TalemateError):
     """
     Exception to raise when the data spec is unknown

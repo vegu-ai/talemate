@@ -10,10 +10,9 @@ from RestrictedPython.Guards import guarded_iter_unpack_sequence, safer_getattr
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
-from talemate.prompts.base import PrependTemplateDirectories, Prompt
-
-from talemate.game.scope import OpenScopedContext, GameInstructionScope
 import talemate.game.engine.api.exceptions as api_exceptions
+from talemate.game.scope import GameInstructionScope, OpenScopedContext
+from talemate.prompts.base import PrependTemplateDirectories, Prompt
 
 log = structlog.get_logger("talemate.game.engine")
 nest_asyncio.apply()
@@ -45,7 +44,7 @@ def compile_scene_module(module_code: str, **kwargs):
 
     # Execute the compiled code with the restricted globals
     exec(compiled_code, restricted_globals, safe_locals)
-    
+
     return safe_locals.get("game")
 
 

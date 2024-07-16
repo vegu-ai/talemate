@@ -19,7 +19,7 @@ from talemate.prompts import LoopedPrompt, Prompt
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
-    
+
 __all__ = [
     "LegacyCharacterCreatorMixin",
     "LegacyScenarioCreatorMixin",
@@ -28,6 +28,7 @@ __all__ = [
 log = structlog.get_logger("talemate.agents.creator.character")
 
 DEFAULT_CONTENT_CONTEXT = "a fun and engaging adventure aimed at an adult audience."
+
 
 def validate(k, v):
     if k and k.lower() == "gender":
@@ -44,7 +45,6 @@ def validate(k, v):
 
 
 class LegacyCharacterCreatorMixin:
-
     """
     Adds character creation functionality to the creator agent
     """
@@ -134,8 +134,7 @@ class LegacyCharacterCreatorMixin:
         )
         await prompt.loop(self.client, "character_details", kind="create_concise")
         return prompt.vars["character_details"].generated
-    
-    
+
     @set_processing
     async def create_character_example_dialogue(
         self,
@@ -152,7 +151,7 @@ class LegacyCharacterCreatorMixin:
         Keeping this here for now for backwards compatibility with
         the legacy creative toolset.
         """
-        
+
         dialogue_rules = await Prompt.request(
             f"creator.character-dialogue-rules",
             self.client,
@@ -190,10 +189,10 @@ class LegacyCharacterCreatorMixin:
         )
 
         return example_dialogue_prompt.vars["generated_examples"].generated
-    
-    
+
+
 class LegacyScenarioCreatorMixin:
-    
+
     @set_processing
     async def create_scene_description(
         self,

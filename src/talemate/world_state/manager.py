@@ -1,16 +1,16 @@
-from typing import TYPE_CHECKING, Any, Union, Callable
+from typing import TYPE_CHECKING, Any, Callable, Union
 
 import pydantic
 import structlog
 
+import talemate.world_state.templates as world_state_templates
 from talemate.character import activate_character, deactivate_character
 from talemate.config import save_config
 from talemate.instance import get_agent
 from talemate.world_state import ContextPin, InsertionMode, ManualContext, Reinforcement
-import talemate.world_state.templates as world_state_templates
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Scene, Character
+    from talemate.tale_mate import Character, Scene
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -143,7 +143,7 @@ class WorldStateManager:
         """
 
         character = self.scene.get_character(character_name)
-        
+
         if not character:
             log.warning("character not found", character_name=character_name)
             return None
@@ -248,9 +248,9 @@ class WorldStateManager:
             else:
                 text = documents[pin.entry_id].raw
                 time_aware_text = str(documents[pin.entry_id])
-                
+
             title = pin.entry_id.replace(".", " - ")
-            
+
             annotated_pin = AnnotatedContextPin(
                 pin=pin, text=text, time_aware_text=time_aware_text, title=title
             )
@@ -306,11 +306,11 @@ class WorldStateManager:
             color: The new color value for the character.
         """
         character = self.scene.get_character(character_name)
-        
+
         if not character:
             log.error("character not found", character_name=character_name)
             return
-        
+
         character.set_color(color)
 
     async def update_character_actor(
@@ -523,17 +523,19 @@ class WorldStateManager:
         if entry_id in self.world_state.pins:
             del self.world_state.pins[entry_id]
 
-    async def get_templates(self, types: list[str] = None) -> world_state_templates.TypedCollection:
+    async def get_templates(
+        self, types: list[str] = None
+    ) -> world_state_templates.TypedCollection:
         """
         Retrieves the current world state templates from scene configuration.
 
         Returns:
             A WorldStateTemplates object containing state reinforcement templates.
         """
-        
+
         collection = self.template_collection
-        return collection.typed(types = types)
-        
+        return collection.typed(types=types)
+
     async def save_template_group(self, group: world_state_templates.Group):
         """
         Adds / Updates a new template group to the scene configuration.
@@ -547,7 +549,7 @@ class WorldStateManager:
             group.save()
         else:
             exists.update(group)
-        
+
     async def remove_template_group(self, group: world_state_templates.Group):
         """
         Removes a template group from the scene configuration.
@@ -569,14 +571,13 @@ class WorldStateManager:
         if getattr(template, "auto_create", False):
             await self.auto_apply_template(template)
 
-        
     async def remove_template(self, template: world_state_templates.AnnotatedTemplate):
         """
         Removes a specific state reinforcement template from scene configuration.
         """
         group = self.template_collection.find(template.group)
         group.delete_template(template)
-                
+
     async def apply_all_auto_create_templates(self):
         """
         Applies all auto-create state reinforcement templates.
@@ -584,7 +585,7 @@ class WorldStateManager:
         This method goes through the scene configuration, identifies templates set for auto-creation,
         and applies them.
         """
-        
+
         collection = self.template_collection
         flat_collection = collection.flat(types=["state_reinforcement"])
 
@@ -598,7 +599,9 @@ class WorldStateManager:
             log.info("applying template", template=template)
             await self.auto_apply_template(template)
 
-    async def auto_apply_template(self, template: world_state_templates.AnnotatedTemplate):
+    async def auto_apply_template(
+        self, template: world_state_templates.AnnotatedTemplate
+    ):
         """
         Automatically applies a state reinforcement template based on its type.
 
@@ -609,11 +612,13 @@ class WorldStateManager:
             This function delegates to a specific apply function based on the template type.
         """
         fn = getattr(self, f"auto_apply_template_{template.template_type}", None)
-        
+
         if not fn:
-            log.error("unsupported template type for auto-application", template=template)
+            log.error(
+                "unsupported template type for auto-application", template=template
+            )
             return
-        
+
         await fn(template)
 
     async def auto_apply_template_state_reinforcement(
@@ -643,7 +648,13 @@ class WorldStateManager:
         for character_name in characters:
             await self.apply_template_state_reinforcement(template, character_name)
 
-    async def apply_templates(self, templates: list[world_state_templates.AnnotatedTemplate], callback_start: Callable, callback_done: Callable, **kwargs):
+    async def apply_templates(
+        self,
+        templates: list[world_state_templates.AnnotatedTemplate],
+        callback_start: Callable,
+        callback_done: Callable,
+        **kwargs,
+    ):
         """
         Applies a list of state reinforcement templates to the scene.
 
@@ -651,10 +662,10 @@ class WorldStateManager:
             templates: A list of StateReinforcementTemplate objects to be applied.
             template_callback: A callback function to apply the templates.
         """
-        
+
         # sort templates by template.priorty descending
         templates = sorted(templates, key=lambda x: x.priority, reverse=True)
-        
+
         for template in templates:
             is_last_template = template == templates[-1]
             if callback_start:
@@ -663,32 +674,32 @@ class WorldStateManager:
             if result and callback_done:
                 callback_done(template, result, is_last_template)
 
-    async def apply_template(self, template: world_state_templates.AnnotatedTemplate, **kwargs):
+    async def apply_template(
+        self, template: world_state_templates.AnnotatedTemplate, **kwargs
+    ):
         """
         Applies a state reinforcement template to the scene.
 
         Arguments:
             template: The StateReinforcementTemplate object to be applied.
         """
-        
+
         fn = getattr(self, f"apply_template_{template.template_type}", None)
-        
+
         if not fn:
             log.error("unsupported template type for application", template=template)
             return
-        
-        
+
         log.debug("applying template", template=template, kwargs=kwargs)
-        
+
         return await fn(template, **kwargs)
-        
 
     async def apply_template_state_reinforcement(
         self,
         template: Union[str, world_state_templates.StateReinforcement],
         character_name: str = None,
         run_immediately: bool = False,
-        **kwargs
+        **kwargs,
     ) -> Reinforcement:
         """
         Applies a state reinforcement template to a specific character, if provided.
@@ -707,39 +718,63 @@ class WorldStateManager:
 
         if isinstance(template, str):
             template_uid = template
-            template = self.template_collection.flat(types=["state_reinforcement"]).templates.get(template_uid)
+            template = self.template_collection.flat(
+                types=["state_reinforcement"]
+            ).templates.get(template_uid)
             if not template:
-                log.error("apply_template_state_reinforcement: template not found", template=template_uid)
+                log.error(
+                    "apply_template_state_reinforcement: template not found",
+                    template=template_uid,
+                )
                 return
 
-        return (await template.generate(self.scene, character_name, run_immediately)).reinforcement
-        
+        return (
+            await template.generate(self.scene, character_name, run_immediately)
+        ).reinforcement
+
     async def apply_template_character_attribute(
-        self, template: str | world_state_templates.character.Attribute, character_name: str, run_immediately: bool = False, **kwargs
+        self,
+        template: str | world_state_templates.character.Attribute,
+        character_name: str,
+        run_immediately: bool = False,
+        **kwargs,
     ) -> str:
-    
+
         if isinstance(template, str):
             template_uid = template
-            template = self.template_collection.flat(types=["character_attribute"]).templates.get(template_uid)
+            template = self.template_collection.flat(
+                types=["character_attribute"]
+            ).templates.get(template_uid)
             if not template:
-                log.error("apply_template_character_attribute: template not found", template=template_uid)
+                log.error(
+                    "apply_template_character_attribute: template not found",
+                    template=template_uid,
+                )
                 return
-    
+
         return await template.generate(self.scene, character_name, **kwargs)
-        
+
     async def apply_template_character_detail(
-        self, template: str | world_state_templates.character.Detail, character_name: str, **kwargs
+        self,
+        template: str | world_state_templates.character.Detail,
+        character_name: str,
+        **kwargs,
     ) -> str:
-    
+
         if isinstance(template, str):
             template_uid = template
-            template = self.template_collection.flat(types=["character_detail"]).templates.get(template_uid)
+            template = self.template_collection.flat(
+                types=["character_detail"]
+            ).templates.get(template_uid)
             if not template:
-                log.error("apply_template_character_detail: template not found", template=template_uid)
+                log.error(
+                    "apply_template_character_detail: template not found",
+                    template=template_uid,
+                )
                 return
-            
+
         return await template.generate(self.scene, character_name, **kwargs)
-    
+
     async def activate_character(self, character_name: str):
         """
         Activates a character in the scene.
@@ -782,16 +817,16 @@ class WorldStateManager:
         Returns:
             The name of the newly created character.
         """
-        
+
         if not name and not generate:
             raise ValueError("You need to specify a name for the character.")
-        
+
         creator = get_agent("creator")
         world_state = get_agent("world_state")
-        
+
         if not generation_options:
             generation_options = world_state_templates.GenerationOptions()
-        
+
         if not name and generate:
             name = await creator.contextual_generate_from_args(
                 context="character attribute:name",
@@ -800,7 +835,7 @@ class WorldStateManager:
                 uid="wsm.create_character",
                 character="the character",
             )
-            
+
         if not description and generate:
             description = await creator.contextual_generate_from_args(
                 context="character detail:description",
@@ -808,45 +843,40 @@ class WorldStateManager:
                 length=100,
                 uid="wsm.create_character",
                 character=name,
-                **generation_options.model_dump()
+                **generation_options.model_dump(),
             )
-        
+
         if generate_attributes:
             base_attributes = await world_state.extract_character_sheet(
                 name=name, text=description
             )
         else:
             base_attributes = {}
-        
+
         # create character instance
         character = self.scene.Character(
-            name = name,
-            description = description,
+            name=name,
+            description=description,
             base_attributes=base_attributes,
-            is_player=is_player
+            is_player=is_player,
         )
-        
+
         # set random color for their name
         character.set_color()
-        
+
         if is_player:
             ActorCls = self.scene.Player
         else:
             ActorCls = self.scene.Actor
-        
-        actor = ActorCls(
-            character,
-            get_agent('conversation')
-        )
-        
+
+        actor = ActorCls(character, get_agent("conversation"))
+
         await self.scene.add_actor(actor)
-        
+
         if not active:
             await deactivate_character(self.scene, name)
-        
+
         return character
-    
-    
 
     async def update_scene_outline(
         self,
@@ -855,24 +885,23 @@ class WorldStateManager:
         intro: str | None = None,
         context: str | None = None,
     ) -> "Scene":
-        
+
         scene = self.scene
         scene.title = title
         scene.description = description
         scene.intro = intro
         scene.context = context
-        
+
         return scene
-    
-    
+
     async def update_scene_settings(
         self,
         immutable_save: bool = False,
         experimental: bool = False,
     ) -> "Scene":
-        
+
         scene = self.scene
         scene.immutable_save = immutable_save
         scene.experimental = experimental
-        
+
         return scene

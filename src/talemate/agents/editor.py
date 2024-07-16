@@ -134,7 +134,7 @@ class EditorAgent(Agent):
 
         if not self.actions["fix_exposition"].enabled:
             return content
-        
+
         # if not content was generated, return it as is
         if not content:
             return content

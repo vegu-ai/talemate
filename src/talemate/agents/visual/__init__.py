@@ -127,8 +127,7 @@ class VisualBase(Agent):
                         description="This will be appended to ALL negative prompts",
                     ),
                 },
-                
-            )
+            ),
         }
 
         for action_name, action in self.ACTIONS.items():
@@ -229,7 +228,7 @@ class VisualBase(Agent):
         await self.setup_check()
         if prev_ready:
             await self.emit_status()
-        
+
     async def on_background_processing_error(self, error):
         emit(
             "image_generation_failed",
@@ -237,7 +236,6 @@ class VisualBase(Agent):
             data={"error": str(error)},
         )
         emit("status", "Image generation failed.", status="error")
-            
 
     async def ready_check(self):
         if not self.enabled:
@@ -248,10 +246,10 @@ class VisualBase(Agent):
         await super().ready_check(task)
 
     async def setup_check(self):
-        
+
         if not self.actions["automatic_setup"].enabled:
             return
-        
+
         backend = self.backend
         if self.client and hasattr(self.client, f"visual_{backend.lower()}_setup"):
             await getattr(self.client, f"visual_{backend.lower()}_setup")(self)
@@ -310,20 +308,38 @@ class VisualBase(Agent):
 
         if styles:
             prompt_style.prepend(*styles)
-            
+
         # Apply prefixes and suffixes
-        
+
         if self.actions["_prompts"].config["positive_prefix"].value.strip():
-            prompt_style.prepend(Style().load(self.actions["_prompts"].config["positive_prefix"].value))
-        
+            prompt_style.prepend(
+                Style().load(self.actions["_prompts"].config["positive_prefix"].value)
+            )
+
         if self.actions["_prompts"].config["negative_prefix"].value.strip():
-            prompt_style.prepend(Style().load("", negative_prompt=self.actions["_prompts"].config["negative_prefix"].value))
-            
+            prompt_style.prepend(
+                Style().load(
+                    "",
+                    negative_prompt=self.actions["_prompts"]
+                    .config["negative_prefix"]
+                    .value,
+                )
+            )
+
         if self.actions["_prompts"].config["positive_suffix"].value.strip():
-            prompt_style.append(Style().load(self.actions["_prompts"].config["positive_suffix"].value))
-        
+            prompt_style.append(
+                Style().load(self.actions["_prompts"].config["positive_suffix"].value)
+            )
+
         if self.actions["_prompts"].config["negative_suffix"].value.strip():
-            prompt_style.append(Style().load("", negative_prompt=self.actions["_prompts"].config["negative_suffix"].value))
+            prompt_style.append(
+                Style().load(
+                    "",
+                    negative_prompt=self.actions["_prompts"]
+                    .config["negative_suffix"]
+                    .value,
+                )
+            )
 
         return prompt_style
 
@@ -342,9 +358,13 @@ class VisualBase(Agent):
         log.debug("apply_image", image=image[:100], context=context)
 
         if context.vis_type == VIS_TYPES.CHARACTER:
-            await self.apply_image_character(image, context.character_name, replace=context.replace)
+            await self.apply_image_character(
+                image, context.character_name, replace=context.replace
+            )
 
-    async def apply_image_character(self, image: str, character_name: str, replace: bool = False):
+    async def apply_image_character(
+        self, image: str, character_name: str, replace: bool = False
+    ):
         character = self.scene.get_character(character_name)
 
         if not character:

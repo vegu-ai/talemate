@@ -7,15 +7,13 @@ import structlog
 
 import talemate.instance as instance
 from talemate import Helper, Scene
-from talemate.client.registry import CLIENT_CLASSES
 from talemate.client.base import ClientBase
+from talemate.client.registry import CLIENT_CLASSES
 from talemate.config import SceneAssetUpload, load_config, save_config
+from talemate.context import ActiveScene, active_scene
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 from talemate.files import list_scenes_directory
-from talemate.load import (
-    load_scene,
-)
-from talemate.context import ActiveScene, active_scene
+from talemate.load import load_scene
 from talemate.scene_assets import Asset
 from talemate.server import (
     assistant,
@@ -33,6 +31,7 @@ __all__ = [
 log = structlog.get_logger("talemate.server.websocket_server")
 
 AGENT_INSTANCES = {}
+
 
 class WebsocketHandler(Receiver):
     def __init__(self, socket, out_queue, llm_clients=dict()):
@@ -139,7 +138,7 @@ class WebsocketHandler(Receiver):
                     agent_config["client"] = client.name
                 except IndexError:
                     client = None
-                    
+
                 if not client:
                     agent_config["client"] = None
 
@@ -147,7 +146,7 @@ class WebsocketHandler(Receiver):
                 log.debug("Linked agent", agent_typ=agent_typ, client=client.name)
             else:
                 log.warning("No client available for agent", agent_typ=agent_typ)
-                
+
             agent = instance.get_agent(agent_typ, client=client)
             agent.client = client
             await agent.apply_config(**agent_config)
@@ -157,7 +156,7 @@ class WebsocketHandler(Receiver):
     def get_first_enabled_client(self) -> ClientBase:
         """
         Will return the first enabled client available
-        
+
         If no enabled clients are available, an IndexError will be raised
         """
         for client in self.llm_clients.values():
@@ -202,7 +201,7 @@ class WebsocketHandler(Receiver):
             conversation_helper = scene.get_helper("conversation")
 
             scene.active = True
-            
+
             with ActiveScene(scene):
                 scene = await load_scene(
                     scene, path_or_data, conversation_helper.agent.client, reset=reset
@@ -212,7 +211,6 @@ class WebsocketHandler(Receiver):
 
             if callback:
                 await callback()
-                
 
             with ActiveScene(scene):
                 await scene.start()
@@ -239,12 +237,17 @@ class WebsocketHandler(Receiver):
             client_cls = CLIENT_CLASSES.get(client["type"])
 
             # so hacky, such sad
-            ignore_model_names = ["Disabled", "No model loaded", "Could not connect", "No API key set"]
+            ignore_model_names = [
+                "Disabled",
+                "No model loaded",
+                "Could not connect",
+                "No API key set",
+            ]
             if client.get("model") in ignore_model_names:
                 # if client instance exists copy model_name from it
                 _client = instance.get_client(client["name"])
                 if _client:
-                    client["model"] = getattr(_client, "model_name", None   )
+                    client["model"] = getattr(_client, "model_name", None)
                 else:
                     client.pop("model", None)
 

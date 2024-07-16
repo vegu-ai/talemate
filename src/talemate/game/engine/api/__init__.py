@@ -5,6 +5,6 @@ import talemate.game.engine.api.agents.visual as agent_visual
 import talemate.game.engine.api.agents.world_state as agent_world_state
 import talemate.game.engine.api.game_state as game_state
 import talemate.game.engine.api.log as log
-import talemate.game.engine.api.scene as scene
 import talemate.game.engine.api.prompt as prompt
+import talemate.game.engine.api.scene as scene
 import talemate.game.engine.api.signals as signals

@@ -115,7 +115,9 @@ STYLE_MAP["graphic_novel"] = Style(
 
 STYLE_MAP["photo"] = Style(
     keywords="photo, photograph, RAW photo, DLSS".split(", "),
-    negative_keywords="digital art, drawing, illustration, painting, concept art".split(", "),
+    negative_keywords="digital art, drawing, illustration, painting, concept art".split(
+        ", "
+    ),
 )
 
 STYLE_MAP["character_portrait"] = Style(keywords="solo, looking at viewer".split(", "))

@@ -136,7 +136,7 @@ class ModelPrompt:
         """
 
         matches = []
-        
+
         cleaned_model_name = model_name.replace("/", "__")
 
         # Iterate over all templates in the loader's directory
@@ -165,7 +165,7 @@ class ModelPrompt:
         """
 
         template_name = template_name.split(".jinja2")[0]
-        
+
         cleaned_model_name = model_name.replace("/", "__")
 
         shutil.copyfile(
@@ -423,6 +423,7 @@ class ZephyrIdentifier(TemplateIdentifier):
             and "<|assistant|>" in content
         )
 
+
 @register_template_identifier
 class Phi3Identifier(TemplateIdentifier):
     template_str = "Phi-3"
@@ -437,4 +438,8 @@ class Phi3Identifier(TemplateIdentifier):
         {{ coercion_message }}
         """
 
-        return "<|user|>" in content and "<|assistant|>" in content and "<|end|>" in content
+        return (
+            "<|user|>" in content
+            and "<|assistant|>" in content
+            and "<|end|>" in content
+        )

@@ -11,18 +11,18 @@ from talemate.prompts import Prompt
 
 from .assistant import AssistantMixin
 from .character import CharacterCreatorMixin
-from .scenario import ScenarioCreatorMixin
 from .legacy import LegacyCharacterCreatorMixin, LegacyScenarioCreatorMixin
+from .scenario import ScenarioCreatorMixin
 
 
 @register()
 class CreatorAgent(
-    LegacyScenarioCreatorMixin, 
-    LegacyCharacterCreatorMixin, 
-    CharacterCreatorMixin, 
-    ScenarioCreatorMixin, 
-    AssistantMixin, 
-    Agent
+    LegacyScenarioCreatorMixin,
+    LegacyCharacterCreatorMixin,
+    CharacterCreatorMixin,
+    ScenarioCreatorMixin,
+    AssistantMixin,
+    Agent,
 ):
     """
     Creates characters and scenarios and other fun stuff!

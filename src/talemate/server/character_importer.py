@@ -50,7 +50,7 @@ class CharacterImporterServerPlugin:
         sorted_characters = scene_data.get("characters", [])
 
         # sort by name
-        
+
         sorted_characters = sorted(
             sorted_characters,
             key=lambda character: character["name"].lower(),
@@ -60,9 +60,7 @@ class CharacterImporterServerPlugin:
             {
                 "type": "character_importer",
                 "action": "list_characters",
-                "characters": [
-                    character["name"] for character in sorted_characters
-                ],
+                "characters": [character["name"] for character in sorted_characters],
             }
         )
 

@@ -1,17 +1,15 @@
+import base64
 import uuid
 from typing import Any, Union
 
 import pydantic
 import structlog
-import base64
 
-from talemate.instance import get_agent
-from talemate.history import history_with_relative_time, rebuild_history
-from talemate.world_state.manager import (
-    WorldStateManager,
-)
-from talemate.export import ExportOptions, export
 import talemate.world_state.templates as world_state_templates
+from talemate.export import ExportOptions, export
+from talemate.history import history_with_relative_time, rebuild_history
+from talemate.instance import get_agent
+from talemate.world_state.manager import WorldStateManager
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -27,9 +25,11 @@ class UpdateCharacterDetailPayload(pydantic.BaseModel):
     detail: str
     value: str
 
+
 class UpdateCharacterColorPayload(pydantic.BaseModel):
     name: str
     color: str
+
 
 class SetCharacterDetailReinforcementPayload(pydantic.BaseModel):
     name: str
@@ -102,33 +102,40 @@ class UpdatePinPayload(pydantic.BaseModel):
 class RemovePinPayload(pydantic.BaseModel):
     entry_id: str
 
-    
+
 class SaveWorldStateTemplatePayload(pydantic.BaseModel):
     template: world_state_templates.AnnotatedTemplate
+
 
 class DeleteWorldStateTemplatePayload(pydantic.BaseModel):
     template: world_state_templates.AnnotatedTemplate
 
+
 class ApplyWorldStateTemplatePayload(pydantic.BaseModel):
     template: world_state_templates.AnnotatedTemplate
-    character_name: str | None = None,
-    run_immediately: bool = False,
-    
+    character_name: str | None = (None,)
+    run_immediately: bool = (False,)
+
+
 class ApplyWorldStateTemplatesPayload(pydantic.BaseModel):
     templates: list[world_state_templates.AnnotatedTemplate]
-    character_name: str | None  = None,
-    run_immediately: bool = False,
+    character_name: str | None = (None,)
+    run_immediately: bool = (False,)
     source: str | None = None
     generation_options: world_state_templates.GenerationOptions | None = None
-    
+
+
 class SaveWorldStateTemplateGroupPayload(pydantic.BaseModel):
     group: world_state_templates.Group
 
+
 class DeleteWorldStateTemplateGroupPayload(pydantic.BaseModel):
     group: world_state_templates.Group
-    
+
+
 class SelectiveCharacterPayload(pydantic.BaseModel):
     name: str
+
 
 class CreateCharacterPayload(pydantic.BaseModel):
     generate: bool = True
@@ -138,23 +145,27 @@ class CreateCharacterPayload(pydantic.BaseModel):
     is_player: bool = False
     generate_attributes: bool = False
     generation_options: world_state_templates.GenerationOptions | None = None
-    
+
+
 class SceneOutlinePayload(pydantic.BaseModel):
     title: str
     description: str | None = None
     intro: str | None = None
     context: str | None = None
-    
+
+
 class SceneSettingsPayload(pydantic.BaseModel):
     experimental: bool = False
     immutable_save: bool = False
-    
+
 
 class SaveScenePayload(pydantic.BaseModel):
     save_as: str | None = None
 
+
 class RegenerateHistoryPayload(pydantic.BaseModel):
     generation_options: world_state_templates.GenerationOptions | None = None
+
 
 class WorldStateManagerPlugin:
     router = "world_state_manager"
@@ -205,11 +216,11 @@ class WorldStateManagerPlugin:
         character_details = await self.world_state_manager.get_character_details(
             data["name"]
         )
-        
+
         if not character_details:
             log.error("Character not found", name=data["name"])
             return
-        
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -246,7 +257,7 @@ class WorldStateManagerPlugin:
                 "action": "templates",
                 "data": {
                     "by_type": templates.model_dump()["templates"],
-                    "managed": self.world_state_manager.template_collection.model_dump()
+                    "managed": self.world_state_manager.template_collection.model_dump(),
                 },
             }
         )
@@ -506,11 +517,13 @@ class WorldStateManagerPlugin:
         await self.world_state_manager.run_detail_reinforcement(
             None, payload.question, payload.reset
         )
-        
-        _, reinforcement = await self.world_state_manager.world_state.find_reinforcement(
-            payload.question, None
+
+        _, reinforcement = (
+            await self.world_state_manager.world_state.find_reinforcement(
+                payload.question, None
+            )
         )
-        
+
         if not reinforcement:
             log.error("Reinforcement not found", question=payload.question)
             await self.signal_operation_done()
@@ -523,7 +536,6 @@ class WorldStateManagerPlugin:
                 "data": reinforcement.model_dump(),
             }
         )
-
 
         # resend world
         await self.handle_get_world({})
@@ -659,9 +671,9 @@ class WorldStateManagerPlugin:
         log.debug("Apply world state template", payload=payload)
 
         result = await self.world_state_manager.apply_template(
-            template = payload.template,
-            character_name = payload.character_name or "",
-            run_immediately = payload.run_immediately
+            template=payload.template,
+            character_name=payload.character_name or "",
+            run_immediately=payload.run_immediately,
         )
 
         self.websocket_handler.queue_put(
@@ -719,13 +731,12 @@ class WorldStateManagerPlugin:
         await self.handle_get_templates({})
         await self.signal_operation_done()
 
-
     async def handle_apply_templates(self, data):
         payload = ApplyWorldStateTemplatesPayload(**data)
 
         log.debug("Applying world state templates", templates=payload.templates)
 
-        def callback_done(template, result, last_template:bool):
+        def callback_done(template, result, last_template: bool):
             self.websocket_handler.queue_put(
                 {
                     "type": "world_state_manager",
@@ -737,7 +748,7 @@ class WorldStateManagerPlugin:
                 }
             )
 
-        def callback_start(template, last_template:bool):
+        def callback_start(template, last_template: bool):
             self.websocket_handler.queue_put(
                 {
                     "type": "world_state_manager",
@@ -747,16 +758,15 @@ class WorldStateManagerPlugin:
                 }
             )
 
-
         await self.world_state_manager.apply_templates(
             payload.templates,
-            callback_start = callback_start,
-            callback_done = callback_done,
-            character_name = payload.character_name,
-            run_immediately = payload.run_immediately,
-            generation_options = payload.generation_options,
+            callback_start=callback_start,
+            callback_done=callback_done,
+            character_name=payload.character_name,
+            run_immediately=payload.run_immediately,
+            generation_options=payload.generation_options,
         )
-        
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -774,9 +784,9 @@ class WorldStateManagerPlugin:
         payload = SaveWorldStateTemplateGroupPayload(**data)
         group = payload.group
         log.debug("Save template group", group=group)
-        
+
         await self.world_state_manager.save_template_group(group)
-        
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -784,20 +794,19 @@ class WorldStateManagerPlugin:
                 "data": payload.model_dump(),
             }
         )
-        
+
         await self.handle_get_templates({})
         await self.signal_operation_done()
-        
-        
+
     async def handle_delete_template_group(self, data):
-        
+
         payload = DeleteWorldStateTemplateGroupPayload(**data)
         group = payload.group
-        
+
         log.debug("Remove template group", group=group)
-        
+
         await self.world_state_manager.remove_template_group(group)
-        
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -805,10 +814,9 @@ class WorldStateManagerPlugin:
                 "data": payload.model_dump(),
             }
         )
-        
+
         await self.handle_get_templates({})
         await self.signal_operation_done()
-        
 
     async def handle_generate_character_dialogue_instructions(self, data):
         payload = SelectiveCharacterPayload(**data)
@@ -846,11 +854,11 @@ class WorldStateManagerPlugin:
     async def handle_delete_character(self, data):
         payload = SelectiveCharacterPayload(**data)
         character = self.scene.get_character(payload.name)
-        
+
         if not character:
             log.error("Character not found", name=payload.name)
             return
-        
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -860,22 +868,22 @@ class WorldStateManagerPlugin:
                 },
             }
         )
-            
+
         await self.scene.remove_actor(character.actor)
         await self.signal_operation_done()
         await self.handle_get_character_list({})
         self.scene.emit_status()
-        
+
     async def handle_activate_character(self, data):
         payload = SelectiveCharacterPayload(**data)
         character = self.scene.get_character(payload.name)
-        
+
         if not character:
             log.error("Character not found", name=payload.name)
             return
-        
+
         await self.world_state_manager.activate_character(character.name)
-        
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -885,20 +893,20 @@ class WorldStateManagerPlugin:
                 },
             }
         )
-        
+
         await self.signal_operation_done()
         self.scene.emit_status()
-        
+
     async def handle_deactivate_character(self, data):
         payload = SelectiveCharacterPayload(**data)
         character = self.scene.get_character(payload.name)
-        
+
         if not character:
             log.error("Character not found", name=payload.name)
             return
-        
+
         await self.world_state_manager.deactivate_character(character.name)
-        
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -908,24 +916,24 @@ class WorldStateManagerPlugin:
                 },
             }
         )
-        
+
         await self.signal_operation_done()
         self.scene.emit_status()
-        
+
     async def handle_create_character(self, data):
         payload = CreateCharacterPayload(**data)
-        
+
         character = await self.world_state_manager.create_character(
-            generate = payload.generate,
-            instructions = payload.instructions,
-            name = payload.name,
-            description = payload.description,
-            is_player = payload.is_player,
-            generate_attributes = payload.generate_attributes,
+            generate=payload.generate,
+            instructions=payload.instructions,
+            name=payload.name,
+            description=payload.description,
+            is_player=payload.is_player,
+            generate_attributes=payload.generate_attributes,
             generation_options=payload.generation_options,
-            active = payload.is_player or not self.scene.has_active_npcs
+            active=payload.is_player or not self.scene.has_active_npcs,
         )
-        
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -933,23 +941,21 @@ class WorldStateManagerPlugin:
                 "data": {
                     "name": character.name,
                     "description": character.description,
-                }
+                },
             }
         )
-        
+
         await self.handle_get_character_list({})
         await self.handle_get_character_details({"name": character.name})
         await self.signal_operation_done()
-        
+
         self.scene.emit_status()
-        
+
     async def handle_update_scene_outline(self, data):
         payload = SceneOutlinePayload(**data)
-        
-        await self.world_state_manager.update_scene_outline(
-            **payload.model_dump()
-        )
-        
+
+        await self.world_state_manager.update_scene_outline(**payload.model_dump())
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -957,19 +963,16 @@ class WorldStateManagerPlugin:
                 "data": payload.model_dump(),
             }
         )
-        
+
         await self.signal_operation_done()
         self.scene.emit_status()
         await self.scene.emit_history()
-        
-        
+
     async def handle_update_scene_settings(self, data):
         payload = SceneSettingsPayload(**data)
-        
-        await self.world_state_manager.update_scene_settings(
-            **payload.model_dump()
-        )
-        
+
+        await self.world_state_manager.update_scene_settings(**payload.model_dump())
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -977,47 +980,42 @@ class WorldStateManagerPlugin:
                 "data": payload.model_dump(),
             }
         )
-        
+
         await self.signal_operation_done()
         self.scene.emit_status()
-    
+
     async def handle_export_scene(self, data):
         payload = ExportOptions(**data)
         scene_data = await export(self.scene, payload)
-        
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
                 "action": "scene_exported",
-                "data": scene_data
+                "data": scene_data,
             }
         )
         await self.signal_operation_done()
-    
+
     async def handle_save_scene(self, data):
         payload = SaveScenePayload(**data)
-        
+
         log.debug("Save scene", copy=payload.save_as)
-        
+
         await self.scene.save(auto=False, force=True, copy_name=payload.save_as)
         self.scene.emit_status()
-        
+
     async def handle_request_scene_history(self, data):
-        history = history_with_relative_time(
-            self.scene.archived_history, self.scene.ts
-        )
-        
+        history = history_with_relative_time(self.scene.archived_history, self.scene.ts)
+
         self.websocket_handler.queue_put(
-            {
-                "type": "world_state_manager",
-                "action": "scene_history",
-                "data": history
-            }
+            {"type": "world_state_manager", "action": "scene_history", "data": history}
         )
-        
+
     async def handle_regenerate_history(self, data):
-        
+
         payload = RegenerateHistoryPayload(**data)
+
         def callback():
             self.websocket_handler.queue_put(
                 {
@@ -1025,24 +1023,21 @@ class WorldStateManagerPlugin:
                     "action": "history_entry_added",
                     "data": history_with_relative_time(
                         self.scene.archived_history, self.scene.ts
-                    )
+                    ),
                 }
             )
-        
+
         await rebuild_history(
-            self.scene,
-            callback=callback,
-            generation_options=payload.generation_options
+            self.scene, callback=callback, generation_options=payload.generation_options
         )
-        
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
                 "action": "history_regenerated",
-                "data": payload.model_dump()
+                "data": payload.model_dump(),
             }
         )
-        
+
         await self.signal_operation_done()
         await self.handle_request_scene_history(data)
-        

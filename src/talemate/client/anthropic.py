@@ -62,7 +62,7 @@ class AnthropicClient(ClientBase):
     @property
     def supported_parameters(self):
         return [
-            "temperature", 
+            "temperature",
             "top_p",
             "top_k",
             "max_tokens",

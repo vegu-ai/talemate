@@ -1,6 +1,7 @@
 from contextvars import ContextVar
-import structlog
+
 import pydantic
+import structlog
 
 __all__ = [
     "scene_is_loading",
@@ -15,13 +16,16 @@ __all__ = [
 
 log = structlog.get_logger(__name__)
 
+
 class InteractionState(pydantic.BaseModel):
     act_as: str | None = None
+
 
 scene_is_loading = ContextVar("scene_is_loading", default=None)
 rerun_context = ContextVar("rerun_context", default=None)
 active_scene = ContextVar("active_scene", default=None)
 interaction = ContextVar("interaction", default=InteractionState())
+
 
 class SceneIsLoading:
     def __init__(self, scene):
@@ -44,6 +48,7 @@ class ActiveScene:
     def __exit__(self, *args):
         active_scene.reset(self.token)
 
+
 class RerunContext:
     def __init__(self, scene, direction=None, method="replace", message: str = None):
         self.scene = scene
@@ -64,12 +69,13 @@ class RerunContext:
     def __exit__(self, *args):
         rerun_context.reset(self.token)
 
+
 class Interaction:
     def __init__(self, **kwargs):
         self.state = InteractionState(**kwargs)
-        
+
     def __enter__(self):
         self.token = interaction.set(self.state)
-        
+
     def __exit__(self, *args):
         interaction.reset(self.token)

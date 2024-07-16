@@ -23,7 +23,7 @@ import talemate.save as save
 import talemate.util as util
 from talemate.client.context import ClientContext, ConversationContext
 from talemate.config import Config, SceneConfig, load_config
-from talemate.context import rerun_context, interaction
+from talemate.context import interaction, rerun_context
 from talemate.emit import Emission, Emitter, emit, wait_for_input
 from talemate.emit.signals import ConfigSaved, ImageGenerated, handlers
 from talemate.exceptions import (
@@ -67,12 +67,15 @@ async_signals.register("game_loop")
 async_signals.register("game_loop_actor_iter")
 async_signals.register("game_loop_new_message")
 
+
 class ActedAsCharacter(Exception):
     """
     Raised when the user acts as another character
     than the main player character
     """
+
     pass
+
 
 class Character:
     """
@@ -156,10 +159,10 @@ class Character:
             return ""
 
         return random.choice(self.example_dialogue)
-        
-    def set_color(self, color:str = None):
+
+    def set_color(self, color: str = None):
         # if no color provided, chose a random color
-        
+
         if color is None:
             color = random.choice(
                 [
@@ -609,7 +612,7 @@ class Player(Actor):
                 self.agent = self.scene.get_helper("conversation").agent
 
             return await super().talk()
-        
+
         act_as = None
 
         if not message:
@@ -618,8 +621,10 @@ class Player(Actor):
 
             name = colored_text(self.character.name + ": ", self.character.color)
             input = await wait_for_input(
-                f"[{history_length}] {name}", character=self.character, data={"reason":"talk"},
-                return_struct=True
+                f"[{history_length}] {name}",
+                character=self.character,
+                data={"reason": "talk"},
+                return_struct=True,
             )
             message = input["message"]
             act_as = input["interaction"].act_as
@@ -632,13 +637,13 @@ class Player(Actor):
                 message = f'"{message}"'
 
             message = util.ensure_dialog_format(message)
-            
+
             log.warning("player_message", message=message, act_as=act_as)
-            
+
             if act_as == "$narrator":
                 # acting as the narrator
                 message = NarratorMessage(message, source="player")
-                self.scene.push_history(message)  
+                self.scene.push_history(message)
                 self.scene.narrator_message(message)
                 raise ActedAsCharacter()
             elif act_as:
@@ -655,11 +660,14 @@ class Player(Actor):
                 self.message = message
 
                 self.scene.push_history(
-                    CharacterMessage(f"{self.character.name}: {message}", source="player")
+                    CharacterMessage(
+                        f"{self.character.name}: {message}", source="player"
+                    )
                 )
                 emit("character", self.history[-1], character=self.character)
 
         return message
+
 
 class Scene(Emitter):
     """
@@ -760,7 +768,7 @@ class Scene(Emitter):
     @property
     def npc_character_names(self):
         return [character.name for character in self.get_npc_characters()]
-    
+
     @property
     def has_active_npcs(self):
         return bool(list(self.get_npc_characters()))
@@ -1246,13 +1254,13 @@ class Scene(Emitter):
             intro = self.intro
 
         if intro and (not intro.startswith("*") or not intro.startswith('"')):
-            
+
             # if intro is not already italicized or quoted, italicize it
-            
-            intro = f'*{intro}*'
-            
+
+            intro = f"*{intro}*"
+
         else:
-            
+
             intro = util.ensure_dialog_format(intro)
 
         return intro
@@ -1765,12 +1773,12 @@ class Scene(Emitter):
             first_loop = False
 
             await asyncio.sleep(0.01)
-            
+
     async def ensure_memory_db(self):
         memory = self.get_helper("memory").agent
         if not memory.db:
             await memory.set_db()
-    
+
     async def emit_history(self):
         emit("clear_screen", "")
 
@@ -1786,9 +1794,7 @@ class Scene(Emitter):
                 not isinstance(actor, Player)
                 and actor.character.introduce_main_character
             ):
-                actor.character.introduce_main_character(
-                    self.main_character.character
-                )
+                actor.character.introduce_main_character(self.main_character.character)
 
             if (
                 actor.character.greeting_text
@@ -1797,10 +1803,9 @@ class Scene(Emitter):
                 item = f"{actor.character.name}: {actor.character.greeting_text}"
                 emit("character", item, character=actor.character)
 
-
     async def _run_game_loop(self, init: bool = True):
 
-        await self.ensure_memory_db()        
+        await self.ensure_memory_db()
 
         if init:
             emit("clear_screen", "")
@@ -1865,16 +1870,16 @@ class Scene(Emitter):
         )
 
         await self.world_state_manager.apply_all_auto_create_templates()
-        
+
         # if loop sets this to True, we skip to the player
         skip_to_player = False
-        
+
         while continue_scene and self.active:
             log.debug(
                 "game loop", auto_save=self.auto_save, auto_progress=self.auto_progress
             )
             try:
-                await self.ensure_memory_db()        
+                await self.ensure_memory_db()
                 await self.load_active_pins()
                 game_loop = events.GameLoopEvent(
                     scene=self, event_type="game_loop", had_passive_narration=False
@@ -1885,10 +1890,10 @@ class Scene(Emitter):
                 signal_game_loop = True
 
                 for actor in self.actors:
-                    
+
                     if skip_to_player and not isinstance(actor, Player):
                         continue
-                    
+
                     skip_to_player = False
 
                     if not actor.character:
@@ -2042,7 +2047,13 @@ class Scene(Emitter):
         )
         self.emit_status()
 
-    async def save(self, save_as: bool = False, auto: bool = False, force: bool = False, copy_name: str = None):
+    async def save(
+        self,
+        save_as: bool = False,
+        auto: bool = False,
+        force: bool = False,
+        copy_name: str = None,
+    ):
         """
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
@@ -2064,7 +2075,7 @@ class Scene(Emitter):
         elif not self.filename and not auto:
             self.filename = await wait_for_input("Enter save name: ")
             self.filename = self.filename.replace(" ", "-").lower() + ".json"
-            
+
         if self.filename and not self.filename.endswith(".json"):
             self.filename = f"{self.filename}.json"
 
@@ -2072,14 +2083,13 @@ class Scene(Emitter):
             # scene has never been saved, don't auto save
             return
 
-
         if save_as:
             self.immutable_save = False
             memory_agent = self.get_helper("memory").agent
             memory_agent.close_db(self)
             self.memory_id = str(uuid.uuid4())[:10]
-            await self.commit_to_memory()        
-        
+            await self.commit_to_memory()
+
         self.set_new_memory_session_id()
 
         saves_dir = self.save_dir
@@ -2161,16 +2171,16 @@ class Scene(Emitter):
         await self.world_state.commit_to_memory(memory)
 
     def reset(self):
-        # remove messages 
+        # remove messages
         self.history = []
-        
+
         # clear out archived history, but keep pre-established history
         self.archived_history = [
             ah for ah in self.archived_history if ah.get("end") is None
         ]
-        
+
         self.world_state.reset()
-        
+
         self.filename = ""
 
     async def remove_all_actors(self):

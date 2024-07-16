@@ -1,23 +1,30 @@
 import asyncio
-from typing import TYPE_CHECKING, Tuple, Union
+import json
 import random
+from typing import TYPE_CHECKING, Tuple, Union
+
 import pydantic
 import structlog
-import json
 
 import talemate.util as util
-from talemate.util.response import extract_list
 from talemate.agents.base import set_processing
 from talemate.emit import emit
-from talemate.prompts import Prompt
-from talemate.world_state.templates import AnnotatedTemplate, Spices, WritingStyle, GenerationOptions
 from talemate.instance import get_agent
+from talemate.prompts import Prompt
+from talemate.util.response import extract_list
+from talemate.world_state.templates import (
+    AnnotatedTemplate,
+    GenerationOptions,
+    Spices,
+    WritingStyle,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
 
 
 log = structlog.get_logger("talemate.creator.assistant")
+
 
 class ContentGenerationContext(pydantic.BaseModel):
     """
@@ -31,7 +38,9 @@ class ContentGenerationContext(pydantic.BaseModel):
     original: str | None = None
     partial: str = ""
     uid: str | None = None
-    generation_options: GenerationOptions = pydantic.Field(default_factory=GenerationOptions)
+    generation_options: GenerationOptions = pydantic.Field(
+        default_factory=GenerationOptions
+    )
     template: AnnotatedTemplate | None = None
     context_aware: bool = True
     history_aware: bool = True
@@ -49,62 +58,64 @@ class ContentGenerationContext(pydantic.BaseModel):
 
     @property
     def spice(self) -> str:
-        
+
         spice_level = self.generation_options.spice_level
-        
+
         if self.template and not getattr(self.template, "supports_spice", False):
             # template supplied that doesn't support spice
             return ""
-        
+
         if spice_level == 0:
             # no spice
             return ""
-        
+
         if not self.generation_options.spices:
             # no spices
             return ""
-        
+
         # randomly determine if we should add spice (0.0 - 1.0)
         if random.random() > spice_level:
             return ""
-        
-        spice = self.generation_options.spices.render(
-            self.scene, self.character
+
+        spice = self.generation_options.spices.render(self.scene, self.character)
+
+        log.debug(
+            "spice_applied",
+            spice=spice,
+            uid=self.uid,
+            character=self.character,
+            context=self.computed_context,
         )
-        
-        log.debug("spice_applied", spice=spice, uid=self.uid, character=self.character, context=self.computed_context)
-        
+
         emit(
-            'spice_applied',
-            websocket_passthrough=True, 
+            "spice_applied",
+            websocket_passthrough=True,
             data={
-                "spice": spice, 
-                "uid": self.uid, 
-                "character": self.character, 
-                "context": self.computed_context
-            }
+                "spice": spice,
+                "uid": self.uid,
+                "character": self.character,
+                "context": self.computed_context,
+            },
         )
-        
+
         return spice
-        
+
     @property
     def style(self):
-        
+
         if self.template and not getattr(self.template, "supports_style", False):
             # template supplied that doesn't support style
             return ""
-        
+
         if not self.generation_options.writing_style:
             # no writing style
             return ""
-        
-        return self.generation_options.writing_style.render(
-            self.scene, self.character
-        )
-        
+
+        return self.generation_options.writing_style.render(self.scene, self.character)
+
     def set_state(self, key: str, value: str | int | float | bool):
-        self.state[key] = value   
-        
+        self.state[key] = value
+
 
 class AssistantMixin:
     """
@@ -171,9 +182,10 @@ class AssistantMixin:
         else:
             kind = "create"
 
-        log.debug(f"Contextual generate: {context_typ} - {context_name}", generation_context=generation_context)
-
-        
+        log.debug(
+            f"Contextual generate: {context_typ} - {context_name}",
+            generation_context=generation_context,
+        )
 
         content = await Prompt.request(
             f"creator.contextual-generate",
@@ -200,23 +212,21 @@ class AssistantMixin:
 
         if not generation_context.partial:
             content = util.strip_partial_sentences(content)
-            
-        
-            
-            
-        if context_typ == 'list':
+
+        if context_typ == "list":
             try:
                 content = json.dumps(extract_list(content), indent=2)
             except Exception as e:
                 log.warning("Failed to extract list", error=e)
                 content = "[]"
-        elif context_typ == 'character dialogue':
+        elif context_typ == "character dialogue":
             if not content.startswith(generation_context.character + ":"):
                 content = generation_context.character + ": " + content
             content = util.strip_partial_sentences(content)
-            content = util.ensure_dialog_format(content, talking_character=generation_context.character)
+            content = util.ensure_dialog_format(
+                content, talking_character=generation_context.character
+            )
             return content
-
 
         return content.strip().strip("*").strip()
 
@@ -250,7 +260,7 @@ class AssistantMixin:
             len(character.name + ":") :
         ].strip()
 
-        response = response.replace("...","").strip()
+        response = response.replace("...", "").strip()
 
         if response.startswith(input):
             response = response[len(input) :]
@@ -287,8 +297,8 @@ class AssistantMixin:
             pad_prepended_response=False,
             dedupe_enabled=False,
         )
-        response = response.strip().replace("...","").strip()
-        
+        response = response.strip().replace("...", "").strip()
+
         if response.startswith(input):
             response = response[len(input) :]
 

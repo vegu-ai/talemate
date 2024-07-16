@@ -1,6 +1,7 @@
 from talemate.agents.base import set_processing
 from talemate.prompts import Prompt
 
+
 class ScenarioCreatorMixin:
     """
     Adds scenario creation functionality to the creator agent

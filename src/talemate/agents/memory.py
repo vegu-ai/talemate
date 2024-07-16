@@ -568,7 +568,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             if "Collection not found" not in str(exc):
                 raise
 
-    def close_db(self, scene, remove_unsaved_memory:bool = True):
+    def close_db(self, scene, remove_unsaved_memory: bool = True):
         if not self.db:
             return
 
@@ -698,9 +698,9 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         _results = self.db.query(query_texts=[text], where=where, n_results=limit)
 
-        #import json
-        #print(json.dumps(_results["ids"], indent=2))
-        #print(json.dumps(_results["distances"], indent=2))
+        # import json
+        # print(json.dumps(_results["ids"], indent=2))
+        # print(json.dumps(_results["distances"], indent=2))
 
         results = []
 

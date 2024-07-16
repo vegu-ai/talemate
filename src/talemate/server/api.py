@@ -23,7 +23,7 @@ async def websocket_endpoint(websocket, path):
     scene_task = None
 
     log.info("frontend connected")
-    
+
     try:
         # Create a task to send messages from the queue
         async def send_messages():
@@ -82,7 +82,7 @@ async def websocket_endpoint(websocket, path):
                     scene_data = data.get("scene_data")
                     filename = data.get("filename")
                     reset = data.get("reset", False)
-                    
+
                     await message_queue.put(
                         {
                             "type": "system",
@@ -99,7 +99,10 @@ async def websocket_endpoint(websocket, path):
                                 "message": "Scene file loaded ...",
                                 "id": "scene.loaded",
                                 "status": "success",
-                                "data": {"hidden": True, "environment": handler.scene.environment},
+                                "data": {
+                                    "hidden": True,
+                                    "environment": handler.scene.environment,
+                                },
                             }
                         )
 
@@ -156,7 +159,11 @@ async def websocket_endpoint(websocket, path):
                 elif action_type == "request_app_config":
                     log.info("request_app_config")
                     await message_queue.put(
-                        {"type": "app_config", "data": load_config(), "version": VERSION}
+                        {
+                            "type": "app_config",
+                            "data": load_config(),
+                            "version": VERSION,
+                        }
                     )
                 else:
                     log.info("Routing to sub-handler", action_type=action_type)

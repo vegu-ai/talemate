@@ -23,8 +23,10 @@ class SetCoverImagePayload(pydantic.BaseModel):
 class RegeneratePayload(pydantic.BaseModel):
     context: Union[VisualContextState, None] = None
 
+
 class GeneratePayload(pydantic.BaseModel):
     context: Union[VisualContextState, None] = None
+
 
 class VisualWebsocketHandler(Plugin):
     router = "visual"
@@ -85,17 +87,16 @@ class VisualWebsocketHandler(Plugin):
             )
             return
 
-
-    async def handle_visualize_character(self, data:dict):
+    async def handle_visualize_character(self, data: dict):
         payload = GeneratePayload(**data)
         visual = get_agent("visual")
         await visual.generate_character_portrait(
-            payload.context.character_name, 
-            payload.context.instructions,
-            replace=True
+            payload.context.character_name, payload.context.instructions, replace=True
         )
-        
-    async def handle_visualize_environment(self, data:dict):
+
+    async def handle_visualize_environment(self, data: dict):
         payload = GeneratePayload(**data)
         visual = get_agent("visual")
-        await visual.generate_environment_background(instructions=payload.context.instructions)
+        await visual.generate_environment_background(
+            instructions=payload.context.instructions
+        )

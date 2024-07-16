@@ -150,7 +150,8 @@ class CharacterMessage(SceneMessage):
 class NarratorMessage(SceneMessage):
     source: str = "progress_story"
     typ = "narrator"
-    
+
+
 @dataclass
 class DirectorMessage(SceneMessage):
     action: str = "actor_instruction"

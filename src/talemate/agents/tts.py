@@ -138,8 +138,8 @@ class TTSAgent(Agent):
         return config_options
 
     def __init__(self, **kwargs):
-        self.is_enabled = False#
-        
+        self.is_enabled = False  #
+
         if not nltk.data.find("tokenizers/punkt"):
             print("Downloading nltk punkt tokenizer")
             nltk.download("punkt", quiet=True)
@@ -359,14 +359,14 @@ class TTSAgent(Agent):
 
         api_changed = api != self.api
 
-        #log.debug(
+        # log.debug(
         #    "apply_config",
         #    api=api,
         #    api_changed=api != self.api,
         #    current_api=self.api,
         #    args=args,
         #    kwargs=kwargs,
-        #)
+        # )
 
         try:
             self.preselect_voice = kwargs["actions"]["_config"]["config"]["voice_id"][

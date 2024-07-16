@@ -32,6 +32,7 @@ JSON_OBJECT_RESPONSE_MODELS = [
     "mistral-large-latest",
 ]
 
+
 class Defaults(pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "open-mixtral-8x22b"
@@ -72,7 +73,7 @@ class MistralAIClient(ClientBase):
     @property
     def supported_parameters(self):
         return [
-            "temperature", 
+            "temperature",
             "top_p",
             "max_tokens",
         ]

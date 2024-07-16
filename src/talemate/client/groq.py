@@ -67,7 +67,9 @@ class GroqClient(ClientBase):
             "top_p",
             "presence_penalty",
             "frequency_penalty",
-            ParameterReroute(talemate_parameter="stopping_strings",  client_parameter="stop"),
+            ParameterReroute(
+                talemate_parameter="stopping_strings", client_parameter="stop"
+            ),
             "max_tokens",
         ]
 
@@ -149,7 +151,7 @@ class GroqClient(ClientBase):
         if kwargs.get("model"):
             self.model_name = kwargs["model"]
             self.set_client(kwargs.get("max_token_length"))
-            
+
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
 

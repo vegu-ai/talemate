@@ -62,6 +62,7 @@ class AgentAction(pydantic.BaseModel):
     container: bool = False
     icon: Union[str, None] = None
 
+
 class AgentDetail(pydantic.BaseModel):
     value: Union[str, None] = None
     description: Union[str, None] = None
@@ -91,6 +92,7 @@ def set_processing(fn):
                     # not sure why this happens
                     # some concurrency error?
                     log.error("error emitting agent status", exc=exc)
+
     return wrapper
 
 
@@ -329,12 +331,12 @@ class Agent(ABC):
                     agent=self.agent_type,
                     exc=fut.exception(),
                 )
-                
+
                 error_handler = getattr(self, "on_background_processing_error", None)
-                
+
                 if error_handler:
                     await error_handler(fut.exception())
-                
+
                 await self.emit_status()
                 return
 

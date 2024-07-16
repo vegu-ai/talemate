@@ -110,7 +110,9 @@ class SummarizeAgent(Agent):
         return result
 
     @set_processing
-    async def build_archive(self, scene, generation_options:GenerationOptions | None = None):
+    async def build_archive(
+        self, scene, generation_options: GenerationOptions | None = None
+    ):
         end = None
 
         if not self.actions["archive"].enabled:
@@ -225,9 +227,9 @@ class SummarizeAgent(Agent):
 
         if dialogue_entries:
             summarized = await self.summarize(
-                "\n".join(map(str, dialogue_entries)), 
+                "\n".join(map(str, dialogue_entries)),
                 extra_context=extra_context,
-                generation_options=generation_options
+                generation_options=generation_options,
             )
 
         else:

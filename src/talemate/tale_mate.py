@@ -1252,16 +1252,11 @@ class Scene(Emitter):
             )
         except AttributeError:
             intro = self.intro
-
-        if intro and (not intro.startswith("*") or not intro.startswith('"')):
-
-            # if intro is not already italicized or quoted, italicize it
-
+            
+        if '"' not in intro and "*" not in intro:
             intro = f"*{intro}*"
-
-        else:
-
-            intro = util.ensure_dialog_format(intro)
+            
+        intro = util.ensure_dialog_format(intro)
 
         return intro
 

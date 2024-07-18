@@ -1,3 +1,4 @@
+import pytest
 from talemate.util import (
     iso8601_add,
     iso8601_correct_duration,
@@ -36,3 +37,23 @@ def test_isodate_utils():
     assert iso8601_duration_to_human(date1) == "11 Months and 15 Minutes ago", iso8601_duration_to_human(date1)
     assert iso8601_duration_to_human(date2) == "1 Second ago",  iso8601_duration_to_human(date2)
     assert iso8601_duration_to_human(iso8601_diff(date1, date2)) == "11 Months, 14 Minutes and 59 Seconds ago", iso8601_duration_to_human(iso8601_diff(date1, date2))
+    
+@pytest.mark.parametrize("dates, expected", [
+    (["PT1S", "P3M", "P6M", "P8M"], "P17MT1S"),
+])
+def test_adding_isodates(dates: list[str], expected: str):
+
+    date = dates[0]
+    
+    for i in range(1, len(dates)):
+        date = iso8601_add(date, dates[i])
+        
+    assert date == expected, date
+    
+    
+@pytest.mark.parametrize("a, b, expected", [
+    ("P1Y", "P11M", "1 Month and 5 Days ago"),
+    ("P12M", "P11M", "1 Month ago"),
+])
+def test_iso8601_diff_to_human(a, b, expected):
+    assert iso8601_diff_to_human(a, b) == expected, iso8601_diff_to_human(a, b)

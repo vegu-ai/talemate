@@ -8,7 +8,7 @@
   "archived_history": [
     {
       "text": "Captain Elmer and Kaira first met during their rigorous training for the Infinity Quest mission. Their initial interactions were marked by a sense of mutual respect and curiosity.",
-      "ts": "PT1S"
+      "ts": "P1M"
     },
     {
       "text": "Over the course of several months, as they trained together, Elmer and Kaira developed a strong bond. They often spent their free time discussing their dreams of exploring the cosmos.",
@@ -25,6 +25,10 @@
     {
       "text": "One memorable evening, while gazing at the stars through the ship's observation deck, Elmer and Kaira shared personal stories from their past. This intimate conversation deepened their connection and understanding of each other.",
       "ts": "P11M"
+    },
+    {
+      "text": "You awaken on board of your ship, disoriented.",
+      "ts": "P12M"
     }
   ],
   "character_states": {},

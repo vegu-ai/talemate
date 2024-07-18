@@ -30,12 +30,14 @@ SUPPORTED_MODELS = [
     "gpt-4-turbo",
     "gpt-4o-2024-05-13",
     "gpt-4o",
+    "gpt-4o-mini",
 ]
 
 # any model starting with gpt-4- is assumed to support 'json_object'
 # for others we need to explicitly state the model name
 JSON_OBJECT_RESPONSE_MODELS = [
     "gpt-4o",
+    "gpt-4o-mini",
     "gpt-3.5-turbo-0125",
 ]
 

@@ -320,7 +320,7 @@ class Agent(ABC):
 
         await asyncio.sleep(0.01)
 
-    async def _handle_background_processing(self, fut: asyncio.Future):
+    async def _handle_background_processing(self, fut: asyncio.Future, error_handler = None):
         try:
             if fut.cancelled():
                 return
@@ -331,8 +331,6 @@ class Agent(ABC):
                     agent=self.agent_type,
                     exc=fut.exception(),
                 )
-
-                error_handler = getattr(self, "on_background_processing_error", None)
 
                 if error_handler:
                     await error_handler(fut.exception())
@@ -345,7 +343,7 @@ class Agent(ABC):
             self.processing_bg -= 1
             await self.emit_status()
 
-    async def set_background_processing(self, task: asyncio.Task):
+    async def set_background_processing(self, task: asyncio.Task, error_handler = None):
         log.info("set_background_processing", agent=self.agent_type)
         if not hasattr(self, "processing_bg"):
             self.processing_bg = 0
@@ -354,7 +352,7 @@ class Agent(ABC):
 
         await self.emit_status()
         task.add_done_callback(
-            lambda fut: asyncio.create_task(self._handle_background_processing(fut))
+            lambda fut: asyncio.create_task(self._handle_background_processing(fut, error_handler))
         )
 
     def connect(self, scene):

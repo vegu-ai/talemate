@@ -229,7 +229,7 @@ class VisualBase(Agent):
         if prev_ready:
             await self.emit_status()
 
-    async def on_background_processing_error(self, error):
+    async def on_image_generation_error(self, error):
         emit(
             "image_generation_failed",
             websocket_passthrough=True,
@@ -480,7 +480,7 @@ class VisualBase(Agent):
 
         if self.process_in_background:
             task = asyncio.create_task(getattr(self, fn)(prompt=prompt, format=format))
-            await self.set_background_processing(task)
+            await self.set_background_processing(task, self.on_image_generation_error)
         else:
             await getattr(self, fn)(prompt=prompt, format=format)
 

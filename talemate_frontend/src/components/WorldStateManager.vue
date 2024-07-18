@@ -75,6 +75,7 @@
 
             <v-window-item value="history">
                 <WorldStateManagerHistory ref="history" 
+                :scene="scene"
                 :generation-options="generationOptions"
                 />
             </v-window-item>

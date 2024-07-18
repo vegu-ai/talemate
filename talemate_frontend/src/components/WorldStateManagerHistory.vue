@@ -24,6 +24,10 @@
             </p>
             <v-divider v-else class="mt-2"></v-divider>
 
+            <v-sheet class="ma-4 text-caption text-center">
+                <span class="text-muted">Total time passed:</span> {{ scene.data.scene_time }}
+            </v-sheet>
+
             <v-list slim density="compact">
                 <v-list-item v-for="(entry, index) in history" :key="index" class="text-body-2" prepend-icon="mdi-clock">
                     <v-list-item-subtitle>{{ entry.time }}</v-list-item-subtitle>
@@ -48,6 +52,7 @@ export default {
     },
     props: {
         generationOptions: Object,
+        scene: Object,
     },
     data() {
         return {

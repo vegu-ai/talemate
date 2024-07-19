@@ -42,14 +42,17 @@ Will open a context menu that allows you to have the actor perform actions.
 
 Will prompt you for a direction and then have the actor will generate dialogue and actions based on that direction.
 
-Depending on what the `Actor Direction Mode` setting in the [Director Agent Settings](/talemate/user-guide/agents/director) the direction will either be given as an instruction or as inner monologue.
+Depending on what the `Actor Direction Mode` setting in the [:material-bullhorn: Director Agent Settings](/talemate/user-guide/agents/director/settings/#actor-direction-mode) the direction will either be given as an instruction or as inner monologue.
 
 Regardless of mode you should write your instruction so it completets the following sentence: `I want you to ...`
 
 Some examples:
 
-- `be angry at the other character`
-- `be annoyed at the situation and storm off`
+> be angry at the other character
+
+or
+
+> be annoyed at the situation and storm off
 
 #### :material-comment-account-outline: Talk - Specific Character
 
@@ -95,7 +98,7 @@ Will narrate the current state of a character, without progressing the story.
 Opens a context menu with options to advance time in the scene, ranging from 5 minutes to 10 years.
 
 
-By default the [Narrator Agent](/talemate/user-guide/agents/narrator) will narrate the time jump, but you can disable this in the [Narrator Agent Settings](/talemate/user-guide/agents/narrator/settings/).
+By default the [:material-script-text: Narrator Agent](/talemate/user-guide/agents/narrator) will narrate the time jump, but you can disable this in the [:material-script-text: Narrator Agent Settings](/talemate/user-guide/agents/narrator/settings/).
 
 
 !!! note "Summarization"

@@ -8,15 +8,16 @@ Talemate uses client(s) to connect to local or remote AI text generation APIs li
 
 ## Add a new client
 
-On the right hand side click the "Add Client" button. If there is no button, you may need to toggle the client options by clicking this button
-
-![open clients](/talemate/img/0.26.0/open-clients.png)
-
-Then click the **:material-plus-box: ADD CLIENT** button.
+On the right hand side click the **:material-plus-box: ADD CLIENT** button. 
 
 ![connect a client add client](/talemate/img/0.26.0/connect-a-client-add-client.png)
 
-The client configuration modal will appear. Here you can choose the type of client you want to add.
+!!! note "No button?"
+    If there is no button, you may need to toggle the client options by clicking this button
+
+    ![open clients](/talemate/img/0.26.0/open-clients.png)
+
+The client configuration window will appear. Here you can choose the type of client you want to add.
 
 ![connect a client add client modal](/talemate/img/0.26.0/connect-a-client-add-client-modal.png)
 
@@ -43,6 +44,7 @@ Select the API you want to use and click through to follow the instructions to c
 - [KoboldCpp](/talemate/user-guide/clients/types/koboldcpp/)
 - [Text-Generation-WebUI](/talemate/user-guide/clients/types/text-generation-webui/) 
 - [LMStudio](/talemate/user-guide/clients/types/lmstudio/)
+- [TabbyAPI](/talemate/user-guide/clients/types/tabbyapi/)
 
 ##### Unofficial OpenAI API implementations
 

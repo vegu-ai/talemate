@@ -8,21 +8,25 @@ On top of the world editor interface you can configure some settings for this ty
 
 ## Applying a writing style
 
-Writing styles are managed through [templates](/talemate/user-guide/world-editor/templates/). 
+Allows you to apply a writing style to AI generated content.
 
-Once there is a writing style template you can select it from the dropdown list.
+Writing styles are managed through [:material-script-text: writing style templates](/talemate/user-guide/world-editor/templates/writing-style). 
+
+Once there is a writing style template available, you can select it from the dropdown list.
 
 ![world editor generation settings 1](/talemate/img/0.26.0/world-editor-generation-settings-2.png)
 
 ## Applying spice
 
-Spice is a way to add some randomness to the generated content.
+Spice is a way to add some controlled randomness to AI generated content.
 
-Spices are managed through [templates](/talemate/user-guide/world-editor/templates/).
+Spices are managed through [:material-chili-mild: spice collection templates](/talemate/user-guide/world-editor/templates/spice).
 
-Once there is a spice template you can select it from the dropdown list.
+Once there is a spice template available, you can select it from the dropdown list.
 
 ![world editor generation settings 1](/talemate/img/0.26.0/world-editor-generation-settings-3.png)
+
+Whether or not spice is applied to the generated content is controlled by the **Spice Chance** setting.
 
 By default it will set a `10%` chance for spice to be applied to the generated content. You can click the :material-minus: and :material-plus: buttons to adjust the spice chance.
 
@@ -35,7 +39,7 @@ So if you are generating 10 character attributes, and have the spice chance set 
 
 If you are generating one specific attribute and want to ensure there is spice applied, you can set the spice chance to `100%`.
 
-## Content that can be generated
+## Content that can be generated and is affected by these settings
 
 - Character descriptions
 - Character names
@@ -44,4 +48,8 @@ If you are generating one specific attribute and want to ensure there is spice a
 - Character dialogue instructions and examples
 - Scene descriptions
 - Scene introduction text
+
+!!! note "Currently only in the world editor"
+    Generation settings are currently **NOT** applied to dialogue or narration generation during
+    scene progression, although this is planned for a future release.
 

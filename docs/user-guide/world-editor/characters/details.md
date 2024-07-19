@@ -7,7 +7,7 @@ To add or change the details of a character, open the :material-earth-box: **Wor
 ![World editor characters attributes 1](/talemate/img/0.26.0/world-editor-characters-details.png)
 
 !!! note "Tracked states and details"
-    When a **:material-image-auto-adjust: state reinforcement** is updated, the value is set to the corresponding detail. Learn more about tracked states in the [Tracked states](/user-guide/world-editor/characters/states) section. 
+    When a **:material-image-auto-adjust: state reinforcement** is updated, the value is set to the corresponding detail. Learn more about tracked states in the [Tracked states](/talemate/user-guide/world-editor/characters/states) section. 
 
 ## Adding a detail
 
@@ -53,7 +53,7 @@ When a detail changes often and lends itself to being tracked, you can quickly s
 
 ## Generating details using templates
 
-You can use [templates](/user-guide/world-editor/templates/detail) to quickly generate details for your characters. 
+You can use [templates](/talemate/user-guide/world-editor/templates/detail) to quickly generate details for your characters. 
 
 In the **Details** tab, click the **:material-cube-scan: Templates** button above the detail list to expand the templates list. 
 

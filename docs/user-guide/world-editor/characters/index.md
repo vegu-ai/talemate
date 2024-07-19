@@ -10,24 +10,24 @@ Characters can also be temporarily disabled, which will prevent them from being 
 
 A character is made up of the following components:
 
-### :material-badge-account: [Attribues](/user-guide/world-editor/characters/attributes)
+### :material-badge-account: [Attribues](/talemate/user-guide/world-editor/characters/attributes)
 
 **Attributes** are low to medium detail information about the character. They range from physical attributes to personality traits.
 
-### :material-account-details: [Details](/user-guide/world-editor/characters/details)
+### :material-account-details: [Details](/talemate/user-guide/world-editor/characters/details)
 
 **Details** are low to high detail information about the character. They could contain information about the character's background, history, or other relevant information.
 
 When a **:material-image-auto-adjust: state reinforcment** is updated the value is set to the corresponding detail.
 
-### :material-text-account: [Description](/user-guide/world-editor/characters/description)
+### :material-text-account: [Description](/talemate/user-guide/world-editor/characters/description)
 
 **Description** is a description of the character. A summarization of their appearance, personality, and other relevant information as it relates to the scene.
 
-### :material-image-auto-adjust: [Tracked states](/user-guide/world-editor/characters/states)
+### :material-image-auto-adjust: [Tracked states](/talemate/user-guide/world-editor/characters/states)
 
---8<-- "docs/user-guide/tracking-a-state.md:what-is-a-tracked-state"
+--8<-- "docs/talemate/user-guide/tracking-a-state.md:what-is-a-tracked-state"
 
-### :material-bullhorn: [Actor management](/user-guide/world-editor/characters/actor)
+### :material-bullhorn: [Actor management](/talemate/user-guide/world-editor/characters/actor)
 
 **Actor management** lets you define acting and speaking patterns for the character via dialogue instructions and examples. This is only available for AI characters.

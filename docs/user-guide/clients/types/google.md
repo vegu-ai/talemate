@@ -14,7 +14,7 @@ The client should appear in the clients list. If you haven't setup Google before
 
 Click the `SETUP GOOGLE API CREDENTIALS` button. This will open the api settings window where you can add your Google API credentials.
 
-For additional instructions on obtaining and setting your Google API credentials, see [Google API instructions](/user-guide/apis/google/).
+For additional instructions on obtaining and setting your Google API credentials, see [Google API instructions](/talemate/user-guide/apis/google/).
 
 ![Google settings](/talemate/img/0.26.0/google-settings.png)
 

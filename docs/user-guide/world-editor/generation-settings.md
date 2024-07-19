@@ -8,7 +8,7 @@ On top of the world editor interface you can configure some settings for this ty
 
 ## Applying a writing style
 
-Writing styles are managed through [templates](/user-guide/world-editor/templates/). 
+Writing styles are managed through [templates](/talemate/user-guide/world-editor/templates/). 
 
 Once there is a writing style template you can select it from the dropdown list.
 
@@ -18,7 +18,7 @@ Once there is a writing style template you can select it from the dropdown list.
 
 Spice is a way to add some randomness to the generated content.
 
-Spices are managed through [templates](/user-guide/world-editor/templates/).
+Spices are managed through [templates](/talemate/user-guide/world-editor/templates/).
 
 Once there is a spice template you can select it from the dropdown list.
 

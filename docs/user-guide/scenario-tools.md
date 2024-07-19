@@ -42,7 +42,7 @@ Will open a context menu that allows you to have the actor perform actions.
 
 Will prompt you for a direction and then have the actor will generate dialogue and actions based on that direction.
 
-Depending on what the `Actor Direction Mode` setting in the [Director Agent Settings](/user-guide/agents/director) the direction will either be given as an instruction or as inner monologue.
+Depending on what the `Actor Direction Mode` setting in the [Director Agent Settings](/talemate/user-guide/agents/director) the direction will either be given as an instruction or as inner monologue.
 
 Regardless of mode you should write your instruction so it completets the following sentence: `I want you to ...`
 
@@ -95,11 +95,11 @@ Will narrate the current state of a character, without progressing the story.
 Opens a context menu with options to advance time in the scene, ranging from 5 minutes to 10 years.
 
 
-By default the [Narrator Agent](/user-guide/agents/narrator) will narrate the time jump, but you can disable this in the [Narrator Agent Settings](/user-guide/agents/narrator/settings/).
+By default the [Narrator Agent](/talemate/user-guide/agents/narrator) will narrate the time jump, but you can disable this in the [Narrator Agent Settings](/talemate/user-guide/agents/narrator/settings/).
 
 
 !!! note "Summarization"
-    Whenever time is advanced, the scene state will be updated, and the next message will trigger the [Summarization Agent](/user-guide/agents/summarization) to summarize any events before the time jump.
+    Whenever time is advanced, the scene state will be updated, and the next message will trigger the [Summarization Agent](/talemate/user-guide/agents/summarization) to summarize any events before the time jump.
 
 
 ### :material-earth: World State Actions
@@ -110,9 +110,9 @@ Allows you to quickly set up tracked character and world states.
 
 !!! info "What is a tracked state?"
 
-    --8<-- "docs/user-guide/tracking-a-state.md:what-is-a-tracked-state"
+    --8<-- "docs/talemate/user-guide/tracking-a-state.md:what-is-a-tracked-state"
 
-Please refer to the [World State](/user-guide/world-state) section for more information on how set up custom states to track.
+Please refer to the [World State](/talemate/user-guide/world-state) section for more information on how set up custom states to track.
 <!--- --8<-- [start:quick-apply-favorite-state] -->
 Any favorited state will be shown in the :material-earth: world state context menu. *Your list may be different than the one shown here, depending on what you have favorited.*
 
@@ -209,9 +209,9 @@ Once it is done, the character will now be part of the scene and can be interact
 ### :material-image-frame: Visualizer
 
 !!! info "Availability"
-    If the visualization menu is greyed out, it means that the [Visualizer Agent](/user-guide/agents/visualizer) is not enabled or ready.
+    If the visualization menu is greyed out, it means that the [Visualizer Agent](/talemate/user-guide/agents/visualizer) is not enabled or ready.
 
-    Please refer to the [Visualizer Agent](/user-guide/agents/visualizer) section for more information on how to set it up.
+    Please refer to the [Visualizer Agent](/talemate/user-guide/agents/visualizer) section for more information on how to set it up.
 
 #### :material-image-filter-hdr: Visualize Environment
 

@@ -71,5 +71,5 @@ Click on the :material-auto-fix: **Generate** button to have the AI generate an 
 
 
 !!! tip
-    Make sure to check out the [Generation Settings](/user-guide/world-editor/generation-settings) to see how you can influence the AI's output.
+    Make sure to check out the [Generation Settings](/talemate/user-guide/world-editor/generation-settings) to see how you can influence the AI's output.
 <!--- --8<-- [end:outline] -->

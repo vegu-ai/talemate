@@ -4,7 +4,7 @@
 
 ##### Update world state
 
-Will attempt to update the [world state snapshot](/user-guide/world-state/) based on the current scene. Runs automatically every N turns.
+Will attempt to update the [world state snapshot](/talemate/user-guide/world-state/) based on the current scene. Runs automatically every N turns.
 
 ###### Turns
 
@@ -20,7 +20,7 @@ This is checked every turn and if there are any state reinforcements that are du
 
 ##### Update conditional context pins
 
-Will attempt to evaluate and update any due [conditional context pins](/user-guide/world-editor/pins/#automatically-pinning-entries).
+Will attempt to evaluate and update any due [conditional context pins](/talemate/user-guide/world-editor/pins/#automatically-pinning-entries).
 
 ###### Turns
 

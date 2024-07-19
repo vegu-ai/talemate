@@ -1,13 +1,13 @@
 # State Reinforcement
 State reinforcement templates are used to quickly (or even automatically) setup common attribues and states you want to track for characters or the world itself. They revolve around a question, statement or attribute name that you want to track for a character. The AI will use this template to generate content that matches the query, based on the current progression of the scene.
 
-They are used in the [Character Editor - Tracked States](/user-guide/world-editor/characters/states) section of the World Editor.
+They are used in the [Character Editor - Tracked States](/talemate/user-guide/world-editor/characters/states) section of the World Editor.
 
 --8<-- "docs/snippets/tips.md:what_is_a_tracked_state"
 
 ## Creating a state reinforcement template
 
-Fist, if you have not done so, [create a template group](/user-guide/world-editor/templates/groups) to store the template in.
+Fist, if you have not done so, [create a template group](/talemate/user-guide/world-editor/templates/groups) to store the template in.
 
 Then select the group you want to add the template to and click the **:material-plus: Create Template** button.
 
@@ -61,7 +61,7 @@ Specifies what type of object the state is attached to, currently this can be
 
 ### Context Attachment Method
 
---8<-- "docs/user-guide/tracking-a-state.md:context-attachment-method"
+--8<-- "docs/talemate/user-guide/tracking-a-state.md:context-attachment-method"
 
 ### Update every `N` turns
 

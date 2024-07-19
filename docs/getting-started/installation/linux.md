@@ -10,6 +10,8 @@
 1. Start the backend: `python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050`.
 1. Open a new terminal, navigate to the `talemate_frontend` directory, and start the frontend server by running `npm run serve`.
 
+If everything went well, you can proceed to [connect a client](../../connect-a-client).
+
 ## Additional Information
 
 ### Setting Up a Virtual Environment

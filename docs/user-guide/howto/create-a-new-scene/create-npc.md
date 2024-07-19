@@ -1,6 +1,6 @@
 # Add an AI controlled character
 
-Continuing from [adding a player character](/user-guide/howto/create-a-new-scene/create-player-character), we will now add an ai controlled character to the scene.
+Continuing from [adding a player character](/talemate/user-guide/howto/create-a-new-scene/create-player-character), we will now add an ai controlled character to the scene.
 
 The steps are identical to adding a player character, with the exception that you will **not** toggle on the **Controlled by Player** switch.
 
@@ -33,7 +33,7 @@ Unlike the player character, which is going to be controlled by a human being, i
 
 You should look over the `Attributes` and add / remove any that are not needed or missing.
 
-There is more information on how to do this in the [Character Editor](/user-guide/world-editor/characters/index) section of the user guide.
+There is more information on how to do this in the [Character Editor](/talemate/user-guide/world-editor/characters/index) section of the user guide.
 
 However one thing that's always good to do is switch to :material-bullhorn: **Actor** tab and generate some dialogue instructions. These will guide the AI on how to act and talk.
 
@@ -48,8 +48,8 @@ For our example it generated
 Which seems good enough for our purposes. 
 
 !!! tip "Related Resources"
-    - [Character Editor](/user-guide/world-editor/characters) - learn more about the character editor.
-    - [Generation Settings](/user-guide/world-editor/generation-settings) - see how you can influence the AI's output.
+    - [Character Editor](/talemate/user-guide/world-editor/characters) - learn more about the character editor.
+    - [Generation Settings](/talemate/user-guide/world-editor/generation-settings) - see how you can influence the AI's output.
 
 ## Save the scene
 

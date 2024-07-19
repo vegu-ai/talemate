@@ -14,7 +14,7 @@ Deactivating a character like this will be instant and not generate any narratio
 !!! tip "Can also be done through the scene tools"
     A character can also be deactivated while engaging with the scene, using the scene tools.
 
-    See [Scene Tools -> Take character out of scnee](/user-guide/scenario-tools/#take-character-out-of-scene) for more information.
+    See [Scene Tools -> Take character out of scnee](/talemate/user-guide/scenario-tools/#take-character-out-of-scene) for more information.
 
     Using this method will generate a narration to explain the character's absence.
 
@@ -29,6 +29,6 @@ Activating a character like this will be instant and not generate any narration 
 !!! tip "Can also be done through the scene tools"
     A character can also be reactivated while engaging with the scene, using the scene tools.
 
-    See [Scene Tools -> Call character to scene](/user-guide/scenario-tools/#call-character-to-scene) for more information.
+    See [Scene Tools -> Call character to scene](/talemate/user-guide/scenario-tools/#call-character-to-scene) for more information.
 
     Using this method will generate a narration to explain the character's return.

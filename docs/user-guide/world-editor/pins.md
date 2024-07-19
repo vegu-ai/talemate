@@ -7,7 +7,7 @@ Pins allow you to permanently pin a context entry to the AI context. While a pin
 
     Remember there is also automatic insertion of context based on relevance to the current scene progress, which happens regardless of pins. Pins are just a way to ensure that a specific entry is always considered relevant.
 
-Entries are pinned through the [Context DB](/user-guide/world-editor/context-db).
+Entries are pinned through the [Context DB](/talemate/user-guide/world-editor/context-db).
 
 Find the entry you want to pin and click the :material-pin: **Pin** button.
 

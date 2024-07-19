@@ -31,22 +31,22 @@ Select the API you want to use and click through to follow the instructions to c
 
 ##### Remote APIs
 
-- [OpenAI](/user-guide/clients/types/openai/)
-- [Anthropic](/user-guide/clients/types/anthropic/)
-- [mistral.ai](/user-guide/clients/types/mistral/)
-- [Cohere](/user-guide/clients/types/cohere/)
-- [Groq](/user-guide/clients/types/groq/)
-- [Google Gemini](/user-guide/clients/types/google/)
+- [OpenAI](/talemate/user-guide/clients/types/openai/)
+- [Anthropic](/talemate/user-guide/clients/types/anthropic/)
+- [mistral.ai](/talemate/user-guide/clients/types/mistral/)
+- [Cohere](/talemate/user-guide/clients/types/cohere/)
+- [Groq](/talemate/user-guide/clients/types/groq/)
+- [Google Gemini](/talemate/user-guide/clients/types/google/)
 
 ##### Local APIs
 
-- [KoboldCpp](/user-guide/clients/types/koboldcpp/)
-- [Text-Generation-WebUI](/user-guide/clients/types/text-generation-webui/) 
-- [LMStudio](/user-guide/clients/types/lmstudio/)
+- [KoboldCpp](/talemate/user-guide/clients/types/koboldcpp/)
+- [Text-Generation-WebUI](/talemate/user-guide/clients/types/text-generation-webui/) 
+- [LMStudio](/talemate/user-guide/clients/types/lmstudio/)
 
 ##### Unofficial OpenAI API implementations
 
-- [DeepInfra](/user-guide/clients/types/openai-compatible/#deepinfra)
+- [DeepInfra](/talemate/user-guide/clients/types/openai-compatible/#deepinfra)
 - llamacpp with the `api_like_OAI.py` wrapper
 
 ## Assign the client to the agents

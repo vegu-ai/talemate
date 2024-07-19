@@ -2,7 +2,7 @@
 
 !!! info "What is a tracked state?"
 
-    --8<-- "docs/user-guide/tracking-a-state.md:what-is-a-tracked-state"
+    --8<-- "docs/talemate/user-guide/tracking-a-state.md:what-is-a-tracked-state"
 
 ## Setting up a new state
 In the :material-earth: **World** editor, in the left panel, click the :material-image-auto-adjust: **New State Reinforcement** button.
@@ -33,7 +33,7 @@ By default it will be `10` turns, but you can change this to any number you like
 
 ### Context Attachment Method
 
---8<-- "docs/user-guide/tracking-a-state.md:context-attachment-method"
+--8<-- "docs/talemate/user-guide/tracking-a-state.md:context-attachment-method"
 
 For this example, we always want to know the state of the ship, so we will set it to `All context`.
 

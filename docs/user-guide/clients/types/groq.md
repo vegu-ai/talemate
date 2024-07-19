@@ -14,7 +14,7 @@ The client should appear in the clients list. If you haven't setup Groq before, 
 
 Click the `SET API KEY` button. This will open the api settings window where you can add your Groq API key.
 
-For additional instructions on obtaining and setting your Groq API key, see [Groq API instructions](/user-guide/apis/groq/).
+For additional instructions on obtaining and setting your Groq API key, see [Groq API instructions](/talemate/user-guide/apis/groq/).
 
 ![Groq settings](/talemate/img/0.26.0/groq-settings.png)
 

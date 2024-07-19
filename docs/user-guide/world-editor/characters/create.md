@@ -38,5 +38,5 @@ If this is toggled on, the AI will generate some attributes for the character ba
 If this is toggled on, the character will be flagged as the main player character. This is used to determine who the player is controlling in the scene.
 
 !!! tip "Related Resources"
-    - [How to: create a player character](/user-guide/howto/create-a-new-scene/create-player-character) - learn how to create a player character.
-    - [How to: create an AI controlled character](/user-guide/howto/create-a-new-scene/create-npc) - learn how to create an AI controlled character.
+    - [How to: create a player character](/talemate/user-guide/howto/create-a-new-scene/create-player-character) - learn how to create a player character.
+    - [How to: create an AI controlled character](/talemate/user-guide/howto/create-a-new-scene/create-npc) - learn how to create an AI controlled character.

@@ -1,6 +1,6 @@
 # Context DB
 
-A very rudimentary interface to browse the current context database managed by the [Memory Agent](/user-guide/agents/memory/).
+A very rudimentary interface to browse the current context database managed by the [Memory Agent](/talemate/user-guide/agents/memory/).
 
 !!! note
     This interface will likely be revamped soon, so documentation will be minimal currently.
@@ -11,7 +11,7 @@ Search is done by typing in the search field and pressing `Enter`.
 
 The search will look for the entered text based on relevancy using embeddings. Without getting too technical here, that means if you're using the basic chromadb configuration, accuracy may be lacking.
 
-See [Memory Agent - ChromaDB Setup](/user-guide/agents/memory/chromadb) for more information on how to improve the search accuracy.
+See [Memory Agent - ChromaDB Setup](/talemate/user-guide/agents/memory/chromadb) for more information on how to improve the search accuracy.
 
 ![world editor history](/talemate/img/0.26.0/world-editor-history.png)
 

@@ -4,7 +4,7 @@ Allows you to use Talemate with a service that exposes an openai-like API.
 
 !!! warning "Use the officual client if it is available"
     Only use this if the service you are trying access doen't already have official support from Talemate.
-    All the officially supported clients can be found [here](/user-guide/clients/).
+    All the officially supported clients can be found [here](/talemate/user-guide/clients/).
 
 ## DeepInfra
 
@@ -70,4 +70,4 @@ Once it is added, the client should appear in the clients list and should displa
 
 #### Generations are weird / bad
 
-Make sure the [correct prompt template is assigned](/user-guide/clients/prompt-templates/).
+Make sure the [correct prompt template is assigned](/talemate/user-guide/clients/prompt-templates/).

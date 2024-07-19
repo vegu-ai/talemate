@@ -10,7 +10,7 @@
 1. Once the installation is complete, you can start the backend and frontend servers by running `start.bat`.
 1. Navigate your browser to http://localhost:8080
 
-If everything went well, you can proceed to [connect a client](/getting-started/connect-a-client).
+If everything went well, you can proceed to [connect a client](../../connect-a-client).
 
 ## Additional Information
 

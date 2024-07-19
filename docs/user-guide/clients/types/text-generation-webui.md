@@ -41,7 +41,7 @@ The number of tokens to use as context when generating text. Defaults to `8192`.
 
 #### Generations are weird / bad
 
-Make sure the [correct prompt template is assigned](/user-guide/clients/prompt-templates/).
+Make sure the [correct prompt template is assigned](/talemate/user-guide/clients/prompt-templates/).
 
 #### No model loaded
 

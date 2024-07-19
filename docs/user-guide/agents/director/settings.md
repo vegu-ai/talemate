@@ -20,7 +20,7 @@ If enabled the director will attempt to direct the scene through narration.
 
 Enables the director to direct the actors in the scene.
 
-Right now this is only triggered manually by the player when the players uses the `Direct actor` toolset from the [Scenario tools](/user-guide/scenario-tools).
+Right now this is only triggered manually by the player when the players uses the `Direct actor` toolset from the [Scenario tools](/talemate/user-guide/scenario-tools).
 
 ###### Actor Direction Mode
 

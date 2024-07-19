@@ -4,7 +4,7 @@ Writing style templates are used to define a writing style that can be applied t
 
 ## Creating a writing style
 
-Fist, if you have not done so, [create a template group](/user-guide/world-editor/templates/groups) to store the template in.
+Fist, if you have not done so, [create a template group](/talemate/user-guide/world-editor/templates/groups) to store the template in.
 
 Then select the group you want to add the template to and click the **:material-plus: Create Template** button.
 
@@ -52,11 +52,11 @@ When you have filled out the form, click the **:material-cube-scan: Create Templ
 
 ## Using the writing style template
 
-Please see the [Generation settings](/user-guide/world-editor/generation-settings) section for general information on how to apply a writing style template during generation.
+Please see the [Generation settings](/talemate/user-guide/world-editor/generation-settings) section for general information on how to apply a writing style template during generation.
 
 ### Example: Update character's description
 
-Go to the [Character Editor - Description](/user-guide/world-editor/characters/description) section of the World Editor.
+Go to the [Character Editor - Description](/talemate/user-guide/world-editor/characters/description) section of the World Editor.
 
 In the **:material-auto-fix: Generation Settings** on top of the world editor, click the **:material-script-text: Writing Style** dropdown and select the writing style template you just created.
 

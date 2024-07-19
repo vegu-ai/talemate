@@ -39,7 +39,7 @@ These contain tools to, for example:
 - save the current scene state
 - and more ...
 
-A full guide can be found in the [Scenario Tools](/user-guide/scenario-tools) section of the user guide.
+A full guide can be found in the [Scenario Tools](/talemate/user-guide/scenario-tools) section of the user guide.
 
 ### World state
 
@@ -51,4 +51,4 @@ Each item can be expanded for more information.
 
 ![getting started world state 2](/talemate/img/0.26.0/getting-started-world-state-2.png)
 
-Find out more about the world state in the [World State](/user-guide/world-state) section of the user guide.
+Find out more about the world state in the [World State](/talemate/user-guide/world-state) section of the user guide.

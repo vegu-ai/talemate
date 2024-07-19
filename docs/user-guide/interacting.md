@@ -41,7 +41,7 @@ When typing out your action / dialogue, you can hit the `ctrl+enter` key combina
 !!! abstract "This works best if the client is in control of the prompt template"
     Success rate on this feature when the text generation api controls the prompt template is reduced, as Talemate cannot prefix the partial text.
 
-    See [Prompt Templates](/user-guide/clients/prompt-templates) for more information.
+    See [Prompt Templates](/talemate/user-guide/clients/prompt-templates) for more information.
 
 ## Auto progress
 
@@ -55,4 +55,4 @@ You can turn this off by disabling the auto progress setting, either in the game
 
 ![Tool bar](/talemate/img/0.26.0/getting-started-ui-element-tools.png)
 
-A set of tools to help you interact with the scenario. Find out more about the various actions in the [Scene Tools](/user-guide/scenario-tools) section of the user guide.
+A set of tools to help you interact with the scenario. Find out more about the various actions in the [Scene Tools](/talemate/user-guide/scenario-tools) section of the user guide.

@@ -5,7 +5,7 @@
     in their [GitHub repository](https://github.com/LostRuins/koboldcpp).
 
 !!! info "Support for KoboldCpp's image generation"
-    If your KoboldCpp instance loads a stable diffusion model via Automatic1111 the [Visual Agent](/user-guide/agents/visualizer/) will be automatically configured to use it - unless its already configured to use another backend.
+    If your KoboldCpp instance loads a stable diffusion model via Automatic1111 the [Visual Agent](/talemate/user-guide/agents/visualizer/) will be automatically configured to use it - unless its already configured to use another backend.
 
 If you want to add an KoboldCpp client, change the `Client Type` to `KoboldCpp`.
 
@@ -48,7 +48,7 @@ The number of tokens to use as context when generating text. Defaults to `8192`.
 
 #### Generations are weird / bad
 
-Make sure the [correct prompt template is assigned](/user-guide/clients/prompt-templates/).
+Make sure the [correct prompt template is assigned](/talemate/user-guide/clients/prompt-templates/).
 
 #### Could not connect
 

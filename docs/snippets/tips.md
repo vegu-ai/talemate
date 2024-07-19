@@ -17,7 +17,7 @@
 
 <!--- --8<-- [start:generation_templates_and_settings] -->
 !!! tip "Generation settings and managing templates"
-    Find out more about content generation, managing templates and how to apply randomization and specific writing styles in [Templates](/user-guide/world-editor/templates/) and [Generation settings](/user-guide/world-editor/generation-settings).
+    Find out more about content generation, managing templates and how to apply randomization and specific writing styles in [Templates](/talemate/user-guide/world-editor/templates/) and [Generation settings](/talemate/user-guide/world-editor/generation-settings).
 <!--- --8<-- [end:generation_templates_and_settings] -->
 
 <!--- --8<-- [start:tracked_state] -->
@@ -33,7 +33,7 @@
     
     A template must explicitly support spice to be able to use a spice collection.
 
-    Find out more about how to use spice collections in the [Generation settings](/user-guide/world-editor/generation-settings) section.
+    Find out more about how to use spice collections in the [Generation settings](/talemate/user-guide/world-editor/generation-settings) section.
 <!--- --8<-- [end:spice_collections] -->
 
 <!--- --8<-- [start:writing_styles] -->
@@ -42,7 +42,7 @@
     
     A template must explicitly support writing styles to be able to use a writing style template.
 
-    Find out more about how to use writing styles in the [Generation settings](/user-guide/world-editor/generation-settings) section.
+    Find out more about how to use writing styles in the [Generation settings](/talemate/user-guide/world-editor/generation-settings) section.
 <!--- --8<-- [end:writing_styles] -->
 
 <!--- --8<-- [start:what_is_a_tracked_state] -->

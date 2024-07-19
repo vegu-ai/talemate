@@ -14,7 +14,7 @@ The client should appear in the clients list. If you haven't setup Mistral.ai be
 
 Click the `SET API KEY` button. This will open the api settings window where you can add your Mistral.ai API key.
 
-For additional instructions on obtaining and setting your Mistral.ai API key, see [Mistral.ai API instructions](/user-guide/apis/mistral/).
+For additional instructions on obtaining and setting your Mistral.ai API key, see [Mistral.ai API instructions](/talemate/user-guide/apis/mistral/).
 
 ![Mistral.ai settings](/talemate/img/0.26.0/mistral-settings.png)
 

@@ -37,7 +37,7 @@ You will be asked to confirm the removal. Press the **:material-close-box-outlin
 
 ## Generating attributes using templates
 
-You can use [templates](/user-guide/world-editor/templates/attribute) to quickly generate attributes for your characters. 
+You can use [templates](/talemate/user-guide/world-editor/templates/attribute) to quickly generate attributes for your characters. 
 
 In the **Attributes** tab, click the **:material-cube-scan: Templates** button above the attribute list to expand the templates list. 
 

@@ -1,6 +1,6 @@
 # Add the player character
 
-Continuing from [creating a new scene](/user-guide/world-editor/creating-empty-scene), we will now add a player character to the scene.
+Continuing from [creating a new scene](/talemate/user-guide/world-editor/creating-empty-scene), we will now add a player character to the scene.
 
 ## Add a player character
 
@@ -37,8 +37,8 @@ This will start the generation process, which may take a few moments and then th
 ![world-editor-create-player-character-3](/talemate/img/0.26.0/world-editor-create-player-character-3.png)
 
 !!! tip "Related Resources"
-    - [Character Editor](/user-guide/world-editor/characters) - learn more about the character editor.
-    - [Generation Settings](/user-guide/world-editor/generation-settings) - see how you can influence the AI's output.
+    - [Character Editor](/talemate/user-guide/world-editor/characters) - learn more about the character editor.
+    - [Generation Settings](/talemate/user-guide/world-editor/generation-settings) - see how you can influence the AI's output.
 
 ## Save the scene
 
@@ -50,4 +50,4 @@ Once you are happy with the character, click on the :material-content-save: **Sa
 
 While it is possible to have a scene play out with just a player character and the narrator, lets also add an AI controlled to the scene to interact with.
 
-[Add an AI controlled character](/user-guide/howto/create-a-new-scene/create-npc)
+[Add an AI controlled character](/talemate/user-guide/howto/create-a-new-scene/create-npc)

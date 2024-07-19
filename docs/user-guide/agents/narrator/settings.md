@@ -21,11 +21,11 @@ If checked and talemate detects a repetitive response (based on a threshold), it
 
 ##### Narrate time passaage
 
-Whenever you indicate a passage of time using the [Scene tools](/user-guide/scenario-tools), the narrator will automatically narrate the passage of time.
+Whenever you indicate a passage of time using the [Scene tools](/talemate/user-guide/scenario-tools), the narrator will automatically narrate the passage of time.
 
 ##### Guide time narration via prompt
 
-Wheneever you indicate a passage of time using the [Scene tools](/user-guide/scenario-tools), the narrator will wait for a prompt from you before narrating the passage of time.
+Wheneever you indicate a passage of time using the [Scene tools](/talemate/user-guide/scenario-tools), the narrator will wait for a prompt from you before narrating the passage of time.
 
 This allows you to explain what happens during the passage of time.
 

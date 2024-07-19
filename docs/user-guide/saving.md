@@ -3,7 +3,7 @@
 
 ## Saving from the scene
 
-To save while looking at the scene, click the :material-content-save: **Save** button on the right of the [Scene tools](/user-guide/scenario-tools) toolbar.
+To save while looking at the scene, click the :material-content-save: **Save** button on the right of the [Scene tools](/talemate/user-guide/scenario-tools) toolbar.
 
 ![Scene save](/talemate/img/0.26.0/scene-save.png)
 
@@ -28,4 +28,4 @@ Some scenes start out with a locked save file. This is so that this particular s
 
 
 !!! info
-    Alternatively you can also unlock the save file through the [Scene editor](/user-guide/world-editor/scene/settings) found in **:material-earth-box: World Editor** :material-arrow-right: **:material-script: Scene** :material-arrow-right: **:material-cogs: Settings**.
+    Alternatively you can also unlock the save file through the [Scene editor](/talemate/user-guide/world-editor/scene/settings) found in **:material-earth-box: World Editor** :material-arrow-right: **:material-script: Scene** :material-arrow-right: **:material-cogs: Settings**.

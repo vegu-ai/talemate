@@ -2,11 +2,11 @@
 
 Character attribute templates are used to define attributes that a character can have. They can be used to define character traits, skills, or other properties. The AI will use this template to generate content that matches the attribute, based on the current progression of the scene or their backstory.
 
-They are used in the [Character Editor - Attributes](/user-guide/world-editor/characters/attributes) section of the World Editor.
+They are used in the [Character Editor - Attributes](/talemate/user-guide/world-editor/characters/attributes) section of the World Editor.
 
 ## Creating a character attribute template
 
-Fist, if you have not done so, [create a template group](/user-guide/world-editor/templates/groups) to store the template in.
+Fist, if you have not done so, [create a template group](/talemate/user-guide/world-editor/templates/groups) to store the template in.
 
 Then select the group you want to add the template to and click the **:material-plus: Create Template** button.
 
@@ -85,7 +85,7 @@ When you have filled out the form, click the **:material-cube-scan: Create Templ
 
 ## Apply the template
 
-The template will be added to the group and will be available for use in the [Character Editor - Attributes](/user-guide/world-editor/characters/attributes) section of the World Editor.
+The template will be added to the group and will be available for use in the [Character Editor - Attributes](/talemate/user-guide/world-editor/characters/attributes) section of the World Editor.
 
 ![world editor templates create attribute template 4](/talemate/img/0.26.0/world-editor-templates-create-attribute-template-4.png)
 

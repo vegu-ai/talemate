@@ -5,7 +5,7 @@
 !!! note "Inference perameters"
     Inference parameters are NOT configured through any individual agent.
 
-    Please see the [Inference presets](/user-guide/clients/presets) section for more information on how to configure inference parameters.
+    Please see the [Inference presets](/talemate/user-guide/clients/presets) section for more information on how to configure inference parameters.
 
 ##### Client
 
@@ -56,7 +56,7 @@ The maximum number of turns a character can go without speaking before the AI wi
 
 ##### Long Term Memory
 
-If checked will inject relevant information into the context using relevancy through the [Memory Agent](/user-guide/agents/memory).
+If checked will inject relevant information into the context using relevancy through the [Memory Agent](/talemate/user-guide/agents/memory).
 
 ##### Context Retrieval Method
 

@@ -8,7 +8,7 @@ After a moment of loading you will be taken to the new scene and `creative` mode
 
 ## Create the outline for the scene
 
---8<-- "docs/user-guide/world-editor/scene/outline.md:outline"
+--8<-- "docs/talemate/user-guide/world-editor/scene/outline.md:outline"
 
 ## Save the scene
 
@@ -24,4 +24,4 @@ Since this is the first time you are saving the scene, you will be prompted to g
 
 ## Next
 
-Next we will [add a player character](/user-guide/howto/create-a-new-scene/create-player-character) to the scene.
+Next we will [add a player character](/talemate/user-guide/howto/create-a-new-scene/create-player-character) to the scene.

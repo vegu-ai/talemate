@@ -2,9 +2,9 @@
 
 You have done the following:
 
-- [Created an empty scene](/user-guide/howto/create-a-new-scene/create-empty-scene)
-- [Added a player character](/user-guide/howto/create-a-new-scene/create-player-character)
-- [Added an AI controlled character](/user-guide/howto/create-a-new-scene/create-npc)
+- [Created an empty scene](/talemate/user-guide/howto/create-a-new-scene/create-empty-scene)
+- [Added a player character](/talemate/user-guide/howto/create-a-new-scene/create-player-character)
+- [Added an AI controlled character](/talemate/user-guide/howto/create-a-new-scene/create-npc)
 
 Now its time to test your scene.
 

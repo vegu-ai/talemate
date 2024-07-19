@@ -4,7 +4,7 @@ Spice collections are used to define a set of instructions that can be applied d
 
 ## Creating a spice collection
 
-Fist, if you have not done so, [create a template group](/user-guide/world-editor/templates/groups) to store the template in.
+Fist, if you have not done so, [create a template group](/talemate/user-guide/world-editor/templates/groups) to store the template in.
 
 Then select the group you want to add the template to and click the **:material-plus: Create Template** button.
 
@@ -95,11 +95,11 @@ When you have filled out the form, click the **:material-cube-scan: Create Templ
 
 ## Using the spice collection template
 
-Please see the [Generation settings](/user-guide/world-editor/generation-settings) section for general information on how to apply a spice collection template during generation.
+Please see the [Generation settings](/talemate/user-guide/world-editor/generation-settings) section for general information on how to apply a spice collection template during generation.
 
 ### Example: Generate a character attribute with a spice collection
 
-In the [Character Editor - Attributes](/user-guide/world-editor/characters/attributes) section of the World Editor, select the attribute you want to apply the spice collection to.
+In the [Character Editor - Attributes](/talemate/user-guide/world-editor/characters/attributes) section of the World Editor, select the attribute you want to apply the spice collection to.
 
 For this example it will be the `Likes` attribute, which holds a list of things the character likes.
 

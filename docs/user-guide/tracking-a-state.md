@@ -17,7 +17,7 @@ The fastest way to get to the character editor for a specific character, is to c
 
 Click the :material-book-open-page-variant: **Manage Character** button.
 
-Then follow the instructions at [Tracking a character state](/user-guide/world-editor/characters/states).
+Then follow the instructions at [Tracking a character state](/talemate/user-guide/world-editor/characters/states).
 
 ### Inspect the state value
 
@@ -33,13 +33,13 @@ When tracking a world state, we mean the state of anything that is not a charact
 
 In the top navigation bar, click :material-earth-box: **World Editor** tab.
 
-Then follow the instructions at [Tracking a world state](/user-guide/world-editor/world/states).
+Then follow the instructions at [Tracking a world state](/talemate/user-guide/world-editor/world/states).
 
 ## Quickly apply often tracked states via templates
 
---8<-- "docs/user-guide/scenario-tools.md:tools-ux"
+--8<-- "docs/talemate/user-guide/scenario-tools.md:tools-ux"
 
---8<-- "docs/user-guide/scenario-tools.md:quick-apply-favorite-state"
+--8<-- "docs/talemate/user-guide/scenario-tools.md:quick-apply-favorite-state"
 
 ## Context Attachment Method
 <!-- --8<-- [start:context-attachment-method] -->
@@ -47,7 +47,7 @@ The state's `Context Attachment Method` determines how the state is attached to 
 
 ##### Passive
 
-The state is only included in context through relevancy, handled by the [Memory Agent](/user-guide/agents/memory/).
+The state is only included in context through relevancy, handled by the [Memory Agent](/talemate/user-guide/agents/memory/).
 
 ##### Sequential
 

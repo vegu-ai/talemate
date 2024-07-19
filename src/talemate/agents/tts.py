@@ -50,24 +50,34 @@ if not TTS:
     )
 
 
-def parse_chunks(text):
-    text = text.replace("...", "__ellipsis__")
+def parse_chunks(text: str) -> list[str]:
 
-    chunks = sent_tokenize(text)
-    cleaned_chunks = []
+    """
+    Takes a string and splits it into chunks based on punctuation.
+    
+    In case of an error it will return the original text as a single chunk and 
+    the error will be logged.
+    """
 
-    for chunk in chunks:
-        chunk = chunk.replace("*", "")
-        if not chunk:
-            continue
-        cleaned_chunks.append(chunk)
+    try:
+        text = text.replace("...", "__ellipsis__")
+        chunks = sent_tokenize(text)
+        cleaned_chunks = []
 
-    for i, chunk in enumerate(cleaned_chunks):
-        chunk = chunk.replace("__ellipsis__", "...")
+        for chunk in chunks:
+            chunk = chunk.replace("*", "")
+            if not chunk:
+                continue
+            cleaned_chunks.append(chunk)
 
-        cleaned_chunks[i] = chunk
+        for i, chunk in enumerate(cleaned_chunks):
+            chunk = chunk.replace("__ellipsis__", "...")
+            cleaned_chunks[i] = chunk
 
-    return cleaned_chunks
+        return cleaned_chunks
+    except Exception as e:
+        log.error("chunking error", error=e, text=text)
+        return [text.replace("__ellipsis__", "...").replace("*", "")]
 
 
 def clean_quotes(chunk: str):
@@ -140,9 +150,15 @@ class TTSAgent(Agent):
     def __init__(self, **kwargs):
         self.is_enabled = False  #
 
-        if not nltk.data.find("tokenizers/punkt"):
-            print("Downloading nltk punkt tokenizer")
-            nltk.download("punkt", quiet=True)
+        try:
+            nltk.data.find("tokenizers/punkt")
+        except LookupError:
+            try:
+                nltk.download("punkt", quiet=True)
+            except Exception as e:
+                log.error("nltk download error", error=e)
+        except Exception as e:
+            log.error("nltk find error", error=e)
 
         self.voices = {
             "elevenlabs": VoiceLibrary(api="elevenlabs"),

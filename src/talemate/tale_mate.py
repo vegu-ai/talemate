@@ -1241,13 +1241,17 @@ class Scene(Emitter):
         """
         self.description = description
 
-    def get_intro(self) -> str:
+    def get_intro(self, intro:str = None) -> str:
         """
         Returns the intro text of the scene
         """
+        
+        if not intro:
+            intro = self.intro
+        
         try:
             player_name = self.get_player_character().name
-            intro = self.intro.replace("{{user}}", player_name).replace(
+            intro = intro.replace("{{user}}", player_name).replace(
                 "{{char}}", player_name
             )
         except AttributeError:
@@ -1823,7 +1827,7 @@ class Scene(Emitter):
 
                 if (
                     actor.character.greeting_text
-                    and actor.character.greeting_text != self.get_intro()
+                    and self.get_intro(actor.character.greeting_text) != self.get_intro()
                 ):
                     item = f"{actor.character.name}: {actor.character.greeting_text}"
                     emit("character", item, character=actor.character)

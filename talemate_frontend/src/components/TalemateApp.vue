@@ -4,21 +4,44 @@
     <!-- system bar -->
     <v-system-bar>
       <v-icon icon="mdi-network-outline"></v-icon>
-      <v-progress-circular v-if="activeAgentName() !== null" indeterminate="disable-shrink" color="primary" size="11"
-        class="mr-1 ml-1"></v-progress-circular>
-      <span class="mr-1">{{ activeAgentName() }}</span>
-      <v-icon icon="mdi-transit-connection-variant"></v-icon>
-      <v-progress-circular v-if="activeClientName() !== null" indeterminate="disable-shrink" color="primary" size="11"
-        class="mr-1 ml-1"></v-progress-circular>
-      <span class="mr-1">{{ activeClientName() }}</span>
-      <v-divider vertical></v-divider>
-      <span v-if="connecting" class="ml-1"><v-icon class="mr-1">mdi-progress-helper</v-icon>connecting</span>
-      <span v-else-if="connected" class="ml-1"><v-icon class="mr-1" color="green" size="14">mdi-checkbox-blank-circle</v-icon>connected</span>
-      <span v-else class="ml-1"><v-icon class="mr-1">mdi-progress-close</v-icon>disconnected</span>
-      <v-divider class="ml-1 mr-1" vertical></v-divider>
+
+      <span v-for="name in sortedClientNames" :key="name">
+        <v-fade-transition>
+          <v-chip v-if="clientStatus[name].recentlyActive" label size="x-small" class="mr-1" variant="text">
+            <template v-slot:prepend>
+              <v-progress-circular v-if="clientStatus[name].busy" indeterminate="disable-shrink" :color="(clientStatus[name].busy_bg ? 'secondary' : 'primary')" size="11"></v-progress-circular>
+              <v-icon v-else color="muted" size="11">mdi-circle-outline</v-icon>
+            </template>
+            <span class="ml-1">{{ clientStatus[name].label }}</span>
+          </v-chip>
+        </v-fade-transition>
+      </span>
+
+      <v-icon icon="mdi-transit-connection-variant" class="mr-1"></v-icon>
+
+      <span v-for="name in sortedAgentNames" :key="name">
+        <v-fade-transition>
+          <v-chip v-if="agentStatus[name].recentlyActive" label size="x-small" class="mr-1" variant="text">
+            <template v-slot:prepend>
+              <v-progress-circular v-if="agentStatus[name].busy" indeterminate="disable-shrink" :color="(agentStatus[name].busy_bg ? 'secondary' : 'primary')" size="11"></v-progress-circular>
+              <v-icon v-else color="muted" size="11">mdi-circle-outline</v-icon>
+            </template>
+            <span class="ml-1">{{ agentStatus[name].label }}</span>
+          </v-chip>
+        </v-fade-transition>
+      </span>
+
+      <v-divider vertical class="ml-1"></v-divider>
+      
+      <v-chip variant="text" prepend-icon="mdi-progress-helper" v-if="connecting" color="info" size="x-small" class="mr-1" label>connecting</v-chip>
+      <v-chip variant="text" prepend-icon="mdi-checkbox-blank-circle" v-else-if="connected" color="success" size="x-small" class="mr-1" label>connected</v-chip>
+      <v-chip variant="text" prepend-icon="mdi-progress-close" v-else color="error" size="x-small" class="mr-1" label>disconnected</v-chip>
+
+
+      <v-divider class="mr-1" vertical></v-divider>
       <AudioQueue ref="audioQueue" />
       <v-spacer></v-spacer>
-      <span v-if="version !== null">v{{ version }}</span>
+      <span v-if="version !== null" class="text-grey text-caption">v{{ version }}</span>
       <span v-if="!ready">
         <v-icon icon="mdi-application-cog"></v-icon>
         <span class="ml-1">Configuration required</span>
@@ -324,6 +347,11 @@ export default {
       autocompleteFocusElement: null,
       worldStateTemplates: {},
       agentStatus: {},
+      clientStatus: {},
+      // timestamps for last agent and client updates
+      // received from the backend
+      lastAgentUpdate: null,
+      lastClientUpdate: null,
     }
   },
   watch:{
@@ -340,6 +368,18 @@ export default {
     availableTabs() {
       return this.tabs.filter(tab => tab.condition());
     },
+    sortedAgentNames() {
+      // sort by label
+      return Object.keys(this.agentStatus).sort((a, b) => {
+        return this.agentStatus[a].label.localeCompare(this.agentStatus[b].label);
+      });
+    },
+    sortedClientNames() {
+      // sort by label
+      return Object.keys(this.clientStatus).sort((a, b) => {
+        return this.clientStatus[a].label.localeCompare(this.clientStatus[b].label);
+      });
+    }
   },
   mounted() {
     this.connect();
@@ -456,13 +496,12 @@ export default {
         this.notificatioonBusy = (data.status == 'busy');
       }
       
-      if (data.type === 'agent_status') {
-        this.agentStatus[data.name] = {
-          busy: data.status === 'busy_bg' || data.status === 'busy',
-          available: data.status === 'idle' || data.status === 'busy' || data.status === 'busy_bg',
-          ready: data.status === 'idle',
-        }
-        return;
+      if(data.type === 'agent_status') {
+        this.setAgentStatus(data);
+      }
+
+      if(data.type === 'client_status') {
+        this.setClientStatus(data);
       }
 
       if (data.type == "scene_status") {
@@ -564,6 +603,91 @@ export default {
           this.worldStateTemplates = data.data;
         }
       }
+    },
+
+    /**
+     * Updates the agentStatus object with the latest agent status data
+     * 
+     * This keeps track of busy and ready status of agents
+     * 
+     * Called when agent_status messages are received from the backend
+     *
+     * @param {Object} data - agent_status message data
+     */
+    setAgentStatus(data) {
+      this.lastAgentUpdate = new Date().getTime();
+
+      // was the agent recently busy?
+      const recentlyActiveDuration = 5000;
+      const lastActive = this.agentStatus[data.name] ? this.agentStatus[data.name].lastActive : null;
+      const busy = data.status === 'busy_bg' || data.status === 'busy';
+      const wasBusy = !busy && this.agentStatus[data.name] && this.agentStatus[data.name].busy;
+      const recentlyActive = busy || wasBusy || (this.lastAgentUpdate - (lastActive || 0)) < recentlyActiveDuration;
+      const recentlyActiveTimeout = this.agentStatus[data.name] ? this.agentStatus[data.name].recentlyActiveTimeout : null;
+
+      if(recentlyActiveTimeout) {
+        clearTimeout(recentlyActiveTimeout);
+      }
+
+      this.agentStatus[data.name] = {
+        status: data.status,
+        busy: busy,
+        busy_bg: data.status === 'busy_bg',
+        available: data.status === 'idle' || data.status === 'busy' || data.status === 'busy_bg',
+        ready: data.status === 'idle',
+        lastActive: (wasBusy || busy ? this.lastClientUpdate : lastActive),
+        label: data.message,
+        // active - has the agent been active in the last 5 seconds?
+        recentlyActive: recentlyActive,
+      }
+
+      if(wasBusy) {
+        this.agentStatus[data.name].recentlyActiveTimeout = setTimeout(() => {
+          this.agentStatus[data.name].recentlyActive = false;
+        }, recentlyActiveDuration);
+      }
+    },
+
+
+    /**
+     * Updates the clientStatus object with the latest client status data
+     * 
+     * This keeps track of busy and ready status of clients
+     * 
+     * Called when client_status messages are received from the backend
+     * 
+     * @param {Object} data - client_status message data
+     */
+    setClientStatus(data) {
+      this.lastClientUpdate = new Date().getTime();
+
+      const recentlyActiveDuration = 15000;
+      const lastActive = this.clientStatus[data.name] ? this.clientStatus[data.name].lastActive : null;
+      const busy = data.status === 'busy';
+      const wasBusy = !busy && this.clientStatus[data.name] && this.clientStatus[data.name].busy;
+      const recentlyActive = busy || wasBusy || (this.lastClientUpdate - (lastActive || 0)) < recentlyActiveDuration;
+      const recentlyActiveTimeout = this.clientStatus[data.name] ? this.clientStatus[data.name].recentlyActiveTimeout : null;
+
+      if(recentlyActiveTimeout) {
+        clearTimeout(recentlyActiveTimeout);
+      }
+
+      this.clientStatus[data.name] = {
+        status: data.status,
+        busy: busy,
+        busy_bg: data.status === 'busy_bg',
+        available: data.status === 'idle' || data.status === 'busy' || data.status === 'busy_bg',
+        ready: data.status === 'idle',
+        label: data.name,
+        lastActive: (wasBusy || busy ? this.lastClientUpdate : lastActive),
+        recentlyActive: recentlyActive,
+      }
+
+      if(wasBusy) {
+        this.clientStatus[data.name].recentlyActiveTimeout = setTimeout(() => {
+          this.clientStatus[data.name].recentlyActive = false;
+        }, recentlyActiveDuration);
+}
     },
 
     isWaitingForDialogInput() {

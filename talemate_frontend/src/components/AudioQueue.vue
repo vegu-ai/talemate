@@ -1,6 +1,6 @@
 <template>
-  <div class="audio-queue">
-    <span>{{ queue.length }} sound(s) queued</span>
+  <div class="audio-queue text-caption">
+    <span class="text-grey mr-1">{{ queue.length }} sound(s) queued</span>
     <v-icon :color="isPlaying ? 'green' : ''" v-if="!isMuted" @click="toggleMute">mdi-volume-high</v-icon>
     <v-icon :color="isPlaying ? 'red' : ''" v-else @click="toggleMute">mdi-volume-off</v-icon>
     <v-icon v-if="isPlaying" class="ml-1" @click="stopAndClear">mdi-stop-circle-outline</v-icon>

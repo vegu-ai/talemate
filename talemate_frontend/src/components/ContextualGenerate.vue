@@ -215,6 +215,10 @@ export default {
                     this.$emit("generate", JSON.parse(response), message.data);
                 }
             }
+            else if (message.type === 'error') {
+                this.dialog = false;
+                this.busy = false;
+            }
         }
 
     },

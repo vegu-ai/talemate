@@ -29,6 +29,7 @@
                         :source="source"
                         :template-types="['state_reinforcement']"
                         @apply-selected="applyTemplates"
+                        @done="applyTemplatesDone"
                     />
                     </v-list-item>
                 </v-list-group>
@@ -38,7 +39,7 @@
                 clearable density="compact" variant="underlined"
                 class="ml-1 mb-1 mt-1"
                 @update:modelValue="autoSelect"></v-text-field>
-            <v-tabs v-model="selected" direction="vertical" color="indigo-lighten-3" density="compact">
+            <v-tabs :disabled="busy" v-model="selected" direction="vertical" color="indigo-lighten-3" density="compact">
                 <v-tab v-for="(value, detail) in filteredList"
                     :key="detail"
                     class="text-caption"
@@ -246,6 +247,8 @@ export default {
         applyTemplates(templateUIDs, callback) {
             this.templateApplicatorCallback = callback;
 
+            this.busy = true;
+
             // collect templates
 
             let templates = [];
@@ -267,6 +270,10 @@ export default {
                 character_name: this.character.name,
                 source: this.source,
             }));
+        },
+
+        applyTemplatesDone() {
+            this.busy = false;
         },
 
 

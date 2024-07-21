@@ -75,6 +75,7 @@ export default {
     },
     emits: [
         'apply-selected',
+        'done',
         'selected',
     ],
     inject: [
@@ -303,12 +304,14 @@ export default {
                 this.busyGroupUID = null;
                 // remove the template from selectedTemplates
                 this.selectedTemplates = this.selectedTemplates.filter(selected => selected !== message.data.uid);
+                this.$emit('done');
             }
             else if (message.action === 'templates_applied') {
                 this.busyTemplateUID = null;
                 this.busyGroupUID = null;
                 this.selectedTemplates = [];
                 this.selectedGroups = [];
+                this.$emit('done');
             }
         },
     },

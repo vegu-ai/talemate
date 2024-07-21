@@ -31,6 +31,7 @@
                         :source="source"
                         :template-types="['character_attribute']"
                         @apply-selected="applyTemplates"
+                        @done="applyTemplatesDone"
                     />
                     </v-list-item>
                 </v-list-group>
@@ -41,7 +42,7 @@
                 clear-icon="mdi-close"
                 class="ml-1 mb-1 mt-1"
                 @update:modelValue="autoSelect"></v-text-field>
-            <v-tabs v-model="selected" density="compact" direction="vertical" color="indigo-lighten-3">
+            <v-tabs :disabled="busy" v-model="selected" density="compact" direction="vertical" color="indigo-lighten-3">
                 <v-tab density="compact" v-for="(value, attribute) in filteredList"
                 class="text-caption"
                     :key="attribute" 
@@ -194,6 +195,8 @@ export default {
     methods: {
         applyTemplates(templateUIDs, callback) {
             this.templateApplicatorCallback = callback;
+            
+            this.busy = true;
 
             // collect templates
 
@@ -217,6 +220,10 @@ export default {
                 source: this.source,
                 generation_options: this.generationOptions,
             }));
+        },
+
+        applyTemplatesDone() {
+            this.busy = false;
         },
         
         validateTemplate(template) {

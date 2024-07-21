@@ -30,6 +30,7 @@
                         :source="source"
                         :template-types="['character_detail']"
                         @apply-selected="applyTemplates"
+                        @done="applyTemplatesDone"
                     />
                     </v-list-item>
                 </v-list-group>
@@ -39,7 +40,7 @@
             clearable density="compact" variant="underlined"
             class="ml-1 mb-1 mt-1"
             @update:model-value="autoSelect"></v-text-field>
-            <v-tabs direction="vertical" density="compact" v-model="selected" color="indigo-lighten-3">
+            <v-tabs :disabled="busy" direction="vertical" density="compact" v-model="selected" color="indigo-lighten-3">
                 <v-tab v-for="(value, detail) in filteredList"
                     :key="detail"
                     class="text-caption"
@@ -218,6 +219,8 @@ export default {
         applyTemplates(templateUIDs, callback) {
             this.templateApplicatorCallback = callback;
 
+            this.busy = true;
+
             // collect templates
 
             let templates = [];
@@ -242,6 +245,10 @@ export default {
             }));
         },
         
+        applyTemplatesDone() {
+            this.busy = false;
+        },
+
         validateTemplate(template) {
             if(template.template_type !== 'character_detail')
                 return false;

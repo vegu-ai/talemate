@@ -646,6 +646,8 @@ export default {
           this.agentStatus[data.name].recentlyActive = false;
         }, recentlyActiveDuration);
       }
+
+      console.log("setAgentStatus", this.agentStatus);
     },
 
 

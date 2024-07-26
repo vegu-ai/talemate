@@ -641,13 +641,12 @@ export default {
         recentlyActive: recentlyActive,
       }
 
-      if(wasBusy) {
+      if(recentlyActive && !busy) {
         this.agentStatus[data.name].recentlyActiveTimeout = setTimeout(() => {
           this.agentStatus[data.name].recentlyActive = false;
         }, recentlyActiveDuration);
       }
 
-      console.log("setAgentStatus", this.agentStatus);
     },
 
 
@@ -685,7 +684,7 @@ export default {
         recentlyActive: recentlyActive,
       }
 
-      if(wasBusy) {
+      if(recentlyActive && !busy) {
         this.clientStatus[data.name].recentlyActiveTimeout = setTimeout(() => {
           this.clientStatus[data.name].recentlyActive = false;
         }, recentlyActiveDuration);

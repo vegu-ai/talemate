@@ -169,10 +169,6 @@ export default {
                 const agent = this.state.agents.find(agent => agent.name === data.name);
                 if (agent) {
 
-                    if(agent.name == 'tts') {
-                        console.log("agents: agent_status TTS", data)
-                    }
-
                     // Update the model name of the client
                     agent.client = data.client;
                     agent.data = data.data;
@@ -181,7 +177,7 @@ export default {
                     agent.meta = data.meta;
                     agent.actions = {}
                     for(let i in data.data.actions) {
-                        agent.actions[i] = {enabled: data.data.actions[i].enabled, config: data.data.actions[i].config, condition: data.data.actions[i].condition};
+                        agent.actions[i] = {...data.data.actions[i]};
                     }
                     agent.enabled = data.data.enabled;
 
@@ -197,7 +193,8 @@ export default {
                     // Add the agent to the list of agents
                     let actions = {}
                     for(let i in data.data.actions) {
-                        actions[i] = {enabled: data.data.actions[i].enabled, config: data.data.actions[i].config, condition: data.data.actions[i].condition};
+                        //actions[i] = {enabled: data.data.actions[i].enabled, config: data.data.actions[i].config, condition: data.data.actions[i].condition};
+                        actions[i] = {...data.data.actions[i]};
                     }
                     this.state.agents.push({
                         name: data.name,

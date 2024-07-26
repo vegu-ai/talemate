@@ -14,7 +14,7 @@ class Defaults(pydantic.BaseModel):
 class LMStudioClient(ClientBase):
     auto_determine_prompt_template: bool = True
     client_type = "lmstudio"
-    
+
     class Meta(ClientBase.Meta):
         name_prefix: str = "LMStudio"
         title: str = "LMStudio"
@@ -27,7 +27,9 @@ class LMStudioClient(ClientBase):
             "top_p",
             "frequency_penalty",
             "presence_penalty",
-            ParameterReroute(talemate_parameter="stopping_strings", client_parameter="stop"),
+            ParameterReroute(
+                talemate_parameter="stopping_strings", client_parameter="stop"
+            ),
         ]
 
     def set_client(self, **kwargs):

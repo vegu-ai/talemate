@@ -1,4 +1,5 @@
 <template>
+<v-list density="compact">
     <v-list-subheader class="text-uppercase">
         <v-icon class="mr-1">mdi-earth</v-icon>World
         <v-progress-circular class="ml-1 mr-3" size="14" v-if="requesting" indeterminate="disable-shrink" color="primary"></v-progress-circular>   
@@ -63,7 +64,7 @@
                             </v-tooltip>
                             <v-tooltip v-else text="Make this character real, adding it to the scene as an actor.">
                                 <template v-slot:activator="{ props }">
-                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(name)" icon="mdi-chat-plus-outline"></v-btn>
+                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(name)" icon="mdi-human-greeting"></v-btn>
 
                                 </template>
                             </v-tooltip>
@@ -203,12 +204,10 @@
 
         </div>
     </v-sheet>
-
-    <WorldStateManager ref="worldStateManager" />
+</v-list>
 </template>
 
 <script>
-import WorldStateManager from './WorldStateManager.vue';
 
 export default {
     name: 'WorldState',
@@ -225,9 +224,6 @@ export default {
             hasAnyWorldState: false,
         }
     },
-    components: {
-        WorldStateManager,
-    },
 
     inject: [
         'getWebsocket', 
@@ -241,6 +237,7 @@ export default {
 
     emits: [
         'passive-characters',
+        'open-world-state-manager'
     ],
 
     methods: {
@@ -249,10 +246,8 @@ export default {
         },
         availableHeight() {
             // screen height - $refs.worldStateContainer top offset
-            console.log("REFS", this.$refs)
             if(this.$refs.charactersContainer == null) return "500px";
             let maxHeight = (window.innerHeight - this.$refs.charactersContainer.getBoundingClientRect().top - 50)+"px";
-            console.log("MAX HEIGHT", maxHeight, this.$refs.charactersContainer.getBoundingClientRect().top);
             return maxHeight;
         },
         truncatedPinText(pin) {
@@ -272,8 +267,7 @@ export default {
             }
         },
         openWorldStateManager(tab, sub1, sub2, sub3) {
-            console.log("OPENING WORLDSTATE MANAGER", tab, sub1, sub2, sub3)
-            this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
+            this.$emit('open-world-state-manager', tab, sub1, sub2, sub3);
         },
         passiveCharacters() {
             let characters = [];

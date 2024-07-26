@@ -1,5 +1,6 @@
-import urllib
 import random
+import urllib
+
 import pydantic
 import structlog
 from openai import AsyncOpenAI, NotFoundError, PermissionDeniedError
@@ -32,7 +33,7 @@ class OpenAICompatibleClient(ClientBase):
     client_type = "openai_compat"
     conversation_retries = 0
     config_cls = ClientConfig
-    
+
     class Meta(ClientBase.Meta):
         title: str = "OpenAI Compatible API"
         name_prefix: str = "OpenAI Compatible API"
@@ -73,8 +74,8 @@ class OpenAICompatibleClient(ClientBase):
     @property
     def supported_parameters(self):
         return [
-            "temperature", 
-            "top_p", 
+            "temperature",
+            "top_p",
             "presence_penalty",
             "max_tokens",
         ]
@@ -121,7 +122,11 @@ class OpenAICompatibleClient(ClientBase):
             if self.api_handles_prompt_template:
                 # OpenAI API handles prompt template
                 # Use the chat completions endpoint
-                self.log.debug("generate (chat/completions)", prompt=prompt[:128] + " ...", parameters=parameters)
+                self.log.debug(
+                    "generate (chat/completions)",
+                    prompt=prompt[:128] + " ...",
+                    parameters=parameters,
+                )
                 human_message = {"role": "user", "content": prompt.strip()}
                 response = await self.client.chat.completions.create(
                     model=self.model_name, messages=[human_message], **parameters
@@ -131,7 +136,11 @@ class OpenAICompatibleClient(ClientBase):
             else:
                 # Talemate handles prompt template
                 # Use the completions endpoint
-                self.log.debug("generate (completions)", prompt=prompt[:128] + " ...", parameters=parameters)
+                self.log.debug(
+                    "generate (completions)",
+                    prompt=prompt[:128] + " ...",
+                    parameters=parameters,
+                )
                 parameters["prompt"] = prompt
                 response = await self.client.completions.create(
                     model=self.model_name, **parameters
@@ -168,6 +177,9 @@ class OpenAICompatibleClient(ClientBase):
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
 
+        if "enabled" in kwargs:
+            self.enabled = bool(kwargs["enabled"])
+
         log.warning("reconfigure", kwargs=kwargs)
 
         self.set_client(**kwargs)
@@ -179,15 +191,15 @@ class OpenAICompatibleClient(ClientBase):
         """
 
         temp = prompt_config["temperature"]
-    
+
         min_offset = offset * 0.3
-        
+
         prompt_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
-        
+
         try:
             presence_penalty = prompt_config["presence_penalty"]
-            prompt_config["presence_penalty"] = round(random.uniform(
-                presence_penalty + 0.1, presence_penalty + offset
-            ),1)
+            prompt_config["presence_penalty"] = round(
+                random.uniform(presence_penalty + 0.1, presence_penalty + offset), 1
+            )
         except KeyError:
             pass

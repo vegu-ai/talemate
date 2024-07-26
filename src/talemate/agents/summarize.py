@@ -14,6 +14,7 @@ import talemate.util as util
 from talemate.events import GameLoopEvent
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, TimePassageMessage
+from talemate.world_state.templates import GenerationOptions
 
 from .base import Agent, AgentAction, AgentActionConfig, set_processing
 from .registry import register
@@ -109,7 +110,9 @@ class SummarizeAgent(Agent):
         return result
 
     @set_processing
-    async def build_archive(self, scene):
+    async def build_archive(
+        self, scene, generation_options: GenerationOptions | None = None
+    ):
         end = None
 
         if not self.actions["archive"].enabled:
@@ -224,7 +227,9 @@ class SummarizeAgent(Agent):
 
         if dialogue_entries:
             summarized = await self.summarize(
-                "\n".join(map(str, dialogue_entries)), extra_context=extra_context
+                "\n".join(map(str, dialogue_entries)),
+                extra_context=extra_context,
+                generation_options=generation_options,
             )
 
         else:
@@ -261,11 +266,11 @@ class SummarizeAgent(Agent):
         extra_context: str = None,
         method: str = None,
         extra_instructions: str = None,
+        generation_options: GenerationOptions | None = None,
     ):
         """
         Summarize the given text
         """
-
         response = await Prompt.request(
             "summarizer.summarize-dialogue",
             self.client,
@@ -281,6 +286,7 @@ class SummarizeAgent(Agent):
                 ),
                 "extra_context": extra_context or "",
                 "extra_instructions": extra_instructions or "",
+                "generation_options": generation_options,
             },
         )
 

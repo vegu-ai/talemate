@@ -22,7 +22,6 @@ export default {
       this.minimized = !this.minimized;
     },
     deleteMessage() {
-      console.log('deleteMessage', this.message_id);
       this.requestDeleteMessage(this.message_id);
     }
   }

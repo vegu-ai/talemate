@@ -30,11 +30,13 @@ class OpenAIImageMixin:
 
     EXTEND_ACTIONS = {
         "openai_image": AgentAction(
-            enabled=False,
+            enabled=True,
+            container=True,
+            icon="mdi-server-outline",
             condition=AgentActionConditional(
                 attribute="_config.config.backend", value="openai_image"
             ),
-            label="OpenAI Image Generation Advanced Settings",
+            label="OpenAI",
             description="Setting overrides for the openai backend",
             config={
                 "model_type": AgentActionConfig(

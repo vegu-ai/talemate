@@ -4,12 +4,18 @@ from typing import TYPE_CHECKING
 
 # import urljoin
 from urllib.parse import urljoin, urlparse
+
 import httpx
 import structlog
 
-from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults, ParameterReroute
-from talemate.client.registry import register
 import talemate.util as util
+from talemate.client.base import (
+    STOPPING_STRINGS,
+    ClientBase,
+    Defaults,
+    ParameterReroute,
+)
+from talemate.client.registry import register
 
 if TYPE_CHECKING:
     from talemate.agents.visual import VisualBase
@@ -81,26 +87,35 @@ class KoboldCppClient(ClientBase):
         else:
             return "max_length"
 
-        
     @property
     def supported_parameters(self):
         if not self.is_openai:
             # koboldcpp united api
 
             return [
-                ParameterReroute(talemate_parameter="max_tokens", client_parameter="max_length"),
+                ParameterReroute(
+                    talemate_parameter="max_tokens", client_parameter="max_length"
+                ),
                 "max_context_length",
-                ParameterReroute(talemate_parameter="repetition_penalty", client_parameter="rep_pen"),
-                ParameterReroute(talemate_parameter="repetition_penalty_range", client_parameter="rep_pen_range"),
+                ParameterReroute(
+                    talemate_parameter="repetition_penalty", client_parameter="rep_pen"
+                ),
+                ParameterReroute(
+                    talemate_parameter="repetition_penalty_range",
+                    client_parameter="rep_pen_range",
+                ),
                 "top_p",
                 "top_k",
-                ParameterReroute(talemate_parameter="stopping_strings", client_parameter="stop_sequence"),
+                ParameterReroute(
+                    talemate_parameter="stopping_strings",
+                    client_parameter="stop_sequence",
+                ),
                 "temperature",
             ]
 
         else:
             # openai api
-            
+
             return [
                 "max_tokens",
                 "presence_penalty",
@@ -124,11 +139,10 @@ class KoboldCppClient(ClientBase):
         super().__init__(**kwargs)
         self.ensure_api_endpoint_specified()
 
-
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)
         self.ensure_api_endpoint_specified()
-        
+
     async def get_model_name(self):
         self.ensure_api_endpoint_specified()
         async with httpx.AsyncClient() as client:
@@ -155,44 +169,44 @@ class KoboldCppClient(ClientBase):
 
         return model_name
 
-    async def tokencount(self, content:str) -> int:
+    async def tokencount(self, content: str) -> int:
         """
         KoboldCpp has a tokencount endpoint we can use to count tokens
         for the prompt and response
-        
+
         If the endpoint is not available, we will use the default token count estimate
         """
-        
+
         # extract scheme and host from api url
-        
+
         parts = urlparse(self.api_url)
-        
+
         url_tokencount = f"{parts.scheme}://{parts.netloc}/api/extra/tokencount"
-        
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 url_tokencount,
-                json={"prompt":content},
+                json={"prompt": content},
                 timeout=None,
                 headers=self.request_headers,
             )
-            
+
             if response.status_code == 404:
                 # kobold united doesn't have tokencount endpoint
                 return util.count_tokens(content)
-            
-            tokencount = len(response.json().get("ids",[]))
+
+            tokencount = len(response.json().get("ids", []))
             return tokencount
-        
+
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
         """
 
         parameters["prompt"] = prompt.strip(" ")
-        
-        self._returned_prompt_tokens = await self.tokencount(parameters["prompt"] )
-        
+
+        self._returned_prompt_tokens = await self.tokencount(parameters["prompt"])
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 self.api_url_for_generation,
@@ -207,12 +221,16 @@ class KoboldCppClient(ClientBase):
                 else:
                     response_text = response_data["results"][0]["text"]
             except (TypeError, KeyError) as exc:
-                log.error("Failed to generate text", exc=exc, response_data=response_data, response_status=response.status_code)
+                log.error(
+                    "Failed to generate text",
+                    exc=exc,
+                    response_data=response_data,
+                    response_status=response.status_code,
+                )
                 response_text = ""
-                
+
             self._returned_response_tokens = await self.tokencount(response_text)
             return response_text
-            
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """
@@ -221,23 +239,23 @@ class KoboldCppClient(ClientBase):
         """
 
         temp = prompt_config["temperature"]
-        
+
         if "rep_pen" in prompt_config:
             rep_pen_key = "rep_pen"
         elif "presence_penalty" in prompt_config:
             rep_pen_key = "presence_penalty"
         else:
             rep_pen_key = "repetition_penalty"
-        
+
         min_offset = offset * 0.3
 
         prompt_config["temperature"] = random.uniform(temp + min_offset, temp + offset)
         try:
             if rep_pen_key == "presence_penalty":
                 presence_penalty = prompt_config["presence_penalty"]
-                prompt_config["presence_penalty"] = round(random.uniform(
-                    presence_penalty + 0.1, presence_penalty + offset
-                ),1)
+                prompt_config["presence_penalty"] = round(
+                    random.uniform(presence_penalty + 0.1, presence_penalty + offset), 1
+                )
             else:
                 rep_pen = prompt_config[rep_pen_key]
                 prompt_config[rep_pen_key] = random.uniform(
@@ -245,49 +263,44 @@ class KoboldCppClient(ClientBase):
                 )
         except KeyError:
             pass
-        
+
     def reconfigure(self, **kwargs):
         if "api_key" in kwargs:
             self.api_key = kwargs.pop("api_key")
 
         super().reconfigure(**kwargs)
 
-
-    async def visual_automatic1111_setup(self, visual_agent:"VisualBase") -> bool:
-        
+    async def visual_automatic1111_setup(self, visual_agent: "VisualBase") -> bool:
         """
         Automatically configure the visual agent for automatic1111
         if the koboldcpp server has a SD model available
         """
-        
+
         if not self.connected:
             return False
-        
+
         sd_models_url = urljoin(self.url, "/sdapi/v1/sd-models")
-        
+
         async with httpx.AsyncClient() as client:
-            
+
             try:
-                response = await client.get(
-                   url=sd_models_url, timeout=2
-                )
+                response = await client.get(url=sd_models_url, timeout=2)
             except Exception as exc:
                 log.error(f"Failed to fetch sd models from {sd_models_url}", exc=exc)
                 return False
-            
+
             if response.status_code != 200:
                 return False
-            
+
             response_data = response.json()
-            
+
             sd_model = response_data[0].get("model_name") if response_data else None
-            
+
         if not sd_model:
             return False
-        
+
         log.info("automatic1111_setup", sd_model=sd_model)
-        
+
         visual_agent.actions["automatic1111"].config["api_url"].value = self.url
         visual_agent.is_enabled = True
         return True
-        

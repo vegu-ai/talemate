@@ -1,0 +1,9 @@
+nav:
+    - Anthropic: anthropic.md
+    - Cohere: cohere.md
+    - ElevenLabs: elevenlabs.md
+    - Google Cloud: google.md
+    - Groq: groq.md
+    - Mistral.ai: mistral.md
+    - OpenAI: openai.md
+    - ...

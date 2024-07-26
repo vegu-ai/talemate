@@ -7,10 +7,10 @@ import vertexai
 from google.api_core.exceptions import ResourceExhausted
 from vertexai.generative_models import (
     ChatSession,
+    GenerationConfig,
     GenerativeModel,
     ResponseValidationError,
     SafetySetting,
-    GenerationConfig,
 )
 
 from talemate.client.base import ClientBase, ErrorAction, ExtraField, ParameterReroute
@@ -55,7 +55,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
     auto_break_repetition_enabled = False
     decensor_enabled = True
     config_cls = ClientConfig
-    
+
     class Meta(ClientBase.Meta):
         name_prefix: str = "Google"
         title: str = "Google"
@@ -144,11 +144,15 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
     @property
     def supported_parameters(self):
         return [
-            "temperature", 
+            "temperature",
             "top_p",
             "top_k",
-            ParameterReroute(talemate_parameter="max_tokens", client_parameter="max_output_tokens"),
-            ParameterReroute(talemate_parameter="stopping_strings",  client_parameter="stop_sequences"),
+            ParameterReroute(
+                talemate_parameter="max_tokens", client_parameter="max_output_tokens"
+            ),
+            ParameterReroute(
+                talemate_parameter="stopping_strings", client_parameter="stop_sequences"
+            ),
         ]
 
     def emit_status(self, processing: bool = None):
@@ -180,6 +184,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         data = {
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
+            "enabled": self.enabled,
         }
 
         self.populate_extra_fields(data)
@@ -189,7 +194,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
             message=self.client_type,
             id=self.name,
             details=model_name,
-            status=status,
+            status=status if self.enabled else "disabled",
             data=data,
         )
 
@@ -248,9 +253,12 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         if "disable_safety_settings" in kwargs:
             self.disable_safety_settings = kwargs["disable_safety_settings"]
 
+        if "enabled" in kwargs:
+            self.enabled = bool(kwargs["enabled"])
+
     def clean_prompt_parameters(self, parameters: dict):
         super().clean_prompt_parameters(parameters)
-        
+
         log.warning("clean_prompt_parameters", parameters=parameters)
         # if top_k is 0, remove it
         if "top_k" in parameters and parameters["top_k"] == 0:
@@ -260,7 +268,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         """
         Generates text from the given prompt and parameters.
         """
-        
+
         if not self.ready:
             raise Exception("Google cloud setup incomplete")
 
@@ -287,7 +295,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         try:
 
             chat = self.model_instance.start_chat()
-            
+
             response = await chat.send_message_async(
                 human_message,
                 safety_settings=self.safety_settings,

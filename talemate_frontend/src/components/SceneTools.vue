@@ -50,14 +50,6 @@
                 <v-icon class="ml-1 mr-3" v-else-if="isWaitingForInput()">mdi-keyboard</v-icon>
                 <v-icon class="ml-1 mr-3" v-else>mdi-circle-outline</v-icon>
 
-                <v-tooltip v-if="isWaitingForInput()" location="top" text="Request autocomplete suggestion for your input. [Ctrl+Enter while typing]">
-                    <template v-slot:activator="{ props }">
-                        <v-btn :disabled="messageInput.length < 5" class="hotkey mr-3" v-bind="props" @click="requestAutocompleteSuggestion" color="primary" icon>
-                            <v-icon>mdi-auto-fix</v-icon>
-                        </v-btn>
-                    </template>
-                </v-tooltip>
-
 
                 <v-divider vertical></v-divider>
 
@@ -95,7 +87,7 @@
                             <v-icon>mdi-cancel</v-icon>
                             
                         </v-btn>
-                        <v-label v-text="this.commandName" class="mr-3 ml-3"></v-label>
+                        <span class="mr-3 ml-3 text-caption text-muted">{{ commandName }}</span>
                     </template>
                 </v-tooltip>
             </v-card-actions>
@@ -194,7 +186,7 @@
                     <v-list>
 
                         <v-list-subheader>Automatic state updates</v-list-subheader>
-                        <div v-if="!worldStateTemplateFavoriteExists()">
+                        <div v-if="!worldStateReinforcementFavoriteExists()">
                             <v-alert dense variant="text" color="grey" icon="mdi-cube-scan">
                                 <span>There are no favorite world state templates. You can add them in the <b>World State Manager</b>. Favorites will be shown here.
                                 </span>
@@ -205,7 +197,7 @@
                             <!-- character templates -->
 
                             <div v-for="npc_name in npc_characters" :key="npc_name">
-                                <v-list-item v-for="(template, index) in worldStateTemplateFavoritesForNPCs()" :key="index"
+                                <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForNPCs()" :key="index"
                                     @click="handleClickWorldStateTemplate(template, npc_name)"
                                     prepend-icon="mdi-account">
                                     <template v-slot:append>
@@ -218,7 +210,7 @@
 
                             <!-- player templates -->
 
-                            <v-list-item v-for="(template, index) in worldStateTemplateFavoritesForPlayer()" :key="'player' + index"
+                            <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForPlayer()" :key="'player' + index"
                                 @click="handleClickWorldStateTemplate(template, getPlayerCharacterName())"
                                 prepend-icon="mdi-account-tie">
                                 <template v-slot:append>
@@ -232,7 +224,7 @@
 
                             <!-- world entry templates -->
 
-                            <v-list-item v-for="(template, index) in worldStateTemplateFavoritesForWorldEntry()" :key="'worldEntry' + index"
+                            <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForWorldEntry()" :key="'worldEntry' + index"
                                 @click="handleClickWorldStateTemplate(template)"
                                 prepend-icon="mdi-earth">
                                 <template v-slot:append>
@@ -321,10 +313,12 @@
                 </v-tooltip>
 
                 <!-- visualizer actions -->
-                
+             
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled() || !visualAgentReady" color="primary" icon>
+                        <v-progress-circular class="ml-1 mr-3" size="24" v-if="agentStatus.visual && agentStatus.visual.busy" indeterminate="disable-shrink"
+                        color="secondary"></v-progress-circular>   
+                        <v-btn v-else class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled() || !visualAgentReady" color="primary" icon>
                             <v-icon>mdi-image-frame</v-icon>
                         </v-btn>
                     </template>
@@ -382,9 +376,11 @@ export default {
         activeCharacters: Array,
         playerCharacterName: String,
         messageInput: String,
+        worldStateTemplates: Object,
+        agentStatus: Object,
     },
     computed: {
-        deactivatableCharacters: function() {
+        deactivatableCharacters() {
             // this.activeCharacters without playerCharacterName
             let characters = [];
             for (let character of this.activeCharacters) {
@@ -393,7 +389,17 @@ export default {
                 }
             }
             return characters;
-        }
+        },
+        worldStateReinforcementTemplates() {
+            let _templates = this.worldStateTemplates.by_type.state_reinforcement;
+            let templates = [];
+
+            for (let key in _templates) {
+                let template = _templates[key];
+                templates.push(template);
+            }
+            return templates;
+        },
     },
     data() {
         return {
@@ -421,7 +427,7 @@ export default {
             narratorActions: [
                 {"value": "narrate_progress", "title": "Progress Story", "icon": "mdi-script-text-play", "description": "Progress the story"},
                 {"value": "narrate_progress_directed", "title": "Progress Story with Direction", "icon": "mdi-script-text-play", "description": "Progress the story (Provide prompt)"},
-                {"value": "narrate_dialogue", "title": "Narrate Dialogue", "icon": "mdi-waves", "description": "Describe visuals, smells and sounds based on the recent dialogue."},
+                {"value": "narrate_dialogue", "title": "Narrate Environment", "icon": "mdi-waves", "description": "Describe visuals, smells and sounds based on the recent dialogue."},
                 {"value": "narrate_q", "title": "Query", "icon": "mdi-crystal-ball", "description": "Ask the narrator a question, or instruct to tell something."},
                 {"value": "narrate", "title": "Look at Scene", "icon": "mdi-table-headers-eye", "description": "Look at the current scene"},
             ],
@@ -554,6 +560,7 @@ export default {
 
         handleClickWorldStateTemplate(template, character_name) {
 
+
             let query = this.formatWorldStateTemplateString(template.query, character_name);
 
             // if state is active, clicking should open the world state manager
@@ -564,32 +571,33 @@ export default {
                 if (stateActive) {
                     this.openWorldStateManager("characters", character_name, "reinforce", query);
                 } else {
-                    this.sendHotButtonMessage('!apply_world_state_template:' + template.name + ':state_reinforcement:' + character_name);
+                    this.getWebsocket().send(JSON.stringify({
+                        type: "world_state_manager",
+                        action: "apply_template",
+                        template: template,
+                        character_name: character_name,
+                        run_immediately: true,
+                    }));
                 }
             } else {
                 let stateActive = this.getTrackedWorldState(query) !== null;
                 if (stateActive) {
                     this.openWorldStateManager("world", "states", query);
                 } else {
-                    this.sendHotButtonMessage('!apply_world_state_template:' + template.name + ':state_reinforcement');
+                    this.getWebsocket().send(JSON.stringify({
+                        type: "world_state_manager",
+                        action: "apply_template",
+                        template: template,
+                        character_name: null,
+                        run_immediately: true,
+                    }));
                 }
             }
 
         },
 
-        worldStateTemplates: function() {
-            let _templates = this.appConfig().game.world_state.templates.state_reinforcement;
-            let templates = [];
-
-            for (let key in _templates) {
-                let template = _templates[key];
-                templates.push(template);
-            }
-            return templates;
-        },
-
-        worldStateTemplateFavoriteExists: function() {
-            for (let template of this.worldStateTemplates()) {
+        worldStateReinforcementFavoriteExists: function() {
+            for (let template of this.worldStateReinforcementTemplates) {
                 if(template.favorite) {
                     return true;
                 }
@@ -597,12 +605,12 @@ export default {
             return false;
         },
 
-        worldStateTemplateFavoritesForWorldEntry() {
+        worldStateReinforcementFavoritesForWorldEntry() {
 
             // 'world' entries
 
             let favorites = [];
-            for (let template of this.worldStateTemplates()) {
+            for (let template of this.worldStateReinforcementTemplates) {
                 if(template.favorite && template.state_type == "world") {
                     favorites.push(template);
                 }
@@ -611,12 +619,12 @@ export default {
 
         },
 
-        worldStateTemplateFavoritesForNPCs() {
+        worldStateReinforcementFavoritesForNPCs() {
 
             // npc templates
 
             let favorites = [];
-            for (let template of this.worldStateTemplates()) {
+            for (let template of this.worldStateReinforcementTemplates) {
                 if(template.favorite && (template.state_type == "npc" || template.state_type == "character")) {
                     favorites.push(template);
                 }
@@ -624,12 +632,12 @@ export default {
             return favorites;
         },
 
-        worldStateTemplateFavoritesForPlayer() {
+        worldStateReinforcementFavoritesForPlayer() {
 
             // player templates
 
             let favorites = [];
-            for (let template of this.worldStateTemplates()) {
+            for (let template of this.worldStateReinforcementTemplates) {
                 if(template.favorite && template.state_type == "player" || template.state_type == "character") {
                     favorites.push(template);
                 }
@@ -646,7 +654,6 @@ export default {
         },
 
         rerun(event) {
-            console.log("EVENT", event)
             // if ctrl is pressed use directed rerun
             let withDirection = event.ctrlKey;
             let method = event.altKey || event.metaKey ? "edit" : "replace";
@@ -698,7 +705,6 @@ export default {
                 this.sceneHelp = data.data.help;
                 this.sceneExperimental = data.data.experimental;
                 this.sceneName = data.name;
-                console.log({autoSave: this.autoSave, autoProgress: this.autoProgress});
 
                 // collect npc characters
                 this.npc_characters = [];
@@ -719,7 +725,6 @@ export default {
 
     },
     mounted() {
-        console.log("Websocket", this.getWebsocket()); // Check if websocket is available
     },
     created() {
         this.registerMessageHandler(this.handleMessage);

@@ -7,24 +7,20 @@ import structlog
 
 import talemate.instance as instance
 from talemate import Helper, Scene
+from talemate.client.base import ClientBase
 from talemate.client.registry import CLIENT_CLASSES
 from talemate.config import SceneAssetUpload, load_config, save_config
+from talemate.context import ActiveScene, active_scene
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 from talemate.files import list_scenes_directory
-from talemate.load import (
-    load_scene,
-    load_scene_from_character_card,
-    load_scene_from_data,
-)
+from talemate.load import load_scene
 from talemate.scene_assets import Asset
 from talemate.server import (
     assistant,
-    character_creator,
     character_importer,
     config,
     devtools,
     quick_settings,
-    scene_creator,
     world_state_manager,
 )
 
@@ -64,13 +60,7 @@ class WebsocketHandler(Receiver):
 
         self.routes = {
             assistant.AssistantPlugin.router: assistant.AssistantPlugin(self),
-            character_creator.CharacterCreatorServerPlugin.router: character_creator.CharacterCreatorServerPlugin(
-                self
-            ),
             character_importer.CharacterImporterServerPlugin.router: character_importer.CharacterImporterServerPlugin(
-                self
-            ),
-            scene_creator.SceneCreatorServerPlugin.router: scene_creator.SceneCreatorServerPlugin(
                 self
             ),
             config.ConfigPlugin.router: config.ConfigPlugin(self),
@@ -141,18 +131,38 @@ class WebsocketHandler(Receiver):
             except TypeError as e:
                 client = None
 
-            if not client:
-                # select first client
-                print("selecting first client", self.llm_clients)
-                client = list(self.llm_clients.values())[0]["client"]
-                agent_config["client"] = client.name
+            if not client or not client.enabled:
+                # select first enabled client
+                try:
+                    client = self.get_first_enabled_client()
+                    agent_config["client"] = client.name
+                except IndexError:
+                    client = None
 
-            log.debug("Linked agent", agent_typ=agent_typ, client=client.name)
+                if not client:
+                    agent_config["client"] = None
+
+            if client:
+                log.debug("Linked agent", agent_typ=agent_typ, client=client.name)
+            else:
+                log.warning("No client available for agent", agent_typ=agent_typ)
+
             agent = instance.get_agent(agent_typ, client=client)
             agent.client = client
             await agent.apply_config(**agent_config)
 
         instance.emit_agents_status()
+
+    def get_first_enabled_client(self) -> ClientBase:
+        """
+        Will return the first enabled client available
+
+        If no enabled clients are available, an IndexError will be raised
+        """
+        for client in self.llm_clients.values():
+            if client and client["client"].enabled:
+                return client["client"]
+        raise IndexError("No enabled clients available")
 
     def init_scene(self):
         # Setup scene
@@ -180,6 +190,7 @@ class WebsocketHandler(Receiver):
             if self.scene:
                 instance.get_agent("memory").close_db(self.scene)
                 self.scene.disconnect()
+                self.scene.active = False
 
             scene = self.init_scene()
 
@@ -189,18 +200,24 @@ class WebsocketHandler(Receiver):
 
             conversation_helper = scene.get_helper("conversation")
 
-            scene = await load_scene(
-                scene, path_or_data, conversation_helper.agent.client, reset=reset
-            )
+            scene.active = True
+
+            with ActiveScene(scene):
+                scene = await load_scene(
+                    scene, path_or_data, conversation_helper.agent.client, reset=reset
+                )
 
             self.scene = scene
 
             if callback:
                 await callback()
 
-            await scene.start()
+            with ActiveScene(scene):
+                await scene.start()
         except Exception:
             log.error("load_scene", error=traceback.format_exc())
+        finally:
+            self.scene.active = False
 
     def queue_put(self, data):
         # Get the current event loop
@@ -219,8 +236,20 @@ class WebsocketHandler(Receiver):
             client.pop("status", None)
             client_cls = CLIENT_CLASSES.get(client["type"])
 
-            if client.get("model") == "No API key set":
-                client.pop("model", None)
+            # so hacky, such sad
+            ignore_model_names = [
+                "Disabled",
+                "No model loaded",
+                "Could not connect",
+                "No API key set",
+            ]
+            if client.get("model") in ignore_model_names:
+                # if client instance exists copy model_name from it
+                _client = instance.get_client(client["name"])
+                if _client:
+                    client["model"] = getattr(_client, "model_name", None)
+                else:
+                    client.pop("model", None)
 
             if not client_cls:
                 log.error("Client type not found", client=client)
@@ -229,6 +258,7 @@ class WebsocketHandler(Receiver):
             client_config = self.llm_clients[client["name"]] = {
                 "name": client["name"],
                 "type": client["type"],
+                "enabled": client.get("enabled", True),
             }
             for dfl_key in client_cls.Meta().defaults.dict().keys():
                 client_config[dfl_key] = client.get(
@@ -583,6 +613,7 @@ class WebsocketHandler(Receiver):
                 "message": message,
                 "character": emission.character.name if emission.character else "",
                 "data": emission.data,
+                "reason": emission.data.get("reason", "") if emission.data else None,
             }
         )
 
@@ -731,6 +762,7 @@ class WebsocketHandler(Receiver):
 
         if asset_upload.scene_cover_image:
             self.scene.assets.cover_image = asset.id
+            self.scene.saved = False
             self.scene.emit_status()
         if asset_upload.character_cover_image:
             character = self.scene.get_character(asset_upload.character_cover_image)
@@ -741,6 +773,7 @@ class WebsocketHandler(Receiver):
                 or old_cover_image == self.scene.assets.cover_image
             ):
                 self.scene.assets.cover_image = asset.id
+            self.scene.saved = False
             self.scene.emit_status()
             self.request_scene_assets([character.cover_image])
             self.queue_put(

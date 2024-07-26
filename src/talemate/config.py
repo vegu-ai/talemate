@@ -36,8 +36,9 @@ class Client(BaseModel):
     model: Union[str, None] = None
     api_url: Union[str, None] = None
     api_key: Union[str, None] = None
-    max_token_length: int = 4096
+    max_token_length: int = 8192
     double_coercion: Union[str, None] = None
+    enabled: bool = True
 
     class Config:
         extra = "ignore"
@@ -192,6 +193,7 @@ class RecentScene(BaseModel):
     date: str
     cover_image: Union[Asset, None] = None
 
+
 class InferenceParameters(BaseModel):
     temperature: float = 1.0
     temperature_last: bool = True
@@ -200,7 +202,7 @@ class InferenceParameters(BaseModel):
     min_p: float | None = 0.1
     presence_penalty: float | None = 0.2
     frequency_penalty: float | None = 0.05
-    repetition_penalty: float | None= 1.0
+    repetition_penalty: float | None = 1.0
     repetition_penalty_range: int | None = 1024
     # this determines whether or not it should be persisted
     # to the config file
@@ -210,33 +212,35 @@ class InferenceParameters(BaseModel):
 class InferencePresets(BaseModel):
 
     analytical: InferenceParameters = InferenceParameters(
-        temperature=0.7, 
+        temperature=0.7,
         presence_penalty=0,
         frequency_penalty=0,
         repetition_penalty=1.0,
         min_p=0,
     )
     conversation: InferenceParameters = InferenceParameters(
-        temperature=0.85,
-        repetition_penalty_range=2048
+        temperature=0.85, repetition_penalty_range=2048
     )
     creative: InferenceParameters = InferenceParameters()
     creative_instruction: InferenceParameters = InferenceParameters(
-        temperature=0.85, 
-        repetition_penalty_range=512
+        temperature=0.85, repetition_penalty_range=512
     )
     deterministic: InferenceParameters = InferenceParameters(
-        temperature=0.1, 
-        top_p=1, 
-        top_k=0, 
+        temperature=0.1,
+        top_p=1,
+        top_k=0,
         repetition_penalty=1.0,
         min_p=0,
     )
     scene_direction: InferenceParameters = InferenceParameters(
-        temperature=0.85, 
+        temperature=0.85,
+        min_p=0.0,
+        presence_penalty=0.0,
     )
     summarization: InferenceParameters = InferenceParameters(
-        temperature=0.7, 
+        temperature=0.7,
+        min_p=0.0,
+        presence_penalty=0.0,
     )
 
 
@@ -376,7 +380,7 @@ AnnotatedClient = Annotated[
 class Config(BaseModel):
     clients: Dict[str, AnnotatedClient] = {}
 
-    game: Game
+    game: Game = Game()
 
     agents: Dict[str, Agent] = {}
 
@@ -405,7 +409,7 @@ class Config(BaseModel):
     tts: TTSConfig = TTSConfig()
 
     recent_scenes: RecentScenes = RecentScenes()
-    
+
     presets: Presets = Presets()
 
     class Config:
@@ -421,7 +425,7 @@ class SceneConfig(BaseModel):
 
 class SceneAssetUpload(BaseModel):
     scene_cover_image: bool
-    character_cover_image: str = None
+    character_cover_image: str | None = None
     content: str = None
 
 
@@ -474,12 +478,12 @@ def save_config(config, file_path: str = "./config.yaml"):
         config["presets"].pop("inference_defaults")
     except KeyError:
         pass
-    
+
     # for normal presets we only want to persist if they have changed
     for preset_name, preset in list(config["presets"]["inference"].items()):
         if not preset.get("changed"):
             config["presets"]["inference"].pop(preset_name)
-            
+
     # if presets is empty, remove it
     if not config["presets"]["inference"]:
         config.pop("presets")
@@ -490,7 +494,7 @@ def save_config(config, file_path: str = "./config.yaml"):
     emit("config_saved", data=config)
 
 
-def cleanup():
+def cleanup() -> Config:
 
     log.info("cleaning up config")
 
@@ -500,6 +504,8 @@ def cleanup():
     cleanup_removed_agents(config)
 
     save_config(config)
+
+    return config
 
 
 def cleanup_removed_clients(config: Config):

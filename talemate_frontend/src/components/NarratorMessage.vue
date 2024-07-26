@@ -1,5 +1,5 @@
 <template>
-  <v-alert variant="text" type="info" icon="mdi-script-text-outline" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
+  <v-alert variant="text" color="narrator" icon="mdi-script-text-outline" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
     <template v-slot:close>
       <v-btn size="x-small" icon @click="deleteMessage">
         <v-icon>mdi-close</v-icon>
@@ -9,7 +9,9 @@
       <v-textarea 
         ref="textarea" 
         v-if="editing" 
-        v-model="editing_text" 
+        v-model="editing_text"
+        color="narrator"
+        bg-color="black"
 
         auto-grow
 
@@ -22,7 +24,7 @@
         @keydown.escape.prevent="cancelEdit()">
       </v-textarea>
       <div v-else class="narrator-text" @dblclick="startEdit()">
-        <span v-for="(part, index) in parts" :key="index" :class="{ highlight: part.isNarrative }">
+        <span v-for="(part, index) in parts" :key="index" :class="{ highlight: part.isNarrative, 'text-narrator': part.isNarrative }">
           {{ part.text }}
         </span>
       </div>
@@ -109,7 +111,6 @@ export default {
     },
 
     cancelEdit() {
-      console.log('cancelEdit', this.message_id);
       this.editing = false;
     },
     startEdit() {
@@ -120,12 +121,10 @@ export default {
       });
     },
     submitEdit() {
-      console.log('submitEdit', this.message_id, this.editing_text);
       this.getWebsocket().send(JSON.stringify({ type: 'edit_message', id: this.message_id, text: this.editing_text }));
       this.editing = false;
     },
     deleteMessage() {
-      console.log('deleteMessage', this.message_id);
       this.requestDeleteMessage(this.message_id);
     }
   }
@@ -134,7 +133,6 @@ export default {
   
 <style scoped>
 .highlight {
-  color: #9FA8DA;
   font-style: italic;
   margin-left: 2px;
   margin-right: 2px;
@@ -155,5 +153,4 @@ export default {
 .narrator-message {
   display: flex;
   flex-direction: row;
-  color: #26A69A;
 }</style>

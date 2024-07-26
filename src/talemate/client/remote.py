@@ -17,6 +17,8 @@ class RemoteServiceMixin:
         if kwargs.get("model"):
             self.model_name = kwargs["model"]
             self.set_client(kwargs.get("max_token_length"))
+        if "enabled" in kwargs:
+            self.enabled = bool(kwargs["enabled"])
 
     def on_config_saved(self, event):
         config = event.data

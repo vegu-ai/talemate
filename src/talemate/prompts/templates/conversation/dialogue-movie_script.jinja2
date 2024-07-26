@@ -44,19 +44,19 @@ The format is a screenplay, so you MUST write the character's name in all caps f
 
     CHARACTER NAME
     "I'm so glad you're here."
-    -- endofline --
+    END-OF-LINE
 
 Emotions and actions should be written in italics. For example:
 
     CHARACTER NAME
     *smiles* "I'm so glad you're here."
-    -- endofline --
+    END-OF-LINE
 
 {{ extra_instructions }}
 
 STAY IN THE SCENE. YOU MUST NOT BREAK CHARACTER. YOU MUST NOT BREAK THE FOURTH WALL.
 
-YOU MUST MARK YOUR CONTRIBUTION WITH "-- endofline --" AT THE END OF YOUR CONTRIBUTION.
+YOU MUST MARK YOUR CONTRIBUTION WITH "END-OF-LINE" AT THE END OF YOUR CONTRIBUTION.
 
 YOU MUST ONLY WRITE NEW DIALOGUE FOR {{ talking_character.name.upper() }}.
 
@@ -92,6 +92,7 @@ YOU MUST ONLY WRITE NEW DIALOGUE FOR {{ talking_character.name.upper() }}.
 {# ACTIVE PINS #}
 <|SECTION:IMPORTANT CONTEXT|>
 {%- for pin in scene.active_pins %}
+### {{ pin.title }}
 {{ pin.time_aware_text|condensed }}
 
 {% endfor %}
@@ -111,7 +112,7 @@ YOU MUST ONLY WRITE NEW DIALOGUE FOR {{ talking_character.name.upper() }}.
     {%- endif -%}
 {% endif -%}
 {% for scene_line in scene_context -%}
-{{ scene_line }}-- endofline --
+{{ scene_line }}END-OF-LINE
 
 {% endfor %}
 {% endblock -%}

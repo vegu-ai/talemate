@@ -15,7 +15,7 @@ def ensure_number(v):
     """
     if v is a str but digit turn into into or float
     """
-    
+
     if isinstance(v, str):
         if v.isdigit():
             return int(v)
@@ -24,6 +24,7 @@ def ensure_number(v):
         except ValueError:
             return v
     return v
+
 
 class DevToolsPlugin:
     router = "devtools"
@@ -48,7 +49,9 @@ class DevToolsPlugin:
         log.info(
             "Testing prompt",
             payload={
-                k: ensure_number(v) for k, v in payload.generation_parameters.items() if k != "prompt"
+                k: ensure_number(v)
+                for k, v in payload.generation_parameters.items()
+                if k != "prompt"
             },
         )
 

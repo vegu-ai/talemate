@@ -5,7 +5,7 @@ import os
 import pydantic
 import structlog
 
-from talemate.load import load_character_into_scene
+from talemate.load import transfer_character
 
 log = structlog.get_logger("talemate.server.character_importer")
 
@@ -47,13 +47,20 @@ class CharacterImporterServerPlugin:
         with open(scene_path, "r") as f:
             scene_data = json.load(f)
 
+        sorted_characters = scene_data.get("characters", [])
+
+        # sort by name
+
+        sorted_characters = sorted(
+            sorted_characters,
+            key=lambda character: character["name"].lower(),
+        )
+
         self.websocket_handler.queue_put(
             {
                 "type": "character_importer",
                 "action": "list_characters",
-                "characters": [
-                    character["name"] for character in scene_data.get("characters", [])
-                ],
+                "characters": [character["name"] for character in sorted_characters],
             }
         )
 
@@ -64,7 +71,7 @@ class CharacterImporterServerPlugin:
 
         scene = self.websocket_handler.scene
 
-        await load_character_into_scene(
+        await transfer_character(
             scene,
             import_character_data.scene_path,
             import_character_data.character_name,

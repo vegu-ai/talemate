@@ -13,6 +13,7 @@
         </v-col>
         <v-col cols="9">
 
+
             <div v-if="tab == 'instructions'">
                 <v-sheet class="text-right">
                     <v-spacer></v-spacer>
@@ -47,12 +48,19 @@
             </div>
 
             <div v-else-if="tab == 'examples'">
+
                 <ContextualGenerate 
+                    ref="contextualGenerate"
+                    uid="wsm.character_dialogue"
                     :context="'character dialogue:'" 
+                    :instructions-placeholder="`An example of what ${character.name} would say when...`"
                     :character="character.name"
                     :rewrite-enabled="false"
+                    :generation-options="generationOptions"
                     @generate="content => { dialogueExamples.push(content); queueUpdateCharacterActor(); }"
                 />
+
+
                 <v-text-field v-model="dialogueExample" label="Add Dialogue Example" @keyup.enter="dialogueExamples.push(dialogueExample); dialogueExample = ''; queueUpdateCharacterActor();" dense></v-text-field>
                 <v-list density="compact" nav>
                     <v-list-item v-for="(example, index) in dialogueExamplesWithNameStripped" :key="index">
@@ -67,19 +75,22 @@
                     </v-list-item>
                 </v-list>
             </div>
-
         </v-col>
     </v-row>
+    <SpiceAppliedNotification :uids="['wsm.character_dialogue']"></SpiceAppliedNotification>
+
 </template>
 
 <script>
 
 import ContextualGenerate from './ContextualGenerate.vue';
+import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 
 export default {
     name: 'WorldStateManagerCharacterActor',
     components: {
         ContextualGenerate,
+        SpiceAppliedNotification,
     },
     data() {
         return {
@@ -104,7 +115,12 @@ export default {
     },
     props: {
         character: Object,
+        templates: Object,
+        generationOptions: Object,
     },
+    emits: [
+        'require-scene-save'
+    ],
     inject: ['getWebsocket', 'registerMessageHandler'],
     methods: {
 
@@ -137,7 +153,6 @@ export default {
         
         handleMessage(data) {
             if(data.type === 'world_state_manager') {
-                console.log("WORLD STATE MANAGER", data);
                 if(data.action === 'character_actor_updated') {
                     this.dialogueInstructionsDirty = false;
                 } else if (data.action === 'character_dialogue_instructions_generated') {
@@ -151,7 +166,6 @@ export default {
         this.registerMessageHandler(this.handleMessage);
     },
     mounted() {
-        console.log("MOUNTED", this.character)
         this.dialogueInstructions = this.character.actor.dialogue_instructions;
         this.dialogueExamples = this.character.actor.dialogue_examples;
     },

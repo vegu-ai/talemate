@@ -1,12 +1,14 @@
 from typing import TYPE_CHECKING
-from talemate.config import load_config, InferencePresets
-from talemate.emit.signals import handlers
-from talemate.client.context import set_client_context_attribute
+
 import structlog
+
+from talemate.client.context import set_client_context_attribute
+from talemate.config import InferencePresets, load_config
+from talemate.emit.signals import handlers
 
 if TYPE_CHECKING:
     from talemate.client.base import ClientBase
-    
+
 __all__ = [
     "configure",
     "set_max_tokens",
@@ -35,7 +37,8 @@ def sync_config(event):
     CONFIG["inference"] = InferencePresets(
         **event.data.get("presets", {}).get("inference", {})
     )
-    
+
+
 handlers["config_saved"].connect(sync_config)
 
 
@@ -46,7 +49,7 @@ def get_inference_parameters(preset_name: str) -> dict:
     presets = CONFIG["inference"].model_dump()
     if preset_name in presets:
         return presets[preset_name]
-    
+
     raise ValueError(f"Preset name {preset_name} not found in presets.inference")
 
 
@@ -104,22 +107,25 @@ PRESET_MAPPING = {
 
 def preset_for_kind(kind: str, client: "ClientBase") -> dict:
     # Check the substrings first(based on order of the original elifs)
-    
+
     preset_name = None
-    
+
     preset_name = PRESET_MAPPING.get(kind)
-    
+
     if not preset_name:
         for substring, value in PRESET_SUBSTRING_MAPPINGS.items():
             if substring in kind:
                 preset_name = value
-        
+
     if not preset_name:
-        log.warning(f"No preset found for kind {kind}, defaulting to 'scene_direction'", presets=CONFIG["inference"])
+        log.warning(
+            f"No preset found for kind {kind}, defaulting to 'scene_direction'",
+            presets=CONFIG["inference"],
+        )
         preset_name = "scene_direction"
-    
+
     set_client_context_attribute("inference_preset", preset_name)
-    
+
     return get_inference_parameters(preset_name)
 
 

@@ -53,3 +53,19 @@ class LLMAccuracyError(TalemateError):
 
         super().__init__(message)
         self.model_name = model_name
+
+
+class SceneInactiveError(TalemateError):
+    """
+    Exception to raise when the scene is not active
+    """
+
+    pass
+
+
+class UnknownDataSpec(TalemateError):
+    """
+    Exception to raise when the data spec is unknown
+    """
+
+    pass

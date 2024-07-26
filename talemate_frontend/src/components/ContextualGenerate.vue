@@ -19,6 +19,14 @@
                     {{ context }}
                 </v-alert>
 
+                <v-alert v-if="generationOptions.writing_style" density="compact" icon="mdi-script-text" variant="text" color="grey">
+                    Writing Style: {{ generationOptions.writing_style.name }}
+                </v-alert>
+
+                <v-alert v-if="generationOptions.spices && generationOptions.spices.spices.length > 0" density="compact" icon="mdi-chili-mild" variant="text" color="grey">
+                    Spice collection: {{ generationOptions.spices.name }}
+                </v-alert>
+
                 <v-alert dense icon="mdi-pencil" variant="text" color="grey" v-if="original && withOriginal">
                    <div class="original-overflow">
                      <span class="text-grey-lighten-2">[Rewriting]</span> {{ original }}
@@ -26,8 +34,8 @@
                    </div>
                 </v-alert>
 
-                <v-textarea class="mt-1" v-model="instructions" rows="2" label="Instructions"
-                    hint="Additional instructions for the AI on how to generate the requested content" v-if="withInstructions"  :disabled="busy"></v-textarea>
+                <v-textarea class="mt-1" ref="instructions" v-model="instructions" rows="2" label="Instructions"
+                    hint="Additional instructions for the AI on how to generate the requested content" v-if="withInstructions"  :disabled="busy" :placeholder="instructionsPlaceholder"></v-textarea>
             </v-card-text>
             <v-card-actions>
                 <v-spacer></v-spacer>
@@ -40,16 +48,27 @@
         <v-spacer></v-spacer>
         <v-tooltip class="pre-wrap" :text="tooltipText" >
             <template v-slot:activator="{ props }">
-                <v-btn v-bind="props" color="primary" @click.stop="open" variant="text" size="x-small" prepend-icon="mdi-auto-fix">Generate</v-btn>
+                <v-btn v-bind="props" color="primary" @click.stop="open" variant="text" prepend-icon="mdi-auto-fix">Generate</v-btn>
             </template>
         </v-tooltip>
     </v-sheet>
 </template>
 <script>
-
+import { v4 as uuidv4 } from 'uuid';
 export default {
     name: 'ContextualGenerate',
     props: {
+        uid: {
+            type: String,
+            required: false,
+            default: uuidv4()
+        },
+        templates: Object,
+        generationOptions: {
+            type: Object,
+            required: false,
+            default: () => ({})
+        },
         context: {
             type: String,
             required: true
@@ -71,7 +90,37 @@ export default {
             type: Boolean,
             required: false,
             default: true
-        }
+        },
+        defaultInstructions: {
+            type: String,
+            required: false,
+            default: ""
+        },
+        requiresInstructions: {
+            type: Boolean,
+            required: false,
+            default: false
+        },
+        instructionsPlaceholder: {
+            type: String,
+            required: false,
+            default: ""
+        },
+        responseFormat: {
+            type: String,
+            required: false,
+            default: "text"
+        },
+        contextAware: {
+            type: Boolean,
+            required: false,
+            default: true
+        },
+        historyAware: {
+            type: Boolean,
+            required: false,
+            default: true
+        },
     },
     data() {
         return {
@@ -83,24 +132,27 @@ export default {
         }
     },
     emits: ["generate"],
-    inject: ["getWebsocket", "registerMessageHandler"],
+    inject: [
+        "getWebsocket", 
+        "registerMessageHandler",
+        "unregisterMessageHandler",
+    ],
     computed: {
         tooltipText() {
             if(this.rewriteEnabled)
                 return "Generate "+this.context+"\n[+ctrl to provide instructions]\n[+alt to rewrite existing content]";
             else
                 return "Generate "+this.context+"\n[+ctrl to provide instructions]";
-        }
+        },
     },
     methods: {
-
 
         open(event) {
             this.dialog = true;
             this.busy = false;
             
             // if ctrl key is pressed, open with instructions
-            this.withInstructions = event.ctrlKey;
+            this.withInstructions = event.ctrlKey || this.requiresInstructions;
             
             // if alt key is pressed, open with original
             this.withOriginal = event.altKey && this.rewriteEnabled;
@@ -108,38 +160,73 @@ export default {
             if (!this.withInstructions) {
 
                 this.generate();
+            } else {
+                this.$nextTick(() => {
+                    this.$refs.instructions.focus();
+                });
             }
         },
 
         generate() {
             this.busy = true;
+
+            let instructions = "";
+
+
+            if(this.withInstructions)
+                instructions =  this.instructions;
+            if(this.defaultInstructions && instructions !== "" && this.instructions !== this.defaultInstructions)
+                instructions = instructions + "\n" + this.defaultInstructions;
+            else if(this.defaultInstructions)
+                instructions = this.defaultInstructions;
+
             this.getWebsocket().send(JSON.stringify({
                 type: "assistant",
                 action: "contextual_generate",
+                uid: this.uid,
                 context: this.context,
                 character: this.character,
                 length: this.length,
-                instructions: this.withInstructions ? this.instructions : "",
+                instructions: instructions,
                 original: this.withOriginal ? this.original : null,
+                generation_options: this.generationOptions,
+                context_aware: this.contextAware,
+                history_aware: this.historyAware,
             }));
         },
 
         handleMessage(message) {
             if (message.type === "assistant" && message.action === "contextual_generate_done") {
                 
+                if(message.data.uid !== this.uid)
+                    return;
+
                 // slot will be some input element with a v-model attribute
                 // update the slot with the generated text
 
                 this.dialog = false;
-                console.log("GENERATED", message)
-                this.$emit("generate", message.data.generated_content);
+                // split message.data.context by : into type and context
+
+                let response = message.data.generated_content;
+
+                if(this.responseFormat === "text") {
+                    this.$emit("generate", response, message.data);
+                } else if(this.responseFormat === "json") {
+                    this.$emit("generate", JSON.parse(response), message.data);
+                }
+            }
+            else if (message.type === 'error') {
+                this.dialog = false;
+                this.busy = false;
             }
         }
 
     },
-    created() {
+    mounted() {
         this.registerMessageHandler(this.handleMessage);
-        // hook click event on child v-textarea
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
     },
 }
 

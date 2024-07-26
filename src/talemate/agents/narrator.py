@@ -618,8 +618,6 @@ class NarratorAgent(Agent):
 
         return narrator_message
 
-    action_to_narration.exposed = True
-
     # LLM client related methods. These are called during or after the client
 
     def inject_prompt_paramters(

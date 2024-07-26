@@ -35,5 +35,10 @@ Expected Answer: A highly accurate numerical chronological list of the events an
 <|SECTION:DIALOGUE SECTION ALPHA|>
 {{ dialogue }}
 <|CLOSE_SECTION|>
+{% if generation_options and generation_options.writing_style %}
+<|SECTION:WRITING STYLE|>
+{{ generation_options.writing_style.instructions }}
+<|CLOSE_SECTION|>
+{% endif %}
 <|SECTION:SUMMARIZATION OF DIALOGUE SECTION ALPHA|>
 {{ bot_token }}In the dialogue section alpha,

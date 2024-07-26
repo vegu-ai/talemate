@@ -225,15 +225,9 @@ class MemoryAgent(Agent):
             self.add(event.text, uid=event.memory_id, ts=event.ts, typ="history")
         )
 
-    def on_character_state(self, event: events.CharacterStateEvent):
-        asyncio.ensure_future(
-            self.add(event.state, uid=f"description-{event.character_name}")
-        )
-
     def connect(self, scene):
         super().connect(scene)
         scene.signals["archive_add"].connect(self.on_archive_add)
-        scene.signals["character_state"].connect(self.on_character_state)
 
     def add_chunks(self, lines: list[str], chunk_size=200):
         current_chunk = []
@@ -286,7 +280,7 @@ class MemoryAgent(Agent):
         max_tokens: int = 1000,
         filter: Callable = lambda x: True,
         **where,
-    ):
+    ) -> str | None:
         """
         Get the character memory context for a given character
         """
@@ -574,7 +568,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             if "Collection not found" not in str(exc):
                 raise
 
-    def close_db(self, scene):
+    def close_db(self, scene, remove_unsaved_memory: bool = True):
         if not self.db:
             return
 
@@ -596,7 +590,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 log.error(
                     "chromadb agent", error="failed to delete collection", details=exc
                 )
-        elif not scene.saved:
+        elif not scene.saved and remove_unsaved_memory:
             # scene was saved but memory was never persisted
             # so we need to remove the memory from the db
             self._remove_unsaved_memory()
@@ -692,7 +686,8 @@ class ChromaDBMemoryAgent(MemoryAgent):
             where["$and"].append({k: v})
 
         if character and not character_filtered:
-            where["$and"].append({"character": character.name})
+            character_name = character if isinstance(character, str) else character.name
+            where["$and"].append({"character": character_name})
 
         if len(where["$and"]) == 1:
             where = where["$and"][0]

@@ -23,7 +23,7 @@ import talemate.save as save
 import talemate.util as util
 from talemate.client.context import ClientContext, ConversationContext
 from talemate.config import Config, SceneConfig, load_config
-from talemate.context import rerun_context
+from talemate.context import interaction, rerun_context
 from talemate.emit import Emission, Emitter, emit, wait_for_input
 from talemate.emit.signals import ConfigSaved, ImageGenerated, handlers
 from talemate.exceptions import (
@@ -52,7 +52,6 @@ from talemate.world_state.manager import WorldStateManager
 
 __all__ = [
     "Character",
-    "TestCharacter",
     "Actor",
     "Scene",
     "Helper",
@@ -67,6 +66,15 @@ async_signals.register("game_loop_start")
 async_signals.register("game_loop")
 async_signals.register("game_loop_actor_iter")
 async_signals.register("game_loop_new_message")
+
+
+class ActedAsCharacter(Exception):
+    """
+    Raised when the user acts as another character
+    than the main player character
+    """
+
+    pass
 
 
 class Character:
@@ -152,6 +160,26 @@ class Character:
 
         return random.choice(self.example_dialogue)
 
+    def set_color(self, color: str = None):
+        # if no color provided, chose a random color
+
+        if color is None:
+            color = random.choice(
+                [
+                    "#F08080",
+                    "#FFD700",
+                    "#90EE90",
+                    "#ADD8E6",
+                    "#DDA0DD",
+                    "#FFB6C1",
+                    "#FAFAD2",
+                    "#D3D3D3",
+                    "#B0E0E6",
+                    "#FFDEAD",
+                ]
+            )
+        self.color = color
+
     def set_cover_image(self, asset_id: str, initial_only: bool = False):
         if self.cover_image and initial_only:
             return
@@ -212,47 +240,6 @@ class Character:
 
         return "\n".join(sheet_list)
 
-    def save(self, file_path: str):
-        """
-        Save this Character instance properties to a json file at the given file path.
-
-        Args:
-        file_path (str): The path to the output json file.
-
-        Returns:
-        None
-        """
-
-        with open(file_path, "w") as output_file:
-            json.dump(self.serialize, output_file, indent=2)
-
-    @classmethod
-    def load(cls, file_path: str) -> "Character":
-        """
-        Load a Character instance properties from a json file at the given file path.
-
-        Args:
-        file_path (str): The path to the input json file.
-
-        Returns:
-        Character: The loaded Character instance.
-        """
-
-        with open(file_path, "r") as input_file:
-            character_dict = json.load(input_file)
-
-        character = cls(
-            name=character_dict["name"],
-            description=character_dict["description"],
-            greeting_text=character_dict["greeting_text"],
-            gender=character_dict["gender"],
-            color=character_dict["color"],
-        )
-
-        character.example_dialogue = character_dict["example_dialogue"]
-
-        return character
-
     def rename(self, new_name: str):
         """
         Rename the character.
@@ -280,54 +267,6 @@ class Character:
         for i, v in list(self.details.items()):
             self.details[i] = v.replace(f"{orig_name}", self.name)
         self.memory_dirty = True
-
-    def load_from_image_metadata(self, image_path: str, file_format: str):
-        """
-        Load character data from an image file's metadata using the extract_metadata function.
-
-        Args:
-        image_path (str): The path to the image file.
-        file_format (str): The image file format ('png' or 'webp').
-
-        Returns:
-        None
-        """
-
-        metadata = extract_metadata(image_path, file_format)
-
-        # check if v2 card spec
-
-        if metadata.get("spec") == "chara_card_v2":
-            metadata = metadata["data"]
-
-        self.color = "red"
-        if "name" in metadata:
-            self.name = metadata["name"]
-
-        # loop through the metadata and set the character name everywhere {{char}}
-        # occurs
-
-        for key in metadata:
-            if isinstance(metadata[key], str):
-                metadata[key] = metadata[key].replace("{{char}}", self.name)
-
-        if "description" in metadata:
-            self.description = metadata["description"]
-        if "scenario" in metadata:
-            self.description += "\n" + metadata["scenario"]
-        if "first_mes" in metadata:
-            self.greeting_text = metadata["first_mes"]
-        if "gender" in metadata:
-            self.gender = metadata["gender"]
-        if "color" in metadata:
-            self.color = metadata["color"]
-        if "mes_example" in metadata:
-            new_line_match = "\r\n" if "\r\n" in metadata["mes_example"] else "\n"
-            for message in metadata["mes_example"].split("<START>"):
-                if message.strip(new_line_match):
-                    self.example_dialogue.extend(
-                        [m for m in message.split(new_line_match) if m]
-                    )
 
     def introduce_main_character(self, character):
         """
@@ -609,28 +548,6 @@ class Helper:
         return self.agent.agent_type
 
 
-class TestCharacter(Character):
-    """
-    A test character with a name, description, and greeting text.
-    """
-
-    def __init__(self):
-        super().__init__(
-            name="Magical Fairy",
-            description="A female magical Fairy. About as big as a human hand. She is not very powerful, but she is very mischievous.",
-            color="magenta",
-            greeting_text="*winking* I am a magical fairy and i am contractually bound to grant you 3 wishes. Tee hee! What is your desire?",
-        )
-
-        self.example_dialogue = [
-            "*giggling* Oh, dear human, I see you've misplaced your keys again! Would you like a little hint, or should I let you search just a bit longer? Tee-hee!",
-            "*fluttering around playfully* Why, hello there! I couldn't help but notice you're feeling a bit glum. How about I cheer you up by turning those frowns into flowers? But be warned, they may tickle!",
-            "*twirling her wand* A touch of magic, a sprinkle of mischief, and voilà! You'll find your shoes swapped with your neighbor's. Don't worry, it's all in good fun!",
-            "*winking* Shall we play a little game, my human friend? I'll hide three enchanted acorns in your garden, and if you find them all, I'll grant you a single wish. But beware, my hiding spots can be quite tricky!",
-            "*fluttering her wings* Oh, what a lovely day for a bit of harmless pranking! How about we turn this plain old rock into a singing stone? Your friends won't know what hit them when it starts belting out tunes!",
-        ]
-
-
 class Actor:
     """
     links a character to an agent
@@ -696,14 +613,21 @@ class Player(Actor):
 
             return await super().talk()
 
+        act_as = None
+
         if not message:
             # Display scene history length before the player character name
             history_length = self.scene.history_length()
 
             name = colored_text(self.character.name + ": ", self.character.color)
-            message = await wait_for_input(
-                f"[{history_length}] {name}", character=self.character
+            input = await wait_for_input(
+                f"[{history_length}] {name}",
+                character=self.character,
+                data={"reason": "talk"},
+                return_struct=True,
             )
+            message = input["message"]
+            act_as = input["interaction"].act_as
 
         if not message:
             return
@@ -714,12 +638,33 @@ class Player(Actor):
 
             message = util.ensure_dialog_format(message)
 
-            self.message = message
+            log.warning("player_message", message=message, act_as=act_as)
 
-            self.scene.push_history(
-                CharacterMessage(f"{self.character.name}: {message}", source="player")
-            )
-            emit("character", self.history[-1], character=self.character)
+            if act_as == "$narrator":
+                # acting as the narrator
+                message = NarratorMessage(message, source="player")
+                self.scene.push_history(message)
+                self.scene.narrator_message(message)
+                raise ActedAsCharacter()
+            elif act_as:
+                # acting as another character
+                character = self.scene.get_character(act_as)
+                if not character:
+                    raise TalemateError(f"Character {act_as} not found")
+                character_message = CharacterMessage(f"{character.name}: {message}")
+                self.scene.push_history(character_message)
+                self.scene.process_npc_dialogue(character.actor, [character_message])
+                raise ActedAsCharacter()
+            else:
+                # acting as the main player character
+                self.message = message
+
+                self.scene.push_history(
+                    CharacterMessage(
+                        f"{self.character.name}: {message}", source="player"
+                    )
+                )
+                emit("character", self.history[-1], character=self.character)
 
         return message
 
@@ -746,8 +691,6 @@ class Scene(Emitter):
         self.helpers = []
         self.history = []
         self.archived_history = []
-        self.goals = []
-        self.character_states = {}
         self.inactive_characters = {}
         self.assets = SceneAssets(scene=self)
         self.description = ""
@@ -781,12 +724,13 @@ class Scene(Emitter):
         self.context = ""
         self.commands = commands.Manager(self)
         self.environment = "scene"
-        self.goal = None
         self.world_state = WorldState()
         self.game_state = GameState()
         self.ts = "PT0S"
+        self.active = False
 
         self.Actor = Actor
+        self.Player = Player
         self.Character = Character
 
         # TODO: deprecate
@@ -801,7 +745,6 @@ class Scene(Emitter):
             "player_message": signal("player_message"),
             "history_add": signal("history_add"),
             "archive_add": signal("archive_add"),
-            "character_state": signal("character_state"),
             "game_loop": async_signals.get("game_loop"),
             "game_loop_start": async_signals.get("game_loop_start"),
             "game_loop_actor_iter": async_signals.get("game_loop_actor_iter"),
@@ -825,6 +768,10 @@ class Scene(Emitter):
     @property
     def npc_character_names(self):
         return [character.name for character in self.get_npc_characters()]
+
+    @property
+    def has_active_npcs(self):
+        return bool(list(self.get_npc_characters()))
 
     @property
     def log(self):
@@ -965,17 +912,6 @@ class Scene(Emitter):
                 break
 
         return recent_history
-
-    def set_character_state(self, character_name: str, state: str):
-        self.character_states[character_name] = state
-        self.signals["character_state"].send(
-            events.CharacterStateEvent(
-                scene=self,
-                event_type="character_state",
-                state=state,
-                character_name=character_name,
-            )
-        )
 
     def push_history(self, messages: list[SceneMessage]):
         """
@@ -1305,17 +1241,28 @@ class Scene(Emitter):
         """
         self.description = description
 
-    def get_intro(self):
+    def get_intro(self, intro:str = None) -> str:
         """
         Returns the intro text of the scene
         """
+        
+        if not intro:
+            intro = self.intro
+        
         try:
             player_name = self.get_player_character().name
-            return self.intro.replace("{{user}}", player_name).replace(
+            intro = intro.replace("{{user}}", player_name).replace(
                 "{{char}}", player_name
             )
         except AttributeError:
-            return self.intro
+            intro = self.intro
+            
+        if '"' not in intro and "*" not in intro:
+            intro = f"*{intro}*"
+            
+        intro = util.ensure_dialog_format(intro)
+
+        return intro
 
     def history_length(self):
         """
@@ -1509,7 +1456,7 @@ class Scene(Emitter):
         if isinstance(message, CharacterMessage):
             self.history.pop()
             await self._rerun_character_message(message)
-        elif isinstance(message, NarratorMessage):
+        elif isinstance(message, NarratorMessage) and message.source != "player":
             self.history.pop()
             await self._rerun_narrator_message(message)
         elif isinstance(message, DirectorMessage):
@@ -1662,6 +1609,8 @@ class Scene(Emitter):
             self.name,
             status="started",
             data={
+                "path": self.full_path,
+                "filename": self.filename,
                 "title": self.title or self.name,
                 "environment": self.environment,
                 "scene_config": self.scene_config,
@@ -1672,6 +1621,10 @@ class Scene(Emitter):
                 "context": self.context,
                 "assets": self.assets.dict(),
                 "characters": [actor.character.serialize for actor in self.actors],
+                "character_colors": {
+                    character.name: character.color
+                    for character in self.get_characters()
+                },
                 "scene_time": (
                     util.iso8601_duration_to_human(self.ts, suffix="")
                     if self.ts
@@ -1684,6 +1637,9 @@ class Scene(Emitter):
                 "game_state": self.game_state.model_dump(),
                 "active_pins": [pin.model_dump() for pin in self.active_pins],
                 "experimental": self.experimental,
+                "immutable_save": self.immutable_save,
+                "description": self.description,
+                "intro": self.intro,
                 "help": self.help,
             },
         )
@@ -1793,6 +1749,7 @@ class Scene(Emitter):
         """
         automated_action.initialize_for_scene(self)
 
+        await self.ensure_memory_db()
         await self.load_active_pins()
 
         self.emit_status()
@@ -1816,7 +1773,39 @@ class Scene(Emitter):
 
             await asyncio.sleep(0.01)
 
+    async def ensure_memory_db(self):
+        memory = self.get_helper("memory").agent
+        if not memory.db:
+            await memory.set_db()
+
+    async def emit_history(self):
+        emit("clear_screen", "")
+
+        self.game_state.init(self)
+
+        await self.signals["scene_init"].send(
+            events.SceneStateEvent(scene=self, event_type="scene_init")
+        )
+        self.narrator_message(self.get_intro())
+
+        for actor in self.actors:
+            if (
+                not isinstance(actor, Player)
+                and actor.character.introduce_main_character
+            ):
+                actor.character.introduce_main_character(self.main_character.character)
+
+            if (
+                actor.character.greeting_text
+                and actor.character.greeting_text != self.get_intro()
+            ):
+                item = f"{actor.character.name}: {actor.character.greeting_text}"
+                emit("character", item, character=actor.character)
+
     async def _run_game_loop(self, init: bool = True):
+
+        await self.ensure_memory_db()
+
         if init:
             emit("clear_screen", "")
 
@@ -1838,7 +1827,7 @@ class Scene(Emitter):
 
                 if (
                     actor.character.greeting_text
-                    and actor.character.greeting_text != self.get_intro()
+                    and self.get_intro(actor.character.greeting_text) != self.get_intro()
                 ):
                     item = f"{actor.character.name}: {actor.character.greeting_text}"
                     emit("character", item, character=actor.character)
@@ -1881,12 +1870,15 @@ class Scene(Emitter):
 
         await self.world_state_manager.apply_all_auto_create_templates()
 
-        while continue_scene:
+        # if loop sets this to True, we skip to the player
+        skip_to_player = False
+
+        while continue_scene and self.active:
             log.debug(
                 "game loop", auto_save=self.auto_save, auto_progress=self.auto_progress
             )
-
             try:
+                await self.ensure_memory_db()
                 await self.load_active_pins()
                 game_loop = events.GameLoopEvent(
                     scene=self, event_type="game_loop", had_passive_narration=False
@@ -1897,6 +1889,11 @@ class Scene(Emitter):
                 signal_game_loop = True
 
                 for actor in self.actors:
+
+                    if skip_to_player and not isinstance(actor, Player):
+                        continue
+
+                    skip_to_player = False
 
                     if not actor.character:
                         self.log.warning("Actor has no character", actor=actor)
@@ -1928,7 +1925,11 @@ class Scene(Emitter):
                     if not actor.character.is_player:
                         await self.call_automated_actions()
 
-                    message = await actor.talk()
+                    try:
+                        message = await actor.talk()
+                    except ActedAsCharacter:
+                        signal_game_loop = False
+                        break
 
                     if not message:
                         continue
@@ -1977,6 +1978,15 @@ class Scene(Emitter):
                 )
             except TalemateError as e:
                 self.log.error("game_loop", error=e)
+            except client.ClientDisabledError as e:
+                self.log.error("game_loop", error=e)
+                emit(
+                    "status",
+                    status="error",
+                    message=f"{e.client.name} is disabled and cannot be used.",
+                )
+                signal_game_loop = False
+                skip_to_player = True
             except Exception as e:
                 self.log.error(
                     "game_loop",
@@ -1989,9 +1999,7 @@ class Scene(Emitter):
     async def _run_creative_loop(self, init: bool = True):
         emit("status", message="Switched to scene editor", status="info")
 
-        if init:
-            emit("clear_screen", "")
-            self.narrator_message(self.description)
+        await self.emit_history()
 
         continue_scene = True
         self.commands = command = commands.Manager(self)
@@ -2038,17 +2046,26 @@ class Scene(Emitter):
         )
         self.emit_status()
 
-    async def save(self, save_as: bool = False, auto: bool = False):
+    async def save(
+        self,
+        save_as: bool = False,
+        auto: bool = False,
+        force: bool = False,
+        copy_name: str = None,
+    ):
         """
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
         scene = self
 
-        if self.immutable_save and not save_as:
+        if self.immutable_save and not save_as and not force:
+            save_as = True
+
+        if copy_name:
             save_as = True
 
         if save_as:
-            self.filename = None
+            self.filename = copy_name
 
         if not self.name and not auto:
             self.name = await wait_for_input("Enter scenario name: ")
@@ -2058,19 +2075,21 @@ class Scene(Emitter):
             self.filename = await wait_for_input("Enter save name: ")
             self.filename = self.filename.replace(" ", "-").lower() + ".json"
 
+        if self.filename and not self.filename.endswith(".json"):
+            self.filename = f"{self.filename}.json"
+
         elif not self.filename or not self.name and auto:
             # scene has never been saved, don't auto save
             return
-
-        self.set_new_memory_session_id()
 
         if save_as:
             self.immutable_save = False
             memory_agent = self.get_helper("memory").agent
             memory_agent.close_db(self)
             self.memory_id = str(uuid.uuid4())[:10]
-            await memory_agent.set_db()
             await self.commit_to_memory()
+
+        self.set_new_memory_session_id()
 
         saves_dir = self.save_dir
 
@@ -2084,17 +2103,15 @@ class Scene(Emitter):
             "description": scene.description,
             "intro": scene.intro,
             "name": scene.name,
+            "title": scene.title,
             "history": scene.history,
             "environment": scene.environment,
             "archived_history": scene.archived_history,
-            "character_states": scene.character_states,
             "characters": [actor.character.serialize for actor in scene.actors],
             "inactive_characters": {
                 name: character.serialize
                 for name, character in scene.inactive_characters.items()
             },
-            "goal": scene.goal,
-            "goals": scene.goals,
             "context": scene.context,
             "world_state": scene.world_state.model_dump(),
             "game_state": scene.game_state.model_dump(),
@@ -2147,19 +2164,23 @@ class Scene(Emitter):
             )
             await asyncio.sleep(0)
 
-        for character_name, cs in self.character_states.items():
-            self.set_character_state(character_name, cs)
-
         for character in self.characters:
             await character.commit_to_memory(memory)
 
         await self.world_state.commit_to_memory(memory)
 
     def reset(self):
+        # remove messages
         self.history = []
-        self.archived_history = []
+
+        # clear out archived history, but keep pre-established history
+        self.archived_history = [
+            ah for ah in self.archived_history if ah.get("end") is None
+        ]
+
+        self.world_state.reset()
+
         self.filename = ""
-        self.goal = None
 
     async def remove_all_actors(self):
         for actor in self.actors:
@@ -2205,14 +2226,11 @@ class Scene(Emitter):
             "history": scene.history,
             "environment": scene.environment,
             "archived_history": scene.archived_history,
-            "character_states": scene.character_states,
             "characters": [actor.character.serialize for actor in scene.actors],
             "inactive_characters": {
                 name: character.serialize
                 for name, character in scene.inactive_characters.items()
             },
-            "goal": scene.goal,
-            "goals": scene.goals,
             "context": scene.context,
             "world_state": scene.world_state.model_dump(),
             "game_state": scene.game_state.model_dump(),

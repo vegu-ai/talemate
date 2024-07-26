@@ -101,6 +101,8 @@ class SceneMessage:
         self.flags &= ~Flags.HIDDEN
 
     def as_format(self, format: str, **kwargs) -> str:
+        if format == "movie_script":
+            return self.message.rstrip("\n") + "\n"
         return self.message
 
 

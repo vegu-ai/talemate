@@ -20,6 +20,7 @@ SUPPORTED_MODELS = [
     "open-mistral-7b",
     "open-mixtral-8x7b",
     "open-mixtral-8x22b",
+    "open-mistral-nemo",
     "mistral-small-latest",
     "mistral-medium-latest",
     "mistral-large-latest",
@@ -27,10 +28,12 @@ SUPPORTED_MODELS = [
 
 JSON_OBJECT_RESPONSE_MODELS = [
     "open-mixtral-8x22b",
+    "open-mistral-nemo",
     "mistral-small-latest",
     "mistral-medium-latest",
     "mistral-large-latest",
 ]
+
 
 class Defaults(pydantic.BaseModel):
     max_token_length: int = 16384
@@ -72,7 +75,7 @@ class MistralAIClient(ClientBase):
     @property
     def supported_parameters(self):
         return [
-            "temperature", 
+            "temperature",
             "top_p",
             "max_tokens",
         ]
@@ -109,10 +112,11 @@ class MistralAIClient(ClientBase):
             message=self.client_type,
             id=self.name,
             details=model_name,
-            status=status,
+            status=status if self.enabled else "disabled",
             data={
                 "error_action": error_action.model_dump() if error_action else None,
                 "meta": self.Meta().model_dump(),
+                "enabled": self.enabled,
             },
         )
 
@@ -151,6 +155,9 @@ class MistralAIClient(ClientBase):
         )
 
     def reconfigure(self, **kwargs):
+        if "enabled" in kwargs:
+            self.enabled = bool(kwargs["enabled"])
+
         if kwargs.get("model"):
             self.model_name = kwargs["model"]
             self.set_client(kwargs.get("max_token_length"))

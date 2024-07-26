@@ -60,6 +60,7 @@ class TextGeneratorWebuiClient(ClientBase):
             "skip_special_tokens",
             "max_tokens",
             "stream",
+            "do_sample",
             # arethese needed?
             "max_new_tokens",
             "stop",
@@ -81,6 +82,10 @@ class TextGeneratorWebuiClient(ClientBase):
         # is this needed?
         parameters["max_new_tokens"] = parameters["max_tokens"]
         parameters["stop"] = parameters["stopping_strings"]
+
+        # if min_p is set, do_sample should be True
+        if parameters.get("min_p"):
+            parameters["do_sample"] = True
 
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)
@@ -106,6 +111,10 @@ class TextGeneratorWebuiClient(ClientBase):
         return prompt, True
 
     def finalize_YI(self, parameters: dict, prompt: str) -> tuple[str, bool]:
+
+        if not self.model_name:
+            return prompt, False
+
         model_name = self.model_name.lower()
         # regex match for yi encased by non-word characters
         if not bool(re.search(r"[\-_]yi[\-_]", model_name)):

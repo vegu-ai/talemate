@@ -85,6 +85,20 @@ class SceneAssets:
         for asset_id, asset_dict in assets_dict.items():
             self.assets[asset_id] = Asset(**asset_dict)
 
+    def transfer_asset(self, source: "SceneAssets", asset_id: str):
+        """
+        Will transfer another scenes asset into this scene on the same id
+        """
+
+        asset = source.assets[asset_id]
+
+        asset_path = source.asset_path(asset_id)
+
+        with open(asset_path, "rb") as f:
+            asset_bytes = f.read()
+
+        self.add_asset(asset_bytes, asset.file_type, asset.media_type)
+
     def set_cover_image(self, asset_bytes: bytes, file_extension: str, media_type: str):
         # add the asset
 

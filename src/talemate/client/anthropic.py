@@ -18,12 +18,13 @@ SUPPORTED_MODELS = [
     "claude-3-haiku-20240307",
     "claude-3-sonnet-20240229",
     "claude-3-opus-20240229",
+    "claude-3-5-sonnet-20240620",
 ]
 
 
 class Defaults(pydantic.BaseModel):
     max_token_length: int = 16384
-    model: str = "claude-3-sonnet-20240229"
+    model: str = "claude-3-5-sonnet-20240620"
 
 
 @register()
@@ -46,7 +47,7 @@ class AnthropicClient(ClientBase):
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
 
-    def __init__(self, model="claude-3-sonnet-20240229", **kwargs):
+    def __init__(self, model="claude-3-5-sonnet-20240620", **kwargs):
         self.model_name = model
         self.api_key_status = None
         self.config = load_config()
@@ -61,7 +62,7 @@ class AnthropicClient(ClientBase):
     @property
     def supported_parameters(self):
         return [
-            "temperature", 
+            "temperature",
             "top_p",
             "top_k",
             "max_tokens",
@@ -99,10 +100,11 @@ class AnthropicClient(ClientBase):
             message=self.client_type,
             id=self.name,
             details=model_name,
-            status=status,
+            status=status if self.enabled else "disabled",
             data={
                 "error_action": error_action.model_dump() if error_action else None,
                 "meta": self.Meta().model_dump(),
+                "enabled": self.enabled,
             },
         )
 
@@ -144,6 +146,9 @@ class AnthropicClient(ClientBase):
         if kwargs.get("model"):
             self.model_name = kwargs["model"]
             self.set_client(kwargs.get("max_token_length"))
+
+        if "enabled" in kwargs:
+            self.enabled = bool(kwargs["enabled"])
 
     def on_config_saved(self, event):
         config = event.data

@@ -3,11 +3,13 @@ import datetime
 import io
 import json
 import re
+import struct
 import textwrap
 from typing import List, Union
-import struct
+
 import isodate
 import structlog
+import tiktoken
 from colorama import Back, Fore, Style, init
 from nltk.tokenize import sent_tokenize
 from PIL import Image
@@ -21,6 +23,8 @@ log = structlog.get_logger("talemate.util")
 
 # Initialize colorama
 init(autoreset=True)
+
+TIKTOKEN_ENCODING = tiktoken.encoding_for_model("gpt-4-turbo")
 
 
 def fix_unquoted_keys(s):
@@ -179,29 +183,30 @@ def color_emotes(text: str, color: str = "blue") -> str:
 def extract_metadata(img_path, img_format):
     return chara_read(img_path)
 
-def read_metadata_from_png_text(image_path:str) -> dict:
-    
+
+def read_metadata_from_png_text(image_path: str) -> dict:
     """
     Reads the character metadata from the tEXt chunk of a PNG image.
     """
-    
+
     # Read the image
-    with open(image_path, 'rb') as f:
+    with open(image_path, "rb") as f:
         png_data = f.read()
-    
+
     # Split the PNG data into chunks
     offset = 8  # Skip the PNG signature
     while offset < len(png_data):
-        length = struct.unpack('!I', png_data[offset:offset+4])[0]
-        chunk_type = png_data[offset+4:offset+8]
-        chunk_data = png_data[offset+8:offset+8+length]
-        if chunk_type == b'tEXt':
-            keyword, text_data = chunk_data.split(b'\x00', 1)
-            if keyword == b'chara':
-                return json.loads(base64.b64decode(text_data).decode('utf-8'))
+        length = struct.unpack("!I", png_data[offset : offset + 4])[0]
+        chunk_type = png_data[offset + 4 : offset + 8]
+        chunk_data = png_data[offset + 8 : offset + 8 + length]
+        if chunk_type == b"tEXt":
+            keyword, text_data = chunk_data.split(b"\x00", 1)
+            if keyword == b"chara":
+                return json.loads(base64.b64decode(text_data).decode("utf-8"))
         offset += 12 + length
-    
-    raise ValueError('No character metadata found.')
+
+    raise ValueError("No character metadata found.")
+
 
 def chara_read(img_url, input_format=None):
     if input_format is None:
@@ -258,13 +263,17 @@ def chara_read(img_url, input_format=None):
             else:
                 log.warn("chara_load", msg="No chara data found in PNG image.")
                 log.warn("chara_load", msg="Trying to read from PNG text.")
-                
+
                 try:
                     return read_metadata_from_png_text(img_url)
                 except ValueError:
                     return False
                 except Exception as exc:
-                    log.error("chara_load", msg="Error reading metadata from PNG text.", exc_info=exc)
+                    log.error(
+                        "chara_load",
+                        msg="Error reading metadata from PNG text.",
+                        exc_info=exc,
+                    )
                     return False
     else:
         return None
@@ -276,7 +285,13 @@ def count_tokens(source):
         for s in source:
             t += count_tokens(s)
     elif isinstance(source, (str, SceneMessage)):
-        t = int(len(source) / 3.6)
+        # FIXME: there is currently no good way to determine
+        # the model loaded in the client, so we are using the
+        # TIKTOKEN_ENCODING for now.
+        #
+        # So counts through this function are at best an approximation
+
+        t = len(TIKTOKEN_ENCODING.encode(str(source)))
     else:
         log.warn("count_tokens", msg="Unknown type: " + str(type(source)))
         t = 0

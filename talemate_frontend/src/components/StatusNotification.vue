@@ -25,6 +25,8 @@ export default {
             switch(this.statusMessageType) {
                 case 'busy':
                     return -1;
+                case 'error':
+                    return 5000;
                 default:
                     return 3000;
             }
@@ -50,7 +52,7 @@ export default {
                 case 'success':
                     return 'success';
                 case 'error':
-                    return 'error';
+                    return 'red-darken-2';
                 case 'warning':
                     return 'warning';
                 case 'info':

@@ -50,24 +50,34 @@ if not TTS:
     )
 
 
-def parse_chunks(text):
-    text = text.replace("...", "__ellipsis__")
+def parse_chunks(text: str) -> list[str]:
 
-    chunks = sent_tokenize(text)
-    cleaned_chunks = []
+    """
+    Takes a string and splits it into chunks based on punctuation.
+    
+    In case of an error it will return the original text as a single chunk and 
+    the error will be logged.
+    """
 
-    for chunk in chunks:
-        chunk = chunk.replace("*", "")
-        if not chunk:
-            continue
-        cleaned_chunks.append(chunk)
+    try:
+        text = text.replace("...", "__ellipsis__")
+        chunks = sent_tokenize(text)
+        cleaned_chunks = []
 
-    for i, chunk in enumerate(cleaned_chunks):
-        chunk = chunk.replace("__ellipsis__", "...")
+        for chunk in chunks:
+            chunk = chunk.replace("*", "")
+            if not chunk:
+                continue
+            cleaned_chunks.append(chunk)
 
-        cleaned_chunks[i] = chunk
+        for i, chunk in enumerate(cleaned_chunks):
+            chunk = chunk.replace("__ellipsis__", "...")
+            cleaned_chunks[i] = chunk
 
-    return cleaned_chunks
+        return cleaned_chunks
+    except Exception as e:
+        log.error("chunking error", error=e, text=text)
+        return [text.replace("__ellipsis__", "...").replace("*", "")]
 
 
 def clean_quotes(chunk: str):
@@ -138,8 +148,17 @@ class TTSAgent(Agent):
         return config_options
 
     def __init__(self, **kwargs):
-        self.is_enabled = False
-        nltk.download("punkt", quiet=True)
+        self.is_enabled = False  #
+
+        try:
+            nltk.data.find("tokenizers/punkt")
+        except LookupError:
+            try:
+                nltk.download("punkt", quiet=True)
+            except Exception as e:
+                log.error("nltk download error", error=e)
+        except Exception as e:
+            log.error("nltk find error", error=e)
 
         self.voices = {
             "elevenlabs": VoiceLibrary(api="elevenlabs"),
@@ -202,10 +221,12 @@ class TTSAgent(Agent):
             ),
             "openai": AgentAction(
                 enabled=True,
+                container=True,
+                icon="mdi-server-outline",
                 condition=AgentActionConditional(
                     attribute="_config.config.api", value="openai"
                 ),
-                label="OpenAI Settings",
+                label="OpenAI",
                 config={
                     "model": AgentActionConfig(
                         type="text",
@@ -354,14 +375,14 @@ class TTSAgent(Agent):
 
         api_changed = api != self.api
 
-        log.debug(
-            "apply_config",
-            api=api,
-            api_changed=api != self.api,
-            current_api=self.api,
-            args=args,
-            kwargs=kwargs,
-        )
+        # log.debug(
+        #    "apply_config",
+        #    api=api,
+        #    api_changed=api != self.api,
+        #    current_api=self.api,
+        #    args=args,
+        #    kwargs=kwargs,
+        # )
 
         try:
             self.preselect_voice = kwargs["actions"]["_config"]["config"]["voice_id"][

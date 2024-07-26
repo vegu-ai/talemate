@@ -1,25 +1,27 @@
-import urllib
-import aiohttp
 import random
+import urllib
+
+import aiohttp
 import pydantic
 import structlog
 from openai import AsyncOpenAI, NotFoundError, PermissionDeniedError
 
 from talemate.client.base import ClientBase, ExtraField
 from talemate.client.registry import register
+from talemate.client.utils import urljoin
 from talemate.config import Client as BaseClientConfig
 from talemate.emit import emit
-from talemate.client.utils import urljoin
 
 log = structlog.get_logger("talemate.client.tabbyapi")
 
 EXPERIMENTAL_DESCRIPTION = """Use this client to use all of TabbyAPI's features"""
 
+
 class CustomAPIClient:
     def __init__(self, base_url, api_key):
         self.base_url = base_url
         self.api_key = api_key
-        
+
     async def get_model_name(self):
         url = urljoin(self.base_url, "model")
         headers = {
@@ -70,7 +72,6 @@ class CustomAPIClient:
                 return await response.json()
 
 
-
 class Defaults(pydantic.BaseModel):
     api_url: str = "http://localhost:5000/v1"
     api_key: str = ""
@@ -79,8 +80,10 @@ class Defaults(pydantic.BaseModel):
     api_handles_prompt_template: bool = False
     double_coercion: str = None
 
+
 class ClientConfig(BaseClientConfig):
     api_handles_prompt_template: bool = False
+
 
 @register()
 class TabbyAPIClient(ClientBase):
@@ -105,7 +108,9 @@ class TabbyAPIClient(ClientBase):
             )
         }
 
-    def __init__(self, model=None, api_key=None, api_handles_prompt_template=False, **kwargs):
+    def __init__(
+        self, model=None, api_key=None, api_handles_prompt_template=False, **kwargs
+    ):
         self.model_name = model
         self.api_key = api_key
         self.api_handles_prompt_template = api_handles_prompt_template
@@ -125,21 +130,25 @@ class TabbyAPIClient(ClientBase):
     @property
     def supported_parameters(self):
         return [
-            "max_tokens", 
-            "presence_penalty", 
-            "frequency_penalty", 
-            "repetition_penalty_range", 
+            "max_tokens",
+            "presence_penalty",
+            "frequency_penalty",
+            "repetition_penalty_range",
             "min_p",
             "top_p",
             "temperature_last",
-            "temperature"
+            "temperature",
         ]
 
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)
-        self.api_handles_prompt_template = kwargs.get("api_handles_prompt_template", self.api_handles_prompt_template)
+        self.api_handles_prompt_template = kwargs.get(
+            "api_handles_prompt_template", self.api_handles_prompt_template
+        )
         self.client = CustomAPIClient(base_url=self.api_url, api_key=self.api_key)
-        self.model_name = kwargs.get("model") or kwargs.get("model_name") or self.model_name
+        self.model_name = (
+            kwargs.get("model") or kwargs.get("model_name") or self.model_name
+        )
 
     def prompt_template(self, system_message: str, prompt: str):
 
@@ -171,25 +180,39 @@ class TabbyAPIClient(ClientBase):
             if self.api_handles_prompt_template:
                 # Custom API handles prompt template
                 # Use the chat completions endpoint
-                self.log.debug("generate (chat/completions)", prompt=prompt[:128] + " ...", parameters=parameters)
+                self.log.debug(
+                    "generate (chat/completions)",
+                    prompt=prompt[:128] + " ...",
+                    parameters=parameters,
+                )
                 human_message = {"role": "user", "content": prompt.strip()}
-                response = await self.client.create_chat_completion(self.model_name, [human_message], **parameters)
-                response = response['choices'][0]['message']['content']
+                response = await self.client.create_chat_completion(
+                    self.model_name, [human_message], **parameters
+                )
+                response = response["choices"][0]["message"]["content"]
                 return self.process_response_for_indirect_coercion(prompt, response)
             else:
                 # Talemate handles prompt template
                 # Use the completions endpoint
-                self.log.debug("generate (completions)", prompt=prompt[:128] + " ...", parameters=parameters)
+                self.log.debug(
+                    "generate (completions)",
+                    prompt=prompt[:128] + " ...",
+                    parameters=parameters,
+                )
                 parameters["prompt"] = prompt
-                response = await self.client.create_completion(self.model_name, **parameters)
-                return response['choices'][0]['text']
+                response = await self.client.create_completion(
+                    self.model_name, **parameters
+                )
+                return response["choices"][0]["text"]
         except PermissionDeniedError as e:
             self.log.error("generate error", e=e)
             emit("status", message="Client API: Permission Denied", status="error")
             return ""
         except Exception as e:
             self.log.error("generate error", e=e)
-            emit("status", message="Error during generation (check logs)", status="error")
+            emit(
+                "status", message="Error during generation (check logs)", status="error"
+            )
             return ""
 
     def reconfigure(self, **kwargs):
@@ -198,7 +221,9 @@ class TabbyAPIClient(ClientBase):
         if "api_url" in kwargs:
             self.api_url = kwargs["api_url"]
         if "max_token_length" in kwargs:
-            self.max_token_length = int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 8192
+            self.max_token_length = (
+                int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 8192
+            )
         if "api_key" in kwargs:
             self.api_key = kwargs["api_key"]
         if "api_handles_prompt_template" in kwargs:
@@ -227,10 +252,12 @@ class TabbyAPIClient(ClientBase):
 
         try:
             presence_penalty = prompt_config["presence_penalty"]
-            adjusted_presence_penalty = round(random.uniform(
-                presence_penalty + 0.1, presence_penalty + offset
-            ),1)
+            adjusted_presence_penalty = round(
+                random.uniform(presence_penalty + 0.1, presence_penalty + offset), 1
+            )
             # Ensure presence_penalty does not exceed 0.5 and does not fall below 0.1
-            prompt_config["presence_penalty"] = min(0.5, max(0.1, adjusted_presence_penalty))
+            prompt_config["presence_penalty"] = min(
+                0.5, max(0.1, adjusted_presence_penalty)
+            )
         except KeyError:
             pass

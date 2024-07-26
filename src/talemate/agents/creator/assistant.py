@@ -260,7 +260,14 @@ class AssistantMixin:
             len(character.name + ":") :
         ].strip()
 
+        # remove ellipsis
+
         response = response.replace("...", "").strip()
+
+        # if sentence starts and ends with quotes, remove them
+        
+        if response.startswith('"') and response.endswith('"') and not "*" in response:
+            response = response[1:-1]
 
         if response.startswith(input):
             response = response[len(input) :]

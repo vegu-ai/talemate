@@ -28,13 +28,12 @@ Generic OpenAI api implementations (tested and confirmed working):
 
 ## Core Features
 
-- Multiple AI agents for dialogue, narration, summarization, direction, editing, world state management, character/scenario creation, text-to-speech, and visual generation
-- Support for multiple AI clients and APIs
-- Long-term memory using ChromaDB and passage of time tracking
+- Multiple agents for dialogue, narration, summarization, direction, editing, world state management, character/scenario creation, text-to-speech, and visual generation
+- Supports per agent API selection
+- Long-term memory and passage of time tracking
 - Narrative world state management to reinforce character and world truths
 - Creative tools for managing NPCs, AI-assisted character, and scenario creation with template support
 - Context management for character details, world information, past events, and pinned information
-- Integration with Runpod
 - Customizable templates for all prompts using Jinja2
 - Modern, responsive UI
 

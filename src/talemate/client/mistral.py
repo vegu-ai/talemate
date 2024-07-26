@@ -20,6 +20,7 @@ SUPPORTED_MODELS = [
     "open-mistral-7b",
     "open-mixtral-8x7b",
     "open-mixtral-8x22b",
+    "open-mistral-nemo",
     "mistral-small-latest",
     "mistral-medium-latest",
     "mistral-large-latest",
@@ -27,6 +28,7 @@ SUPPORTED_MODELS = [
 
 JSON_OBJECT_RESPONSE_MODELS = [
     "open-mixtral-8x22b",
+    "open-mistral-nemo",
     "mistral-small-latest",
     "mistral-medium-latest",
     "mistral-large-latest",

@@ -30,8 +30,8 @@ if not chromadb:
     log.info("ChromaDB not found, disabling Chroma agent")
 
 
-from .base import Agent, AgentDetail
-
+from talemate.agents.base import Agent, AgentDetail
+from talemate.agents.registry import register
 
 class MemoryDocument(str):
     def __new__(cls, text, meta, id, raw):
@@ -334,7 +334,6 @@ class MemoryAgent(Agent):
         return memory_context
 
 
-from .registry import register
 
 
 @register(condition=lambda: chromadb is not None)
@@ -538,7 +537,14 @@ class ChromaDBMemoryAgent(MemoryAgent):
             log.info("chromadb", status="instructor db ready")
         else:
             log.info("chromadb", status="using default embeddings")
-            self.db = self.db_client.get_or_create_collection(collection_name)
+            
+            #ef = embedding_functions.SentenceTransformerEmbeddingFunction(
+            #    model_name="Alibaba-NLP/gte-base-en-v1.5"
+            #)
+            
+            self.db = self.db_client.get_or_create_collection(
+                collection_name#, embedding_function=ef
+            )
 
         self.scene._memory_never_persisted = self.db.count() == 0
         log.info("chromadb agent", status="db ready")

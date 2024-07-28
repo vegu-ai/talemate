@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union
 import pydantic
 import structlog
 import yaml
+from enum import Enum
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
@@ -180,12 +181,14 @@ class TTSConfig(BaseModel):
 
 
 class ChromaDB(BaseModel):
-    instructor_device: str = "cpu"
-    instructor_model: str = "default"
-    openai_model: str = "text-embedding-3-small"
-    embeddings: str = "default"
-
-
+    embeddings: str = "sentence-transformer"
+    model: str = "all-MiniLM-L6-v2"
+    trust_remote_code: bool = False
+    device: str = "cpu"
+    distance: float = 1.5
+    distance_mod: int = 1
+    distance_function: str = "l2"
+    
 class RecentScene(BaseModel):
     name: str
     path: str

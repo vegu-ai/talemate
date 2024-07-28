@@ -414,6 +414,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         assert embeddings in [
             "default",
+            "sentence-transformer",
             "openai",
             "instructor",
         ], f"Unknown embeddings {embeddings}"
@@ -427,6 +428,17 @@ class ChromaDBMemoryAgent(MemoryAgent):
     @property
     def USE_INSTRUCTOR(self):
         return self.embeddings == "instructor"
+    
+    @property
+    def USE_SENTENCE_TRANSFORMER(self):
+        return self.embeddings == "default" or self.embeddings == "sentence-transformer"
+    
+    @property
+    def max_distance(self) -> float:
+        distance = float(self.config.get("chromadb").get("distance", 1.0))
+        distance_mod = float(self.config.get("chromadb").get("distance_mod", 1.0))
+        
+        return distance * distance_mod
 
     @property
     def db_name(self):
@@ -455,7 +467,8 @@ class ChromaDBMemoryAgent(MemoryAgent):
             elif "large" in model:
                 suffix += "-large"
         else:
-            suffix = ""
+            model_name = self.config.get("chromadb").get("model", "all-MiniLM-L6-v2").replace("/", "-").lower()
+            suffix = f"-sentence-transformer-{model_name}"
 
         return f"{scene.memory_id}-tm{suffix}"
 
@@ -484,7 +497,10 @@ class ChromaDBMemoryAgent(MemoryAgent):
         log.info(
             "chromadb agent", status="setting up db", collection_name=collection_name
         )
-
+        
+        distance_function = self.config.get("chromadb").get("distance_function", "l2")
+        collection_metadata = {"hnsw:space": distance_function}
+        
         if self.USE_OPENAI:
             if not openai_key:
                 raise ValueError(
@@ -492,12 +508,12 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 )
 
             model_name = self.config.get("chromadb").get(
-                "openai_model", "text-embedding-3-small"
+                "model", "text-embedding-3-small"
             )
 
             log.info(
                 "crhomadb",
-                status="using openai",
+                embeddings="OpenAI",
                 openai_key=openai_key[:5] + "...",
                 model=model_name,
             )
@@ -506,19 +522,19 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 model_name=model_name,
             )
             self.db = self.db_client.get_or_create_collection(
-                collection_name, embedding_function=openai_ef
+                collection_name, embedding_function=openai_ef, metadata=collection_metadata
             )
         elif self.USE_INSTRUCTOR:
             instructor_device = self.config.get("chromadb").get(
-                "instructor_device", "cpu"
+                "device", "cpu"
             )
             instructor_model = self.config.get("chromadb").get(
-                "instructor_model", "hkunlp/instructor-xl"
+                "model", "hkunlp/instructor-xl"
             )
 
             log.info(
                 "chromadb",
-                status="using instructor",
+                embeddings="Instructor-XL",
                 model=instructor_model,
                 device=instructor_device,
             )
@@ -531,19 +547,29 @@ class ChromaDBMemoryAgent(MemoryAgent):
             log.info("chromadb", status="embedding function ready")
 
             self.db = self.db_client.get_or_create_collection(
-                collection_name, embedding_function=ef
+                collection_name, embedding_function=ef, metadata=collection_metadata
             )
 
             log.info("chromadb", status="instructor db ready")
         else:
-            log.info("chromadb", status="using default embeddings")
+            device = self.config.get("chromadb").get("device", "cpu")
+            model = self.config.get("chromadb").get("model", "all-MiniLM-L6-v2")
+            log.info(
+                "chromadb", 
+                embeddins="SentenceTransformer", 
+                model=model,
+                device=device,
+                distance_function=distance_function
+            )
             
-            #ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-            #    model_name="Alibaba-NLP/gte-base-en-v1.5"
-            #)
+            ef = embedding_functions.SentenceTransformerEmbeddingFunction(
+                model_name=model,
+                trust_remote_code=True,
+                device=device
+            )
             
             self.db = self.db_client.get_or_create_collection(
-                collection_name#, embedding_function=ef
+                collection_name, embedding_function=ef, metadata=collection_metadata
             )
 
         self.scene._memory_never_persisted = self.db.count() == 0
@@ -704,17 +730,15 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         _results = self.db.query(query_texts=[text], where=where, n_results=limit)
 
-        # import json
-        # print(json.dumps(_results["ids"], indent=2))
-        # print(json.dumps(_results["distances"], indent=2))
+        #import json
+        #print(json.dumps(_results["ids"], indent=2))
+        #print(json.dumps(_results["distances"], indent=2))
 
         results = []
 
-        max_distance = 1.5
-        if self.USE_INSTRUCTOR:
-            max_distance = 1
-        elif self.USE_OPENAI:
-            max_distance = 1
+        max_distance = self.max_distance
+        
+        closest = None
 
         for i in range(len(_results["distances"][0])):
             distance = _results["distances"][0][i]
@@ -731,6 +755,11 @@ class ChromaDBMemoryAgent(MemoryAgent):
             # skip pin_only entries
             if meta.get("pin_only", False):
                 continue
+            
+            if closest is None:
+                closest = {"distance": distance, "doc": doc}
+            elif distance < closest["distance"]:
+                closest = {"distance": distance, "doc": doc}
 
             if distance < max_distance:
                 date_prefix = self.convert_ts_to_date_prefix(ts)
@@ -749,6 +778,8 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
             if len(results) > limit:
                 break
+            
+        log.debug("chromadb agent get", closest=closest)
 
         return results
 

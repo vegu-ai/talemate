@@ -53,7 +53,8 @@ InstructorEmbedding = "^1.0.1"
 torch = ">=2.1.0"
 torchaudio = ">=2.3.0"
 # locked for instructor embeddings
-sentence-transformers="==2.2.2"
+#sentence-transformers="==2.2.2"
+sentence_transformers=">=2.7.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

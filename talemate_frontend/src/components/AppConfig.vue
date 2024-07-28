@@ -450,7 +450,17 @@ export default {
             // check if presets component is present
             if(this.$refs.presets) {
                 // update app_config.presets from $refs.presets.config
-                this.app_config.presets = this.$refs.presets.config;
+
+                let inferenceConfig = this.$refs.presets.inference_config();
+                let embeddingsConfig = this.$refs.presets.embeddings_config();
+
+                if(inferenceConfig) {
+                    this.app_config.presets.inference = inferenceConfig;
+                }
+
+                if(embeddingsConfig) {
+                    this.app_config.presets.embeddings = embeddingsConfig;
+                }
             }
 
             this.sendRequest({

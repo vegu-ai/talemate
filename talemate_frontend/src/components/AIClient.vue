@@ -156,6 +156,8 @@ export default {
     'clients-updated',
     'client-assigned',
     'open-app-config',
+    'save',
+    'error',
   ],
   methods: {
 

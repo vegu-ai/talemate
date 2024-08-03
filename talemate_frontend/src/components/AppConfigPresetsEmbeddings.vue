@@ -6,7 +6,7 @@
             <v-list slim selectable v-model:selected="selected" color="primary">
 
                 <!-- add new -->
-                <v-list-item @click.stop="addNewPreset" prepend-icon="mdi-plus" :value="$NEW">
+                <v-list-item @click.stop="addNewPreset" prepend-icon="mdi-plus" :value="'$NEW'">
                     <v-list-item-title>Add new</v-list-item-title>
                 </v-list-item>
 

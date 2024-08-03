@@ -375,6 +375,7 @@ class WebsocketHandler(Receiver):
                         "type": emission.typ,
                         "message": emission.message,
                         "data": emission.data,
+                        "meta": emission.meta,
                     }
                 )
             except Exception as e:

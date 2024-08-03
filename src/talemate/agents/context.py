@@ -1,4 +1,5 @@
 import contextvars
+import uuid
 from typing import TYPE_CHECKING, Callable
 
 import pydantic
@@ -14,6 +15,7 @@ class ActiveAgentContext(pydantic.BaseModel):
     agent: object
     fn: Callable
     agent_stack: list = pydantic.Field(default_factory=list)
+    agent_stack_uid: str | None = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -36,8 +38,10 @@ class ActiveAgent:
 
         if previous_agent:
             self.agent.agent_stack = previous_agent.agent_stack + [str(self.agent)]
+            self.agent.agent_stack_uid = previous_agent.agent_stack_uid
         else:
             self.agent.agent_stack = [str(self.agent)]
+            self.agent.agent_stack_uid = str(uuid.uuid4())
 
         self.token = active_agent.set(self.agent)
 

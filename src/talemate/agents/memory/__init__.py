@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import functools
-import os
-import shutil
-from typing import TYPE_CHECKING, Callable, List, Optional, Union
+import hashlib
+import uuid
+from typing import Callable
 
 import structlog
 from chromadb.config import Settings
@@ -14,7 +14,6 @@ import talemate.util as util
 from talemate.agents.base import (
     Agent,
     AgentAction,
-    AgentActionConditional,
     AgentActionConfig,
     AgentDetail,
     set_processing,
@@ -23,6 +22,7 @@ from talemate.config import load_config
 from talemate.context import scene_is_loading
 from talemate.emit import emit
 from talemate.emit.signals import handlers
+from talemate.agents.memory.context import memory_request, MemoryRequest
 
 try:
     import chromadb
@@ -157,26 +157,29 @@ class MemoryAgent(Agent):
     @property
     def distance_function(self):
         return self.embeddings_config.get("distance_function", "l2")
-    
+
+    @property
+    def device(self) -> str:
+        return self.actions["_config"].config["device"].value
+
+    @property
+    def fingerprint(self) -> str:
+        """
+        Returns a unique fingerprint for the current configuration
+        """
+        return f"{self.embeddings}-{self.model.replace('/','-')}-{self.distance_function}-{self.device}".lower()   
 
     async def apply_config(self, *args, **kwargs):
         
-        _embeddings = self.actions["_config"].config["embeddings"].value
-        _device = self.actions["_config"].config["device"].value
+        _fingerprint = self.fingerprint
         
         await super().apply_config(*args, **kwargs)
         
-        embeddings_changed = (_embeddings != self.actions["_config"].config["embeddings"].value)
-        
-        # if selected embeddings are local and device changed we need to reset the db
-        if self.using_local_embeddings and _device != self.actions["_config"].config["device"].value:
-            device_changed = True
-        else:
-            device_changed = False
+        fingerprint_changed = _fingerprint != self.fingerprint
         
         # have embeddings or device changed?
-        if embeddings_changed or device_changed:
-            log.warning("memory agent", embeddings_changed=True, old=_embeddings, new=self.actions["_config"].config["embeddings"].value, device_changed=device_changed, old_device=_device, new_device=self.actions["_config"].config["device"].value)
+        if fingerprint_changed:
+            log.warning("memory agent", status="embedding function changed", old=_fingerprint, new=self.fingerprint)
             await self.handle_embeddings_change()
             
     
@@ -284,12 +287,6 @@ class MemoryAgent(Agent):
         """
         raise NotImplementedError()
 
-    def _delete(self, meta: dict):
-        """
-        Delete an object from the memory
-        """
-        raise NotImplementedError()
-
     @set_processing
     async def delete(self, meta: dict):
         """
@@ -305,13 +302,20 @@ class MemoryAgent(Agent):
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._delete, meta)
 
+    def _delete(self, meta: dict):
+        """
+        Delete an object from the memory
+        """
+        raise NotImplementedError()
+
     @set_processing
     async def get(self, text, character=None, **query):
-        loop = asyncio.get_running_loop()
-
-        return await loop.run_in_executor(
-            None, functools.partial(self._get, text, character, **query)
-        )
+        with MemoryRequest(query=text, query_params=query) as active_memory_request:
+            active_memory_request.max_distance = self.max_distance
+            return await asyncio.to_thread(self._get, text, character, **query)
+            #return await loop.run_in_executor(
+            #    None, functools.partial(self._get, text, character, **query)
+            #)
 
     def _get(self, text, character=None, **query):
         raise NotImplementedError()
@@ -332,22 +336,6 @@ class MemoryAgent(Agent):
     def connect(self, scene):
         super().connect(scene)
         scene.signals["archive_add"].connect(self.on_archive_add)
-
-    def add_chunks(self, lines: list[str], chunk_size=200):
-        current_chunk = []
-        current_size = 0
-        for line in lines:
-            current_size += util.count_tokens(line)
-
-            if current_size > chunk_size:
-                self.add("\n".join(current_chunk))
-                current_chunk = [line]
-                current_size = util.count_tokens(line)
-            else:
-                current_chunk.append(line)
-
-        if current_chunk:
-            self.add("\n".join(current_chunk))
 
     async def memory_context(
         self,
@@ -378,6 +366,7 @@ class MemoryAgent(Agent):
                 break
         return memory_context
 
+    @set_processing
     async def query(
         self,
         query: str,
@@ -398,6 +387,7 @@ class MemoryAgent(Agent):
         except IndexError:
             return None
 
+    @set_processing
     async def multi_query(
         self,
         queries: list[str],
@@ -436,8 +426,6 @@ class MemoryAgent(Agent):
             if util.count_tokens(memory_context) >= max_tokens:
                 break
         return memory_context
-
-
 
 
 @register(condition=lambda: chromadb is not None)
@@ -503,10 +491,20 @@ class ChromaDBMemoryAgent(MemoryAgent):
     def openai_api_key(self):
         return self.config.get("openai", {}).get("api_key")
 
-    def make_collection_name(self, scene):
-        model_name = self.model
-        suffix = f"-{self.embeddings}-{model_name.replace('/', '-')}"
-        return f"{scene.memory_id}-tm{suffix}"
+    def make_collection_name(self, scene) -> str:
+        # generate plain text collection name
+        collection_name = f"{self.fingerprint}"
+        
+        # chromadb collection names have the following rules:
+        # Expected collection name that (1) contains 3-63 characters, (2) starts and ends with an alphanumeric character, (3) otherwise contains only alphanumeric characters, underscores or hyphens (-), (4) contains no two consecutive periods (..) and (5) is not a valid IPv4 address
+
+        # Step 1: Hash the input string using MD5
+        md5_hash = hashlib.md5(collection_name.encode()).hexdigest()
+        
+        # Step 2: Ensure the result is exactly 32 characters long
+        hashed_collection_name = md5_hash[:32]
+        
+        return f"{scene.memory_id}-tm-{hashed_collection_name}"
         
     async def count(self):
         await asyncio.sleep(0)
@@ -768,12 +766,16 @@ class ChromaDBMemoryAgent(MemoryAgent):
         max_distance = self.max_distance
         
         closest = None
+        
+        active_memory_request = memory_request.get()
 
         for i in range(len(_results["distances"][0])):
             distance = _results["distances"][0][i]
 
             doc = _results["documents"][0][i]
             meta = _results["metadatas"][0][i]
+            
+            active_memory_request.add_result(doc, distance, meta)
 
             if not meta:
                 log.warning("chromadb agent get", error="no meta", doc=doc)
@@ -800,8 +802,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 doc = MemoryDocument(doc, meta, _results["ids"][0][i], raw)
 
                 results.append(doc)
-            else:
-                break
+                active_memory_request.accept_result(str(doc), distance, meta)
 
             # log.debug("crhomadb agent get", result=results[-1], distance=distance)
 
@@ -809,7 +810,11 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 break
             
         log.debug("chromadb agent get", closest=closest, max_distance=max_distance)
-
+        self.last_query = {
+            "query": text,
+            "closest": closest,
+        }
+        
         return results
 
     def convert_ts_to_date_prefix(self, ts):

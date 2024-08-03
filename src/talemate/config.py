@@ -201,13 +201,10 @@ class EmbeddingFunctionPreset(BaseModel):
     custom: bool = False
 
 
-class ChromaDB(EmbeddingFunctionPreset):
-    pass
-    
 
 def generate_chromadb_presets() -> dict[str, EmbeddingFunctionPreset]:
     """
-    Returns a dict of default ChromaDB presets
+    Returns a dict of default embedding presets
     """
     
     return {
@@ -459,8 +456,6 @@ class Config(BaseModel):
     runpod: RunPodConfig = RunPodConfig()
 
     google: GoogleConfig = GoogleConfig()
-
-    chromadb: ChromaDB = ChromaDB()
 
     elevenlabs: ElevenLabsConfig = ElevenLabsConfig()
 

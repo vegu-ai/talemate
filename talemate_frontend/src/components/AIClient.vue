@@ -1,6 +1,15 @@
 <template>
+  <v-list-subheader class="text-uppercase"><v-icon>mdi-network-outline</v-icon>
+    Clients
+    <v-btn @click="hideDisabled = !hideDisabled" size="x-small" v-if="numDisabledClients > 0">
+      <template v-slot:prepend>
+        <v-icon>{{ hideDisabled ? 'mdi-eye' : 'mdi-eye-off' }}</v-icon>
+      </template>
+      {{ hideDisabled ? 'Show disabled' : 'Hide disabled' }} ({{ numDisabledClients }})
+    </v-btn>
+  </v-list-subheader>
   <div v-if="isConnected()">
-    <v-list density="compact" v-for="(client, index) in state.clients" :key="index">
+    <v-list density="compact" v-for="(client, index) in visibleClients" :key="index">
       <v-list-item>
         <v-list-item-title>
           <v-progress-circular v-if="client.status === 'busy'" indeterminate="disable-shrink" color="primary"
@@ -104,6 +113,7 @@ export default {
     return {
       saveDelayTimeout: null,
       clientStatusCheck: null,
+      hideDisabled: true,
       clientImmutable: {},
       state: {
         clients: [],
@@ -121,6 +131,14 @@ export default {
         }, // Add a new field to store the model name
         formTitle: ''
       }
+    }
+  },
+  computed: {
+    visibleClients: function() {
+      return this.state.clients.filter(client => !this.hideDisabled || client.status !== 'disabled');
+    },
+    numDisabledClients: function() {
+      return this.state.clients.filter(client => client.status === 'disabled').length;
     }
   },
   inject: [

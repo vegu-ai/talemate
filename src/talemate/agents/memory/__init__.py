@@ -226,6 +226,10 @@ class MemoryAgent(Agent):
             raise
         except Exception as e:
             log.error("memory agent", error="failed to set db", details=e)
+            
+            if "torchvision::nms does not exist" in str(e):
+                raise SetDBError("The embeddings you are trying to use require the `torchvision` package to be installed")
+            
             raise SetDBError(str(e))
 
 
@@ -499,11 +503,18 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 description="The embeddings type.",
             ).model_dump(),
             "model": AgentDetail(
-                icon="mdi-memory",
+                icon="mdi-brain",
                 value=self.model,
                 description="The embeddings model.",
             ).model_dump(),
         }
+        
+        if self.using_local_embeddings:
+            details["device"] = AgentDetail(
+                icon="mdi-memory",
+                value=self.device,
+                description="The device to use for embeddings.",
+            ).model_dump()
 
         if self.embeddings == "openai" and not self.openai_api_key:
             # return "No OpenAI API key set"

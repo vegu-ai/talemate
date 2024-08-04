@@ -1,5 +1,5 @@
 <template>
-    <v-tabs color="secondary" v-model="tab">
+    <v-tabs color="secondary" v-model="tab" :disabled="busy">
         <v-tab v-for="t in tabs" :key="t.value" :value="t.value">
             <v-icon start>{{ t.icon }}</v-icon>
             {{ t.title }}
@@ -10,7 +10,14 @@
             <AppConfigPresetsInference ref="inference" :immutableConfig="immutableConfig" @update="() => $emit('update', config)"></AppConfigPresetsInference>
         </v-window-item>
         <v-window-item value="embeddings">
-            <AppConfigPresetsEmbeddings ref="embeddings" :immutableConfig="immutableConfig" @update="() => $emit('update', config)"></AppConfigPresetsEmbeddings>
+            <AppConfigPresetsEmbeddings 
+            ref="embeddings" 
+            @busy="() => busy = true"
+            @done="() => busy = false"
+            :memoryAgentStatus="agentStatus.memory || null" :immutableConfig="immutableConfig"
+            :sceneActive="sceneActive"
+            @update="() => $emit('update', config)"
+            ></AppConfigPresetsEmbeddings>
         </v-window-item>
     </v-window>
 </template>
@@ -26,6 +33,8 @@ export default {
     },
     props: {
         immutableConfig: Object,
+        agentStatus: Object,
+        sceneActive: Boolean,
     },
     emits: [
         'update',
@@ -37,6 +46,7 @@ export default {
                 { title: 'Embeddings', icon: 'mdi-cube-unfolded', value: 'embeddings' },
             ],
             tab: 'inference',
+            busy: false,
         }
     },
     methods: {

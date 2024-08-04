@@ -216,7 +216,7 @@
       </v-container>
     </v-main>
 
-    <AppConfig ref="appConfig" />
+    <AppConfig ref="appConfig" :agentStatus="agentStatus" :sceneActive="sceneActive" />
     <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
@@ -633,6 +633,7 @@ export default {
         label: data.message,
         // active - has the agent been active in the last 5 seconds?
         recentlyActive: recentlyActive,
+        details: data.client,
       }
 
       if(recentlyActive && !busy) {

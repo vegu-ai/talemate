@@ -270,7 +270,12 @@
                 <!-- PRESETS -->
 
                 <v-window-item value="presets">
-                    <AppConfigPresets :immutable-config="app_config" ref="presets"></AppConfigPresets>
+                    <AppConfigPresets 
+                    ref="presets"
+                    :immutable-config="app_config" 
+                    :agentStatus="agentStatus"
+                    :sceneActive="sceneActive"
+                    ></AppConfigPresets>
                 </v-window-item>
 
                 <!-- CREATOR -->
@@ -341,6 +346,10 @@ export default {
     name: 'AppConfig',
     components: {
         AppConfigPresets,
+    },
+    props: {
+        agentStatus: Object,
+        sceneActive: Boolean,
     },
     data() {
         return {

@@ -72,7 +72,6 @@ class MemoryRequest:
             query = self.state.query[:max_length]+"..." if len(self.state.query) > max_length else self.state.query
             log.debug("MemoryRequest", number_of_results=len(self.state.results), query=query)
             log.debug("MemoryRequest", number_of_accepted_results=len(self.state.accepted_results), query=query)
-            log.debug("MemoryRequest", closest_text=self.state.closest_text[:max_length]+"...", closest_distance=self.state.closest_distance)
             
             for result in self.state.results:
                 # distance to 2 decimal places

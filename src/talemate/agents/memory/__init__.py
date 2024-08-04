@@ -19,10 +19,14 @@ from talemate.agents.base import (
     set_processing,
 )
 from talemate.config import load_config
-from talemate.context import scene_is_loading
+from talemate.context import scene_is_loading, active_scene
 from talemate.emit import emit
 from talemate.emit.signals import handlers
 from talemate.agents.memory.context import memory_request, MemoryRequest
+from talemate.agents.memory.exceptions import (
+    EmbeddingsModelLoadError,
+    SetDBError,
+)
 
 try:
     import chromadb
@@ -163,11 +167,15 @@ class MemoryAgent(Agent):
         return self.actions["_config"].config["device"].value
 
     @property
+    def trust_remote_code(self) -> bool:
+        return self.embeddings_config.get("trust_remote_code", False)
+
+    @property
     def fingerprint(self) -> str:
         """
         Returns a unique fingerprint for the current configuration
         """
-        return f"{self.embeddings}-{self.model.replace('/','-')}-{self.distance_function}-{self.device}".lower()   
+        return f"{self.embeddings}-{self.model.replace('/','-')}-{self.distance_function}-{self.device}-{self.trust_remote_code}".lower()   
 
     async def apply_config(self, *args, **kwargs):
         
@@ -183,18 +191,43 @@ class MemoryAgent(Agent):
             await self.handle_embeddings_change()
             
     
+    @set_processing
     async def handle_embeddings_change(self):
-        pass
+        scene = active_scene.get()
+        
+        if not scene or not scene.get_helper("memory"):
+            return
+        
+        self.close_db(scene)
+        await scene.commit_to_memory()
+        await scene.save()
 
     def on_config_saved(self, event):
+        loop = asyncio.get_running_loop()
         openai_key = self.openai_api_key
+        
+        fingerprint = self.fingerprint
+        
         self.config = load_config()
+            
+        if fingerprint != self.fingerprint:
+            log.warning("memory agent", status="embedding function changed", old=fingerprint, new=self.fingerprint)
+            loop.run_until_complete(self.handle_embeddings_change())
+            
         if openai_key != self.openai_api_key:
-            loop = asyncio.get_running_loop()
             loop.run_until_complete(self.emit_status())
 
+    @set_processing
     async def set_db(self):
-        raise NotImplementedError()
+        loop = asyncio.get_running_loop()
+        try:
+            await loop.run_in_executor(None, self._set_db)
+        except EmbeddingsModelLoadError:
+            raise
+        except Exception as e:
+            log.error("memory agent", error="failed to set db", details=e)
+            raise SetDBError(str(e))
+
 
     def close_db(self):
         raise NotImplementedError()
@@ -510,11 +543,6 @@ class ChromaDBMemoryAgent(MemoryAgent):
         await asyncio.sleep(0)
         return self.db.count()
 
-    @set_processing
-    async def set_db(self):
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._set_db)
-
     def _set_db(self):
         self._ready_to_add = False
 
@@ -582,11 +610,17 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 distance_function=distance_function
             )
             
-            ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-                model_name=model_name,
-                trust_remote_code=True,
-                device=device
-            )
+            try:
+                ef = embedding_functions.SentenceTransformerEmbeddingFunction(
+                    model_name=model_name,
+                    trust_remote_code=self.trust_remote_code,
+                    device=device
+                )
+            except ValueError as e:
+                if "`trust_remote_code=True` to remove this error" in str(e):
+                    raise EmbeddingsModelLoadError(model_name, "Model requires `Trust remote code` to be enabled")
+                raise EmbeddingsModelLoadError(model_name, str(e))
+                
             
             self.db = self.db_client.get_or_create_collection(
                 collection_name, embedding_function=ef, metadata=collection_metadata
@@ -595,13 +629,6 @@ class ChromaDBMemoryAgent(MemoryAgent):
         self.scene._memory_never_persisted = self.db.count() == 0
         log.info("chromadb agent", status="db ready")
         self._ready_to_add = True
-
-    @set_processing
-    async def handle_embeddings_change(self):
-        if not self.scene or not self.scene.get_helper("memory"):
-            return
-        self.close_db(self.scene)
-        await self.scene.commit_to_memory()
 
     def clear_db(self):
         if not self.db:

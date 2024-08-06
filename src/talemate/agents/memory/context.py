@@ -20,7 +20,7 @@ __all__ =  [
 
 log = structlog.get_logger()
 
-DEBUG_MEMORY_REQUESTS = True
+DEBUG_MEMORY_REQUESTS = False
 
 class MemoryRequestResult(pydantic.BaseModel):
     doc: str

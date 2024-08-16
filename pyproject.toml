@@ -50,11 +50,16 @@ numpy = "^1"
 # ChromaDB
 chromadb = ">=0.4.17,<1"
 InstructorEmbedding = "^1.0.1"
-torch = ">=2.1.0"
-torchaudio = ">=2.3.0"
+torch = {version = "^2.4.0", source = "pytorch"}
+torchaudio = {version = "^2.4.0", source = "pytorch"}
 # locked for instructor embeddings
 #sentence-transformers="==2.2.2"
 sentence_transformers=">=2.7.0"
+
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu121"
+priority = "explicit"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"

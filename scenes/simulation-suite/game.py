@@ -448,7 +448,7 @@ def game(TM):
         def call_remove_ai_character(self, call:str, inject:str) -> str:
             TM.signals.status("busy", "Simulation suite removing character.", as_scene_message=True)
             
-            character_name = TM.agents.creator.determine_character_name(instructions=f"{inject} - what is the name of the character being removed?", allowed_names=TM.scene.npc_character_names())
+            character_name = TM.agents.creator.determine_character_name(instructions=f"{inject} - what is the name of the character being removed?", allowed_names=TM.scene.npc_character_names)
             
             npc = TM.scene.get_character(character_name)
             
@@ -466,7 +466,7 @@ def game(TM):
         def call_change_ai_character(self, call:str, inject:str) -> str:
             TM.signals.status("busy", "Simulation suite altering character.", as_scene_message=True)
             
-            character_name = TM.agents.creator.determine_character_name(instructions=f"{inject} - what is the name of the character receiving the changes (before the change)?", allowed_names=TM.scene.npc_character_names())
+            character_name = TM.agents.creator.determine_character_name(instructions=f"{inject} - what is the name of the character receiving the changes (before the change)?", allowed_names=TM.scene.npc_character_names)
             
             if character_name in self.added_npcs:
                 # we dont want to change the character if it was just added

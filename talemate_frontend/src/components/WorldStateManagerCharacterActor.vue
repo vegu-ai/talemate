@@ -113,6 +113,15 @@ export default {
             return `Automatically generate dialogue instructions for ${this.character.name}, based on their attributes and description`;
         }
     },
+    watch: {
+        character: {
+            handler() {
+                this.dialogueInstructions = this.character.actor.dialogue_instructions;
+                this.dialogueExamples = this.character.actor.dialogue_examples;
+            },
+            deep: true
+        }
+    },
     props: {
         character: Object,
         templates: Object,

@@ -25,47 +25,6 @@
                     </div>
 
                     <v-table>
-                    <!--
-                    {
-        "query": "Elmer: \"Kaira...\" *I say suddenly.* \"How did we first meet? I can't seem to recall, but i feel like the memory is there... i... i just can't grasp it.\"",
-        "results": [
-            {
-                "doc": "Captain Elmer and Kaira first met during their rigorous training for the Infinity Quest mission. Their initial interactions were marked by a sense of mutual respect and curiosity.",
-                "distance": 0.34782390420399134,
-                "meta": {
-                    "character": "__narrator__",
-                    "session": "9624b36a-3",
-                    "source": "talemate",
-                    "ts": "P1M",
-                    "typ": "history"
-                }
-            },
-        ],
-        "accepted_results": [
-            {
-                "doc": "11 Months ago: Captain Elmer and Kaira first met during their rigorous training for the Infinity Quest mission. Their initial interactions were marked by a sense of mutual respect and curiosity.",
-                "distance": 0.34782390420399134,
-                "meta": {
-                    "character": "__narrator__",
-                    "session": "9624b36a-3",
-                    "source": "talemate",
-                    "ts": "P1M",
-                    "typ": "history"
-                }
-            },
-        ],
-        "query_params": {
-            "limit": 10
-        },
-        "closest_distance": 0.34782390420399134,
-        "furthest_distance": 0.4819549331888565,
-        "max_distance": 1,
-        "success": true,
-        "agent_stack_uid": "0c571b5a-b664-41d6-9312-31c9d936373a",
-        "new_agent_activity": true,
-        "duration": 0.08
-    }
-                    -->
                     <thead>
                         <tr>
                             <th>Doc</th>

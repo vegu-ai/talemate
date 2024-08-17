@@ -156,6 +156,9 @@ async def websocket_endpoint(websocket, path):
                 elif action_type == "edit_message":
                     log.info("edit_message", data=data)
                     handler.edit_message(data.get("id"), data.get("text"))
+                elif action_type == "interrupt":
+                    log.info("interrupt")
+                    handler.scene.interrupt()
                 elif action_type == "request_app_config":
                     log.info("request_app_config")
                     await message_queue.put(

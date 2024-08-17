@@ -33,6 +33,7 @@ from talemate.exceptions import (
     RestartSceneLoop,
     TalemateError,
     TalemateInterrupt,
+    GenerationCancelled,
 )
 from talemate.game.state import GameState
 from talemate.instance import get_agent
@@ -739,6 +740,15 @@ class Scene(Emitter):
         self.active_pins = []
         # Add an attribute to store the most recent AI Actor
         self.most_recent_ai_actor = None
+        
+        # if the user has requested to cancel the current action
+        # or series of agent actions this will be true
+        #
+        # A check to self.continue_actions() will be made
+        #
+        # if self.cancel_requested is True self.continue_actions() will raise
+        # a GenerationCancelled exception
+        self.cancel_requested = False
 
         self.signals = {
             "ai_message": signal("ai_message"),
@@ -1966,7 +1976,11 @@ class Scene(Emitter):
                     await self.save(auto=True)
 
                 self.emit_status()
-
+            except GenerationCancelled:
+                signal_game_loop = False
+                skip_to_player = True
+                self.next_actor = None
+                self.log.warning("Generation cancelled, skipping to player")
             except TalemateInterrupt:
                 raise
             except LLMAccuracyError as e:
@@ -2015,7 +2029,8 @@ class Scene(Emitter):
 
                 self.saved = False
                 self.emit_status()
-
+            except GenerationCancelled:
+                continue
             except TalemateInterrupt:
                 raise
             except LLMAccuracyError as e:
@@ -2248,3 +2263,12 @@ class Scene(Emitter):
     @property
     def json(self):
         return json.dumps(self.serialize, indent=2, cls=save.SceneEncoder)
+
+
+    def interrupt(self):
+        self.cancel_requested = True
+
+    def continue_actions(self):
+        if self.cancel_requested:
+            self.cancel_requested = False
+            raise GenerationCancelled("action cancelled")

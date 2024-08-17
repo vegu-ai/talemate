@@ -1021,6 +1021,7 @@ export default {
     toLabel(value) {
         return value.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     },
+
   }
 }
 </script>

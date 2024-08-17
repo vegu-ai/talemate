@@ -17,6 +17,7 @@ import talemate.util as util
 from talemate.agents.context import ActiveAgent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
+from talemate.context import active_scene
 
 __all__ = [
     "Agent",
@@ -81,6 +82,12 @@ def set_processing(fn):
 
     @wraps(fn)
     async def wrapper(self, *args, **kwargs):
+        
+        scene = active_scene.get()
+        
+        if scene:
+            scene.continue_actions()
+        
         with ActiveAgent(self, fn):
             try:
                 await self.emit_status(processing=True)

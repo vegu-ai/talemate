@@ -59,7 +59,8 @@
                     :disabled="working"
                     v-model="character.reinforcements[selected].answer"
                     @update:modelValue="queueUpdate(selected)"
-                    :color="dirty ? 'info' : ''"></v-textarea>
+                    :color="dirty ? 'dirty' : ''">
+                </v-textarea>
 
                 <v-row>
                     <v-col cols="6">
@@ -70,7 +71,7 @@
                             :disabled="working"
                             class="mb-2"
                             @update:modelValue="queueUpdate(selected)"
-                            :color="dirty ? 'info' : ''"></v-text-field>
+                            :color="dirty ? 'dirty' : ''"></v-text-field>
                     </v-col>
                     <v-col cols="6">
                         <v-select
@@ -81,7 +82,7 @@
                             class="mr-1 mb-1" variant="underlined"
                             density="compact"
                             @update:modelValue="queueUpdate(selected)"
-                            :color="dirty ? 'info' : ''">
+                            :color="dirty ? 'dirty' : ''">
                         </v-select>
                     </v-col>
                 </v-row>
@@ -93,7 +94,7 @@
                     v-model="character.reinforcements[selected].instructions"
                     @update:modelValue="queueUpdate(selected)"
                     :disabled="working"
-                    :color="dirty ? 'info' : ''"
+                    :color="dirty ? 'dirty' : ''"
                     ></v-textarea>
 
                 <v-row>
@@ -332,7 +333,7 @@ export default {
             this.character.reinforcements[name] = {...this.newReinforcment};
         },
 
-        queueUpdate(name) {
+        queueUpdate(name, delay = 1500) {
             if (this.updateTimeout !== null) {
                 clearTimeout(this.updateTimeout);
             }
@@ -341,7 +342,7 @@ export default {
 
             this.updateTimeout = setTimeout(() => {
                 this.update(name);
-            }, 500);
+            }, delay);
         },
 
         update(name, updateState) {

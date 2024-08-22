@@ -6,7 +6,7 @@
                     v-model="scene.data.title"
                     label="Title"
                     hint="The title of the scene. This will be displayed to the user when they play the scene."
-                    :color="dirty['title'] ? 'primary' : ''"
+                    :color="dirty['title'] ? 'dirty' : ''"
                     :disabled="busy['title']"
                     :loading="busy['title']"
                     @update:model-value="queueUpdate('title')"
@@ -64,7 +64,7 @@
                     max-rows="32"
 
                     @update:model-value="queueUpdate('intro')"
-                    :color="dirty['intro'] ? 'primary' : ''"
+                    :color="dirty['intro'] ? 'dirty' : ''"
                     
                     :disabled="busy['intro']"
                     :loading="busy['intro']"
@@ -148,7 +148,7 @@ export default {
             this.queueUpdate('intro');
         },
 
-        queueUpdate(name) {
+        queueUpdate(name, delay = 1500) {
             if (this.updateTimeout !== null) {
                 clearTimeout(this.updateTimeout);
             }
@@ -157,7 +157,7 @@ export default {
 
             this.updateTimeout = setTimeout(() => {
                 this.update();
-            }, 500);
+            }, delay);
         },
 
         update() {

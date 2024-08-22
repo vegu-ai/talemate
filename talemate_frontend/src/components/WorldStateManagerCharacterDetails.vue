@@ -68,7 +68,8 @@
 
                 <v-textarea rows="5" max-rows="18" auto-grow
                     ref="detail"
-                    :color="dirty ? 'info' : ''"
+                    :label="selected"
+                    :color="dirty ? 'dirty' : ''"
 
                     :disabled="busy"
                     :loading="busy"
@@ -77,7 +78,7 @@
                     @keyup.ctrl.enter.stop="sendAutocompleteRequest"
 
                     @update:modelValue="queueUpdate(selected)"
-                    :label="selected"
+
                     v-model="character.details[selected]">
                 </v-textarea>
 
@@ -269,7 +270,7 @@ export default {
             }
         },
 
-        queueUpdate(name) {
+        queueUpdate(name, delay = 1500) {
             if (this.updateTimeout !== null) {
                 clearTimeout(this.updateTimeout);
             }
@@ -278,7 +279,7 @@ export default {
 
             this.updateTimeout = setTimeout(() => {
                 this.update(name);
-            }, 500);
+            }, delay);
         },
 
         update(name) {

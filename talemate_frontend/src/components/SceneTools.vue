@@ -55,9 +55,9 @@
                     class="pre-wrap"
                     max-width="300px">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey" v-bind="props"
+                        <v-btn class="hotkey mr-3" v-bind="props"
                             @click="interruptScene" color="primary" icon>
-                            <v-icon>mdi-stop</v-icon>
+                            <v-icon>mdi-stop-circle-outline</v-icon>
                         </v-btn>
                     </template>
                 </v-tooltip>

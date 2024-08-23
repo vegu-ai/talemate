@@ -104,7 +104,7 @@
                                 </v-col>
                             </v-row>
 
-                            <v-alert v-if="isCurrentyLoaded" color="unsaved" icon="mdi-refresh" density="compact" variant="text">This embedding is currently loaded by the Memory agent and saving changes to may fields may cause the associated vector db to be recreated and repopulated immediately after saving.</v-alert>
+                            <v-alert v-if="isCurrentyLoaded" color="unsaved" icon="mdi-refresh" density="compact" variant="text">This embedding is currently loaded by the Memory agent and saving changes will cause the associated databse to be recreated and repopulated immediately after saving. Depending on the size of the model and scene this may take a while.</v-alert>
 
                             <p v-if="busy">
                                 <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>

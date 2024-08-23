@@ -90,6 +90,7 @@ class MemoryAgent(Agent):
                         value="cpu",
                         label="Device",
                         description="Which device to use for embeddings (for local embeddings)",
+                        note="Making changes to the embeddings or the device while a scene is loaded will cause the memory database to be re-imported. Depending on the size of the model and scene this may take a while.",
                         choices=[
                             {"value": "cpu", "label": "CPU"},
                             {"value": "cuda", "label": "CUDA"},
@@ -199,6 +200,7 @@ class MemoryAgent(Agent):
             return
         
         self.close_db(scene)
+        emit("status", "Re-importing context database", status="busy")
         await scene.commit_to_memory()
         await scene.save()
 

@@ -178,7 +178,7 @@ class NarratorAgent(Agent):
             return self.actions["generation_override"].config["length"].value
         return 128
 
-    def clean_result(self, result):
+    def clean_result(self, result:str, ensure_dialog_format:bool=True, force_narrative:bool=True) -> str:
         """
         Cleans the result of a narration
         """
@@ -213,7 +213,14 @@ class NarratorAgent(Agent):
         result = "\n".join(cleaned)
         
         result = util.strip_partial_sentences(result)
-        result = util.ensure_dialog_format(result)
+        
+        if force_narrative:
+            if "*" not in result and '"' not in result:
+                result = f"*{result.strip()}*"
+        
+        if ensure_dialog_format:
+            result = util.ensure_dialog_format(result)
+
         
         return result
 
@@ -317,7 +324,11 @@ class NarratorAgent(Agent):
     @set_processing
     async def progress_story(self, narrative_direction: str | None = None):
         """
-        Narrate the scene
+        Narrate scene progression, moving the plot forward.
+        
+        Arguments:
+        
+        - narrative_direction: A string describing the direction the narrative should take. If not provided, will attempt to subtly move the story forward.
         """
 
         scene = self.scene
@@ -373,11 +384,11 @@ class NarratorAgent(Agent):
                 "extra_instructions": self.extra_instructions,
             },
         )
-        log.info("narrate_query", response=response)
-        response = self.clean_result(response.strip())
-        log.info("narrate_query (after clean)", response=response)
-        if as_narrative:
-            response = f"*{response}*"
+        response = self.clean_result(
+            response.strip(), 
+            ensure_dialog_format=False, 
+            force_narrative=as_narrative
+        )
 
         return response
 
@@ -399,8 +410,7 @@ class NarratorAgent(Agent):
             },
         )
 
-        response = self.clean_result(response.strip())
-        response = f"*{response}*"
+        response = self.clean_result(response.strip(), ensure_dialog_format=False, force_narrative=True)
 
         return response
 
@@ -476,7 +486,6 @@ class NarratorAgent(Agent):
         log.info("narrate_time_passage", response=response)
 
         response = self.clean_result(response.strip())
-        response = f"*{response}*"
 
         return response
 
@@ -538,7 +547,6 @@ class NarratorAgent(Agent):
         )
 
         response = self.clean_result(response.strip().strip("*"))
-        response = f"*{response}*"
 
         return response
 
@@ -562,7 +570,6 @@ class NarratorAgent(Agent):
         )
 
         response = self.clean_result(response.strip().strip("*"))
-        response = f"*{response}*"
 
         return response
 
@@ -586,7 +593,6 @@ class NarratorAgent(Agent):
         log.info("paraphrase", narration=narration, response=response)
 
         response = self.clean_result(response.strip().strip("*"))
-        response = f"*{response}*"
 
         return response
 
@@ -699,18 +705,12 @@ class NarratorAgent(Agent):
         if not self.actions["generation_override"].enabled:
             return
 
-        log.debug("set_generation_overrides - NARRATOR - before", prompt_param=prompt_param)
         prompt_param["max_tokens"] = min(prompt_param.get("max_tokens", 256), self.max_generation_length)
 
-        
-
         if self.jiggle > 0.0:
-            log.debug("set_generation_overrides - NARRATOR - applying jiggle", jiggle=self.jiggle)
             nuke_repetition = client_context_attribute("nuke_repetition")
             if nuke_repetition == 0.0:
                 # we only apply the agent override if some other mechanism isn't already
                 # setting the nuke_repetition value
                 nuke_repetition = self.jiggle
                 set_client_context_attribute("nuke_repetition", nuke_repetition)
-
-        log.debug("set_generation_overrides - NARRATOR - after", prompt_param=prompt_param)

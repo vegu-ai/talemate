@@ -470,12 +470,6 @@ class ClientBase:
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         parameters["stream"] = False
-        if client_context_attribute(
-            "nuke_repetition"
-        ) > 0.0 and self.jiggle_enabled_for(kind):
-            self.jiggle_randomness(
-                parameters, offset=client_context_attribute("nuke_repetition")
-            )
 
         fn_tune_kind = getattr(self, f"tune_prompt_parameters_{kind}", None)
         if fn_tune_kind:
@@ -485,6 +479,13 @@ class ClientBase:
         if agent_context.agent:
             agent_context.agent.inject_prompt_paramters(
                 parameters, kind, agent_context.action
+            )
+            
+        if client_context_attribute(
+            "nuke_repetition"
+        ) > 0.0 and self.jiggle_enabled_for(kind):
+            self.jiggle_randomness(
+                parameters, offset=client_context_attribute("nuke_repetition")
             )
 
     def tune_prompt_parameters_conversation(self, parameters: dict):

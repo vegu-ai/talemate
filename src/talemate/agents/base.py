@@ -18,6 +18,9 @@ from talemate.agents.context import ActiveAgent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
+from talemate.client.context import (
+    ClientContext
+)
 
 __all__ = [
     "Agent",
@@ -82,23 +85,23 @@ def set_processing(fn):
 
     @wraps(fn)
     async def wrapper(self, *args, **kwargs):
-        
-        scene = active_scene.get()
-        
-        if scene:
-            scene.continue_actions()
-        
-        with ActiveAgent(self, fn):
-            try:
-                await self.emit_status(processing=True)
-                return await fn(self, *args, **kwargs)
-            finally:
+        with ClientContext():
+            scene = active_scene.get()
+            
+            if scene:
+                scene.continue_actions()
+            
+            with ActiveAgent(self, fn):
                 try:
-                    await self.emit_status(processing=False)
-                except RuntimeError as exc:
-                    # not sure why this happens
-                    # some concurrency error?
-                    log.error("error emitting agent status", exc=exc)
+                    await self.emit_status(processing=True)
+                    return await fn(self, *args, **kwargs)
+                finally:
+                    try:
+                        await self.emit_status(processing=False)
+                    except RuntimeError as exc:
+                        # not sure why this happens
+                        # some concurrency error?
+                        log.error("error emitting agent status", exc=exc)
 
     return wrapper
 

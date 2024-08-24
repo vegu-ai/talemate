@@ -1,6 +1,7 @@
 import asyncio
 import sys
 import os
+import argparse
 
 async def read_stream(stream, prefix):
     while True:
@@ -36,10 +37,20 @@ async def start_process(command, cwd=None, prefix=""):
     print(f"Started {prefix} process")
     return process
 
-async def main():
+async def main(dev_mode):
     # Start the frontend process
-    frontend_cmd = "npm run serve"
-    frontend_process = await start_process(frontend_cmd, cwd="talemate_frontend", prefix="Frontend")
+    if dev_mode:
+        frontend_cmd = "npm run serve"
+        frontend_cwd = "talemate_frontend"
+    else:
+        if sys.platform == "win32":
+            activate_cmd = ".\\talemate_env\\Scripts\\activate.bat"
+        else:
+            activate_cmd = "source talemate_env/bin/activate"
+        frontend_cmd = f"{activate_cmd} && python frontend_server.py"
+        frontend_cwd = None
+
+    frontend_process = await start_process(frontend_cmd, cwd=frontend_cwd, prefix="Frontend")
 
     # Start the backend process
     if sys.platform == "win32":
@@ -75,7 +86,11 @@ async def main():
         await backend_process.wait()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run Talemate server")
+    parser.add_argument("--dev", action="store_true", help="Run in development mode")
+    args = parser.parse_args()
+
     try:
-        asyncio.run(main())
+        asyncio.run(main(args.dev))
     except KeyboardInterrupt:
         print("Keyboard interrupt received. Exiting...")

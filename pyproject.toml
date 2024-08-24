@@ -47,6 +47,10 @@ huggingface-hub = ">=0.20.2"
 RestrictedPython = ">7.1"
 numpy = "^1"
 
+# Process
+gunicorn = ">=23.0.0"
+whitenoise = ">=6.7.0"
+
 # ChromaDB
 chromadb = ">=0.4.17,<1"
 InstructorEmbedding = "^1.0.1"

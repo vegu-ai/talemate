@@ -47,7 +47,7 @@ async def main(dev_mode):
             activate_cmd = ".\\talemate_env\\Scripts\\activate.bat"
         else:
             activate_cmd = "source talemate_env/bin/activate"
-        frontend_cmd = f"{activate_cmd} && gunicorn --bind 0.0.0.0:8080 frontend_wsgi:application"
+        frontend_cmd = f"{activate_cmd} && gunicorn --bind 0.0.0.0:8080 --workers 4 --timeout 120 --keep-alive 5 frontend_wsgi:application"
         frontend_cwd = None
 
     frontend_process = await start_process(frontend_cmd, cwd=frontend_cwd, prefix="Frontend")

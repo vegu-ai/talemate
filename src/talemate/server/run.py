@@ -10,9 +10,21 @@ import re
 
 import talemate.config
 from talemate.server.api import websocket_endpoint
+from talemate.version import VERSION
 
 log = structlog.get_logger("talemate.server.run")
 
+
+STARTUP_TEXT = f"""
+
+████████╗ █████╗ ██╗     ███████╗███╗   ███╗ █████╗ ████████╗███████╗
+╚══██╔══╝██╔══██╗██║     ██╔════╝████╗ ████║██╔══██╗╚══██╔══╝██╔════╝
+   ██║   ███████║██║     █████╗  ██╔████╔██║███████║   ██║   █████╗  
+   ██║   ██╔══██║██║     ██╔══╝  ██║╚██╔╝██║██╔══██║   ██║   ██╔══╝  
+   ██║   ██║  ██║███████╗███████╗██║ ╚═╝ ██║██║  ██║   ██║   ███████╗
+   ╚═╝   ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚══════╝
+v{VERSION}
+"""
 
 async def log_stream(stream, log_func):
     while True:
@@ -131,6 +143,8 @@ def main():
     runserver_parser.add_argument("--frontend-port", type=int, default=8080, help="Frontend Port")
 
     args = parser.parse_args()
+
+    print(STARTUP_TEXT)
 
     if args.command == "runserver":
         run_server(args)

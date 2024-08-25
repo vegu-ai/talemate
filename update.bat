@@ -1,5 +1,6 @@
 @echo off
 
+echo Checking git repository...
 REM check if git repository is initialized and initialize if not
 if not exist .git (
 git init
@@ -13,15 +14,21 @@ REM activate the virtual environment
 call talemate_env\Scripts\activate
 
 REM use poetry to install dependencies
+echo Updating virtual environment...
 python -m poetry install
 
-echo Virtual environment updated
+echo Virtual environment updated!
 
 REM updating npm packages
+echo Updating npm packages...
 cd talemate_frontend
 npm install
-cd ..
-
 echo NPM packages updated
+
+REM build the frontend
+echo Building frontend...
+npm run build
+
+cd ..
 
 pause

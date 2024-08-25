@@ -143,6 +143,12 @@ def main():
     runserver_parser.add_argument("--frontend-port", type=int, default=8080, help="Frontend Port")
 
     args = parser.parse_args()
+    
+    # wipe screen if backend only mode is not enabled
+    # reason: backend only is run usually in dev mode and may be worth keeping the console output
+    if not args.backend_only:
+        # this needs to work on windows and linux
+        os.system("cls" if os.name == "nt" else "clear")
 
     print(STARTUP_TEXT)
 

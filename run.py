@@ -2,6 +2,7 @@ import asyncio
 import sys
 import os
 import argparse
+import signal
 
 def safe_decode(byte_string):
     try:
@@ -16,32 +17,35 @@ async def read_stream(stream, prefix):
             break
         print(f"{prefix}: {safe_decode(line).strip()}")
 
-async def run_command(command, cwd=None, prefix=""):
-    process = await asyncio.create_subprocess_shell(
-        command,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        cwd=cwd,
-        shell=True
-    )
-    
-    await asyncio.gather(
-        read_stream(process.stdout, f"{prefix} OUT"),
-        read_stream(process.stderr, f"{prefix} ERR")
-    )
-    
-    return process
-
 async def start_process(command, cwd=None, prefix=""):
     process = await asyncio.create_subprocess_shell(
         command,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         cwd=cwd,
-        shell=True
+        shell=True,
+        preexec_fn=os.setsid if sys.platform != "win32" else None
     )
     print(f"Started {prefix} process")
     return process
+
+async def terminate_process(process, prefix):
+    try:
+        if sys.platform != "win32":
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        else:
+            process.terminate()
+        await asyncio.wait_for(process.wait(), timeout=5.0)
+    except ProcessLookupError:
+        print(f"{prefix} process has already exited")
+    except asyncio.TimeoutError:
+        print(f"{prefix} process did not terminate in time, forcing...")
+        if sys.platform != "win32":
+            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+        else:
+            process.kill()
+    except Exception as e:
+        print(f"Error terminating {prefix} process: {e}")
 
 async def main(dev_mode):
     # Start the frontend process
@@ -53,8 +57,6 @@ async def main(dev_mode):
             activate_cmd = ".\\talemate_env\\Scripts\\activate.bat"
         else:
             activate_cmd = "source talemate_env/bin/activate"
-        #frontend_cmd = f"{activate_cmd} && gunicorn --bind 0.0.0.0:8080 --workers 4 --timeout 120 --keep-alive 5 frontend_wsgi:application"
-        # uvicorn instead
         frontend_cmd = f"{activate_cmd} && uvicorn --host 0.0.0.0 --port 8080 --workers 4 frontend_wsgi:application"
         frontend_cwd = None
 
@@ -70,35 +72,42 @@ async def main(dev_mode):
     
     backend_process = await start_process(backend_cmd, prefix="Backend")
 
-    # Read output from both processes concurrently
-    await asyncio.gather(
-        read_stream(frontend_process.stdout, "Frontend OUT"),
-        read_stream(frontend_process.stderr, "Frontend ERR"),
-        read_stream(backend_process.stdout, "Backend OUT"),
-        read_stream(backend_process.stderr, "Backend ERR")
-    )
+    async def signal_handler(sig, frame):
+        print("Stopping processes...")
+        await terminate_process(frontend_process, "Frontend")
+        await terminate_process(backend_process, "Backend")
+
+    if sys.platform == "win32":
+        signal.signal(signal.SIGINT, lambda s, f: asyncio.create_task(signal_handler(s, f)))
+        signal.signal(signal.SIGTERM, lambda s, f: asyncio.create_task(signal_handler(s, f)))
+    else:
+        loop = asyncio.get_event_loop()
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(sig, lambda s=sig: asyncio.create_task(signal_handler(s, None)))
 
     try:
+        # Read output from both processes concurrently
+        await asyncio.gather(
+            read_stream(frontend_process.stdout, "Frontend OUT"),
+            read_stream(frontend_process.stderr, "Frontend ERR"),
+            read_stream(backend_process.stdout, "Backend OUT"),
+            read_stream(backend_process.stderr, "Backend ERR")
+        )
+
         # Wait for both processes to complete
         await asyncio.gather(
             frontend_process.wait(),
             backend_process.wait()
         )
     except asyncio.CancelledError:
-        print("Stopping processes...")
+        pass
     finally:
         # Terminate both processes
-        frontend_process.terminate()
-        backend_process.terminate()
-        await frontend_process.wait()
-        await backend_process.wait()
+        await signal_handler(None, None)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Talemate server")
     parser.add_argument("--dev", action="store_true", help="Run in development mode")
     args = parser.parse_args()
 
-    try:
-        asyncio.run(main(args.dev))
-    except KeyboardInterrupt:
-        print("Keyboard interrupt received. Exiting...")
+    asyncio.run(main(args.dev))

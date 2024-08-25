@@ -3,12 +3,18 @@ import sys
 import os
 import argparse
 
+def safe_decode(byte_string):
+    try:
+        return byte_string.decode('utf-8')
+    except UnicodeDecodeError:
+        return byte_string.decode('utf-8', errors='replace')
+
 async def read_stream(stream, prefix):
     while True:
         line = await stream.readline()
         if not line:
             break
-        print(f"{prefix}: {line.decode().strip()}")
+        print(f"{prefix}: {safe_decode(line).strip()}")
 
 async def run_command(command, cwd=None, prefix=""):
     process = await asyncio.create_subprocess_shell(

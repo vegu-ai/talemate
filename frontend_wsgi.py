@@ -1,32 +1,28 @@
 import os
-from whitenoise import WhiteNoise
-from urllib.parse import urlparse
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException
 
 # Get the directory of the current file
 current_dir = os.path.dirname(os.path.abspath(__file__))
 # Construct the path to the dist directory
 dist_dir = os.path.join(current_dir, "talemate_frontend", "dist")
 
-def application(environ, start_response):
-    path = environ.get('PATH_INFO', '')
-    if path == '/' or not os.path.exists(os.path.join(dist_dir, path.lstrip('/'))):
-        # Serve index.html for root path or any path that doesn't exist as a file
-        try:
-            with open(os.path.join(dist_dir, 'index.html'), 'rb') as f:
-                content = f.read()
-            status = '200 OK'
-            headers = [('Content-type', 'text/html')]
-            start_response(status, headers)
-            return [content]
-        except IOError:
-            status = '404 NOT FOUND'
-            headers = [('Content-type', 'text/plain')]
-            start_response(status, headers)
-            return [b'Not Found']
-    
-    # Let WhiteNoise handle existing static files
-    return application.whitenoise(environ, start_response)
+app = FastAPI()
 
-# Wrap the WSGI application with WhiteNoise
-application.whitenoise = WhiteNoise(application, root=dist_dir)
-application.whitenoise.add_files(dist_dir, prefix='')
+# Serve static files, but exclude the root path
+app.mount("/", StaticFiles(directory=dist_dir, html=True), name="static")
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_root():
+    index_path = os.path.join(dist_dir, "index.html")
+    if os.path.exists(index_path):
+        with open(index_path, "r") as f:
+            content = f.read()
+        return HTMLResponse(content=content)
+    else:
+        raise HTTPException(status_code=404, detail="index.html not found")
+
+# This is the ASGI application
+application = app

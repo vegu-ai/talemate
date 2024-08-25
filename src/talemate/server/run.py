@@ -14,9 +14,6 @@ from talemate.server.api import websocket_endpoint
 log = structlog.get_logger("talemate.server.run")
 
 
-def strip_log_prefix(message):
-    return re.sub(r'^(INFO|WARNING|ERROR|CRITICAL):\s*', '', message)
-
 async def log_stream(stream, log_func):
     while True:
         line = await stream.readline()
@@ -24,16 +21,13 @@ async def log_stream(stream, log_func):
             break
         decoded_line = line.decode().strip()
         
-        # Strip log level prefix
-        cleaned_line = strip_log_prefix(decoded_line)
-        
         # Check if the original line started with "INFO:" (Uvicorn startup messages)
         if decoded_line.startswith("INFO:"):
             # Use info level for Uvicorn startup messages
-            log.info(cleaned_line)
+            log.info("uvicorn", message=decoded_line)
         else:
             # Use the provided log_func for other messages
-            log_func(cleaned_line)
+            log_func("uvicron", message=decoded_line)
 
 async def run_frontend(host: str = "localhost", port: int = 8080):
     if sys.platform == "win32":

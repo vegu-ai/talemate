@@ -6,6 +6,7 @@ import sys
 
 import structlog
 import websockets
+import re
 
 import talemate.config
 from talemate.server.api import websocket_endpoint
@@ -13,16 +14,26 @@ from talemate.server.api import websocket_endpoint
 log = structlog.get_logger("talemate.server.run")
 
 
-async def start_frontend_process(command:str, cwd:str|None=None):
-    process = await asyncio.create_subprocess_shell(
-        command,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        cwd=cwd,
-        shell=True,
-        preexec_fn=os.setsid if sys.platform != "win32" else None
-    )
-    return process
+def strip_log_prefix(message):
+    return re.sub(r'^(INFO|WARNING|ERROR|CRITICAL):\s*', '', message)
+
+async def log_stream(stream, log_func):
+    while True:
+        line = await stream.readline()
+        if not line:
+            break
+        decoded_line = line.decode().strip()
+        
+        # Strip log level prefix
+        cleaned_line = strip_log_prefix(decoded_line)
+        
+        # Check if the original line started with "INFO:" (Uvicorn startup messages)
+        if decoded_line.startswith("INFO:"):
+            # Use info level for Uvicorn startup messages
+            log.info(cleaned_line)
+        else:
+            # Use the provided log_func for other messages
+            log_func(cleaned_line)
 
 async def run_frontend(host: str = "localhost", port: int = 8080):
     if sys.platform == "win32":
@@ -32,12 +43,23 @@ async def run_frontend(host: str = "localhost", port: int = 8080):
     frontend_cmd = f"{activate_cmd} && uvicorn --host {host} --port {port} frontend_wsgi:application"
     frontend_cwd = None
         
-    process = await start_frontend_process(frontend_cmd, cwd=frontend_cwd)
+    process = await asyncio.create_subprocess_shell(
+        frontend_cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        cwd=frontend_cwd,
+        shell=True,
+        preexec_fn=os.setsid if sys.platform != "win32" else None
+    )
     
     log.info(f"talemate frontend started", host=host, port=port, server="uvicorn", process=process.pid)
     
     try:
-        await process.communicate()
+        stdout_task = asyncio.create_task(log_stream(process.stdout, log.info))
+        stderr_task = asyncio.create_task(log_stream(process.stderr, log.error))
+        
+        await asyncio.gather(stdout_task, stderr_task)
+        await process.wait()
     finally:
         if process.returncode is None:
             if sys.platform == "win32":

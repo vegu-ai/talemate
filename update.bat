@@ -22,13 +22,14 @@ echo Virtual environment updated!
 REM updating npm packages
 echo Updating npm packages...
 cd talemate_frontend
-npm install
+call npm install
+
 echo NPM packages updated
 
 REM build the frontend
 echo Building frontend...
-npm run build
+call npm run build
 
 cd ..
-
+echo Update complete - You may close this window now.
 pause

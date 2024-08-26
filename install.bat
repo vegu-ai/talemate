@@ -54,10 +54,10 @@ IF NOT EXIST config.yaml copy config.example.yaml config.yaml
 REM navigate to the frontend directory
 echo Installing frontend dependencies...
 cd talemate_frontend
-npm install
+call npm install
 
 echo Building frontend...
-npm run build
+call npm run build
 
 REM return to the root directory
 cd ..

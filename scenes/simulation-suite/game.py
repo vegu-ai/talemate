@@ -578,3 +578,11 @@ def game(TM):
 
     SimulationSuite().run()
     
+def on_generation_cancelled(TM, exc):
+    
+    """
+    Called when user pressed the cancel button during the simulation suite
+    loop.
+    """
+    
+    TM.signals.status("success", "Simulation suite cancelled", as_scene_message=True)

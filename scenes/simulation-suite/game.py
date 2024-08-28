@@ -585,4 +585,6 @@ def on_generation_cancelled(TM, exc):
     loop.
     """
     
-    TM.signals.status("success", "Simulation suite cancelled", as_scene_message=True)
+    TM.signals.status("success", "Simulation suite instructions cancelled", as_scene_message=True)
+    rounds = TM.game_state.get_var("instr.rounds", 0)
+    TM.log.debug("SIMULATION SUITE: command cancelled", rounds=rounds)

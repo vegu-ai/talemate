@@ -96,7 +96,12 @@ You must only generate one line of example dialogue for {{ character_name }}.
 {% endif -%}
 {#- SCENE INTRO -#}
 {% elif context_typ == "scene intro" %}
-{{ action_task }} introduction for the scene. This is the first text that is shown to {{ scene.get_player_character().name }} when they enter the scene. It must setup an interesting entry point for them to participate in the scene and interact with {% if scene.num_npc_characters() %}the other characters and the environment.{% else %}the environment.{% endif %}
+{{ action_task }} introduction for the scene. This is the first text that is shown to {{ scene.get_player_character().name or "the reader" }} when they start the scene. 
+
+It must contain enough context for the reader to dive right in. Assume that the reader has not looked at the character or scene descriptions.
+
+It must setup an interesting entry point for the reader to participate in the scene and interact with {% if scene.num_npc_characters() %}the other characters and the environment.{% else %}the environment.{% endif %}
+
 {#- GENERAL CONTEXT -#}
 {% else %}
 {% if context_name.endswith("?") -%}

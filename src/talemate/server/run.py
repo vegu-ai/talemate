@@ -44,9 +44,9 @@ async def log_stream(stream, log_func):
 async def run_frontend(host: str = "localhost", port: int = 8080):
     if sys.platform == "win32":
         activate_cmd = ".\\talemate_env\\Scripts\\activate.bat"
+        frontend_cmd = f"{activate_cmd} && uvicorn --host {host} --port {port} frontend_wsgi:application"
     else:
-        activate_cmd = "source talemate_env/bin/activate"
-    frontend_cmd = f"{activate_cmd} && uvicorn --host {host} --port {port} frontend_wsgi:application"
+        frontend_cmd = f"/bin/bash -c 'source talemate_env/bin/activate && uvicorn --host {host} --port {port} frontend_wsgi:application'"
     frontend_cwd = None
         
     process = await asyncio.create_subprocess_shell(

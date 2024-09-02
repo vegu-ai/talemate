@@ -1,27 +1,19 @@
 version: '3.8'
 
 services:
-  talemate-backend:
+  talemate:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: Dockerfile
     ports:
-      - "5050:5050"
+      - "${FRONTEND_PORT:-8080}:8080"
+      - "${BACKEND_PORT:-5050}:5050"
     volumes:
-      # can uncomment for dev purposes
-      #- ./src/talemate:/app/src/talemate
       - ./config.yaml:/app/config.yaml
       - ./scenes:/app/scenes
       - ./templates:/app/templates
       - ./chroma:/app/chroma
     environment:
       - PYTHONUNBUFFERED=1
-  
-  talemate-frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    ports:
-      - "8080:8080"
-    #volumes:
-    #  - ./talemate_frontend:/app
+      - PYTHONPATH=/app/src:$PYTHONPATH
+    command: ["/bin/bash", "-c", "source /app/talemate_env/bin/activate && python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050 --frontend-host 0.0.0.0 --frontend-port 8080"]

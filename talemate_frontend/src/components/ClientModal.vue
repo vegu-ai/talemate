@@ -7,7 +7,6 @@
       </v-card-title>
       <v-card-text>
         <v-form ref="form" v-model="formIsValid">
-
           <v-row>
             <v-col cols="3">
               <v-tabs v-model="tab" direction="vertical">
@@ -35,23 +34,22 @@
                   </v-row>
                   <v-row>
                     <v-col cols="12">
-                      <v-row>
-                        <v-col :cols="clientMeta().enable_api_auth ? 7 : 12">
-                          <v-text-field v-model="client.api_url" v-if="requiresAPIUrl(client)" :rules="[rules.required]"
-                            label="API URL"></v-text-field>
-                        </v-col>
-                        <v-col cols="5">
-                          <v-text-field type="password" v-model="client.api_key"
-                            v-if="requiresAPIUrl(client) && clientMeta().enable_api_auth"
-                            label="API Key"></v-text-field>
-                        </v-col>
-                      </v-row>
+                      <!-- API Key Field -->
+                      <v-text-field type="password" v-model="client.api_key"
+                        v-if="clientMeta().enable_api_auth"
+                        label="API Key"></v-text-field>
+
+                      <!-- Model Dropdown (only for Infermatic) -->
+                      <v-select v-model="client.model" v-if="client.type === 'infermatic'"
+                        :items="clientMeta().manual_model_choices" label="Model"></v-select>
+
+                      <!-- Model Selection for other clients -->
                       <v-select v-model="client.model"
-                        v-if="clientMeta().manual_model && clientMeta().manual_model_choices"
+                        v-else-if="clientMeta().manual_model && clientMeta().manual_model_choices"
                         :items="clientMeta().manual_model_choices" label="Model"></v-select>
                       <v-text-field v-model="client.model_name" v-else-if="clientMeta().manual_model"
                         label="Manually specify model name"
-                        hint="It looks like we're unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you're locally serving a model."></v-text-field>
+                        hint="It looks like we're unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you're locally serving a model."></v-text-field>                      
                     </v-col>
                   </v-row>
                   <v-row v-for="field in clientMeta().extra_fields" :key="field.name">
@@ -63,29 +61,10 @@
                     </v-col>
                   </v-row>
                   <v-row>
-                    <v-col cols="4">
+                    <v-col cols="12"> 
                       <v-text-field v-model="client.max_token_length" v-if="requiresAPIUrl(client)" type="number"
-                        label="Context Length" :rules="[rules.required]"></v-text-field>
-                    </v-col>
-                    <v-col cols="8"
-                      v-if="!typeEditable() && client.data && client.data.prompt_template_example !== null && client.model_name && clientMeta().requires_prompt_template && !client.data.api_handles_prompt_template">
-                      <v-autocomplete ref="promptTemplateComboBox" :label="'Prompt Template for ' + client.model_name"
-                        v-model="client.data.template_file" @update:model-value="setPromptTemplate"
-                        :items="promptTemplates"></v-autocomplete>
-                      <v-card elevation="3" :color="(client.data.has_prompt_template ? 'primary' : 'warning')"
-                        variant="tonal">
-
-                        <v-card-text>
-                          <div class="text-caption" v-if="!client.data.has_prompt_template">No matching LLM prompt
-                            template found. Using default.</div>
-                          <div class="prompt-template-preview">{{ client.data.prompt_template_example }}</div>
-                        </v-card-text>
-                        <v-card-actions>
-                          <v-btn @click.stop="determineBestTemplate" prepend-icon="mdi-web-box">Determine via
-                            HuggingFace</v-btn>
-                        </v-card-actions>
-                      </v-card>
-
+                        label="Context Length" :rules="[rules.required]"
+                        :hint="client.type === 'infermatic' ? 'Check https://infermatic.ai/models/ for context lengths.' : ''"></v-text-field>
                     </v-col>
                   </v-row>
                 </v-window-item>
@@ -165,7 +144,7 @@ export default {
             return this.clientMeta().requires_prompt_template;
           },
         },
-      }
+      },
     };
   },
   computed: {

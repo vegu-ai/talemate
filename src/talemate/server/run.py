@@ -26,6 +26,13 @@ STARTUP_TEXT = f"""
 v{VERSION}
 """
 
+async def install_punkt():
+    import nltk
+    
+    log.info("Downloading NLTK punkt tokenizer")
+    await asyncio.get_event_loop().run_in_executor(None, nltk.download, "punkt")
+    log.info("Download complete")
+
 async def log_stream(stream, log_func):
     while True:
         line = await stream.readline()
@@ -57,6 +64,8 @@ async def run_frontend(host: str = "localhost", port: int = 8080):
         shell=True,
         preexec_fn=os.setsid if sys.platform != "win32" else None
     )
+    
+    asyncio.create_task(install_punkt())
     
     log.info(f"talemate frontend started", host=host, port=port, server="uvicorn", process=process.pid)
     

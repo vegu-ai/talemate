@@ -1812,6 +1812,24 @@ class Scene(Emitter):
                 item = f"{actor.character.name}: {actor.character.greeting_text}"
                 emit("character", item, character=actor.character)
 
+        max_backscroll = (
+            self.config.get("game", {}).get("general", {}).get("max_backscroll", 512)
+        )
+        
+        # history is not empty, so we are continuing a scene
+        # need to emit current messages
+        for item in self.history[-max_backscroll:]:
+            char_name = item.split(":")[0]
+            try:
+                actor = self.get_character(char_name).actor
+            except AttributeError:
+                # If the character is not an actor, then it is the narrator
+                emit(item.typ, item)
+                continue
+            emit("character", item, character=actor.character)
+            if not actor.character.is_player:
+                self.most_recent_ai_actor = actor
+
     async def _run_game_loop(self, init: bool = True):
 
         await self.ensure_memory_db()

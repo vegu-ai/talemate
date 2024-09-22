@@ -169,7 +169,7 @@ class Automatic1111Mixin:
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                url=f"{url}/sdapi/v1/txt2img", json=payload, timeout=90
+                url=f"{url}/sdapi/v1/txt2img", json=payload, timeout=self.generate_timeout
             )
 
         r = response.json()

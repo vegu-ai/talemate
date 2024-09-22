@@ -2,13 +2,19 @@
 ## Quick install instructions
 
 !!! warning
-    python 3.12 and node.js v21 are currently not supported.
+    python 3.12 is currently not supported.
+
+### Dependencies
+
+1. node.js and npm - see instructions [here](https://nodejs.org/en/download/package-manager/)
+1. python 3.10 or 3.11 - see instructions [here](https://www.python.org/downloads/)
+
+### Installation
 
 1. `git clone https://github.com/vegu-ai/talemate.git`
 1. `cd talemate`
 1. `source install.sh`
-1. Start the backend: `python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050`.
-1. Open a new terminal, navigate to the `talemate_frontend` directory, and start the frontend server by running `npm run serve`.
+1. `source start.sh`
 
 If everything went well, you can proceed to [connect a client](../../connect-a-client).
 

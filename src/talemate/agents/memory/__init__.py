@@ -202,7 +202,10 @@ class MemoryAgent(Agent):
         self.close_db(scene)
         emit("status", "Re-importing context database", status="busy")
         await scene.commit_to_memory()
-        await scene.save()
+        log.warning("memory agent", status="context database re-imported")
+        if not scene.immutable_save:
+            await scene.save(auto=True)
+        emit("status", "Context database re-imported", status="success")
 
     def on_config_saved(self, event):
         loop = asyncio.get_running_loop()

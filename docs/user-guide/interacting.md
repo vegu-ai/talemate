@@ -56,3 +56,13 @@ You can turn this off by disabling the auto progress setting, either in the game
 ![Tool bar](/talemate/img/0.26.0/getting-started-ui-element-tools.png)
 
 A set of tools to help you interact with the scenario. Find out more about the various actions in the [Scene Tools](/talemate/user-guide/scenario-tools) section of the user guide.
+
+
+## Cancel Generation
+
+Sometimes Talemate will be generating a response (or go through a chain of generations) and you want to cancel it. You can do this by hitting the **:material-stop-circle-outline:** button that will appear in the scene tools bar.
+
+![Cancel generation](/talemate/img/0.27.0/cancel-generation.png)
+
+!!! info
+    While the generation is cancelled immediately, the current inference request will still be processed by the LLM backend. The Talemate UI will be responsive but the LLM api may require some time to finish the request.

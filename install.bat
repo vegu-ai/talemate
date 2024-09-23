@@ -62,7 +62,7 @@ IF ERRORLEVEL 1 (
     echo CUDA found. Installing PyTorch with CUDA support...
     REM uninstalling existing torch, torchvision, torchaudio
     python -m pip uninstall torch torchvision torchaudio -y
-    python -m pip install torch==">=2.4.1,<3" torchvision==">=2.4.1,<3" torchaudio==">=2.4.1,<3" --index-url https://download.pytorch.org/whl/cu121
+    python -m pip install torch~=2.4.1 torchvision~=0.19.1 torchaudio~=2.4.1 --index-url https://download.pytorch.org/whl/cu121
 )
 
 REM copy config.example.yaml to config.yaml only if config.yaml doesn't exist

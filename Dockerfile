@@ -39,6 +39,15 @@ RUN . /app/talemate_env/bin/activate && \
 # Copy the Python source code
 COPY ./src /app/src
 
+# Conditional PyTorch+CUDA install
+ARG CUDA_AVAILABLE=false
+RUN . /app/talemate_env/bin/activate && \
+    if [ "$CUDA_AVAILABLE" = "true" ]; then \
+        echo "Installing PyTorch with CUDA support..." && \
+        pip uninstall torch torchaudio -y && \
+        pip install torch~=2.4.1 torchaudio~=2.4.1 --index-url https://download.pytorch.org/whl/cu121; \
+    fi
+
 # Stage 3: Final image
 FROM python:3.11-slim
 

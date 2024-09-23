@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - CUDA_AVAILABLE=${CUDA_AVAILABLE:-false}
     ports:
       - "${FRONTEND_PORT:-8080}:8080"
       - "${BACKEND_PORT:-5050}:5050"

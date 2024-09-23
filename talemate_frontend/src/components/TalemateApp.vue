@@ -117,16 +117,10 @@
         </v-alert>
 
         <v-list>
-          <v-list-subheader class="text-uppercase"><v-icon>mdi-network-outline</v-icon>
-            Clients</v-list-subheader>
-          <v-list-item>
-            <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig"></AIClient>
-          </v-list-item>
+          <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig"></AIClient>
           <v-divider></v-divider>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
-          <v-list-item>
-            <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents"></AIAgent>
-          </v-list-item>
+          <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents"></AIAgent>
           <!-- More sections can be added here -->
         </v-list>
       </v-navigation-drawer>
@@ -222,7 +216,7 @@
       </v-container>
     </v-main>
 
-    <AppConfig ref="appConfig" />
+    <AppConfig ref="appConfig" :agentStatus="agentStatus" :sceneActive="sceneActive" />
     <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
@@ -639,6 +633,7 @@ export default {
         label: data.message,
         // active - has the agent been active in the last 5 seconds?
         recentlyActive: recentlyActive,
+        details: data.client,
       }
 
       if(recentlyActive && !busy) {
@@ -1026,6 +1021,7 @@ export default {
     toLabel(value) {
         return value.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     },
+
   }
 }
 </script>

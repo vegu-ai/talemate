@@ -78,6 +78,15 @@ class VisualBase(Agent):
                         label="Default Style",
                         description="The default style to use for visual processing",
                     ),
+                    "timeout": AgentActionConfig(
+                        type="number",
+                        value=300,
+                        label="Image generation timeout",
+                        min=1,
+                        max=900,
+                        step=50,
+                        description="Timeout in seconds. If the backend does not generate an image within this time, it will be considered failed.",
+                    ),
                 },
             ),
             "automatic_setup": AgentAction(
@@ -95,6 +104,7 @@ class VisualBase(Agent):
                 label="Process in Background",
                 description="Process renders in the background",
             ),
+
             "_prompts": AgentAction(
                 enabled=True,
                 container=True,
@@ -164,6 +174,10 @@ class VisualBase(Agent):
         return STYLE_MAP.get(
             self.actions["_config"].config["default_style"].value, Style()
         )
+
+    @property
+    def generate_timeout(self):
+        return self.actions["_config"].config["timeout"].value
 
     @property
     def ready(self):

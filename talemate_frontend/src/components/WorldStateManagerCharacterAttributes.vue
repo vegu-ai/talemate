@@ -70,10 +70,11 @@
 
                 <v-textarea ref="attribute" rows="5" auto-grow
                     :label="selected"
-                    :color="dirty ? 'info' : ''"
+                    :color="dirty ? 'dirty' : ''"
 
                     :disabled="busy"
                     :loading="busy"
+                    
                     :hint="autocompleteInfoMessage(busy)"
                     @keyup.ctrl.enter.stop="sendAutocompleteRequest"
 
@@ -253,7 +254,7 @@ export default {
             }
         },
 
-        queueUpdate(name) {
+        queueUpdate(name, delay = 1500) {
             if (this.updateTimeout !== null) {
                 clearTimeout(this.updateTimeout);
             }
@@ -262,7 +263,7 @@ export default {
 
             this.updateTimeout = setTimeout(() => {
                 this.update(name);
-            }, 500);
+            }, delay);
         },
 
         update(name) {

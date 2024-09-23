@@ -15,7 +15,7 @@ Once your AUTOAMTIC1111 API is running (check with your browser) you can set the
 
 ## Settings
 
-![Visual agent automatic1111 settings](/talemate/img/0.26.0/visual-agent-a1111-settings.png)
+![Visual agent automatic1111 settings](/talemate/img/0.27.0/automatic1111-settings.png)
 
 ##### API URL
 
@@ -24,6 +24,18 @@ The url of the API, if following this example, should be `http://localhost:7861`
 ##### Steps
 
 The number of steps to use for image generation. More steps will result in higher quality images but will take longer to generate.
+
+##### Sampling Method
+
+Which sampling method to use for image generation. 
+
+##### Schedule Type
+
+Which scheduler to use for image generation.
+
+##### CFG Scale
+
+CFG scale for image generation.
 
 ##### Model type
 

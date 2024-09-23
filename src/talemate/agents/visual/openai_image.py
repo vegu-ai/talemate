@@ -112,6 +112,7 @@ class OpenAIImageMixin:
             quality=self.openai_quality,
             n=1,
             response_format="b64_json",
+            timeout=self.generate_timeout,
         )
 
         await self.emit_image(response.data[0].b64_json)

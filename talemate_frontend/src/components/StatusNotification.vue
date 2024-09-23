@@ -26,7 +26,7 @@ export default {
                 case 'busy':
                     return -1;
                 case 'error':
-                    return 5000;
+                    return 8000;
                 default:
                     return 3000;
             }

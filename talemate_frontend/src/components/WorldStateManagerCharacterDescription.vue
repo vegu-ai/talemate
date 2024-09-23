@@ -12,13 +12,13 @@
     />
 
     <v-textarea ref="description" rows="5" auto-grow v-model="character.description"
-        :color="dirty ? 'info' : ''"
+        :color="dirty ? 'dirty' : ''"
 
         :disabled="busy"
         :loading="busy"
         @keyup.ctrl.enter.stop="sendAutocompleteRequest"
 
-        @update:model-value="queueUpdate"
+        @update:model-value="queueUpdate()"
         label="Description"
         :hint="'A short description of the character. '+autocompleteInfoMessage(busy)">
     </v-textarea>
@@ -75,7 +75,7 @@ export default {
         }
     },
     methods: {
-        queueUpdate() {
+        queueUpdate(delay = 1500) {
             if (this.updateTimeout !== null) {
                 clearTimeout(this.updateTimeout);
             }
@@ -84,7 +84,7 @@ export default {
 
             this.updateTimeout = setTimeout(() => {
                 this.update();
-            }, 500);
+            }, delay);
         },
         update() {
             this.getWebsocket().send(JSON.stringify({

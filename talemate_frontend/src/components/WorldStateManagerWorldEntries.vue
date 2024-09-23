@@ -12,14 +12,14 @@
                 :original="entry.text"
                 :requires-instructions="true"
                 :generation-options="generationOptions"
-                @generate="content => { entry.text=content; queueSave(); }"
+                @generate="content => { entry.text=content; queueSave(500); }"
             />
             <v-textarea 
                 v-model="entry.text"
                 label="World information"
                 hint="Describe the world information here. This could be a description of a location, a historical event, or anything else that is relevant to the world." 
-                :color="dirty ? 'info' : ''"
-                @update:model-value="queueSave"
+                :color="dirty ? 'dirty' : ''"
+                @update:model-value="queueSave()"
                 auto-grow
                 max-rows="24"
                 rows="5">
@@ -31,7 +31,7 @@
                 'This entry will only be included when pinned and never be included via automatic relevancy matching.' :
                 'This entry may be included via automatic relevancy matching.'
             )"
-            @change="queueSave"></v-checkbox>
+            @change="queueSave(500)"></v-checkbox>
         </v-form>
 
         <v-card-actions v-if="isNewEntry">
@@ -126,7 +126,7 @@ export default {
         },
     },
     methods: {
-        queueSave() {
+        queueSave(delay = 1500) {
 
             if(this.isNewEntry) {
                 return;
@@ -140,7 +140,7 @@ export default {
 
             this.timeout = setTimeout(() => {
                 this.save();
-            }, 500);
+            }, delay);
         },
 
         save() {

@@ -21,8 +21,8 @@
                         :label="state.question"
                         :disabled="busy"
                         hint="You can leave this blank as it will be automatically generated. Or you can fill it in to start with a specific answer."
-                        :color="dirty ? 'info' : ''"
-                        @update:model-value="queueSave"
+                        :color="dirty ? 'dirty' : ''"
+                        @update:model-value="queueSave()"
                         max-rows="15"
                         auto-grow
                         rows="5">
@@ -41,7 +41,8 @@
                     step="1" 
                     class="mb-2" 
                     :disabled="busy"
-                    @update:modelValue="queueSave" :color="dirty ? 'info' : ''">
+                    @update:modelValue="queueSave()" 
+                    :color="dirty ? 'dirty' : ''">
                     </v-text-field>
                 </v-col>
                 <v-col cols="6" xl="3">
@@ -51,7 +52,7 @@
                         class="mr-1 mb-1" 
                         :disabled="busy"
                         variant="underlined"  
-                        density="compact" @update:modelValue="queueSave" :color="dirty ? 'info' : ''">
+                        density="compact" @update:modelValue="save()" :color="dirty ? 'dirty' : ''">
                     </v-select>
                 </v-col>
             </v-row>
@@ -61,9 +62,9 @@
                     <v-textarea 
                         v-model="state.instructions"
                         label="Additional instructions to the AI for generating this state."
-                        :color="dirty ? 'info' : ''"
+                        :color="dirty ? 'dirty' : ''"
                         :disabled="busy"
-                        @update:model-value="queueSave"
+                        @update:model-value="queueSave()"
                         auto-grow
                         max-rows="5"
                         rows="3">
@@ -163,8 +164,7 @@ export default {
         },
     },
     methods: {
-        queueSave() {
-
+        queueSave(delay = 1500) {
             if(this.isNewState) {
                 return;
             }
@@ -177,7 +177,7 @@ export default {
 
             this.timeout = setTimeout(() => {
                 this.save();
-            }, 500);
+            }, delay);
         },
 
         save(updateState) {
@@ -253,9 +253,6 @@ export default {
             if (message.type !== 'world_state_manager') {
                 return;
             }
-
-            console.log('message', message);
-            
             if (message.action == 'world_state_reinforcement_set') {
                 this.dirty = false;
                 if(message.data.question === this.state.question) {

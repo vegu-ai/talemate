@@ -50,6 +50,17 @@
                 <v-icon class="ml-1 mr-3" v-else-if="isWaitingForInput()">mdi-keyboard</v-icon>
                 <v-icon class="ml-1 mr-3" v-else>mdi-circle-outline</v-icon>
 
+                <v-tooltip v-if="!isWaitingForInput()" location="top"
+                    text="Interrupt the current generation(s)"
+                    class="pre-wrap"
+                    max-width="300px">
+                    <template v-slot:activator="{ props }">
+                        <v-btn class="hotkey mr-3" v-bind="props"
+                            @click="interruptScene" color="primary" icon>
+                            <v-icon>mdi-stop-circle-outline</v-icon>
+                        </v-btn>
+                    </template>
+                </v-tooltip>
 
                 <v-divider vertical></v-divider>
 
@@ -686,6 +697,11 @@ export default {
 
         requestAutocompleteSuggestion() {
             this.getWebsocket().send(JSON.stringify({ type: 'interact', text: `!acdlg:${this.messageInput}` }));
+        },
+
+
+        interruptScene() {
+            this.getWebsocket().send(JSON.stringify({ type: 'interrupt' }));
         },
 
         handleMessage(data) {

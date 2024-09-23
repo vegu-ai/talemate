@@ -8,6 +8,7 @@ import talemate.game.engine.api as scoped_api
 from talemate.client.base import ClientBase
 from talemate.emit import emit
 from talemate.instance import get_agent
+from talemate.exceptions import GenerationCancelled
 
 if TYPE_CHECKING:
     from talemate.agents.director import DirectorAgent
@@ -53,6 +54,7 @@ class GameInstructionScope:
         log: object,
         scene: "Scene",
         module_function: callable,
+        on_generation_cancelled: callable = None,
     ):
         client = director.client
 
@@ -73,6 +75,7 @@ class GameInstructionScope:
         self.agents.world_state = scoped_api.agent_world_state.create(scene)
         self.agents.visual = scoped_api.agent_visual.create(scene)
         self.module_function = module_function
+        self.on_generation_cancelled = on_generation_cancelled
 
         # set assert_scene_active as a method on all scoped api objects
 
@@ -89,7 +92,11 @@ class GameInstructionScope:
         self.agents.visual.assert_scene_active = assert_scene_active
 
     def __call__(self):
-        self.module_function(self)
+        try:
+            self.module_function(self)
+        except GenerationCancelled as exc:
+            if callable(self.on_generation_cancelled):
+                self.on_generation_cancelled(self, exc)
 
     def emit_status(self, status: str, message: str, **kwargs):
         if kwargs:

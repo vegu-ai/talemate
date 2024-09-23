@@ -19,8 +19,10 @@ nest_asyncio.apply()
 
 DEV_MODE = True
 
+def empty_function(*args, **kwargs):
+    pass
 
-def compile_scene_module(module_code: str, **kwargs):
+def compile_scene_module(module_code: str, **kwargs) -> dict[str, callable]:
     # Compile the module code using RestrictedPython
     compiled_code = compile_restricted(
         module_code, filename="<scene instructions>", mode="exec"
@@ -45,7 +47,10 @@ def compile_scene_module(module_code: str, **kwargs):
     # Execute the compiled code with the restricted globals
     exec(compiled_code, restricted_globals, safe_locals)
 
-    return safe_locals.get("game")
+    return {
+        "game": safe_locals.get("game"),
+        "on_generation_cancelled": safe_locals.get("on_generation_cancelled", empty_function)
+    }
 
 
 class GameInstructionsMixin:
@@ -153,11 +158,18 @@ class GameInstructionsMixin:
         # read thje file into _module property
         with open(module_path, "r") as f:
             module_code = f.read()
+            
+            scene_modules = compile_scene_module(module_code)
+            
+            if "game" not in scene_modules:
+                raise ValueError(f"`game` function not found in scene module {module_path}")
+            
             scene._module = GameInstructionScope(
                 director=self,
                 log=log,
                 scene=scene,
-                module_function=compile_scene_module(module_code),
+                module_function=scene_modules["game"],
+                on_generation_cancelled=scene_modules.get("on_generation_cancelled", empty_function)
             )
 
     async def scene_has_module(self, scene: "Scene"):

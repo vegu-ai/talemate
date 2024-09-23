@@ -2,20 +2,31 @@ from __future__ import annotations
 
 import asyncio
 import functools
-import os
-import shutil
-from typing import TYPE_CHECKING, Callable, List, Optional, Union
+import hashlib
+import uuid
+from typing import Callable
 
 import structlog
 from chromadb.config import Settings
 
 import talemate.events as events
 import talemate.util as util
-from talemate.agents.base import set_processing
+from talemate.agents.base import (
+    Agent,
+    AgentAction,
+    AgentActionConfig,
+    AgentDetail,
+    set_processing,
+)
 from talemate.config import load_config
-from talemate.context import scene_is_loading
+from talemate.context import scene_is_loading, active_scene
 from talemate.emit import emit
 from talemate.emit.signals import handlers
+from talemate.agents.memory.context import memory_request, MemoryRequest
+from talemate.agents.memory.exceptions import (
+    EmbeddingsModelLoadError,
+    SetDBError,
+)
 
 try:
     import chromadb
@@ -30,8 +41,7 @@ if not chromadb:
     log.info("ChromaDB not found, disabling Chroma agent")
 
 
-from .base import Agent, AgentDetail
-
+from talemate.agents.registry import register
 
 class MemoryDocument(str):
     def __new__(cls, text, meta, id, raw):
@@ -51,7 +61,44 @@ class MemoryAgent(Agent):
     """
 
     agent_type = "memory"
-    verbose_name = "Long-term memory"
+    verbose_name = "Memory"
+
+    def __init__(self, scene, **kwargs):
+        self.db = None
+        self.scene = scene
+        self.memory_tracker = {}
+        self.config = load_config()
+        self._ready_to_add = False
+
+        handlers["config_saved"].connect(self.on_config_saved)
+        
+        self.actions = {
+            "_config": AgentAction(
+                enabled=True,
+                label="Configure",
+                description="Memory agent configuration",
+                config={
+                    "embeddings": AgentActionConfig(
+                        type="text",
+                        value="default",
+                        label="Embeddings",
+                        choices=self.get_presets,
+                        description="Which embeddings to use",
+                    ),
+                    "device": AgentActionConfig(
+                        type="text",
+                        value="cpu",
+                        label="Device",
+                        description="Which device to use for embeddings (for local embeddings)",
+                        note="Making changes to the embeddings or the device while a scene is loaded will cause the memory database to be re-imported. Depending on the size of the model and scene this may take a while.",
+                        choices=[
+                            {"value": "cpu", "label": "CPU"},
+                            {"value": "cuda", "label": "CUDA"},
+                        ]
+                    ),
+                },
+            ),
+        }
 
     @property
     def readonly(self):
@@ -65,29 +112,130 @@ class MemoryAgent(Agent):
     @property
     def db_name(self):
         raise NotImplementedError()
+    
+    @property
+    def get_presets(self):
+        return [
+            {"value": k, "label": f"{v['embeddings']}: {v['model']}"} for k,v in self.config.get("presets", {}).get("embeddings", {}).items()
+        ]
+        
+    @property
+    def embeddings_config(self):
+        _embeddings = self.actions["_config"].config["embeddings"].value
+        return self.config.get("presets", {}).get("embeddings", {}).get(_embeddings, {})
+    
+    @property
+    def embeddings(self):
+        return self.embeddings_config.get("embeddings", "sentence-transformer")
+        
+    @property
+    def using_openai_embeddings(self):
+        return self.embeddings == "openai"
 
-    @classmethod
-    def config_options(cls, agent=None):
-        return {}
+    @property
+    def using_instructor_embeddings(self):
+        return self.embeddings == "instructor"
+    
+    @property
+    def using_sentence_transformer_embeddings(self):
+        return self.embeddings == "default" or self.embeddings == "sentence-transformer"
+    
+    @property
+    def using_local_embeddings(self):
+        return self.embeddings in [
+            "instructor",
+            "sentence-transformer",
+            "default"
+        ]
+    
+    @property
+    def max_distance(self) -> float:
+        distance = float(self.embeddings_config.get("distance", 1.0))
+        distance_mod = float(self.embeddings_config.get("distance_mod", 1.0))
+        
+        return distance * distance_mod
+    
+    @property
+    def model(self):
+        return self.embeddings_config.get("model")
+    
+    @property
+    def distance_function(self):
+        return self.embeddings_config.get("distance_function", "l2")
 
-    def __init__(self, scene, **kwargs):
-        self.db = None
-        self.scene = scene
-        self.memory_tracker = {}
-        self.config = load_config()
-        self._ready_to_add = False
+    @property
+    def device(self) -> str:
+        return self.actions["_config"].config["device"].value
 
-        handlers["config_saved"].connect(self.on_config_saved)
+    @property
+    def trust_remote_code(self) -> bool:
+        return self.embeddings_config.get("trust_remote_code", False)
+
+    @property
+    def fingerprint(self) -> str:
+        """
+        Returns a unique fingerprint for the current configuration
+        """
+        return f"{self.embeddings}-{self.model.replace('/','-')}-{self.distance_function}-{self.device}-{self.trust_remote_code}".lower()   
+
+    async def apply_config(self, *args, **kwargs):
+        
+        _fingerprint = self.fingerprint
+        
+        await super().apply_config(*args, **kwargs)
+        
+        fingerprint_changed = _fingerprint != self.fingerprint
+        
+        # have embeddings or device changed?
+        if fingerprint_changed:
+            log.warning("memory agent", status="embedding function changed", old=_fingerprint, new=self.fingerprint)
+            await self.handle_embeddings_change()
+            
+    
+    @set_processing
+    async def handle_embeddings_change(self):
+        scene = active_scene.get()
+        
+        if not scene or not scene.get_helper("memory"):
+            return
+        
+        self.close_db(scene)
+        emit("status", "Re-importing context database", status="busy")
+        await scene.commit_to_memory()
+        if not scene.immutable_save:
+            await scene.save(auto=True)
+        emit("status", "Context database re-imported", status="success")
 
     def on_config_saved(self, event):
+        loop = asyncio.get_running_loop()
         openai_key = self.openai_api_key
+        
+        fingerprint = self.fingerprint
+        
         self.config = load_config()
+            
+        if fingerprint != self.fingerprint:
+            log.warning("memory agent", status="embedding function changed", old=fingerprint, new=self.fingerprint)
+            loop.run_until_complete(self.handle_embeddings_change())
+            
         if openai_key != self.openai_api_key:
-            loop = asyncio.get_running_loop()
             loop.run_until_complete(self.emit_status())
 
+    @set_processing
     async def set_db(self):
-        raise NotImplementedError()
+        loop = asyncio.get_running_loop()
+        try:
+            await loop.run_in_executor(None, self._set_db)
+        except EmbeddingsModelLoadError:
+            raise
+        except Exception as e:
+            log.error("memory agent", error="failed to set db", details=e)
+            
+            if "torchvision::nms does not exist" in str(e):
+                raise SetDBError("The embeddings you are trying to use require the `torchvision` package to be installed")
+            
+            raise SetDBError(str(e))
+
 
     def close_db(self):
         raise NotImplementedError()
@@ -180,12 +328,6 @@ class MemoryAgent(Agent):
         """
         raise NotImplementedError()
 
-    def _delete(self, meta: dict):
-        """
-        Delete an object from the memory
-        """
-        raise NotImplementedError()
-
     @set_processing
     async def delete(self, meta: dict):
         """
@@ -201,13 +343,20 @@ class MemoryAgent(Agent):
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._delete, meta)
 
+    def _delete(self, meta: dict):
+        """
+        Delete an object from the memory
+        """
+        raise NotImplementedError()
+
     @set_processing
     async def get(self, text, character=None, **query):
-        loop = asyncio.get_running_loop()
-
-        return await loop.run_in_executor(
-            None, functools.partial(self._get, text, character, **query)
-        )
+        with MemoryRequest(query=text, query_params=query) as active_memory_request:
+            active_memory_request.max_distance = self.max_distance
+            return await asyncio.to_thread(self._get, text, character, **query)
+            #return await loop.run_in_executor(
+            #    None, functools.partial(self._get, text, character, **query)
+            #)
 
     def _get(self, text, character=None, **query):
         raise NotImplementedError()
@@ -228,22 +377,6 @@ class MemoryAgent(Agent):
     def connect(self, scene):
         super().connect(scene)
         scene.signals["archive_add"].connect(self.on_archive_add)
-
-    def add_chunks(self, lines: list[str], chunk_size=200):
-        current_chunk = []
-        current_size = 0
-        for line in lines:
-            current_size += util.count_tokens(line)
-
-            if current_size > chunk_size:
-                self.add("\n".join(current_chunk))
-                current_chunk = [line]
-                current_size = util.count_tokens(line)
-            else:
-                current_chunk.append(line)
-
-        if current_chunk:
-            self.add("\n".join(current_chunk))
 
     async def memory_context(
         self,
@@ -274,6 +407,7 @@ class MemoryAgent(Agent):
                 break
         return memory_context
 
+    @set_processing
     async def query(
         self,
         query: str,
@@ -294,6 +428,7 @@ class MemoryAgent(Agent):
         except IndexError:
             return None
 
+    @set_processing
     async def multi_query(
         self,
         queries: list[str],
@@ -334,9 +469,6 @@ class MemoryAgent(Agent):
         return memory_context
 
 
-from .registry import register
-
-
 @register(condition=lambda: chromadb is not None)
 class ChromaDBMemoryAgent(MemoryAgent):
     requires_llm_client = False
@@ -372,9 +504,21 @@ class ChromaDBMemoryAgent(MemoryAgent):
             "embeddings": AgentDetail(
                 icon="mdi-cube-unfolded",
                 value=self.embeddings,
+                description="The embeddings type.",
+            ).model_dump(),
+            "model": AgentDetail(
+                icon="mdi-brain",
+                value=self.model,
                 description="The embeddings model.",
             ).model_dump(),
         }
+        
+        if self.using_local_embeddings:
+            details["device"] = AgentDetail(
+                icon="mdi-memory",
+                value=self.device,
+                description="The device to use for embeddings.",
+            ).model_dump()
 
         if self.embeddings == "openai" and not self.openai_api_key:
             # return "No OpenAI API key set"
@@ -388,48 +532,6 @@ class ChromaDBMemoryAgent(MemoryAgent):
         return details
 
     @property
-    def embeddings(self):
-        """
-        Returns which embeddings to use
-
-        will read from TM_CHROMADB_EMBEDDINGS env variable and default to 'default' using
-        the default embeddings specified by chromadb.
-
-        other values are
-
-        - openai: use openai embeddings
-        - instructor: use instructor embeddings
-
-        for `openai`:
-
-        you will also need to provide an `OPENAI_API_KEY` env variable
-
-        for `instructor`:
-
-        you will also need to provide which instructor model to use with the `TM_INSTRUCTOR_MODEL` env variable, which defaults to hkunlp/instructor-xl
-
-        additionally you can provide the `TM_INSTRUCTOR_DEVICE` env variable to specify which device to use, which defaults to cpu
-        """
-
-        embeddings = self.config.get("chromadb").get("embeddings")
-
-        assert embeddings in [
-            "default",
-            "openai",
-            "instructor",
-        ], f"Unknown embeddings {embeddings}"
-
-        return embeddings
-
-    @property
-    def USE_OPENAI(self):
-        return self.embeddings == "openai"
-
-    @property
-    def USE_INSTRUCTOR(self):
-        return self.embeddings == "instructor"
-
-    @property
     def db_name(self):
         return getattr(self, "collection_name", "<unnamed>")
 
@@ -437,37 +539,24 @@ class ChromaDBMemoryAgent(MemoryAgent):
     def openai_api_key(self):
         return self.config.get("openai", {}).get("api_key")
 
-    def make_collection_name(self, scene):
-        if self.USE_OPENAI:
-            model_name = self.config.get("chromadb").get(
-                "openai_model", "text-embedding-3-small"
-            )
-            if model_name == "text-embedding-ada-002":
-                suffix = "-openai"
-            else:
-                suffix = f"-openai-{model_name}"
-        elif self.USE_INSTRUCTOR:
-            suffix = "-instructor"
-            model = self.config.get("chromadb").get(
-                "instructor_model", "hkunlp/instructor-xl"
-            )
-            if "xl" in model:
-                suffix += "-xl"
-            elif "large" in model:
-                suffix += "-large"
-        else:
-            suffix = ""
+    def make_collection_name(self, scene) -> str:
+        # generate plain text collection name
+        collection_name = f"{self.fingerprint}"
+        
+        # chromadb collection names have the following rules:
+        # Expected collection name that (1) contains 3-63 characters, (2) starts and ends with an alphanumeric character, (3) otherwise contains only alphanumeric characters, underscores or hyphens (-), (4) contains no two consecutive periods (..) and (5) is not a valid IPv4 address
 
-        return f"{scene.memory_id}-tm{suffix}"
-
+        # Step 1: Hash the input string using MD5
+        md5_hash = hashlib.md5(collection_name.encode()).hexdigest()
+        
+        # Step 2: Ensure the result is exactly 32 characters long
+        hashed_collection_name = md5_hash[:32]
+        
+        return f"{scene.memory_id}-tm-{hashed_collection_name}"
+        
     async def count(self):
         await asyncio.sleep(0)
         return self.db.count()
-
-    @set_processing
-    async def set_db(self):
-        loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._set_db)
 
     def _set_db(self):
         self._ready_to_add = False
@@ -485,20 +574,21 @@ class ChromaDBMemoryAgent(MemoryAgent):
         log.info(
             "chromadb agent", status="setting up db", collection_name=collection_name
         )
-
-        if self.USE_OPENAI:
+        
+        distance_function = self.distance_function
+        collection_metadata = {"hnsw:space": distance_function}
+        device =  self.actions["_config"].config["device"].value
+        model_name = self.model
+        
+        if self.using_openai_embeddings:
             if not openai_key:
                 raise ValueError(
                     "You must provide an the openai ai key in the config if you want to use it for chromadb embeddings"
                 )
 
-            model_name = self.config.get("chromadb").get(
-                "openai_model", "text-embedding-3-small"
-            )
-
             log.info(
-                "crhomadb",
-                status="using openai",
+                "chromadb",
+                embeddings="OpenAI",
                 openai_key=openai_key[:5] + "...",
                 model=model_name,
             )
@@ -507,38 +597,49 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 model_name=model_name,
             )
             self.db = self.db_client.get_or_create_collection(
-                collection_name, embedding_function=openai_ef
+                collection_name, embedding_function=openai_ef, metadata=collection_metadata
             )
-        elif self.USE_INSTRUCTOR:
-            instructor_device = self.config.get("chromadb").get(
-                "instructor_device", "cpu"
-            )
-            instructor_model = self.config.get("chromadb").get(
-                "instructor_model", "hkunlp/instructor-xl"
-            )
-
+        elif self.using_instructor_embeddings:
             log.info(
                 "chromadb",
-                status="using instructor",
-                model=instructor_model,
-                device=instructor_device,
+                embeddings="Instructor-XL",
+                model=model_name,
+                device=device,
             )
 
-            # ef = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-mpnet-base-v2")
             ef = embedding_functions.InstructorEmbeddingFunction(
-                model_name=instructor_model, device=instructor_device
+                model_name=model_name, device=device
             )
 
             log.info("chromadb", status="embedding function ready")
-
             self.db = self.db_client.get_or_create_collection(
-                collection_name, embedding_function=ef
+                collection_name, embedding_function=ef, metadata=collection_metadata
             )
-
             log.info("chromadb", status="instructor db ready")
         else:
-            log.info("chromadb", status="using default embeddings")
-            self.db = self.db_client.get_or_create_collection(collection_name)
+            log.info(
+                "chromadb", 
+                embeddins="SentenceTransformer", 
+                model=model_name,
+                device=device,
+                distance_function=distance_function
+            )
+            
+            try:
+                ef = embedding_functions.SentenceTransformerEmbeddingFunction(
+                    model_name=model_name,
+                    trust_remote_code=self.trust_remote_code,
+                    device=device
+                )
+            except ValueError as e:
+                if "`trust_remote_code=True` to remove this error" in str(e):
+                    raise EmbeddingsModelLoadError(model_name, "Model requires `Trust remote code` to be enabled")
+                raise EmbeddingsModelLoadError(model_name, str(e))
+                
+            
+            self.db = self.db_client.get_or_create_collection(
+                collection_name, embedding_function=ef, metadata=collection_metadata
+            )
 
         self.scene._memory_never_persisted = self.db.count() == 0
         log.info("chromadb agent", status="db ready")
@@ -698,23 +799,25 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         _results = self.db.query(query_texts=[text], where=where, n_results=limit)
 
-        # import json
-        # print(json.dumps(_results["ids"], indent=2))
-        # print(json.dumps(_results["distances"], indent=2))
+        #import json
+        #print(json.dumps(_results["ids"], indent=2))
+        #print(json.dumps(_results["distances"], indent=2))
 
         results = []
 
-        max_distance = 1.5
-        if self.USE_INSTRUCTOR:
-            max_distance = 1
-        elif self.USE_OPENAI:
-            max_distance = 1
+        max_distance = self.max_distance
+        
+        closest = None
+        
+        active_memory_request = memory_request.get()
 
         for i in range(len(_results["distances"][0])):
             distance = _results["distances"][0][i]
 
             doc = _results["documents"][0][i]
             meta = _results["metadatas"][0][i]
+            
+            active_memory_request.add_result(doc, distance, meta)
 
             if not meta:
                 log.warning("chromadb agent get", error="no meta", doc=doc)
@@ -725,6 +828,11 @@ class ChromaDBMemoryAgent(MemoryAgent):
             # skip pin_only entries
             if meta.get("pin_only", False):
                 continue
+            
+            if closest is None:
+                closest = {"distance": distance, "doc": doc}
+            elif distance < closest["distance"]:
+                closest = {"distance": distance, "doc": doc}
 
             if distance < max_distance:
                 date_prefix = self.convert_ts_to_date_prefix(ts)
@@ -736,14 +844,19 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 doc = MemoryDocument(doc, meta, _results["ids"][0][i], raw)
 
                 results.append(doc)
-            else:
-                break
+                active_memory_request.accept_result(str(doc), distance, meta)
 
             # log.debug("crhomadb agent get", result=results[-1], distance=distance)
 
             if len(results) > limit:
                 break
-
+            
+        log.debug("chromadb agent get", closest=closest, max_distance=max_distance)
+        self.last_query = {
+            "query": text,
+            "closest": closest,
+        }
+        
         return results
 
     def convert_ts_to_date_prefix(self, ts):

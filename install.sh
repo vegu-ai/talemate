@@ -24,6 +24,8 @@ read -p "Do you want to install PyTorch with CUDA support? (y/n): " cuda
 # if not, torch with cpu is alrady installed so nothing needs to be done
 if [ $cuda == "y" ]; then
     echo "Installing PyTorch with CUDA support..."
+    # uninstall torch and torchaudio
+    pip uninstall torch torchaudio -y
     pip install torch~=2.4.1 torchaudio~=2.4.1 --index-url https://download.pytorch.org/whl/cu121
 fi
 

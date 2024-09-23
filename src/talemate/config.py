@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union
 import pydantic
 import structlog
 import yaml
+from enum import Enum
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated
 
@@ -179,19 +180,72 @@ class TTSConfig(BaseModel):
     voices: list[TTSVoiceSamples] = pydantic.Field(default_factory=list)
 
 
-class ChromaDB(BaseModel):
-    instructor_device: str = "cpu"
-    instructor_model: str = "default"
-    openai_model: str = "text-embedding-3-small"
-    embeddings: str = "default"
-
-
 class RecentScene(BaseModel):
     name: str
     path: str
     filename: str
     date: str
     cover_image: Union[Asset, None] = None
+
+class EmbeddingFunctionPreset(BaseModel):
+    embeddings: str = "sentence-transformer"
+    model: str = "all-MiniLM-L6-v2"
+    trust_remote_code: bool = False
+    device: str = "cpu"
+    distance: float = 1.5
+    distance_mod: int = 1
+    distance_function: str = "l2"
+    fast: bool = True
+    gpu_recommendation: bool = False
+    local: bool = True
+    custom: bool = False
+
+
+
+def generate_chromadb_presets() -> dict[str, EmbeddingFunctionPreset]:
+    """
+    Returns a dict of default embedding presets
+    """
+    
+    return {
+        "default": EmbeddingFunctionPreset(),
+        "Alibaba-NLP/gte-base-en-v1.5": EmbeddingFunctionPreset(
+            embeddings="sentence-transformer",
+            model="Alibaba-NLP/gte-base-en-v1.5",
+            trust_remote_code=True,
+            distance=1,
+            distance_function="cosine",
+        ),
+        "openai": EmbeddingFunctionPreset(
+            embeddings="openai",
+            model="text-embedding-3-small",
+            distance=1,
+            local=False,
+        ),
+        "hkunlp/instructor-xl": EmbeddingFunctionPreset(
+            embeddings="instructor",
+            model="hkunlp/instructor-xl",
+            distance=1,
+            local=True,
+            fast=False,
+            gpu_recommendation=True,
+        ),
+        "hkunlp/instructor-large": EmbeddingFunctionPreset(
+            embeddings="instructor",
+            model="hkunlp/instructor-large",
+            distance=1,
+            local=True,
+            fast=False,
+            gpu_recommendation=True,
+        ),
+        "hkunlp/instructor-base": EmbeddingFunctionPreset(
+            embeddings="instructor",
+            model="hkunlp/instructor-base",
+            distance=1,
+            local=True,
+            fast=True,
+        ),
+    }
 
 
 class InferenceParameters(BaseModel):
@@ -247,6 +301,9 @@ class InferencePresets(BaseModel):
 class Presets(BaseModel):
     inference_defaults: InferencePresets = InferencePresets()
     inference: InferencePresets = InferencePresets()
+    
+    embeddings_defaults: dict[str, EmbeddingFunctionPreset] = pydantic.Field(default_factory=generate_chromadb_presets)
+    embeddings: dict[str, EmbeddingFunctionPreset] = pydantic.Field(default_factory=generate_chromadb_presets)
 
 
 def gnerate_intro_scenes():
@@ -400,8 +457,6 @@ class Config(BaseModel):
 
     google: GoogleConfig = GoogleConfig()
 
-    chromadb: ChromaDB = ChromaDB()
-
     elevenlabs: ElevenLabsConfig = ElevenLabsConfig()
 
     coqui: CoquiConfig = CoquiConfig()
@@ -474,11 +529,14 @@ def save_config(config, file_path: str = "./config.yaml"):
 
     # we dont want to persist the following, so we drop them:
     # - presets.inference_defaults
-    try:
+    # - presets.embeddings_defaults
+    
+    if "inference_defaults" in config["presets"]:
         config["presets"].pop("inference_defaults")
-    except KeyError:
-        pass
-
+        
+    if "embeddings_defaults" in config["presets"]:
+        config["presets"].pop("embeddings_defaults")
+    
     # for normal presets we only want to persist if they have changed
     for preset_name, preset in list(config["presets"]["inference"].items()):
         if not preset.get("changed"):

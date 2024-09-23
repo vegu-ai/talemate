@@ -8,6 +8,10 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 import structlog
 
 import talemate.client as client
+from talemate.client.context import (
+    client_context_attribute,
+    set_client_context_attribute,
+)
 import talemate.emit.async_signals
 import talemate.util as util
 from talemate.agents.base import Agent, AgentAction, AgentActionConfig, AgentEmission
@@ -17,6 +21,8 @@ from talemate.emit import emit
 from talemate.events import GameLoopActorIterEvent
 from talemate.prompts import Prompt
 from talemate.scene_message import NarratorMessage
+
+from talemate.instance import get_agent
 
 from .registry import register
 
@@ -75,14 +81,31 @@ class NarratorAgent(Agent):
         self.actions = {
             "generation_override": AgentAction(
                 enabled=True,
-                label="Generation Override",
-                description="Override generation parameters",
+                label="Generation Settings",
                 config={
+                    "length": AgentActionConfig(
+                        type="number",
+                        label="Max. Generation Length (tokens)",
+                        description="Maximum number of tokens to generate for narrative text. Some narrative actions generate longer or shorter texts. This value is used as a maximum limit.",
+                        value=192,
+                        min=32,
+                        max=1024,
+                        step=32,
+                    ), 
                     "instructions": AgentActionConfig(
                         type="text",
                         label="Instructions",
                         value="Never wax poetic.",
                         description="Extra instructions to give to the AI for narrative generation.",
+                    ),
+                    "jiggle": AgentActionConfig(
+                        type="number",
+                        label="Jiggle (Increased Randomness)",
+                        description="If > 0.0 will cause certain generation parameters to have a slight random offset applied to them. The bigger the number, the higher the potential offset.",
+                        value=0.0,
+                        min=0.0,
+                        max=1.0,
+                        step=0.1,
                     ),
                 },
             ),
@@ -138,12 +161,24 @@ class NarratorAgent(Agent):
         }
 
     @property
-    def extra_instructions(self):
+    def extra_instructions(self) -> str:
         if self.actions["generation_override"].enabled:
             return self.actions["generation_override"].config["instructions"].value
         return ""
 
-    def clean_result(self, result):
+    @property
+    def jiggle(self) -> float:
+        if self.actions["generation_override"].enabled:
+            return self.actions["generation_override"].config["jiggle"].value
+        return 0.0
+
+    @property
+    def max_generation_length(self) -> int:
+        if self.actions["generation_override"].enabled:
+            return self.actions["generation_override"].config["length"].value
+        return 128
+
+    def clean_result(self, result:str, ensure_dialog_format:bool=True, force_narrative:bool=True) -> str:
         """
         Cleans the result of a narration
         """
@@ -157,13 +192,36 @@ class NarratorAgent(Agent):
 
         cleaned = []
         for line in result.split("\n"):
+            log.debug("clean_result", line=line)
+            
+            character_dialogue_detected = False
+            
             for character_name in character_names:
-                if line.startswith(f"{character_name}:"):
+                if line.lower().startswith(f"{character_name}:"):
+                    character_dialogue_detected = True
+                elif line.startswith(f"{character_name.upper()}"):
+                    character_dialogue_detected = True
+                    
+                if character_dialogue_detected:
                     break
+            
+            if character_dialogue_detected:
+                break
+                
             cleaned.append(line)
 
         result = "\n".join(cleaned)
-        # result = util.strip_partial_sentences(result)
+        
+        result = util.strip_partial_sentences(result)
+        
+        if force_narrative:
+            if "*" not in result and '"' not in result:
+                result = f"*{result.strip()}*"
+        
+        if ensure_dialog_format:
+            result = util.ensure_dialog_format(result)
+
+        
         return result
 
     def connect(self, scene):
@@ -259,17 +317,18 @@ class NarratorAgent(Agent):
             },
         )
 
-        response = response.strip("*")
-        response = util.strip_partial_sentences(response)
-
-        response = f"*{response.strip('*')}*"
+        response = self.clean_result(response.strip())
 
         return response
 
     @set_processing
-    async def progress_story(self, narrative_direction: str = None):
+    async def progress_story(self, narrative_direction: str | None = None):
         """
-        Narrate the scene
+        Narrate scene progression, moving the plot forward.
+        
+        Arguments:
+        
+        - narrative_direction: A string describing the direction the narrative should take. If not provided, will attempt to subtly move the story forward.
         """
 
         scene = self.scene
@@ -302,13 +361,7 @@ class NarratorAgent(Agent):
         self.scene.log.info("progress_story", response=response)
 
         response = self.clean_result(response.strip())
-
-        response = response.strip().strip("*")
-        response = f"*{response}*"
-        if response.count("*") % 2 != 0:
-            response = response.replace("*", "")
-            response = f"*{response}*"
-
+        
         return response
 
     @set_processing
@@ -331,11 +384,11 @@ class NarratorAgent(Agent):
                 "extra_instructions": self.extra_instructions,
             },
         )
-        log.info("narrate_query", response=response)
-        response = self.clean_result(response.strip())
-        log.info("narrate_query (after clean)", response=response)
-        if as_narrative:
-            response = f"*{response}*"
+        response = self.clean_result(
+            response.strip(), 
+            ensure_dialog_format=False, 
+            force_narrative=as_narrative
+        )
 
         return response
 
@@ -357,8 +410,7 @@ class NarratorAgent(Agent):
             },
         )
 
-        response = self.clean_result(response.strip())
-        response = f"*{response}*"
+        response = self.clean_result(response.strip(), ensure_dialog_format=False, force_narrative=True)
 
         return response
 
@@ -434,7 +486,6 @@ class NarratorAgent(Agent):
         log.info("narrate_time_passage", response=response)
 
         response = self.clean_result(response.strip())
-        response = f"*{response}*"
 
         return response
 
@@ -496,7 +547,6 @@ class NarratorAgent(Agent):
         )
 
         response = self.clean_result(response.strip().strip("*"))
-        response = f"*{response}*"
 
         return response
 
@@ -520,7 +570,6 @@ class NarratorAgent(Agent):
         )
 
         response = self.clean_result(response.strip().strip("*"))
-        response = f"*{response}*"
 
         return response
 
@@ -544,7 +593,6 @@ class NarratorAgent(Agent):
         log.info("paraphrase", narration=narration, response=response)
 
         response = self.clean_result(response.strip().strip("*"))
-        response = f"*{response}*"
 
         return response
 
@@ -629,10 +677,21 @@ class NarratorAgent(Agent):
             kind=kind,
             agent_function_name=agent_function_name,
         )
-        character_names = [f"\n{c.name}:" for c in self.scene.get_characters()]
+        
+        # depending on conversation format in the context, stopping strings
+        # for character names may change format
+        conversation_agent = get_agent("conversation")
+        
+        if conversation_agent.conversation_format == "movie_script":
+            character_names = [f"\n{c.name.upper()}\n" for c in self.scene.get_characters()]
+        else: 
+            character_names = [f"\n{c.name}:" for c in self.scene.get_characters()]
+        
         if prompt_param.get("extra_stopping_strings") is None:
             prompt_param["extra_stopping_strings"] = []
         prompt_param["extra_stopping_strings"] += character_names
+        
+        self.set_generation_overrides(prompt_param)
 
     def allow_repetition_break(
         self, kind: str, agent_function_name: str, auto: bool = False
@@ -641,3 +700,17 @@ class NarratorAgent(Agent):
             return False
 
         return True
+
+    def set_generation_overrides(self, prompt_param: dict):
+        if not self.actions["generation_override"].enabled:
+            return
+
+        prompt_param["max_tokens"] = min(prompt_param.get("max_tokens", 256), self.max_generation_length)
+
+        if self.jiggle > 0.0:
+            nuke_repetition = client_context_attribute("nuke_repetition")
+            if nuke_repetition == 0.0:
+                # we only apply the agent override if some other mechanism isn't already
+                # setting the nuke_repetition value
+                nuke_repetition = self.jiggle
+                set_client_context_attribute("nuke_repetition", nuke_repetition)

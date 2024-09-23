@@ -11,7 +11,11 @@
 {% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
+{% if not can_coerce -%}
 Continue {{ character.name }}'s unfinished line in this screenplay.
+{%- else -%}
+Write {{ character.name }}'s next line in this screenplay.
+{%- endif %}
 
 Your response MUST only be the new parts of {{ character.name }}'s dialogue, not the entire line.
 Your response MUST be short. (10 - 15 words)
@@ -20,11 +24,12 @@ Your response MUST NOT include the provided text, only the new parts.
 All actions and prose must be contained within * markers.
 All spoken word must be contained within " markers.
 
-Continue this text: {{ character.name }}: {{ input }}
 {% if not can_coerce -%}
+Continue this text: {{ character.name }}: {{ input }}
 Continuation: 
 <|CLOSE_SECTION|>
 {%- else -%}
 <|CLOSE_SECTION|>
-{{ bot_token }}{{ input }}
+{{ bot_token }}{{ character.name.upper() }}
+{{ input }}
 {%- endif -%}

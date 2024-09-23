@@ -127,8 +127,10 @@
                             </td>
                             <td>
                                 <v-textarea rows="1" auto-grow density="compact" hide-details
-                                    :color="entry.dirty ? 'info' : ''" v-model="entry.text"
-                                    @update:model-value="queueUodate(entry)"></v-textarea>
+                                    :color="entry.dirty ? 'dirty' : ''" v-model="entry.text"
+                                    @update:model-value="queueUodate(entry)"
+                                    >
+                                </v-textarea>
                             </td>
                             <td class="text-center">
                                 <v-tooltip :text="entryHasPin(entry.id) ? 'Manage pin' : 'Add pin'">
@@ -303,7 +305,7 @@ export default {
             delete this.newEntry.meta[name];
         },
 
-        queueUodate(entry) {
+        queueUodate(entry, delay = 1500) {
             if (this.updateTimeout !== null) {
                 clearTimeout(this.updateTimeout);
             }
@@ -313,7 +315,7 @@ export default {
             this.updateTimeout = setTimeout(() => {
                 this.update(entry);
                 entry.dirty = false;
-            }, 500);
+            }, delay);
         },
 
         update(entry) {
@@ -380,7 +382,7 @@ export default {
             }
             else if (message.action === 'context_db_updated') {
                 this.$emit('request-sync')
-                this.load(message.data.id);
+                //this.load(message.data.id);
             }
             else if (message.action === 'context_db_deleted') {
                 let entry_id = message.data.id;

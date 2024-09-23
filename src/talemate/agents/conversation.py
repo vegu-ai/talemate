@@ -106,7 +106,7 @@ class ConversationAgent(Agent):
                         min=32,
                         max=512,
                         step=32,
-                    ),  #
+                    ),
                     "instructions": AgentActionConfig(
                         type="text",
                         label="Instructions",

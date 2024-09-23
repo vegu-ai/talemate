@@ -28,8 +28,8 @@
                 :disabled="dialogueInstructionsBusy"
                 placeholder="speak less formally, use more contractions, and be more casual." 
                 v-model="dialogueInstructions" label="Acting Instructions" 
-                :color="dialogueInstructionsDirty ? 'primary' : null"
-                @update:model-value="queueUpdateCharacterActor"
+                :color="dialogueInstructionsDirty ? 'info' : null"
+                @update:model-value="queueUpdateCharacterActor()"
                 rows="3" 
                 auto-grow></v-textarea>
                 <v-alert icon="mdi-bullhorn" density="compact" variant="text" color="grey">
@@ -57,7 +57,7 @@
                     :character="character.name"
                     :rewrite-enabled="false"
                     :generation-options="generationOptions"
-                    @generate="content => { dialogueExamples.push(content); queueUpdateCharacterActor(); }"
+                    @generate="content => { dialogueExamples.push(content); queueUpdateCharacterActor(500); }"
                 />
 
 
@@ -113,6 +113,15 @@ export default {
             return `Automatically generate dialogue instructions for ${this.character.name}, based on their attributes and description`;
         }
     },
+    watch: {
+        character: {
+            handler() {
+                this.dialogueInstructions = this.character.actor.dialogue_instructions;
+                this.dialogueExamples = this.character.actor.dialogue_examples;
+            },
+            deep: true
+        }
+    },
     props: {
         character: Object,
         templates: Object,
@@ -124,12 +133,12 @@ export default {
     inject: ['getWebsocket', 'registerMessageHandler'],
     methods: {
 
-        queueUpdateCharacterActor() {
+        queueUpdateCharacterActor(delay = 1500) {
             this.dialogueInstructionsDirty = true;
             if (this.updateCharacterActorTimeout) {
                 clearTimeout(this.updateCharacterActorTimeout);
             }
-            this.updateCharacterActorTimeout = setTimeout(this.updateCharacterActor, 500);
+            this.updateCharacterActorTimeout = setTimeout(this.updateCharacterActor, delay);
         },
         
         updateCharacterActor() {

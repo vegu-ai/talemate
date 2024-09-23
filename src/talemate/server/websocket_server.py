@@ -15,6 +15,7 @@ from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 from talemate.files import list_scenes_directory
 from talemate.load import load_scene
 from talemate.scene_assets import Asset
+from talemate.agents.memory.exceptions import MemoryAgentError
 from talemate.server import (
     assistant,
     character_importer,
@@ -203,9 +204,15 @@ class WebsocketHandler(Receiver):
             scene.active = True
 
             with ActiveScene(scene):
-                scene = await load_scene(
-                    scene, path_or_data, conversation_helper.agent.client, reset=reset
-                )
+                try:
+                    scene = await load_scene(
+                        scene, path_or_data, conversation_helper.agent.client, reset=reset
+                    )
+                except MemoryAgentError as e:
+                    emit("status", message=str(e), status="error")
+                    log.error("load_scene", error=str(e))
+                    return
+                
 
             self.scene = scene
 
@@ -375,6 +382,7 @@ class WebsocketHandler(Receiver):
                         "type": emission.typ,
                         "message": emission.message,
                         "data": emission.data,
+                        "meta": emission.meta,
                     }
                 )
             except Exception as e:

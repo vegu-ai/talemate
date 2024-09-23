@@ -6,6 +6,9 @@ To load the introductory `Infinity Quest` scenario, simply click on its entry in
 
 ![Load infinity quest](/talemate/img/0.26.0/getting-started-load-screen.png)
 
+!!! info "First time may take a moment"
+    When you load the a scenario for the first time, Talemate will need to initialize the long term memory model. Which likely means a download. Just be patient and it will be ready soon.
+
 ## Interacting with the scenario
 
 After a moment of loading, you will see the scenario's introductory message and be able to send a text interaction.

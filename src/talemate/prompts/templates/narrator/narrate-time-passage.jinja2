@@ -12,10 +12,12 @@ Player Character: {{ scene.get_player_character().name }}
 {% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-Narrate the passage of time that just occured, subtly move the story forward, and set up the next scene.
+Narrate the passage of time that just occured, subtly move the story forward, and set up the next scene. Your main goal is to fill in what happened during the time passage.
 
 {% if narrative %}
 Directions for new narration: {{ narrative }}
+
+These are directions and the events described have not happened yet, you are writing the narrative based on the directions.
 {% endif %}
 
 {{ extra_instructions }}

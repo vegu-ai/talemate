@@ -14,28 +14,21 @@ Player Character: {{ player_character.name }}
 {% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-YOU MUST WRITE FROM THE PERSPECTIVE OF THE NARRATOR.
+Maintain the existing writing style consistently throughout your narration.
+Advance the scene through vivid narration. Focus on the protagonist's actions, thoughts, and surroundings.
+Maintain continuity with the overall context. Prioritize scene progression.
+Use sensory details and internal monologue for immersion.
+Adopt an informal, conversational tone similar to 90s adventure games.
+Narrate as an omniscient storyteller, describing scenes and characters' inner experiences.
+Generate descriptive prose and internal thoughts. Avoid direct speech.
+Begin the next scene if the current one has ended.
+Speak only as the narrator, guiding the reader through the story world.
 
-Continue the current dialogue by narrating the progression of the scene.
-
-If the scene is over, narrate the beginning of the next scene.
-
-Consider the entire context and honor the sequentiality of the scene. Continue based on the final state of the dialogue.
-
-Progression of the scene is important. The last line is the most important, the first line is the least important.
-
-Be creative and generate something new and interesting, but stay true to the setting and context of the story so far.
-
-Use an informal and colloquial register with a conversational tone. Overall, the narrative is informal, conversational, natural, and spontaneous, with a sense of immediacy.
-
-Narration style should be that of a 90s point and click adventure game. You are omniscient and can describe the scene in detail.
-
-YOU MUST WRITE FROM THE PERSPECTIVE OF THE NARRATOR.
-
-Only generate new narration. Avoid including any character's internal thoughts or dialogue.
-
+Remember: You are the all-seeing narrator. Immerse the reader in the story through your descriptions and insights.
 {% if narrative_direction %}
 Directions for new narration: {{ narrative_direction }}
+
+These are directions and the events described have not happened yet, you are writing the narrative based on the directions.
 {% endif %}
 
 Write 2 to 4 sentences. {{ extra_instructions }}

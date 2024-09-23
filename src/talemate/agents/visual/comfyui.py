@@ -287,7 +287,7 @@ class ComfyUIMixin:
         log.info("comfyui_generate", payload=payload, url=url)
 
         async with httpx.AsyncClient() as client:
-            response = await client.post(url=f"{url}/prompt", json=payload, timeout=90)
+            response = await client.post(url=f"{url}/prompt", json=payload, timeout=self.generate_timeout)
 
         log.info("comfyui_generate", response=response.text)
 

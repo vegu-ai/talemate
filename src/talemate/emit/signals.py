@@ -20,6 +20,7 @@ AgentStatus = signal("agent_status")
 RequestAgentStatus = signal("request_agent_status")
 ClientBootstraps = signal("client_bootstraps")
 PromptSent = signal("prompt_sent")
+MemoryRequest = signal("memory_request")
 
 RemoveMessage = signal("remove_message")
 
@@ -71,4 +72,5 @@ handlers = {
     "image_generation_failed": ImageGenerationFailed,
     "autocomplete_suggestion": AutocompleteSuggestion,
     "spice_applied": SpiceApplied,
+    "memory_request": MemoryRequest,
 }

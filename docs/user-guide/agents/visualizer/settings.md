@@ -1,6 +1,6 @@
 # Settings
 
-![Visual agent settings](/talemate/img/0.26.0/visual-agent-settings.png)
+![Visual agent settings](/talemate/img/0.27.0/visual-agent-settings.png)
 
 ##### Client
 
@@ -26,6 +26,10 @@ The style to use for image generation. Prompts will be automatically adjusted to
 - Photo
 
 More styles will be added in the future and support for custom styles will be added as well.
+
+##### Image generation timeout
+
+The maximum time to wait for image generation to complete. If the image generation takes longer than this, it will be cancelled. Defaults to 300 seconds.
 
 ##### Automatic Setup
 

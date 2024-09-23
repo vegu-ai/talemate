@@ -31,6 +31,8 @@ SUPPORTED_MODELS = [
     "gpt-4o-2024-05-13",
     "gpt-4o",
     "gpt-4o-mini",
+    "o1-preview",
+    "o1-mini",
 ]
 
 # any model starting with gpt-4- is assumed to support 'json_object'
@@ -39,6 +41,8 @@ JSON_OBJECT_RESPONSE_MODELS = [
     "gpt-4o",
     "gpt-4o-mini",
     "gpt-3.5-turbo-0125",
+    "o1-preview",
+    "o1-mini",
 ]
 
 
@@ -70,7 +74,7 @@ def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0
             "Warning: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0613."
         )
         return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613")
-    elif "gpt-4" in model:
+    elif "gpt-4" in model or "o1" in model:
         print(
             "Warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613."
         )

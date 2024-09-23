@@ -21,6 +21,43 @@ from .style import STYLE_MAP, Style
 log = structlog.get_logger("talemate.agents.visual.automatic1111")
 
 
+SAMPLING_METHODS = [
+    {"value": "DPM++ 2M", "label": "DPM++ 2M"},
+    {"value": "DPM++ SDE", "label": "DPM++ SDE"},
+    {"value": "DPM++ 2M SDE", "label": "DPM++ 2M SDE"},
+    {"value": "DPM++ 2M SDE Heun", "label": "DPM++ 2M SDE Heun"},
+    {"value": "DPM++ 2S a", "label": "DPM++ 2S a"},
+    {"value": "DPM++ 3M SDE", "label": "DPM++ 3M SDE"},
+    {"value": "Euler a", "label": "Euler a"},
+    {"value": "Euler", "label": "Euler"},
+    {"value": "LMS", "label": "LMS"},
+    {"value": "Heun", "label": "Heun"},
+    {"value": "DPM2", "label": "DPM2"},
+    {"value": "DPM2 a", "label": "DPM2 a"},
+    {"value": "DPM fast", "label": "DPM fast"},
+    {"value": "DPM adaptive", "label": "DPM adaptive"},
+    {"value": "Restart", "label": "Restart"},
+]
+SAMPLING_METHODS = sorted(SAMPLING_METHODS, key=lambda x: x["label"])
+
+
+SAMPLING_SCHEDULES = [
+    {"value": "Automatic", "label": "Automatic"},
+    {"value": "Uniform", "label": "Uniform"},
+    {"value": "Karras", "label": "Karras"},
+    {"value": "Exponential", "label": "Exponential"},
+    {"value": "polyPolyexponentialexponential", "label": "Polyexponential"},
+    {"value": "SGM Uniform", "label": "SGM Uniform"},
+    {"value": "KL Optimal", "label": "KL Optimal"},
+    {"value": "Align Your Steps", "label": "Align Your Steps"},
+    {"value": "Simple", "label": "Simple"},
+    {"value": "Normal", "label": "Normal"},
+    {"value": "DDIM", "label": "DDIM"},
+    {"value": "Beta", "label": "Beta"},
+]
+
+SAMPLING_SCHEDULES = sorted(SAMPLING_SCHEDULES, key=lambda x: x["label"])
+
 @register(backend_name="automatic1111", label="AUTOMATIC1111")
 class Automatic1111Mixin:
 
@@ -52,6 +89,29 @@ class Automatic1111Mixin:
                     step=1,
                     description="number of render steps",
                 ),
+                "sampling_method": AgentActionConfig(
+                    type="text",
+                    choices=SAMPLING_METHODS,
+                    label="Sampling Method",
+                    description="The sampling method to use",
+                    value="DPM++ 2M",
+                ),
+                "schedule_type": AgentActionConfig(
+                    type="text",
+                    value="automatic",
+                    choices=SAMPLING_SCHEDULES,
+                    label="Schedule Type",
+                    description="The sampling schedule to use",
+                ),
+                "cfg": AgentActionConfig(
+                    type="number",
+                    value=7,
+                    label="CFG Scale",
+                    description="CFG scale",
+                    min=1,
+                    max=30,
+                    step=0.5,
+                ),
                 "model_type": AgentActionConfig(
                     type="text",
                     value="sdxl",
@@ -76,6 +136,18 @@ class Automatic1111Mixin:
         else:
             return self.automatic1111_default_render_settings
 
+    @property
+    def automatic1111_sampling_method(self):
+        return self.actions["automatic1111"].config["sampling_method"].value
+        
+    @property
+    def automatic1111_schedule_type(self):
+        return self.actions["automatic1111"].config["schedule_type"].value
+    
+    @property
+    def automatic1111_cfg(self):
+        return self.actions["automatic1111"].config["cfg"].value    
+
     async def automatic1111_generate(self, prompt: Style, format: str):
         url = self.api_url
         resolution = self.resolution_from_format(
@@ -88,13 +160,16 @@ class Automatic1111Mixin:
             "steps": render_settings.steps,
             "width": resolution.width,
             "height": resolution.height,
+            "cfg_scale": self.automatic1111_cfg,
+            "sampler_name": self.automatic1111_sampling_method,
+            "scheduler": self.automatic1111_schedule_type
         }
 
         log.info("automatic1111_generate", payload=payload, url=url)
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                url=f"{url}/sdapi/v1/txt2img", json=payload, timeout=90
+                url=f"{url}/sdapi/v1/txt2img", json=payload, timeout=self.generate_timeout
             )
 
         r = response.json()

@@ -6,6 +6,7 @@ import ipaddress
 import logging
 import random
 import time
+import asyncio
 from typing import Callable, Union
 
 import pydantic
@@ -22,7 +23,7 @@ from talemate.client.context import client_context_attribute
 from talemate.client.model_prompts import model_prompt
 from talemate.context import active_scene
 from talemate.emit import emit
-from talemate.exceptions import SceneInactiveError
+from talemate.exceptions import SceneInactiveError, GenerationCancelled
 
 # Set up logging level for httpx to WARNING to suppress debug logs.
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -469,12 +470,6 @@ class ClientBase:
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         parameters["stream"] = False
-        if client_context_attribute(
-            "nuke_repetition"
-        ) > 0.0 and self.jiggle_enabled_for(kind):
-            self.jiggle_randomness(
-                parameters, offset=client_context_attribute("nuke_repetition")
-            )
 
         fn_tune_kind = getattr(self, f"tune_prompt_parameters_{kind}", None)
         if fn_tune_kind:
@@ -484,6 +479,13 @@ class ClientBase:
         if agent_context.agent:
             agent_context.agent.inject_prompt_paramters(
                 parameters, kind, agent_context.action
+            )
+            
+        if client_context_attribute(
+            "nuke_repetition"
+        ) > 0.0 and self.jiggle_enabled_for(kind):
+            self.jiggle_randomness(
+                parameters, offset=client_context_attribute("nuke_repetition")
             )
 
     def tune_prompt_parameters_conversation(self, parameters: dict):
@@ -553,6 +555,59 @@ class ClientBase:
                 "status", message="Error during generation (check logs)", status="error"
             )
             return ""
+        
+        
+    def _generate_task(self, prompt: str, parameters: dict, kind: str):
+        """
+        Creates an asyncio task to generate text from the given prompt and parameters.
+        """
+        
+        return asyncio.create_task(self.generate(prompt, parameters, kind))
+    
+
+    def _poll_interrupt(self):
+        """
+        Creatates a task that continiously checks active_scene.cancel_requested and
+        will complete the task if it is requested.
+        """
+        
+        async def poll():
+            while True:
+                scene = active_scene.get()
+                if not scene or not scene.active or scene.cancel_requested:
+                    break
+                await asyncio.sleep(0.3)
+            return GenerationCancelled("Generation cancelled")
+        
+        return asyncio.create_task(poll())
+        
+    async def _cancelable_generate(self, prompt: str, parameters: dict, kind: str) -> str | GenerationCancelled:
+        
+        """
+        Queues the generation task and the poll task to be run concurrently.
+        
+        If the poll task completes before the generation task, the generation task
+        will be cancelled.
+        
+        If the generation task completes before the poll task, the poll task will
+        be cancelled.
+        """
+        
+        task_poll = self._poll_interrupt()
+        task_generate = self._generate_task(prompt, parameters, kind)
+        
+        done, pending = await asyncio.wait(
+            [task_poll, task_generate],
+            return_when=asyncio.FIRST_COMPLETED
+        )
+        
+        # cancel the remaining task
+        for task in pending:
+            task.cancel()
+        
+        # return the result of the completed task
+        return done.pop().result()
+        
 
     async def send_prompt(
         self,
@@ -609,8 +664,15 @@ class ClientBase:
                 parameters=prompt_param,
             )
             prompt_sent = self.repetition_adjustment(finalized_prompt)
-            response = await self.generate(prompt_sent, prompt_param, kind)
-
+            
+            response = await self._cancelable_generate(prompt_sent, prompt_param, kind)
+            
+            if isinstance(response, GenerationCancelled):
+                # generation was cancelled
+                raise response
+            
+            #response = await self.generate(prompt_sent, prompt_param, kind)
+            
             response, finalized_prompt = await self.auto_break_repetition(
                 finalized_prompt, prompt_param, response, kind, retries
             )
@@ -646,8 +708,10 @@ class ClientBase:
             )
 
             return response
+        except GenerationCancelled as e:
+            raise
         except Exception as e:
-            self.log.error("send_prompt error", e=e)
+            self.log.exception("send_prompt error", e=e)
             emit(
                 "status", message="Error during generation (check logs)", status="error"
             )

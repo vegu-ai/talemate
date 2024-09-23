@@ -48,6 +48,23 @@ python -m pip install "poetry==1.7.1" "rapidfuzz>=3" -U
 REM use poetry to install dependencies
 python -m poetry install
 
+REM installing torch
+echo Installiing PyTorch... 
+echo Checking for CUDA availability...
+
+REM we use nvcc to check for CUDA availability
+REM if cuda exists: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+REM else pip install torch torchvision torchaudio
+nvcc --version >nul 2>&1
+
+IF ERRORLEVEL 1 (
+    echo CUDA not found. Installing PyTorch without CUDA support...
+    python -m pip install torch==2.4.1 torchvision==2.4.1 torchaudio==2.4.1
+) ELSE (
+    echo CUDA found. Installing PyTorch with CUDA support...
+    python -m pip install torch==2.4.1 torchvision==2.4.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu121
+)
+
 REM copy config.example.yaml to config.yaml only if config.yaml doesn't exist
 IF NOT EXIST config.yaml copy config.example.yaml config.yaml
 

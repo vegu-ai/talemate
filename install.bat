@@ -54,15 +54,15 @@ echo Checking for CUDA availability...
 
 REM we use nvcc to check for CUDA availability
 REM if cuda exists: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-REM else pip install torch torchvision torchaudio
 nvcc --version >nul 2>&1
 
 IF ERRORLEVEL 1 (
-    echo CUDA not found. Installing PyTorch without CUDA support...
-    python -m pip install torch==2.4.1 torchvision==2.4.1 torchaudio==2.4.1
+    echo CUDA not found. Keeping PyTorch installation without CUDA support...
 ) ELSE (
     echo CUDA found. Installing PyTorch with CUDA support...
-    python -m pip install torch==2.4.1 torchvision==2.4.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cu121
+    REM uninstalling existing torch, torchvision, torchaudio
+    python -m pip uninstall torch torchvision torchaudio -y
+    python -m pip install torch==">=2.4.1,<3" torchvision==">=2.4.1,<3" torchaudio==">=2.4.1,<3" --index-url https://download.pytorch.org/whl/cu121
 )
 
 REM copy config.example.yaml to config.yaml only if config.yaml doesn't exist

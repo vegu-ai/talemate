@@ -50,6 +50,8 @@ numpy = "^1"
 # ChromaDB
 chromadb = ">=0.4.17,<1"
 InstructorEmbedding = "^1.0.1"
+torch = "^2.4.0"
+torchaudio = "^2.4.0"
 # locked for instructor embeddings
 #sentence-transformers="==2.2.2"
 sentence_transformers=">=2.7.0"

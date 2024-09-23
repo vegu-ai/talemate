@@ -14,6 +14,8 @@
 1. `git clone https://github.com/vegu-ai/talemate.git`
 1. `cd talemate`
 1. `source install.sh`
+    - When asked if you want to install pytorch with CUDA support choose `y` if you have
+        a CUDA compatible Nvidia GPU and have installed the necessary drivers.
 1. `source start.sh`
 
 If everything went well, you can proceed to [connect a client](../../connect-a-client).

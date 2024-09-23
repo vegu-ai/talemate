@@ -34,6 +34,11 @@ Select the embedding type and then enter the model name. When using sentence-tra
 
 ![Add new embedding](/talemate/img/0.27.0/embedding-settings-new-1.png)
 
+!!! warning "New embeddings require a download"
+    When you add a new embedding model and use it for the first time in the Memory agent, Talemate will download the model from Huggingface. This can take a while, depending on the size of the model and your internet connection.
+
+    You can track the download in the talemate process window. A better UX based download progress bar is planned for a future release.
+
 ## Editing an Embedding
 
 ![Edit embedding](/talemate/img/0.27.0/embedding-settings-edit.png)

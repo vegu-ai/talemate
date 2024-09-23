@@ -10,7 +10,12 @@
 1. copy config file
     1. linux: `cp config.example.yaml config.yaml` 
     1. windows: `copy config.example.yaml config.yaml`
-1. `docker compose up`
+1. If your host has a CUDA compatible Nvidia GPU
+    1. Windows (via PowerShell): `$env:CUDA_AVAILABLE="true"; docker-compose up`
+    1. Linux: `CUDA_AVAILABLE=true docker compose up`
+1. If your host does **NOT** have a CUDA compatible Nvidia GPU
+    1. Windows: `docker compose up`
+    1. Linux: `docker compose up`
 1. Navigate your browser to http://localhost:8080
 
 !!! note

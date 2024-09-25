@@ -44,14 +44,26 @@
       <v-chip size="x-small" color="grey-lighten-1" v-else-if="!editing && hovered" variant="text" class="mr-1">
         <v-icon>mdi-pencil</v-icon>
         Double-click to edit.</v-chip>
+        
+        <!-- create pin -->
         <v-chip size="x-small" label color="success" v-if="!editing && hovered" variant="outlined" @click="createPin(message_id)">
           <v-icon class="mr-1">mdi-pin</v-icon>
           Create Pin
         </v-chip>
+        
+        <!-- fix continuity errors 
         <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered" variant="outlined" @click="fixMessageContinuityErrors(message_id)">
           <v-icon class="mr-1">mdi-call-split</v-icon>
           Fix Continuity Errors
         </v-chip>
+        -->
+
+        <!-- fork scene -->
+        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered" variant="outlined" @click="forkSceneInitiate(message_id)">
+          <v-icon class="mr-1">mdi-source-fork</v-icon>
+          Fork Scene
+        </v-chip>
+
     </v-sheet>
     <div v-else style="height:24px">
 
@@ -62,7 +74,7 @@
 <script>
 export default {
   props: ['character', 'text', 'color', 'message_id'],
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage'],
+  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage'],
   computed: {
     parts() {
       const parts = [];

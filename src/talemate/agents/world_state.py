@@ -506,7 +506,7 @@ class WorldStateAgent(Agent):
         return response
 
     @set_processing
-    async def update_reinforcements(self, force: bool = False):
+    async def update_reinforcements(self, force: bool = False, reset: bool = False):
         """
         Queries due worldstate re-inforcements
         """
@@ -514,7 +514,7 @@ class WorldStateAgent(Agent):
         for reinforcement in self.scene.world_state.reinforce:
             if reinforcement.due <= 0 or force:
                 await self.update_reinforcement(
-                    reinforcement.question, reinforcement.character
+                    reinforcement.question, reinforcement.character, reset=reset
                 )
             else:
                 reinforcement.due -= 1

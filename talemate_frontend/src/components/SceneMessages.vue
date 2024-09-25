@@ -1,4 +1,10 @@
 <template>
+    <RequestInput 
+    ref="requestForkName" 
+    title="Save Forked Scene As"
+    instructions="A new copy of the scene will be forked from the message you've selected. All progress after the message will be removed, allowing you to make new choices and take the scene in a different direction."
+    @continue="(name, params) => { forkScene(params.message_id, name) }" /> 
+
     <div class="message-container" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;">
         <div v-for="(message, index) in messages" :key="index">
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
@@ -64,6 +70,7 @@ import NarratorMessage from './NarratorMessage.vue';
 import DirectorMessage from './DirectorMessage.vue';
 import TimePassageMessage from './TimePassageMessage.vue';
 import StatusMessage from './StatusMessage.vue';
+import RequestInput from './RequestInput.vue';
 
 const MESSAGE_FLAGS = {
     NONE: 0,
@@ -78,6 +85,7 @@ export default {
         DirectorMessage,
         TimePassageMessage,
         StatusMessage,
+        RequestInput,
     },
     data() {
         return {
@@ -90,6 +98,7 @@ export default {
             requestDeleteMessage: this.requestDeleteMessage,
             createPin: this.createPin,
             fixMessageContinuityErrors: this.fixMessageContinuityErrors,
+            forkSceneInitiate: this.forkSceneInitiate,
         }
     },
     methods: {
@@ -162,6 +171,21 @@ export default {
                 'status', 
                 'autocomplete_suggestion' 
             ].includes(type);
+        },
+
+        forkSceneInitiate(message_id) {
+            this.$refs.requestForkName.openDialog(
+                { message_id: message_id }
+            );
+        },
+
+        forkScene(message_id, save_name) {
+            this.getWebsocket().send(JSON.stringify({ 
+                type: 'assistant',
+                action: 'fork_new_scene',
+                message_id: message_id,
+                save_name: save_name,
+            }));
         },
 
         handleMessage(data) {

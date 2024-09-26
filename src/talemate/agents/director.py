@@ -94,7 +94,7 @@ class DirectorAgent(GameInstructionsMixin, Agent):
                         type="bool",
                         label="Enabled",
                         description="If enabled, the director will generate actions for you when it's your turn.",
-                        value=True,
+                        value=False,
                     ),
                     
                     "chance": AgentActionConfig(

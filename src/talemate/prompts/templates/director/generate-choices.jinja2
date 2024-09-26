@@ -8,40 +8,28 @@
 {% endblock -%}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-Generate {{ num_choices }} actions for the player character who is controlling {{ player_character.name }} to advance the text adventure game.
+Generate {{ num_choices }} interesting actions for {{ player_character.name }} to advance the current scene in this text adventure game. Consider:
 
-For example, they could look at something or someone to fill in more detail. 
+1. Examining intriguing objects or characters for more detail
+2. Interacting with the environment in meaningful ways
+3. Taking actions that naturally progress the story
 
-The actions must make sense for the current state of the scene. 
+Format each action as a short, concise command from {{ player_character.name }}'s perspective, such as:
+"Look at the strange artifact."
+"Ask the merchant about the rumors."
+"Climb the crumbling staircase."
+"Inspect the mysterious footprints."
+"Eavesdrop on the whispering guards."
+"Pick up the discarded letter."
+"Offer the beggar a coin."
+"Attempt to decipher the ancient runes."
+"Search the bookshelf for hidden compartments."
+"Try the rusty key in the lock."
 
-If the scene provides an opportunity for the player to do something interesting that should be considered as well.
+Ensure the actions:
+- Fit the scene's current context and writing style
+- Offer varied options without drastic pacing changes
+- Are significantly different from each other
 
-Consider:
-
-Was something visually interesting revealed? Maybe looking at it could provide more detail.
-
-Is there an action {{ player_character.name }} could take to move the scene forward?
-
-Examples of action text formatting:
-
-"Look at {object}."
-"Listen to the strange sound coming from outside."
-"Open the door."
-"Punch {character} in the face!"
-
-You must only provide engaging actions, less is more.
-
-You must only provide the action texts, nothing else.
-
-The action text must fit the writing style of the existing narrative. 
-
-The action text must be worded from {{ player_character.name }}'s perspective.
-
-The action text should be short and concise as it will be displayed as a clickable button in the context of a text adventure game.
-
-The actions must be significantly different from each other.
-
-The actions must make sense in the context of the scene's current state.
-
-Provide a numbered list.
+Provide a numbered list of actions, with no additional text.
 {{ set_prepared_response('1.') }}

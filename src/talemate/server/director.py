@@ -1,7 +1,9 @@
 import pydantic
 import structlog
 
+import talemate.util as util
 from talemate.emit import emit
+from talemate.context import interaction
 from talemate.instance import get_agent
 from talemate.scene_message import CharacterMessage
 
@@ -37,18 +39,7 @@ class DirectorPlugin:
         
     async def handle_select_choice(self, data: dict):
         payload = SelectChoicePayload(**data)
-        conversation = get_agent("conversation")
-        
         character = self.scene.get_player_character()
         actor = character.actor
         
-        messages = await conversation.converse(actor, only_generate=True, instruction=payload.choice)
-        
-        for message in messages:
-            character_message = CharacterMessage(
-                message, source="player"
-            )
-            self.scene.push_history(character_message)
-            emit("character", character_message, character=character)
-            
-        
+        await actor.generate_from_choice(payload.choice)

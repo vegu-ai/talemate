@@ -26,6 +26,9 @@
                     {{ choice }}
                 </v-list-item-title>
             </v-list-item>
+            <v-list-item @click="cancel" prepend-icon="mdi-cancel">
+                <v-list-item-title>Cancel</v-list-item-title>
+            </v-list-item>
         </v-list>
     </v-alert>
 

@@ -110,6 +110,7 @@ class SceneMessage:
 class CharacterMessage(SceneMessage):
     typ = "character"
     source: str = "ai"
+    from_choice: str | None = None
 
     def __str__(self):
         return self.message
@@ -125,6 +126,10 @@ class CharacterMessage(SceneMessage):
     @property
     def raw(self):
         return self.message.split(":", 1)[1].replace('"', "").replace("*", "").strip()
+    
+    @property
+    def without_name(self) -> str:
+        return self.message.split(":", 1)[1]
 
     @property
     def as_movie_script(self):
@@ -139,6 +144,14 @@ class CharacterMessage(SceneMessage):
         message = self.message.split(":", 1)[1].replace('"', "").strip()
 
         return f"\n{self.character_name.upper()}\n{message}\n"
+
+    def __dict__(self):
+        rv = super().__dict__()
+
+        if self.from_choice:
+            rv["from_choice"] = self.from_choice
+
+        return rv
 
     def as_format(self, format: str, **kwargs) -> str:
         if format == "movie_script":

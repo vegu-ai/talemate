@@ -83,15 +83,24 @@ class DirectorAgent(GameInstructionsMixin, Agent):
                     ),
                 },
             ),
-            "generate_choices": AgentAction(
+            "_generate_choices": AgentAction(
                 enabled=True,
-                label="Generate Actions",
-                description="Will generate clickable actions for the player character",
+                container=True,
+                label="Dynamic Actions",
+                icon="mdi-tournament",
+                description="Allows the director to generate clickable choices for the player.",
                 config={
+                    "enabled": AgentActionConfig(
+                        type="bool",
+                        label="Enabled",
+                        description="If enabled, the director will generate actions for you when it's your turn.",
+                        value=True,
+                    ),
+                    
                     "chance": AgentActionConfig(
                         type="number",
                         label="Chance",
-                        description="The chance to generate actions",
+                        description="The chance to generate actions. 0 = never, 1 = always",
                         value=0.5,
                         min=0,
                         max=1,
@@ -106,6 +115,13 @@ class DirectorAgent(GameInstructionsMixin, Agent):
                         min=1,
                         max=10,
                         step=1,
+                    ),
+                    
+                    "never_auto_progress": AgentActionConfig(
+                        type="bool",
+                        label="Never Auto Progress on Action Selection",
+                        description="If enabled, the scene will not auto progress after you select an action.",
+                        value=False,
                     ),
                 }
             ),
@@ -142,15 +158,19 @@ class DirectorAgent(GameInstructionsMixin, Agent):
 
     @property
     def generate_choices_enabled(self):
-        return self.actions["generate_choices"].enabled
+        return self.actions["_generate_choices"].config["enabled"].value
     
     @property
     def generate_choices_chance(self):
-        return self.actions["generate_choices"].config["chance"].value
+        return self.actions["_generate_choices"].config["chance"].value
     
     @property
     def generate_choices_num_choices(self):
-        return self.actions["generate_choices"].config["num_choices"].value
+        return self.actions["_generate_choices"].config["num_choices"].value
+
+    @property
+    def generate_choices_never_auto_progress(self):
+        return self.actions["_generate_choices"].config["never_auto_progress"].value
 
     def connect(self, scene):
         super().connect(scene)

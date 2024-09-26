@@ -620,7 +620,6 @@ class Player(Actor):
         if not message:
             # Display scene history length before the player character name
             history_length = self.scene.history_length()
-
             name = colored_text(self.character.name + ": ", self.character.color)
             input = await wait_for_input(
                 f"[{history_length}] {name}",
@@ -660,15 +659,43 @@ class Player(Actor):
             else:
                 # acting as the main player character
                 self.message = message
-
+                
+                extra = {}
+                
+                if input.get("from_choice"):
+                    extra["from_choice"] = input["from_choice"]
+                
                 self.scene.push_history(
                     CharacterMessage(
-                        f"{self.character.name}: {message}", source="player"
+                        f"{self.character.name}: {message}", source="player", **extra
                     )
                 )
                 emit("character", self.history[-1], character=self.character)
 
         return message
+
+    async def generate_from_choice(self, choice:str):
+        character = self.character
+        actor = self
+        conversation = self.scene.get_helper("conversation").agent
+        director = self.scene.get_helper("director").agent
+        
+        messages = await conversation.converse(actor, only_generate=True, instruction=choice)
+        
+        message = messages[0]
+        message = util.ensure_dialog_format(message.strip(), character.name)
+        character_message = CharacterMessage(
+            message, source="player", from_choice=choice
+        )
+        
+        interaction_state = interaction.get()
+        
+        if director.generate_choices_never_auto_progress:
+            self.scene.push_history(character_message)
+            emit("character", character_message, character=character)
+        else:
+            interaction_state.from_choice = choice
+            interaction_state.input = character_message.without_name
 
 
 class Scene(Emitter):
@@ -1458,7 +1485,8 @@ class Scene(Emitter):
 
         log.debug(f"Rerunning message: {message} [{message.id}]")
 
-        if message.source == "player":
+        if message.source == "player" and not message.from_choice:
+            log.warning("Cannot rerun player's message", message=message)
             return
 
         current_rerun_context = rerun_context.get()
@@ -1564,6 +1592,13 @@ class Scene(Emitter):
         character = self.get_character(character_name)
 
         if character.is_player:
+            
+            if message.from_choice:
+                log.info(f"Rerunning player's generated message: {message} [{message.id}]")
+                emit("remove_message", "", id=message.id)
+                await character.actor.generate_from_choice(message.from_choice)
+                return
+                    
             emit("system", "Cannot rerun player's message")
             return
 
@@ -1571,7 +1606,7 @@ class Scene(Emitter):
 
         # Call talk() for the most recent AI Actor
         actor = character.actor
-
+        
         new_messages = await actor.talk()
 
         # Print the new messages
@@ -1916,6 +1951,7 @@ class Scene(Emitter):
                 if signal_game_loop:
                     await self.signals["game_loop"].send(game_loop)
 
+                turn_start = signal_game_loop
                 signal_game_loop = True
 
                 for actor in self.actors:
@@ -1954,7 +1990,7 @@ class Scene(Emitter):
 
                     if not actor.character.is_player:
                         await self.call_automated_actions()
-                    else:
+                    elif turn_start:
                         await self.signals["player_turn_start"].send(
                             events.PlayerTurnStartEvent(
                                 scene=self,

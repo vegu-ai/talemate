@@ -18,6 +18,7 @@ from thefuzz import fuzz
 from talemate.scene_message import SceneMessage
 from talemate.util.dialogue import *
 from talemate.util.prompt import *
+from talemate.util.response import *
 
 log = structlog.get_logger("talemate.util")
 

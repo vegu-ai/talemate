@@ -67,6 +67,7 @@ async_signals.register("game_loop_start")
 async_signals.register("game_loop")
 async_signals.register("game_loop_actor_iter")
 async_signals.register("game_loop_new_message")
+async_signals.register("player_turn_start")
 
 
 class ActedAsCharacter(Exception):
@@ -760,6 +761,7 @@ class Scene(Emitter):
             "game_loop_actor_iter": async_signals.get("game_loop_actor_iter"),
             "game_loop_new_message": async_signals.get("game_loop_new_message"),
             "scene_init": async_signals.get("scene_init"),
+            "player_turn_start": async_signals.get("player_turn_start"),
         }
 
         self.setup_emitter(scene=self)
@@ -1952,6 +1954,13 @@ class Scene(Emitter):
 
                     if not actor.character.is_player:
                         await self.call_automated_actions()
+                    else:
+                        await self.signals["player_turn_start"].send(
+                            events.PlayerTurnStartEvent(
+                                scene=self,
+                                event_type="player_turn_start",
+                            )
+                        )
 
                     try:
                         message = await actor.talk()

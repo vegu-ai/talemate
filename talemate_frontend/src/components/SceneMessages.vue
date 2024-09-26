@@ -56,6 +56,11 @@
                     <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" />
                 </div>
             </div>
+            <div v-else-if="message.type === 'player_choice'" :class="`message ${message.type}`">
+                <div class="player-choice-message"  :id="`message-player-choice`">
+                    <PlayerChoiceMessage :choices="message.data.choices" @close="closePlayerChoice" />
+                </div>
+            </div>
 
             <div v-else :class="`message ${message.type}`">
                 {{ message.text }}
@@ -71,6 +76,7 @@ import DirectorMessage from './DirectorMessage.vue';
 import TimePassageMessage from './TimePassageMessage.vue';
 import StatusMessage from './StatusMessage.vue';
 import RequestInput from './RequestInput.vue';
+import PlayerChoiceMessage from './PlayerChoiceMessage.vue';
 
 const MESSAGE_FLAGS = {
     NONE: 0,
@@ -86,6 +92,7 @@ export default {
         TimePassageMessage,
         StatusMessage,
         RequestInput,
+        PlayerChoiceMessage,
     },
     data() {
         return {
@@ -173,6 +180,16 @@ export default {
             ].includes(type);
         },
 
+        closePlayerChoice() {
+            // find the most recent player choice message and remove it
+            for (let i = this.messages.length - 1; i >= 0; i--) {
+                if (this.messages[i].type === 'player_choice') {
+                    this.messages.splice(i, 1);
+                    break;
+                }
+            }
+        },
+
         forkSceneInitiate(message_id) {
             this.$refs.requestForkName.openDialog(
                 { message_id: message_id }
@@ -253,6 +270,14 @@ export default {
                     return;
                 }
 
+                // if the previous message was a player choice message, remove it
+                if (this.messageTypeIsSceneMessage(data.type)) {
+                    if(this.messages.length > 0 && this.messages[this.messages.length - 1].type === 'player_choice') {
+                        console.log('removing player choice message', data);
+                        this.messages.pop();
+                    }
+                }
+
                 if (data.type === 'character') {
                     const parts = data.message.split(':');
                     const character = parts.shift();
@@ -268,6 +293,9 @@ export default {
                             action: data.action
                         }
                     );
+                } else if (data.type === 'player_choice') {
+                    console.log('player_choice', data);
+                    this.messages.push({ id: data.id, type: data.type, data: data.data });
                 } else if (this.messageTypeIsSceneMessage(data.type)) {
                     this.messages.push({ id: data.id, type: data.type, text: data.message, color: data.color, character: data.character, status:data.status, ts:data.ts }); // Add color property to the message
                 } else if (data.type === 'status' && data.data && data.data.as_scene_message === true) {

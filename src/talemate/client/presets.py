@@ -83,6 +83,7 @@ PRESET_SUBSTRING_MAPPINGS = {
     "creative": "creative",
     "analytical": "analytical",
     "analyze": "analytical",
+    "direction": "scene_direction",
 }
 
 PRESET_MAPPING = {
@@ -155,6 +156,7 @@ TOKEN_SUBSTRING_MAPPINGS = {
     "extensive": 2048,
     "long": 1024,
     "medium2": 512,
+    "list": 300,
     "medium": 192,
     "short2": 128,
     "short": 75,

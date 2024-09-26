@@ -795,7 +795,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         elif not where["$and"]:
             where = None
 
-        # log.debug("crhomadb agent get", text=text, where=where)
+        log.debug("crhomadb agent get", text=text, where=where)
 
         _results = self.db.query(query_texts=[text], where=where, n_results=limit)
 

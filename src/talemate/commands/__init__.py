@@ -3,7 +3,7 @@ from .cmd_autocomplete import *
 from .cmd_characters import *
 from .cmd_debug_tools import *
 from .cmd_dialogue import *
-from .cmd_director import CmdDirectorDirect, CmdDirectorDirectWithOverride
+from .cmd_director import *
 from .cmd_exit import CmdExit
 from .cmd_help import CmdHelp
 from .cmd_info import CmdInfo

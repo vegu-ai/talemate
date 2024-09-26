@@ -433,6 +433,7 @@ class ConversationAgent(Agent):
         self,
         character: Character,
         char_message: Optional[str] = "",
+        instruction: Optional[str] = None,
     ):
         """
         Builds the prompt that drives the AI's conversational response
@@ -494,6 +495,7 @@ class ConversationAgent(Agent):
                 "partial_message": char_message,
                 "director_message": director_message,
                 "extra_instructions": extra_instructions,
+                "direct_instruction": instruction,
                 "decensor": self.client.decensor_enabled,
             },
         )
@@ -567,10 +569,10 @@ class ConversationAgent(Agent):
 
         return self.current_memory_context
 
-    async def build_prompt(self, character, char_message: str = ""):
+    async def build_prompt(self, character, char_message: str = "", instruction:str = None):
         fn = self.build_prompt_default
 
-        return await fn(character, char_message=char_message)
+        return await fn(character, char_message=char_message, instruction=instruction)
 
     def clean_result(self, result, character):
         if "#" in result:
@@ -607,7 +609,7 @@ class ConversationAgent(Agent):
                 set_client_context_attribute("nuke_repetition", nuke_repetition)
 
     @set_processing
-    async def converse(self, actor):
+    async def converse(self, actor, only_generate:bool = False, instruction:str = None) -> list[str] | list[CharacterMessage]:
         """
         Have a conversation with the AI
         """
@@ -625,7 +627,7 @@ class ConversationAgent(Agent):
 
         self.set_generation_overrides()
 
-        result = await self.client.send_prompt(await self.build_prompt(character))
+        result = await self.client.send_prompt(await self.build_prompt(character, instruction=instruction))
 
         result = self.clean_result(result, character)
 
@@ -707,6 +709,9 @@ class ConversationAgent(Agent):
         response_message = util.parse_messages_from_str(total_result, [character.name])
 
         log.info("conversation agent", result=response_message)
+        
+        if only_generate:
+            return response_message
 
         emission = ConversationAgentEmission(
             agent=self, generation=response_message, actor=actor, character=character

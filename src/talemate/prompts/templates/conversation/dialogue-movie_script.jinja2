@@ -129,6 +129,11 @@ YOU MUST ONLY WRITE NEW DIALOGUE FOR {{ talking_character.name.upper() }}.
 # Requested changes: {{ rerun_context.direction }}
 {% endif -%}
 {% endif -%}
+{% if direct_instruction -%}
+{{ talking_character.name }}'s next action: {{ direct_instruction }}
+
+You must not add additional actions.
+{% endif -%}
 {{ bot_token }}{{ talking_character.name.upper() }}
 {% if partial_message -%}
 {{ partial_message.strip() }}

@@ -1,0 +1,45 @@
+<|SECTION:SCENE|>
+{% block scene_history -%}
+{% set scene_context = scene.context_history(budget=max_tokens-200, min_dialogue=15, sections=False, keep_director=False) -%}
+{% for scene_line in scene_context -%}
+{{ scene_line }}
+
+{% endfor %}
+{% endblock -%}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Generate {{ num_choices }} actions for the player character who is controlling {{ player_character.name }} to advance the text adventure game.
+
+For example, they could look at something or someone to fill in more detail. 
+
+The actions must make sense for the current state of the scene. 
+
+If the scene provides an opportunity for the player to do something interesting that should be considered as well.
+
+Consider:
+
+Was something visually interesting revealed? Maybe looking at it could provide more detail.
+
+Is there an action {{ player_character.name }} could take to move the scene forward?
+
+Examples of action text formatting:
+
+"Look at {object}."
+"Listen to the strange sound coming from outside."
+"Open the door."
+"Punch {character} in the face!"
+
+You must only provide highly interesting actions, less is more.
+
+You must only provide the action texts, nothing else.
+
+The action text must fit the writing style of the existing narrative. 
+
+The actions must be significantly different from each other.
+
+The action text must be worded from {{ player_character.name }}'s perspective.
+
+The action text should be short and concise as it will be displayed as a clickable button in the context of a text adventure game.
+
+Provide a numbered list.
+{{ set_prepared_response('1.') }}

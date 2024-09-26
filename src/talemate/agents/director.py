@@ -83,6 +83,33 @@ class DirectorAgent(GameInstructionsMixin, Agent):
                     ),
                 },
             ),
+            "generate_choices": AgentAction(
+                enabled=True,
+                label="Generate Actions",
+                description="Will generate clickable actions for the player character",
+                config={
+                    "chance": AgentActionConfig(
+                        type="number",
+                        label="Chance",
+                        description="The chance to generate actions",
+                        value=0.5,
+                        min=0,
+                        max=1,
+                        step=0.1,
+                    ),
+                    
+                    "num_choices": AgentActionConfig(
+                        type="number",
+                        label="Number of Actions",
+                        description="The number of actions to generate",
+                        value=3,
+                        min=1,
+                        max=10,
+                        step=1,
+                    ),
+                }
+            ),
+                
         }
 
     @property
@@ -113,6 +140,18 @@ class DirectorAgent(GameInstructionsMixin, Agent):
     def actor_direction_mode(self):
         return self.actions["direct"].config["actor_direction_mode"].value
 
+    @property
+    def generate_choices_enabled(self):
+        return self.actions["generate_choices"].enabled
+    
+    @property
+    def generate_choices_chance(self):
+        return self.actions["generate_choices"].config["chance"].value
+    
+    @property
+    def generate_choices_num_choices(self):
+        return self.actions["generate_choices"].config["num_choices"].value
+
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("agent.conversation.before_generate").connect(
@@ -122,6 +161,7 @@ class DirectorAgent(GameInstructionsMixin, Agent):
             self.on_player_dialog
         )
         talemate.emit.async_signals.get("scene_init").connect(self.on_scene_init)
+        talemate.emit.async_signals.get("player_turn_start").connect(self.on_player_turn_start)
 
     async def on_scene_init(self, event: SceneStateEvent):
         """
@@ -171,6 +211,14 @@ class DirectorAgent(GameInstructionsMixin, Agent):
             return
 
         event.game_loop.had_passive_narration = await self.direct(None)
+
+    async def on_player_turn_start(self, event: GameLoopStartEvent):
+        if not self.enabled:
+            return
+        
+        if self.generate_choices_enabled:
+            if random.random() < self.generate_choices_chance:
+                await self.generate_choices() 
 
     async def direct(self, character: Character) -> bool:
         if not self.actions["direct"].enabled:
@@ -432,3 +480,39 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         self, kind: str, agent_function_name: str, auto: bool = False
     ):
         return True
+
+
+    @set_processing
+    async def generate_choices(
+        self,
+    ):
+        
+        log.info("generate_choices")
+        
+        response = await Prompt.request(
+            "director.generate-choices",
+            self.client,
+            "direction_list",
+            vars={
+                "max_tokens": self.client.max_token_length,
+                "scene": self.scene,
+                "player_character": self.scene.get_player_character(),
+                "num_choices": self.generate_choices_num_choices,
+            },
+        )
+
+        choices = util.extract_list(response)
+        
+        # strip quotes
+        choices = [choice.strip().strip('"') for choice in choices]
+        
+        log.info("generate_choices done", choices=choices)
+        
+        emit(
+            "player_choice",
+            response,
+            data = {
+                "choices": choices
+            },
+            websocket_passthrough=True
+        )

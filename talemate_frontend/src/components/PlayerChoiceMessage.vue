@@ -52,7 +52,7 @@ export default {
             this.busy = false;
         }
     },
-    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'unregisterMessageHandler'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'unregisterMessageHandler', 'openAgentSettings'],
     emits: ['close'],
     methods: {
         selectChoice(index) {
@@ -64,6 +64,7 @@ export default {
             }));
         },
         settings() {
+            this.openAgentSettings('director', '_generate_choices');
         },
         cancel() {
             this.$emit('close');

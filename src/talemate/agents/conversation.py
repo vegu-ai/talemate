@@ -86,7 +86,9 @@ class ConversationAgent(Agent):
         self.actions = {
             "generation_override": AgentAction(
                 enabled=True,
-                label="Generation Settings",
+                container=True,
+                icon="mdi-atom-variant",
+                label="Generation",
                 config={
                     "format": AgentActionConfig(
                         type="text",
@@ -107,12 +109,6 @@ class ConversationAgent(Agent):
                         max=512,
                         step=32,
                     ),
-                    "instructions": AgentActionConfig(
-                        type="text",
-                        label="Instructions",
-                        value="Write 1-3 sentences. Never wax poetic.",
-                        description="Extra instructions to give the AI for dialog generatrion.",
-                    ),
                     "jiggle": AgentActionConfig(
                         type="number",
                         label="Jiggle (Increased Randomness)",
@@ -122,6 +118,29 @@ class ConversationAgent(Agent):
                         max=1.0,
                         step=0.1,
                     ),
+                    "instructions": AgentActionConfig(
+                        type="blob",
+                        label="Task Instructions",
+                        value="Write 1-3 sentences. Never wax poetic.",
+                        description="Allows to extend the task instructions - placed above the context history.",
+                    ),
+                    "actor_instructions": AgentActionConfig(
+                        type="blob",
+                        label="Actor Instructions",
+                        value="",
+                        description="Allows to extend the actor instructions - placed at the end of the context history.",
+                    ),
+                    "actor_instructions_offset": AgentActionConfig(
+                        type="number",
+                        label="Actor Instructions Offset",
+                        value=0,
+                        description="Offsets the actor instructions into the context history, shifting it up N number of messages. 0 = at the end of the context history.",
+                        min=0,
+                        max=20,
+                        step=1,
+                    ),
+                    
+
                 },
             ),
             "auto_break_repetition": AgentAction(
@@ -218,6 +237,18 @@ class ConversationAgent(Agent):
         }
 
         return details
+
+    @property
+    def generation_settings_task_instructions(self):
+        return self.actions["generation_override"].config["instructions"].value
+
+    @property
+    def generation_settings_actor_instructions(self):
+        return self.actions["generation_override"].config["actor_instructions"].value
+
+    @property
+    def generation_settings_actor_instructions_offset(self):
+        return self.actions["generation_override"].config["actor_instructions_offset"].value
 
     def connect(self, scene):
         super().connect(scene)
@@ -473,12 +504,6 @@ class ConversationAgent(Agent):
         except IndexError:
             director_message = False
 
-        extra_instructions = ""
-        if self.actions["generation_override"].enabled:
-            extra_instructions = (
-                self.actions["generation_override"].config["instructions"].value
-            )
-
         conversation_format = self.conversation_format
         prompt = Prompt.get(
             f"conversation.dialogue-{conversation_format}",
@@ -494,7 +519,10 @@ class ConversationAgent(Agent):
                 "talking_character": character,
                 "partial_message": char_message,
                 "director_message": director_message,
-                "extra_instructions": extra_instructions,
+                "extra_instructions": self.generation_settings_task_instructions, #backward compatibility
+                "task_instructions": self.generation_settings_task_instructions,
+                "actor_instructions": self.generation_settings_actor_instructions,
+                "actor_instructions_offset": self.generation_settings_actor_instructions_offset,
                 "direct_instruction": instruction,
                 "decensor": self.client.decensor_enabled,
             },

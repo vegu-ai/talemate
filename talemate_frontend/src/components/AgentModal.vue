@@ -19,7 +19,7 @@
       <v-card-text class="scrollable-content">
 
         <v-row>
-          <v-col cols="3">
+          <v-col cols="4">
             <v-tabs v-model="tab" color="primary" direction="vertical">
               <v-tab v-for="item in tabs" :key="item.name" v-model="tab" :value="item.name">
                 <v-icon>{{ item.icon }}</v-icon>
@@ -28,7 +28,7 @@
             </v-tabs>
       
           </v-col>
-          <v-col cols="9">
+          <v-col cols="8">
             <v-window v-model="tab">
               <v-window-item :value="item.name" v-for="item in tabs" :key="item.name">
                 <v-select v-if="agent.data.requires_llm_client && tab === '_config'" v-model="selectedClient" :items="agent.data.client" label="Client"  @update:modelValue="save(false)"></v-select>

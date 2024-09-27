@@ -1,3 +1,7 @@
+<|SECTION:CONTEXT|>
+{% block character_context %}
+{% if include_character_context %}{% include "character-context.jinja2" %}{% endif %}
+{% endblock %}
 {% set questions = instruct_text("Generate 5 targeted queries to gather additional context for this story. Your task:
 
 1. Focus on established facts, lore, and background information.
@@ -7,9 +11,7 @@
 5. Phrase queries as direct requests for information from the world database.
 6. For unfamiliar elements, ask straightforward questions to clarify their nature or significance.
 
-Format your response as a list of 5 short, focused queries, each on its own line. Do not include any additional text or explanations.", text) %}
-<|SECTION:CONTEXT|>
-{% if include_character_context %}{% include "character-context.jinja2" %}{% endif %}
+Format your response as a list of 5 short, focused queries, each on its own line. Do not include any additional text or explanations.", self.character_context() + "\n\n" + text) %}
 {%- with memory_query=questions -%}
     {% include "extra-context.jinja2" %}
 {% endwith %}

@@ -544,13 +544,15 @@ class ConversationAgent(Agent):
             if retrieval_method == "questions":
                 self.current_memory_context = (
                     await world_state.analyze_text_and_extract_context(
-                        text, f"continue the conversation as {character.name}"
+                        text, f"continue the conversation as {character.name}",
+                        include_character_context=True
                     )
                 ).split("\n")
             elif retrieval_method == "queries":
                 self.current_memory_context = (
                     await world_state.analyze_text_and_extract_context_via_queries(
-                        text, f"continue the conversation as {character.name}"
+                        text, f"continue the conversation as {character.name}",
+                        include_character_context=True
                     )
                 )
 

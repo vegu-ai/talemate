@@ -7,12 +7,10 @@
         </template>
         <v-card-title class="text-subtitle-1">
             The
+            <span class="text-director text-secondary"><v-icon size="small">mdi-bullhorn</v-icon> Director</span> 
+            suggests some actions
 
-            <span class="text-director text-secondary"><v-icon size="small">mdi-bullhorn</v-icon> Director</span> has
-            generated
-            dynamic actions
-
-            <v-btn variant="text" size="small" color="info" prepend-icon="mdi-refresh" @click="regenerate" :disabled="busy">Regenerate</v-btn>
+            <v-btn variant="text" size="small" color="secondary" prepend-icon="mdi-refresh" @click="regenerate" :disabled="busy">Regenerate</v-btn>
             <v-btn variant="text" size="small" color="primary" prepend-icon="mdi-cogs" @click="settings" :disabled="busy">Settings</v-btn>
         </v-card-title>
 

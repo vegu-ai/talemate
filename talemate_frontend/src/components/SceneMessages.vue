@@ -215,6 +215,14 @@ export default {
 
             if (data.type == "remove_message") {
 
+                // if the last message is a player_choice message
+                // and the second to last message is the message to remove
+                // also remove the player_choice message
+
+                if (this.messages.length > 1 && this.messages[this.messages.length - 1].type === 'player_choice' && this.messages[this.messages.length - 2].id === data.id) {
+                    this.messages.pop();
+                }
+
                 // find message where type == "character" and id == data.id
                 // remove that message from the array
                 let newMessages = [];
@@ -273,7 +281,6 @@ export default {
                 // if the previous message was a player choice message, remove it
                 if (this.messageTypeIsSceneMessage(data.type)) {
                     if(this.messages.length > 0 && this.messages[this.messages.length - 1].type === 'player_choice') {
-                        console.log('removing player choice message', data);
                         this.messages.pop();
                     }
                 }

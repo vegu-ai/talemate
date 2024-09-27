@@ -123,6 +123,13 @@ class DirectorAgent(GameInstructionsMixin, Agent):
                         description="If enabled, the scene will not auto progress after you select an action.",
                         value=False,
                     ),
+                    
+                    "instructions": AgentActionConfig(
+                        type="blob",
+                        label="Instructions",
+                        description="Provide some instructions to the director for generating actions.",
+                        value="",
+                    ),
                 }
             ),
                 
@@ -171,6 +178,10 @@ class DirectorAgent(GameInstructionsMixin, Agent):
     @property
     def generate_choices_never_auto_progress(self):
         return self.actions["_generate_choices"].config["never_auto_progress"].value
+
+    @property
+    def generate_choices_instructions(self):
+        return self.actions["_generate_choices"].config["instructions"].value
 
     def connect(self, scene):
         super().connect(scene)
@@ -518,6 +529,7 @@ class DirectorAgent(GameInstructionsMixin, Agent):
                 "scene": self.scene,
                 "player_character": self.scene.get_player_character(),
                 "num_choices": self.generate_choices_num_choices,
+                "instructions": self.generate_choices_instructions,
             },
         )
 

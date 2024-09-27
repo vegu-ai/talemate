@@ -31,5 +31,9 @@ Ensure the actions:
 - Offer varied options without drastic pacing changes
 - Are significantly different from each other
 
+{% if instructions %}
+### Specific instructions
+{{ instructions}}{% endif %}
+
 Provide a numbered list of actions, with no additional text.
 {{ set_prepared_response('1.') }}

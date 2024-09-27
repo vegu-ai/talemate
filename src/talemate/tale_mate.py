@@ -633,7 +633,18 @@ class Player(Actor):
         if not message:
             return
 
-        if not commands.Manager.is_command(message):
+        if message.startswith("@"):
+            character_messasge = await self.generate_from_choice(message[1:], process=False)
+            
+            if not character_messasge:
+                return
+            
+            self.message = character_messasge.without_name
+            self.scene.push_history(character_messasge)
+            emit("character", character_messasge, character=self.character)
+            message = self.message
+
+        elif not commands.Manager.is_command(message):
             if '"' not in message and "*" not in message:
                 message = f'"{message}"'
 
@@ -674,11 +685,45 @@ class Player(Actor):
 
         return message
 
-    async def generate_from_choice(self, choice:str):
+    async def generate_from_choice(self, choice:str, process:bool=True) -> CharacterMessage:
         character = self.character
         actor = self
         conversation = self.scene.get_helper("conversation").agent
         director = self.scene.get_helper("director").agent
+        narrator = self.scene.get_helper("narrator").agent
+        
+        # sensory checks
+        sensory_checks = ["look", "listen", "smell", "taste", "touch", "feel"]
+        
+        sensory_action = {
+            "look": "see",
+            "inspect": "see",
+            "examine": "see",
+            "observe": "see",
+            "watch": "see",
+            "view": "see",
+            "see": "see",
+            "listen": "hear",
+            "smell": "smell",
+            "taste": "taste",
+            "touch": "feel",
+            "feel": "feel",
+        }
+        
+        if choice.lower().startswith(tuple(sensory_checks)):
+            
+            # extract the sensory type
+            sensory_type = choice.split(" ", 1)[0]
+            sensory_suffix = sensory_action.get(sensory_type, "experience")
+            
+            log.debug("generate_from_choice", choice=choice, sensory_checks=True)
+            # sensory checks should trigger a narrator query instead of conversation
+            await narrator.action_to_narration(
+                "narrate_query",
+                emit_message=True,
+                query=f"{character.name} wants to \"{choice}\" - what does {character.name} {sensory_suffix} (your answer must be descriptive and detailed)?",
+            )
+            return
         
         messages = await conversation.converse(actor, only_generate=True, instruction=choice)
         
@@ -688,6 +733,9 @@ class Player(Actor):
             message, source="player", from_choice=choice
         )
         
+        if not process:
+            return character_message
+        
         interaction_state = interaction.get()
         
         if director.generate_choices_never_auto_progress:
@@ -696,6 +744,8 @@ class Player(Actor):
         else:
             interaction_state.from_choice = choice
             interaction_state.input = character_message.without_name
+            
+        return character_message
 
 
 class Scene(Emitter):

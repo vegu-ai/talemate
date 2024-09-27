@@ -571,7 +571,7 @@ class Actor:
     def history(self):
         return self.scene.history
 
-    async def talk(self):
+    async def talk(self, instruction: str = None):
         """
         Set the message to be sent to the AI
         """
@@ -589,7 +589,7 @@ class Actor:
         )
 
         with ClientContext(conversation=conversation_context):
-            messages = await self.agent.converse(self)
+            messages = await self.agent.converse(self, instruction=instruction)
 
         return messages
 
@@ -1670,7 +1670,7 @@ class Scene(Emitter):
         # Call talk() for the most recent AI Actor
         actor = character.actor
         
-        new_messages = await actor.talk()
+        new_messages = await actor.talk(instruction=message.from_choice)
 
         # Print the new messages
         for item in new_messages:

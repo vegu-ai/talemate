@@ -936,6 +936,14 @@ def ensure_dialog_format(line: str, talking_character: str = None) -> str:
 
     if talking_character:
         line = line[len(talking_character) + 1 :].lstrip()
+        
+    if line.startswith('*') and line.startswith('*'):
+        if line.count("*") == 2 and not line.count('"'):
+            return f"{talking_character}: {line}" if talking_character else line
+
+    if line.startswith('"') and line.endswith('"'):
+        if line.count('"') == 2 and not line.count('*'):
+            return f"{talking_character}: {line}" if talking_character else line
 
     lines = []
 

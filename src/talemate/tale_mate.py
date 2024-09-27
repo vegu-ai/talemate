@@ -634,14 +634,23 @@ class Player(Actor):
             return
 
         if message.startswith("@"):
-            character_messasge = await self.generate_from_choice(message[1:], process=False)
+            character_message = await self.generate_from_choice(
+                message[1:], process=False, character=None if not act_as else self.scene.get_character(act_as)
+            )
             
-            if not character_messasge:
+            if not character_message:
                 return
             
-            self.message = character_messasge.without_name
-            self.scene.push_history(character_messasge)
-            emit("character", character_messasge, character=self.character)
+            self.message = character_message.without_name
+            self.scene.push_history(character_message)
+            
+            if act_as:
+                character = self.scene.get_character(act_as)
+                
+                self.scene.process_npc_dialogue(character.actor, [character_message])
+                raise ActedAsCharacter()
+            else:
+                emit("character", character_message, character=self.character)
             message = self.message
 
         elif not commands.Manager.is_command(message):
@@ -685,9 +694,13 @@ class Player(Actor):
 
         return message
 
-    async def generate_from_choice(self, choice:str, process:bool=True) -> CharacterMessage:
-        character = self.character
-        actor = self
+    async def generate_from_choice(self, choice:str, process:bool=True, character:Character=None) -> CharacterMessage:
+        character = self.character if not character else character
+        
+        if not character:
+            raise TalemateError("Character not found during generate_from_choice")
+        
+        actor = character.actor
         conversation = self.scene.get_helper("conversation").agent
         director = self.scene.get_helper("director").agent
         narrator = self.scene.get_helper("narrator").agent
@@ -730,7 +743,7 @@ class Player(Actor):
         message = messages[0]
         message = util.ensure_dialog_format(message.strip(), character.name)
         character_message = CharacterMessage(
-            message, source="player", from_choice=choice
+            message, source="player" if isinstance(actor, Player) else "ai", from_choice=choice
         )
         
         if not process:

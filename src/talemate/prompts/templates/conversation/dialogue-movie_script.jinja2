@@ -115,7 +115,7 @@ YOU MUST ONLY WRITE NEW DIALOGUE FOR {{ talking_character.name.upper() }}.
 <|CLOSE_SECTION|>
 UPDOG
 {% if scene.count_messages() < actor_instructions_offset or actor_instructions_offset == 0 %}
-{% if not talking_character.dialogue_instructions %}(Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is informal, conversational, natural, and spontaneous, with a sense of immediacy.{% if actor_instructions %} {{ actor_instructions }}){% endif -%}{% else %}(Internal acting instructions for {{ talking_character.name }}: {{ talking_character.dialogue_instructions }}{% if actor_instructions %} {{ actor_instructions }}{% endif %}){% endif -%}
+{% if not talking_character.dialogue_instructions %}({% if actor_instructions %} {{ actor_instructions }}{% else %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is informal, conversational, natural, and spontaneous, with a sense of immediacy.{% endif -%}){% else %}(Internal acting instructions for {{ talking_character.name }}: {{ talking_character.dialogue_instructions }}{% if actor_instructions %} {{ actor_instructions }}{% endif %}){% endif -%}
 {% endif -%}
 {% if rerun_context and rerun_context.direction -%}
 {% if rerun_context.method == 'replace' -%}

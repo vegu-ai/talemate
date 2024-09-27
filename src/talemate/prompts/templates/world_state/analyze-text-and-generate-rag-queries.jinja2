@@ -2,23 +2,50 @@
 <|SECTION:CONTEXT|>
 {% include "extra-context.jinja2" %}
 <|CLOSE_SECTION|>
+{% if include_character_context %}{% include "character-context.jinja2" %}{% endif %}
 {% endblock -%}
 <|SECTION:SCENE|>
 {{ text }}
 <|SECTION:TASK|>
-You have access to a vector database to retrieve relevant data to gather more established context for the continuation of this conversation. If a character is asking about a state, location or information about an item or another character, make sure to include queries that help gather context for this.
+You are assisting with an ongoing story. You have access to a vector database containing factual information about the characters, locations, events, and lore of this narrative world. Your task is to generate up to 10 specific, targeted queries to gather additional context for the current scene or conversation.
 
-Please compile a list of up to 10 short queries to the database that will help us gather additional context for the actors to continue the ongoing conversation.
+Before generating the queries, you will be provided with:
+1. A brief summary of the story context
+2. Key character names and their roles
+3. The most recent dialogue or scene description
 
-Each query must be a short trigger keyword phrase and the database will match on semantic similarity.
+Using this information, create queries that:
+- Seek new information not already provided in the given context
+- Explore potential gaps in the current narrative
+- Investigate background details that could enrich the scene
+- Look for connections between current elements and established lore
 
-Each query must be on its own line as raw unformatted text.
+Your queries should focus on:
+- Historical information about characters or locations
+- Established relationships between characters
+- Known facts about objects or concepts in the story world
+- Past events that may be relevant to the current scene
 
-Your response should look like this and contain only the queries and nothing else:
+Avoid queries that:
+- Repeat information already given in the context
+- Ask about characters' current thoughts, feelings, or intentions
+- Seek speculative or future events
+- Request information that would not be part of established lore or backstory
+
+Each query should be:
+- A short, focused keyword phrase
+- Relevant to the current story context, but not redundant
+- Designed to elicit specific, factual information not yet revealed
+
+Format your response as a list of raw, unformatted text queries, each on its own line:
 
 - <query 1>
 - <query 2>
 - ...
 - <query 10>
+
+Do not include any additional text, explanations, or formatting in your response.
+
+After receiving the story context and recent dialogue, generate your list of targeted, non-redundant, lore-focused queries.
 <|CLOSE_SECTION|>
 {{ set_prepared_response('-') }}

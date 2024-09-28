@@ -1435,6 +1435,7 @@ class Scene(Emitter):
 
         conversation_format = self.conversation_format
         actor_direction_mode = self.get_helper("director").agent.actor_direction_mode
+        layered_history_enabled = self.get_helper("summarizer").agent.archive_layered_history
 
         history_offset = kwargs.get("history_offset", 0)
         message_id = kwargs.get("message_id")
@@ -1457,7 +1458,7 @@ class Scene(Emitter):
 
         # collect context, ignore where end > len(history) - count
         
-        if not self.layered_history:
+        if not self.layered_history or not layered_history_enabled:
 
             for i in range(len(self.archived_history) - 1, -1, -1):
                 archive_history_entry = self.archived_history[i]
@@ -1465,9 +1466,6 @@ class Scene(Emitter):
                 start = archive_history_entry.get("start")
 
                 if end is None:
-                    continue
-
-                if start > len(self.history) - count:
                     continue
 
                 try:

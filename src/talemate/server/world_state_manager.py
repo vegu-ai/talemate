@@ -1013,9 +1013,22 @@ class WorldStateManagerPlugin:
 
     async def handle_request_scene_history(self, data):
         history = history_with_relative_time(self.scene.archived_history, self.scene.ts)
+        
+        layered_history = []
+        
+        summarizer = get_agent("summarizer")
+        
+        if summarizer.archive_layered_history:
+            for layer in self.scene.layered_history:
+                layered_history.append(
+                    history_with_relative_time(layer, self.scene.ts)
+                )
 
         self.websocket_handler.queue_put(
-            {"type": "world_state_manager", "action": "scene_history", "data": history}
+            {"type": "world_state_manager", "action": "scene_history", "data": {
+                "history": history,
+                "layered_history": layered_history,
+            }}
         )
 
     async def handle_regenerate_history(self, data):

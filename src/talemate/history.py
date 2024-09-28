@@ -78,7 +78,11 @@ def history_with_relative_time(history: list[str], scene_time: str) -> list[dict
         {
             "text": entry["text"],
             "ts": entry["ts"],
+            "ts_start": entry.get("ts_start", None),
+            "ts_end": entry.get("ts_end", None),
             "time": iso8601_diff_to_human(scene_time, entry["ts"]),
+            "time_start": iso8601_diff_to_human(scene_time, entry["ts_start"] if entry.get("ts_start") else None),
+            "time_end": iso8601_diff_to_human(scene_time, entry["ts_end"] if entry.get("ts_end") else None),
         }
         for entry in history
     ]

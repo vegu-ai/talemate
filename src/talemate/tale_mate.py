@@ -784,6 +784,7 @@ class Scene(Emitter):
         self.history = []
         self.archived_history = []
         self.inactive_characters = {}
+        self.layered_history = []
         self.assets = SceneAssets(scene=self)
         self.description = ""
         self.intro = ""
@@ -1453,14 +1454,98 @@ class Scene(Emitter):
         else:
             history_start = len(self.history) - (1 + history_offset)
 
+
+        # collect context, ignore where end > len(history) - count
+        
+        if not self.layered_history:
+
+            for i in range(len(self.archived_history) - 1, -1, -1):
+                archive_history_entry = self.archived_history[i]
+                end = archive_history_entry.get("end")
+                start = archive_history_entry.get("start")
+
+                if end is None:
+                    continue
+
+                if start > len(self.history) - count:
+                    continue
+
+                try:
+                    time_message = util.iso8601_diff_to_human(
+                        archive_history_entry["ts"], self.ts
+                    )
+                    text = f"{time_message}: {archive_history_entry['text']}"
+                except Exception as e:
+                    log.error("context_history", error=e, traceback=traceback.format_exc())
+                    text = archive_history_entry["text"]
+
+                if count_tokens(parts_context) + count_tokens(text) > budget_context:
+                    break
+
+                parts_context.insert(0, condensed(text))
+                    
+        else:
+            
+            # layered history available
+            # start with the last layer and work backwards
+            
+            next_layer_start = None
+            
+            for i in range(len(self.layered_history) - 1, -1, -1):
+                
+                log.debug("context_history - layered history", i=i, next_layer_start=next_layer_start)
+                
+                if not self.layered_history[i]:
+                    continue
+                
+                for layered_history_entry in self.layered_history[i][next_layer_start if next_layer_start is not None else 0:]:
+                    
+                    time_message_start = util.iso8601_diff_to_human(
+                        layered_history_entry["ts_start"], self.ts
+                    )
+                    time_message_end = util.iso8601_diff_to_human(
+                        layered_history_entry["ts_end"], self.ts
+                    )
+                    time_message = f"{time_message_start} to {time_message_end}"
+                    text = f"{time_message}: {layered_history_entry['text']}"
+                    parts_context.append(condensed(text))
+                    
+                next_layer_start = layered_history_entry["end"] + 1
+                    
+            
+            # collect archived history entries that have not yet been
+            # summarized to the layered history
+            base_layer_start = self.layered_history[0][-1]["end"] + 1 if self.layered_history[0] else None
+            
+            if base_layer_start is not None:
+                for archive_history_entry in self.archived_history[base_layer_start:]:
+                    time_message = util.iso8601_diff_to_human(
+                        archive_history_entry["ts"], self.ts
+                    )
+                    
+                    text = f"{time_message}: {archive_history_entry['text']}"
+                    parts_context.append(condensed(text))
+
+        # log.warn if parts_context token count > budget_context
+        if count_tokens(parts_context) > budget_context:
+            log.warning(
+                "context_history",
+                message="context exceeds budget",
+                context_tokens=count_tokens(parts_context),
+                budget=budget_context,
+            )
+
         # collect dialogue
 
         count = 0
 
-        for i in range(history_start, -1, -1):
-            count += 1
+        summarized_to = self.archived_history[-1]["end"]+1 if self.archived_history else None
+        
+        # we always want to include some message, so offset -10, but normalize to 0
+        summarized_to = max(0, summarized_to - 10)
 
-            message = self.history[i]
+        for message in self.history[summarized_to if summarized_to is not None else 0:]:
+            count += 1
 
             if message.hidden:
                 continue
@@ -1483,41 +1568,18 @@ class Scene(Emitter):
             if count_tokens(parts_dialogue) + count_tokens(message) > budget_dialogue:
                 break
 
-            parts_dialogue.insert(
-                0, message.as_format(conversation_format, mode=actor_direction_mode)
+            parts_dialogue.append(
+                message.as_format(conversation_format, mode=actor_direction_mode)
             )
-
-        # collect context, ignore where end > len(history) - count
-
-        for i in range(len(self.archived_history) - 1, -1, -1):
-            archive_history_entry = self.archived_history[i]
-            end = archive_history_entry.get("end")
-            start = archive_history_entry.get("start")
-
-            if end is None:
-                continue
-
-            if start > len(self.history) - count:
-                continue
-
-            try:
-                time_message = util.iso8601_diff_to_human(
-                    archive_history_entry["ts"], self.ts
-                )
-                text = f"{time_message}: {archive_history_entry['text']}"
-            except Exception as e:
-                log.error("context_history", error=e, traceback=traceback.format_exc())
-                text = archive_history_entry["text"]
-
-            if count_tokens(parts_context) + count_tokens(text) > budget_context:
-                break
-
-            parts_context.insert(0, condensed(text))
-
+                    
+            
         if count_tokens(parts_context + parts_dialogue) < 1024:
             intro = self.get_intro()
             if intro:
                 parts_context.insert(0, intro)
+                
+
+            
 
         return list(map(str, parts_context)) + list(map(str, parts_dialogue))
 
@@ -2248,6 +2310,7 @@ class Scene(Emitter):
             "history": scene.history,
             "environment": scene.environment,
             "archived_history": scene.archived_history,
+            "layered_history": scene.layered_history,
             "characters": [actor.character.serialize for actor in scene.actors],
             "inactive_characters": {
                 name: character.serialize
@@ -2367,6 +2430,7 @@ class Scene(Emitter):
             "history": scene.history,
             "environment": scene.environment,
             "archived_history": scene.archived_history,
+            "layered_history": scene.layered_history,
             "characters": [actor.character.serialize for actor in scene.actors],
             "inactive_characters": {
                 name: character.serialize

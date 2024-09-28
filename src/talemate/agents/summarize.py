@@ -65,6 +65,12 @@ class SummarizeAgent(Agent):
                             {"label": "Factual List", "value": "facts"},
                         ],
                     ),
+                    "layered_history": AgentActionConfig(
+                        type="bool",
+                        label="Generate layered history",
+                        description="Generate a layered history with multiple levels of summarization",
+                        value=True,
+                    ),
                     "include_previous": AgentActionConfig(
                         type="number",
                         label="Use preceeding summaries to strengthen context",
@@ -88,6 +94,23 @@ class SummarizeAgent(Agent):
         all_tokens = sum([util.count_tokens(entry) for entry in self.scene.history])
         return all_tokens // self.threshold
 
+    @property
+    def archive_threshold(self):
+        return self.actions["archive"].config["threshold"].value
+    
+    @property
+    def archive_method(self):
+        return self.actions["archive"].config["method"].value
+    
+    @property
+    def archive_include_previous(self):
+        return self.actions["archive"].config["include_previous"].value
+    
+    @property
+    def archive_layered_history(self):
+        return self.actions["archive"].config["layered_history"].value
+    
+
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("game_loop").connect(self.on_game_loop)
@@ -98,6 +121,9 @@ class SummarizeAgent(Agent):
         """
 
         await self.build_archive(self.scene)
+        
+        if self.archive_layered_history:
+            await self.summarize_to_layered_history()
 
     def clean_result(self, result):
         if "#" in result:
@@ -267,12 +293,13 @@ class SummarizeAgent(Agent):
         method: str = None,
         extra_instructions: str = None,
         generation_options: GenerationOptions | None = None,
+        source_type: str = "dialogue",
     ):
         """
         Summarize the given text
         """
         response = await Prompt.request(
-            "summarizer.summarize-dialogue",
+            f"summarizer.summarize-{source_type}",
             self.client,
             "summarize",
             vars={
@@ -296,128 +323,203 @@ class SummarizeAgent(Agent):
 
         return self.clean_result(response)
 
-    async def build_stepped_archive_for_level(self, level: int):
+    @set_processing
+    async def generate_timeline(self) -> list[str]:
         """
-        WIP - not yet used
-
-        This will iterate over existing archived_history entries
-        and stepped_archived_history entries and summarize based on time duration
-        indicated between the entries.
-
-        The lowest level of summarization (based on token threshold and any time passage)
-        happens in build_archive. This method is for summarizing furhter levels based on
-        long time pasages.
-
-        Level 0: small timestap summarize (summarizes all token summarizations when time advances +1 day)
-        Level 1: medium timestap summarize (summarizes all small timestep summarizations when time advances +1 week)
-        Level 2: large timestap summarize (summarizes all medium timestep summarizations when time advances +1 month)
-        Level 3: huge timestap summarize (summarizes all large timestep summarizations when time advances +1 year)
-        Level 4: massive timestap summarize (summarizes all huge timestep summarizations when time advances +10 years)
-        Level 5: epic timestap summarize (summarizes all massive timestep summarizations when time advances +100 years)
-        and so on (increasing by a factor of 10 each time)
-
-        ```
-        @dataclass
-        class ArchiveEntry:
-            text: str
-            start: int = None
-            end: int = None
-            ts: str = None
-        ```
-
-        Like token summarization this will use ArchiveEntry and start and end will refer to the entries in the
-        lower level of summarization.
-
-        Ts is the iso8601 timestamp of the start of the summarized period.
+        Will generate a factual and concise timeline of the scene history
+        
+        Events will be returned one per line, in a single sentence.
+        
+        Only major events and important milestones should be included.
         """
-
-        # select the list to use for the entries
-
-        if level == 0:
-            entries = self.scene.archived_history
-        else:
-            entries = self.scene.stepped_archived_history[level - 1]
-
-        # select the list to summarize new entries to
-
-        target = self.scene.stepped_archived_history[level]
-
-        if not target:
-            raise ValueError(f"Invalid level {level}")
-
-        # determine the start and end of the period to summarize
-
-        if not entries:
-            return
-
-        # determine the time threshold for this level
-
-        # first calculate all possible thresholds in iso8601 format, starting with 1 day
-        thresholds = [
-            "P1D",
-            "P1W",
-            "P1M",
-            "P1Y",
+        
+        events = []
+        
+        for ah in self.scene.archived_history:
+            events.append(
+                {
+                    "text": ah["text"],
+                    "time": util.iso8601_duration_to_human(ah["ts"], suffix="later", zero_time_default="The beginning")
+                }
+            )
+            
+        if not events:
+            return []
+            
+        response = await Prompt.request(
+            "summarizer.timeline",
+            self.client,
+            "analyze_extensive",
+            vars={
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "events": events,
+            },
+        )
+        
+        log.debug("generate_timeline", response=response)
+        
+        return util.extract_list(response)
+    
+    @set_processing
+    async def summarize_to_layered_history(self):
+        
+        """
+        The layered history is a summarized archive with dynamic layers that
+        will get less and less granular as the scene progresses.
+        
+        The most granular is still self.scene.archived_history, which holds
+        all the base layer summarizations.
+        
+        self.scene.layered_history = [
+            # first layer after archived_history
+            [
+                {
+                    "start": 0, # index in self.archived_history
+                    "end": 10, # index in self.archived_history
+                    "ts": "PT5M",
+                    "text": "A summary of the first 10 entries"
+                },
+                ...
+            ],
+            
+            # second layer
+            [
+                {
+                    "start": 0, # index in self.scene.layered_history[0]
+                    "end": 5, # index in self.scene.layered_history[0]
+                    "ts": "PT2M",
+                    "text": "A summary of the first 5 entries"
+                },
+                ...
+            ],
+            
+            # additional layers
+            ...
         ]
+        
+        The same token threshold as for the base layer will be used for the
+        layers.
+        
+        The same summarization function will be used for the layers.
+        
+        The next level layer will be generated automatically when the token
+        threshold is reached.
+        """
+        
+        if not self.scene.archived_history:
+            return  # No base layer summaries to work with
 
-        # TODO: auto extend?
+        token_threshold = self.actions["archive"].config["threshold"].value
+        include_previous = self.actions["archive"].config["include_previous"].value
+        method = self.actions["archive"].config["method"].value
 
-        time_threshold_in_seconds = util.iso8601_to_seconds(thresholds[level])
+        if not hasattr(self.scene, 'layered_history'):
+            self.scene.layered_history = []
+            
+        layered_history = self.scene.layered_history
 
-        if not time_threshold_in_seconds:
-            raise ValueError(f"Invalid level {level}")
+        async def summarize_layer(source_layer, next_layer_index, start_from) -> bool:
+            current_chunk = []
+            current_tokens = 0
+            start_index = start_from
+            noop = True
 
-        # determine the most recent summarized entry time, and then find entries
-        # that are newer than that in the lower list
+            for i in range(start_from, len(source_layer)):
+                entry = source_layer[i]
+                entry_tokens = util.count_tokens(entry['text'])
+                
+                log.debug("summarize_to_layered_history", entry=entry["text"][:100]+"...", tokens=entry_tokens, current_layer=next_layer_index-1)
+                
+                if current_tokens + entry_tokens > token_threshold:
+                    if current_chunk:
+                        
+                        try:
+                            # check if the next layer exists
+                            next_layer = layered_history[next_layer_index]
+                        except IndexError:
+                            # create the next layer
+                            layered_history.append([])
+                            log.debug("summarize_to_layered_history", created_layer=next_layer_index)
+                            next_layer = layered_history[next_layer_index]
+                        
+                        # provide the previous N entries in the current layer
+                        # as extra_context
+                        
+                        extra_context = "\n\n".join(
+                            [chunk['text'] for chunk in next_layer[-include_previous:]]
+                        )
+                            
+                        
+                        summary_text = await self.summarize(
+                            "\n\n".join(chunk['text'] for chunk in current_chunk),
+                            method=method,
+                            source_type="events",
+                            extra_context=extra_context,
+                        )
+                        
+                        noop = False
+                        
+                        # make sure the first letter is capitalized
+                        summary_text = summary_text[0].upper() + summary_text[1:]
+                        
+                        log.debug("summarize_to_layered_history", original_length=util.count_tokens("\n".join(chunk['text'] for chunk in current_chunk)), summarized_length=util.count_tokens(summary_text))
+                        
+                        next_layer.append({
+                            "start": start_index,
+                            "end": i - 1,
+                            "ts": current_chunk[0]['ts'],
+                            "ts_start": current_chunk[0]['ts_start'] if 'ts_start' in current_chunk[0] else current_chunk[0]['ts'],
+                            "ts_end": current_chunk[-1]['ts_end'] if 'ts_end' in current_chunk[-1] else current_chunk[-1]['ts'],
+                            "text": summary_text
+                        })
+                        current_chunk = []
+                        current_tokens = 0
+                        start_index = i
 
-        ts = target[-1].ts if target else entries[0].ts
-
-        # determine the most recent entry at the lower level, if its not newer or
-        # the difference is less than the threshold, then we don't need to summarize
-
-        recent_entry = entries[-1]
-
-        if util.iso8601_diff(recent_entry.ts, ts) < time_threshold_in_seconds:
-            return
-
-        log.debug("build_stepped_archive", level=level, ts=ts)
-
-        # if target is empty, start is 0
-        # otherwise start is the end of the last entry
-
-        start = 0 if not target else target[-1].end
-
-        # collect entries starting at start until the combined time duration
-        # exceeds the threshold
-
-        entries_to_summarize = []
-
-        for entry in entries[start:]:
-            entries_to_summarize.append(entry)
-            if util.iso8601_diff(entry.ts, ts) > time_threshold_in_seconds:
-                break
-
-        # summarize the entries
-        # we also collect N entries of previous summaries to use as context
-
-        num_previous = self.actions["archive"].config["include_previous"].value
-        if num_previous > 0:
-            extra_context = "\n\n".join(
-                [entry["text"] for entry in target[-num_previous:]]
-            )
+                current_chunk.append(entry)
+                current_tokens += entry_tokens
+                
+            log.debug("summarize_to_layered_history", tokens=current_tokens, threshold=token_threshold, next_layer=next_layer_index)
+            
+            return not noop
+                
+        
+        # First layer (always the base layer)
+        
+        if not layered_history:
+            layered_history.append([])
+            log.debug("summarize_to_layered_history", layer="base", new_layer=True)
+            await summarize_layer(self.scene.archived_history, 0, 0)
         else:
-            extra_context = None
-
-        summarized = await self.summarize(
-            "\n".join(map(str, entries_to_summarize)), extra_context=extra_context
-        )
-
-        # push summarized entry to target
-
-        ts = entries_to_summarize[-1].ts
-
-        target.append(
-            data_objects.ArchiveEntry(
-                summarized, start, len(entries_to_summarize) - 1, ts=ts
-            )
-        )
+            # determine starting point by checking for `end` in the last entry
+            last_entry = layered_history[0][-1]
+            end = last_entry["end"]
+            log.debug("summarize_to_layered_history", layer="base", start=end)
+            await summarize_layer(self.scene.archived_history, 0, end + 1)
+            
+        # process layers
+        async def update_layers() -> bool:
+            noop = True
+            for index in range(0, len(layered_history)):
+                log.debug("WATCH", index=index)
+                layer = layered_history[index]
+                
+                try:
+                    # check if the next layer exists
+                    next_layer = layered_history[index + 1]
+                except IndexError:
+                    next_layer = None
+                
+                end = next_layer[-1]["end"] if next_layer else 0
+                
+                log.debug("summarize_to_layered_history", layer=index, start=end)
+                summarized = await summarize_layer(layered_history[index], index + 1, end + 1 if end else 0)
+                
+                if summarized:
+                    noop = False
+                    
+            return not noop
+        
+        while await update_layers():
+            pass

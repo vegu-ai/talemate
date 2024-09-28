@@ -532,7 +532,7 @@ def iso8601_diff(duration_str1, duration_str2):
     return difference
 
 
-def iso8601_duration_to_human(iso_duration, suffix: str = " ago"):
+def iso8601_duration_to_human(iso_duration, suffix: str = " ago", zero_time_default:str="Moments"):
     # Parse the ISO8601 duration string into an isodate duration object
     if not isinstance(iso_duration, isodate.Duration):
         duration = isodate.parse_duration(iso_duration)
@@ -583,7 +583,7 @@ def iso8601_duration_to_human(iso_duration, suffix: str = " ago"):
     elif components:
         human_str = components[0]
     else:
-        human_str = "Moments"
+        human_str = zero_time_default
 
     return f"{human_str}{suffix}"
 

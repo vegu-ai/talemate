@@ -1,3 +1,52 @@
-Instruction: Summarize the events within the dialogue as accurately as you can.
-Expected Answer: A list short narrative descriptions
-Narrator answers:
+{% if summarization_method == "facts" -%}
+{% set output_type = "factual list" -%}
+{% else -%}
+{% set output_type = "narrative outline" -%}
+{% endif %}
+{% if extra_context %}
+
+<|SECTION:PREVIOUS CONTEXT|>
+{{ extra_context }}
+<|CLOSE_SECTION|>
+{% endif -%}
+<|SECTION:TASK|>
+Question: What happens explicitly within the story section alpha below? Summarize into a {{output_type}}.
+Content Context: This is a specific scene from {{ scene.context }}
+{% if output_type == "narrative outline" %}
+Use an informal and colloquial register with a conversational tone. Overall, the narrative is informal, conversational, natural, and spontaneous, with a sense of immediacy.
+{% endif %}
+
+YOU MUST ONLY SUMMARIZE THE CONTENT IN STORY SECTION ALPHA.
+
+YOU MUST ONLY INCLUDE THE SUMMARY, NO COMMENTARY.
+
+THE SUMMARY MUST BE CLEANLY WRITTEN AND EASY TO READ.
+
+{% if output_type == "narrative outline" %}
+Expected Answer: A summarized {{output_type}} of the story section alpha. It must include all the important milestones and story beats.
+{% elif output_type == "factual list" %}
+Expected Answer: A highly accurate numerical chronological list of the events and state changes that occur in the story section alpha. Important is anything that causes a state change in the scene, characters or objects. Use simple, clear language, and note details. Use exact words. Note all the state changes. Leave nothing out.
+{% endif %}
+
+{% if summarization_method == "long" -%}
+This should be a detailed summary, including all the juicy details.
+{% elif summarization_method == "short" -%}
+This should be a short and specific summary, including the most important details. 2 - 3 sentences.
+{% else %}
+Write 2 to 3 paragraphs summarizing the story section alpha.
+{% endif -%}
+
+{% if extra_instructions -%}
+{{ extra_instructions }}
+{% endif -%}
+<|CLOSE_SECTION|>
+<|SECTION:STORY SECTION ALPHA|>
+{{ dialogue }}
+<|CLOSE_SECTION|>
+{% if generation_options and generation_options.writing_style %}
+<|SECTION:WRITING STYLE|>
+{{ generation_options.writing_style.instructions }}
+<|CLOSE_SECTION|>
+{% endif %}
+<|SECTION:SUMMARIZATION OF STORY SECTION ALPHA|>
+{{ bot_token }}In the story section alpha,

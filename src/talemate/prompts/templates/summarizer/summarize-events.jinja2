@@ -17,7 +17,7 @@ Do not repeat any information from the original content.
 
 The summary MUST be maximum 3 sentences. Keep it concise, but keep key details.
 
-The writing style MUST match the tone of the original content. This is a {{ scene.context }}, so treat it as such.
+The writing style MUST match the tone of the original content. This is a {{ scene.context.lower() }} so treat it as such.
 <|CLOSE_SECTION|>
 {% if generation_options and generation_options.writing_style %}
 <|SECTION:WRITING STYLE|>

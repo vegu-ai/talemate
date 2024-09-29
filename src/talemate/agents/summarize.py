@@ -493,7 +493,13 @@ class SummarizeAgent(Agent):
             current_tokens = 0
             start_index = start_from
             noop = True
-            max_chunk_tokens = 512
+            
+            # smaller LLMs still struggle A LOT with summarizing long texts
+            # and keeping all the important story beats.
+            # 
+            # so we piece meal the text into chunks of N tokens that is
+            # then stitched together in the next layer
+            max_chunk_tokens = 360
 
             for i in range(start_from, len(source_layer)):
                 entry = source_layer[i]

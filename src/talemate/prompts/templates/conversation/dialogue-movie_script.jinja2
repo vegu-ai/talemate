@@ -105,7 +105,7 @@ YOU MUST ONLY WRITE NEW DIALOGUE FOR {{ talking_character.name.upper() }}.
 {% block scene_history -%}
 {% set scene_context = scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=talking_character.name) -%}
 {%- if actor_instructions_offset > 0 and talking_character.dialogue_instructions and scene.count_messages() > actor_instructions_offset -%}
-    {%- set _ = scene_context.insert(-actor_instructions_offset, "(Internal acting instructions for "+talking_character.name+": "+talking_character.dialogue_instructions+")") -%}
+    {%- set _ = scene_context.insert(-actor_instructions_offset, "(Internal acting instructions for "+talking_character.name+": "+talking_character.dialogue_instructions+" "+actor_instructions+")") -%}
 {% endif -%}
 {% for scene_line in scene_context -%}
 {{ scene_line }}END-OF-LINE

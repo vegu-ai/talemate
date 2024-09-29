@@ -22,6 +22,12 @@ from .registry import register
 log = structlog.get_logger("talemate.agents.summarize")
 
 
+class SummaryLongerThanOriginalError(ValueError):
+    def __init__(self, original_length:int, summarized_length:int):
+        self.original_length = original_length
+        self.summarized_length = summarized_length
+        super().__init__(f"Summarized text is longer than original text: {summarized_length} > {original_length}")
+
 @register()
 class SummarizeAgent(Agent):
     """
@@ -130,7 +136,7 @@ class SummarizeAgent(Agent):
             result = result.split("#")[0]
 
         # Removes partial sentence at the end
-        result = re.sub(r"[^\.\?\!]+(\n|$)", "", result)
+        result = util.strip_partial_sentences(result)
         result = result.strip()
 
         return result
@@ -361,6 +367,69 @@ class SummarizeAgent(Agent):
         
         return util.extract_list(response)
     
+    def compile_layered_history(self, for_layer_index:int = None) -> list[str]:
+        """
+        Starts at the last layer and compiles the layered history into a single
+        list of events.
+        
+        We are iterating backwards, so the last layer will be the most granular.
+        
+        Each preceeding layer starts from the end of the the next layer.
+        """
+        
+        layered_history = self.scene.layered_history
+        compiled = []
+        next_layer_start = None
+        
+        for i in range(len(layered_history) - 1, -1, -1):
+            
+            if for_layer_index is not None:
+                if i < for_layer_index:
+                    continue
+            
+            log.debug("compilelayered history", i=i, next_layer_start=next_layer_start)
+            
+            if not layered_history[i]:
+                continue
+            
+            for layered_history_entry in layered_history[i][next_layer_start if next_layer_start is not None else 0:]:
+                text = f"{layered_history_entry['text']}"
+                compiled.append(text)
+                
+            next_layer_start = layered_history_entry["end"] + 1
+            
+        return compiled
+    
+    @set_processing
+    async def list_major_milestones(self, content:str, extra_context:str, as_list:bool=False) -> list[str] | str:
+        """
+        Will generate a list of major milestones in the scene history
+        """
+        
+        response = await Prompt.request(
+            "summarizer.summarize-events-list-milestones",
+            self.client,
+            "analyze_medium3",
+            vars={
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "content": content,
+                "extra_context": extra_context,
+            },
+        )
+        
+        if not as_list:
+            return response
+        
+        try:
+            response = util.extract_list(response)
+        except IndexError as e:
+            log.error("list_major_milestones", error=str(e), response=response)
+            return ""
+        
+        return response
+        
+    
     @set_processing
     async def summarize_to_layered_history(self):
         
@@ -424,6 +493,7 @@ class SummarizeAgent(Agent):
             current_tokens = 0
             start_index = start_from
             noop = True
+            max_chunk_tokens = 512
 
             for i in range(start_from, len(source_layer)):
                 entry = source_layer[i]
@@ -446,33 +516,63 @@ class SummarizeAgent(Agent):
                         # provide the previous N entries in the current layer
                         # as extra_context
                         
+                        #extra_context = "\n\n".join(
+                        #    [chunk['text'] for chunk in next_layer[-include_previous:]]
+                        #)
+                        
+                        # we only want to send max_chunks at a time for summarization
+                                
+                        ts = current_chunk[0]['ts']
+                        ts_start = current_chunk[0]['ts_start'] if 'ts_start' in current_chunk[0] else ts
+                        ts_end = current_chunk[-1]['ts_end'] if 'ts_end' in current_chunk[-1] else ts
+                        
+                        summaries = []
+
                         extra_context = "\n\n".join(
-                            [chunk['text'] for chunk in next_layer[-include_previous:]]
+                            self.compile_layered_history(next_layer_index)
                         )
+
+                        text_length = util.count_tokens("\n\n".join(chunk['text'] for chunk in current_chunk))
+
+                        while current_chunk:
                             
+                            log.debug("summarize_to_layered_history", items_in_chunk=len(current_chunk), max_chunk_tokens=max_chunk_tokens)
+                            
+                            partial_chunk = []
+                            
+                            while current_chunk and util.count_tokens("\n\n".join(chunk['text'] for chunk in partial_chunk)) < max_chunk_tokens:
+                                partial_chunk.append(current_chunk.pop(0))
+                            
+                            text_to_summarize = "\n\n".join(chunk['text'] for chunk in partial_chunk)
                         
-                        summary_text = await self.summarize(
-                            "\n\n".join(chunk['text'] for chunk in current_chunk),
-                            method=method,
-                            source_type="events",
-                            extra_context=extra_context,
-                        )
+                            summary_text = await self.summarize(
+                                text_to_summarize,
+                                method=method,
+                                source_type="events",
+                                extra_context=extra_context + "\n\n".join(summaries),
+                            )
+                            noop = False
+                            
+                            # make sure the first letter is capitalized
+                            summary_text = summary_text[0].upper() + summary_text[1:]
+                            summaries.append(summary_text)
+                            
+                        # if summarized text is longer than the original, we will
+                        # raise an error
+                        if util.count_tokens(summaries) > text_length:
+                            raise SummaryLongerThanOriginalError(text_length, util.count_tokens(summaries))
                         
-                        noop = False
-                        
-                        # make sure the first letter is capitalized
-                        summary_text = summary_text[0].upper() + summary_text[1:]
-                        
-                        log.debug("summarize_to_layered_history", original_length=util.count_tokens("\n".join(chunk['text'] for chunk in current_chunk)), summarized_length=util.count_tokens(summary_text))
+                        log.debug("summarize_to_layered_history", original_length=text_length, summarized_length=util.count_tokens(summaries))
                         
                         next_layer.append({
                             "start": start_index,
                             "end": i - 1,
-                            "ts": current_chunk[0]['ts'],
-                            "ts_start": current_chunk[0]['ts_start'] if 'ts_start' in current_chunk[0] else current_chunk[0]['ts'],
-                            "ts_end": current_chunk[-1]['ts_end'] if 'ts_end' in current_chunk[-1] else current_chunk[-1]['ts'],
-                            "text": summary_text
+                            "ts": ts,
+                            "ts_start": ts_start,
+                            "ts_end": ts_end,
+                            "text": "\n\n".join(summaries)
                         })
+                            
                         current_chunk = []
                         current_tokens = 0
                         start_index = i
@@ -487,22 +587,27 @@ class SummarizeAgent(Agent):
         
         # First layer (always the base layer)
         
-        if not layered_history:
-            layered_history.append([])
-            log.debug("summarize_to_layered_history", layer="base", new_layer=True)
-            await summarize_layer(self.scene.archived_history, 0, 0)
-        else:
-            # determine starting point by checking for `end` in the last entry
-            last_entry = layered_history[0][-1]
-            end = last_entry["end"]
-            log.debug("summarize_to_layered_history", layer="base", start=end)
-            await summarize_layer(self.scene.archived_history, 0, end + 1)
+        try:
+        
+            if not layered_history:
+                layered_history.append([])
+                log.debug("summarize_to_layered_history", layer="base", new_layer=True)
+                await summarize_layer(self.scene.archived_history, 0, 0)
+            else:
+                # determine starting point by checking for `end` in the last entry
+                last_entry = layered_history[0][-1]
+                end = last_entry["end"]
+                log.debug("summarize_to_layered_history", layer="base", start=end)
+                await summarize_layer(self.scene.archived_history, 0, end + 1)
+                
+        except SummaryLongerThanOriginalError as exc:
+            log.error("summarize_to_layered_history", error=exc, layer="base")
+            return
             
         # process layers
         async def update_layers() -> bool:
             noop = True
             for index in range(0, len(layered_history)):
-                log.debug("WATCH", index=index)
                 layer = layered_history[index]
                 
                 try:
@@ -521,5 +626,9 @@ class SummarizeAgent(Agent):
                     
             return not noop
         
-        while await update_layers():
-            pass
+        try:
+            while await update_layers():
+                pass
+        except SummaryLongerThanOriginalError as exc:
+            log.error("summarize_to_layered_history", error=exc, layer="subsequent")
+            return

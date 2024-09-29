@@ -1536,14 +1536,27 @@ class Scene(Emitter):
         # collect dialogue
 
         count = 0
-
+        
+        assured_messagbes = 15
+        history_len = len(self.history)
+        
         summarized_to = self.archived_history[-1]["end"]+1 if self.archived_history else None
         
-        # we always want to include some message, so offset -10, but normalize to 0
-        summarized_to = max(0, summarized_to - 10)
+        # we always want to include some message, so offset, but normalize to 0
+        summarized_to = max(0, summarized_to - assured_messagbes)
 
-        for message in self.history[summarized_to if summarized_to is not None else 0:]:
+        # if summarized_to somehow is bigger than the length of the history
+        # since we have no way to determine where they sync up just put as much of
+        # the dialogue as possible
+        if summarized_to >= history_len:
+            log.warning("context_history", message="summarized_to is greater than history length - may want to regenerate history")
+            summarized_to = 0
+        
+        #for message in self.history[summarized_to if summarized_to is not None else 0:]:
+        for i in range(len(self.history) - 1, summarized_to, -1):
             count += 1
+
+            message = self.history[i]
 
             if message.hidden:
                 continue
@@ -1566,7 +1579,8 @@ class Scene(Emitter):
             if count_tokens(parts_dialogue) + count_tokens(message) > budget_dialogue:
                 break
 
-            parts_dialogue.append(
+            parts_dialogue.insert(
+                0, 
                 message.as_format(conversation_format, mode=actor_direction_mode)
             )
                     

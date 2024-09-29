@@ -133,7 +133,7 @@ def preset_for_kind(kind: str, client: "ClientBase") -> dict:
 TOKEN_MAPPING = {
     "conversation": 75,
     "conversation_select_talking_actor": 30,
-    "summarize": 1024,
+    "summarize": 512,
     "analyze": 500,
     "analyze_long": 2048,
     "analyze_freeform": 500,

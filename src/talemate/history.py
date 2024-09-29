@@ -101,6 +101,8 @@ async def rebuild_history(
     scene.archived_history = [
         ah for ah in scene.archived_history if ah.get("end") is None
     ]
+    
+    scene.layered_history = []
 
     scene.saved = False
 
@@ -145,4 +147,9 @@ async def rebuild_history(
 
     scene.sync_time()
     await scene.commit_to_memory()
+    
+    if summarizer.archive_layered_history:
+        emit("status", message="Rebuilding layered history...", status="busy")
+        await summarizer.summarize_to_layered_history()
+    
     emit("status", message="Historical archive rebuilt", status="success")

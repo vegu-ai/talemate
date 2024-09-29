@@ -112,6 +112,7 @@ export default {
         },
         regenerate() {
             this.history = [];
+            this.layered_history = [];
             this.busy = true;
             this.getWebsocket().send(JSON.stringify({
                 type: "world_state_manager",
@@ -155,3 +156,8 @@ export default {
 }
 
 </script>
+<style scoped>
+.history-entry {
+    white-space: pre-wrap;
+}
+</style>

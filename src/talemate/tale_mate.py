@@ -1426,7 +1426,7 @@ class Scene(Emitter):
         return summary
 
     def context_history(
-        self, budget: int = 2048, keep_director: Union[bool, str] = False, **kwargs
+        self, budget: int = 8192, keep_director: Union[bool, str] = False, **kwargs
     ):
         parts_context = []
         parts_dialogue = []

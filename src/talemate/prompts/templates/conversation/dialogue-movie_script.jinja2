@@ -108,7 +108,7 @@ YOU MUST ONLY WRITE NEW DIALOGUE FOR {{ talking_character.name.upper() }}.
     {%- set _ = scene_context.insert(-actor_instructions_offset, "(Internal acting instructions for "+talking_character.name+": "+talking_character.dialogue_instructions+" "+actor_instructions+")") -%}
 {% endif -%}
 {% for scene_line in scene_context -%}
-{{ scene_line }}END-OF-LINE
+{{ scene_line }}
 
 {% endfor %}
 {% endblock -%}

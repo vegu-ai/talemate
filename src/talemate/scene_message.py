@@ -143,7 +143,7 @@ class CharacterMessage(SceneMessage):
 
         message = self.message.split(":", 1)[1].replace('"', "").strip()
 
-        return f"\n{self.character_name.upper()}\n{message}\n"
+        return f"\n{self.character_name.upper()}\n{message}\nEND-OF-LINE\n"
 
     def __dict__(self):
         rv = super().__dict__()

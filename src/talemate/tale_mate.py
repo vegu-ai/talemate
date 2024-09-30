@@ -726,7 +726,8 @@ class Player(Actor):
         if choice.lower().startswith(tuple(sensory_checks)):
             
             # extract the sensory type
-            sensory_type = choice.split(" ", 1)[0]
+            sensory_type = choice.split(" ", 1)[0].lower()
+            
             sensory_suffix = sensory_action.get(sensory_type, "experience")
             
             log.debug("generate_from_choice", choice=choice, sensory_checks=True)

@@ -556,11 +556,8 @@ class ConversationAgent(Agent):
         if retrieval_method != "direct":
             world_state = instance.get_agent("world_state")
             history = self.scene.context_history(
-                min_dialogue=3,
-                max_dialogue=15,
                 keep_director=False,
-                sections=False,
-                add_archieved_history=False,
+                budget=int(self.client.max_token_length * 0.75),
             )
             text = "\n".join(history)
             log.debug(

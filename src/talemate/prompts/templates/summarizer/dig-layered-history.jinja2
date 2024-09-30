@@ -1,0 +1,57 @@
+{% for entry in entries %}
+<|SECTION:CHAPTER {{ loop.index }}|>
+{{ entry["text"] }}
+<|CLOSE_SECTION|>
+{% endfor %}
+{% if context and False %}
+<|SECTION:GATHERED CONTEXT THROUGH DIGGING|>
+{% for entry in context %}
+{{ entry }}
+
+{% endfor %}
+{% endif %}
+<|SECTION:TASK|>
+QUERY: "{{ query }}"
+
+Do any of the chapters contain more information to help answer the query?
+
+Select one of three options to proceed:
+
+{% if layer > -1 %}- call function `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% endif %}
+- call function `answer(answer)` to provide an answer to the query - if you can use the chapter information, do so.
+- call function `abort()` to stop the process
+
+You response should be an analysis and explanation of your choice followed by function call(s) inside a single code block like this:
+
+{% if layer > -1 %}
+```
+dig(n)
+```
+
+You may call `dig` multiple times
+
+```
+dig(n)
+dig(m)
+...
+```
+
+or
+{% endif %}
+
+```
+answer("The house was built in 1920.")
+```
+
+or
+
+```
+abort()
+```
+YOU MUST ANALYSE BEFORE YOU WRITE THE FUNCTION CALLS.
+
+ONLY THE FUNCTION CALL(S) SHOULD BE CONTAINED IN THE CODE BLOCK.
+
+THERE SHOULD BE A SINGLE CODE BLOCK IN YOUR RESPONSE.
+<|CLOSE_SECTION|>
+{{ bot_token }}

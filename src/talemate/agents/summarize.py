@@ -474,7 +474,7 @@ class SummarizeAgent(Agent):
         
         return util.extract_list(response)
     
-    def compile_layered_history(self, for_layer_index:int = None) -> list[str]:
+    def compile_layered_history(self, for_layer_index:int = None, as_objects:bool=False) -> list[str]:
         """
         Starts at the last layer and compiles the layered history into a single
         list of events.
@@ -501,7 +501,15 @@ class SummarizeAgent(Agent):
             
             for layered_history_entry in layered_history[i][next_layer_start if next_layer_start is not None else 0:]:
                 text = f"{layered_history_entry['text']}"
-                compiled.append(text)
+                if as_objects:
+                    compiled.append({
+                        "text": text,
+                        "start": layered_history_entry["start"],
+                        "end": layered_history_entry["end"],
+                        "layer": i,
+                    })
+                else:
+                    compiled.append(text)
                 
             next_layer_start = layered_history_entry["end"] + 1
             
@@ -733,3 +741,109 @@ class SummarizeAgent(Agent):
         except SummaryLongerThanOriginalError as exc:
             log.error("summarize_to_layered_history", error=exc, layer="subsequent")
             return
+        
+        
+    @set_processing
+    async def dig_layered_history(
+        self,
+        query: str,
+        entry: dict | None = None,
+        context: list[str] | None = None
+    ):
+        
+        """
+        Digs through the layered history in order to answer a query
+        """
+        
+        if not entry:
+            entries = self.compile_layered_history(as_objects=True)
+            layer = len(self.scene.layered_history) - 1
+        elif "layer" in entry:
+            layer = entry["layer"] - 1
+            
+            if layer > -1:
+                entries = self.scene.layered_history[layer][entry["start"]:entry["end"]+1]
+                # add `layer` entry to each
+                for entry in entries:
+                    entry["layer"] = layer
+            else:
+                entries = self.scene.archived_history[entry["start"]:entry["end"]+1]
+        else:
+            log.error("dig_layered_history", error="No layer information", entry=entry)
+            return ""
+        
+        response = await Prompt.request(
+            "summarizer.dig-layered-history",
+            self.client,
+            "analyze_freeform",
+            vars={
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "query": query,
+                "layer": layer,
+                "entries": entries,
+                "context": context,
+            },
+        )
+        
+        # find the first ```
+        code_block_start = response.find("```")
+        if code_block_start == -1:
+            log.error("dig_layered_history", error="No code block found", response=response)
+            return ""
+        
+        log.debug("dig_layered_history", code_block_start=code_block_start, response=response)
+        
+        code_block = response[code_block_start:].split("```",2)[1].strip()
+        
+        log.debug("dig_layered_history", code_block=code_block)
+        
+        function_calls = code_block.split("\n")[:3] # max 3 function calls
+        
+        log.debug("dig_layered_history", function_calls=function_calls)
+        
+        answers = []
+        
+        for function_call in function_calls:
+            
+            answer = None
+        
+            log.debug("dig_layered_history", function_name=function_call)
+            
+            function_name = function_call.split("(")[0].strip()
+            
+            if function_name == "dig":
+                # dig further
+                into_item = function_call.split("(")[1].split(")")[0].strip()
+                into_item = int(into_item)
+                
+                # if into item is larger, just max it out
+                if into_item > len(entries):
+                    into_item = len(entries) 
+                
+                try:
+                    entry = entries[into_item-1]
+                except IndexError:
+                    log.error("dig_layered_history", error="Index out of range", into_item=into_item, layer=layer)
+                    continue
+                except Exception as e:
+                    log.error("dig_layered_history", error=str(e), into_item=into_item, layer=layer)
+                    continue
+
+                log.debug("dig_layered_history", into_item=into_item, layer=layer-1, start=entry["start"], end=entry["end"])
+                return await self.dig_layered_history(
+                    query,
+                    entry,
+                    context=context + [entry["text"]] if context else [entry["text"]]
+                ) 
+            elif function_name == "abort":
+                continue
+            elif function_name == "answer":
+                answer = function_call.split("(")[1].split(")")[0].strip()
+                answers.append(answer)
+            else:
+                log.error("dig_layered_history", error="Unknown function", function_name=function_name)
+            
+        log.debug("dig_layered_history", answers=answers)
+            
+        return "\n".join(answers) if answers else ""

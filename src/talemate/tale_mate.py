@@ -1476,6 +1476,7 @@ class Scene(Emitter):
             # start with the last layer and work backwards
             
             next_layer_start = None
+            chapter = 1
             
             for i in range(len(self.layered_history) - 1, -1, -1):
                 
@@ -1497,8 +1498,9 @@ class Scene(Emitter):
                         time_message = time_message_start
                     else:
                         time_message = f"{time_message_start} to {time_message_end}"
-                    text = f"{time_message}: {layered_history_entry['text']}"
-                    parts_context.append(condensed(text))
+                    text = f"### Chapter {chapter}\n{layered_history_entry['text']}\nTimestamp: {time_message}"
+                    parts_context.append(text)
+                    chapter += 1
                     
                 next_layer_start = layered_history_entry["end"] + 1
                     

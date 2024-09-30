@@ -377,8 +377,8 @@ class SummarizeAgent(Agent):
         number = int(match.group(1)) if match else len(event_chunks)-1
         
         result = {
-            "selected": [event_chunks[:number+1]],
-            "remaining": [event_chunks[number+1:]]
+            "selected": event_chunks[:number+1],
+            "remaining": event_chunks[number+1:]
         }
         
         log.debug("find_natural_scene_termination", response=response, result=result)
@@ -607,10 +607,7 @@ class SummarizeAgent(Agent):
                             layered_history.append([])
                             log.debug("summarize_to_layered_history", created_layer=next_layer_index)
                             next_layer = layered_history[next_layer_index]
-                        
-                        # call analyze diagolgue to determine if there is a good
-                        # point of termination within the chunk                        
-                        terminating_line = await self.find_natural_scene_termination([chunk['text'] for chunk in current_chunk])
+
                         
                         # provide the previous N entries in the current layer
                         # as extra_context
@@ -625,7 +622,6 @@ class SummarizeAgent(Agent):
                         ts_start = current_chunk[0]['ts_start'] if 'ts_start' in current_chunk[0] else ts
                         ts_end = current_chunk[-1]['ts_end'] if 'ts_end' in current_chunk[-1] else ts
                         
-                        summaries = []
 
                         extra_context = "\n\n".join(
                             self.compile_layered_history(next_layer_index)
@@ -633,16 +629,41 @@ class SummarizeAgent(Agent):
 
                         text_length = util.count_tokens("\n\n".join(chunk['text'] for chunk in current_chunk))
 
-                        while current_chunk:
+                        summaries = []
+                        initial_chunks = [chunk['text'] for chunk in current_chunk]
+                        selected_chunks = None
+                        remaining_chunks = None
+                        
+                        while initial_chunks:
                             
-                            log.debug("summarize_to_layered_history", tokens_in_chunk=util.count_tokens("\n\n".join(chunk['text'] for chunk in current_chunk)), max_process_tokens=max_process_tokens)
+                            # call analyze diagolgue to determine if there is a good
+                            # point of termination within the chunk                        
+                            analyzed = await self.find_natural_scene_termination(initial_chunks)
+                            selected_chunks = analyzed["selected"]
+                            initial_chunks = remaining_chunks = analyzed["remaining"]
                             
-                            partial_chunk = []
+                            if not selected_chunks:
+                                break
                             
-                            while current_chunk and util.count_tokens("\n\n".join(chunk['text'] for chunk in partial_chunk)) < max_process_tokens:
-                                partial_chunk.append(current_chunk.pop(0))
+                            log.debug(
+                                "summarize_to_layered_history", 
+                                tokens_selected=util.count_tokens(selected_chunks), 
+                                tokens_remaining=util.count_tokens(remaining_chunks), 
+                                chunks_selected=len(selected_chunks),
+                                chunks_remaining=len(remaining_chunks),
+                                max_process_tokens=max_process_tokens
+                            )
+
+                            partial_chunks = []
                             
-                            text_to_summarize = "\n\n".join(chunk['text'] for chunk in partial_chunk)
+                            while selected_chunks and util.count_tokens(partial_chunks) < max_process_tokens:
+                                partial_chunks.append(selected_chunks.pop(0))
+                                
+                            # if there are selected chunks remaining re insert them into initial_chunks
+                            if selected_chunks:
+                                initial_chunks = selected_chunks + initial_chunks
+                            
+                            text_to_summarize = "\n\n".join(partial_chunks)
                         
                             summary_text = await self.summarize(
                                 text_to_summarize,

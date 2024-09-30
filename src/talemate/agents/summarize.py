@@ -85,7 +85,7 @@ class SummarizeAgent(Agent):
             ),
             # layered history gets its own action
             "layered_history": AgentAction(
-                enabled=True,
+                enabled=False,
                 container=True,
                 icon="mdi-layers",
                 can_be_disabled=True,
@@ -838,11 +838,13 @@ class SummarizeAgent(Agent):
                 ) 
                 if answer:
                     answers.append(answer)
+                    break
             elif function_name == "abort":
                 continue
             elif function_name == "answer":
                 answer = function_call.split("(")[1].split(")")[0].strip()
                 answers.append(answer)
+                break
             else:
                 log.error("dig_layered_history", error="Unknown function", function_name=function_name)
             

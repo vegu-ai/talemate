@@ -619,11 +619,12 @@ class SummarizeAgent(Agent):
                             layered_history.append([])
                             log.debug("summarize_to_layered_history", created_layer=next_layer_index)
                             next_layer = layered_history[next_layer_index]
-
+                                
                         ts = current_chunk[0]['ts']
                         ts_start = current_chunk[0]['ts_start'] if 'ts_start' in current_chunk[0] else ts
                         ts_end = current_chunk[-1]['ts_end'] if 'ts_end' in current_chunk[-1] else ts
                         
+                        summaries = []
 
                         extra_context = "\n\n".join(
                             self.compile_layered_history(next_layer_index)
@@ -631,25 +632,16 @@ class SummarizeAgent(Agent):
 
                         text_length = util.count_tokens("\n\n".join(chunk['text'] for chunk in current_chunk))
 
-                        summaries = []
-                        initial_chunks = [chunk['text'] for chunk in current_chunk]
-                        grouped_chunks = await self.find_natural_scene_termination(initial_chunks)
-                        
-                        while grouped_chunks:
+                        while current_chunk:
                             
-                            # call analyze diagolgue to determine if there is a good
-                            # point of termination within the chunk                        
-                            selected_chunks = grouped_chunks.pop(0)
+                            log.debug("summarize_to_layered_history", tokens_in_chunk=util.count_tokens("\n\n".join(chunk['text'] for chunk in current_chunk)), max_process_tokens=max_process_tokens)
                             
-                            log.debug(
-                                "summarize_to_layered_history", 
-                                tokens_selected=util.count_tokens(selected_chunks), 
-                                tokens_remaining=util.count_tokens(grouped_chunks), 
-                                chunks_selected=len(selected_chunks),
-                                chunks_remaining=len(grouped_chunks),
-                            )
-
-                            text_to_summarize = "\n\n".join(selected_chunks)
+                            partial_chunk = []
+                            
+                            while current_chunk and util.count_tokens("\n\n".join(chunk['text'] for chunk in partial_chunk)) < max_process_tokens:
+                                partial_chunk.append(current_chunk.pop(0))
+                            
+                            text_to_summarize = "\n\n".join(chunk['text'] for chunk in partial_chunk)
                         
                             summary_text = await self.summarize(
                                 text_to_summarize,
@@ -741,6 +733,3 @@ class SummarizeAgent(Agent):
         except SummaryLongerThanOriginalError as exc:
             log.error("summarize_to_layered_history", error=exc, layer="subsequent")
             return
-        
-        import json
-        print(json.dumps(layered_history, indent=2))

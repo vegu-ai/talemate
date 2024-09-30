@@ -337,14 +337,10 @@ class SummarizeAgent(Agent):
         return response
 
     @set_processing
-    async def find_natural_scene_termination(self, event_chunks:list[str]) -> dict[str, list[str]]:
+    async def find_natural_scene_termination(self, event_chunks:list[str]) -> list[list[str]]:
         """
-        Will analyze a list of events and return a dictionary with two keys:
-        
-        - selected: a list of events that are considered to be part of the
-            natural scene comings to an end
-        - remaining: a list of events that are considered to be part of the
-            next scene(s)
+        Will analyze a list of events and return a list of events that
+        has been separated at a natural scene termination points.
         """
         
         # scan through event chunks and split into paragraphs
@@ -370,18 +366,34 @@ class SummarizeAgent(Agent):
         )
         response = response.strip()
         
-        # Look for denouement at progress (\d+)""
+        items = util.extract_list(response)
         
-        match = re.search(r"denouement at progress (\d+)", response.lower())
+        # will be a list of 
+        # ["Progress 1", "Progress 12", "Progress 323", ...]
+        # convert to a list of just numbers 
         
-        number = int(match.group(1)) if match else len(event_chunks)-1
+        numbers = []
         
-        result = {
-            "selected": event_chunks[:number+1],
-            "remaining": event_chunks[number+1:]
-        }
+        for item in items:
+            match = re.match(r"Progress (\d+)", item.strip())
+            if match:
+                numbers.append(int(match.group(1)))
+                
+        # make sure its unique and sorted
+        numbers = sorted(list(set(numbers)))
+                
+        result = []
+        prev_number = 0
+        for number in numbers:
+            result.append(event_chunks[prev_number:number+1])
+            prev_number = number+1
         
-        log.debug("find_natural_scene_termination", response=response, result=result)
+        #result = {
+        #    "selected": event_chunks[:number+1],
+        #    "remaining": event_chunks[number+1:]
+        #}
+        
+        log.debug("find_natural_scene_termination", response=response, result=result, numbers=numbers)
         
         return result
                 
@@ -608,16 +620,6 @@ class SummarizeAgent(Agent):
                             log.debug("summarize_to_layered_history", created_layer=next_layer_index)
                             next_layer = layered_history[next_layer_index]
 
-                        
-                        # provide the previous N entries in the current layer
-                        # as extra_context
-                        
-                        #extra_context = "\n\n".join(
-                        #    [chunk['text'] for chunk in next_layer[-include_previous:]]
-                        #)
-                        
-                        # we only want to send max_chunks at a time for summarization
-                                
                         ts = current_chunk[0]['ts']
                         ts_start = current_chunk[0]['ts_start'] if 'ts_start' in current_chunk[0] else ts
                         ts_end = current_chunk[-1]['ts_end'] if 'ts_end' in current_chunk[-1] else ts
@@ -631,39 +633,23 @@ class SummarizeAgent(Agent):
 
                         summaries = []
                         initial_chunks = [chunk['text'] for chunk in current_chunk]
-                        selected_chunks = None
-                        remaining_chunks = None
+                        grouped_chunks = await self.find_natural_scene_termination(initial_chunks)
                         
-                        while initial_chunks:
+                        while grouped_chunks:
                             
                             # call analyze diagolgue to determine if there is a good
                             # point of termination within the chunk                        
-                            analyzed = await self.find_natural_scene_termination(initial_chunks)
-                            selected_chunks = analyzed["selected"]
-                            initial_chunks = remaining_chunks = analyzed["remaining"]
-                            
-                            if not selected_chunks:
-                                break
+                            selected_chunks = grouped_chunks.pop(0)
                             
                             log.debug(
                                 "summarize_to_layered_history", 
                                 tokens_selected=util.count_tokens(selected_chunks), 
-                                tokens_remaining=util.count_tokens(remaining_chunks), 
+                                tokens_remaining=util.count_tokens(grouped_chunks), 
                                 chunks_selected=len(selected_chunks),
-                                chunks_remaining=len(remaining_chunks),
-                                max_process_tokens=max_process_tokens
+                                chunks_remaining=len(grouped_chunks),
                             )
 
-                            partial_chunks = []
-                            
-                            while selected_chunks and util.count_tokens(partial_chunks) < max_process_tokens:
-                                partial_chunks.append(selected_chunks.pop(0))
-                                
-                            # if there are selected chunks remaining re insert them into initial_chunks
-                            if selected_chunks:
-                                initial_chunks = selected_chunks + initial_chunks
-                            
-                            text_to_summarize = "\n\n".join(partial_chunks)
+                            text_to_summarize = "\n\n".join(selected_chunks)
                         
                             summary_text = await self.summarize(
                                 text_to_summarize,

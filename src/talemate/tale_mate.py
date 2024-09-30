@@ -1440,6 +1440,9 @@ class Scene(Emitter):
         include_reinfocements = kwargs.get("include_reinfocements", True)
         assured_dialogue_num = kwargs.get("assured_dialogue_num", 15)
 
+        history_len = len(self.history)
+
+
         # CONTEXT
         # collect context, ignore where end > len(history) - count
         if not self.layered_history or not layered_history_enabled:
@@ -1489,7 +1492,11 @@ class Scene(Emitter):
                     time_message_end = util.iso8601_diff_to_human(
                         layered_history_entry["ts_end"], self.ts
                     )
-                    time_message = f"{time_message_start} to {time_message_end}"
+                    
+                    if time_message_start == time_message_end:
+                        time_message = time_message_start
+                    else:
+                        time_message = f"{time_message_start} to {time_message_end}"
                     text = f"{time_message}: {layered_history_entry['text']}"
                     parts_context.append(condensed(text))
                     
@@ -1522,11 +1529,6 @@ class Scene(Emitter):
                 parts_context.pop(0)
 
         # DIALOGUE
-
-        count = 0
-        
-        history_len = len(self.history)
-        
         summarized_to = self.archived_history[-1]["end"]+1 if self.archived_history else None
         
         # we always want to include some message, so offset, but normalize to 0
@@ -1541,8 +1543,6 @@ class Scene(Emitter):
         
         #for message in self.history[summarized_to if summarized_to is not None else 0:]:
         for i in range(len(self.history) - 1, summarized_to, -1):
-            count += 1
-
             message = self.history[i]
 
             if message.hidden:

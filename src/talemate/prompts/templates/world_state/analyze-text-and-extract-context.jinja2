@@ -2,16 +2,16 @@
 {% block character_context %}
 {% if include_character_context %}{% include "character-context.jinja2" %}{% endif %}
 {% endblock %}
-{% set questions = instruct_text("Generate 5 targeted queries to gather additional context for this story. Your task:
+{% set questions = instruct_text("Ask the narrator 1 important question to gather additional context to assist with the following goal: "+goal+"
 
 1. Focus on established facts, lore, and background information.
-2. Avoid repeating information already provided in the given context.
+2. Avoid asking for information already provided in the given context.
 3. Address gaps in the current narrative or explore relevant backstory.
 4. If characters mention specific states, locations, items, or other characters, prioritize queries about these.
 5. Phrase queries as direct requests for information from the world database.
 6. For unfamiliar elements, ask straightforward questions to clarify their nature or significance.
 
-Format your response as a list of 5 short, focused queries, each on its own line. Do not include any additional text or explanations.", self.character_context() + "\n\n" + text) %}
+Your response must be the question only. Do not include any additional text or explanations.", self.character_context() + "\n\n" + text) %}
 {%- with memory_query=questions -%}
     {% include "extra-context.jinja2" %}
 {% endwith %}

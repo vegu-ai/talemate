@@ -18,7 +18,7 @@ Do any of the chapters contain more information to help answer the query?
 Select one of three options to proceed:
 
 {% if layer > -1 %}- call function `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% endif %}
-- call function `answer(answer)` to provide an answer to the query - if you can use the chapter information, do so.
+- call function `answer(answer)` to provide an answer to the query - if you can use the chapter information, do so. This MUST be a narrative lore dump and MUST NOT mention chapter numbers.
 - call function `abort()` to stop the process
 
 You response should be an analysis and explanation of your choice followed by function call(s) inside a single code block like this:
@@ -28,7 +28,7 @@ You response should be an analysis and explanation of your choice followed by fu
 dig(n)
 ```
 
-You may call `dig` multiple times
+You may call `dig` multiple times. You must do this if there are multiple candidates to explore.
 
 ```
 dig(n)
@@ -40,7 +40,7 @@ or
 {% endif %}
 
 ```
-answer("The house was built in 1920.")
+answer("The house was built in 1920.") 
 ```
 
 or
@@ -48,10 +48,10 @@ or
 ```
 abort()
 ```
-YOU MUST ANALYSE BEFORE YOU WRITE THE FUNCTION CALLS.
+YOU MUST ANALYSE FIRST BEFORE YOU WRITE THE FUNCTION CALLS.
 
 ONLY THE FUNCTION CALL(S) SHOULD BE CONTAINED IN THE CODE BLOCK.
 
 THERE SHOULD BE A SINGLE CODE BLOCK IN YOUR RESPONSE.
 <|CLOSE_SECTION|>
-{{ bot_token }}
+{{ bot_token }} Analysis:

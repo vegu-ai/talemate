@@ -792,7 +792,7 @@ class SummarizeAgent(Agent):
             log.error("dig_layered_history", error="No code block found", response=response)
             return ""
         
-        log.debug("dig_layered_history", code_block_start=code_block_start, response=response)
+        log.debug("dig_layered_history", code_block_start=code_block_start)
         
         code_block = response[code_block_start:].split("```",2)[1].strip()
         
@@ -831,11 +831,13 @@ class SummarizeAgent(Agent):
                     continue
 
                 log.debug("dig_layered_history", into_item=into_item, layer=layer-1, start=entry["start"], end=entry["end"])
-                return await self.dig_layered_history(
+                answer = await self.dig_layered_history(
                     query,
                     entry,
                     context=context + [entry["text"]] if context else [entry["text"]]
                 ) 
+                if answer:
+                    answers.append(answer)
             elif function_name == "abort":
                 continue
             elif function_name == "answer":

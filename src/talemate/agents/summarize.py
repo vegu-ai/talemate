@@ -71,12 +71,6 @@ class SummarizeAgent(Agent):
                             {"label": "Factual List", "value": "facts"},
                         ],
                     ),
-                    "layered_history": AgentActionConfig(
-                        type="bool",
-                        label="Generate layered history",
-                        description="Generate a layered history with multiple levels of summarization",
-                        value=True,
-                    ),
                     "include_previous": AgentActionConfig(
                         type="number",
                         label="Use preceeding summaries to strengthen context",
@@ -88,7 +82,47 @@ class SummarizeAgent(Agent):
                         step=1,
                     ),
                 },
-            )
+            ),
+            # layered history gets its own action
+            "layered_history": AgentAction(
+                enabled=True,
+                container=True,
+                icon="mdi-layers",
+                can_be_disabled=True,
+                experimental=True,
+                label="Layered history",
+                description="Generate a layered history with multiple levels of summarization",
+                config={
+                    "threshold": AgentActionConfig(
+                        type="number",
+                        label="Token Threshold",
+                        description="Will summarize when the number of tokens in previous layer exceeds this threshold",
+                        min=256,
+                        max=8192,
+                        step=128,
+                        value=1536,
+                    ),
+                    "max_layers": AgentActionConfig(
+                        type="number",
+                        label="Maximum number of layers",
+                        description="The maximum number of layers to generate",
+                        min=1,
+                        max=5,
+                        step=1,
+                        value=3,
+                    ),  
+                    "max_process_tokens": AgentActionConfig(
+                        type="number",
+                        label="Maximum tokens to process",
+                        description="The maximum number of tokens to process at once.",
+                        note="Smaller LLMs may struggle with accurately summarizing long texts. This setting will split the text into chunks and summarize each chunk separately, then stich them together in the next layer. If you're using a strong LLM (70B+), you can try setting this to be the same as the threshold.",
+                        min=256,
+                        max=8192,
+                        step=128,
+                        value=384,
+                    ),
+                },
+            ),
         }
 
     @property
@@ -113,9 +147,20 @@ class SummarizeAgent(Agent):
         return self.actions["archive"].config["include_previous"].value
     
     @property
-    def archive_layered_history(self):
-        return self.actions["archive"].config["layered_history"].value
+    def layered_history_enabled(self):
+        return self.actions["layered_history"].enabled
     
+    @property
+    def layered_history_threshold(self):
+        return self.actions["layered_history"].config["threshold"].value
+    
+    @property
+    def layered_history_max_process_tokens(self):
+        return self.actions["layered_history"].config["max_process_tokens"].value
+    
+    @property
+    def layered_history_max_layers(self):
+        return self.actions["layered_history"].config["max_layers"].value
 
     def connect(self, scene):
         super().connect(scene)
@@ -128,7 +173,7 @@ class SummarizeAgent(Agent):
 
         await self.build_archive(self.scene)
         
-        if self.archive_layered_history:
+        if self.layered_history_enabled:
             await self.summarize_to_layered_history()
 
     def clean_result(self, result):
@@ -290,6 +335,56 @@ class SummarizeAgent(Agent):
 
         response = self.clean_result(response)
         return response
+
+    @set_processing
+    async def find_natural_scene_termination(self, event_chunks:list[str]) -> dict[str, list[str]]:
+        """
+        Will analyze a list of events and return a dictionary with two keys:
+        
+        - selected: a list of events that are considered to be part of the
+            natural scene comings to an end
+        - remaining: a list of events that are considered to be part of the
+            next scene(s)
+        """
+        
+        # scan through event chunks and split into paragraphs
+        rebuilt_chunks = []
+        
+        for chunk in event_chunks:
+            paragraphs = [
+                p.strip() for p in chunk.split("\n") if p.strip()
+            ]
+            rebuilt_chunks.extend(paragraphs)
+        
+        event_chunks = rebuilt_chunks
+        
+        response = await Prompt.request(
+            "summarizer.find-natural-scene-termination-events",
+            self.client,
+            "analyze_short2",
+            vars={
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "events": event_chunks,
+            },
+        )
+        response = response.strip()
+        
+        # Look for denouement at progress (\d+)""
+        
+        match = re.search(r"denouement at progress (\d+)", response.lower())
+        
+        number = int(match.group(1)) if match else len(event_chunks)-1
+        
+        result = {
+            "selected": [event_chunks[:number+1]],
+            "remaining": [event_chunks[number+1:]]
+        }
+        
+        log.debug("find_natural_scene_termination", response=response, result=result)
+        
+        return result
+                
 
     @set_processing
     async def summarize(
@@ -479,9 +574,10 @@ class SummarizeAgent(Agent):
         if not self.scene.archived_history:
             return  # No base layer summaries to work with
 
-        token_threshold = self.actions["archive"].config["threshold"].value
-        include_previous = self.actions["archive"].config["include_previous"].value
+        token_threshold = self.layered_history_threshold
         method = self.actions["archive"].config["method"].value
+        max_process_tokens = self.layered_history_max_process_tokens
+        max_layers = self.layered_history_max_layers
 
         if not hasattr(self.scene, 'layered_history'):
             self.scene.layered_history = []
@@ -493,13 +589,6 @@ class SummarizeAgent(Agent):
             current_tokens = 0
             start_index = start_from
             noop = True
-            
-            # smaller LLMs still struggle A LOT with summarizing long texts
-            # and keeping all the important story beats.
-            # 
-            # so we piece meal the text into chunks of N tokens that is
-            # then stitched together in the next layer
-            max_chunk_tokens = 360
 
             for i in range(start_from, len(source_layer)):
                 entry = source_layer[i]
@@ -518,6 +607,10 @@ class SummarizeAgent(Agent):
                             layered_history.append([])
                             log.debug("summarize_to_layered_history", created_layer=next_layer_index)
                             next_layer = layered_history[next_layer_index]
+                        
+                        # call analyze diagolgue to determine if there is a good
+                        # point of termination within the chunk                        
+                        terminating_line = await self.find_natural_scene_termination([chunk['text'] for chunk in current_chunk])
                         
                         # provide the previous N entries in the current layer
                         # as extra_context
@@ -542,11 +635,11 @@ class SummarizeAgent(Agent):
 
                         while current_chunk:
                             
-                            log.debug("summarize_to_layered_history", items_in_chunk=len(current_chunk), max_chunk_tokens=max_chunk_tokens)
+                            log.debug("summarize_to_layered_history", tokens_in_chunk=util.count_tokens("\n\n".join(chunk['text'] for chunk in current_chunk)), max_process_tokens=max_process_tokens)
                             
                             partial_chunk = []
                             
-                            while current_chunk and util.count_tokens("\n\n".join(chunk['text'] for chunk in partial_chunk)) < max_chunk_tokens:
+                            while current_chunk and util.count_tokens("\n\n".join(chunk['text'] for chunk in partial_chunk)) < max_process_tokens:
                                 partial_chunk.append(current_chunk.pop(0))
                             
                             text_to_summarize = "\n\n".join(chunk['text'] for chunk in partial_chunk)
@@ -614,7 +707,10 @@ class SummarizeAgent(Agent):
         async def update_layers() -> bool:
             noop = True
             for index in range(0, len(layered_history)):
-                layer = layered_history[index]
+                
+                # check against max layers
+                if index + 1 > max_layers:
+                    return False
                 
                 try:
                     # check if the next layer exists
@@ -638,3 +734,6 @@ class SummarizeAgent(Agent):
         except SummaryLongerThanOriginalError as exc:
             log.error("summarize_to_layered_history", error=exc, layer="subsequent")
             return
+        
+        import json
+        print(json.dumps(layered_history, indent=2))

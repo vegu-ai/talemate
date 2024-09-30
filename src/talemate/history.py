@@ -148,7 +148,7 @@ async def rebuild_history(
     scene.sync_time()
     await scene.commit_to_memory()
     
-    if summarizer.archive_layered_history:
+    if summarizer.layered_history_enabled:
         emit("status", message="Rebuilding layered history...", status="busy")
         await summarizer.summarize_to_layered_history()
     

@@ -18,6 +18,7 @@ export default createVuetify({
           delete: colors.red.darken2,
           cancel: colors.blueGrey.lighten3,
           muted: colors.grey.darken1,
+          mutedheader: colors.grey.lighten1,
           mutedbg: colors.grey.darken4,
           normal: colors.grey.base,
           unsaved: colors.amber.lighten2,

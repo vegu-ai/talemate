@@ -1018,7 +1018,7 @@ class WorldStateManagerPlugin:
         
         summarizer = get_agent("summarizer")
         
-        if summarizer.archive_layered_history:
+        if summarizer.layered_history_enabled:
             for layer in self.scene.layered_history:
                 layered_history.append(
                     history_with_relative_time(layer, self.scene.ts)

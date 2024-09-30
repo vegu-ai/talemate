@@ -26,33 +26,36 @@
                 {{ item.label }}
               </v-tab>
             </v-tabs>
-      
           </v-col>
           <v-col cols="8">
             <v-window v-model="tab">
               <v-window-item :value="item.name" v-for="item in tabs" :key="item.name">
                 <v-select v-if="agent.data.requires_llm_client && tab === '_config'" v-model="selectedClient" :items="agent.data.client" label="Client"  @update:modelValue="save(false)"></v-select>
-
-                <v-alert type="warning" variant="tonal" density="compact" v-if="agent.data.experimental">
-                  This agent is currently experimental and may significantly decrease performance and / or require
-                  strong LLMs to function properly.
-                </v-alert>
         
                 <v-sheet v-for="(action, key) in actionsForTab" :key="key" density="compact">
                   <div v-if="testActionConditional(action)">
                     <div>
-                      <v-checkbox v-if="!actionAlwaysEnabled(key) && !action.container" :label="agent.data.actions[key].label" :messages="agent.data.actions[key].description" density="compact" color="primary" v-model="action.enabled" @update:modelValue="save(false)">
+                      <v-checkbox v-if="!actionAlwaysVisible(key, action) && !action.container" :label="agent.data.actions[key].label" :messages="agent.data.actions[key].description" density="compact" color="primary" v-model="action.enabled" @update:modelValue="save(false)">
                         <!-- template details slot -->
                         <template v-slot:message="{ message }">
-                          <span class="text-caption text-grey">{{ message }}</span>
+                          <div class="text-caption text-grey mb-8">{{ message }}</div>
                         </template>
 
                       </v-checkbox>
-                      <p v-else-if="action.container">{{ agent.data.actions[key].description }}</p>
+                      <p v-else-if="action.container" class="text-muted mt-2">
+                        {{ agent.data.actions[key].description }}
+                      </p>
                     </div>
                     <div class="mt-2">
+
+                      <div v-if="action.container && action.can_be_disabled">
+                        <v-checkbox :label="'Enable '+action.label" color="primary" v-model="action.enabled" @update:modelValue="save(false)">
+                          <!-- template details slot -->
+                        </v-checkbox>
+                      </div>
+
                       <div v-for="(action_config, config_key) in agent.data.actions[key].config" :key="config_key">
-                        <div v-if="action.enabled || actionAlwaysEnabled(key)">
+                        <div v-if="action.enabled || actionAlwaysVisible(key, action)">
                           <!-- render config widgets based on action_config.type (int, str, bool, float) -->
                           <v-text-field v-if="action_config.type === 'text' && action_config.choices === null" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" density="compact" @keyup="save(true)"></v-text-field>
 
@@ -60,7 +63,7 @@
 
                           <v-autocomplete v-else-if="action_config.type === 'text' && action_config.choices !== null" v-model="action.config[config_key].value" :items="action_config.choices" :label="action_config.label" :hint="action_config.description" density="compact" item-title="label" item-value="value" @update:modelValue="save(false)"></v-autocomplete>
 
-                          <v-slider v-if="action_config.type === 'number' && action_config.step !== null" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" :min="action_config.min" :max="action_config.max" :step="action_config.step" density="compact" thumb-label @update:modelValue="save(true)" color="primary"></v-slider>
+                          <v-slider v-if="action_config.type === 'number' && action_config.step !== null" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" :min="action_config.min" :max="action_config.max" :step="action_config.step" density="compact" @update:modelValue="save(true)" color="primary" thumb-label="always"></v-slider>
 
                           <v-checkbox v-if="action_config.type === 'bool'" v-model="action.config[config_key].value" :label="action_config.label" :messages="action_config.description" density="compact" @update:modelValue="save(false)" color="primary">
                             <!-- template details slot -->
@@ -72,6 +75,7 @@
                           </v-checkbox>
                             
                           <v-alert v-if="action_config.note != null" variant="outlined" density="compact" color="grey-darken-1" icon="mdi-information">
+                            <div class="text-caption text-mutedheader">{{ action_config.label }}</div>
                             {{ action_config.note }}
                           </v-alert>
                         </div>
@@ -81,6 +85,18 @@
                 </v-sheet>
               </v-window-item>
             </v-window>
+          </v-col>
+        </v-row>
+
+        <v-row>
+          <v-col cols="12">
+            <v-alert type="warning" variant="outlined" density="compact" v-if="agent.data.experimental">
+              <!-- small icon -->
+              <span class="text-caption">
+                This agent is currently experimental and may significantly decrease performance and / or require
+                strong LLMs to function properly.
+              </span>
+            </v-alert>
           </v-col>
         </v-row>
       </v-card-text>
@@ -111,7 +127,9 @@ export default {
       // will cycle through all actions, and each each action that has `container` = True, will be added to the tabs
       // will always add a general tab for the general agent settings
 
-      let tabs = [{ name: "_config", label: "General", icon: "mdi-cog" }];
+      let tabs = [{ name: "_config", label: "General", icon: "mdi-cog", action: {} }];
+
+      console.log("Agent: ", this.agent);
 
       for (let key in this.agent.actions) {
         let action = this.agent.actions[key];
@@ -121,7 +139,7 @@ export default {
           if(this.testActionConditional(action) === false)
             continue;
 
-          tabs.push({ name: key, label: action.label, icon: action.icon });
+          tabs.push({ name: key, label: action.label, icon: action.icon, action:action });
         }
       }
 
@@ -179,8 +197,8 @@ export default {
         return 'Enable';
       }
     },
-    actionAlwaysEnabled(actionName) {
-      if (actionName.charAt(0) === '_') {
+    actionAlwaysVisible(actionName, action) {
+      if (actionName.charAt(0) === '_' || action.container) {
         return true;
       } else {
         return false;
@@ -222,7 +240,7 @@ export default {
 
       this.saveTimeout = setTimeout(() => {
         this.$emit('save', this.agent);
-      }, 500);
+      }, 1500);
 
       //this.$emit('save', this.agent);
     }

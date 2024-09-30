@@ -86,17 +86,12 @@ class DirectorAgent(GameInstructionsMixin, Agent):
             "_generate_choices": AgentAction(
                 enabled=True,
                 container=True,
+                can_be_disabled=True,
+                experimental=True,
                 label="Dynamic Actions",
                 icon="mdi-tournament",
                 description="Allows the director to generate clickable choices for the player.",
                 config={
-                    "enabled": AgentActionConfig(
-                        type="bool",
-                        label="Enabled",
-                        description="If enabled, the director will generate actions for you when it's your turn.",
-                        value=False,
-                    ),
-                    
                     "chance": AgentActionConfig(
                         type="number",
                         label="Chance",
@@ -165,7 +160,7 @@ class DirectorAgent(GameInstructionsMixin, Agent):
 
     @property
     def generate_choices_enabled(self):
-        return self.actions["_generate_choices"].config["enabled"].value
+        return self.actions["_generate_choices"].enabled
     
     @property
     def generate_choices_chance(self):

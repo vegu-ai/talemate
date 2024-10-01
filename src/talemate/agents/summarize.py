@@ -846,7 +846,9 @@ class SummarizeAgent(Agent):
                 answers.append(answer)
                 break
             else:
-                log.error("dig_layered_history", error="Unknown function", function_name=function_name)
+                # Treat contents of code block as a single answer
+                answers.append(code_block)
+                break
             
         log.debug("dig_layered_history", answers=answers)
             

@@ -699,12 +699,15 @@ class SummarizeAgent(Agent):
                 layered_history.append([])
                 log.debug("summarize_to_layered_history", layer="base", new_layer=True)
                 await summarize_layer(self.scene.archived_history, 0, 0)
-            else:
+            elif layered_history[0]:
                 # determine starting point by checking for `end` in the last entry
                 last_entry = layered_history[0][-1]
                 end = last_entry["end"]
                 log.debug("summarize_to_layered_history", layer="base", start=end)
                 await summarize_layer(self.scene.archived_history, 0, end + 1)
+            else:
+                log.debug("summarize_to_layered_history", layer="base", empty=True)
+                await summarize_layer(self.scene.archived_history, 0, 0)
                 
         except SummaryLongerThanOriginalError as exc:
             log.error("summarize_to_layered_history", error=exc, layer="base")

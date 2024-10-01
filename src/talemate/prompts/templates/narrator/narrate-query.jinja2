@@ -14,6 +14,7 @@
 {% set final_line_number=len(scene_history) %}
 {% for scene_context in scene_history -%}
 {{ loop.index }}. {{ scene_context }}
+
 {% endfor %}
 <|SECTION:TASK|>
 {% if query.endswith("?") -%}

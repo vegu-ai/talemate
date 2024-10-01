@@ -12,9 +12,9 @@ Scene History
 
 {% endfor %}
 {% endif %}
+<|SECTION:QUERY|>
+{{ query }}
 <|SECTION:TASK|>
-QUERY: "{{ query }}"
-
 Do any of the chapters contain more information to help answer the query?
 
 Select one of three options to proceed:
@@ -23,9 +23,13 @@ Select one of three options to proceed:
 - call function `answer(answer)` to provide an answer to the query - If you feel like there is sufficient information in the chapters, you should answer instead of digging further. This MUST be a narrative lore dump and MUST NOT mention chapter numbers.
 - call function `abort()` to stop the process
 
-You response should be an analysis and explanation of your choice followed by function call(s) inside a single code block like this:
+You response should be an analysis and explanation of your choice followed by function call(s) inside a single code block.
 
+<|CLOSE_SECTION|>
+<|SECTION:EXAMPLES|>
 {% if layer > -1 %}
+### Digging into chapters
+
 ```
 dig(n)
 ```
@@ -41,6 +45,8 @@ dig(m)
 ```
 {% endif %}
 
+### Answer the question
+
 ```
 answer("Perched atop Raven's Peak, the Blackwood mansion has stood for two centuries, its stone walls steeped in mystery. Once home to a wealthy family, it now lies abandoned, its overgrown gardens hiding crumbling statues. Local lore speaks of hidden chambers and arcane rituals conducted within. Though deserted, eerie lights sometimes flicker in its windows on stormy nights, fueling rumors of ghosts or secretive occupants. The mansion remains a source of fascination and fear for the townspeople, its true history known only to its silent walls.")
 ```
@@ -53,13 +59,20 @@ answer("New Alexandria is torn between two warring factions: the Crimson Hand an
 answer("The Great Cataclysm, 237 years ago, reshaped our world. It began with earthquakes and tidal waves, followed by volcanic eruptions that turned the sky red. Reality itself seemed to tear, as creatures emerged from rifts, bringing chaotic magic that warped the land and mutated life forms. Continents were reshaped, mountains crumbled, and new islands rose. In the aftermath, survivors found a changed world, with ancient knowledge lost and civilizations in ruins. The cause remains unknown, with some attributing it to a fulfilled prophecy or a magical experiment gone wrong.")
 ```
 
-ANSWERS MUST BE SHORT LORE DUMPS WITH CONTEXT. 
-YOU MUST NOT MENTION CHAPTER NUMBERS. 
-LOCATIONS, PEOPLE, ACTIONS AND CONTEXT - THEY ALL MATTER.
+ANSWERS MUST BE SHORT INFO DUMPS THAT PROVIDE CONTEXT. 
+
+ANSWERS MUST NOT MENTION CHAPTER NUMBERS. 
+
+ANSWERS MUST INCLUDE LOCATIONS, PEOPLE, ACTIONS AND CONTEXT.
+
+### Aborting the query
 
 ```
 abort()
 ```
+
+<|CLOSE_SECTION|>
+<|SECTION:FINAL INSTRUCTIONS|>
 
 YOU MUST NOT MIX FUNCTIONS.
 
@@ -69,6 +82,6 @@ ONLY THE FUNCTION CALL(S) SHOULD BE CONTAINED IN THE CODE BLOCK.
 
 THERE MUST BE A SINGLE CODE BLOCK IN YOUR RESPONSE.
 
-THE CODE BLOCK MUST BE THE END OF YOUR RESPONSE.
+THE CODE BLOCK MUST BE THE END OF YOUR RESPONSE
 <|CLOSE_SECTION|>
 {{ bot_token }} After

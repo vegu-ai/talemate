@@ -1438,7 +1438,7 @@ class Scene(Emitter):
         actor_direction_mode = self.get_helper("director").agent.actor_direction_mode
         layered_history_enabled = self.get_helper("summarizer").agent.layered_history_enabled
         include_reinfocements = kwargs.get("include_reinfocements", True)
-        assured_dialogue_num = kwargs.get("assured_dialogue_num", 15)
+        assured_dialogue_num = kwargs.get("assured_dialogue_num", 3)
 
         history_len = len(self.history)
 
@@ -1531,10 +1531,17 @@ class Scene(Emitter):
                 parts_context.pop(0)
 
         # DIALOGUE
-        summarized_to = self.archived_history[-1]["end"]+1 if self.archived_history else None
+        try:
+            summarized_to = self.archived_history[-1]["end"]+1 if self.archived_history else None
+        except KeyError:
+            # only static archived history entries exist (pre-entered history
+            # that doesnt have start and end timestamps)
+            summarized_to = 0
+        
         
         # we always want to include some message, so offset, but normalize to 0
-        summarized_to = max(0, summarized_to - assured_dialogue_num)
+        if summarized_to > 0 and summarized_to - history_len < assured_dialogue_num:
+            summarized_to = history_len - assured_dialogue_num
 
         # if summarized_to somehow is bigger than the length of the history
         # since we have no way to determine where they sync up just put as much of
@@ -1542,6 +1549,8 @@ class Scene(Emitter):
         if summarized_to >= history_len:
             log.warning("context_history", message="summarized_to is greater than history length - may want to regenerate history")
             summarized_to = 0
+            
+        log.debug("context_history", summarized_to=summarized_to, history_len=history_len)
         
         #for message in self.history[summarized_to if summarized_to is not None else 0:]:
         for i in range(len(self.history) - 1, summarized_to, -1):

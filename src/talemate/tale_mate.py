@@ -1532,7 +1532,7 @@ class Scene(Emitter):
 
         # DIALOGUE
         try:
-            summarized_to = self.archived_history[-1]["end"]+1 if self.archived_history else None
+            summarized_to = self.archived_history[-1]["end"]+1 if self.archived_history else 0
         except KeyError:
             # only static archived history entries exist (pre-entered history
             # that doesnt have start and end timestamps)
@@ -1540,13 +1540,13 @@ class Scene(Emitter):
         
         
         # we always want to include some message, so offset, but normalize to 0
-        if summarized_to > 0 and summarized_to - history_len < assured_dialogue_num:
+        if summarized_to and summarized_to - history_len < assured_dialogue_num:
             summarized_to = history_len - assured_dialogue_num
 
         # if summarized_to somehow is bigger than the length of the history
         # since we have no way to determine where they sync up just put as much of
         # the dialogue as possible
-        if summarized_to >= history_len:
+        if summarized_to and summarized_to >= history_len:
             log.warning("context_history", message="summarized_to is greater than history length - may want to regenerate history")
             summarized_to = 0
             

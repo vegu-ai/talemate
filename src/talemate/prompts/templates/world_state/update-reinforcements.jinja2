@@ -1,3 +1,4 @@
+
 {% block rendered_context -%}
 <|SECTION:CONTEXT|>
 {%- with memory_query=scene.snapshot() -%}
@@ -12,9 +13,13 @@
 {% endblock -%}
 <|SECTION:SCENE|>
 {% set scene_history=scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context())) -%}
-{% set final_line_number=len(scene_history) -%}
+{% set last_message = scene_history[-1] %}
+{% set last_message_is_reinforcement = ("internal notes" in last_message.lower() and question in last_message)%}
+{% if not last_message_is_reinforcement %}{% set final_line_number=len(scene_history) %}{% else %}{% set final_line_number=len(scene_history)-1 %}{% endif %}
 {% for scene_context in scene_history -%}
+{% if not (loop.last and last_message_is_reinforcement) -%}
 {{ loop.index }}. {{ scene_context }}
+{% endif -%}
 {% endfor -%}
 {% if not scene.history -%}
 No dialogue so far
@@ -45,7 +50,7 @@ YOUR ANSWER IS CONFIDENT, MAKE CREATIVE CHOICES AS NEEDED.
 {% endif %}
 The tone of your answer should be consistent with the tone of the story so far.
 
-Question: {{ question }}
+Question: {{ question }}  (At line {{ final_line_number }} in the scene progression)
 {% if answer %}Previous Answer: {{ answer }}
 {% endif -%}
 <|CLOSE_SECTION|>

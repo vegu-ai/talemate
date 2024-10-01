@@ -1536,9 +1536,6 @@ class Scene(Emitter):
             summarized_to = 0
         
         
-        # we always want to include some message, so offset, but normalize to 0
-        summarized_to = max(0, summarized_to - assured_dialogue_num)
-    
         # if summarized_to somehow is bigger than the length of the history
         # since we have no way to determine where they sync up just put as much of
         # the dialogue as possible
@@ -1548,13 +1545,18 @@ class Scene(Emitter):
             
         log.debug("context_history", summarized_to=summarized_to, history_len=history_len)
         
+        dialogue_messages_collected = 0 
+        
         #for message in self.history[summarized_to if summarized_to is not None else 0:]:
-        for i in range(len(self.history) - 1, summarized_to-1, -1):
+        for i in range(len(self.history) - 1, -1, -1):
             message = self.history[i]
+            
+            if i < summarized_to and dialogue_messages_collected >= assured_dialogue_num:
+                break
 
             if message.hidden:
                 continue
-
+            
             if isinstance(message, ReinforcementMessage) and not include_reinfocements:
                 continue
 
@@ -1577,6 +1579,9 @@ class Scene(Emitter):
                 0, 
                 message.as_format(conversation_format, mode=actor_direction_mode)
             )
+            
+            if isinstance(message, CharacterMessage):
+                dialogue_messages_collected += 1
                     
             
         if count_tokens(parts_context + parts_dialogue) < 1024:

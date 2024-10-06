@@ -15,21 +15,18 @@ Scene History
 <|SECTION:QUERY|>
 {{ query }}
 <|SECTION:TASK|>
-Do any of the chapters contain more information to help answer the query?
+1. Understand the query, what do we want to find out?
+2. Analyse the provided chapters.
+3. Select a function to call to process the request.
 
-Select one of three options to proceed:
+### Available Functions
+{% if layer > -1 %}- `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% endif %}
+- `answer(answer)` to provide an answer to the query - If you feel like there is sufficient information in the chapters, you should answer instead of digging further. This MUST be a narrative lore dump and MUST NOT mention chapter numbers.
+- `abort()` to stop the process
 
-{% if layer > -1 %}- call function `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% endif %}
-- call function `answer(answer)` to provide an answer to the query - If you feel like there is sufficient information in the chapters, you should answer instead of digging further. This MUST be a narrative lore dump and MUST NOT mention chapter numbers.
-- call function `abort()` to stop the process
-
-You response should be an analysis and explanation of your choice followed by function call(s) inside a single code block.
-
-<|CLOSE_SECTION|>
-<|SECTION:EXAMPLES|>
+### Examples
 {% if layer > -1 %}
-### Digging into chapters
-
+#### Digging into chapters
 ```
 dig(n)
 ```
@@ -45,8 +42,7 @@ dig(m)
 ```
 {% endif %}
 
-### Answer the question
-
+#### Answer the question
 ```
 answer("Perched atop Raven's Peak, the Blackwood mansion has stood for two centuries, its stone walls steeped in mystery. Once home to a wealthy family, it now lies abandoned, its overgrown gardens hiding crumbling statues. Local lore speaks of hidden chambers and arcane rituals conducted within. Though deserted, eerie lights sometimes flicker in its windows on stormy nights, fueling rumors of ghosts or secretive occupants. The mansion remains a source of fascination and fear for the townspeople, its true history known only to its silent walls.")
 ```
@@ -65,15 +61,13 @@ ANSWERS MUST NOT MENTION CHAPTER NUMBERS.
 
 ANSWERS MUST INCLUDE LOCATIONS, PEOPLE, ACTIONS AND CONTEXT.
 
-### Aborting the query
-
+#### Aborting the query
 ```
 abort()
 ```
 
 <|CLOSE_SECTION|>
 <|SECTION:FINAL INSTRUCTIONS|>
-
 YOU MUST NOT MIX FUNCTIONS.
 
 YOU MUST ANALYSE FIRST BEFORE YOU WRITE THE FUNCTION CALLS.
@@ -83,5 +77,11 @@ ONLY THE FUNCTION CALL(S) SHOULD BE CONTAINED IN THE CODE BLOCK.
 THERE MUST BE A SINGLE CODE BLOCK IN YOUR RESPONSE.
 
 THE CODE BLOCK MUST BE THE END OF YOUR RESPONSE
+### Response Format
+<Analysis of the query>
+
+<Analysis of the chapters and context>
+
+<Code block with function call(s)>
 <|CLOSE_SECTION|>
 {{ bot_token }}

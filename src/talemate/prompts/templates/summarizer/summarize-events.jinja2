@@ -7,7 +7,11 @@
 {% endif -%}
 <|SECTION:{{ section_name }}|>
 {{ section_name.upper() }} START
-{{ dialogue }}
+{% for chunk in text_to_chunks(dialogue, chunk_size=1024) %}
+CHUNK {{ loop.index }}: 
+{{ chunk }}
+
+{% endfor %}
 {{ section_name.upper() }} END
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
@@ -15,15 +19,13 @@ Provide a compressed, short summary for {{ section_name }}.
 
 Do not repeat any information from the previous context. 
 
-The summary MUST be maximum 5 sentences. Keep it concise, but keep key details.
+Compress each individual chbunk into 1 sentence.
 
-YOU MUST NOT ADD COMMENTARY.
-
-The writing style MUST match the tone of the previous context. This is a {{ scene.context.lower() }} so treat it as such.
+YOU MUST NOT ADD COMMENTARY. 
 <|CLOSE_SECTION|>
 {% if generation_options and generation_options.writing_style %}
 <|SECTION:WRITING STYLE|>
 {{ generation_options.writing_style.instructions }}
 <|CLOSE_SECTION|>
 {% endif %}
-{{ bot_token }}In {{ section_name }},
+{{ set_prepared_response("CHUNK 1:")}}

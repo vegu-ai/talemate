@@ -659,6 +659,9 @@ class SummarizeAgent(Agent):
                             )
                             noop = False
                             
+                            # strip all occurences of "CHUNK \d+: " from the summary
+                            summary_text = re.sub(r"(CHUNK|CHAPTER) \d+: ", "", summary_text)
+                            
                             # make sure the first letter is capitalized
                             summary_text = summary_text[0].upper() + summary_text[1:]
                             summaries.append(summary_text)
@@ -788,6 +791,9 @@ class SummarizeAgent(Agent):
                 "context": context,
             },
         )
+        
+        # replace ```python with ``` to avoid markdown issues
+        response = response.replace("```python", "```")
         
         # find the first ```
         code_block_start = response.find("```")

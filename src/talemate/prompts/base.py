@@ -386,6 +386,7 @@ class Prompt:
         env.globals["llm_can_be_coerced"] = lambda: (
             self.client.can_be_coerced if self.client else False
         )
+        env.globals["text_to_chunks"] = self.text_to_chunks
         env.globals["emit_narrator"] = lambda message: emit("system", message=message)
         env.filters["condensed"] = condensed
         ctx.update(self.vars)
@@ -598,6 +599,39 @@ class Prompt:
             emit("status", status=status, message=message, data=kwargs)
         else:
             emit("status", status=status, message=message)
+
+
+    def text_to_chunks(self, text:str, chunk_size:int=512) -> list[str]:
+        """
+        Takes a text string and splits it into chunks based length of the text.
+        
+        Arguments:
+        
+        - text: The text to split into chunks.
+        - chunk_size: number of characters in each chunk.
+        """
+        
+        chunks = []
+        
+        for i, line in enumerate(text.split("\n")):
+            
+            # dont push empty lines into empty chunks
+            if not line.strip() and (not chunks or not chunks[-1]):
+                continue
+            
+            if not chunks:
+                chunks.append([line])
+                continue
+            
+            if len("\n".join(chunks[-1])) + len(line) < chunk_size:
+                chunks[-1].append(line)
+            else:
+                chunks.append([line])
+        
+
+        return ["\n\n".join(chunk) for chunk in chunks]
+        
+
 
     def set_prepared_response(self, response: str, prepend: str = ""):
         """

@@ -358,8 +358,28 @@ class AssistantMixin:
             # truncate scene.archived_history keeping the element where `end` is < `index`
             # as the last element
             self.scene.archived_history = [
-                x for x in self.scene.archived_history if x["end"] < index
+                x for x in self.scene.archived_history if "end" not in x or x["end"] < index
             ]
+            
+            # the same needs to be done for layered history
+            # where each layer is truncated based on what's left in the previous layer
+            # using similar logic as above (checking `end` vs `index`)
+            # layer 0 checks archived_history
+            
+            new_layered_history = []
+            for layer_number, layer in enumerate(self.scene.layered_history):
+                
+                if layer_number == 0:
+                    index = len(self.scene.archived_history) - 1
+                else:
+                    index = len(new_layered_history[layer_number - 1]) - 1
+                    
+                new_layer = [
+                    x for x in layer if x["end"] < index
+                ]
+                new_layered_history.append(new_layer)
+                
+            self.scene.layered_history = new_layered_history
 
             # save the scene
             await self.scene.save(copy_name=save_name)

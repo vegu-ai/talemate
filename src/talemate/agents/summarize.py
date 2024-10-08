@@ -761,6 +761,13 @@ class SummarizeAgent(Agent):
         Digs through the layered history in order to answer a query
         """
         
+        if not self.layered_history_enabled:
+            return ""
+        
+        if not self.scene.layered_history and not self.scene.archived_history:
+            log.debug("dig_layered_history", skip="No history to dig through")
+            return ""
+        
         if not entry:
             entries = self.compile_layered_history(as_objects=True)
             layer = len(self.scene.layered_history) - 1
@@ -776,6 +783,14 @@ class SummarizeAgent(Agent):
                 entries = self.scene.archived_history[entry["start"]:entry["end"]+1]
         else:
             log.error("dig_layered_history", error="No layer information", entry=entry)
+            return ""
+        
+        if not entries:
+            layer = -1
+            entries = self.scene.archived_history
+        
+        if not entries:
+            log.debug("dig_layered_history", skip="No entries to dig through")
             return ""
         
         response = await Prompt.request(
@@ -862,3 +877,11 @@ class SummarizeAgent(Agent):
         log.debug("dig_layered_history", answers=answers)
             
         return "\n".join(answers) if answers else ""
+    
+    def inject_prompt_paramters(
+        self, prompt_param: dict, kind: str, agent_function_name: str
+    ):
+        if agent_function_name == "dig_layered_history":
+            if prompt_param.get("extra_stopping_strings") is None:
+                prompt_param["extra_stopping_strings"] = []
+            prompt_param["extra_stopping_strings"] += ["DONE"]

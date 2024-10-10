@@ -83,6 +83,7 @@ PRESET_SUBSTRING_MAPPINGS = {
     "creative": "creative",
     "analytical": "analytical",
     "analyze": "analytical",
+    "direction": "scene_direction",
 }
 
 PRESET_MAPPING = {
@@ -132,7 +133,7 @@ def preset_for_kind(kind: str, client: "ClientBase") -> dict:
 TOKEN_MAPPING = {
     "conversation": 75,
     "conversation_select_talking_actor": 30,
-    "summarize": 500,
+    "summarize": 512,
     "analyze": 500,
     "analyze_long": 2048,
     "analyze_freeform": 500,
@@ -154,7 +155,9 @@ TOKEN_MAPPING = {
 TOKEN_SUBSTRING_MAPPINGS = {
     "extensive": 2048,
     "long": 1024,
+    "medium3": 750,
     "medium2": 512,
+    "list": 300,
     "medium": 192,
     "short2": 128,
     "short": 75,

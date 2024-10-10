@@ -1,0 +1,48 @@
+Scene History
+
+{% set can_dig = layer > -1 %}
+{% for entry in entries %}
+<|SECTION:CHAPTER {{ loop.index }}|>
+{{ entry["text"] }}
+<|CLOSE_SECTION|>
+{% endfor %}
+{% if context and False %}
+<|SECTION:GATHERED CONTEXT THROUGH DIGGING|>
+{% for entry in context %}
+{{ entry }}
+
+{% endfor %}
+{% endif %}
+<|SECTION:QUERY|>
+{{ query }}
+<|SECTION:TASK|>
+- Understand the query, what do we want to find out?
+- Read the provided chapters and select one that holds the answer.{% if can_dig %} You can also decide to dig chapters for more information.
+- Select a function to call to process the request.{% endif %}
+
+### Available Functions
+{% if can_dig %}- `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% else %}- `answer(answer)` to provide an answer to the query - If you feel like there is sufficient information in the chapters, you should answer instead of digging further. This MUST be a narrative lore dump and MUST NOT mention chapter numbers. Provide a detailed answer to the query, adding context and explanations.{% endif %}
+- `abort()` to stop the process
+
+### Rules
+- You MUST NOT mix functions
+{% if can_dig %}- Digging is expensive. Only dig chapters if they are highly likely to be related to the query.{% endif %}
+- Use untyped code blocks, so ``` instead of ```python.
+- You must never invent information. Dig instead.
+- End with `DONE` after calling a function.
+
+### Response Format
+Follow this format exactly:
+
+ANALYSIS:
+<Analysis of the query>
+
+<Analysis of the provided information>
+
+CALL:
+```
+<function_name>(<arguments>)
+```
+DONE
+<|CLOSE_SECTION|>
+{{ bot_token }}ANALYSIS:

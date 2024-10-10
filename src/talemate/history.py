@@ -78,7 +78,11 @@ def history_with_relative_time(history: list[str], scene_time: str) -> list[dict
         {
             "text": entry["text"],
             "ts": entry["ts"],
+            "ts_start": entry.get("ts_start", None),
+            "ts_end": entry.get("ts_end", None),
             "time": iso8601_diff_to_human(scene_time, entry["ts"]),
+            "time_start": iso8601_diff_to_human(scene_time, entry["ts_start"] if entry.get("ts_start") else None),
+            "time_end": iso8601_diff_to_human(scene_time, entry["ts_end"] if entry.get("ts_end") else None),
         }
         for entry in history
     ]
@@ -97,6 +101,8 @@ async def rebuild_history(
     scene.archived_history = [
         ah for ah in scene.archived_history if ah.get("end") is None
     ]
+    
+    scene.layered_history = []
 
     scene.saved = False
 
@@ -141,4 +147,9 @@ async def rebuild_history(
 
     scene.sync_time()
     await scene.commit_to_memory()
+    
+    if summarizer.layered_history_enabled:
+        emit("status", message="Rebuilding layered history...", status="busy")
+        await summarizer.summarize_to_layered_history()
+    
     emit("status", message="Historical archive rebuilt", status="success")

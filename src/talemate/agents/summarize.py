@@ -11,7 +11,9 @@ import structlog
 import talemate.data_objects as data_objects
 import talemate.emit.async_signals
 import talemate.util as util
+from talemate.emit import emit
 from talemate.events import GameLoopEvent
+from talemate.status import set_loading
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, TimePassageMessage
 from talemate.world_state.templates import GenerationOptions
@@ -593,7 +595,7 @@ class SummarizeAgent(Agent):
         
         if not self.scene.archived_history:
             return  # No base layer summaries to work with
-
+        
         token_threshold = self.layered_history_threshold
         method = self.actions["archive"].config["method"].value
         max_process_tokens = self.layered_history_max_process_tokens
@@ -609,6 +611,11 @@ class SummarizeAgent(Agent):
             current_tokens = 0
             start_index = start_from
             noop = True
+            
+            total_tokens_in_previous_layer = util.count_tokens([
+                entry['text'] for entry in source_layer
+            ])
+            estimated_entries = total_tokens_in_previous_layer // token_threshold
 
             for i in range(start_from, len(source_layer)):
                 entry = source_layer[i]
@@ -640,6 +647,10 @@ class SummarizeAgent(Agent):
 
                         text_length = util.count_tokens("\n\n".join(chunk['text'] for chunk in current_chunk))
 
+                        num_entries_in_layer = len(layered_history[next_layer_index])
+
+                        emit("status", status="busy", message=f"Updating layered history - layer {next_layer_index} - {num_entries_in_layer} / {estimated_entries}")
+                        
                         while current_chunk:
                             
                             log.debug("summarize_to_layered_history", tokens_in_chunk=util.count_tokens("\n\n".join(chunk['text'] for chunk in current_chunk)), max_process_tokens=max_process_tokens)
@@ -651,6 +662,7 @@ class SummarizeAgent(Agent):
                             
                             text_to_summarize = "\n\n".join(chunk['text'] for chunk in partial_chunk)
                         
+
                             summary_text = await self.summarize(
                                 text_to_summarize,
                                 method=method,
@@ -681,6 +693,8 @@ class SummarizeAgent(Agent):
                             "ts_end": ts_end,
                             "text": "\n\n".join(summaries)
                         })
+                        
+                        emit("status", status="busy", message=f"Updating layered history - layer {next_layer_index} - {num_entries_in_layer+1} / {estimated_entries}")
                             
                         current_chunk = []
                         current_tokens = 0
@@ -742,10 +756,14 @@ class SummarizeAgent(Agent):
             return not noop
         
         try:
+            has_been_updated = False
             while await update_layers():
-                pass
+                has_been_updated = True
+            if has_been_updated:
+                emit("status", status="success", message="Layered history updated.")
         except SummaryLongerThanOriginalError as exc:
             log.error("summarize_to_layered_history", error=exc, layer="subsequent")
+            emit("status", status="error", message="Layered history update failed.")
             return
         
         

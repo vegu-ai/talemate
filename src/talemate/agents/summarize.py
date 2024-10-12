@@ -709,22 +709,23 @@ class SummarizeAgent(Agent):
                 
         
         # First layer (always the base layer)
+        has_been_updated = False
         
         try:
         
             if not layered_history:
                 layered_history.append([])
                 log.debug("summarize_to_layered_history", layer="base", new_layer=True)
-                await summarize_layer(self.scene.archived_history, 0, 0)
+                has_been_updated = await summarize_layer(self.scene.archived_history, 0, 0)
             elif layered_history[0]:
                 # determine starting point by checking for `end` in the last entry
                 last_entry = layered_history[0][-1]
                 end = last_entry["end"]
                 log.debug("summarize_to_layered_history", layer="base", start=end)
-                await summarize_layer(self.scene.archived_history, 0, end + 1)
+                has_been_updated = await summarize_layer(self.scene.archived_history, 0, end + 1)
             else:
                 log.debug("summarize_to_layered_history", layer="base", empty=True)
-                await summarize_layer(self.scene.archived_history, 0, 0)
+                has_been_updated = await summarize_layer(self.scene.archived_history, 0, 0)
                 
         except SummaryLongerThanOriginalError as exc:
             log.error("summarize_to_layered_history", error=exc, layer="base")
@@ -756,11 +757,11 @@ class SummarizeAgent(Agent):
             return not noop
         
         try:
-            has_been_updated = False
             while await update_layers():
                 has_been_updated = True
             if has_been_updated:
                 emit("status", status="success", message="Layered history updated.")
+            
         except SummaryLongerThanOriginalError as exc:
             log.error("summarize_to_layered_history", error=exc, layer="subsequent")
             emit("status", status="error", message="Layered history update failed.")

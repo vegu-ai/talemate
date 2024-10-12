@@ -32,8 +32,9 @@ export default createVuetify({
 
           // messages
           narrator: colors.deepPurple.lighten3,
-          character: colors.grey.darken1,
+          character: colors.shades.white,
           director: colors.deepOrange.base,
+          time: colors.deepPurple.lighten3,
 
           // html colors
           cornflowerblue: "#6495ED",

@@ -160,7 +160,7 @@
                 </v-alert>
               </div>
 
-              <SceneMessages ref="sceneMessages" />
+              <SceneMessages ref="sceneMessages" :appearance-config="appConfig ? appConfig.appearance : {}" />
               <div style="flex-shrink: 0;">
       
                 <SceneTools 

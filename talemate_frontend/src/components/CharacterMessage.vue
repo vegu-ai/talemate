@@ -32,7 +32,7 @@
         >
       </v-textarea>
       <div v-else class="character-text" @dblclick="startEdit()">
-        <span v-for="(part, index) in parts" :key="index" :class="{ highlight: part.isNarrative, 'text-narrator': part.isNarrative }">
+        <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(part.isNarrative ? 'narrator' : 'character')">
           <span>{{ part.text }}</span>
         </span>
       </div>
@@ -74,7 +74,7 @@
 <script>
 export default {
   props: ['character', 'text', 'color', 'message_id'],
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage'],
+  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle'],
   computed: {
     parts() {
       const parts = [];

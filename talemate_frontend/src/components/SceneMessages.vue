@@ -85,6 +85,11 @@ const MESSAGE_FLAGS = {
 
 export default {
     name: 'SceneMessages',
+    props: {
+        appearanceConfig: {
+            type: Object,
+        }
+    },
     components: {
         CharacterMessage,
         NarratorMessage,
@@ -97,6 +102,12 @@ export default {
     data() {
         return {
             messages: [],
+            defaultColors: {
+                "narrator": "#B39DDB",
+                "character": "#FFFFFF",
+                "director": "#FF5722",
+                "time": "#B39DDB",
+            },
         }
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput'],
@@ -106,9 +117,32 @@ export default {
             createPin: this.createPin,
             fixMessageContinuityErrors: this.fixMessageContinuityErrors,
             forkSceneInitiate: this.forkSceneInitiate,
+            getMessageColor: this.getMessageColor,
+            getMessageStyle: this.getMessageStyle,
         }
     },
     methods: {
+
+        getMessageColor(typ,color) {
+            if(!this.appearanceConfig || !this.appearanceConfig.scene[`${typ}_messages`].color) {
+                return this.defaultColors[typ];
+            }
+
+            return color || this.appearanceConfig.scene[`${typ}_messages`].color;
+        },
+
+        getMessageStyle(typ) {
+            let styles = "";
+            let config = this.appearanceConfig.scene[`${typ}_messages`];
+            if (config.italic) {
+                styles += "font-style: italic;";
+            }
+            if (config.bold) {
+                styles += "font-weight: bold;";
+            }
+            styles += "color: " + this.getMessageColor(typ, config.color) + ";";
+            return styles;
+        },
 
         clear() {
             this.messages = [];

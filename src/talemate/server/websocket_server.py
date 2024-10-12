@@ -21,6 +21,7 @@ from talemate.server import (
     character_importer,
     config,
     devtools,
+    director,
     quick_settings,
     world_state_manager,
 )
@@ -72,6 +73,7 @@ class WebsocketHandler(Receiver):
                 self
             ),
             devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
+            director.DirectorPlugin.router: director.DirectorPlugin(self),
         }
 
         self.set_agent_routers()

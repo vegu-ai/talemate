@@ -160,7 +160,7 @@
                 </v-alert>
               </div>
 
-              <SceneMessages ref="sceneMessages" />
+              <SceneMessages ref="sceneMessages" :appearance-config="appConfig ? appConfig.appearance : {}" />
               <div style="flex-shrink: 0;">
       
                 <SceneTools 
@@ -398,6 +398,7 @@ export default {
       scene: () => this.scene,
       getClients: () => this.getClients(),
       getAgents: () => this.getAgents(),
+      openAgentSettings: this.openAgentSettings,
       requestSceneAssets: (asset_ids) => this.requestSceneAssets(asset_ids),
       requestAssets: (assets) => this.requestAssets(assets),
       openCharacterSheet: (characterName) => this.openCharacterSheet(characterName),
@@ -868,6 +869,9 @@ export default {
         return agent.label;
       }
       return null;
+    },
+    openAgentSettings(agentName, section) {
+      this.$refs.aiAgent.openSettings(agentName, section);
     },
     configurationRequired() {
       if (!this.$refs.aiClient || this.connecting || (!this.connecting && !this.connected)) {

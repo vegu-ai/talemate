@@ -291,16 +291,18 @@ class WorldStateAgent(Agent):
         self,
         text: str,
         goal: str,
+        include_character_context: bool = False,
     ):
         response = await Prompt.request(
             "world_state.analyze-text-and-extract-context",
             self.client,
-            "analyze_freeform",
+            "analyze_freeform_long",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "text": text,
                 "goal": goal,
+                "include_character_context": include_character_context,
             },
         )
 
@@ -315,6 +317,7 @@ class WorldStateAgent(Agent):
         self,
         text: str,
         goal: str,
+        include_character_context: bool = False,
     ) -> list[str]:
         response = await Prompt.request(
             "world_state.analyze-text-and-generate-rag-queries",
@@ -325,6 +328,7 @@ class WorldStateAgent(Agent):
                 "max_tokens": self.client.max_token_length,
                 "text": text,
                 "goal": goal,
+                "include_character_context": include_character_context,
             },
         )
 
@@ -506,7 +510,7 @@ class WorldStateAgent(Agent):
         return response
 
     @set_processing
-    async def update_reinforcements(self, force: bool = False):
+    async def update_reinforcements(self, force: bool = False, reset: bool = False):
         """
         Queries due worldstate re-inforcements
         """
@@ -514,7 +518,7 @@ class WorldStateAgent(Agent):
         for reinforcement in self.scene.world_state.reinforce:
             if reinforcement.due <= 0 or force:
                 await self.update_reinforcement(
-                    reinforcement.question, reinforcement.character
+                    reinforcement.question, reinforcement.character, reset=reset
                 )
             else:
                 reinforcement.due -= 1

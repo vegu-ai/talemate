@@ -1,6 +1,7 @@
 import asyncio
 import json
 import random
+import uuid
 from typing import TYPE_CHECKING, Tuple, Union
 
 import pydantic
@@ -317,3 +318,88 @@ class AssistantMixin:
             emit("autocomplete_suggestion", response)
 
         return response
+
+    @set_processing
+    async def fork_scene(
+        self,
+        message_id: int,
+        save_name: str | None = None,
+    ):
+        """
+        Allows to fork a new scene from a specific message
+        in the current scene.
+        
+        All content after the message will be removed and the
+        context database will be re imported ensuring a clean state.
+        
+        All state reinforcements will be reset to their most recent
+        state before the message.
+        """
+        
+        emit("status", "Creating scene fork ...", status="busy")
+        try:
+            if not save_name:
+                # build a save name
+                uuid_str = str(uuid.uuid4())[:8]
+                save_name = f"{uuid_str}-forked"
+            
+            log.info(f"Forking scene", message_id=message_id, save_name=save_name)
+            
+            world_state = get_agent("world_state")
+            
+            # does a message with the given id exist?
+            index = self.scene.message_index(message_id)
+            if index is None:
+                raise ValueError(f"Message with id {message_id} not found.")
+            
+            # truncate scene.history keeping index as the last element
+            self.scene.history = self.scene.history[:index + 1]
+            
+            # truncate scene.archived_history keeping the element where `end` is < `index`
+            # as the last element
+            self.scene.archived_history = [
+                x for x in self.scene.archived_history if "end" not in x or x["end"] < index
+            ]
+            
+            # the same needs to be done for layered history
+            # where each layer is truncated based on what's left in the previous layer
+            # using similar logic as above (checking `end` vs `index`)
+            # layer 0 checks archived_history
+            
+            new_layered_history = []
+            for layer_number, layer in enumerate(self.scene.layered_history):
+                
+                if layer_number == 0:
+                    index = len(self.scene.archived_history) - 1
+                else:
+                    index = len(new_layered_history[layer_number - 1]) - 1
+                    
+                new_layer = [
+                    x for x in layer if x["end"] < index
+                ]
+                new_layered_history.append(new_layer)
+                
+            self.scene.layered_history = new_layered_history
+
+            # save the scene
+            await self.scene.save(copy_name=save_name)
+            
+            log.info(f"Scene forked", save_name=save_name)
+            
+            # re-emit history
+            await self.scene.emit_history()
+            
+            emit("status", f"Updating world state ...", status="busy")
+
+            # reset state reinforcements
+            await world_state.update_reinforcements(force = True, reset= True)
+            
+            # update world state
+            await self.scene.world_state.request_update()
+            
+            emit("status", f"Scene forked", status="success")            
+        except Exception as e:
+            log.exception("Scene fork failed", exc=e)
+            emit("status", "Scene fork failed", status="error")
+        
+        

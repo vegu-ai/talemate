@@ -123,7 +123,17 @@ async def wait_for_input(
 
     while input_received["message"] is None:
         await asyncio.sleep(0.1)
-
+        
+        interaction_state = interaction.get()
+        
+        if interaction_state.input:
+            input_received["message"] = interaction_state.input
+            input_received["interaction"] = interaction_state
+            input_received["from_choice"] = interaction_state.from_choice
+            interaction_state.input = None
+            interaction_state.from_choice = None
+            break
+        
     handlers["receive_input"].disconnect(input_receiver)
 
     if input_received["message"] == "!abort":

@@ -201,7 +201,7 @@ class ConversationAgent(Agent):
                 },
             ),
             "investigate_layered_history": AgentAction(
-                enabled=True,
+                enabled=False,
                 label="Investigate Layered History",
                 description="Will investigate the layered history of the conversation to extract relevant information. This can be very slow, especially as number of layers increase. Layered history needs to be enabled in the summarizer agent.",
             ),

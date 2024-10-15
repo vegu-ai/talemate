@@ -780,6 +780,8 @@ class SummarizeAgent(Agent):
         Digs through the layered history in order to answer a query
         """
         
+        is_initial = entry is None
+        
         if not self.layered_history_enabled:
             return ""
         
@@ -823,6 +825,7 @@ class SummarizeAgent(Agent):
                 "layer": layer,
                 "entries": entries,
                 "context": context,
+                "is_initial": is_initial,
             },
         )
         

@@ -6,6 +6,9 @@ Scene History
 {{ entry["text"] }}
 <|CLOSE_SECTION|>
 {% endfor %}
+<|SECTION:CURRENT SCENE|>
+{{ scene.snapshot(lines=10) }}
+<|CLOSE_SECTION|>
 {% if context and False %}
 <|SECTION:GATHERED CONTEXT THROUGH DIGGING|>
 {% for entry in context %}
@@ -17,6 +20,13 @@ Scene History
 {{ query }}
 <|SECTION:TASK|>
 - Understand the query, what do we want to find out?
+{% if is_initial %}- In order for a query to be valid any of the following must be true:
+  - A character is asking a question.
+  - A location, event, person or object is refered to that you could gather more information about.
+  - The query itself is a direct question.
+  - The answer to the query is not contained within the current scene.
+{% endif -%}
+- If the query is invalid you must call abort() immediately.
 - Read the provided chapters and select one that holds the answer.{% if can_dig %} You can also decide to dig chapters for more information.
 - Select a function to call to process the request.{% endif %}
 
@@ -35,6 +45,13 @@ Scene History
 Follow this format exactly:
 
 ANALYSIS:
+{% if is_initial %}- character asking question: <yes or no>
+- direct question: <yes or no>
+- location, event, person or object mentioned: <yes or no>
+- answer contained in current scene: <yes or no>
+- query valid based on the above: <yes or no>
+
+{% endif -%}
 <Analysis of the query>
 
 <Analysis of the provided information>

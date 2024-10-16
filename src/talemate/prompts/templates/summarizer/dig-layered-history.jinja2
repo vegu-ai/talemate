@@ -6,9 +6,18 @@ Scene History
 {{ entry["text"] }}
 <|CLOSE_SECTION|>
 {% endfor %}
+{% if is_initial -%}
 <|SECTION:CURRENT SCENE|>
 {{ scene.snapshot(lines=10) }}
 <|CLOSE_SECTION|>
+<|SECTION:EXTRA CONTEXT|>
+{%- for message in scene.collect_messages(typ="context_investigation", max_iterations=5) %}
+{{ message.message }}
+
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif %}
+
 {% if context and False %}
 <|SECTION:GATHERED CONTEXT THROUGH DIGGING|>
 {% for entry in context %}
@@ -24,9 +33,10 @@ Scene History
   - A character is asking a question.
   - A location, event, person or object is refered to that you could gather more information about.
   - The query itself is a direct question.
-  - The answer to the query is not contained within the current scene.
-{% endif -%}
+- The query is invalid if any of these are true:
+  - The answer to the query is already contained within the current scene or extra 
 - If the query is invalid you must call abort() immediately.
+{% endif -%}
 - Read the provided chapters and select one that holds the answer.{% if can_dig %} You can also decide to dig chapters for more information.
 - Select a function to call to process the request.{% endif %}
 
@@ -40,6 +50,8 @@ Scene History
 - Use untyped code blocks, so ``` instead of ```python.
 - You must never invent information. Dig instead.
 - End with `DONE` after calling a function.
+{% if is_initial %}- if answer contained in extra context the query is invalid and you must abort
+- if answer contained in current scene the query is invalid and you must abort{% endif %}
 
 ### Response Format
 Follow this format exactly:
@@ -49,6 +61,7 @@ ANALYSIS:
 - direct question: <yes or no>
 - location, event, person or object mentioned: <yes or no>
 - answer contained in current scene: <yes or no>
+- answer contained in extra context: <yes or no>
 - query valid based on the above: <yes or no>
 
 {% endif -%}

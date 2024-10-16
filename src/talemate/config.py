@@ -448,6 +448,7 @@ class SceneAppearance(BaseModel):
     character_messages: HistoryMessageStyle = HistoryMessageStyle()
     director_messages: HistoryMessageStyle = HistoryMessageStyle()
     time_messages: HistoryMessageStyle = HistoryMessageStyle()
+    context_investigation_messages: HistoryMessageStyle = HistoryMessageStyle()
     
 class Appearance(BaseModel):
     

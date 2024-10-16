@@ -21,7 +21,7 @@ from talemate.emit import emit
 from talemate.events import GameLoopEvent
 from talemate.exceptions import LLMAccuracyError
 from talemate.prompts import Prompt
-from talemate.scene_message import CharacterMessage, DirectorMessage
+from talemate.scene_message import CharacterMessage, DirectorMessage, ContextInvestigationMessage
 
 from .base import (
     Agent,
@@ -512,6 +512,9 @@ class ConversationAgent(Agent):
             director_message = isinstance(scene_and_dialogue[-1], DirectorMessage)
         except IndexError:
             director_message = False
+            
+        if self.investigate_layered_history:
+            await self.run_layered_history_investigation()
 
         conversation_format = self.conversation_format
         prompt = Prompt.get(
@@ -534,7 +537,6 @@ class ConversationAgent(Agent):
                 "actor_instructions_offset": self.generation_settings_actor_instructions_offset,
                 "direct_instruction": instruction,
                 "decensor": self.client.decensor_enabled,
-                "layered_history_investigation": await self.run_layered_history_investigation() if self.investigate_layered_history else None,
             },
         )
 
@@ -612,7 +614,14 @@ class ConversationAgent(Agent):
         history = history[::-1]
         summarizer = instance.get_agent("summarizer")
         
-        return await summarizer.dig_layered_history("\n".join(history))
+        result = await summarizer.dig_layered_history("\n".join(history))
+        
+        if not result:
+            return
+        
+        message = ContextInvestigationMessage(message=result)
+        self.scene.push_history([message])
+        emit("context_investigation", message)
 
     async def build_prompt(self, character, char_message: str = "", instruction:str = None):
         fn = self.build_prompt_default

@@ -61,6 +61,11 @@
                     <PlayerChoiceMessage :choices="message.data.choices" @close="closePlayerChoice" />
                 </div>
             </div>
+            <div v-else-if="message.type === 'context_investigation'" :class="`message ${message.type}`">
+                <div class="context-investigation-message"  :id="`message-${message.id}`">
+                    <ContextInvestigationMessage :text="message.text" :message_id="message.id" />
+                </div>
+            </div>
 
             <div v-else :class="`message ${message.type}`">
                 {{ message.text }}
@@ -77,6 +82,7 @@ import TimePassageMessage from './TimePassageMessage.vue';
 import StatusMessage from './StatusMessage.vue';
 import RequestInput from './RequestInput.vue';
 import PlayerChoiceMessage from './PlayerChoiceMessage.vue';
+import ContextInvestigationMessage from './ContextInvestigationMessage.vue';
 
 const MESSAGE_FLAGS = {
     NONE: 0,
@@ -98,6 +104,7 @@ export default {
         StatusMessage,
         RequestInput,
         PlayerChoiceMessage,
+        ContextInvestigationMessage,
     },
     data() {
         return {
@@ -107,6 +114,7 @@ export default {
                 "character": "#FFFFFF",
                 "director": "#FF5722",
                 "time": "#B39DDB",
+                "context_investigation": "#607D8B",
             },
         }
     },

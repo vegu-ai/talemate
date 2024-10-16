@@ -476,6 +476,18 @@ class WebsocketHandler(Receiver):
                 ),
             }
         )
+        
+    def handle_context_investigation(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "context_investigation",
+                "message": emission.message,
+                "id": emission.id,
+                "flags": (
+                    int(emission.message_object.flags) if emission.message_object else 0
+                ),
+            }
+        )
 
     def handle_prompt_sent(self, emission: Emission):
         self.queue_put(

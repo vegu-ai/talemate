@@ -15,7 +15,7 @@ from talemate.emit import emit
 from talemate.events import GameLoopEvent
 from talemate.status import set_loading
 from talemate.prompts import Prompt
-from talemate.scene_message import DirectorMessage, TimePassageMessage
+from talemate.scene_message import DirectorMessage, TimePassageMessage, ContextInvestigationMessage
 from talemate.world_state.templates import GenerationOptions
 
 from .base import Agent, AgentAction, AgentActionConfig, set_processing
@@ -239,7 +239,7 @@ class SummarizeAgent(Agent):
 
             # log.debug("build_archive", idx=i, content=str(dialogue)[:64]+"...")
 
-            if isinstance(dialogue, DirectorMessage):
+            if isinstance(dialogue, (DirectorMessage, ContextInvestigationMessage)):
                 if i == start:
                     start += 1
                 continue

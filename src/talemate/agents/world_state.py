@@ -16,7 +16,6 @@ from talemate.events import GameLoopEvent
 from talemate.instance import get_agent
 from talemate.prompts import Prompt
 from talemate.scene_message import (
-    DirectorMessage,
     ReinforcementMessage,
     TimePassageMessage,
 )

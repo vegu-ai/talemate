@@ -289,6 +289,24 @@ class ReinforcementMessage(SceneMessage):
         return self.message
 
 
+@dataclass
+class ContextInvestigationMessage(SceneMessage):
+    typ = "context_investigation"
+    source: str = "ai"
+    
+    def __str__(self):
+        return (
+            f"# Internal notes - additional context: {self.message}"
+        )
+
+    def as_format(self, format: str, **kwargs) -> str:
+        if format == "movie_script":
+            message = str(self)[2:]
+            return f"\n({message})\n"
+        return self.message
+
+
+
 MESSAGES = {
     "scene": SceneMessage,
     "character": CharacterMessage,
@@ -296,4 +314,5 @@ MESSAGES = {
     "director": DirectorMessage,
     "time": TimePassageMessage,
     "reinforcement": ReinforcementMessage,
+    "context_investigation": ContextInvestigationMessage,
 }

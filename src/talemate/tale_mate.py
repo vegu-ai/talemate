@@ -45,6 +45,7 @@ from talemate.scene_message import (
     ReinforcementMessage,
     SceneMessage,
     TimePassageMessage,
+    ContextInvestigationMessage,
 )
 from talemate.util import colored_text, count_tokens, extract_metadata, wrap_text
 from talemate.util.prompt import condensed
@@ -1161,7 +1162,7 @@ class Scene(Emitter):
         """
 
         if not ignore:
-            ignore = [ReinforcementMessage, DirectorMessage]
+            ignore = [ReinforcementMessage, DirectorMessage, ContextInvestigationMessage]
 
         collected = []
 
@@ -1426,13 +1427,16 @@ class Scene(Emitter):
         return summary
 
     def context_history(
-        self, budget: int = 8192, keep_director: Union[bool, str] = False, **kwargs
+        self, budget: int = 8192, **kwargs
     ):
         parts_context = []
         parts_dialogue = []
 
         budget_context = int(0.5 * budget)
         budget_dialogue = int(0.5 * budget)
+        
+        keep_director = kwargs.get("keep_director", False)
+        keep_context_investigation = kwargs.get("keep_context_investigation", True)
 
         conversation_format = self.conversation_format
         actor_direction_mode = self.get_helper("director").agent.actor_direction_mode
@@ -1560,7 +1564,7 @@ class Scene(Emitter):
             if isinstance(message, ReinforcementMessage) and not include_reinfocements:
                 continue
 
-            if isinstance(message, DirectorMessage):
+            elif isinstance(message, DirectorMessage):
                 if not keep_director:
                     continue
 
@@ -1571,6 +1575,10 @@ class Scene(Emitter):
 
                 elif isinstance(keep_director, str) and message.source != keep_director:
                     continue
+            
+            elif isinstance(message, ContextInvestigationMessage) and not keep_context_investigation:
+                continue
+
 
             if count_tokens(parts_dialogue) + count_tokens(message) > budget_dialogue:
                 break
@@ -1615,7 +1623,7 @@ class Scene(Emitter):
 
         popped_reinforcement_messages = []
 
-        while isinstance(message, ReinforcementMessage):
+        while isinstance(message, (ReinforcementMessage, ContextInvestigationMessage)):
             popped_reinforcement_messages.append(self.history.pop())
             message = self.history[idx]
 

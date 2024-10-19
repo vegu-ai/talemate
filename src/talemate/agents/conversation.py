@@ -200,10 +200,26 @@ class ConversationAgent(Agent):
                     ),
                 },
             ),
-            "investigate_layered_history": AgentAction(
+            "investigate_context": AgentAction(
                 enabled=False,
-                label="Investigate Layered History",
-                description="Will investigate the layered history of the conversation to extract relevant information. This can be very slow, especially as number of layers increase. Layered history needs to be enabled in the summarizer agent.",
+                label="Context Investigation",
+                container=True,
+                icon="mdi-text-search",
+                can_be_disabled=True,
+                experimental=True,
+                description="Will investigate the layered history of the scene to extract relevant information. This can be very slow, especially as number of layers increase. Layered history needs to be enabled in the summarizer agent.",
+                config={
+                    "trigger": AgentActionConfig(
+                        type="text",
+                        label="Trigger",
+                        description="The trigger to start the context investigation",
+                        value="ai",
+                        choices=[
+                            {"label": "Agent decides", "value": "ai"},
+                            {"label": "Only when a question is asked", "value": "question"},
+                        ]
+                    ),
+                }
             ),
         }
 
@@ -256,8 +272,12 @@ class ConversationAgent(Agent):
         return self.actions["generation_override"].config["actor_instructions_offset"].value
 
     @property
-    def investigate_layered_history(self):
-        return self.actions["investigate_layered_history"].enabled 
+    def investigate_context(self):
+        return self.actions["investigate_context"].enabled 
+    
+    @property
+    def investigate_context_trigger(self):
+        return self.actions["investigate_context"].config["trigger"].value
     
     def connect(self, scene):
         super().connect(scene)
@@ -513,8 +533,8 @@ class ConversationAgent(Agent):
         except IndexError:
             director_message = False
             
-        if self.investigate_layered_history:
-            await self.run_layered_history_investigation()
+        if self.investigate_context:
+            await self.run_context_investigation()
 
         conversation_format = self.conversation_format
         prompt = Prompt.get(
@@ -608,7 +628,7 @@ class ConversationAgent(Agent):
 
         return self.current_memory_context
 
-    async def run_layered_history_investigation(self):
+    async def run_context_investigation(self):
         
         # go backwards in the history if there is a ContextInvestigation message before
         # there is a character or narrator message, just return
@@ -620,6 +640,14 @@ class ConversationAgent(Agent):
                 break
         
         last_message = self.scene.last_message_of_type("character")
+        
+        if self.investigate_context_trigger == "question":
+            if not last_message:
+                return
+
+            if "?" not in str(last_message):
+                return
+        
         summarizer = instance.get_agent("summarizer")
         result = await summarizer.dig_layered_history(str(last_message)) 
         

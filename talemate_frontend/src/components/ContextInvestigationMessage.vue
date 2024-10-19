@@ -8,6 +8,10 @@
     </div>
     <v-alert @click="toggle()" v-else-if="show" class="clickable" variant="text" type="info" :icon="icon" elevation="0" density="compact" @click:close="deleteMessage()" :color="getMessageColor('context_investigation', null)">
       <span>{{ text }}</span>
+      <v-sheet color="transparent">
+        <v-btn color="secondary" variant="text" size="x-small" prepend-icon="mdi-eye-off">Hide these messages</v-btn>
+        <v-btn color="primary" variant="text" size="x-small" prepend-icon="mdi-cogs">Disable context Investigations.</v-btn>
+      </v-sheet>
     </v-alert>
   </div>
 </template>
@@ -23,7 +27,7 @@ export default {
   },
   computed: {
     icon() {
-      return "mdi-magnify";
+      return "mdi-text-search";
     }
   },
   props: ['text', 'message_id'],

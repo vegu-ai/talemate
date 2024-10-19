@@ -28,6 +28,8 @@ Scene History
 <|SECTION:QUERY|>
 {{ query }}
 <|SECTION:TASK|>
+The author of the scene has given you a query and is asking you to provide additional context to the actors in the scene. 
+
 - Understand the query, what do we want to find out?
 {% if is_initial %}- For a query to be valid any of the following must be true:
   - A character is trying to retrieve information in the form of a question.
@@ -40,8 +42,8 @@ Scene History
 - Select a function to call to process the request.{% endif %}
 
 ### Available Functions
-{% if can_dig %}- `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% else %}- `answer(answer)` to provide an answer to the query - If you feel like there is sufficient information in the chapters, you should answer instead of digging further. This MUST be a narrative lore dump and MUST NOT mention chapter numbers. Provide a detailed answer to the query, adding context and explanations.{% endif %}
-- `abort()` to stop the process
+{% if can_dig %}- `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% else %}- `answer(answer)` to provide an answer to the query - If you feel like there is sufficient information in the chapters, you should answer instead of digging further. This MUST be a narrative lore dump and MUST NOT mention chapter numbers. Answer the query and provide contextual and circumstantial details. Limit the answer to two paragraphs.{% endif %}
+- `abort()` to stop the process if there are no avenues left to explore and there is no information to satisfy the query.
 
 ### Rules
 - You MUST NOT mix functions
@@ -55,7 +57,7 @@ Scene History
 ### Response Format
 Follow this format exactly:
 
-QUERY: <Analysis of the query, what could be the reason this query was given to you? Be very strict with your evaluation. Many queries are given in error.
+QUERY: <Analysis of the query, what could be the reason this query was given to you? Be very strict with your evaluation. Many queries are given in error.>
 
 ANALYSIS:
 {% if is_initial %}- character trying retrieve information: <yes or no>.
@@ -65,7 +67,9 @@ ANALYSIS:
 - query valid based on the above: <yes or no>.
 
 {% endif -%}
-<Analysis of the provided information>
+<Quick Analysis of the provided information>
+
+FUNCTION SELECTED: <Quickly explain which function you have selected and why.>
 
 CALL:
 ```

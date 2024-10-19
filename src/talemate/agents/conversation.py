@@ -21,7 +21,7 @@ from talemate.emit import emit
 from talemate.events import GameLoopEvent
 from talemate.exceptions import LLMAccuracyError
 from talemate.prompts import Prompt
-from talemate.scene_message import CharacterMessage, DirectorMessage, ContextInvestigationMessage
+from talemate.scene_message import CharacterMessage, DirectorMessage, ContextInvestigationMessage, NarratorMessage
 
 from .base import (
     Agent,
@@ -609,12 +609,19 @@ class ConversationAgent(Agent):
         return self.current_memory_context
 
     async def run_layered_history_investigation(self):
-        history = list(map(str, self.scene.collect_messages(max_iterations=3, typ="character")))
-        # reverse
-        history = history[::-1]
-        summarizer = instance.get_agent("summarizer")
         
-        result = await summarizer.dig_layered_history("\n".join(history))
+        # go backwards in the history if there is a ContextInvestigation message before
+        # there is a character or narrator message, just return
+        for idx in range(len(self.scene.history) - 1, -1, -1):
+            if isinstance(self.scene.history[idx], ContextInvestigationMessage):
+                return
+
+            if isinstance(self.scene.history[idx], (CharacterMessage, NarratorMessage)):
+                break
+        
+        last_message = self.scene.last_message_of_type("character")
+        summarizer = instance.get_agent("summarizer")
+        result = await summarizer.dig_layered_history(str(last_message)) 
         
         if not result:
             return

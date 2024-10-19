@@ -29,10 +29,9 @@ Scene History
 {{ query }}
 <|SECTION:TASK|>
 - Understand the query, what do we want to find out?
-{% if is_initial %}- In order for a query to be valid any of the following must be true:
-  - A character is asking a question.
-  - A location, event, person or object is refered to that you could gather more information about.
-  - The query itself is a direct question.
+{% if is_initial %}- For a query to be valid any of the following must be true:
+  - A character is trying to retrieve information in the form of a question.
+  - A location, event, off-scene person or object is refered to that you could gather more information about.
 - The query is invalid if any of these are true:
   - The answer to the query is already contained within the current scene or extra 
 - If the query is invalid you must call abort() immediately.
@@ -56,17 +55,16 @@ Scene History
 ### Response Format
 Follow this format exactly:
 
+QUERY: <Analysis of the query, what could be the reason this query was given to you? Be very strict with your evaluation. Many queries are given in error.
+
 ANALYSIS:
-{% if is_initial %}- character asking question: <yes or no>
-- direct question: <yes or no>
-- location, event, person or object mentioned: <yes or no>
-- answer contained in current scene: <yes or no>
-- answer contained in extra context: <yes or no>
-- query valid based on the above: <yes or no>
+{% if is_initial %}- character trying retrieve information: <yes or no>.
+- answer contained in current scene: <yes or no>.
+- answer contained in extra context: <yes or no>.
+- location, event, off-scene person or object mentioned: <yes or no>.
+- query valid based on the above: <yes or no>.
 
 {% endif -%}
-<Analysis of the query>
-
 <Analysis of the provided information>
 
 CALL:
@@ -75,4 +73,4 @@ CALL:
 ```
 DONE
 <|CLOSE_SECTION|>
-{{ bot_token }}ANALYSIS:
+{{ bot_token }}QUERY:

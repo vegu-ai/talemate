@@ -406,6 +406,7 @@ export default {
       creativeEditor: () => this.$refs.creativeEditor,
       requestAppConfig: () => this.requestAppConfig(),
       appConfig: () => this.appConfig,
+      openAppConfig: this.openAppConfig,
       configurationRequired: () => this.configurationRequired(),
       getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
       getTrackedWorldState: (question) => this.$refs.worldState.trackedWorldState(question),

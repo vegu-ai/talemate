@@ -9,8 +9,8 @@
     <v-alert @click="toggle()" v-else-if="show" class="clickable" variant="text" type="info" :icon="icon" elevation="0" density="compact" @click:close="deleteMessage()" :color="getMessageColor('context_investigation', null)">
       <span>{{ text }}</span>
       <v-sheet color="transparent">
-        <v-btn color="secondary" variant="text" size="x-small" prepend-icon="mdi-eye-off">Hide these messages</v-btn>
-        <v-btn color="primary" variant="text" size="x-small" prepend-icon="mdi-cogs">Disable context Investigations.</v-btn>
+        <v-btn color="secondary" variant="text" size="x-small" prepend-icon="mdi-eye-off" @click.stop="openAppConfig('appearance', 'scene')">Hide these messages</v-btn>
+        <v-btn color="primary" variant="text" size="x-small" prepend-icon="mdi-cogs" @click.stop="openAgentSettings('conversation', 'investigate_context')">Disable context Investigations.</v-btn>
       </v-sheet>
     </v-alert>
   </div>
@@ -31,7 +31,7 @@ export default {
     }
   },
   props: ['text', 'message_id'],
-  inject: ['requestDeleteMessage', 'getMessageStyle', 'getMessageColor'],
+  inject: ['requestDeleteMessage', 'getMessageStyle', 'getMessageColor', 'openAppConfig', 'openAgentSettings'],
   methods: {
     toggle() {
       this.minimized = !this.minimized;

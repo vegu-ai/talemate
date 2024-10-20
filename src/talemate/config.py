@@ -440,15 +440,20 @@ class HistoryMessageStyle(BaseModel):
     
     # Leave None for default color
     color: str | None = None 
+
+
+class HidableHistoryMessageStyle(HistoryMessageStyle):
+    # certain messages can be hidden, but all messages are shown by default
+    show: bool = True
     
 
 class SceneAppearance(BaseModel):
 
     narrator_messages: HistoryMessageStyle = HistoryMessageStyle(italic=True)
     character_messages: HistoryMessageStyle = HistoryMessageStyle()
-    director_messages: HistoryMessageStyle = HistoryMessageStyle()
+    director_messages: HidableHistoryMessageStyle = HidableHistoryMessageStyle()
     time_messages: HistoryMessageStyle = HistoryMessageStyle()
-    context_investigation_messages: HistoryMessageStyle = HistoryMessageStyle()
+    context_investigation_messages: HidableHistoryMessageStyle = HidableHistoryMessageStyle()
     
 class Appearance(BaseModel):
     

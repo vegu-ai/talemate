@@ -46,7 +46,7 @@
                     <NarratorMessage :text="message.text" :message_id="message.id" />
                 </div>
             </div>
-            <div v-else-if="message.type === 'director'" :class="`message ${message.type}`">
+            <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="director-message"  :id="`message-${message.id}`">
                     <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action"/>
                 </div>
@@ -61,13 +61,13 @@
                     <PlayerChoiceMessage :choices="message.data.choices" @close="closePlayerChoice" />
                 </div>
             </div>
-            <div v-else-if="message.type === 'context_investigation'" :class="`message ${message.type}`">
+            <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="context-investigation-message"  :id="`message-${message.id}`">
                     <ContextInvestigationMessage :text="message.text" :message_id="message.id" />
                 </div>
             </div>
 
-            <div v-else :class="`message ${message.type}`">
+            <div v-else-if="!getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 {{ message.text }}
             </div>
         </div>
@@ -137,6 +137,19 @@ export default {
             }
 
             return color || this.appearanceConfig.scene[`${typ}_messages`].color;
+        },
+
+        getMessageTypeHidden(typ) {
+            // messages are hidden if appearanceCOnfig.scene[`${typ}_messages`].show is false
+            // true and undefined are the same
+
+            if(!this.appearanceConfig || !this.appearanceConfig.scene[`${typ}_messages`]) {
+                return false;
+            } else if(this.appearanceConfig && this.appearanceConfig.scene[`${typ}_messages`].show === false) {
+                return true;
+            }
+
+            return false;
         },
 
         getMessageStyle(typ) {

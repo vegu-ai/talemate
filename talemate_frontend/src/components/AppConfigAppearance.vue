@@ -1,5 +1,5 @@
 <template>
-    <v-tabs color="secondary" v-model="tab" :disabled="busy">
+    <v-tabs color="secondary" v-model="tab">
         <v-tab v-for="t in tabs" :key="t.value" :value="t.value">
             <v-icon start>{{ t.icon }}</v-icon>
             {{ t.title }}

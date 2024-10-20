@@ -1,30 +1,32 @@
 <template>
 
-    <v-row>
-        <v-col cols="6">
-            <v-card density="compact" v-for="config, typ in config" :key="typ">
-                <v-card-text>
-                    <v-form>
-                        <v-row>
-                            <v-col cols="3" :class="(colorPickerTarget === typ ? 'text-highlight5' : '')">
-                                <div class="text-caption">{{ typLabelMap[typ] }}</div>
-                            </v-col>
-                            <v-col cols="3">
-                                <v-checkbox :disabled="!canSetStyleOn[typ]" density="compact" v-model="config.italic" label="Italic"></v-checkbox>
-                            </v-col>
-                            <v-col cols="3">
-                                <v-checkbox :disabled="!canSetStyleOn[typ]" density="compact" v-model="config.bold" label="Bold"></v-checkbox>
-                            </v-col>
-                            <v-col cols="3" v-if="canSetColorOn[typ]">
-                                <v-icon class="mt-2" :color="getColor(typ, config.color)" @click="openColorPicker(typ, getColor(typ, config.color))">mdi-circle</v-icon>
-                                <v-btn size="x-small" color="secondary" variant="text" class="mt-2" prepend-icon="mdi-refresh" @click="reset(typ, config)">Reset</v-btn>
-                            </v-col>
-                        </v-row>
-                    </v-form>
-                </v-card-text>
-            </v-card>
+    <v-row class="ma-5" no-gutters>
+        <v-col cols="12">
+            <v-form v-for="config, typ in config" :key="typ">
+                <v-row>
+                    <v-col cols="3" :class="(colorPickerTarget === typ ? 'text-highlight5' : '')">
+                        <div class="text-caption">{{ typLabelMap[typ] }}</div>
+                    </v-col>
+                    <v-col cols="2">
+                        <v-checkbox :disabled="!canSetStyleOn[typ]" density="compact" v-model="config.italic" label="Italic"></v-checkbox>
+                    </v-col>
+                    <v-col cols="2">
+                        <v-checkbox :disabled="!canSetStyleOn[typ]" density="compact" v-model="config.bold" label="Bold"></v-checkbox>
+                    </v-col>
+                    <v-col cols="2">
+                        <v-checkbox v-if="config.show !== undefined" density="compact" v-model="config.show" label="Show"></v-checkbox>
+                    </v-col>
+                    <v-col class="text-right" cols="3" v-if="canSetColorOn[typ]">
+                        <v-icon class="mt-2" :color="getColor(typ, config.color)" @click="openColorPicker(typ, getColor(typ, config.color))">mdi-circle</v-icon>
+                        <v-btn size="x-small" color="secondary" variant="text" class="mt-2" prepend-icon="mdi-refresh" @click="reset(typ, config)">Reset</v-btn>
+                    </v-col>
+
+                </v-row>
+            </v-form>
         </v-col>
-        <v-col cols="6">
+    </v-row>
+    <v-row class="ma-5" no-gutters>
+        <v-col cols="8">
             <v-card elevation="7">
                 <v-card-text>
                     <div>
@@ -53,13 +55,27 @@
                                 <span>3 days later</span>
                             </v-chip>
                         </div>
+                        <div class="mt-3">
+                            <!-- context investigations, similar to director messages, with both chip and text -->
+
+                            <v-chip :color="getColor('context_investigation_messages', config.context_investigation_messages.color)">
+                                <v-icon class="mr-2">mdi-text-search</v-icon>
+                                <span>Context Investigation</span>
+                            </v-chip>
+                        </div>
+                        <div class="mt-3" :style="buildCssStyles('context_investigation_messages', config.context_investigation_messages)">
+                            <span>
+                                "The fox was last seen in the forest"
+                            </span>
+                        </div>
                     </div>
                 </v-card-text>
             </v-card>
-
+        </v-col>
+        <v-col cols="4">
             <v-card :style="'opacity: '+(colorPickerTarget ? 1 : 0)">
                 <v-card-text>
-                    <v-color-picker :disabled="colorPickerTarget === null" v-model="color" @update:model-value="onColorChange"></v-color-picker>
+                    <v-color-picker hide-inputs :disabled="colorPickerTarget === null" v-model="color" @update:model-value="onColorChange"></v-color-picker>
                 </v-card-text>
             </v-card>
 
@@ -107,12 +123,14 @@ export default {
                 "character_messages": "#FFFFFF",
                 "director_messages": "#FF5722",
                 "time_messages": "#B39DDB",
+                "context_investigation_messages": "#607D8B",
             },
             typLabelMap: {
                 "narrator_messages": "Narrator Messages",
                 "character_messages": "Character Messages",
                 "director_messages": "Director Messages",
                 "time_messages": "Time Messages",
+                "context_investigation_messages": "Context Investigations",
             },
             config: {
                 scene: {}
@@ -121,6 +139,7 @@ export default {
                 "narrator_messages": true,
                 "character_messages": true,
                 "director_messages": true,
+                "context_investigation_messages": true,
                 //"time_messages": true,
             },
             canSetColorOn: {
@@ -128,6 +147,7 @@ export default {
                 "character_messages": true,
                 "director_messages": true,
                 "time_messages": true,
+                "context_investigation_messages": true,
             },
         }
     },

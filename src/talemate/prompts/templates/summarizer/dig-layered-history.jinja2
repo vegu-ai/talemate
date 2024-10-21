@@ -38,16 +38,19 @@ The author of the scene has given you a query and is asking you to provide addit
   - The answer to the query is already contained within the current scene or extra 
 - If the query is invalid you must call abort() immediately.
 {% endif -%}
-- Read the provided chapters and select one that holds the answer.{% if can_dig %} You can also decide to dig chapters for more information.
-- Select a function to call to process the request.{% endif %}
+- Read the provided chapters and select one that holds the answer or relevant context.{% if can_dig %} You can also decide to dig chapters for more information.{% else %}- If no answer can be provided, but you can provide additional relevant context, that is also acceptable.{% endif %}
+- Select a function to call to process the request.
 
 ### Available Functions
-{% if can_dig %}- `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% else %}- `answer(answer)` to provide an answer to the query - If you feel like there is sufficient information in the chapters, you should answer instead of digging further. This MUST be a narrative lore dump and MUST NOT mention chapter numbers. Answer the query and provide contextual and circumstantial details. Limit the answer to two paragraphs.{% endif %}
+{% if can_dig %}- `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% else %}-- `answer(answer)` to provide an answer or context. The answer MUST be a narrative lore dump and MUST NOT mention chapter numbers. Answer the query and provide contextual and circumstantial details. Limit the answer to two paragraphs.{% endif %}
 - `abort()` to stop the process if there are no avenues left to explore and there is no information to satisfy the query.
 
 ### Rules
 - You MUST NOT mix functions
-{% if can_dig %}- Digging is expensive. Only dig chapters if they are highly likely to be related to the query.{% endif %}
+{%- if can_dig %}
+- Digging is expensive. Only dig chapters if they are highly likely to be related to the query.{% endif %}
+{%- if not can_dig %}
+- When using the `answer()` function always write from the perspective of the investigator. You MUST NOT formulate the answer from the perspective of any of the characters.{% endif %}
 - Use untyped code blocks, so ``` instead of ```python.
 - You must never invent information. Dig instead.
 - End with `DONE` after calling a function.

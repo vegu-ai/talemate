@@ -31,6 +31,12 @@ Ensure the actions:
 - Offer varied options without drastic pacing changes
 - Are significantly different from each other
 
+The actions you generate must chronologically come after this moment in the scene:
+
+```
+{{ scene.last_message_of_type(['character', 'narrator']).message }}
+```
+
 {% if instructions %}
 ### Specific instructions
 {{ instructions}}{% endif %}

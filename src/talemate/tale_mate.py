@@ -1135,12 +1135,16 @@ class Scene(Emitter):
                 if self.history[idx].source == "player":
                     return self.history[idx]
                 
-    def last_message_of_type(self, typ: str, source: str = None):
+    def last_message_of_type(self, typ: str | list[str], source: str = None):
         """
         Returns the last message of the given type and source
         """
+        
+        if not isinstance(typ, list):
+            typ = [typ]
+        
         for idx in range(len(self.history) - 1, -1, -1):
-            if self.history[idx].typ == typ and (
+            if self.history[idx].typ in typ and (
                 self.history[idx].source == source or not source
             ):
                 return self.history[idx]

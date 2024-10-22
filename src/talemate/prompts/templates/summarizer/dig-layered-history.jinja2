@@ -30,19 +30,24 @@ Scene History
 <|SECTION:TASK|>
 The author of the scene has given you a query and is asking you to provide additional context to the actors in the scene. 
 
-- Understand the query, what do we want to find out?
-{% if is_initial %}- For a query to be valid any of the following must be true:
+{% if analysis %}
+{{ analysis }}
+{% endif %}
+
+{% if is_initial %}- Understand the query, what do we want to find out?
+- For a query to be valid any of the following must be true:
   - A character is trying to retrieve information in the form of a question.
   - A location, event, off-scene person or object is refered to that you could gather more information about.
 - The query is invalid if any of these are true:
   - The answer to the query is already contained within the current scene or extra 
 - If the query is invalid you must call abort() immediately.
 {% endif -%}
-- Read the provided chapters and select one that holds the answer or relevant context.{% if can_dig %} You can also decide to dig chapters for more information.{% else %}- If no answer can be provided, but you can provide additional relevant context, that is also acceptable.{% endif %}
+- Read the provided chapters and select one that holds the answer or relevant context.{% if can_dig %} You can also decide to dig chapters for more information.{% else %}
+- If no answer can be provided, but you can provide additional relevant context, that is also acceptable.{% endif %}
 - Select a function to call to process the request.
 
 ### Available Functions
-{% if can_dig %}- `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% else %}-- `answer(answer)` to provide an answer or context. The answer MUST be a narrative lore dump and MUST NOT mention chapter numbers. Answer the query and provide contextual and circumstantial details. Limit the answer to two paragraphs.{% endif %}
+{% if can_dig %}- `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% else %}-- `answer(answer)` to provide an answer or context or both. The answer MUST be a narrative lore dump and MUST NOT mention chapter numbers. Answer the query and provide contextual and circumstantial details. Limit the answer to two paragraphs.{% endif %}
 - `abort()` to stop the process if there are no avenues left to explore and there is no information to satisfy the query.
 
 ### Rules
@@ -60,17 +65,21 @@ The author of the scene has given you a query and is asking you to provide addit
 ### Response Format
 Follow this format exactly:
 
-QUERY: <Analysis of the query, what could be the reason this query was given to you? Be very strict with your evaluation. Many queries are given in error.>
+{% if is_initial %}QUERY: <Analysis of the query, what could be the reason this query was given to you? Be very strict with your evaluation. Many queries are given in error.>
 
 ANALYSIS:
-{% if is_initial %}- character trying retrieve information: <yes or no>.
+- character trying retrieve information: <yes or no>.
 - answer contained in current scene: <yes or no>.
 - answer contained in extra context: <yes or no>.
 - location, event, off-scene person or object mentioned: <yes or no>.
 - query valid based on the above: <yes or no>.
 
-{% endif -%}
 <Quick Analysis of the provided information>
+
+{% else %}
+ANALYSIS: <Quick Analysis of the provided information>
+
+{% endif -%}
 
 FUNCTION SELECTED: <Quickly explain which function you have selected and why.>
 
@@ -80,4 +89,4 @@ CALL:
 ```
 DONE
 <|CLOSE_SECTION|>
-{{ bot_token }}QUERY:
+{{ bot_token }}{% if is_initial %}QUERY:{% else %}ANALYSIS:{% endif %}

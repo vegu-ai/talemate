@@ -773,7 +773,8 @@ class SummarizeAgent(Agent):
         self,
         query: str,
         entry: dict | None = None,
-        context: list[str] | None = None
+        context: list[str] | None = None,
+        analysis: str | None = None,
     ):
         
         """
@@ -826,8 +827,13 @@ class SummarizeAgent(Agent):
                 "entries": entries,
                 "context": context,
                 "is_initial": is_initial,
+                "analysis": analysis,
             },
         )
+        
+        # find the query analysis
+        if is_initial:
+            analysis = response.split("ANALYSIS:", 1)[0].strip()
         
         # replace ```python with ``` to avoid markdown issues
         response = response.replace("```python", "```")
@@ -880,7 +886,8 @@ class SummarizeAgent(Agent):
                 answer = await self.dig_layered_history(
                     query,
                     entry,
-                    context=context + [entry["text"]] if context else [entry["text"]]
+                    context=context + [entry["text"]] if context else [entry["text"]],
+                    analysis=analysis,
                 ) 
                 if answer:
                     answers.append(answer)

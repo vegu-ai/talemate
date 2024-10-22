@@ -7,6 +7,10 @@
                     <v-icon start>mdi-gamepad-square</v-icon>
                     Game
                 </v-tab>
+                <v-tab value="appearance">
+                    <v-icon start>mdi-palette-outline</v-icon>
+                    Appearance
+                </v-tab>
                 <v-tab value="application">
                     <v-icon start>mdi-application</v-icon>
                     Application
@@ -88,6 +92,16 @@
                             </v-row>
                         </v-card-text>
                     </v-card>
+                </v-window-item>
+
+                <!-- APPEARANCE -->
+
+                <v-window-item value="appearance">
+                    <AppConfigAppearance 
+                    ref="appearance"
+                    :immutableConfig="app_config" 
+                    :sceneActive="sceneActive"
+                    ></AppConfigAppearance>
                 </v-window-item>
 
                 <!-- APPLICATION -->
@@ -341,11 +355,13 @@
 <script>
 
 import AppConfigPresets from './AppConfigPresets.vue';
+import AppConfigAppearance from './AppConfigAppearance.vue';
 
 export default {
     name: 'AppConfig',
     components: {
         AppConfigPresets,
+        AppConfigAppearance,
     },
     props: {
         agentStatus: Object,
@@ -361,6 +377,9 @@ export default {
                 game: [
                     {title: 'General', icon: 'mdi-cog', value: 'general'},
                     {title: 'Default Character', icon: 'mdi-human-edit', value: 'character'},
+                ],
+                appearance: [
+                    {title: 'Scene', icon: 'mdi-script-text', value: 'scene'},
                 ],
                 application: [
                     {title: 'OpenAI', icon: 'mdi-api', value: 'openai_api'},
@@ -470,6 +489,12 @@ export default {
                 if(embeddingsConfig) {
                     this.app_config.presets.embeddings = embeddingsConfig;
                 }
+            }
+
+            // check if appearance component is present
+            if(this.$refs.appearance) {
+                // update app_config.appearance from $refs.appearance.config
+                this.app_config.appearance = this.$refs.appearance.get_config();
             }
 
             this.sendRequest({

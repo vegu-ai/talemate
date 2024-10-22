@@ -45,6 +45,7 @@ from talemate.scene_message import (
     ReinforcementMessage,
     SceneMessage,
     TimePassageMessage,
+    ContextInvestigationMessage,
 )
 from talemate.util import colored_text, count_tokens, extract_metadata, wrap_text
 from talemate.util.prompt import condensed
@@ -67,6 +68,7 @@ async_signals.register("game_loop_start")
 async_signals.register("game_loop")
 async_signals.register("game_loop_actor_iter")
 async_signals.register("game_loop_new_message")
+async_signals.register("player_turn_start")
 
 
 class ActedAsCharacter(Exception):
@@ -570,7 +572,7 @@ class Actor:
     def history(self):
         return self.scene.history
 
-    async def talk(self):
+    async def talk(self, instruction: str = None):
         """
         Set the message to be sent to the AI
         """
@@ -588,7 +590,7 @@ class Actor:
         )
 
         with ClientContext(conversation=conversation_context):
-            messages = await self.agent.converse(self)
+            messages = await self.agent.converse(self, instruction=instruction)
 
         return messages
 
@@ -619,7 +621,6 @@ class Player(Actor):
         if not message:
             # Display scene history length before the player character name
             history_length = self.scene.history_length()
-
             name = colored_text(self.character.name + ": ", self.character.color)
             input = await wait_for_input(
                 f"[{history_length}] {name}",
@@ -633,7 +634,27 @@ class Player(Actor):
         if not message:
             return
 
-        if not commands.Manager.is_command(message):
+        if message.startswith("@"):
+            character_message = await self.generate_from_choice(
+                message[1:], process=False, character=None if not act_as else self.scene.get_character(act_as)
+            )
+            
+            if not character_message:
+                return
+            
+            self.message = character_message.without_name
+            self.scene.push_history(character_message)
+            
+            if act_as:
+                character = self.scene.get_character(act_as)
+                
+                self.scene.process_npc_dialogue(character.actor, [character_message])
+                raise ActedAsCharacter()
+            else:
+                emit("character", character_message, character=self.character)
+            message = self.message
+
+        elif not commands.Manager.is_command(message):
             if '"' not in message and "*" not in message:
                 message = f'"{message}"'
 
@@ -659,15 +680,87 @@ class Player(Actor):
             else:
                 # acting as the main player character
                 self.message = message
-
+                
+                extra = {}
+                
+                if input.get("from_choice"):
+                    extra["from_choice"] = input["from_choice"]
+                
                 self.scene.push_history(
                     CharacterMessage(
-                        f"{self.character.name}: {message}", source="player"
+                        f"{self.character.name}: {message}", source="player", **extra
                     )
                 )
                 emit("character", self.history[-1], character=self.character)
 
         return message
+
+    async def generate_from_choice(self, choice:str, process:bool=True, character:Character=None) -> CharacterMessage:
+        character = self.character if not character else character
+        
+        if not character:
+            raise TalemateError("Character not found during generate_from_choice")
+        
+        actor = character.actor
+        conversation = self.scene.get_helper("conversation").agent
+        director = self.scene.get_helper("director").agent
+        narrator = self.scene.get_helper("narrator").agent
+        
+        # sensory checks
+        sensory_checks = ["look", "listen", "smell", "taste", "touch", "feel"]
+        
+        sensory_action = {
+            "look": "see",
+            "inspect": "see",
+            "examine": "see",
+            "observe": "see",
+            "watch": "see",
+            "view": "see",
+            "see": "see",
+            "listen": "hear",
+            "smell": "smell",
+            "taste": "taste",
+            "touch": "feel",
+            "feel": "feel",
+        }
+        
+        if choice.lower().startswith(tuple(sensory_checks)):
+            
+            # extract the sensory type
+            sensory_type = choice.split(" ", 1)[0].lower()
+            
+            sensory_suffix = sensory_action.get(sensory_type, "experience")
+            
+            log.debug("generate_from_choice", choice=choice, sensory_checks=True)
+            # sensory checks should trigger a narrator query instead of conversation
+            await narrator.action_to_narration(
+                "narrate_query",
+                emit_message=True,
+                query=f"{character.name} wants to \"{choice}\" - what does {character.name} {sensory_suffix} (your answer must be descriptive and detailed)?",
+            )
+            return
+        
+        messages = await conversation.converse(actor, only_generate=True, instruction=choice)
+        
+        message = messages[0]
+        message = util.ensure_dialog_format(message.strip(), character.name)
+        character_message = CharacterMessage(
+            message, source="player" if isinstance(actor, Player) else "ai", from_choice=choice
+        )
+        
+        if not process:
+            return character_message
+        
+        interaction_state = interaction.get()
+        
+        if director.generate_choices_never_auto_progress:
+            self.scene.push_history(character_message)
+            emit("character", character_message, character=character)
+        else:
+            interaction_state.from_choice = choice
+            interaction_state.input = character_message.without_name
+            
+        return character_message
 
 
 class Scene(Emitter):
@@ -693,6 +786,7 @@ class Scene(Emitter):
         self.history = []
         self.archived_history = []
         self.inactive_characters = {}
+        self.layered_history = []
         self.assets = SceneAssets(scene=self)
         self.description = ""
         self.intro = ""
@@ -760,6 +854,7 @@ class Scene(Emitter):
             "game_loop_actor_iter": async_signals.get("game_loop_actor_iter"),
             "game_loop_new_message": async_signals.get("game_loop_new_message"),
             "scene_init": async_signals.get("scene_init"),
+            "player_turn_start": async_signals.get("player_turn_start"),
         }
 
         self.setup_emitter(scene=self)
@@ -1039,6 +1134,20 @@ class Scene(Emitter):
             if isinstance(self.history[idx], CharacterMessage):
                 if self.history[idx].source == "player":
                     return self.history[idx]
+                
+    def last_message_of_type(self, typ: str | list[str], source: str = None):
+        """
+        Returns the last message of the given type and source
+        """
+        
+        if not isinstance(typ, list):
+            typ = [typ]
+        
+        for idx in range(len(self.history) - 1, -1, -1):
+            if self.history[idx].typ in typ and (
+                self.history[idx].source == source or not source
+            ):
+                return self.history[idx]
 
     def collect_messages(
         self, typ: str = None, source: str = None, max_iterations: int = 100
@@ -1067,7 +1176,7 @@ class Scene(Emitter):
         """
 
         if not ignore:
-            ignore = [ReinforcementMessage, DirectorMessage]
+            ignore = [ReinforcementMessage, DirectorMessage, ContextInvestigationMessage]
 
         collected = []
 
@@ -1332,51 +1441,144 @@ class Scene(Emitter):
         return summary
 
     def context_history(
-        self, budget: int = 2048, keep_director: Union[bool, str] = False, **kwargs
+        self, budget: int = 8192, **kwargs
     ):
         parts_context = []
         parts_dialogue = []
 
         budget_context = int(0.5 * budget)
         budget_dialogue = int(0.5 * budget)
+        
+        keep_director = kwargs.get("keep_director", False)
+        keep_context_investigation = kwargs.get("keep_context_investigation", True)
 
         conversation_format = self.conversation_format
         actor_direction_mode = self.get_helper("director").agent.actor_direction_mode
-
-        history_offset = kwargs.get("history_offset", 0)
-        message_id = kwargs.get("message_id")
+        layered_history_enabled = self.get_helper("summarizer").agent.layered_history_enabled
         include_reinfocements = kwargs.get("include_reinfocements", True)
+        assured_dialogue_num = kwargs.get("assured_dialogue_num", 5)
 
-        # if message id is provided, find the message in the history
-        if message_id:
+        history_len = len(self.history)
 
-            if history_offset:
-                log.warning(
-                    "context_history",
-                    message="history_offset is ignored when message_id is provided",
-                )
 
-            message_index = self.message_index(message_id)
-            history_start = message_index - 1
+        # CONTEXT
+        # collect context, ignore where end > len(history) - count
+        if not self.layered_history or not layered_history_enabled or not self.layered_history[0]:
+            
+            # no layered history available
+
+            for i in range(len(self.archived_history) - 1, -1, -1):
+                archive_history_entry = self.archived_history[i]
+                end = archive_history_entry.get("end")
+
+                if end is None:
+                    continue
+
+                try:
+                    time_message = util.iso8601_diff_to_human(
+                        archive_history_entry["ts"], self.ts
+                    )
+                    text = f"{time_message}: {archive_history_entry['text']}"
+                except Exception as e:
+                    log.error("context_history", error=e, traceback=traceback.format_exc())
+                    text = archive_history_entry["text"]
+
+                if count_tokens(parts_context) + count_tokens(text) > budget_context:
+                    break
+
+                parts_context.insert(0, condensed(text))
+                    
         else:
-            history_start = len(self.history) - (1 + history_offset)
+            
+            # layered history available
+            # start with the last layer and work backwards
+            
+            next_layer_start = None
+            
+            for i in range(len(self.layered_history) - 1, -1, -1):
+                
+                log.debug("context_history - layered history", i=i, next_layer_start=next_layer_start)
+                
+                if not self.layered_history[i]:
+                    continue
+                
+                for layered_history_entry in self.layered_history[i][next_layer_start if next_layer_start is not None else 0:]:
+                    
+                    time_message_start = util.iso8601_diff_to_human(
+                        layered_history_entry["ts_start"], self.ts
+                    )
+                    time_message_end = util.iso8601_diff_to_human(
+                        layered_history_entry["ts_end"], self.ts
+                    )
+                    
+                    if time_message_start == time_message_end:
+                        time_message = time_message_start
+                    else:
+                        time_message = f"{time_message_start} to {time_message_end}"
+                    text = f"{time_message} {layered_history_entry['text']}"
+                    parts_context.append(text)
+                    
+                next_layer_start = layered_history_entry["end"] + 1
+            
+            # collect archived history entries that have not yet been
+            # summarized to the layered history
+            base_layer_start = self.layered_history[0][-1]["end"] + 1 if self.layered_history[0] else None
+            
+            if base_layer_start is not None:
+                for archive_history_entry in self.archived_history[base_layer_start:]:
+                    time_message = util.iso8601_diff_to_human(
+                        archive_history_entry["ts"], self.ts
+                    )
+                    
+                    text = f"{time_message}: {archive_history_entry['text']}"
+                    parts_context.append(condensed(text))
 
-        # collect dialogue
+        # log.warn if parts_context token count > budget_context
+        if count_tokens(parts_context) > budget_context:
+            log.warning(
+                "context_history",
+                message="context exceeds budget",
+                context_tokens=count_tokens(parts_context),
+                budget=budget_context,
+            )
+            # chop off the top until it fits
+            while count_tokens(parts_context) > budget_context:
+                parts_context.pop(0)
 
-        count = 0
-
-        for i in range(history_start, -1, -1):
-            count += 1
-
+        # DIALOGUE
+        try:
+            summarized_to = self.archived_history[-1]["end"] if self.archived_history else 0
+        except KeyError:
+            # only static archived history entries exist (pre-entered history
+            # that doesnt have start and end timestamps)
+            summarized_to = 0
+        
+        
+        # if summarized_to somehow is bigger than the length of the history
+        # since we have no way to determine where they sync up just put as much of
+        # the dialogue as possible
+        if summarized_to and summarized_to >= history_len:
+            log.warning("context_history", message="summarized_to is greater than history length - may want to regenerate history")
+            summarized_to = 0
+            
+        log.debug("context_history", summarized_to=summarized_to, history_len=history_len)
+        
+        dialogue_messages_collected = 0 
+        
+        #for message in self.history[summarized_to if summarized_to is not None else 0:]:
+        for i in range(len(self.history) - 1, -1, -1):
             message = self.history[i]
+            
+            if i < summarized_to and dialogue_messages_collected >= assured_dialogue_num:
+                break
 
             if message.hidden:
                 continue
-
+            
             if isinstance(message, ReinforcementMessage) and not include_reinfocements:
                 continue
 
-            if isinstance(message, DirectorMessage):
+            elif isinstance(message, DirectorMessage):
                 if not keep_director:
                     continue
 
@@ -1387,45 +1589,30 @@ class Scene(Emitter):
 
                 elif isinstance(keep_director, str) and message.source != keep_director:
                     continue
+            
+            elif isinstance(message, ContextInvestigationMessage) and not keep_context_investigation:
+                continue
+
 
             if count_tokens(parts_dialogue) + count_tokens(message) > budget_dialogue:
                 break
-
+            
             parts_dialogue.insert(
-                0, message.as_format(conversation_format, mode=actor_direction_mode)
+                0, 
+                message.as_format(conversation_format, mode=actor_direction_mode)
             )
-
-        # collect context, ignore where end > len(history) - count
-
-        for i in range(len(self.archived_history) - 1, -1, -1):
-            archive_history_entry = self.archived_history[i]
-            end = archive_history_entry.get("end")
-            start = archive_history_entry.get("start")
-
-            if end is None:
-                continue
-
-            if start > len(self.history) - count:
-                continue
-
-            try:
-                time_message = util.iso8601_diff_to_human(
-                    archive_history_entry["ts"], self.ts
-                )
-                text = f"{time_message}: {archive_history_entry['text']}"
-            except Exception as e:
-                log.error("context_history", error=e, traceback=traceback.format_exc())
-                text = archive_history_entry["text"]
-
-            if count_tokens(parts_context) + count_tokens(text) > budget_context:
-                break
-
-            parts_context.insert(0, condensed(text))
-
+            
+            if isinstance(message, CharacterMessage):
+                dialogue_messages_collected += 1
+                    
+            
         if count_tokens(parts_context + parts_dialogue) < 1024:
             intro = self.get_intro()
             if intro:
                 parts_context.insert(0, intro)
+                
+
+            
 
         return list(map(str, parts_context)) + list(map(str, parts_dialogue))
 
@@ -1450,13 +1637,14 @@ class Scene(Emitter):
 
         popped_reinforcement_messages = []
 
-        while isinstance(message, ReinforcementMessage):
+        while isinstance(message, (ReinforcementMessage, ContextInvestigationMessage)):
             popped_reinforcement_messages.append(self.history.pop())
             message = self.history[idx]
 
         log.debug(f"Rerunning message: {message} [{message.id}]")
 
-        if message.source == "player":
+        if message.source == "player" and not message.from_choice:
+            log.warning("Cannot rerun player's message", message=message)
             return
 
         current_rerun_context = rerun_context.get()
@@ -1562,6 +1750,13 @@ class Scene(Emitter):
         character = self.get_character(character_name)
 
         if character.is_player:
+            
+            if message.from_choice:
+                log.info(f"Rerunning player's generated message: {message} [{message.id}]")
+                emit("remove_message", "", id=message.id)
+                await character.actor.generate_from_choice(message.from_choice)
+                return
+                    
             emit("system", "Cannot rerun player's message")
             return
 
@@ -1569,8 +1764,8 @@ class Scene(Emitter):
 
         # Call talk() for the most recent AI Actor
         actor = character.actor
-
-        new_messages = await actor.talk()
+        
+        new_messages = await actor.talk(instruction=message.from_choice)
 
         # Print the new messages
         for item in new_messages:
@@ -1914,6 +2109,7 @@ class Scene(Emitter):
                 if signal_game_loop:
                     await self.signals["game_loop"].send(game_loop)
 
+                turn_start = signal_game_loop
                 signal_game_loop = True
 
                 for actor in self.actors:
@@ -1952,6 +2148,13 @@ class Scene(Emitter):
 
                     if not actor.character.is_player:
                         await self.call_automated_actions()
+                    elif turn_start:
+                        await self.signals["player_turn_start"].send(
+                            events.PlayerTurnStartEvent(
+                                scene=self,
+                                event_type="player_turn_start",
+                            )
+                        )
 
                     try:
                         message = await actor.talk()
@@ -2140,6 +2343,7 @@ class Scene(Emitter):
             "history": scene.history,
             "environment": scene.environment,
             "archived_history": scene.archived_history,
+            "layered_history": scene.layered_history,
             "characters": [actor.character.serialize for actor in scene.actors],
             "inactive_characters": {
                 name: character.serialize
@@ -2259,6 +2463,7 @@ class Scene(Emitter):
             "history": scene.history,
             "environment": scene.environment,
             "archived_history": scene.archived_history,
+            "layered_history": scene.layered_history,
             "characters": [actor.character.serialize for actor in scene.actors],
             "inactive_characters": {
                 name: character.serialize

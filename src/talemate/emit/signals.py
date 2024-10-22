@@ -8,6 +8,8 @@ DirectorMessage = signal("director")
 TimePassageMessage = signal("time")
 StatusMessage = signal("status")
 ReinforcementMessage = signal("reinforcement")
+PlayerChoiceMessage = signal("player_choice")
+ContextInvestigationMessage = signal("context_investigation")
 
 ClearScreen = signal("clear_screen")
 
@@ -49,6 +51,7 @@ handlers = {
     "player": PlayerMessage,
     "director": DirectorMessage,
     "time": TimePassageMessage,
+    "context_investigation": ContextInvestigationMessage,
     "reinforcement": ReinforcementMessage,
     "request_input": RequestInput,
     "receive_input": ReceiveInput,
@@ -73,4 +76,5 @@ handlers = {
     "autocomplete_suggestion": AutocompleteSuggestion,
     "spice_applied": SpiceApplied,
     "memory_request": MemoryRequest,
+    "player_choice": PlayerChoiceMessage,
 }

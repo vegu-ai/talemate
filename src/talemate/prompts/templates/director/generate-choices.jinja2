@@ -1,0 +1,45 @@
+<|SECTION:SCENE|>
+{% block scene_history -%}
+{% set scene_context = scene.context_history(budget=max_tokens-200, min_dialogue=15, sections=False, keep_director=False) -%}
+{% for scene_line in scene_context -%}
+{{ scene_line }}
+
+{% endfor %}
+{% endblock -%}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Generate {{ num_choices }} interesting actions for {{ player_character.name }} to advance the current scene in this text adventure game. Consider:
+
+1. Examining intriguing objects or characters for more detail
+2. Interacting with the environment in meaningful ways
+3. Taking actions that naturally progress the story
+
+Format each action as a short, concise command from {{ player_character.name }}'s perspective, such as:
+"Look at the strange artifact."
+"Ask the merchant about the rumors."
+"Climb the crumbling staircase."
+"Inspect the mysterious footprints."
+"Eavesdrop on the whispering guards."
+"Pick up the discarded letter."
+"Offer the beggar a coin."
+"Attempt to decipher the ancient runes."
+"Search the bookshelf for hidden compartments."
+"Try the rusty key in the lock."
+
+Ensure the actions:
+- Fit the scene's current context and writing style
+- Offer varied options without drastic pacing changes
+- Are significantly different from each other
+
+The actions you generate must chronologically come after this moment in the scene:
+
+```
+{{ scene.last_message_of_type(['character', 'narrator']).message }}
+```
+
+{% if instructions %}
+### Specific instructions
+{{ instructions}}{% endif %}
+
+Provide a numbered list of actions, with no additional text.
+{{ set_prepared_response('1.') }}

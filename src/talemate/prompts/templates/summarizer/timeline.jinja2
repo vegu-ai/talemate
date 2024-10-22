@@ -1,0 +1,14 @@
+<|SECTION:STORY|>
+{% for event in events %}
+{{ event["text"] }}
+
+{% endfor %}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Identify the major events and milestone in the provided story.
+
+Summarize them into a consice list of events. Each item should be a single sentence, be concise and to the point.
+
+The list must be in chronological order, with the earliest event at the top and the latest event at the bottom.
+<|CLOSE_SECTION|>

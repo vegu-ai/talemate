@@ -395,7 +395,7 @@ export default {
         handleMessage(message) {
             if(message.type == "image_generated") {
                 this.coverImageBusy = false;
-                if(message.data.context.character_name === this.character.name) {
+                if(this.character && message.data.context.character_name === this.character.name) {
                     this.loadCharacter(this.character.name);
                 }
             } 

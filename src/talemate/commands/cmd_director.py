@@ -4,6 +4,11 @@ from talemate.emit import emit, wait_for_input
 from talemate.scene_message import DirectorMessage
 from talemate.util import colored_text, wrap_text
 
+__all__ = [
+    "CmdDirectorDirect",
+    "CmdDirectorDirectWithOverride",
+    "CmdDirectorGenerateChoices",
+]
 
 @register
 class CmdDirectorDirect(TalemateCommand):
@@ -64,3 +69,22 @@ class CmdDirectorDirectWithOverride(CmdDirectorDirect):
 
     async def run(self):
         await super().run(ask_for_input=True)
+
+@register
+class CmdDirectorGenerateChoices(TalemateCommand):
+    """
+    Command class for the 'director' command
+    """
+
+    name = "director_generate_choices"
+    description = "Calls a director to generate choices for a character"
+    aliases = ["generate_choices"]
+
+    async def run(self, ask_for_input=True):
+        director = self.scene.get_helper("director")
+
+        if not director:
+            self.system_message("No director found")
+            return True
+
+        choices = await director.agent.generate_choices()

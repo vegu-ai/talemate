@@ -1,3 +1,31 @@
-Instruction: Summarize the events within the dialogue as accurately as you can.
-Expected Answer: A list short narrative descriptions
-Narrator answers:
+{% if extra_context %}{% set section_name = "chapter 2" %}{% else %}{% set section_name = "chapter 1" %}{% endif %}
+{% include "character-context.jinja2" -%}
+{% if extra_context %}
+<|SECTION:PREVIOUS CONTEXT|>
+{{ extra_context }}
+<|CLOSE_SECTION|>
+{% endif -%}
+<|SECTION:{{ section_name }}|>
+{{ section_name.upper() }} START
+{% for chunk in text_to_chunks(dialogue, chunk_size=1024) %}
+CHUNK {{ loop.index }}: 
+{{ chunk }}
+
+{% endfor %}
+{{ section_name.upper() }} END
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Provide a compressed, short summary for {{ section_name }}.
+
+Do not repeat any information from the previous context. 
+
+Compress each individual chbunk into 1 sentence.
+
+YOU MUST NOT ADD COMMENTARY. 
+<|CLOSE_SECTION|>
+{% if generation_options and generation_options.writing_style %}
+<|SECTION:WRITING STYLE|>
+{{ generation_options.writing_style.instructions }}
+<|CLOSE_SECTION|>
+{% endif %}
+{{ set_prepared_response("CHUNK 1:")}}

@@ -974,7 +974,7 @@ export default {
     },
 
     messageInputLongHint() {
-      const DIALOG_HINT = "Ctrl+Enter to autocomplete, Shift+Enter for newline, Tab to act as another character";
+      const DIALOG_HINT = "Ctrl+Enter to autocomplete, Shift+Enter for newline, Tab to act as another character. Start messages with '@' to do an action. (e.g., '@look at the door')";
 
       if(this.waitingForInput) {
         if(this.inputRequestInfo.reason === "talk") {

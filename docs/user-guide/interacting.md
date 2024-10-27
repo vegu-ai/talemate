@@ -34,6 +34,16 @@ Version `0.26` introduces a new `act-as` feature, which allows you to act as ano
 
 ![Dialogue input - act as narrator](/talemate/img/0.26.0/interacting-input-act-as-narrator.png)
 
+### Quick action
+
+If you start a message with the `@` character you can have the AI generate the response based on what action you are taking. This is useful if you want to quickly generate a response without having to type out the full action and narration yourself.
+
+![Quick action](/talemate/img/0.28.0/quick-action.png)
+
+![Quick action generated text](/talemate/img/0.28.0/quick-action-generated-text.png)
+
+This functionality was added in version `0.28.0`
+
 ### Autocomplete
 
 When typing out your action / dialogue, you can hit the `ctrl+enter` key combination to generate an autocompletion of your current text. 

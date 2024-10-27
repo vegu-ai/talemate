@@ -11,7 +11,9 @@ Scene History
 {{ scene.snapshot(lines=10) }}
 <|CLOSE_SECTION|>
 <|SECTION:EXTRA CONTEXT|>
-{%- for message in scene.collect_messages(typ="context_investigation", max_iterations=5) %}
+{% set extra_context = scene.collect_messages(typ="context_investigation", max_iterations=5) %}
+{%- if not extra_context %}No extra context.{% endif %}
+{%- for message in extra_context %}
 {{ message.message }}
 
 {% endfor %}

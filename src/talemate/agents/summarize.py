@@ -121,7 +121,7 @@ class SummarizeAgent(Agent):
                         min=256,
                         max=8192,
                         step=128,
-                        value=384,
+                        value=768,
                     ),
                 },
             ),

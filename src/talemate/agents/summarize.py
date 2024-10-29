@@ -786,7 +786,7 @@ class SummarizeAgent(Agent):
         if not self.layered_history_enabled:
             return ""
         
-        if not self.scene.layered_history and not self.scene.archived_history:
+        if not self.scene.layered_history or not self.scene.layered_history[0]:
             log.debug("dig_layered_history", skip="No history to dig through")
             return ""
         

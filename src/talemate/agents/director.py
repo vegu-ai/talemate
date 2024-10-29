@@ -533,6 +533,9 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         # strip quotes
         choices = [choice.strip().strip('"') for choice in choices]
         
+        # limit to num_choices
+        choices = choices[:self.generate_choices_num_choices]
+        
         log.info("generate_choices done", choices=choices)
         
         emit(

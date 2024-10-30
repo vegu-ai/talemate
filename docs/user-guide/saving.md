@@ -29,3 +29,9 @@ Some scenes start out with a locked save file. This is so that this particular s
 
 !!! info
     Alternatively you can also unlock the save file through the [Scene editor](/talemate/user-guide/world-editor/scene/settings) found in **:material-earth-box: World Editor** :material-arrow-right: **:material-script: Scene** :material-arrow-right: **:material-cogs: Settings**.
+
+## Forking a copy of a scene
+
+You can create a new copy of a scene from any message in the scene by clicking the :material-source-fork: **Fork** button underneath the message.
+
+All progress after the target message will be removed and a new scene will be created with the previous messages.

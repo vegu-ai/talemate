@@ -18,7 +18,8 @@
         :loading="busy"
         @keyup.ctrl.enter.stop="sendAutocompleteRequest"
 
-        @update:model-value="queueUpdate()"
+        @update:model-value="dirty = true"
+        @blur="update(true)"
         label="Description"
         :hint="'A short description of the character. '+autocompleteInfoMessage(busy)">
     </v-textarea>
@@ -75,18 +76,12 @@ export default {
         }
     },
     methods: {
-        queueUpdate(delay = 1500) {
-            if (this.updateTimeout !== null) {
-                clearTimeout(this.updateTimeout);
+        update(only_if_dirty = false) {
+
+            if(only_if_dirty && !this.dirty) {
+                return;
             }
 
-            this.dirty = true;
-
-            this.updateTimeout = setTimeout(() => {
-                this.update();
-            }, delay);
-        },
-        update() {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'update_character_description',

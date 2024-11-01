@@ -77,7 +77,8 @@
 
                     @keyup.ctrl.enter.stop="sendAutocompleteRequest"
 
-                    @update:modelValue="queueUpdate(selected)"
+                    @update:modelValue="dirty = true"
+                    @blur="update(selected, true)"
 
                     v-model="character.details[selected]">
                 </v-textarea>
@@ -270,19 +271,11 @@ export default {
             }
         },
 
-        queueUpdate(name, delay = 1500) {
-            if (this.updateTimeout !== null) {
-                clearTimeout(this.updateTimeout);
+        update(name, only_if_dirty = false) {
+
+            if(only_if_dirty && !this.dirty) {
+                return;
             }
-
-            this.dirty = true;
-
-            this.updateTimeout = setTimeout(() => {
-                this.update(name);
-            }, delay);
-        },
-
-        update(name) {
 
             // if field is currently empty, don't send update, because that
             // will cause a deletion

@@ -22,7 +22,8 @@
                         :disabled="busy"
                         hint="You can leave this blank as it will be automatically generated. Or you can fill it in to start with a specific answer."
                         :color="dirty ? 'dirty' : ''"
-                        @update:model-value="queueSave()"
+                        @update:model-value="dirty = true"
+                        @blur="save(false, true)"
                         max-rows="15"
                         auto-grow
                         rows="5">
@@ -41,7 +42,8 @@
                     step="1" 
                     class="mb-2" 
                     :disabled="busy"
-                    @update:modelValue="queueSave()" 
+                    @update:model-value="dirty = true"
+                    @blur="save(false, true)"
                     :color="dirty ? 'dirty' : ''">
                     </v-text-field>
                 </v-col>
@@ -64,7 +66,8 @@
                         label="Additional instructions to the AI for generating this state."
                         :color="dirty ? 'dirty' : ''"
                         :disabled="busy"
-                        @update:model-value="queueSave()"
+                        @update:model-value="dirty = true"
+                        @blur="save(false, true)"
                         auto-grow
                         max-rows="5"
                         rows="3">
@@ -180,7 +183,12 @@ export default {
             }, delay);
         },
 
-        save(updateState) {
+        save(updateState, only_if_dirty = false) {
+
+            if(only_if_dirty && !this.dirty) {
+                return;
+            }
+
             this.busy = true;
             this.$refs.form.validate();
             if(!this.formValid) {

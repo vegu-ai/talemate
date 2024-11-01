@@ -29,7 +29,8 @@
                 placeholder="speak less formally, use more contractions, and be more casual." 
                 v-model="dialogueInstructions" label="Acting Instructions" 
                 :color="dialogueInstructionsDirty ? 'info' : null"
-                @update:model-value="queueUpdateCharacterActor()"
+                @update:model-value="dialogueInstructionsDirty = true"
+                @blur="updateCharacterActor(true)"
                 rows="3" 
                 auto-grow></v-textarea>
                 <v-alert icon="mdi-bullhorn" density="compact" variant="text" color="grey">
@@ -57,15 +58,15 @@
                     :character="character.name"
                     :rewrite-enabled="false"
                     :generation-options="generationOptions"
-                    @generate="content => { dialogueExamples.push(content); queueUpdateCharacterActor(500); }"
+                    @generate="content => { dialogueExamples.push(content); updateCharacterActor(); }"
                 />
 
 
-                <v-text-field v-model="dialogueExample" label="Add Dialogue Example" @keyup.enter="dialogueExamples.push(dialogueExample); dialogueExample = ''; queueUpdateCharacterActor();" dense></v-text-field>
+                <v-text-field v-model="dialogueExample" label="Add Dialogue Example" @keyup.enter="dialogueExamples.push(dialogueExample); dialogueExample = ''; updateCharacterActor();" dense></v-text-field>
                 <v-list density="compact" nav>
                     <v-list-item v-for="(example, index) in dialogueExamplesWithNameStripped" :key="index">
                         <template v-slot:prepend>
-                            <v-btn  color="red-darken-2" rounded="sm" size="x-small" icon variant="text" @click="dialogueExamples.splice(index, 1); queueUpdateCharacterActor()">
+                            <v-btn  color="red-darken-2" rounded="sm" size="x-small" icon variant="text" @click="dialogueExamples.splice(index, 1); updateCharacterActor()">
                                 <v-icon>mdi-close-box-outline</v-icon>
                             </v-btn>
                         </template>
@@ -132,16 +133,13 @@ export default {
     ],
     inject: ['getWebsocket', 'registerMessageHandler'],
     methods: {
-
-        queueUpdateCharacterActor(delay = 1500) {
-            this.dialogueInstructionsDirty = true;
-            if (this.updateCharacterActorTimeout) {
-                clearTimeout(this.updateCharacterActorTimeout);
-            }
-            this.updateCharacterActorTimeout = setTimeout(this.updateCharacterActor, delay);
-        },
         
-        updateCharacterActor() {
+        updateCharacterActor(only_if_dirty = false) {
+
+            if(only_if_dirty && !this.dialogueInstructionsDirty) {
+                return;
+            }
+
             this.getWebsocket().send(JSON.stringify({
                 type: "world_state_manager",
                 action: "update_character_actor",

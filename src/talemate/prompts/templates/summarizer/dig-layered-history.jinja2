@@ -49,7 +49,7 @@ The author of the scene has given you a query and is asking you to provide addit
 - Select a function to call to process the request.
 
 ### Available Functions
-{% if can_dig %}- `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% else %}-- `answer(answer)` to provide an answer or context or both. The answer MUST be a narrative lore dump and MUST NOT mention chapter numbers. Answer the query and provide contextual and circumstantial details. Limit the answer to two paragraphs.{% endif %}
+{% if can_dig %}- `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% else %}-- `answer(answer)` to provide an answer or context or both. The answer MUST be factional information and MUST NOT mention chapter numbers. DO NOT write narration. Answer the query and provide contextual and circumstantial details. Limit the answer to two paragraphs.{% endif %}
 - `abort()` to stop the process if there are no avenues left to explore and there is no information to satisfy the query.
 
 ### Rules

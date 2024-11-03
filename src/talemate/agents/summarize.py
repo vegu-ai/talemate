@@ -672,7 +672,7 @@ class SummarizeAgent(Agent):
                             noop = False
                             
                             # strip all occurences of "CHUNK \d+: " from the summary
-                            summary_text = re.sub(r"(CHUNK|CHAPTER) \d+: ", "", summary_text)
+                            summary_text = re.sub(r"(CHUNK|CHAPTER) \d+:\s+", "", summary_text)
                             
                             # make sure the first letter is capitalized
                             summary_text = summary_text[0].upper() + summary_text[1:]

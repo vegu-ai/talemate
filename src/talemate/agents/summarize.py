@@ -850,6 +850,11 @@ class SummarizeAgent(Agent):
         
         log.debug("dig_layered_history", code_block=code_block)
         
+        # replace potential linebreaks after ( and before )
+        
+        code_block = re.sub(r"\(\n", "(", code_block, flags=re.MULTILINE)
+        code_block = re.sub(r"\n\)", ")", code_block, flags=re.MULTILINE)
+        
         function_calls = code_block.split("\n")[:3] # max 3 function calls
         
         log.debug("dig_layered_history", function_calls=function_calls)

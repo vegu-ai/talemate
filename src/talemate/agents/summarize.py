@@ -867,7 +867,11 @@ class SummarizeAgent(Agent):
             if function_name == "dig":
                 # dig further
                 into_item = function_call.split("(")[1].split(")")[0].strip()
-                into_item = int(into_item)
+                try:
+                    into_item = int(into_item)
+                except ValueError:
+                    log.error("dig_layered_history", error="Invalid argument for `dig`", arg=into_item)
+                    continue
                 
                 # if into item is larger, just max it out
                 if into_item > len(entries):

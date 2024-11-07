@@ -17,7 +17,7 @@ from talemate.emit import emit, wait_for_input
 from talemate.events import GameLoopActorIterEvent, GameLoopStartEvent, SceneStateEvent
 from talemate.game.engine import GameInstructionsMixin
 from talemate.prompts import Prompt
-from talemate.scene_message import DirectorMessage, NarratorMessage
+from talemate.scene_message import DirectorMessage, NarratorMessage, CharacterMessage
 
 from .base import Agent, AgentAction, AgentActionConfig, set_processing
 from .registry import register
@@ -243,6 +243,23 @@ class DirectorAgent(GameInstructionsMixin, Agent):
             return
         
         if self.generate_choices_enabled:
+            
+            # lool backwards through history and abort if we encounter
+            # a character message with source "player" before either
+            # a character message with a different source or a narrator message
+            #
+            # this is so choices aren't generated when the player message was
+            # the most recent content in the scene
+            
+            for i in range(len(self.scene.history) - 1, -1, -1):
+                message = self.scene.history[i]
+                if isinstance(message, NarratorMessage):
+                    break
+                if isinstance(message, CharacterMessage):
+                    if message.source == "player":
+                        return
+                    break
+                            
             if random.random() < self.generate_choices_chance:
                 await self.generate_choices() 
 

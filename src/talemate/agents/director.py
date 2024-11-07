@@ -244,7 +244,7 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         
         if self.generate_choices_enabled:
             
-            # lool backwards through history and abort if we encounter
+            # look backwards through history and abort if we encounter
             # a character message with source "player" before either
             # a character message with a different source or a narrator message
             #

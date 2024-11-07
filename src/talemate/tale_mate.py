@@ -1279,7 +1279,6 @@ class Scene(Emitter):
         for actor in self.actors:
             if actor.character == character:
                 await self.remove_actor(actor)
-                return
         
         if character.name in self.inactive_characters:
             del self.inactive_characters[character.name]

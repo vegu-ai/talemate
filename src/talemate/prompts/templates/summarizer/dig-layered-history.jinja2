@@ -27,13 +27,15 @@ Scene History
 
 {% endfor %}
 {% endif %}
+{% if is_initial %}
 <|SECTION:QUERY|>
 {{ query }}
+{% endif %} 
 <|SECTION:TASK|>
-The author of the scene has given you a query and is asking you to provide additional context to the actors in the scene. 
+The author of the scene has given YOU - the analyst - a query and is asking you to provide additional context to the actors in the scene. 
 
 {% if analysis %}
-{{ analysis }}
+QUERY: {{ analysis }}
 {% endif %}
 
 {% if is_initial %}- Understand the query, what do we want to find out?
@@ -49,7 +51,12 @@ The author of the scene has given you a query and is asking you to provide addit
 - Select a function to call to process the request.
 
 ### Available Functions
-{% if can_dig %}- `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% else %}-- `answer(answer)` to provide an answer or context or both. The answer MUST be factional information and MUST NOT mention chapter numbers. DO NOT write narration. Answer the query and provide contextual and circumstantial details. Limit the answer to two paragraphs.{% endif %}
+{% if can_dig %}- `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% else %}- `answer(answer)` to provide an answer or context or both.
+  - The answer MUST be factional information and MUST NOT mention chapter numbers.
+  - Answer the query and provide contextual and circumstantial details.
+  - Limit the answer to two paragraphs.
+  - The answer text must be explanatory summarization, NOT narration.
+{% endif %}
 - `abort()` to stop the process if there are no avenues left to explore and there is no information to satisfy the query.
 
 ### Rules
@@ -57,10 +64,11 @@ The author of the scene has given you a query and is asking you to provide addit
 {%- if can_dig %}
 - Digging is expensive. Only dig chapters if they are highly likely to be related to the query.{% endif %}
 {%- if not can_dig %}
-- When using the `answer()` function always write from the perspective of the investigator. You MUST NOT formulate the answer from the perspective of any of the characters.{% endif %}
+- When using the `answer()` function always write from the perspective of the investigator.{% endif %}
 - Use untyped code blocks, so ``` instead of ```python.
 - You must never invent information. Dig instead.
 - End with `DONE` after calling a function.
+- You must not invent or guess
 {% if is_initial %}- if answer contained in extra context the query is invalid and you must abort
 - if answer contained in current scene the query is invalid and you must abort{% endif %}
 

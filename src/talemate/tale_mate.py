@@ -1267,6 +1267,24 @@ class Scene(Emitter):
         if memory_helper:
             await actor.character.commit_to_memory(memory_helper.agent)
 
+
+    async def remove_character(self, character: Character):
+        """
+        Remove a character from the scene
+        
+        Class remove_actor if the character is active
+        otherwise remove from inactive_characters.
+        """
+        
+        for actor in self.actors:
+            if actor.character == character:
+                await self.remove_actor(actor)
+                return
+        
+        if character.name in self.inactive_characters:
+            del self.inactive_characters[character.name]
+
+
     async def remove_actor(self, actor: Actor):
         """
         Remove an actor from the scene

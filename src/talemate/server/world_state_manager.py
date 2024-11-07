@@ -870,7 +870,7 @@ class WorldStateManagerPlugin:
             }
         )
 
-        await self.scene.remove_actor(character.actor)
+        await self.scene.remove_character(character)            
         await self.signal_operation_done()
         await self.handle_get_character_list({})
         self.scene.emit_status()

@@ -401,7 +401,7 @@ class Prompt:
 
         # Render the template with the prompt variables
         self.eval_context = {}
-        self.dedupe_enabled = True
+        #self.dedupe_enabled = True
         try:
             self.prompt = template.render(ctx)
             if not sectioning_handler:

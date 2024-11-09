@@ -27,16 +27,12 @@ Scene History
 
 {% endfor %}
 {% endif %}
-{% if is_initial %}
+{% if is_initial or dig_question %}
 <|SECTION:QUERY|>
-{{ query }}
+{{ dig_question or query }}
 {% endif %} 
 <|SECTION:TASK|>
 The author of the scene has given YOU - the analyst - a query and is asking you to provide additional context to the actors in the scene. 
-
-{% if analysis %}
-QUERY: {{ analysis }}
-{% endif %}
 
 {% if is_initial %}- Understand the query, what do we want to find out?
 - For a query to be valid any of the following must be true:
@@ -51,7 +47,8 @@ QUERY: {{ analysis }}
 - Select a function to call to process the request.
 
 ### Available Functions
-{% if can_dig %}- `dig(chapter_number)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.{% else %}- `answer(answer)` to provide an answer or context or both.
+{% if can_dig %}- `dig(chapter_number, question)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.
+  - The question you pass to the dig query should contain enough context to accurately target the event you want to query. Don't be vague, be specific.{% else %}- `answer(answer)` to provide an answer or context or both.
   - The answer MUST be factional information and MUST NOT mention chapter numbers.
   - Answer the query and provide contextual and circumstantial details.
   - Limit the answer to two paragraphs.
@@ -68,7 +65,7 @@ QUERY: {{ analysis }}
 - Use untyped code blocks, so ``` instead of ```python.
 - You must never invent information. Dig instead.
 - End with `DONE` after calling a function.
-- You must not invent or guess
+- You must not invent or guess, you can however decide to provide extra context if a factual answer is not possible.
 {% if is_initial %}- if answer contained in extra context the query is invalid and you must abort
 - if answer contained in current scene the query is invalid and you must abort{% endif %}
 
@@ -99,4 +96,38 @@ CALL:
 ```
 DONE
 <|CLOSE_SECTION|>
+<|SECTION:EXAMPLES|>
+
+Digging:
+
+CALL:
+```
+dig(3, "What happened when James first saw the prepared breakfast during the morning of his birthday?")
+```
+DONE
+
+Digging multiple times:
+
+CALL:
+```
+dig(3, "What is the significance of the red door?")
+dig(5, "What is the significance of the red door?")
+```
+DONE
+
+Answering:
+
+CALL:
+```
+answer("The red door led to the secret chamber where the treasure was hidden. James learned about it from his grandfather.")
+```
+DONE
+
+Aborting:
+
+CALL:
+```
+abort()
+```
+DONE
 {{ bot_token }}{% if is_initial %}QUERY:{% else %}ANALYSIS:{% endif %}

@@ -774,7 +774,7 @@ class SummarizeAgent(Agent):
         query: str,
         entry: dict | None = None,
         context: list[str] | None = None,
-        analysis: str | None = None,
+        dig_question: str | None = None,
     ):
         
         """
@@ -827,13 +827,10 @@ class SummarizeAgent(Agent):
                 "entries": entries,
                 "context": context,
                 "is_initial": is_initial,
-                "analysis": analysis,
+                "dig_question": dig_question,
             },
+            dedupe_enabled=False,
         )
-        
-        # find the query analysis
-        if is_initial:
-            analysis = response.split("ANALYSIS:", 1)[0].strip()
         
         # replace ```python with ``` to avoid markdown issues
         response = response.replace("```python", "```")
@@ -871,32 +868,42 @@ class SummarizeAgent(Agent):
             
             if function_name == "dig":
                 # dig further
-                into_item = function_call.split("(")[1].split(")")[0].strip()
-                try:
-                    into_item = int(into_item)
-                except ValueError:
-                    log.error("dig_layered_history", error="Invalid argument for `dig`", arg=into_item)
+                # dig arguments are provided as chapter number and question
+                # dig(1, "What is the significance of the red door?")
+                
+                # use regex to parse
+                
+                match = re.match(r"dig\((\d+),\s*\"(.+)\"\)", function_call)
+                
+                if not match:
+                    log.error("dig_layered_history", error="Invalid argument for `dig`", arg=function_call)
                     continue
+                
+                    
+                dig_into_chapter = int(match.group(1))
+                dig_question = match.group(2)
+                
+                log.debug("dig_layered_history", into_item=dig_into_chapter, question=dig_question)
                 
                 # if into item is larger, just max it out
-                if into_item > len(entries):
-                    into_item = len(entries) 
+                if dig_into_chapter > len(entries):
+                    dig_into_chapter = len(entries) 
                 
                 try:
-                    entry = entries[into_item-1]
+                    entry = entries[dig_into_chapter-1]
                 except IndexError:
-                    log.error("dig_layered_history", error="Index out of range", into_item=into_item, layer=layer)
+                    log.error("dig_layered_history", error="Index out of range", into_item=dig_into_chapter, layer=layer)
                     continue
                 except Exception as e:
-                    log.error("dig_layered_history", error=str(e), into_item=into_item, layer=layer)
+                    log.error("dig_layered_history", error=str(e), into_item=dig_into_chapter, layer=layer)
                     continue
 
-                log.debug("dig_layered_history", into_item=into_item, layer=layer-1, start=entry["start"], end=entry["end"])
+                log.debug("dig_layered_history", into_item=dig_into_chapter, layer=layer-1, start=entry["start"], end=entry["end"])
                 answer = await self.dig_layered_history(
                     query,
                     entry,
                     context=context + [entry["text"]] if context else [entry["text"]],
-                    analysis=analysis,
+                    dig_question=dig_question,
                 ) 
                 if answer:
                     answers.append(answer)

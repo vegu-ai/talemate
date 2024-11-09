@@ -412,7 +412,7 @@ export default {
       getTrackedWorldState: (question) => this.$refs.worldState.trackedWorldState(question),
       getPlayerCharacterName: () => this.getPlayerCharacterName(),
       formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
-      autocompleteRequest: (partialInput, callback, focus_element) => this.autocompleteRequest(partialInput, callback, focus_element),
+      autocompleteRequest: (partialInput, callback, focus_element, delay) => this.autocompleteRequest(partialInput, callback, focus_element, delay),
       autocompleteInfoMessage: (active) => this.autocompleteInfoMessage(active),
       toLabel: (value) => this.toLabel(value),
     };
@@ -725,7 +725,8 @@ export default {
             this.autocompleting = false
             this.messageInput += completion;
           },
-          this.$refs.messageInput
+          this.$refs.messageInput,
+          100,
         );
         return;
       }
@@ -751,9 +752,13 @@ export default {
       }));
     },
 
-    autocompleteRequest(param, callback, focus_element) {
+    autocompleteRequest(param, callback, focus_element, delay=500) {
 
-      this.autocompleteCallback = callback;
+      this.autocompleteCallback = (completion) => {
+        setTimeout(() => {
+          callback(completion);
+        }, delay);
+      };
       this.autocompleteFocusElement = focus_element;
       this.autocompletePartialInput = param.partial;
 

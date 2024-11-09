@@ -651,7 +651,7 @@ class ConversationAgent(Agent):
         summarizer = instance.get_agent("summarizer")
         result = await summarizer.dig_layered_history(str(last_message)) 
         
-        if not result:
+        if not result.strip():
             return
         
         message = ContextInvestigationMessage(message=result)

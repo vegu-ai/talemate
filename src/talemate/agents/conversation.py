@@ -639,7 +639,7 @@ class ConversationAgent(Agent):
             if isinstance(self.scene.history[idx], (CharacterMessage, NarratorMessage)):
                 break
         
-        last_message = self.scene.last_message_of_type("character")
+        last_message = self.scene.last_message_of_type(["character", "narrator"])
         
         if self.investigate_context_trigger == "question":
             if not last_message:

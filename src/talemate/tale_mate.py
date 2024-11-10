@@ -1531,7 +1531,7 @@ class Scene(Emitter):
                     if time_message_start == time_message_end:
                         time_message = time_message_start
                     else:
-                        time_message = f"{time_message_start} to {time_message_end}"
+                        time_message = f"Start:{time_message_start}, End:{time_message_end}" if time_message_start != time_message_end else time_message_start
                     text = f"{time_message} {layered_history_entry['text']}"
                     parts_context.append(text)
                     

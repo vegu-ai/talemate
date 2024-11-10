@@ -9,10 +9,10 @@
 <|CLOSE_SECTION|>
 {% endif -%}
 <|SECTION:TASK|>
-Question: What happens explicitly within the dialogue section alpha below? Summarize into a {{output_type}}.
-Content Context: This is a specific scene from {{ scene.context }}
+Question: What happens explicitly within chapter 2 below? Summarize into a {{output_type}}.
+Content Context: This is a specific scene from {{ scene.context }}.
 {% if output_type == "narrative description" %}
-Use an informal and colloquial register with a conversational tone. Overall, the narrative is informal, conversational, natural, and spontaneous, with a sense of immediacy.
+The tone of the summary must match the tone of the dialogue.
 {% endif %}
 
 {% if summarization_method == "long" -%}
@@ -21,18 +21,18 @@ This should be a detailed summary of the dialogue, including all the juicy detai
 This should be a short and specific summary of the dialogue, including the most important details. 2 - 3 sentences.
 {% endif -%}
 
-YOU MUST ONLY SUMMARIZE THE CONTENT IN DIALOGUE SECTION ALPHA.
+YOU MUST ONLY SUMMARIZE THE CONTENT IN CHAPTER 2.
 
 {% if output_type == "narrative description" %}
-Expected Answer: A summarized {{output_type}} of the dialogue section alpha, that can be inserted into the ongoing story in place of the dialogue.
+Expected Answer: A summarized {{output_type}} of chapter 2, that can be inserted into the ongoing story in place of the dialogue.
 {% elif output_type == "factual list" %}
-Expected Answer: A highly accurate numerical chronological list of the events and state changes that occur in the dialogue section alpha. Important is anything that causes a state change in the scene, characters or objects. Use simple, clear language, and note details. Use exact words. Note all the state changes. Leave nothing out.
+Expected Answer: A highly accurate numerical chronological list of the events and state changes that occur in chapter 2. Important is anything that causes a state change in the scene, characters or objects. Use simple, clear language, and note details. Use exact words. Note all the state changes. Leave nothing out.
 {% endif %}
 {% if extra_instructions -%}
 {{ extra_instructions }}
 {% endif -%}
 <|CLOSE_SECTION|>
-<|SECTION:DIALOGUE SECTION ALPHA|>
+<|SECTION:CHAPTER 2|>
 {{ dialogue }}
 <|CLOSE_SECTION|>
 {% if generation_options and generation_options.writing_style %}
@@ -40,5 +40,5 @@ Expected Answer: A highly accurate numerical chronological list of the events an
 {{ generation_options.writing_style.instructions }}
 <|CLOSE_SECTION|>
 {% endif %}
-<|SECTION:SUMMARIZATION OF DIALOGUE SECTION ALPHA|>
-{{ bot_token }}In the dialogue section alpha,
+<|SECTION:SUMMARIZATION OF CHAPTER 2|>
+{{ bot_token }}In chapter 2,

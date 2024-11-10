@@ -10,7 +10,7 @@ import talemate.util as util
 from talemate.emit import emit
 from talemate.events import GameLoopEvent
 from talemate.prompts import Prompt
-from talemate.scene_message import DirectorMessage, TimePassageMessage, ContextInvestigationMessage
+from talemate.scene_message import DirectorMessage, TimePassageMessage, ContextInvestigationMessage, ReinforcementMessage
 from talemate.world_state.templates import GenerationOptions
 
 from .base import Agent, AgentAction, AgentActionConfig, set_processing
@@ -73,9 +73,9 @@ class SummarizeAgent(Agent):
                         label="Use preceeding summaries to strengthen context",
                         description="Number of entries",
                         note="Help the AI summarize by including the last few summaries as additional context. Some models may incorporate this context into the new summary directly, so if you find yourself with a bunch of similar history entries, try setting this to 0.",
-                        value=3,
+                        value=6,
                         min=0,
-                        max=10,
+                        max=24,
                         step=1,
                     ),
                 },
@@ -234,7 +234,7 @@ class SummarizeAgent(Agent):
 
             # log.debug("build_archive", idx=i, content=str(dialogue)[:64]+"...")
 
-            if isinstance(dialogue, (DirectorMessage, ContextInvestigationMessage)):
+            if isinstance(dialogue, (DirectorMessage, ContextInvestigationMessage, ReinforcementMessage)):
                 if i == start:
                     start += 1
                 continue

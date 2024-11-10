@@ -873,7 +873,7 @@ class SummarizeAgent(Agent):
                 
                 # use regex to parse
                 
-                match = re.match(r"dig\((\d+),\s*\"(.+)\"\)", function_call)
+                match = re.match(r"dig\((\d+),\s*[\"'](.+)[\"']\)", function_call)
                 
                 if not match:
                     log.error("dig_layered_history", error="Invalid argument for `dig`", arg=function_call)

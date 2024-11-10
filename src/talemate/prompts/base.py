@@ -605,7 +605,7 @@ class Prompt:
     def time_diff(self, iso8601_time: str):
         scene = active_scene.get()
         if not iso8601_time:
-            iso8601_time = scene.ts
+            return ""
         return iso8601_diff_to_human(iso8601_time, scene.ts)
 
     def text_to_chunks(self, text:str, chunk_size:int=512) -> list[str]:

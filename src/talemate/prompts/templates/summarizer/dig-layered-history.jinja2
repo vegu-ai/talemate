@@ -98,7 +98,7 @@ DONE
 <|CLOSE_SECTION|>
 <|SECTION:EXAMPLES|>
 
-Digging:
+{% if can_dig %}Digging:
 
 CALL:
 ```
@@ -113,15 +113,15 @@ CALL:
 dig(3, "What is the significance of the red door?")
 dig(5, "What is the significance of the red door?")
 ```
-DONE
+DONE{% endif %}
 
-Answering:
+{% if not can_dig %}Answering:
 
 CALL:
 ```
 answer("The red door led to the secret chamber where the treasure was hidden. James learned about it from his grandfather.")
 ```
-DONE
+DONE{% endif %}
 
 Aborting:
 

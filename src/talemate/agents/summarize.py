@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import re
-import time
-import traceback
-from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import structlog
 
@@ -13,7 +9,6 @@ import talemate.emit.async_signals
 import talemate.util as util
 from talemate.emit import emit
 from talemate.events import GameLoopEvent
-from talemate.status import set_loading
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, TimePassageMessage, ContextInvestigationMessage
 from talemate.world_state.templates import GenerationOptions
@@ -906,7 +901,7 @@ class SummarizeAgent(Agent):
                     dig_question=dig_question,
                 ) 
                 if answer:
-                    answers.append(answer)
+                    answers.append(f"{dig_question}\n{answer}")
                     break
             elif function_name == "abort":
                 continue

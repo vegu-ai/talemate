@@ -3,6 +3,7 @@ Scene History
 {% set can_dig = layer > -1 %}
 {% for entry in entries %}
 <|SECTION:CHAPTER {{ loop.index }}|>
+{{ time_diff(entry.get("ts_start", entry.get("ts"))) }}
 {{ entry["text"] }}
 <|CLOSE_SECTION|>
 {% endfor %}
@@ -53,6 +54,7 @@ The author of the scene has given YOU - the analyst - a query and is asking you 
   - Answer the query and provide contextual and circumstantial details.
   - Limit the answer to two paragraphs.
   - The answer text must be explanatory summarization, NOT narration.
+  - For historic context include a note about how long ago the situation occured.
 {% endif %}
 - `abort()` to stop the process if there are no avenues left to explore and there is no information to satisfy the query.
 
@@ -119,7 +121,7 @@ DONE{% endif %}
 
 CALL:
 ```
-answer("The red door led to the secret chamber where the treasure was hidden. James learned about it from his grandfather.")
+answer("Two weeks ago James discovered that the red door led to the secret chamber where the treasure was hidden. James learned about it from his grandfather.")
 ```
 DONE{% endif %}
 

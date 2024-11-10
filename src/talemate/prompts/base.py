@@ -23,7 +23,7 @@ import structlog
 import talemate.instance as instance
 import talemate.thematic_generators as thematic_generators
 from talemate.config import load_config
-from talemate.context import rerun_context
+from talemate.context import rerun_context, active_scene
 from talemate.emit import emit
 from talemate.exceptions import LLMAccuracyError, RenderPromptError
 from talemate.util import (
@@ -32,6 +32,7 @@ from talemate.util import (
     extract_json,
     fix_faulty_json,
     remove_extra_linebreaks,
+    iso8601_diff_to_human,
 )
 from talemate.util.prompt import condensed
 
@@ -366,6 +367,7 @@ class Prompt:
         env.globals["instruct_text"] = self.instruct_text
         env.globals["agent_action"] = self.agent_action
         env.globals["retrieve_memories"] = self.retrieve_memories
+        env.globals["time_diff"] = self.time_diff
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
         env.globals["config"] = self.config
@@ -600,6 +602,11 @@ class Prompt:
         else:
             emit("status", status=status, message=message)
 
+    def time_diff(self, iso8601_time: str):
+        scene = active_scene.get()
+        if not iso8601_time:
+            iso8601_time = scene.ts
+        return iso8601_diff_to_human(iso8601_time, scene.ts)
 
     def text_to_chunks(self, text:str, chunk_size:int=512) -> list[str]:
         """

@@ -296,7 +296,7 @@ class ContextInvestigationMessage(SceneMessage):
     
     def __str__(self):
         return (
-            f"# Internal notes - additional context: {self.message}"
+            f"# Internal notes - {self.message}"
         )
 
     def as_format(self, format: str, **kwargs) -> str:

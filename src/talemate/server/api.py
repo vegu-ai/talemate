@@ -170,7 +170,10 @@ async def websocket_endpoint(websocket, path):
                     )
                 else:
                     log.info("Routing to sub-handler", action_type=action_type)
-                    await handler.route(data)
+                    #await handler.route(data)
+                    
+                    # add handle route as task
+                    asyncio.create_task(handler.route(data))
 
     # handle disconnects
     except (

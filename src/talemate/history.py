@@ -106,7 +106,7 @@ async def rebuild_history(
 
     scene.saved = False
 
-    scene.ts = scene.archived_history[-1].ts if scene.archived_history else "PT0S"
+    scene.ts = scene.archived_history[-1]["ts"] if scene.archived_history else "PT0S"
 
     summarizer = get_agent("summarizer")
 
@@ -115,6 +115,8 @@ async def rebuild_history(
 
     try:
         while True:
+            
+            await asyncio.sleep(0.1)
 
             if not scene.active:
                 # scene is no longer active

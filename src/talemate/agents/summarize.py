@@ -511,6 +511,7 @@ class SummarizeAgent(Agent):
                         "start": layered_history_entry["start"],
                         "end": layered_history_entry["end"],
                         "layer": i,
+                        "ts_start": layered_history_entry["ts_start"],
                     })
                 else:
                     compiled.append(text)
@@ -530,6 +531,7 @@ class SummarizeAgent(Agent):
                         "start": ah["start"],
                         "end": ah["end"],
                         "layer": -1,
+                        "ts": ah["ts"],
                     })
                 else:
                     compiled.append(text)

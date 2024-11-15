@@ -49,7 +49,8 @@ The author of the scene has given YOU - the analyst - a query and is asking you 
 
 ### Available Functions
 {% if can_dig %}- `dig(chapter_number, question)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.
-  - The question you pass to the dig query should contain enough context to accurately target the event you want to query. Don't be vague, be specific.{% else %}- `answer(answer)` to provide an answer or context or both.
+  - The question you pass to the dig query should contain enough context to accurately target the event you want to query.  Don't be vague, be specific by providing any relevant context you have learned so far.
+  - Do not mention chapters in your question.{% else %}- `answer(answer)` to provide an answer or context or both.
   - The answer MUST be factional information and MUST NOT mention chapter numbers.
   - Answer the query and provide contextual and circumstantial details.
   - Limit the answer to two paragraphs.

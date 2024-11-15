@@ -430,7 +430,13 @@ class SummarizeAgent(Agent):
         self.scene.log.info(
             "summarize", dialogue_length=len(text), summarized_length=len(response)
         )
-
+        
+        # capitalize first letter
+        try:
+            response = response[0].upper() + response[1:]
+        except IndexError:
+            pass
+        
         return self.clean_result(response)
 
     @set_processing

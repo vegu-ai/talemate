@@ -12,6 +12,7 @@ from talemate.events import GameLoopEvent
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, TimePassageMessage, ContextInvestigationMessage, ReinforcementMessage
 from talemate.world_state.templates import GenerationOptions
+from talemate.tale_mate import Character
 
 from .base import Agent, AgentAction, AgentActionConfig, set_processing
 from .registry import register
@@ -793,6 +794,7 @@ class SummarizeAgent(Agent):
         entry: dict | None = None,
         context: list[str] | None = None,
         dig_question: str | None = None,
+        character: Character | None = None,
     ):
         
         """
@@ -849,6 +851,7 @@ class SummarizeAgent(Agent):
                 "context": context,
                 "is_initial": is_initial,
                 "dig_question": dig_question,
+                "character": character,
             },
             dedupe_enabled=False,
         )
@@ -925,6 +928,7 @@ class SummarizeAgent(Agent):
                     entry,
                     context=context + [entry["text"]] if context else [entry["text"]],
                     dig_question=dig_question,
+                    character=character,
                 ) 
                 if answer:
                     answers.append(f"{dig_question}\n{answer}")

@@ -534,7 +534,7 @@ class ConversationAgent(Agent):
             director_message = False
             
         if self.investigate_context:
-            await self.run_context_investigation()
+            await self.run_context_investigation(character)
 
         conversation_format = self.conversation_format
         prompt = Prompt.get(
@@ -628,7 +628,7 @@ class ConversationAgent(Agent):
 
         return self.current_memory_context
 
-    async def run_context_investigation(self):
+    async def run_context_investigation(self, character: Character | None = None):
         
         # go backwards in the history if there is a ContextInvestigation message before
         # there is a character or narrator message, just return
@@ -649,7 +649,7 @@ class ConversationAgent(Agent):
                 return
         
         summarizer = instance.get_agent("summarizer")
-        result = await summarizer.dig_layered_history(str(last_message)) 
+        result = await summarizer.dig_layered_history(str(last_message), character=character) 
         
         if not result.strip():
             return

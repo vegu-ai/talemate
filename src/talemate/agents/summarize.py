@@ -808,6 +808,10 @@ class SummarizeAgent(Agent):
             log.debug("dig_layered_history", skip="No history to dig through")
             return ""
         
+        log.debug(f"dig_layered_history", entry=entry)
+        
+        entries = []
+        
         if not entry:
             entries = self.compile_layered_history(as_objects=True, include_base_layer=True)
             layer = len(self.scene.layered_history) - 1
@@ -819,18 +823,17 @@ class SummarizeAgent(Agent):
                 # add `layer` entry to each
                 for entry in entries:
                     entry["layer"] = layer
-            else:
+            elif layer == -1:
                 entries = self.scene.archived_history[entry["start"]:entry["end"]+1]
+            elif layer == -2:
+                # TODO: expand into message history here?
+                entries = [entry]
         else:
             log.error("dig_layered_history", error="No layer information", entry=entry)
             return ""
         
         if not entries:
-            layer = -1
-            entries = self.scene.archived_history
-        
-        if not entries:
-            log.debug("dig_layered_history", skip="No entries to dig through")
+            log.error("dig_layered_history", skip="No entries to dig through")
             return ""
         
         response = await Prompt.request(

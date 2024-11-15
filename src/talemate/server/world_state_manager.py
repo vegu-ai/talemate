@@ -1,4 +1,4 @@
-import base64
+import asyncio
 import uuid
 from typing import Any, Union
 
@@ -1046,17 +1046,24 @@ class WorldStateManagerPlugin:
                 }
             )
 
-        await rebuild_history(
+        task = asyncio.create_task(rebuild_history(
             self.scene, callback=callback, generation_options=payload.generation_options
-        )
+        ))
+        
+        async def done():
+            self.websocket_handler.queue_put(
+                {
+                    "type": "world_state_manager",
+                    "action": "history_regenerated",
+                    "data": payload.model_dump(),
+                }
+            )
 
-        self.websocket_handler.queue_put(
-            {
-                "type": "world_state_manager",
-                "action": "history_regenerated",
-                "data": payload.model_dump(),
-            }
-        )
+            await self.signal_operation_done()
+            await self.handle_request_scene_history(data)
+        
+        # when task is done,  queue a message to the client
+        task.add_done_callback(lambda _: asyncio.create_task(done()))
+    
 
-        await self.signal_operation_done()
-        await self.handle_request_scene_history(data)
+

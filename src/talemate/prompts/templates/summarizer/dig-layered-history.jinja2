@@ -1,5 +1,11 @@
 Scene History
+{% if context %}
+<|SECTION:HISTORY|>
+{% for entry in context %}
+{{ entry["text"] }}
 
+{% endfor %}
+{% endif %}
 {% set can_dig = layer > -1 %}
 {% for entry in entries %}
 <|SECTION:CHAPTER {{ loop.index }}|>
@@ -21,13 +27,6 @@ Scene History
 <|CLOSE_SECTION|>
 {% endif %}
 
-{% if context and False %}
-<|SECTION:GATHERED CONTEXT THROUGH DIGGING|>
-{% for entry in context %}
-{{ entry }}
-
-{% endfor %}
-{% endif %}
 {% if is_initial or dig_question %}
 <|SECTION:QUERY|>
 {{ dig_question or query }}
@@ -51,6 +50,7 @@ The author of the scene has given YOU - the analyst - a query and is asking you 
 {% if can_dig %}- `dig(chapter_number, question)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.
   - The question you pass to the dig query should contain enough context to accurately target the event you want to query.  Don't be vague, be specific by providing any relevant context you have learned so far.
   - Do not mention chapters in your question.{% else %}- `answer(answer)` to provide an answer or context or both.
+  - Use the history for context, but source the answer from the Chapter(s).
   - The answer MUST be factional information and MUST NOT mention chapter numbers.
   - Answer the query and provide contextual and circumstantial details.
   - Limit the answer to two paragraphs.

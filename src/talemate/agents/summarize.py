@@ -478,7 +478,13 @@ class SummarizeAgent(Agent):
         
         return util.extract_list(response)
     
-    def compile_layered_history(self, for_layer_index:int = None, as_objects:bool=False, include_base_layer:bool=False) -> list[str]:
+    def compile_layered_history(
+        self, 
+        for_layer_index:int = None, 
+        as_objects:bool=False, 
+        include_base_layer:bool=False,
+        max:int = None
+    ) -> list[str]:
         """
         Starts at the last layer and compiles the layered history into a single
         list of events.
@@ -496,7 +502,7 @@ class SummarizeAgent(Agent):
             
             if for_layer_index is not None:
                 if i < for_layer_index:
-                    continue
+                    break
             
             log.debug("compilelayered history", i=i, next_layer_start=next_layer_start)
             
@@ -505,6 +511,10 @@ class SummarizeAgent(Agent):
             
             for layered_history_entry in layered_history[i][next_layer_start if next_layer_start is not None else 0:]:
                 text = f"{layered_history_entry['text']}"
+                
+                if for_layer_index == i and max is not None and max <= layered_history_entry["end"]:
+                    break
+                
                 if as_objects:
                     compiled.append({
                         "text": text,
@@ -899,7 +909,7 @@ class SummarizeAgent(Agent):
                 
                 # use regex to parse
                 
-                match = re.match(r"dig\((\d+),\s*[\"'](.+)[\"']\)", function_call)
+                match = re.match(r"dig\((\d+),\s*[\"'](.+)[\"']\s?\)", function_call)
                 
                 if not match:
                     log.error("dig_layered_history", error="Invalid argument for `dig`", arg=function_call)
@@ -928,7 +938,7 @@ class SummarizeAgent(Agent):
                 answer = await self.dig_layered_history(
                     query,
                     entry,
-                    context=context + [entry["text"]] if context else [entry["text"]],
+                    context=(context or []) + entries[:dig_into_chapter],
                     dig_question=dig_question,
                     character=character,
                 ) 

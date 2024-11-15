@@ -477,7 +477,7 @@ class SummarizeAgent(Agent):
         
         return util.extract_list(response)
     
-    def compile_layered_history(self, for_layer_index:int = None, as_objects:bool=False) -> list[str]:
+    def compile_layered_history(self, for_layer_index:int = None, as_objects:bool=False, include_base_layer:bool=False) -> list[str]:
         """
         Starts at the last layer and compiles the layered history into a single
         list of events.
@@ -515,6 +515,23 @@ class SummarizeAgent(Agent):
                     compiled.append(text)
                 
             next_layer_start = layered_history_entry["end"] + 1
+            
+        if i == 0 and include_base_layer:
+            # we are are at layered history layer zero and inclusion of base layer (archived history) is requested
+            # so we append the base layer to the compiled list, starting from
+            # index `next_layer_start`
+            
+            for ah in self.scene.archived_history[next_layer_start:]:
+                text = f"{ah['text']}"
+                if as_objects:
+                    compiled.append({
+                        "text": text,
+                        "start": ah["start"],
+                        "end": ah["end"],
+                        "layer": -1,
+                    })
+                else:
+                    compiled.append(text)
             
         return compiled
     
@@ -792,7 +809,7 @@ class SummarizeAgent(Agent):
             return ""
         
         if not entry:
-            entries = self.compile_layered_history(as_objects=True)
+            entries = self.compile_layered_history(as_objects=True, include_base_layer=True)
             layer = len(self.scene.layered_history) - 1
         elif "layer" in entry:
             layer = entry["layer"] - 1

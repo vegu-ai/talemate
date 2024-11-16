@@ -82,9 +82,14 @@ A new :material-flask: experimental feature introduced in `0.28.0` alongside the
 
 If enabled, the AI will investigate the history for relevant information to include in the conversation prompt. Investigation works by digging through the various layers of the history, and extracting relevant information based on the final message in the scene.
 
-This can be **very slow** depending on how many layers are enabled and generated, but we've had really good results with it so far. Probably requires a decently smart LLM to work well.
+This can be **very slow** depending on how many layers are enabled and generated. It can lead to a great improvement in the quality of the generated dialogue, but it currently still is a mixed bag. A strong LLM is almost a hard requirement for it produce anything useful. 22B+ models are recommended.
 
 ![Conversation agent context investigation settings](/talemate/img/0.28.0/conversation-context-investigation-settings.png)
+
+!!! note "Tips"
+    - This is experimental and results WILL vary in quality.
+    - Requires a strong LLM. 22B+ models are recommended.
+    - Good, clean summarization of the history is a hard requirement for this to work well. Regenerate your history if it's messy. (World Editor -> History -> Regenerate)
 
 ##### Enable context investigation
 

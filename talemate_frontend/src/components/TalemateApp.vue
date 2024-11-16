@@ -785,16 +785,30 @@ export default {
       }
 
       let selectedCharacter = null;
+      let foundActAs = false;
 
       for(let characterName of this.activeCharacters) {
-        if(this.actAs === null && characterName === playerCharacterName)  {
-          continue;
+        // actAs is $narrator so we take the first character in the list
+        if(this.actAs === "$narrator") {
+          selectedCharacter = characterName;
+          break;
         }
-        if(this.actAs === characterName) {
-          continue;
+        // actAs is null, so we take the first character in the list that is not
+        // the player character
+        if(this.actAs === null && characterName !== playerCharacterName) {
+          selectedCharacter = characterName;
+          break;
         }
-        selectedCharacter = characterName;
-        break;
+        // actAs is set, so we find the first non player character after the current actAs
+        // if actAs is the last character in the list, we set actAs to null
+        if(foundActAs) {
+          selectedCharacter = characterName;
+          break;
+        } else {
+          if(characterName === this.actAs) {
+            foundActAs = true;
+          }
+        }
       }
 
       if(selectedCharacter === null || selectedCharacter === playerCharacterName) {

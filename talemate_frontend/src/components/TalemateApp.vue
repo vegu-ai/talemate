@@ -144,6 +144,7 @@
             @request-scene-load="(path) => {  resetViews(); $refs.loadScene.loadJsonSceneFromPath(path); }"
             :version="version" 
             :scene-loading-available="ready && connected"
+            :scene-is-loading="loading"
             :config="appConfig" />
           </v-tabs-window-item>
           <!-- SCENE -->

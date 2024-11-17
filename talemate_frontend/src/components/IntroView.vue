@@ -1,7 +1,7 @@
 <template>
   <v-row>
     <v-col cols="12" v-if="sceneLoadingAvailable">
-      <IntroRecentScenes :config="config" :scene-loading-available="sceneLoadingAvailable"  @request-scene-load="requestSceneLoad"/>
+      <IntroRecentScenes :config="config" :scene-is-loading="sceneIsLoading" :scene-loading-available="sceneLoadingAvailable"  @request-scene-load="requestSceneLoad"/>
     </v-col>
   </v-row>
   <v-row v-if="false">
@@ -38,6 +38,7 @@ export default {
   props: {
     version: String,
     sceneLoadingAvailable: Boolean,
+    sceneIsLoading: Boolean,
     config: Object,
   },
   emits: ['request-scene-load'],

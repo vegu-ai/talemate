@@ -13,6 +13,7 @@ from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, TimePassageMessage, ContextInvestigationMessage, ReinforcementMessage
 from talemate.world_state.templates import GenerationOptions
 from talemate.tale_mate import Character
+from talemate.exceptions import GenerationCancelled
 
 from .base import Agent, AgentAction, AgentActionConfig, set_processing
 from .registry import register
@@ -696,7 +697,7 @@ class SummarizeAgent(Agent):
 
                         num_entries_in_layer = len(layered_history[next_layer_index])
 
-                        emit("status", status="busy", message=f"Updating layered history - layer {next_layer_index} - {num_entries_in_layer} / {estimated_entries}")
+                        emit("status", status="busy", message=f"Updating layered history - layer {next_layer_index} - {num_entries_in_layer} / {estimated_entries}", data={"cancellable": True})
                         
                         while current_chunk:
                             
@@ -777,6 +778,10 @@ class SummarizeAgent(Agent):
         except SummaryLongerThanOriginalError as exc:
             log.error("summarize_to_layered_history", error=exc, layer="base")
             return
+        except GenerationCancelled:
+            log.info("Generation cancelled, stopping rebuild of historical layered history")
+            emit("status", message="Rebuilding of layered history cancelled", status="info")
+            return
             
         # process layers
         async def update_layers() -> bool:
@@ -813,7 +818,10 @@ class SummarizeAgent(Agent):
             log.error("summarize_to_layered_history", error=exc, layer="subsequent")
             emit("status", status="error", message="Layered history update failed.")
             return
-        
+        except GenerationCancelled:
+            log.info("Generation cancelled, stopping rebuild of historical layered history")
+            emit("status", message="Rebuilding of layered history cancelled", status="info")
+            return
         
     @set_processing
     async def dig_layered_history(

@@ -9,8 +9,9 @@
 <|CLOSE_SECTION|>
 {% endif -%}
 <|SECTION:TASK|>
-Question: What happens explicitly within chapter 2 below? Summarize into a {{output_type}}.
-Content Context: This is a specific scene from {{ scene.context }}.
+Summarize chapter 2 into a {{output_type}}.
+
+This is a specific chapter from {{ scene.context }}.
 {% if output_type == "narrative description" %}
 The tone of the summary must match the tone of the dialogue.
 {% endif %}
@@ -21,13 +22,16 @@ This should be a detailed summary of the dialogue, including all the juicy detai
 This should be a short and specific summary of the dialogue, including the most important details. 2 - 3 sentences.
 {% endif -%}
 
-YOU MUST ONLY SUMMARIZE THE CONTENT IN CHAPTER 2. DO NOT REPEAT ALREADY ESTABLISHED NARRATION.
+YOU MUST ONLY SUMMARIZE THE CONTENT IN CHAPTER 2. 
+YOU MUST NOT REPEAT ALREADY ESTABLISHED NARRATION.
 
 {% if output_type == "narrative description" %}
-Expected Answer: A summarized {{output_type}} of chapter 2, that can be inserted into the ongoing story in place of the dialogue.
+Provide a summarized {{output_type}} of chapter 2, that can be inserted into the ongoing story in place of the dialogue.
 {% elif output_type == "factual list" %}
-Expected Answer: A highly accurate numerical chronological list of the events and state changes that occur in chapter 2. Important is anything that causes a state change in the scene, characters or objects. Use simple, clear language, and note details. Use exact words. Note all the state changes. Leave nothing out.
+PRovide a highly accurate numerical chronological list of the events and state changes that occur in chapter 2. Important is anything that causes a state change in the scene, characters or objects. Use simple, clear language, and note details. Use exact words. Note all the state changes. Leave nothing out.
 {% endif %}
+
+{% if extra_context %}Use the previous context to inform your understanding of the whole story, but only summarize what is explicitly mentioned in chapter 2.{% endif -%}
 {% if extra_instructions -%}
 {{ extra_instructions }}
 {% endif -%}
@@ -40,5 +44,5 @@ Expected Answer: A highly accurate numerical chronological list of the events an
 {{ generation_options.writing_style.instructions }}
 <|CLOSE_SECTION|>
 {% endif %}
-<|SECTION:SUMMARIZATION OF CHAPTER 2|>
+<|SECTION:SUMMARY OF CHAPTER 2|>
 {{ bot_token }}In chapter 2,

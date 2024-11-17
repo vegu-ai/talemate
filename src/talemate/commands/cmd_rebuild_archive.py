@@ -17,6 +17,7 @@ class CmdRebuildArchive(TalemateCommand):
 
     async def run(self):
         summarizer = self.scene.get_helper("summarizer")
+        memory = self.scene.get_helper("memory")
 
         if not summarizer:
             self.system_message("No summarizer found")
@@ -27,11 +28,9 @@ class CmdRebuildArchive(TalemateCommand):
             ah for ah in self.scene.archived_history if ah.get("end") is None
         ]
 
-        self.scene.ts = (
-            self.scene.archived_history[-1].ts
-            if self.scene.archived_history
-            else "PT0S"
-        )
+        self.scene.ts = "PT0S"
+        
+        memory.delete({"typ": "history"})
 
         entries = 0
         total_entries = summarizer.agent.estimated_entry_count
@@ -42,7 +41,10 @@ class CmdRebuildArchive(TalemateCommand):
                 status="busy",
             )
             more = await summarizer.agent.build_archive(self.scene)
+            self.scene.sync_time()
+            
             entries += 1
+            
             if not more:
                 break
 

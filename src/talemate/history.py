@@ -107,7 +107,7 @@ async def rebuild_history(
 
     scene.saved = False
 
-    scene.ts = scene.archived_history[-1]["ts"] if scene.archived_history else "PT0S"
+    scene.sync_time()
 
     summarizer = get_agent("summarizer")
 
@@ -136,7 +136,7 @@ async def rebuild_history(
                 scene, generation_options=generation_options
             )
 
-            scene.ts = scene.archived_history[-1]["ts"]
+            scene.ts = scene.sync_time()
 
             if callback:
                 callback()

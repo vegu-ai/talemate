@@ -1870,7 +1870,7 @@ class Scene(Emitter):
             "scene_status",
             scene=self.name,
             scene_time=self.ts,
-            human_ts=util.iso8601_duration_to_human(self.ts, suffix=""),
+            human_ts=util.iso8601_duration_to_human(self.ts, suffix="") if self.ts else None,
             saved=self.saved,
         )
 

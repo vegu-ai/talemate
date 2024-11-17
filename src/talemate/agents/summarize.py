@@ -159,6 +159,10 @@ class SummarizeAgent(Agent):
     @property
     def layered_history_max_layers(self):
         return self.actions["layered_history"].config["max_layers"].value
+    
+    @property
+    def layered_history_available(self):
+        return self.layered_history_enabled and self.scene.layered_history and self.scene.layered_history[0]
 
     def connect(self, scene):
         super().connect(scene)
@@ -170,9 +174,6 @@ class SummarizeAgent(Agent):
         """
 
         await self.build_archive(self.scene)
-        
-        if self.layered_history_enabled:
-            await self.summarize_to_layered_history()
 
     def clean_result(self, result):
         if "#" in result:
@@ -210,9 +211,15 @@ class SummarizeAgent(Agent):
 
         num_previous = self.actions["archive"].config["include_previous"].value
         if recent_entry and num_previous > 0:
-            extra_context = "\n\n".join(
-                [entry["text"] for entry in scene.archived_history[-num_previous:]]
-            )
+            if self.layered_history_available:
+                log.warning("build_archive with layered history")
+                extra_context = "\n\n".join(
+                    self.compile_layered_history(include_base_layer=True)
+                )
+            else:
+                extra_context = "\n\n".join(
+                    [entry["text"] for entry in scene.archived_history[-num_previous:]]
+                )
         else:
             extra_context = None
 
@@ -301,6 +308,11 @@ class SummarizeAgent(Agent):
                 end = start + len(dialogue_entries) - 1
 
         if dialogue_entries:
+            
+            if not extra_context:
+                # prepend scene intro to dialogue
+                dialogue_entries.insert(0, scene.intro)
+            
             summarized = await self.summarize(
                 "\n".join(map(str, dialogue_entries)),
                 extra_context=extra_context,
@@ -315,6 +327,10 @@ class SummarizeAgent(Agent):
         # determine the appropariate timestamp for the summarization
 
         scene.push_archive(data_objects.ArchiveEntry(summarized, start, end, ts=ts))
+        
+        # process layered history
+        if self.layered_history_enabled:
+            await self.summarize_to_layered_history()
 
         return True
 

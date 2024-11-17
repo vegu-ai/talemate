@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="context-investigation-container" v-if="show && minimized" >
-      <v-chip closable :color="getMessageColor('context_investigation', null)" class="clickable" @click:close="deleteMessage()">
+      <v-chip closable :color="getMessageColor('context_investigation', null)" class="clickable" @click:close="deleteMessage()" :disabled="uxLocked">
         <v-icon class="mr-2">{{ icon }}</v-icon>
         <span @click="toggle()">Context Investigation</span>
       </v-chip>
@@ -30,7 +30,7 @@ export default {
       return "mdi-text-search";
     }
   },
-  props: ['text', 'message_id'],
+  props: ['text', 'message_id', 'uxLocked'],
   inject: ['requestDeleteMessage', 'getMessageStyle', 'getMessageColor', 'openAppConfig', 'openAgentSettings'],
   methods: {
     toggle() {

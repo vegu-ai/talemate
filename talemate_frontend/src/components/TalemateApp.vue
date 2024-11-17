@@ -160,7 +160,7 @@
                 </v-alert>
               </div>
 
-              <SceneMessages ref="sceneMessages" :appearance-config="appConfig ? appConfig.appearance : {}" />
+              <SceneMessages ref="sceneMessages" :appearance-config="appConfig ? appConfig.appearance : {}" :ux-locked="uxLocked" />
               <div style="flex-shrink: 0;">
       
                 <SceneTools 
@@ -373,6 +373,25 @@ export default {
       return Object.keys(this.clientStatus).sort((a, b) => {
         return this.clientStatus[a].label.localeCompare(this.clientStatus[b].label);
       });
+    },
+    uxLocked() {
+      // no scene loaded, not locked
+      if(!this.sceneActive) {
+        return false;
+      }
+
+      // if loading, ux is locked
+      if(this.loading) {
+        return true;
+      }
+
+      // if not waiting for input then ux is locked
+      if(!this.waitingForInput) {
+        return true;
+      }
+
+      return false;
+
     }
   },
   mounted() {

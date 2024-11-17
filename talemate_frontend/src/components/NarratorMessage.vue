@@ -1,7 +1,7 @@
 <template>
   <v-alert variant="text" color="narrator" icon="mdi-script-text-outline" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
     <template v-slot:close>
-      <v-btn size="x-small" icon @click="deleteMessage">
+      <v-btn size="x-small" icon @click="deleteMessage" :disabled="uxLocked">
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
@@ -50,7 +50,7 @@
   
 <script>
 export default {
-  props: ['text', 'message_id'],
+  props: ['text', 'message_id', 'uxLocked'],
   inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle'],
   computed: {
     parts() {

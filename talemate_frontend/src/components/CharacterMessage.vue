@@ -1,7 +1,7 @@
 <template>
   <v-alert variant="text" :color="color" icon="mdi-chat-outline" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
     <template v-slot:close>
-      <v-btn size="x-small" icon @click="deleteMessage">
+      <v-btn size="x-small" icon @click="deleteMessage" :disabled="uxLocked">
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
@@ -46,20 +46,13 @@
         Double-click to edit.</v-chip>
         
         <!-- create pin -->
-        <v-chip size="x-small" label color="success" v-if="!editing && hovered" variant="outlined" @click="createPin(message_id)">
+        <v-chip size="x-small" label color="success" v-if="!editing && hovered" variant="outlined" @click="createPin(message_id)" :disabled="uxLocked">
           <v-icon class="mr-1">mdi-pin</v-icon>
           Create Pin
         </v-chip>
-        
-        <!-- fix continuity errors 
-        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered" variant="outlined" @click="fixMessageContinuityErrors(message_id)">
-          <v-icon class="mr-1">mdi-call-split</v-icon>
-          Fix Continuity Errors
-        </v-chip>
-        -->
 
         <!-- fork scene -->
-        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered" variant="outlined" @click="forkSceneInitiate(message_id)">
+        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered" variant="outlined" @click="forkSceneInitiate(message_id)" :disabled="uxLocked">
           <v-icon class="mr-1">mdi-source-fork</v-icon>
           Fork Scene
         </v-chip>
@@ -73,7 +66,7 @@
   
 <script>
 export default {
-  props: ['character', 'text', 'color', 'message_id'],
+  props: ['character', 'text', 'color', 'message_id', 'uxLocked'],
   inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle'],
   computed: {
     parts() {

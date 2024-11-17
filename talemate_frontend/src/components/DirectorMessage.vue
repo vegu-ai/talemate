@@ -2,7 +2,7 @@
   <div v-if="character">
     <!-- actor instructions (character direction)-->
     <div class="director-container" v-if="show && minimized" >
-      <v-chip closable :color="getMessageColor('director', null)" class="clickable" @click:close="deleteMessage()">
+      <v-chip closable :color="getMessageColor('director', null)" class="clickable" @click:close="deleteMessage()" :disabled="uxLocked">
         <v-icon class="mr-2">{{ icon }}</v-icon>
         <span @click="toggle()">{{ character }}</span>
       </v-chip>
@@ -53,7 +53,7 @@ export default {
       }
     }
   },
-  props: ['text', 'message_id', 'character', 'direction_mode', 'action'],
+  props: ['text', 'message_id', 'character', 'direction_mode', 'action', 'uxLocked'],
   inject: ['requestDeleteMessage', 'getMessageStyle', 'getMessageColor'],
   methods: {
     toggle() {

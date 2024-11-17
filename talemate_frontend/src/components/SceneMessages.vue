@@ -10,7 +10,7 @@
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -43,27 +43,27 @@
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`">
-                    <NarratorMessage :text="message.text" :message_id="message.id" />
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="director-message"  :id="`message-${message.id}`">
-                    <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action"/>
+                    <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action" :uxLocked="uxLocked"/>
                 </div>
             </div>
             <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
                 <div class="time-message"  :id="`message-${message.id}`">
-                    <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" />
+                    <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :uxLocked="uxLocked" />
                 </div>
             </div>
             <div v-else-if="message.type === 'player_choice'" :class="`message ${message.type}`">
                 <div class="player-choice-message"  :id="`message-player-choice`">
-                    <PlayerChoiceMessage :choices="message.data.choices" @close="closePlayerChoice" />
+                    <PlayerChoiceMessage :choices="message.data.choices" @close="closePlayerChoice" :uxLocked="uxLocked" />
                 </div>
             </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="context-investigation-message"  :id="`message-${message.id}`">
-                    <ContextInvestigationMessage :text="message.text" :message_id="message.id" />
+                    <ContextInvestigationMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" />
                 </div>
             </div>
 
@@ -94,7 +94,11 @@ export default {
     props: {
         appearanceConfig: {
             type: Object,
-        }
+        },
+        uxLocked: {
+            type: Boolean,
+            default: false,
+        },
     },
     components: {
         CharacterMessage,

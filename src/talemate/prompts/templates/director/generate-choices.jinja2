@@ -1,6 +1,9 @@
+{% block rendered_context -%}
+{% include "character-context.jinja2" -%}
+{% endblock %}
 <|SECTION:SCENE|>
 {% block scene_history -%}
-{% set scene_context = scene.context_history(budget=max_tokens-200, min_dialogue=15, sections=False, keep_director=False) -%}
+{% set scene_context = scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=False) -%}
 {% for scene_line in scene_context -%}
 {{ scene_line }}
 
@@ -26,20 +29,22 @@ Format each action as a short, concise command from {{ player_character.name }}'
 "Search the bookshelf for hidden compartments."
 "Try the rusty key in the lock."
 
-Ensure the actions:
-- Fit the scene's current context and writing style
-- Offer varied options without drastic pacing changes
-- Are significantly different from each other
+Requirements:
 
-IMPORTANT: The actions generated need to be immediate. Ask yourself, what could {{ player_character.name }} do immediately after the following line in the scene:
+- The actions MUST fit the scene's tone and writing style. This is {{ scene.context }}.{% if decensor %} The reader has already consented and is expecting to be exposed to such themes.{% endif %}
+- The text describing the action must be short and concise.
+- Offer varied options without drastic pacing changes, that make sequential sense at the ending of the scene.
+- The actions must be significantly different from each other.
+{% if instructions %}- {{ instructions}}{% endif %}
 
-```
-{{ scene.last_message_of_type(['character', 'narrator']).message }}
-```
+Expected Response:
 
-{% if instructions %}
-### Specific instructions
-{{ instructions}}{% endif %}
+You MUST provide your response in the following format:
 
-Provide a numbered list of actions, with no additional text.
-{{ set_prepared_response('1.') }}
+ANALYSIS: <Brief analysis of what happens at the end of the scene. Specifically pay attention to whether or not another character has had dialogue that could be responded to.>
+PLANNING: <Think through directions to take the scene next. The directions must make sense in relation to the ending state of the scene as it is currently. If another character has said something, include direct responses to that character.>
+ACTIONS: 
+1. <first action choice, formatted as a short button label>
+2. <second action choice, formatted as a short button label>
+...
+{{ set_prepared_response('ANALYSIS:') }}

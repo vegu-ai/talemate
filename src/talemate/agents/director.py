@@ -535,7 +535,7 @@ class DirectorAgent(GameInstructionsMixin, Agent):
         response = await Prompt.request(
             "director.generate-choices",
             self.client,
-            "direction_list",
+            "direction_long",
             vars={
                 "max_tokens": self.client.max_token_length,
                 "scene": self.scene,
@@ -545,14 +545,21 @@ class DirectorAgent(GameInstructionsMixin, Agent):
             },
         )
 
-        choices = util.extract_list(response)
+        try:
+            choice_text = response.split("ACTIONS:", 1)[1]
+            choices = util.extract_list(choice_text)
+            # strip quotes
+            choices = [choice.strip().strip('"') for choice in choices]
+            
+            # limit to num_choices
+            choices = choices[:self.generate_choices_num_choices]
         
-        # strip quotes
-        choices = [choice.strip().strip('"') for choice in choices]
+        except Exception as e:
+            log.error("generate_choices failed", error=str(e), response=response)
+            return
+
         
-        # limit to num_choices
-        choices = choices[:self.generate_choices_num_choices]
-        
+
         log.info("generate_choices done", choices=choices)
         
         emit(

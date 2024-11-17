@@ -948,7 +948,11 @@ class SummarizeAgent(Agent):
             elif function_name == "abort":
                 continue
             elif function_name == "answer":
-                answer = function_call.split("(")[1].split(")")[0].strip()
+                try:
+                    answer = function_call.split("(")[1].split(")")[0].strip()
+                except IndexError:
+                    log.error("dig_layered_history", error="Invalid argument for `answer`", arg=function_call)
+                    continue
                 answers.append(answer)
                 break
             else:

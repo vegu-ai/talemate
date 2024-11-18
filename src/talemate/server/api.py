@@ -20,10 +20,12 @@ async def websocket_endpoint(websocket, path):
     # Create a queue for outgoing messages
     message_queue = asyncio.Queue()
     handler = WebsocketHandler(websocket, message_queue)
+    scene_task = None
 
     log.info("frontend connected")
 
-    def frontend_disconnect(exc):
+    async def frontend_disconnect(exc):
+        nonlocal scene_task
         log.warning(f"frontend disconnected: {exc}")
         
         main_task.cancel()
@@ -35,8 +37,8 @@ async def websocket_endpoint(websocket, path):
         if handler.scene:
             handler.scene.active = False
             handler.scene.continue_scene = False
-            if getattr(handler, "scene_task", None):
-                handler.scene_task.cancel()
+            if scene_task:
+                scene_task.cancel()
 
     # Create a task to send messages from the queue
     async def send_messages():
@@ -77,13 +79,14 @@ async def websocket_endpoint(websocket, path):
             try:
                 await websocket.send(json.dumps({"type": "ping"}))
             except Exception as e:
-                frontend_disconnect(e)
+                await frontend_disconnect(e)
             await asyncio.sleep(1)
     
     
     
     # main loop task
     async def handle_messages():
+        nonlocal scene_task
         try:
             while True:
                 data = await websocket.recv()
@@ -96,10 +99,10 @@ async def websocket_endpoint(websocket, path):
 
                 with ActiveScene(handler.scene):
                     if action_type == "load_scene":
-                        if getattr("handler", "scene_task", None):
+                        if scene_task:
                             log.info("Unloading current scene")
                             handler.scene.continue_scene = False
-                            handler.scene_task.cancel()
+                            scene_task.cancel()
 
                         file_path = data.get("file_path")
                         scene_data = data.get("scene_data")
@@ -137,7 +140,7 @@ async def websocket_endpoint(websocket, path):
                         log.info("load_scene", file_path=file_path, reset=reset)
 
                         # Create a task to load the scene in the background
-                        handler.scene_task = asyncio.create_task(
+                        scene_task = asyncio.create_task(
                             handler.load_scene(
                                 file_path, reset=reset, callback=scene_loading_done
                             )
@@ -202,7 +205,7 @@ async def websocket_endpoint(websocket, path):
             starlette.websockets.WebSocketDisconnect,
             RuntimeError,
         ) as exc:
-            frontend_disconnect(exc)
+            await frontend_disconnect(exc)
 
 
     main_task = asyncio.create_task(handle_messages())

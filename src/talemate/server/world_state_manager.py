@@ -1034,17 +1034,19 @@ class WorldStateManagerPlugin:
     async def handle_regenerate_history(self, data):
 
         payload = RegenerateHistoryPayload(**data)
-
-        def callback():
-            self.websocket_handler.queue_put(
-                {
-                    "type": "world_state_manager",
-                    "action": "history_entry_added",
-                    "data": history_with_relative_time(
-                        self.scene.archived_history, self.scene.ts
-                    ),
-                }
-            )
+        
+        async def callback():
+            self.scene.emit_status()
+            await self.handle_request_scene_history(data)
+            #self.websocket_handler.queue_put(
+            #    {
+            #        "type": "world_state_manager",
+            #        "action": "history_entry_added",
+            #        "data": history_with_relative_time(
+            #            self.scene.archived_history, self.scene.ts
+            #        ),
+            #    }
+            #)
 
         task = asyncio.create_task(rebuild_history(
             self.scene, callback=callback, generation_options=payload.generation_options

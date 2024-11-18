@@ -136,10 +136,10 @@ async def rebuild_history(
                 scene, generation_options=generation_options
             )
 
-            scene.ts = scene.sync_time()
+            scene.sync_time()
 
             if callback:
-                callback()
+                await callback()
 
             entries += 1
             if not more:

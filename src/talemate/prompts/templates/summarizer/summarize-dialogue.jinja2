@@ -1,15 +1,28 @@
+{% set summary_target = "chapter "+to_str(num_extra_context+1) %}
 {% if summarization_method == "facts" -%}
 {% set output_type = "factual list" -%}
 {% else -%}
 {% set output_type = "narrative description" -%}
 {% endif -%}
 {% if extra_context -%}
-<|SECTION:PREVIOUS CONTEXT|>
-{{ extra_context }}
+<|SECTION:PREVIOUS CHAPTERS|>
+{% for chapter_summary in extra_context %}
+## Chapter {{ loop.index }}
+{{ chapter_summary }}
+
+{% endfor %}
 <|CLOSE_SECTION|>
 {% endif -%}
+<|SECTION:{{ summary_target.upper() }} (To be summarized)|>
+{{ dialogue }}
+<|CLOSE_SECTION|>
+{% if generation_options and generation_options.writing_style %}
+<|SECTION:WRITING STYLE|>
+{{ generation_options.writing_style.instructions }}
+<|CLOSE_SECTION|>
+{% endif %}
 <|SECTION:TASK|>
-Summarize chapter 2 into a {{output_type}}.
+Summarize {{ summary_target }} into a {{output_type}}.
 
 This is a specific chapter from {{ scene.context }}.
 {% if output_type == "narrative description" %}
@@ -22,27 +35,24 @@ This should be a detailed summary of the dialogue, including all the juicy detai
 This should be a short and specific summary of the dialogue, including the most important details. 2 - 3 sentences.
 {% endif -%}
 
-YOU MUST ONLY SUMMARIZE THE CONTENT EXPLICITLY STATED WITHIN CHAPTER 2. 
-YOU MUST NOT REPEAT THE PREVIOUS CONTEXT.
+YOU MUST ONLY SUMMARIZE THE CONTENT EXPLICITLY STATED WITHIN {{ summary_target.upper() }}. 
+YOU MUST NOT INCLUDE OR REPEAT THE PREVIOUS CONTEXT iN YOUR SUMMARY.
 
 {% if output_type == "narrative description" %}
-Provide a summarized {{output_type}} of chapter 2, that can be inserted into the ongoing story in place of the dialogue.
+Provide a summarized {{output_type}} of {{ summary_target }}.
 {% elif output_type == "factual list" %}
-Provide a highly accurate numerical chronological list of the events and state changes that occur in chapter 2. Important is anything that causes a state change in the scene, characters or objects. Use simple, clear language, and note details. Use exact words. Note all the state changes. Leave nothing out.
+Provide a highly accurate numerical chronological list of the events and state changes that occur in {{ summary_target }}. Important is anything that causes a state change in the scene, characters or objects. Use simple, clear language, and note details. Use exact words. Note all the state changes. Leave nothing out.
 {% endif %}
 
-{% if extra_context %}Use the previous context to inform your understanding of the whole story, but only summarize what is explicitly mentioned in chapter 2.{% endif -%}
+{% if extra_context %}Use the previous context to inform your understanding of the whole story, but only summarize what is explicitly mentioned in {{ summary_target }}.{% endif -%}
+
 {% if extra_instructions -%}
 {{ extra_instructions }}
 {% endif -%}
+Your response must follow this format:
+
+ANALYSIS: <brief analysis the cross over point from previous chapters to {{ summary_target }}. How does {{ summary_target }} start and what should be in the summary.>
+SUMMARY: <summary of {{ summary_target }} based on analysis>
 <|CLOSE_SECTION|>
-<|SECTION:CHAPTER 2|>
-{{ dialogue }}
-<|CLOSE_SECTION|>
-{% if generation_options and generation_options.writing_style %}
-<|SECTION:WRITING STYLE|>
-{{ generation_options.writing_style.instructions }}
-<|CLOSE_SECTION|>
-{% endif %}
-<|SECTION:SUMMARY OF CHAPTER 2|>
-{{ bot_token }}In chapter 2,
+<|SECTION:SUMMARY OF {{ summary_target.upper() }}|>
+{{ set_prepared_response("ANALYSIS:") }}

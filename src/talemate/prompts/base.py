@@ -370,6 +370,7 @@ class Prompt:
         env.globals["time_diff"] = self.time_diff
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
+        env.globals["to_str"] = lambda x: str(x)
         env.globals["config"] = self.config
         env.globals["len"] = lambda x: len(x)
         env.globals["max"] = lambda x, y: max(x, y)

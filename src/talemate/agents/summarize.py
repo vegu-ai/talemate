@@ -214,13 +214,12 @@ class SummarizeAgent(Agent):
         if recent_entry and num_previous > 0:
             if self.layered_history_available:
                 log.warning("build_archive with layered history")
-                extra_context = "\n\n".join(
-                    self.compile_layered_history(include_base_layer=True)
-                )
+                extra_context = self.compile_layered_history(include_base_layer=True)
             else:
-                extra_context = "\n\n".join(
-                    [entry["text"] for entry in scene.archived_history[-num_previous:]]
-                )
+                extra_context = [
+                    entry["text"] for entry in scene.archived_history[-num_previous:]
+                ]
+                
         else:
             extra_context = None
 
@@ -440,6 +439,7 @@ class SummarizeAgent(Agent):
                     else method
                 ),
                 "extra_context": extra_context or "",
+                "num_extra_context": len(extra_context) if extra_context else 0,
                 "extra_instructions": extra_instructions or "",
                 "generation_options": generation_options,
             },
@@ -449,13 +449,22 @@ class SummarizeAgent(Agent):
             "summarize", dialogue_length=len(text), summarized_length=len(response)
         )
         
+        try:
+            if source_type == "dialogue":
+                summary = response.split("SUMMARY:")[1].strip()
+            else:
+                summary = response.strip()
+        except Exception:
+            log.error("summarize", response=response)
+            raise
+        
         # capitalize first letter
         try:
-            response = response[0].upper() + response[1:]
+            summary = summary[0].upper() + summary[1:]
         except IndexError:
             pass
         
-        return self.clean_result(response)
+        return self.clean_result(summary)
 
     @set_processing
     async def generate_timeline(self) -> list[str]:

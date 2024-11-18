@@ -21,7 +21,16 @@ Do not repeat any information from the previous context.
 
 Compress each individual chunk into 1 natural sounding sentence. Consider the other chunks and previous history to inform the context of the summarizations. Each chunk must be summarized in a way that it leads into the next chunk.
 
-YOU MUST NOT ADD COMMENTARY. 
+YOU MUST NOT ADD COMMENTARY.
+YOU MUST NOT ADD COMBINED SUMMARIZATION OF ALL CHUNKS.
+
+You must provide your response in the following format:
+
+CHUNK 1: <summary of the first chunk>
+
+CHUNK 2: <summary of the second chunk>
+
+...
 <|CLOSE_SECTION|>
 {% if generation_options and generation_options.writing_style %}
 <|SECTION:WRITING STYLE|>

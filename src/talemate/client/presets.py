@@ -84,6 +84,7 @@ PRESET_SUBSTRING_MAPPINGS = {
     "analytical": "analytical",
     "analyze": "analytical",
     "direction": "scene_direction",
+    "summarize": "summarization",
 }
 
 PRESET_MAPPING = {

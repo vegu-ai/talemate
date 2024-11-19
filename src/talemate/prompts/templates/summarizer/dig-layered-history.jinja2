@@ -15,15 +15,7 @@ Scene History
 {% endfor %}
 {% if is_initial -%}
 <|SECTION:CURRENT SCENE|>
-{{ scene.snapshot(lines=10) }}
-<|CLOSE_SECTION|>
-<|SECTION:EXTRA CONTEXT|>
-{% set extra_context = scene.collect_messages(typ="context_investigation", max_iterations=5) %}
-{%- if not extra_context %}No extra context.{% endif %}
-{%- for message in extra_context %}
-{{ message.message }}
-
-{% endfor %}
+{{ scene.snapshot(lines=15, ignore=['director']) }}
 <|CLOSE_SECTION|>
 {% endif %}
 
@@ -39,7 +31,7 @@ The author of the scene has given YOU - the analyst - a query and is asking you 
   - A character is trying to retrieve information in the form of a question.
   - A location, event, off-scene person or object is refered to that you could gather more information about.
 - The query is invalid if any of these are true:
-  - The answer to the query is already contained within the current scene or extra 
+  - The answer to the query is already contained within the current scene.
 - If the query is invalid you must call abort() immediately.
 {% endif -%}
 - Read the provided chapters and select one that holds the answer or relevant context.{% if can_dig %} You can also decide to dig chapters for more information.{% else %}
@@ -70,8 +62,7 @@ The author of the scene has given YOU - the analyst - a query and is asking you 
 - You must never invent information. Dig instead.
 - End with `DONE` after calling a function.
 - You must not invent or guess, you can however decide to provide extra context if a factual answer is not possible.
-{% if is_initial %}- if answer contained in extra context the query is invalid and you must abort
-- if answer contained in current scene the query is invalid and you must abort{% endif %}
+{% if is_initial %}- If the answer contained in current scene the query is invalid and you must abort.{% endif %}
 
 ### Response Format
 Follow this format exactly:
@@ -81,7 +72,6 @@ Follow this format exactly:
 ANALYSIS:
 - character trying retrieve information: <yes or no>.
 - answer contained in current scene: <yes or no>.
-- answer contained in extra context: <yes or no>.
 - location, event, off-scene person or object mentioned: <yes or no>.
 - query valid based on the above: <yes or no>.
 

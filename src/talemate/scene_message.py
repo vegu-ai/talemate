@@ -2,7 +2,17 @@ import enum
 import re
 from dataclasses import dataclass, field
 
-import isodate
+__all__ = [
+    "SceneMessage",
+    "CharacterMessage",
+    "NarratorMessage",
+    "DirectorMessage",
+    "TimePassageMessage",
+    "ReinforcementMessage",
+    "ContextInvestigationMessage",
+    "Flags",
+    "MESSAGES",
+]
 
 _message_id = 0
 
@@ -279,14 +289,14 @@ class ReinforcementMessage(SceneMessage):
     def __str__(self):
         question, _ = self.source.split(":", 1)
         return (
-            f"# Internal notes for {self.character_name} - {question}: {self.message}"
+            f"# Internal note for {self.character_name} - {question}\n{self.message}"
         )
 
     def as_format(self, format: str, **kwargs) -> str:
         if format == "movie_script":
             message = str(self)[2:]
             return f"\n({message})\n"
-        return self.message
+        return f"\n{self.message}\n"
 
 
 @dataclass
@@ -296,14 +306,14 @@ class ContextInvestigationMessage(SceneMessage):
     
     def __str__(self):
         return (
-            f"# Internal notes - {self.message}"
+            f"# Internal note - {self.message}"
         )
 
     def as_format(self, format: str, **kwargs) -> str:
         if format == "movie_script":
             message = str(self)[2:]
             return f"\n({message})\n"
-        return self.message
+        return f"\n{self.message}\n"
 
 
 

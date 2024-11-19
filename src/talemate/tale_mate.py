@@ -46,6 +46,7 @@ from talemate.scene_message import (
     SceneMessage,
     TimePassageMessage,
     ContextInvestigationMessage,
+    MESSAGES as MESSAGE_TYPES,
 )
 from talemate.util import colored_text, count_tokens, extract_metadata, wrap_text
 from talemate.util.prompt import condensed
@@ -1150,7 +1151,11 @@ class Scene(Emitter):
                 return self.history[idx]
 
     def collect_messages(
-        self, typ: str = None, source: str = None, max_iterations: int = 100
+        self, 
+        typ: str = None, 
+        source: str = None,
+        max_iterations: int = 100,
+        max_messages: int | None = None,
     ):
         """
         Finds all messages in the history that match the given typ and source
@@ -1158,11 +1163,16 @@ class Scene(Emitter):
 
         messages = []
         iterations = 0
+        collected = 0
         for idx in range(len(self.history) - 1, -1, -1):
             if (not typ or self.history[idx].typ == typ) and (
                 not source or self.history[idx].source == source
             ):
                 messages.append(self.history[idx])
+                collected += 1
+                if max_messages is not None and collected >= max_messages:
+                    break
+                
 
             iterations += 1
             if iterations >= max_iterations:
@@ -1170,13 +1180,30 @@ class Scene(Emitter):
 
         return messages
 
-    def snapshot(self, lines: int = 3, ignore: list = None, start: int = None) -> str:
+    def snapshot(
+        self, 
+        lines: int = 3, 
+        ignore: list[str | SceneMessage] = None, 
+        start: int = None
+    ) -> str:
         """
         Returns a snapshot of the scene history
         """
 
         if not ignore:
             ignore = [ReinforcementMessage, DirectorMessage, ContextInvestigationMessage]
+        else:
+            # ignore me also be a list of message type strings (e.g. 'director')
+            # convert to class types
+            _ignore = []
+            for item in ignore:
+                if isinstance(item, str):
+                    _ignore.append(MESSAGE_TYPES.get(item)) 
+                elif isinstance(item, SceneMessage):
+                    _ignore.append(item)
+                else:
+                    raise ValueError("ignore must be a list of strings or SceneMessage types")
+            ignore = _ignore
 
         collected = []
 

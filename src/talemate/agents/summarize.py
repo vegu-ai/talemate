@@ -243,6 +243,7 @@ class SummarizeAgent(Agent):
             # log.debug("build_archive", idx=i, content=str(dialogue)[:64]+"...")
 
             if isinstance(dialogue, (DirectorMessage, ContextInvestigationMessage, ReinforcementMessage)):
+                # these messages are not part of the dialogue and should not be summarized
                 if i == start:
                     start += 1
                 continue

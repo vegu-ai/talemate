@@ -31,6 +31,7 @@ async def install_punkt():
     
     log.info("Downloading NLTK punkt tokenizer")
     await asyncio.get_event_loop().run_in_executor(None, nltk.download, "punkt")
+    await asyncio.get_event_loop().run_in_executor(None, nltk.download, "punkt_tab")
     log.info("Download complete")
 
 async def log_stream(stream, log_func):
@@ -65,7 +66,6 @@ async def run_frontend(host: str = "localhost", port: int = 8080):
         preexec_fn=os.setsid if sys.platform != "win32" else None
     )
     
-    asyncio.create_task(install_punkt())
     
     log.info(f"talemate frontend started", host=host, port=port, server="uvicorn", process=process.pid)
     
@@ -114,6 +114,9 @@ def run_server(args):
     )
     
     loop.run_until_complete(start_server)
+    
+    # start task to unstall punkt
+    loop.create_task(install_punkt())
     
     if not args.backend_only:
         frontend_task = loop.create_task(run_frontend(args.frontend_host, args.frontend_port))

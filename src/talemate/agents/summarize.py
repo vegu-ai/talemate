@@ -887,7 +887,7 @@ class SummarizeAgent(Agent):
         response = await Prompt.request(
             "summarizer.dig-layered-history",
             self.client,
-            "analyze_freeform",
+            "analyze_freeform_long",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,

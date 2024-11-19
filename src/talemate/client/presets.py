@@ -94,6 +94,8 @@ PRESET_MAPPING = {
     "analyze_long": "analytical",
     "analyze_freeform": "analytical",
     "analyze_freeform_short": "analytical",
+    "analyze_freeform_medium": "analytical",
+    "analyze_freeform_medium_short": "analytical",
     "narrate": "creative",
     "create": "creative_instruction",
     "create_short": "creative_instruction",

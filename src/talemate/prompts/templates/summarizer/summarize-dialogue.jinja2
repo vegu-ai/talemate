@@ -1,8 +1,10 @@
 {% set summary_target = "chapter "+to_str(num_extra_context+1) %}
 {% if summarization_method == "facts" -%}
 {% set output_type = "factual list" -%}
+{% set max_length = "" %}
 {% else -%}
 {% set output_type = "narrative description" -%}
+{% set max_length = " Length: 1 - 2 paragraphs" %}
 {% endif -%}
 {% if extra_context -%}
 <|SECTION:PREVIOUS CHAPTERS|>
@@ -31,12 +33,15 @@ The tone of the summary must match the tone of the dialogue.
 
 {% if summarization_method == "long" -%}
 This should be a detailed summary of the dialogue, including all the juicy details.
+{% set max_length = " Length: 1 - 3 paragraphs" %}
 {% elif summarization_method == "short" -%}
 This should be a short and specific summary of the dialogue, including the most important details. 2 - 3 sentences.
+{% set max_length = " Length: 1 paragraph" %}
 {% endif -%}
 
 YOU MUST ONLY SUMMARIZE THE CONTENT EXPLICITLY STATED WITHIN {{ summary_target.upper() }}. 
 YOU MUST NOT INCLUDE OR REPEAT THE PREVIOUS CONTEXT iN YOUR SUMMARY.
+YOU MUST NOT QUOTE DIALOGUE.
 
 {% if output_type == "narrative description" %}
 Provide a summarized {{output_type}} of {{ summary_target }}.
@@ -52,7 +57,7 @@ Provide a highly accurate numerical chronological list of the events and state c
 Your response must follow this format:
 
 ANALYSIS: <brief analysis the cross over point from previous chapters to {{ summary_target }}. How does {{ summary_target }} start and what should be in the summary.>
-SUMMARY: <summary of {{ summary_target }} based on analysis>
+SUMMARY: <summary of {{ summary_target }} based on analysis.{{ max_length }}>
 <|CLOSE_SECTION|>
 <|SECTION:SUMMARY OF {{ summary_target.upper() }}|>
 {{ set_prepared_response("ANALYSIS:") }}

@@ -305,8 +305,13 @@ class SummarizeAgent(Agent):
                     if str(line) in terminating_line:
                         break
                     adjusted_dialogue.append(line)
-                dialogue_entries = adjusted_dialogue
-                end = start + len(dialogue_entries) - 1
+                    
+                # if difference start and end is less than 4, ignore the termination
+                if len(adjusted_dialogue) > 4:
+                    dialogue_entries = adjusted_dialogue
+                    end = start + len(dialogue_entries) - 1
+                else:
+                    log.warning("build_archive", message="Ignoring termination", start=start, end=end, adjusted_dialogue=adjusted_dialogue)
 
         if dialogue_entries:
             
@@ -314,11 +319,19 @@ class SummarizeAgent(Agent):
                 # prepend scene intro to dialogue
                 dialogue_entries.insert(0, scene.intro)
             
-            summarized = await self.summarize(
-                "\n".join(map(str, dialogue_entries)),
-                extra_context=extra_context,
-                generation_options=generation_options,
-            )
+            summarized = None
+            retries = 5
+            
+            while not summarized and retries > 0:
+                summarized = await self.summarize(
+                    "\n".join(map(str, dialogue_entries)),
+                    extra_context=extra_context,
+                    generation_options=generation_options,
+                )
+                retries -= 1
+                
+            if not summarized:
+                raise IOError("Failed to summarize dialogue", dialogue=dialogue_entries)
 
         else:
             # AI has likely identified the first line as a scene change, so we can't summarize
@@ -429,7 +442,7 @@ class SummarizeAgent(Agent):
         response = await Prompt.request(
             f"summarizer.summarize-{source_type}",
             self.client,
-            "summarize",
+            "summarize_long",
             vars={
                 "dialogue": text,
                 "scene": self.scene,
@@ -455,9 +468,9 @@ class SummarizeAgent(Agent):
                 summary = response.split("SUMMARY:")[1].strip()
             else:
                 summary = response.strip()
-        except Exception:
-            log.error("summarize", response=response)
-            raise
+        except Exception as e:
+            log.error("summarize failed", response=response, exc=e)
+            return ""
         
         # capitalize first letter
         try:

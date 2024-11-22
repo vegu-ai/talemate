@@ -1962,6 +1962,84 @@ class Scene(Emitter):
         # TODO: need to adjust archived_history ts as well
         # but removal also probably means the history needs to be regenerated
         # anyway.
+        
+    def fix_time(self):
+        """
+        New implementation of sync_time that will fix time across the board
+        using the base history as the sole source of truth.
+        
+        This means first identifying the time jumps in the base history by
+        looking for TimePassageMessages and then applying those time jumps
+        
+        to the archived history and the layered history based on their start and end
+        indexes.
+        """
+        try:
+            ts = self.ts
+            self._fix_time()
+        except Exception as e:
+            log.exception("fix_time", exc=e)
+            self.ts = ts
+        
+    def _fix_time(self):
+        starting_time = "PT0S"
+        
+        for archived_entry in self.archived_history:
+            if "ts" in archived_entry and "end" not in archived_entry:
+                starting_time = archived_entry["ts"]
+            elif "end" in archived_entry:
+                break
+        
+        # store time jumps by index
+        time_jumps = []
+        
+        for idx, message in enumerate(self.history):
+            if isinstance(message, TimePassageMessage):
+                time_jumps.append((idx, message.ts))
+        
+        # now make the timejumps cumulative, meaning that each time jump
+        # will be the sum of all time jumps up to that point
+        cumulative_time_jumps = []
+        ts = starting_time
+        for idx, ts_jump in time_jumps:
+            ts = util.iso8601_add(ts, ts_jump)
+            cumulative_time_jumps.append((idx, ts))
+            
+        try:
+            ending_time = cumulative_time_jumps[-1][1]
+        except IndexError:
+            # no time jumps found
+            ending_time = starting_time
+            self.ts = ending_time
+            return    
+            
+        # apply time jumps to the archived history
+        ts = starting_time
+        for _, entry in enumerate(self.archived_history):
+            
+            if "end" not in entry:
+                continue
+            
+            # we need to find best_ts by comparing entry["end"]
+            # index to time_jumps (find the closest time jump that is
+            # smaller than entry["end"])
+            
+            best_ts = None
+            for jump_idx, jump_ts in cumulative_time_jumps:
+                if jump_idx < entry["end"]:
+                    best_ts = jump_ts
+                else:
+                    break
+            
+            if best_ts:
+                entry["ts"] = best_ts
+                ts = entry["ts"]
+            else:
+                entry["ts"] = ts
+
+        # finally set scene time to last entry in time_jumps
+        log.debug("fix_time", ending_time=ending_time)
+        self.ts = ending_time
 
     def calc_time(self, start_idx: int = 0, end_idx: int = None):
         """
@@ -1976,7 +2054,7 @@ class Scene(Emitter):
 
         for message in self.history[start_idx:end_idx]:
             if isinstance(message, TimePassageMessage):
-                util.iso8601_add(ts, message.ts)
+                ts = util.iso8601_add(ts, message.ts)
                 found = True
 
         if not found:

@@ -238,7 +238,7 @@ async def load_scene_from_data(
         scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
         scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
 
-        scene.sync_time()
+        scene.fix_time()
         log.debug("scene time", ts=scene.ts)
 
     loading_status("Initializing long-term memory...")

@@ -549,6 +549,8 @@ class SummarizeAgent(Agent):
             if not layered_history[i]:
                 continue
             
+            entry_num = 1
+            
             for layered_history_entry in layered_history[i][next_layer_start if next_layer_start is not None else 0:]:
                 text = f"{layered_history_entry['text']}"
                 
@@ -562,7 +564,9 @@ class SummarizeAgent(Agent):
                         "end": layered_history_entry["end"],
                         "layer": i,
                         "ts_start": layered_history_entry["ts_start"],
+                        "index": entry_num,
                     })
+                    entry_num += 1
                 else:
                     compiled.append(text)
                 
@@ -573,7 +577,10 @@ class SummarizeAgent(Agent):
             # so we append the base layer to the compiled list, starting from
             # index `next_layer_start`
             
+            entry_num = 1
+            
             for ah in self.scene.archived_history[next_layer_start:]:
+                
                 text = f"{ah['text']}"
                 if as_objects:
                     compiled.append({
@@ -582,7 +589,9 @@ class SummarizeAgent(Agent):
                         "end": ah["end"],
                         "layer": -1,
                         "ts": ah["ts"],
+                        "index": entry_num,
                     })
+                    entry_num += 1
                 else:
                     compiled.append(text)
             
@@ -869,7 +878,6 @@ class SummarizeAgent(Agent):
             log.debug("dig_layered_history", skip="No history to dig through")
             return ""
         
-        log.debug(f"dig_layered_history", entry=entry)
         
         entries = []
         
@@ -882,16 +890,20 @@ class SummarizeAgent(Agent):
             if layer > -1:
                 entries = self.scene.layered_history[layer][entry["start"]:entry["end"]+1]
                 # add `layer` entry to each
-                for entry in entries:
-                    entry["layer"] = layer
+                for _entry in entries:
+                    _entry["layer"] = layer
             elif layer == -1:
                 entries = self.scene.archived_history[entry["start"]:entry["end"]+1]
+                # set layer to -1 for all entries
+                for _entry in entries:
+                    _entry["layer"] = -1
             elif layer == -2:
                 # TODO: expand into message history here?
                 entries = [entry]
         else:
             log.error("dig_layered_history", error="No layer information", entry=entry)
             return ""
+        
         
         if not entries:
             log.error("dig_layered_history", skip="No entries to dig through")
@@ -985,7 +997,7 @@ class SummarizeAgent(Agent):
                 answer = await self.dig_layered_history(
                     query,
                     entry,
-                    context=(context or []) + entries[:dig_into_chapter],
+                    context=(context or []) + (entries[:dig_into_chapter] if dig_into_chapter > 1 else []),
                     dig_question=dig_question,
                     character=character,
                 ) 

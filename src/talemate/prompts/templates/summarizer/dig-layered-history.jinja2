@@ -7,13 +7,19 @@
 {% endif %}
 {% set can_dig = layer > -1 %}
 {% for entry in entries %}
-<|SECTION:CHAPTER {{ loop.index }}|>
+{% if entry.get("layer") > -1 or layer == -1 %}<|SECTION:CHAPTER {{ loop.index }}|>
 {{ time_diff(entry.get("ts_start", entry.get("ts"))) }}
 {{ entry["text"] }}
-<|CLOSE_SECTION|>
+<|CLOSE_SECTION|>{% endif %}
 {% endfor %}
 {% if is_initial -%}
 <|SECTION:CURRENT SCENE|>
+{% for entry in entries %}
+{% if entry.get("layer") == -1 %}{{ time_diff(entry.get("ts_start", entry.get("ts"))) }}
+{{ entry["text"] }}
+
+{% endif %}
+{% endfor %}
 {{ scene.snapshot(lines=15, ignore=['director']) }}
 <|CLOSE_SECTION|>
 {% endif %}
@@ -42,6 +48,7 @@ The author of the scene has given YOU - the analyst - a query and is asking you 
   - The question you pass to the dig query must contain enough context to accurately target the event you want to query. Don't be vague, be specific by providing any relevant context you have learned so far. If you are targeting a specific event mention it using a detailed description that leaves no doubt.
   - Do not mention chapters in your question.{% else %}- `answer(answer)` to provide an answer or context or both.
   - Use the history for context, but source the answer from the Chapter(s).
+  - You MUST NOT let the query impact the answer. The chapters are the source of truth. The query may imply or assume incorrect things.
   - The answer MUST be factional information and MUST NOT mention chapter numbers.
   - Answer the query and provide contextual and circumstantial details.
   - Limit the answer to two paragraphs.

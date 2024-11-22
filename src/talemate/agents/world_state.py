@@ -695,7 +695,7 @@ class WorldStateAgent(Agent):
 
         summary = await summarizer.summarize(
             text,
-            extra_context=extra_context,
+            extra_context=[extra_context],
             method="short",
             extra_instructions="Pay particularly close attention to decisions, agreements or promises made.",
         )

@@ -875,6 +875,10 @@ class ChromaDBMemoryAgent(MemoryAgent):
             return None
 
     def _get_document(self, id) -> dict:
+        
+        if not id:
+            return {}
+        
         result = self.db.get(ids=[id] if isinstance(id, str) else id)
         documents = {}
 

@@ -15,8 +15,7 @@
 {% if is_initial -%}
 <|SECTION:CURRENT SCENE|>
 {% for entry in entries %}
-{% if entry.get("layer") == -1 %}{{ time_diff(entry.get("ts_start", entry.get("ts"))) }}
-{{ entry["text"] }}
+{% if entry.get("layer") == -1 %}{{ entry["text"] }}
 
 {% endif %}
 {% endfor %}
@@ -45,6 +44,7 @@ The author of the scene has given YOU - the analyst - a query and is asking you 
 
 ### Available Functions
 {% if can_dig %}- `dig(chapter_number, question)` to dig into a specific chapter for more information - number must be available and listed as a chapter above. You must call dig multiple times if there are multiple promising chapters to investigate.
+  - Valid chapters to dig: {% for entry in entries %}{% if entry.get("layer") > -1 %}{{ loop.index }}{% if not loop.last %}, {% endif %}{% endif %}{% endfor %}
   - The question you pass to the dig query must contain enough context to accurately target the event you want to query. Don't be vague, be specific by providing any relevant context you have learned so far. If you are targeting a specific event mention it using a detailed description that leaves no doubt.
   - Do not mention chapters in your question.{% else %}- `answer(answer)` to provide an answer or context or both.
   - Use the history for context, but source the answer from the Chapter(s).

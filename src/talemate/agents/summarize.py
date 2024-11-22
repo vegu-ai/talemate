@@ -992,12 +992,17 @@ class SummarizeAgent(Agent):
                 except Exception as e:
                     log.error("dig_layered_history", error=str(e), into_item=dig_into_chapter, layer=layer)
                     continue
-
+                
+                # if entry is a layer -1 entry there is nothing to dig.
+                if entry["layer"] == -1:
+                    log.debug("dig_layered_history", skip="Digging into layer -1 entry")
+                    continue
+                
                 log.debug("dig_layered_history", into_item=dig_into_chapter, layer=layer-1, start=entry["start"], end=entry["end"])
                 answer = await self.dig_layered_history(
                     query,
                     entry,
-                    context=(context or []) + (entries[:dig_into_chapter] if dig_into_chapter > 1 else []),
+                    context=(context or []) + (entries[:dig_into_chapter-1] if dig_into_chapter > 1 else []),
                     dig_question=dig_question,
                     character=character,
                 ) 

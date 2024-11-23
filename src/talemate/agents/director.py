@@ -96,7 +96,7 @@ class DirectorAgent(GameInstructionsMixin, Agent):
                         type="number",
                         label="Chance",
                         description="The chance to generate actions. 0 = never, 1 = always",
-                        value=0.5,
+                        value=0.3,
                         min=0,
                         max=1,
                         step=0.1,

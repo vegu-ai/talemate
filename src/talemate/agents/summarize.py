@@ -84,7 +84,7 @@ class SummarizeAgent(Agent):
             ),
             # layered history gets its own action
             "layered_history": AgentAction(
-                enabled=False,
+                enabled=True,
                 container=True,
                 icon="mdi-layers",
                 can_be_disabled=True,

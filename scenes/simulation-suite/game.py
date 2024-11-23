@@ -481,7 +481,11 @@ def game(TM):
                 
                 TM.log.debug("SIMULATION SUITE: transform npc", npc=npc)
                 
-                character_attributes = TM.agents.world_state.extract_character_sheet(name=npc.name, alteration_instructions=self.player_message.raw)
+                character_attributes = TM.agents.world_state.extract_character_sheet(
+                    name=npc.name,
+                    text=inject,
+                    alteration_instructions=self.player_message.raw
+                )
                 
                 TM.scene.set_character_attributes(npc.name, character_attributes)
                 character_description = TM.agents.creator.determine_character_description(npc.name)

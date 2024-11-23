@@ -41,6 +41,9 @@ SUPPORTED_MODELS = [
 # any model starting with gpt-4- is assumed to support 'json_object'
 # for others we need to explicitly state the model name
 JSON_OBJECT_RESPONSE_MODELS = [
+    "gpt-4o-2024-08-06",
+    "gpt-4o-2024-11-20",
+    "gpt-4o-latest",
     "gpt-4o",
     "gpt-4o-mini",
     "gpt-3.5-turbo-0125",
@@ -212,6 +215,10 @@ class OpenAIClient(ClientBase):
             self.max_token_length = min(max_token_length or 8192, 8192)
         elif model == "gpt-3.5-turbo-16k":
             self.max_token_length = min(max_token_length or 16384, 16384)
+        elif model.startswith("gpt-4o") and model != "gpt-4o-2024-05-13":
+            self.max_token_length = min(max_token_length or 16384, 16384)
+        elif model == "gpt-4o-2024-05-13":
+            self.max_token_length = min(max_token_length or 4096, 4096)
         elif model == "gpt-4-1106-preview":
             self.max_token_length = min(max_token_length or 128000, 128000)
         else:

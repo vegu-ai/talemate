@@ -1,4 +1,4 @@
-import base64
+import asyncio
 import uuid
 from typing import Any, Union
 
@@ -161,6 +161,7 @@ class SceneSettingsPayload(pydantic.BaseModel):
 
 class SaveScenePayload(pydantic.BaseModel):
     save_as: str | None = None
+    project_name: str | None = None
 
 
 class RegenerateHistoryPayload(pydantic.BaseModel):
@@ -869,7 +870,7 @@ class WorldStateManagerPlugin:
             }
         )
 
-        await self.scene.remove_actor(character.actor)
+        await self.scene.remove_character(character)            
         await self.signal_operation_done()
         await self.handle_get_character_list({})
         self.scene.emit_status()
@@ -1000,44 +1001,71 @@ class WorldStateManagerPlugin:
     async def handle_save_scene(self, data):
         payload = SaveScenePayload(**data)
 
-        log.debug("Save scene", copy=payload.save_as)
+        log.debug("Save scene", copy=payload.save_as, project_name=payload.project_name)
+        
+        if not self.scene.filename:
+            # scene has never been saved before
+            # specify project name (directory name)
+            self.scene.name = payload.project_name
 
         await self.scene.save(auto=False, force=True, copy_name=payload.save_as)
         self.scene.emit_status()
 
     async def handle_request_scene_history(self, data):
         history = history_with_relative_time(self.scene.archived_history, self.scene.ts)
+        
+        layered_history = []
+        
+        summarizer = get_agent("summarizer")
+        
+        if summarizer.layered_history_enabled:
+            for layer in self.scene.layered_history:
+                layered_history.append(
+                    history_with_relative_time(layer, self.scene.ts)
+                )
 
         self.websocket_handler.queue_put(
-            {"type": "world_state_manager", "action": "scene_history", "data": history}
+            {"type": "world_state_manager", "action": "scene_history", "data": {
+                "history": history,
+                "layered_history": layered_history,
+            }}
         )
 
     async def handle_regenerate_history(self, data):
 
         payload = RegenerateHistoryPayload(**data)
+        
+        async def callback():
+            self.scene.emit_status()
+            await self.handle_request_scene_history(data)
+            #self.websocket_handler.queue_put(
+            #    {
+            #        "type": "world_state_manager",
+            #        "action": "history_entry_added",
+            #        "data": history_with_relative_time(
+            #            self.scene.archived_history, self.scene.ts
+            #        ),
+            #    }
+            #)
 
-        def callback():
+        task = asyncio.create_task(rebuild_history(
+            self.scene, callback=callback, generation_options=payload.generation_options
+        ))
+        
+        async def done():
             self.websocket_handler.queue_put(
                 {
                     "type": "world_state_manager",
-                    "action": "history_entry_added",
-                    "data": history_with_relative_time(
-                        self.scene.archived_history, self.scene.ts
-                    ),
+                    "action": "history_regenerated",
+                    "data": payload.model_dump(),
                 }
             )
 
-        await rebuild_history(
-            self.scene, callback=callback, generation_options=payload.generation_options
-        )
+            await self.signal_operation_done()
+            await self.handle_request_scene_history(data)
+        
+        # when task is done,  queue a message to the client
+        task.add_done_callback(lambda _: asyncio.create_task(done()))
+    
 
-        self.websocket_handler.queue_put(
-            {
-                "type": "world_state_manager",
-                "action": "history_regenerated",
-                "data": payload.model_dump(),
-            }
-        )
 
-        await self.signal_operation_done()
-        await self.handle_request_scene_history(data)

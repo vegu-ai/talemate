@@ -65,6 +65,8 @@ class AgentAction(pydantic.BaseModel):
     condition: Union[AgentActionConditional, None] = None
     container: bool = False
     icon: Union[str, None] = None
+    can_be_disabled: bool = False
+    experimental: bool = False
 
 
 class AgentDetail(pydantic.BaseModel):

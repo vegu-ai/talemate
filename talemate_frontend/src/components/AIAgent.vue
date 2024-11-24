@@ -62,7 +62,7 @@
                 -->
             </v-list-item>
         </v-list>
-        <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" @save="saveAgent" @update:dialog="updateDialog"></AgentModal>
+        <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" @save="saveAgent" @update:dialog="updateDialog" ref="modal"></AgentModal>
     </div>
 </template>
     
@@ -161,6 +161,14 @@ export default {
         },
         updateDialog(newVal) {
             this.state.dialog = newVal;
+        },
+        openSettings(agentName, section) {
+            let index = this.state.agents.findIndex(a => a.name === agentName);
+            if (index !== -1) {
+                this.editAgent(index);
+                if(section)
+                    this.$refs.modal.tab = section;
+            }
         },
         handleMessage(data) {
             // Handle agent_status message type

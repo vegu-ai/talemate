@@ -434,6 +434,33 @@ AnnotatedClient = Annotated[
 ]
 
 
+class HistoryMessageStyle(BaseModel):
+    italic: bool = False
+    bold: bool = False
+    
+    # Leave None for default color
+    color: str | None = None 
+
+
+class HidableHistoryMessageStyle(HistoryMessageStyle):
+    # certain messages can be hidden, but all messages are shown by default
+    show: bool = True
+    
+
+class SceneAppearance(BaseModel):
+
+    narrator_messages: HistoryMessageStyle = HistoryMessageStyle(italic=True)
+    character_messages: HistoryMessageStyle = HistoryMessageStyle()
+    director_messages: HidableHistoryMessageStyle = HidableHistoryMessageStyle()
+    time_messages: HistoryMessageStyle = HistoryMessageStyle()
+    context_investigation_messages: HidableHistoryMessageStyle = HidableHistoryMessageStyle()
+    
+class Appearance(BaseModel):
+    
+    scene: SceneAppearance = SceneAppearance()
+    
+
+
 class Config(BaseModel):
     clients: Dict[str, AnnotatedClient] = {}
 
@@ -466,6 +493,8 @@ class Config(BaseModel):
     recent_scenes: RecentScenes = RecentScenes()
 
     presets: Presets = Presets()
+    
+    appearance: Appearance = Appearance()
 
     class Config:
         extra = "ignore"

@@ -21,7 +21,7 @@ from talemate.emit import emit
 from talemate.events import GameLoopEvent
 from talemate.exceptions import LLMAccuracyError
 from talemate.prompts import Prompt
-from talemate.scene_message import CharacterMessage, DirectorMessage
+from talemate.scene_message import CharacterMessage, DirectorMessage, ContextInvestigationMessage, NarratorMessage
 
 from .base import (
     Agent,
@@ -86,7 +86,9 @@ class ConversationAgent(Agent):
         self.actions = {
             "generation_override": AgentAction(
                 enabled=True,
-                label="Generation Settings",
+                container=True,
+                icon="mdi-atom-variant",
+                label="Generation",
                 config={
                     "format": AgentActionConfig(
                         type="text",
@@ -107,12 +109,6 @@ class ConversationAgent(Agent):
                         max=512,
                         step=32,
                     ),
-                    "instructions": AgentActionConfig(
-                        type="text",
-                        label="Instructions",
-                        value="Write 1-3 sentences. Never wax poetic.",
-                        description="Extra instructions to give the AI for dialog generatrion.",
-                    ),
                     "jiggle": AgentActionConfig(
                         type="number",
                         label="Jiggle (Increased Randomness)",
@@ -122,6 +118,29 @@ class ConversationAgent(Agent):
                         max=1.0,
                         step=0.1,
                     ),
+                    "instructions": AgentActionConfig(
+                        type="blob",
+                        label="Task Instructions",
+                        value="Write 1-3 sentences. Never wax poetic.",
+                        description="Allows to extend the task instructions - placed above the context history.",
+                    ),
+                    "actor_instructions": AgentActionConfig(
+                        type="blob",
+                        label="Actor Instructions",
+                        value="",
+                        description="Allows to extend the actor instructions - placed towards the end of the context history.",
+                    ),
+                    "actor_instructions_offset": AgentActionConfig(
+                        type="number",
+                        label="Actor Instructions Offset",
+                        value=3,
+                        description="Offsets the actor instructions into the context history, shifting it up N number of messages. 0 = at the end of the context history.",
+                        min=0,
+                        max=20,
+                        step=1,
+                    ),
+                    
+
                 },
             ),
             "auto_break_repetition": AgentAction(
@@ -176,10 +195,31 @@ class ConversationAgent(Agent):
                             {
                                 "label": "AI compiled question and answers (slow)",
                                 "value": "questions",
-                            },
+                            }
                         ],
                     ),
                 },
+            ),
+            "investigate_context": AgentAction(
+                enabled=False,
+                label="Context Investigation",
+                container=True,
+                icon="mdi-text-search",
+                can_be_disabled=True,
+                experimental=True,
+                description="Will investigate the layered history of the scene to extract relevant information. This can be very slow, especially as number of layers increase. Layered history needs to be enabled in the summarizer agent.",
+                config={
+                    "trigger": AgentActionConfig(
+                        type="text",
+                        label="Trigger",
+                        description="The trigger to start the context investigation",
+                        value="ai",
+                        choices=[
+                            {"label": "Agent decides", "value": "ai"},
+                            {"label": "Only when a question is asked", "value": "question"},
+                        ]
+                    ),
+                }
             ),
         }
 
@@ -219,6 +259,26 @@ class ConversationAgent(Agent):
 
         return details
 
+    @property
+    def generation_settings_task_instructions(self):
+        return self.actions["generation_override"].config["instructions"].value
+
+    @property
+    def generation_settings_actor_instructions(self):
+        return self.actions["generation_override"].config["actor_instructions"].value
+
+    @property
+    def generation_settings_actor_instructions_offset(self):
+        return self.actions["generation_override"].config["actor_instructions_offset"].value
+
+    @property
+    def investigate_context(self):
+        return self.actions["investigate_context"].enabled 
+    
+    @property
+    def investigate_context_trigger(self):
+        return self.actions["investigate_context"].config["trigger"].value
+    
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("game_loop").connect(self.on_game_loop)
@@ -433,6 +493,7 @@ class ConversationAgent(Agent):
         self,
         character: Character,
         char_message: Optional[str] = "",
+        instruction: Optional[str] = None,
     ):
         """
         Builds the prompt that drives the AI's conversational response
@@ -471,12 +532,9 @@ class ConversationAgent(Agent):
             director_message = isinstance(scene_and_dialogue[-1], DirectorMessage)
         except IndexError:
             director_message = False
-
-        extra_instructions = ""
-        if self.actions["generation_override"].enabled:
-            extra_instructions = (
-                self.actions["generation_override"].config["instructions"].value
-            )
+            
+        if self.investigate_context:
+            await self.run_context_investigation(character)
 
         conversation_format = self.conversation_format
         prompt = Prompt.get(
@@ -493,7 +551,11 @@ class ConversationAgent(Agent):
                 "talking_character": character,
                 "partial_message": char_message,
                 "director_message": director_message,
-                "extra_instructions": extra_instructions,
+                "extra_instructions": self.generation_settings_task_instructions, #backward compatibility
+                "task_instructions": self.generation_settings_task_instructions,
+                "actor_instructions": self.generation_settings_actor_instructions,
+                "actor_instructions_offset": self.generation_settings_actor_instructions_offset,
+                "direct_instruction": instruction,
                 "decensor": self.client.decensor_enabled,
             },
         )
@@ -526,11 +588,8 @@ class ConversationAgent(Agent):
         if retrieval_method != "direct":
             world_state = instance.get_agent("world_state")
             history = self.scene.context_history(
-                min_dialogue=3,
-                max_dialogue=15,
                 keep_director=False,
-                sections=False,
-                add_archieved_history=False,
+                budget=int(self.client.max_token_length * 0.75),
             )
             text = "\n".join(history)
             log.debug(
@@ -542,13 +601,15 @@ class ConversationAgent(Agent):
             if retrieval_method == "questions":
                 self.current_memory_context = (
                     await world_state.analyze_text_and_extract_context(
-                        text, f"continue the conversation as {character.name}"
+                        text, f"continue the conversation as {character.name}",
+                        include_character_context=True
                     )
                 ).split("\n")
             elif retrieval_method == "queries":
                 self.current_memory_context = (
                     await world_state.analyze_text_and_extract_context_via_queries(
-                        text, f"continue the conversation as {character.name}"
+                        text, f"continue the conversation as {character.name}",
+                        include_character_context=True
                     )
                 )
 
@@ -567,10 +628,40 @@ class ConversationAgent(Agent):
 
         return self.current_memory_context
 
-    async def build_prompt(self, character, char_message: str = ""):
+    async def run_context_investigation(self, character: Character | None = None):
+        
+        # go backwards in the history if there is a ContextInvestigation message before
+        # there is a character or narrator message, just return
+        for idx in range(len(self.scene.history) - 1, -1, -1):
+            if isinstance(self.scene.history[idx], ContextInvestigationMessage):
+                return
+
+            if isinstance(self.scene.history[idx], (CharacterMessage, NarratorMessage)):
+                break
+        
+        last_message = self.scene.last_message_of_type(["character", "narrator"])
+        
+        if self.investigate_context_trigger == "question":
+            if not last_message:
+                return
+
+            if "?" not in str(last_message):
+                return
+        
+        summarizer = instance.get_agent("summarizer")
+        result = await summarizer.dig_layered_history(str(last_message), character=character) 
+        
+        if not result.strip():
+            return
+        
+        message = ContextInvestigationMessage(message=result)
+        self.scene.push_history([message])
+        emit("context_investigation", message)
+
+    async def build_prompt(self, character, char_message: str = "", instruction:str = None):
         fn = self.build_prompt_default
 
-        return await fn(character, char_message=char_message)
+        return await fn(character, char_message=char_message, instruction=instruction)
 
     def clean_result(self, result, character):
         if "#" in result:
@@ -607,7 +698,7 @@ class ConversationAgent(Agent):
                 set_client_context_attribute("nuke_repetition", nuke_repetition)
 
     @set_processing
-    async def converse(self, actor):
+    async def converse(self, actor, only_generate:bool = False, instruction:str = None) -> list[str] | list[CharacterMessage]:
         """
         Have a conversation with the AI
         """
@@ -625,7 +716,7 @@ class ConversationAgent(Agent):
 
         self.set_generation_overrides()
 
-        result = await self.client.send_prompt(await self.build_prompt(character))
+        result = await self.client.send_prompt(await self.build_prompt(character, instruction=instruction))
 
         result = self.clean_result(result, character)
 
@@ -707,6 +798,9 @@ class ConversationAgent(Agent):
         response_message = util.parse_messages_from_str(total_result, [character.name])
 
         log.info("conversation agent", result=response_message)
+        
+        if only_generate:
+            return response_message
 
         emission = ConversationAgentEmission(
             agent=self, generation=response_message, actor=actor, character=character

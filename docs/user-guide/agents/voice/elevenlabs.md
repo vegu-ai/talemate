@@ -4,4 +4,4 @@ If you have not configured the ElevenLabs TTS API, the voice agent will show tha
 
 ![Elevenlaps api key missing](/talemate/img/0.26.0/voice-agent-missing-api-key.png)
 
-See the [ElevenLabs API setup](/apis/elevenlabs.md) for instructions on how to set up the API key.
+See the [ElevenLabs API setup](/talemate/user-guide/apis/elevenlabs/) for instructions on how to set up the API key.

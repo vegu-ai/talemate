@@ -58,7 +58,8 @@
                     :label="selected"
                     :disabled="working"
                     v-model="character.reinforcements[selected].answer"
-                    @update:modelValue="queueUpdate(selected)"
+                    @update:modelValue="dirty = true"
+                    @blur="update(selected, false, true)"
                     :color="dirty ? 'dirty' : ''">
                 </v-textarea>
 
@@ -70,7 +71,8 @@
                             type="number" min="1" max="100" step="1"
                             :disabled="working"
                             class="mb-2"
-                            @update:modelValue="queueUpdate(selected)"
+                            @update:modelValue="dirty = true"
+                            @blur="update(selected, false, true)"
                             :color="dirty ? 'dirty' : ''"></v-text-field>
                     </v-col>
                     <v-col cols="6">
@@ -81,7 +83,8 @@
                             label="Context Attachment Method"
                             class="mr-1 mb-1" variant="underlined"
                             density="compact"
-                            @update:modelValue="queueUpdate(selected)"
+                            @update:modelValue="dirty = true"
+                            @blur="update(selected, false, true)"
                             :color="dirty ? 'dirty' : ''">
                         </v-select>
                     </v-col>
@@ -92,7 +95,8 @@
                 <v-textarea rows="3" auto-grow max-rows="5"
                     label="Additional instructions to the AI for generating this state."
                     v-model="character.reinforcements[selected].instructions"
-                    @update:modelValue="queueUpdate(selected)"
+                    @update:modelValue="dirty = true"
+                    @blur="update(selected, false, true)"
                     :disabled="working"
                     :color="dirty ? 'dirty' : ''"
                     ></v-textarea>
@@ -333,24 +337,16 @@ export default {
             this.character.reinforcements[name] = {...this.newReinforcment};
         },
 
-        queueUpdate(name, delay = 1500) {
-            if (this.updateTimeout !== null) {
-                clearTimeout(this.updateTimeout);
+        update(name, updateState, only_if_dirty = false) {
+
+            if(only_if_dirty && !this.dirty) {
+                return;
             }
 
-            this.dirty = true;
-
-            this.updateTimeout = setTimeout(() => {
-                this.update(name);
-            }, delay);
-        },
-
-        update(name, updateState) {
             let interval = this.character.reinforcements[name].interval;
             let instructions = this.character.reinforcements[name].instructions;
             let insert = this.character.reinforcements[name].insert;
-            if (updateState === true)
-                this.busy = true;
+            this.busy = true;
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'set_character_detail_reinforcement',

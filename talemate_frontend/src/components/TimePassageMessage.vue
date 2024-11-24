@@ -1,6 +1,6 @@
 <template>
   <div class="time-container" v-if="show && minimized" >
-    <v-chip closable @click:close="deleteMessage()" color="deep-purple-lighten-3">
+    <v-chip closable @click:close="deleteMessage()" :color="getMessageColor('time',null)" :disabled="uxLocked">
       <v-icon class="mr-2">mdi-clock-outline</v-icon>
       <span>{{ text }}</span>
     </v-chip>
@@ -15,8 +15,8 @@ export default {
       minimized: true
     }
   },
-  props: ['text', 'message_id', 'ts'],
-  inject: ['requestDeleteMessage'],
+  props: ['text', 'message_id', 'ts', 'uxLocked'],
+  inject: ['requestDeleteMessage', 'getMessageStyle', 'getMessageColor'],
   methods: {
     toggle() {
       this.minimized = !this.minimized;

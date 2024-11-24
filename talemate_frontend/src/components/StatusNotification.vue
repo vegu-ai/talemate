@@ -3,7 +3,7 @@
         <v-progress-circular v-if="statusMessageType === 'busy'" indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular>
         <v-icon v-else>{{ notificationIcon() }}</v-icon>
         <span class="ml-2">{{ statusMessageText }}</span>
-
+        <v-btn v-if="cancellable" class="ml-2" size="small" color="delete" icon rounded="0" elevation="0" variant="text" @click="cancel"><v-icon>mdi-cancel</v-icon></v-btn>
     </v-snackbar>
 </template>
 
@@ -15,11 +15,15 @@ export default {
             statusMessage: false,
             statusMessageText: '',
             statusMessageType: '',
+            cancellable: false,
         }
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput'],
     methods: {
 
+        cancel: function() {
+            this.getWebsocket().send(JSON.stringify({type: 'interrupt'}));
+        },
 
         notificationTimeout: function() {
             switch(this.statusMessageType) {
@@ -76,6 +80,7 @@ export default {
                     this.statusMessage = true;
                     this.statusMessageText = data.message;
                     this.statusMessageType = data.status;
+                    this.cancellable = data.data && data.data.cancellable;
                 }
             }
         },

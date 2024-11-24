@@ -228,6 +228,7 @@ async def load_scene_from_data(
         scene.memory_session_id = scene_data.get("memory_session_id", None)
         scene.history = _load_history(scene_data["history"])
         scene.archived_history = scene_data["archived_history"]
+        scene.layered_history = scene_data.get("layered_history", [])
         scene.world_state = WorldState(**scene_data.get("world_state", {}))
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.context = scene_data.get("context", "")
@@ -237,7 +238,7 @@ async def load_scene_from_data(
         scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
         scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
 
-        scene.sync_time()
+        scene.fix_time()
         log.debug("scene time", ts=scene.ts)
 
     loading_status("Initializing long-term memory...")

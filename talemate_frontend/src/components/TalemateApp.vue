@@ -144,6 +144,7 @@
             @request-scene-load="(path) => {  resetViews(); $refs.loadScene.loadJsonSceneFromPath(path); }"
             :version="version" 
             :scene-loading-available="ready && connected"
+            :scene-is-loading="loading"
             :config="appConfig" />
           </v-tabs-window-item>
           <!-- SCENE -->
@@ -160,7 +161,7 @@
                 </v-alert>
               </div>
 
-              <SceneMessages ref="sceneMessages" />
+              <SceneMessages ref="sceneMessages" :appearance-config="appConfig ? appConfig.appearance : {}" :ux-locked="uxLocked" />
               <div style="flex-shrink: 0;">
       
                 <SceneTools 
@@ -373,6 +374,25 @@ export default {
       return Object.keys(this.clientStatus).sort((a, b) => {
         return this.clientStatus[a].label.localeCompare(this.clientStatus[b].label);
       });
+    },
+    uxLocked() {
+      // no scene loaded, not locked
+      if(!this.sceneActive) {
+        return false;
+      }
+
+      // if loading, ux is locked
+      if(this.loading) {
+        return true;
+      }
+
+      // if not waiting for input then ux is locked
+      if(!this.waitingForInput) {
+        return true;
+      }
+
+      return false;
+
     }
   },
   mounted() {
@@ -398,6 +418,7 @@ export default {
       scene: () => this.scene,
       getClients: () => this.getClients(),
       getAgents: () => this.getAgents(),
+      openAgentSettings: this.openAgentSettings,
       requestSceneAssets: (asset_ids) => this.requestSceneAssets(asset_ids),
       requestAssets: (assets) => this.requestAssets(assets),
       openCharacterSheet: (characterName) => this.openCharacterSheet(characterName),
@@ -405,12 +426,13 @@ export default {
       creativeEditor: () => this.$refs.creativeEditor,
       requestAppConfig: () => this.requestAppConfig(),
       appConfig: () => this.appConfig,
+      openAppConfig: this.openAppConfig,
       configurationRequired: () => this.configurationRequired(),
       getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
       getTrackedWorldState: (question) => this.$refs.worldState.trackedWorldState(question),
       getPlayerCharacterName: () => this.getPlayerCharacterName(),
       formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
-      autocompleteRequest: (partialInput, callback, focus_element) => this.autocompleteRequest(partialInput, callback, focus_element),
+      autocompleteRequest: (partialInput, callback, focus_element, delay) => this.autocompleteRequest(partialInput, callback, focus_element, delay),
       autocompleteInfoMessage: (active) => this.autocompleteInfoMessage(active),
       toLabel: (value) => this.toLabel(value),
     };
@@ -723,7 +745,8 @@ export default {
             this.autocompleting = false
             this.messageInput += completion;
           },
-          this.$refs.messageInput
+          this.$refs.messageInput,
+          100,
         );
         return;
       }
@@ -749,9 +772,13 @@ export default {
       }));
     },
 
-    autocompleteRequest(param, callback, focus_element) {
+    autocompleteRequest(param, callback, focus_element, delay=500) {
 
-      this.autocompleteCallback = callback;
+      this.autocompleteCallback = (completion) => {
+        setTimeout(() => {
+          callback(completion);
+        }, delay);
+      };
       this.autocompleteFocusElement = focus_element;
       this.autocompletePartialInput = param.partial;
 
@@ -778,16 +805,30 @@ export default {
       }
 
       let selectedCharacter = null;
+      let foundActAs = false;
 
       for(let characterName of this.activeCharacters) {
-        if(this.actAs === null && characterName === playerCharacterName)  {
-          continue;
+        // actAs is $narrator so we take the first character in the list
+        if(this.actAs === "$narrator") {
+          selectedCharacter = characterName;
+          break;
         }
-        if(this.actAs === characterName) {
-          continue;
+        // actAs is null, so we take the first character in the list that is not
+        // the player character
+        if(this.actAs === null && characterName !== playerCharacterName) {
+          selectedCharacter = characterName;
+          break;
         }
-        selectedCharacter = characterName;
-        break;
+        // actAs is set, so we find the first non player character after the current actAs
+        // if actAs is the last character in the list, we set actAs to null
+        if(foundActAs) {
+          selectedCharacter = characterName;
+          break;
+        } else {
+          if(characterName === this.actAs) {
+            foundActAs = true;
+          }
+        }
       }
 
       if(selectedCharacter === null || selectedCharacter === playerCharacterName) {
@@ -868,6 +909,9 @@ export default {
         return agent.label;
       }
       return null;
+    },
+    openAgentSettings(agentName, section) {
+      this.$refs.aiAgent.openSettings(agentName, section);
     },
     configurationRequired() {
       if (!this.$refs.aiClient || this.connecting || (!this.connecting && !this.connected)) {
@@ -969,7 +1013,7 @@ export default {
     },
 
     messageInputLongHint() {
-      const DIALOG_HINT = "Ctrl+Enter to autocomplete, Shift+Enter for newline, Tab to act as another character";
+      const DIALOG_HINT = "Ctrl+Enter to autocomplete, Shift+Enter for newline, Tab to act as another character. Start messages with '@' to do an action. (e.g., '@look at the door')";
 
       if(this.waitingForInput) {
         if(this.inputRequestInfo.reason === "talk") {

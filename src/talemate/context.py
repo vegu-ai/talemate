@@ -3,7 +3,10 @@ from contextvars import ContextVar
 import pydantic
 import structlog
 
+from talemate.exceptions import SceneInactiveError
+
 __all__ = [
+    "assert_active_scene",
     "scene_is_loading",
     "rerun_context",
     "active_scene",
@@ -19,6 +22,8 @@ log = structlog.get_logger(__name__)
 
 class InteractionState(pydantic.BaseModel):
     act_as: str | None = None
+    from_choice: str | None = None
+    input: str | None = None
 
 
 scene_is_loading = ContextVar("scene_is_loading", default=None)
@@ -79,3 +84,11 @@ class Interaction:
 
     def __exit__(self, *args):
         interaction.reset(self.token)
+
+
+def assert_active_scene(scene: object):
+    if not active_scene.get():
+        raise SceneInactiveError("Scene is not active")
+    
+    if active_scene.get() != scene:
+        raise SceneInactiveError("Scene has changed")

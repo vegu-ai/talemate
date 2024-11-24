@@ -19,7 +19,8 @@
                 label="World information"
                 hint="Describe the world information here. This could be a description of a location, a historical event, or anything else that is relevant to the world." 
                 :color="dirty ? 'dirty' : ''"
-                @update:model-value="queueSave()"
+                @update:model-value="dirty = true"
+                @blur="save(true)"
                 auto-grow
                 max-rows="24"
                 rows="5">
@@ -31,7 +32,7 @@
                 'This entry will only be included when pinned and never be included via automatic relevancy matching.' :
                 'This entry may be included via automatic relevancy matching.'
             )"
-            @change="queueSave(500)"></v-checkbox>
+            @change="save()"></v-checkbox>
         </v-form>
 
         <v-card-actions v-if="isNewEntry">
@@ -143,7 +144,12 @@ export default {
             }, delay);
         },
 
-        save() {
+        save(only_if_dirty = false) {
+
+            if(only_if_dirty && !this.dirty) {
+                return;
+            }
+
             this.$refs.form.validate();
             if(!this.formValid) {
                 return;

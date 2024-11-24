@@ -8,6 +8,10 @@ from talemate.instance import get_agent
 log = structlog.get_logger("talemate.server.assistant")
 
 
+class ForkScenePayload(pydantic.BaseModel):
+    message_id: int
+    save_name: str | None = None
+
 class AssistantPlugin:
     router = "assistant"
 
@@ -86,3 +90,24 @@ class AssistantPlugin:
         except Exception as e:
             log.error("Error running autocomplete", error=str(e))
             emit("autocomplete_suggestion", "")
+
+
+    async def handle_fork_new_scene(self, data: dict):
+        """
+        Allows to fork a new scene from a specific message
+        in the current scene.
+        
+        All content after the message will be removed and the
+        context database will be re imported ensuring a clean state.
+        
+        All state reinforcements will be reset to their most recent
+        state before the message.
+        """
+        
+        payload = ForkScenePayload(**data)
+        
+        creator = get_agent("creator")
+        
+        await creator.fork_scene(payload.message_id, payload.save_name)
+        
+        

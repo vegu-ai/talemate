@@ -14,6 +14,7 @@ from talemate.instance import get_agent
 from talemate.scene_message import SceneMessage
 from talemate.util import iso8601_diff_to_human
 from talemate.world_state.templates import GenerationOptions
+from talemate.exceptions import GenerationCancelled
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -78,7 +79,11 @@ def history_with_relative_time(history: list[str], scene_time: str) -> list[dict
         {
             "text": entry["text"],
             "ts": entry["ts"],
+            "ts_start": entry.get("ts_start", None),
+            "ts_end": entry.get("ts_end", None),
             "time": iso8601_diff_to_human(scene_time, entry["ts"]),
+            "time_start": iso8601_diff_to_human(scene_time, entry["ts_start"] if entry.get("ts_start") else None),
+            "time_end": iso8601_diff_to_human(scene_time, entry["ts_end"] if entry.get("ts_end") else None),
         }
         for entry in history
     ]
@@ -97,10 +102,12 @@ async def rebuild_history(
     scene.archived_history = [
         ah for ah in scene.archived_history if ah.get("end") is None
     ]
+    
+    scene.layered_history = []
 
     scene.saved = False
 
-    scene.ts = scene.archived_history[-1].ts if scene.archived_history else "PT0S"
+    scene.sync_time()
 
     summarizer = get_agent("summarizer")
 
@@ -109,6 +116,8 @@ async def rebuild_history(
 
     try:
         while True:
+            
+            await asyncio.sleep(0.1)
 
             if not scene.active:
                 # scene is no longer active
@@ -120,20 +129,25 @@ async def rebuild_history(
                 "status",
                 message=f"Rebuilding historical archive... {entries}/~{total_entries}",
                 status="busy",
+                data={"cancellable": True},
             )
 
             more = await summarizer.build_archive(
                 scene, generation_options=generation_options
             )
 
-            scene.ts = scene.archived_history[-1]["ts"]
+            scene.sync_time()
 
             if callback:
-                callback()
+                await callback()
 
             entries += 1
             if not more:
                 break
+    except GenerationCancelled:
+        log.info("Generation cancelled, stopping rebuild of historical archive")
+        emit("status", message="Rebuilding of archive cancelled", status="info")
+        return
     except Exception as e:
         log.exception("Error rebuilding historical archive", error=e)
         emit("status", message="Error rebuilding historical archive", status="error")
@@ -141,4 +155,9 @@ async def rebuild_history(
 
     scene.sync_time()
     await scene.commit_to_memory()
+    
+    if summarizer.layered_history_enabled:
+        emit("status", message="Rebuilding layered history...", status="busy")
+        await summarizer.summarize_to_layered_history()
+    
     emit("status", message="Historical archive rebuilt", status="success")

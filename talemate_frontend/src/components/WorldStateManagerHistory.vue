@@ -1,44 +1,70 @@
 <template>
-    <v-card>
-        <v-card-text>
-            
-            <v-alert color="muted" density="compact" variant="text" icon="mdi-timer-sand-complete">
-                Whenever the scene is summarized a new entry is added to the history.
-                This summarization happens either when a certain length threshold is met or when the scene time advances.
-            </v-alert>
 
-            <v-card-actions>
-                <v-spacer></v-spacer>
-                <ConfirmActionInline
-                    action-label="Regenerate History"
-                    confirm-label="Confirm"
-                    color="warning"
-                    icon="mdi-refresh"
-                    :disabled="busy"
-                    @confirm="regenerate"
-                />
-                <v-spacer></v-spacer>
-            </v-card-actions>
-            <p v-if="busy">
-                <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
-            </p>
-            <v-divider v-else class="mt-2"></v-divider>
+    <v-tabs v-model="tab" density="compact" color="secondary">
+        <v-tab key="base">Base</v-tab>
+        <v-tab v-for="(layer, index) in layers" :key="index">{{ layer.title }}</v-tab>
+    </v-tabs>
 
-            <v-sheet class="ma-4 text-caption text-center">
-                <span class="text-muted">Total time passed:</span> {{ scene.data.scene_time }}
-            </v-sheet>
+    <v-tabs-window v-model="tab">
+        <v-tabs-window-item key="base">
+            <v-card>
+                <v-card-text>
+                    
+                    <v-alert color="muted" density="compact" variant="text" icon="mdi-timer-sand-complete">
+                        Whenever the scene is summarized a new entry is added to the history.
+                        This summarization happens either when a certain length threshold is met or when the scene time advances.
+                    </v-alert>
+        
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <ConfirmActionInline
+                            action-label="Regenerate History"
+                            confirm-label="Confirm"
+                            color="warning"
+                            icon="mdi-refresh"
+                            :disabled="busy"
+                            @confirm="regenerate"
+                        />
+                        <v-spacer></v-spacer>
+                    </v-card-actions>
+                    <p v-if="busy">
+                        <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
+                    </p>
+                    <v-divider v-else class="mt-2"></v-divider>
+        
+                    <v-sheet class="ma-4 text-caption text-center">
+                        <span class="text-muted">Total time passed:</span> {{ scene.data.scene_time }}
+                    </v-sheet>
+        
+                    <v-list slim density="compact">
+                        <v-list-item v-for="(entry, index) in history" :key="index" class="text-body-2" prepend-icon="mdi-clock">
+                            <v-list-item-subtitle>{{ entry.time }}</v-list-item-subtitle>
+                            <div class="history-entry text-muted">
+                                {{ entry.text }}
+                            </div>
+                        </v-list-item>
+                    </v-list>
+        
+                </v-card-text>
+            </v-card>
+        </v-tabs-window-item>
+        <v-tabs-window-item v-for="(layer, index) in layers" :key="index">
+            <v-card>
+                <v-card-text>
+                    <v-list slim density="compact">
+                        <v-list-item v-for="(entry, index) in layer.entries" :key="index" class="text-body-2" prepend-icon="mdi-clock">
+                            <v-list-item-subtitle>{{ timespan(entry) }}</v-list-item-subtitle>
+                            <div class="history-entry text-muted">
+                                {{ entry.text }}
+                            </div>
+                        </v-list-item>
+                    </v-list>
+                </v-card-text>
+            </v-card>
+        </v-tabs-window-item>
+    </v-tabs-window>
 
-            <v-list slim density="compact">
-                <v-list-item v-for="(entry, index) in history" :key="index" class="text-body-2" prepend-icon="mdi-clock">
-                    <v-list-item-subtitle>{{ entry.time }}</v-list-item-subtitle>
-                    <div class="history-entry text-muted">
-                        {{ entry.text }}
-                    </div>
-                </v-list-item>
-            </v-list>
 
-        </v-card-text>
-    </v-card>
 </template>
 
 <script>
@@ -57,7 +83,19 @@ export default {
     data() {
         return {
             history: [],
+            layered_history: [],
             busy: false,
+            tab: 'base',
+        }
+    },
+    computed: {
+        layers() {
+            return this.layered_history.map((layer, index) => {
+                return {
+                    title: `Layer ${index}`,
+                    entries: layer,
+                }
+            });
         }
     },
     inject:[
@@ -74,12 +112,20 @@ export default {
         },
         regenerate() {
             this.history = [];
+            this.layered_history = [];
             this.busy = true;
             this.getWebsocket().send(JSON.stringify({
                 type: "world_state_manager",
                 action: "regenerate_history",
                 generation_options: this.generationOptions,
             }));
+        },
+        timespan(entry) {
+            // if different display as range
+            if(entry.time_start != entry.time_end) {
+                return `${entry.time_start} to ${entry.time_end}`;
+            }
+            return `${entry.time_end}`;
         },
         requestSceneHistory() {
             this.getWebsocket().send(JSON.stringify({
@@ -93,9 +139,11 @@ export default {
             }
 
             if(message.action == 'scene_history') {
-                this.history = message.data;
+                this.history = message.data.history;
+                this.layered_history = message.data.layered_history;
                 // reverse
                 this.history = this.history.reverse();
+                this.layered_history = this.layered_history.map(layer => layer.reverse());
             } else if (message.action == 'history_entry_added') {
                 this.history = message.data;
                 // reverse
@@ -115,3 +163,8 @@ export default {
 }
 
 </script>
+<style scoped>
+.history-entry {
+    white-space: pre-wrap;
+}
+</style>

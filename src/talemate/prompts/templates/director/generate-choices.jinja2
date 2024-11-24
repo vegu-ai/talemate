@@ -1,0 +1,50 @@
+{% block rendered_context -%}
+{% include "character-context.jinja2" -%}
+{% endblock %}
+<|SECTION:SCENE|>
+{% block scene_history -%}
+{% set scene_context = scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=False) -%}
+{% for scene_line in scene_context -%}
+{{ scene_line }}
+
+{% endfor %}
+{% endblock -%}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Generate {{ num_choices }} interesting actions for {{ player_character.name }} to advance the current scene in this text adventure game. Consider:
+
+1. Examining intriguing objects or characters for more detail
+2. Interacting with the environment in meaningful ways
+3. Taking actions that naturally progress the story
+
+Format each action as a short, concise command from {{ player_character.name }}'s perspective, such as:
+"Look at the strange artifact."
+"Ask the merchant about the rumors."
+"Climb the crumbling staircase."
+"Inspect the mysterious footprints."
+"Eavesdrop on the whispering guards."
+"Pick up the discarded letter."
+"Offer the beggar a coin."
+"Attempt to decipher the ancient runes."
+"Search the bookshelf for hidden compartments."
+"Try the rusty key in the lock."
+
+Requirements:
+
+- The actions MUST fit the scene's tone and writing style. This is {{ scene.context }}.{% if decensor %} The reader has already consented and is expecting to be exposed to such themes.{% endif %}
+- The text describing the action must be short and concise.
+- Offer varied options without drastic pacing changes, that make sequential sense at the ending of the scene.
+- The actions must be significantly different from each other.
+{% if instructions %}- {{ instructions}}{% endif %}
+
+Expected Response:
+
+You MUST provide your response in the following format:
+
+ANALYSIS: <Brief analysis of what happens at the end of the scene. Specifically pay attention to whether or not another character has had dialogue that could be responded to.>
+PLANNING: <Think through directions to take the scene next. The directions must make sense in relation to the ending state of the scene as it is currently. If another character has said something, include direct responses to that character. Remember, {{ player_character.name }} is the next one to act, so plan from {{ player_character.name }}'s perspective.>
+ACTIONS: 
+1. <first action choice, formatted as a short button label>
+2. <second action choice, formatted as a short button label>
+...
+{{ set_prepared_response('ANALYSIS:') }}

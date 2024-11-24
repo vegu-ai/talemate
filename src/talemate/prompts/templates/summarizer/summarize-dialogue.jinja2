@@ -1,38 +1,21 @@
+{% set summary_target = "chapter "+to_str(num_extra_context+1) %}
 {% if summarization_method == "facts" -%}
 {% set output_type = "factual list" -%}
+{% set max_length = "" %}
 {% else -%}
 {% set output_type = "narrative description" -%}
+{% set max_length = " Length: 1 - 2 paragraphs" %}
 {% endif -%}
 {% if extra_context -%}
-<|SECTION:PREVIOUS CONTEXT|>
-{{ extra_context }}
+<|SECTION:PREVIOUS CHAPTERS|>
+{% for chapter_summary in extra_context %}
+## Chapter {{ loop.index }}
+{{ chapter_summary }}
+
+{% endfor %}
 <|CLOSE_SECTION|>
 {% endif -%}
-<|SECTION:TASK|>
-Question: What happens explicitly within the dialogue section alpha below? Summarize into a {{output_type}}.
-Content Context: This is a specific scene from {{ scene.context }}
-{% if output_type == "narrative description" %}
-Use an informal and colloquial register with a conversational tone. Overall, the narrative is informal, conversational, natural, and spontaneous, with a sense of immediacy.
-{% endif %}
-
-{% if summarization_method == "long" -%}
-This should be a detailed summary of the dialogue, including all the juicy details.
-{% elif summarization_method == "short" -%}
-This should be a short and specific summary of the dialogue, including the most important details. 2 - 3 sentences.
-{% endif -%}
-
-YOU MUST ONLY SUMMARIZE THE CONTENT IN DIALOGUE SECTION ALPHA.
-
-{% if output_type == "narrative description" %}
-Expected Answer: A summarized {{output_type}} of the dialogue section alpha, that can be inserted into the ongoing story in place of the dialogue.
-{% elif output_type == "factual list" %}
-Expected Answer: A highly accurate numerical chronological list of the events and state changes that occur in the dialogue section alpha. Important is anything that causes a state change in the scene, characters or objects. Use simple, clear language, and note details. Use exact words. Note all the state changes. Leave nothing out.
-{% endif %}
-{% if extra_instructions -%}
-{{ extra_instructions }}
-{% endif -%}
-<|CLOSE_SECTION|>
-<|SECTION:DIALOGUE SECTION ALPHA|>
+<|SECTION:{{ summary_target.upper() }} (To be summarized)|>
 {{ dialogue }}
 <|CLOSE_SECTION|>
 {% if generation_options and generation_options.writing_style %}
@@ -40,5 +23,41 @@ Expected Answer: A highly accurate numerical chronological list of the events an
 {{ generation_options.writing_style.instructions }}
 <|CLOSE_SECTION|>
 {% endif %}
-<|SECTION:SUMMARIZATION OF DIALOGUE SECTION ALPHA|>
-{{ bot_token }}In the dialogue section alpha,
+<|SECTION:TASK|>
+Summarize {{ summary_target }} into a {{output_type}}.
+
+This is a specific chapter from {{ scene.context }}.
+{% if output_type == "narrative description" %}
+The tone of the summary must match the tone of the dialogue.
+{% endif %}
+
+{% if summarization_method == "long" -%}
+This should be a detailed summary of the dialogue, including all the juicy details.
+{% set max_length = " Length: 1 - 3 paragraphs" %}
+{% elif summarization_method == "short" -%}
+This should be a short and specific summary of the dialogue, including the most important details. 2 - 3 sentences.
+{% set max_length = " Length: 1 paragraph" %}
+{% endif -%}
+
+YOU MUST ONLY SUMMARIZE THE CONTENT EXPLICITLY STATED WITHIN {{ summary_target.upper() }}. 
+YOU MUST NOT INCLUDE OR REPEAT THE PREVIOUS CONTEXT iN YOUR SUMMARY.
+YOU MUST NOT QUOTE DIALOGUE.
+
+{% if output_type == "narrative description" %}
+Provide a summarized {{output_type}} of {{ summary_target }}.
+{% elif output_type == "factual list" %}
+Provide a highly accurate numerical chronological list of the events and state changes that occur in {{ summary_target }}. Important is anything that causes a state change in the scene, characters or objects. Use simple, clear language, and note details. Use exact words. Note all the state changes. Leave nothing out.
+{% endif %}
+
+{% if extra_context %}Use the previous context to inform your understanding of the whole story, but only summarize what is explicitly mentioned in {{ summary_target }}.{% endif -%}
+
+{% if extra_instructions -%}
+{{ extra_instructions }}
+{% endif -%}
+Your response must follow this format:
+
+ANALYSIS: <brief analysis the cross over point from previous chapters to {{ summary_target }}. How does {{ summary_target }} start and what should be in the summary.>
+SUMMARY: <summary of {{ summary_target }} based on analysis.{{ max_length }}>
+<|CLOSE_SECTION|>
+<|SECTION:SUMMARY OF {{ summary_target.upper() }}|>
+{{ set_prepared_response("ANALYSIS:") }}

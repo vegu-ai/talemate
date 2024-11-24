@@ -23,7 +23,7 @@ import structlog
 import talemate.instance as instance
 import talemate.thematic_generators as thematic_generators
 from talemate.config import load_config
-from talemate.context import rerun_context
+from talemate.context import rerun_context, active_scene
 from talemate.emit import emit
 from talemate.exceptions import LLMAccuracyError, RenderPromptError
 from talemate.util import (
@@ -32,6 +32,7 @@ from talemate.util import (
     extract_json,
     fix_faulty_json,
     remove_extra_linebreaks,
+    iso8601_diff_to_human,
 )
 from talemate.util.prompt import condensed
 
@@ -366,8 +367,10 @@ class Prompt:
         env.globals["instruct_text"] = self.instruct_text
         env.globals["agent_action"] = self.agent_action
         env.globals["retrieve_memories"] = self.retrieve_memories
+        env.globals["time_diff"] = self.time_diff
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
+        env.globals["to_str"] = lambda x: str(x)
         env.globals["config"] = self.config
         env.globals["len"] = lambda x: len(x)
         env.globals["max"] = lambda x, y: max(x, y)
@@ -386,6 +389,7 @@ class Prompt:
         env.globals["llm_can_be_coerced"] = lambda: (
             self.client.can_be_coerced if self.client else False
         )
+        env.globals["text_to_chunks"] = self.text_to_chunks
         env.globals["emit_narrator"] = lambda message: emit("system", message=message)
         env.filters["condensed"] = condensed
         ctx.update(self.vars)
@@ -400,7 +404,7 @@ class Prompt:
 
         # Render the template with the prompt variables
         self.eval_context = {}
-        self.dedupe_enabled = True
+        #self.dedupe_enabled = True
         try:
             self.prompt = template.render(ctx)
             if not sectioning_handler:
@@ -598,6 +602,44 @@ class Prompt:
             emit("status", status=status, message=message, data=kwargs)
         else:
             emit("status", status=status, message=message)
+
+    def time_diff(self, iso8601_time: str):
+        scene = active_scene.get()
+        if not iso8601_time:
+            return ""
+        return iso8601_diff_to_human(iso8601_time, scene.ts)
+
+    def text_to_chunks(self, text:str, chunk_size:int=512) -> list[str]:
+        """
+        Takes a text string and splits it into chunks based length of the text.
+        
+        Arguments:
+        
+        - text: The text to split into chunks.
+        - chunk_size: number of characters in each chunk.
+        """
+        
+        chunks = []
+        
+        for i, line in enumerate(text.split("\n")):
+            
+            # dont push empty lines into empty chunks
+            if not line.strip() and (not chunks or not chunks[-1]):
+                continue
+            
+            if not chunks:
+                chunks.append([line])
+                continue
+            
+            if len("\n".join(chunks[-1])) + len(line) < chunk_size:
+                chunks[-1].append(line)
+            else:
+                chunks.append([line])
+        
+
+        return ["\n\n".join(chunk) for chunk in chunks]
+        
+
 
     def set_prepared_response(self, response: str, prepend: str = ""):
         """

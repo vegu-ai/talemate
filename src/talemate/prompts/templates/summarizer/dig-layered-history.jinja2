@@ -8,7 +8,7 @@
 {% set can_dig = layer > -1 %}
 {% for entry in entries %}
 {% if entry.get("layer") > -1 or layer == -1 %}<|SECTION:CHAPTER {{ loop.index }}|>
-{{ time_diff(entry.get("ts_start", entry.get("ts"))) }}
+{{ time_diff(entry.get("ts_end", entry.get("ts"))) }}
 {{ entry["text"] }}
 <|CLOSE_SECTION|>{% endif %}
 {% endfor %}

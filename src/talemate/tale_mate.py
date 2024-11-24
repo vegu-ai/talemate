@@ -1184,7 +1184,8 @@ class Scene(Emitter):
         self, 
         lines: int = 3, 
         ignore: list[str | SceneMessage] = None, 
-        start: int = None
+        start: int = None,
+        as_format: str = "movie_script",
     ) -> str:
         """
         Returns a snapshot of the scene history
@@ -1218,7 +1219,7 @@ class Scene(Emitter):
             if len(collected) >= lines:
                 break
 
-        return "\n".join([str(message) for message in collected])
+        return "\n".join([message.as_format(as_format) for message in collected])
 
     def push_archive(self, entry: data_objects.ArchiveEntry):
         """

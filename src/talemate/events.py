@@ -65,3 +65,8 @@ class GameLoopActorIterEvent(GameLoopBase):
 @dataclass
 class GameLoopNewMessageEvent(GameLoopBase):
     message: SceneMessage
+
+
+@dataclass
+class PlayerTurnStartEvent(Event):
+    pass

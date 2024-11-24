@@ -52,7 +52,7 @@ Emotions and actions should be written in italics. For example:
     *smiles* "I'm so glad you're here."
     END-OF-LINE
 
-{{ extra_instructions }}
+{{ task_instructions }}
 
 STAY IN THE SCENE. YOU MUST NOT BREAK CHARACTER. YOU MUST NOT BREAK THE FOURTH WALL.
 
@@ -62,6 +62,11 @@ YOU MUST ONLY WRITE NEW DIALOGUE FOR {{ talking_character.name.upper() }}.
 
 {% if scene.count_messages() >= 5 and not talking_character.dialogue_instructions %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is informal, conversational, natural, and spontaneous, with a sense of immediacy.
 {% endif -%}
+<|CLOSE_SECTION|>
+<|SECTION:How to use internal notes|>
+Internal notes may be given to you to help you with consistency when writing.
+
+They may be instructions on how the character should act or simply add some context that may inform the character's next dialogue.
 <|CLOSE_SECTION|>
 
 {% set general_reinforcements = scene.world_state.filter_reinforcements(insert=['all-context']) %}
@@ -104,21 +109,17 @@ YOU MUST ONLY WRITE NEW DIALOGUE FOR {{ talking_character.name.upper() }}.
 {% endblock -%}
 {% block scene_history -%}
 {% set scene_context = scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=talking_character.name) -%}
-{%- if talking_character.dialogue_instructions and scene.count_messages() > 5 -%}
-    {%- if scene.count_messages() < 15 -%}
-    {%- set _ = scene_context.insert(-3, "(Internal acting instructions for "+talking_character.name+": "+talking_character.dialogue_instructions+")") -%}
-    {%- else -%}
-    {%- set _ = scene_context.insert(-10, "(Internal acting instructions for "+talking_character.name+": "+talking_character.dialogue_instructions+")") -%}
-    {%- endif -%}
+{%- if actor_instructions_offset > 0 and talking_character.dialogue_instructions and scene.count_messages() > actor_instructions_offset -%}
+    {%- set _ = scene_context.insert(-actor_instructions_offset, "(Internal acting instructions for "+talking_character.name+": "+talking_character.dialogue_instructions+" "+actor_instructions+")") -%}
 {% endif -%}
 {% for scene_line in scene_context -%}
-{{ scene_line }}END-OF-LINE
+{{ scene_line }}
 
 {% endfor %}
 {% endblock -%}
 <|CLOSE_SECTION|>
-{% if scene.count_messages() < 5 %}
-{% if not talking_character.dialogue_instructions %}(Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is informal, conversational, natural, and spontaneous, with a sense of immediacy.){% else %}(Internal acting instructions for {{ talking_character.name }}: {{ talking_character.dialogue_instructions }}){% endif -%}
+{% if scene.count_messages() < actor_instructions_offset or actor_instructions_offset == 0 %}
+{% if not talking_character.dialogue_instructions %}({% if actor_instructions %} {{ actor_instructions }}{% else %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is informal, conversational, natural, and spontaneous, with a sense of immediacy.{% endif -%}){% else %}(Internal acting instructions for {{ talking_character.name }}: {{ talking_character.dialogue_instructions }}{% if actor_instructions %} {{ actor_instructions }}{% endif %}){% endif -%}
 {% endif -%}
 {% if rerun_context and rerun_context.direction -%}
 {% if rerun_context.method == 'replace' -%}
@@ -128,6 +129,11 @@ YOU MUST ONLY WRITE NEW DIALOGUE FOR {{ talking_character.name.upper() }}.
 
 # Requested changes: {{ rerun_context.direction }}
 {% endif -%}
+{% endif -%}
+{% if direct_instruction -%}
+{{ talking_character.name }}'s next action: {{ direct_instruction }}
+
+You must not add additional actions. You must not add additional actions. Dialogue generated should be natural sounding and realistic. Less is more.
 {% endif -%}
 {{ bot_token }}{{ talking_character.name.upper() }}
 {% if partial_message -%}

@@ -5,6 +5,11 @@
                 <span class="headline">{{ title }}</span>
             </v-card-title>
             <v-card-text>
+
+                <v-alert v-if="instructions" color="muted" variant="text">
+                    {{ instructions }}
+                </v-alert>
+
                 <v-form @submit.prevent="proceed" ref="form" v-model="valid">
                     <v-row v-if="inputType === 'multiline'">
                         <v-col cols="12">
@@ -45,6 +50,7 @@ export default {
     name: "RequestInput",
     props: {
         title: String,
+        instructions: String,
         inputType: {
             type: String,
             default: 'text',
@@ -54,6 +60,7 @@ export default {
         return {
             open: false,
             valid: false,
+            extra_params: {},
             input: '',
             rules: {
                 required: value => !!value || 'Required.',
@@ -69,15 +76,16 @@ export default {
                 return;
             }
 
-            this.$emit('continue', this.input);
+            this.$emit('continue', this.input, this.extra_params);
             this.open = false;
         },
         cancel() {
             this.$emit('cancel');
             this.open = false;
         },
-        openDialog() {
+        openDialog(extra_params) {
             this.open = true;
+            this.extra_params = extra_params;
             this.input = '';
         }
     }

@@ -1,0 +1,14 @@
+{% if extra_context %}{% set section_name = "chapter la" %}{% else %}{% set section_name = "chapter 1" %}{% endif %}
+{% if extra_context %}
+
+<|SECTION:PREVIOUS CONTEXT|>
+{{ extra_context }}
+<|CLOSE_SECTION|>
+{% endif -%}
+<|SECTION:{{ section_name }}|>
+{{ content }}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+List up to five major story developments that happen in {{ section_name }}. 
+<|CLOSE_SECTION|>
+{{ set_prepared_response("1.") }}

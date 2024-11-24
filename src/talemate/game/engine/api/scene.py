@@ -93,7 +93,7 @@ def create(scene: "Scene") -> "ScopedAPI":
 
             validated = Arguments(budget=budget, keep_director=keep_director)
 
-            return scene.context_history(validated.budget, validated.keep_director)
+            return scene.context_history(validated.budget, keep_director=validated.keep_director)
 
         def get_player_character(self) -> schema.CharacterSchema | None:
             """

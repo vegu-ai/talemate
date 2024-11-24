@@ -1,0 +1,12 @@
+<|SECTION:CHARACTERS|>
+{% for character in scene.characters %}
+### {{ character.name }}
+{% if max_tokens > 6000 -%}
+{{ character.sheet }}
+{% else -%}
+{{ character.filtered_sheet(['age', 'gender']) }}
+{{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
+{% endif %}
+{{ character.description }}
+{% endfor %}
+<|CLOSE_SECTION|>

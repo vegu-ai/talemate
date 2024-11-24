@@ -7,12 +7,17 @@ import structlog
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
 from talemate.prompts.base import set_default_sectioning_handler
+from talemate.instance import get_agent
 
 __all__ = [
     "CmdDebugOn",
     "CmdDebugOff",
     "CmdPromptChangeSectioning",
     "CmdRunAutomatic",
+    "CmdSummarizerGenerateTimeline",
+    "CmdSummarizerUpdatedLayeredHistory",
+    "CmdSummarizerResetLayeredHistory",
+    "CmdSummarizerDigLayeredHistory",
 ]
 
 log = structlog.get_logger("talemate.commands.cmd_debug_tools")
@@ -178,3 +183,68 @@ class CmdDumpSceneSerialization(TalemateCommand):
 
     async def run(self):
         log.debug("dump_scene_serialization", serialization=self.scene.json)
+
+@register
+class CmdSummarizerGenerateTimeline(TalemateCommand):
+    """
+    Command class for the 'summarizer_generate_timeline' command
+    """
+
+    name = "summarizer_generate_timeline"
+    description = "Generate a timeline from the scene"
+    aliases = ["generate_timeline"]
+
+    async def run(self):
+        summarizer = get_agent("summarizer")
+
+        await summarizer.generate_timeline()
+        
+@register
+class CmdSummarizerUpdatedLayeredHistory(TalemateCommand):
+    """
+    Command class for the 'summarizer_updated_layered_history' command
+    """
+
+    name = "summarizer_updated_layered_history"
+    description = "Update the stepped archive for the summarizer"
+    aliases = ["update_layered_history"]
+
+    async def run(self):
+        summarizer = get_agent("summarizer")
+
+        await summarizer.summarize_to_layered_history()
+        
+@register
+class CmdSummarizerResetLayeredHistory(TalemateCommand):
+    """
+    Command class for the 'summarizer_reset_layered_history' command
+    """
+
+    name = "summarizer_reset_layered_history"
+    description = "Reset the stepped archive for the summarizer"
+    aliases = ["reset_layered_history"]
+
+    async def run(self):
+        summarizer = get_agent("summarizer")
+        self.scene.layered_history = []
+        await summarizer.summarize_to_layered_history()
+        
+@register
+class CmdSummarizerDigLayeredHistory(TalemateCommand):
+    """
+    Command class for the 'summarizer_dig_layered_history' command
+    """
+
+    name = "summarizer_dig_layered_history"
+    description = "Dig into the layered history"
+    aliases = ["dig_layered_history"]
+
+    async def run(self):
+        if not self.args:
+            self.emit("system", "You must specify a query")
+            
+        query = self.args[0]
+        
+        summarizer = get_agent("summarizer")
+        
+        await summarizer.dig_layered_history(query)

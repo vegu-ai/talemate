@@ -1,10 +1,16 @@
 <template>
+    <RequestInput 
+    ref="requestForkName" 
+    title="Save Forked Scene As"
+    instructions="A new copy of the scene will be forked from the message you've selected. All progress after the message will be removed, allowing you to make new choices and take the scene in a different direction."
+    @continue="(name, params) => { forkScene(params.message_id, name) }" /> 
+
     <div class="message-container" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;">
         <div v-for="(message, index) in messages" :key="index">
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -37,21 +43,31 @@
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`">
-                    <NarratorMessage :text="message.text" :message_id="message.id" />
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" />
                 </div>
             </div>
-            <div v-else-if="message.type === 'director'" :class="`message ${message.type}`">
+            <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="director-message"  :id="`message-${message.id}`">
-                    <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action"/>
+                    <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action" :uxLocked="uxLocked"/>
                 </div>
             </div>
             <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
                 <div class="time-message"  :id="`message-${message.id}`">
-                    <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" />
+                    <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :uxLocked="uxLocked" />
+                </div>
+            </div>
+            <div v-else-if="message.type === 'player_choice'" :class="`message ${message.type}`">
+                <div class="player-choice-message"  :id="`message-player-choice`">
+                    <PlayerChoiceMessage :choices="message.data.choices" @close="closePlayerChoice" :uxLocked="uxLocked" />
+                </div>
+            </div>
+            <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
+                <div class="context-investigation-message"  :id="`message-${message.id}`">
+                    <ContextInvestigationMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" />
                 </div>
             </div>
 
-            <div v-else :class="`message ${message.type}`">
+            <div v-else-if="!getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 {{ message.text }}
             </div>
         </div>
@@ -64,6 +80,9 @@ import NarratorMessage from './NarratorMessage.vue';
 import DirectorMessage from './DirectorMessage.vue';
 import TimePassageMessage from './TimePassageMessage.vue';
 import StatusMessage from './StatusMessage.vue';
+import RequestInput from './RequestInput.vue';
+import PlayerChoiceMessage from './PlayerChoiceMessage.vue';
+import ContextInvestigationMessage from './ContextInvestigationMessage.vue';
 
 const MESSAGE_FLAGS = {
     NONE: 0,
@@ -72,16 +91,35 @@ const MESSAGE_FLAGS = {
 
 export default {
     name: 'SceneMessages',
+    props: {
+        appearanceConfig: {
+            type: Object,
+        },
+        uxLocked: {
+            type: Boolean,
+            default: false,
+        },
+    },
     components: {
         CharacterMessage,
         NarratorMessage,
         DirectorMessage,
         TimePassageMessage,
         StatusMessage,
+        RequestInput,
+        PlayerChoiceMessage,
+        ContextInvestigationMessage,
     },
     data() {
         return {
             messages: [],
+            defaultColors: {
+                "narrator": "#B39DDB",
+                "character": "#FFFFFF",
+                "director": "#FF5722",
+                "time": "#B39DDB",
+                "context_investigation": "#607D8B",
+            },
         }
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput'],
@@ -90,9 +128,46 @@ export default {
             requestDeleteMessage: this.requestDeleteMessage,
             createPin: this.createPin,
             fixMessageContinuityErrors: this.fixMessageContinuityErrors,
+            forkSceneInitiate: this.forkSceneInitiate,
+            getMessageColor: this.getMessageColor,
+            getMessageStyle: this.getMessageStyle,
         }
     },
     methods: {
+
+        getMessageColor(typ,color) {
+            if(!this.appearanceConfig || !this.appearanceConfig.scene[`${typ}_messages`].color) {
+                return this.defaultColors[typ];
+            }
+
+            return color || this.appearanceConfig.scene[`${typ}_messages`].color;
+        },
+
+        getMessageTypeHidden(typ) {
+            // messages are hidden if appearanceCOnfig.scene[`${typ}_messages`].show is false
+            // true and undefined are the same
+
+            if(!this.appearanceConfig || !this.appearanceConfig.scene[`${typ}_messages`]) {
+                return false;
+            } else if(this.appearanceConfig && this.appearanceConfig.scene[`${typ}_messages`].show === false) {
+                return true;
+            }
+
+            return false;
+        },
+
+        getMessageStyle(typ) {
+            let styles = "";
+            let config = this.appearanceConfig.scene[`${typ}_messages`];
+            if (config.italic) {
+                styles += "font-style: italic;";
+            }
+            if (config.bold) {
+                styles += "font-weight: bold;";
+            }
+            styles += "color: " + this.getMessageColor(typ, config.color) + ";";
+            return styles;
+        },
 
         clear() {
             this.messages = [];
@@ -164,6 +239,31 @@ export default {
             ].includes(type);
         },
 
+        closePlayerChoice() {
+            // find the most recent player choice message and remove it
+            for (let i = this.messages.length - 1; i >= 0; i--) {
+                if (this.messages[i].type === 'player_choice') {
+                    this.messages.splice(i, 1);
+                    break;
+                }
+            }
+        },
+
+        forkSceneInitiate(message_id) {
+            this.$refs.requestForkName.openDialog(
+                { message_id: message_id }
+            );
+        },
+
+        forkScene(message_id, save_name) {
+            this.getWebsocket().send(JSON.stringify({ 
+                type: 'assistant',
+                action: 'fork_new_scene',
+                message_id: message_id,
+                save_name: save_name,
+            }));
+        },
+
         handleMessage(data) {
 
             var i;
@@ -173,6 +273,14 @@ export default {
             }
 
             if (data.type == "remove_message") {
+
+                // if the last message is a player_choice message
+                // and the second to last message is the message to remove
+                // also remove the player_choice message
+
+                if (this.messages.length > 1 && this.messages[this.messages.length - 1].type === 'player_choice' && this.messages[this.messages.length - 2].id === data.id) {
+                    this.messages.pop();
+                }
 
                 // find message where type == "character" and id == data.id
                 // remove that message from the array
@@ -229,6 +337,13 @@ export default {
                     return;
                 }
 
+                // if the previous message was a player choice message, remove it
+                if (this.messageTypeIsSceneMessage(data.type)) {
+                    if(this.messages.length > 0 && this.messages[this.messages.length - 1].type === 'player_choice') {
+                        this.messages.pop();
+                    }
+                }
+
                 if (data.type === 'character') {
                     const parts = data.message.split(':');
                     const character = parts.shift();
@@ -244,6 +359,9 @@ export default {
                             action: data.action
                         }
                     );
+                } else if (data.type === 'player_choice') {
+                    console.log('player_choice', data);
+                    this.messages.push({ id: data.id, type: data.type, data: data.data });
                 } else if (this.messageTypeIsSceneMessage(data.type)) {
                     this.messages.push({ id: data.id, type: data.type, text: data.message, color: data.color, character: data.character, status:data.status, ts:data.ts }); // Add color property to the message
                 } else if (data.type === 'status' && data.data && data.data.as_scene_message === true) {

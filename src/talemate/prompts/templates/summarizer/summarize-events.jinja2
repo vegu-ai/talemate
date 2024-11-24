@@ -1,3 +1,46 @@
-Instruction: Summarize the events within the dialogue as accurately as you can.
-Expected Answer: A list short narrative descriptions
-Narrator answers:
+{% if extra_context %}{% set section_name = "chapter 2" %}{% else %}{% set section_name = "chapter 1" %}{% endif %}
+{% include "character-context.jinja2" -%}
+{% if extra_context %}
+<|SECTION:HISTORY|>
+{{ extra_context }}
+<|CLOSE_SECTION|>
+{% endif -%}
+<|SECTION:{{ section_name }}|>
+{{ section_name.upper() }} START
+{% for chunk in text_to_chunks(dialogue, chunk_size=2500) %}
+CHUNK {{ loop.index }}: 
+{{ chunk }}
+
+{% endfor %}
+{{ section_name.upper() }} END
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Provide a compressed, short summary for {{ section_name }}.
+
+Do not repeat any information from the previous context. 
+
+Compress each individual chunk, keeping the start and ending points as anchors. 
+
+Ensure the persistence of all important moments, decisions and story developments. 
+
+Specifically mention characters, locations and objects by name. 
+
+Consider the other chunks and the history to inform the context of the summarizations. Each chunk must be summarized in a way that it leads into the next chunk.
+
+YOU MUST NOT ADD COMMENTARY.
+YOU MUST NOT ADD COMBINED SUMMARIZATION OF ALL CHUNKS.
+
+You must provide your response in the following format:
+
+CHUNK 1: <summary of the first chunk>
+
+CHUNK 2: <summary of the second chunk>
+
+...
+<|CLOSE_SECTION|>
+{% if generation_options and generation_options.writing_style %}
+<|SECTION:WRITING STYLE|>
+{{ generation_options.writing_style.instructions }}
+<|CLOSE_SECTION|>
+{% endif %}
+{{ set_prepared_response("CHUNK 1:")}}

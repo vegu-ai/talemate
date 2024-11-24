@@ -413,6 +413,7 @@ export default {
                 type: 'world_state_manager',
                 action: 'save_scene',
                 save_as: copy ? copy : null,
+                project_name: this.scene.data.filename ? this.scene.data.name : this.scene.data.title
             }));
         },
 

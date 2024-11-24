@@ -65,11 +65,13 @@ export default {
         handleMessage(data) {
             if(this.log_socket_messages) {
 
-                if(this.filter_socket_messages) {
+                if(this.filter_socket_messages != "" && this.filter_socket_messages != null) {
                     if(data.type.indexOf(this.filter_socket_messages) === -1) {
                         return;
                     }
                 }
+
+                console.log(data);
 
             }
         }

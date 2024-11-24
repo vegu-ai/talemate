@@ -18,7 +18,7 @@
         <v-card-text v-if="config != null">
             <div class="tiles">
                 <div class="tile" v-for="(scene, index) in recentScenes()" :key="index">
-                    <v-card density="compact" elevation="7"  @click="loadScene(scene)" color="primary" variant="outlined">
+                    <v-card :disabled="!sceneLoadingAvailable || sceneIsLoading" density="compact" elevation="7"  @click="loadScene(scene)" color="primary" variant="outlined">
                         <v-card-title>
                             {{ filenameToTitle(scene.filename) }}
                         </v-card-title>
@@ -42,6 +42,7 @@
 export default {
     name: 'IntroRecentScenes',
     props: {
+        sceneIsLoading: Boolean,
         sceneLoadingAvailable: Boolean,
         config: Object,
     },
@@ -175,6 +176,10 @@ export default {
     flex: 0 0 275px;
     margin: 10px;
     max-width: 275px;
+}
+
+.v-card:disabled {
+    opacity: 0.5;
 }
 
 </style>

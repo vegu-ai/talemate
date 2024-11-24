@@ -1,7 +1,7 @@
 <template>
   <v-alert variant="text" color="narrator" icon="mdi-script-text-outline" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
     <template v-slot:close>
-      <v-btn size="x-small" icon @click="deleteMessage">
+      <v-btn size="x-small" icon @click="deleteMessage" :disabled="uxLocked">
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
@@ -24,7 +24,7 @@
         @keydown.escape.prevent="cancelEdit()">
       </v-textarea>
       <div v-else class="narrator-text" @dblclick="startEdit()">
-        <span v-for="(part, index) in parts" :key="index" :class="{ highlight: part.isNarrative, 'text-narrator': part.isNarrative }">
+        <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(part.isNarrative ? 'narrator' : 'character')">
           {{ part.text }}
         </span>
       </div>
@@ -50,8 +50,8 @@
   
 <script>
 export default {
-  props: ['text', 'message_id'],
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage'],
+  props: ['text', 'message_id', 'uxLocked'],
+  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle'],
   computed: {
     parts() {
       const parts = [];

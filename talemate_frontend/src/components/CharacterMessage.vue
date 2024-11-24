@@ -1,7 +1,7 @@
 <template>
   <v-alert variant="text" :color="color" icon="mdi-chat-outline" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
     <template v-slot:close>
-      <v-btn size="x-small" icon @click="deleteMessage">
+      <v-btn size="x-small" icon @click="deleteMessage" :disabled="uxLocked">
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
@@ -32,7 +32,7 @@
         >
       </v-textarea>
       <div v-else class="character-text" @dblclick="startEdit()">
-        <span v-for="(part, index) in parts" :key="index" :class="{ highlight: part.isNarrative, 'text-narrator': part.isNarrative }">
+        <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(part.isNarrative ? 'narrator' : 'character')">
           <span>{{ part.text }}</span>
         </span>
       </div>
@@ -44,14 +44,19 @@
       <v-chip size="x-small" color="grey-lighten-1" v-else-if="!editing && hovered" variant="text" class="mr-1">
         <v-icon>mdi-pencil</v-icon>
         Double-click to edit.</v-chip>
-        <v-chip size="x-small" label color="success" v-if="!editing && hovered" variant="outlined" @click="createPin(message_id)">
+        
+        <!-- create pin -->
+        <v-chip size="x-small" label color="success" v-if="!editing && hovered" variant="outlined" @click="createPin(message_id)" :disabled="uxLocked">
           <v-icon class="mr-1">mdi-pin</v-icon>
           Create Pin
         </v-chip>
-        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered" variant="outlined" @click="fixMessageContinuityErrors(message_id)">
-          <v-icon class="mr-1">mdi-call-split</v-icon>
-          Fix Continuity Errors
+
+        <!-- fork scene -->
+        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered" variant="outlined" @click="forkSceneInitiate(message_id)" :disabled="uxLocked">
+          <v-icon class="mr-1">mdi-source-fork</v-icon>
+          Fork Scene
         </v-chip>
+
     </v-sheet>
     <div v-else style="height:24px">
 
@@ -61,8 +66,8 @@
   
 <script>
 export default {
-  props: ['character', 'text', 'color', 'message_id'],
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage'],
+  props: ['character', 'text', 'color', 'message_id', 'uxLocked'],
+  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle'],
   computed: {
     parts() {
       const parts = [];

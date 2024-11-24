@@ -9,14 +9,17 @@
                     :color="dirty['title'] ? 'dirty' : ''"
                     :disabled="busy['title']"
                     :loading="busy['title']"
-                    @update:model-value="queueUpdate('title')"
+                    @update:model-value="setFieldDirty('title')"
+                    @blur="update(true)"
                     :placeholder="scene.data.title"
                 ></v-text-field>
             </v-col>
             <v-col cols="12" md="8" lg="6" xl="6">
                 <v-combobox
                     v-model="scene.data.context"
-                    @update:model-value="queueUpdate('context')"
+                    @update:model-value="setFieldDirty('context')"
+                    @blur="update(true)"
+                    :color="dirty['context'] ? 'dirty' : ''"
                     :items="appConfig ? appConfig.creator.content_context: []"
                     messages="This can strongly influence the type of content that is generated, during narration, dialogue and world building."
                     label="Content context"
@@ -30,8 +33,9 @@
                     class="mt-1"
                     ref="description"
                     v-model="scene.data.description"
-                    @update:model-value="queueUpdate('description')"
-                    :color="dirty['description'] ? 'primary' : ''"
+                    @update:model-value="setFieldDirty('description')"
+                    @blur="update(true)"
+                    :color="dirty['description'] ? 'dirty' : ''"
                     :disabled="busy['description']"
                     :loading="busy['description']"
                     label="Description"
@@ -63,7 +67,8 @@
                     auto-grow
                     max-rows="32"
 
-                    @update:model-value="queueUpdate('intro')"
+                    @update:model-value="setFieldDirty('intro')"
+                    @blur="update(true)"
                     :color="dirty['intro'] ? 'dirty' : ''"
                     
                     :disabled="busy['intro']"
@@ -160,7 +165,16 @@ export default {
             }, delay);
         },
 
-        update() {
+        setFieldDirty(name) {
+            this.dirty[name] = true;
+        },
+
+        update(only_if_dirty = false) {
+
+            if(only_if_dirty && !Object.values(this.dirty).some(v => v)) {
+                return;
+            }
+
             return this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'update_scene_outline',

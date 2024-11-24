@@ -5,7 +5,6 @@ from talemate.client.base import ClientBase
     "kind",
     [
         "narrate",
-        "story",
         "director",
         "create",
         "roleplay",

@@ -21,6 +21,7 @@ from talemate.server import (
     character_importer,
     config,
     devtools,
+    director,
     quick_settings,
     world_state_manager,
 )
@@ -72,6 +73,7 @@ class WebsocketHandler(Receiver):
                 self
             ),
             devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
+            director.DirectorPlugin.router: director.DirectorPlugin(self),
         }
 
         self.set_agent_routers()
@@ -469,6 +471,18 @@ class WebsocketHandler(Receiver):
                 "message": emission.message,
                 "id": emission.id,
                 "ts": emission.message_object.ts,
+                "flags": (
+                    int(emission.message_object.flags) if emission.message_object else 0
+                ),
+            }
+        )
+        
+    def handle_context_investigation(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "context_investigation",
+                "message": emission.message,
+                "id": emission.id,
                 "flags": (
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),

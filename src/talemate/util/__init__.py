@@ -586,7 +586,7 @@ def flatten_duration_components(years: int, months: int, weeks: int, days: int,
         return new_years, 0, 0, 0, 0, 0, 0
 
 def iso8601_duration_to_human(iso_duration, suffix: str = " ago", 
-                            zero_time_default: str = "Moments", flatten: bool = True):
+                            zero_time_default: str = "Recently", flatten: bool = True):
     # Parse the ISO8601 duration string into an isodate duration object
     if not isinstance(iso_duration, isodate.Duration):
         duration = isodate.parse_duration(iso_duration)
@@ -642,7 +642,7 @@ def iso8601_duration_to_human(iso_duration, suffix: str = " ago",
     elif components:
         human_str = components[0]
     else:
-        human_str = zero_time_default
+        return zero_time_default
 
     return f"{human_str}{suffix}"
 

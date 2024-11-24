@@ -89,9 +89,9 @@ def test_adding_isodates(dates: list[str], expected: str):
     ("PT0S", "P1Y", "1 Year ago"),
     
     # Zero difference
-    ("P1Y", "P1Y", "Moments ago"),
-    ("P1M", "P1M", "Moments ago"),
-    ("PT0S", "PT0S", "Moments ago"),
+    ("P1Y", "P1Y", "Recently"),
+    ("P1M", "P1M", "Recently"),
+    ("PT0S", "PT0S", "Recently"),
 ])
 def test_iso8601_diff_to_human_unflattened(a, b, expected):
     assert iso8601_diff_to_human(a, b, flatten=False) == expected, iso8601_diff_to_human(a, b, flatten=False)

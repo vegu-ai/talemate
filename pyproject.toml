@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "talemate"
-version = "0.27.0"
+version = "0.29.0"
 description = "AI-backed roleplay and narrative tools"
 authors = ["FinalWombat"]
 license = "GNU Affero General Public License v3.0"

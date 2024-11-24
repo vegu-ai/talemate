@@ -53,7 +53,7 @@
                 <v-card-text>
                     <v-list slim density="compact">
                         <v-list-item v-for="(entry, index) in layer.entries" :key="index" class="text-body-2" prepend-icon="mdi-clock">
-                            <v-list-item-subtitle>{{ entry.time_start }} to {{ entry.time_end }}</v-list-item-subtitle>
+                            <v-list-item-subtitle>{{ timespan(entry) }}</v-list-item-subtitle>
                             <div class="history-entry text-muted">
                                 {{ entry.text }}
                             </div>
@@ -119,6 +119,13 @@ export default {
                 action: "regenerate_history",
                 generation_options: this.generationOptions,
             }));
+        },
+        timespan(entry) {
+            // if different display as range
+            if(entry.time_start != entry.time_end) {
+                return `${entry.time_start} to ${entry.time_end}`;
+            }
+            return `${entry.time_end}`;
         },
         requestSceneHistory() {
             this.getWebsocket().send(JSON.stringify({

@@ -232,8 +232,12 @@ class SummarizeAgent(Agent):
 
         log.debug("build_archive", start=start, recent_entry=recent_entry)
 
+        scoped = {}
+
         if recent_entry:
-            ts = recent_entry.get("ts", ts)
+            scoped["ts"] = recent_entry.get("ts", ts)
+        else:
+            scoped["ts"] = ts
 
         # we ignore the most recent entry, as the user may still chose to
         # regenerate it
@@ -250,14 +254,15 @@ class SummarizeAgent(Agent):
 
             if isinstance(dialogue, TimePassageMessage):
                 log.debug("build_archive", time_passage_message=dialogue)
+                scoped["ts"] = util.iso8601_add(scoped["ts"], dialogue.ts)
+                
                 if i == start:
-                    ts = util.iso8601_add(ts, dialogue.ts)
                     log.debug(
                         "build_archive",
                         time_passage_message=dialogue,
                         start=start,
                         i=i,
-                        ts=ts,
+                        ts=scoped["ts"],
                     )
                     start += 1
                     continue
@@ -280,7 +285,7 @@ class SummarizeAgent(Agent):
             "build_archive",
             start=start,
             end=end,
-            ts=ts,
+            ts=scoped["ts"],
             time_passage_termination=time_passage_termination,
         )
 
@@ -340,7 +345,10 @@ class SummarizeAgent(Agent):
 
         # determine the appropariate timestamp for the summarization
 
-        scene.push_archive(data_objects.ArchiveEntry(summarized, start, end, ts=ts))
+        scene.push_archive(data_objects.ArchiveEntry(summarized, start, end, ts=scoped["ts"]))
+        
+        scene.ts=scoped["ts"]
+        scene.emit_status()
         
         # process layered history
         if self.layered_history_enabled:

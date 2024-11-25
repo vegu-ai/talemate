@@ -867,6 +867,7 @@ class SummarizeAgent(Agent):
         context: list[str] | None = None,
         dig_question: str | None = None,
         character: Character | None = None,
+        deep: bool = False,
     ):
         
         """
@@ -931,6 +932,77 @@ class SummarizeAgent(Agent):
             dedupe_enabled=False,
         )
         
+        result = await self.dig_layered_history_process_function_calls(
+            response, query, entry, entries, layer, context=context,
+            collect_analysis=is_initial, deep=deep, can_dig=True, character=character,
+            dig_question=dig_question,
+        )
+        
+        questions_and_answers = result["answers"]
+            
+        log.debug("dig_layered_history", answers=questions_and_answers)
+        
+        if is_initial and result["dig"]:
+            # we have dug as deep as we can, run the final prompt to answer
+            # the query
+            
+            response = await Prompt.request(
+                "summarizer.dig-layered-history-finalize",
+                self.client,
+                "analyze_freeform_long",
+                vars={
+                    "scene": self.scene,
+                    "max_tokens": self.client.max_token_length,
+                    "query": query,
+                    "questions_and_answers": questions_and_answers,
+                    "entries": entries,
+                    "context": context,
+                    "character": character,
+                    "analysis": result["analysis"],
+                },
+                dedupe_enabled=False,
+            )
+            
+            result = await self.dig_layered_history_process_function_calls(
+                response, query, entry, entries, layer, context=context,
+                collect_analysis=False, deep=False, can_dig=False, character=character,
+                dig_question=dig_question,
+            )
+            
+            return result["answers"]
+            
+        else:
+            return questions_and_answers
+        
+
+    async def dig_layered_history_process_function_calls(
+        self,
+        response: str,
+        query: str,
+        entry: dict,
+        entries: list[str],
+        layer: int,
+        context: list[str] | None = None,
+        collect_analysis: bool = True,
+        deep: bool = False,
+        can_dig: bool = True,
+        character: Character | None = None,
+        dig_question: str | None = None,
+    ) -> dict:
+        
+        result = {
+            "answers": "",
+            "analysis": "",
+            "dig": False,
+        }
+        
+        # grab the analysis by looking for the text between
+        # the beginning of the response and the "ANALYSIS:" tag
+        if collect_analysis:
+            analysis = response.split("ANALYSIS:")[0].strip()
+        else:
+            analysis = ""
+               
         # replace ```python with ``` to avoid markdown issues
         response = response.replace("```python", "```")
         
@@ -938,7 +1010,7 @@ class SummarizeAgent(Agent):
         code_block_start = response.find("```")
         if code_block_start == -1:
             log.error("dig_layered_history", error="No code block found", response=response)
-            return ""
+            return result
         
         log.debug("dig_layered_history", code_block_start=code_block_start)
         
@@ -965,7 +1037,10 @@ class SummarizeAgent(Agent):
             
             function_name = function_call.split("(")[0].strip()
             
-            if function_name == "dig":
+            if function_name == "dig" and can_dig:
+                
+                result["dig"] = True
+                
                 # dig further
                 # dig arguments are provided as chapter number and question
                 # dig(1, "What is the significance of the red door?")
@@ -1011,8 +1086,10 @@ class SummarizeAgent(Agent):
                     character=character,
                 ) 
                 if answer:
-                    answers.append(f"{dig_question}\n{answer}")
-                    break
+                    answers.append(answer)
+                    if not deep:
+                        # if we are not doing a deep dig, we only want the first answer
+                        break
             elif function_name == "abort":
                 continue
             elif function_name == "answer":
@@ -1021,16 +1098,18 @@ class SummarizeAgent(Agent):
                 except IndexError:
                     log.error("dig_layered_history", error="Invalid argument for `answer`", arg=function_call)
                     continue
-                answers.append(answer)
+                answers.append(f"{dig_question}\n\n{answer}")
                 break
             else:
                 # Treat contents of code block as a single answer
                 answers.append(code_block)
                 break
             
-        log.debug("dig_layered_history", answers=answers)
-            
-        return "\n".join(answers) if answers else ""
+        result["answers"] = "\n\n".join(answers)
+        result["analysis"] = analysis
+        
+        return result
+    
     
     def inject_prompt_paramters(
         self, prompt_param: dict, kind: str, agent_function_name: str

@@ -73,17 +73,18 @@ The author of the scene has given YOU - the analyst - a query and is asking you 
 ### Response Format
 Follow this format exactly:
 
-{% if is_initial %}QUERY: <Analysis of the query, what could be the reason this query was given to you? Be very strict with your evaluation. Many queries are given in error.>
+{% if is_initial %}QUERY: <Analysis of the query. What could be the reason this query was given to you? Be very strict with your evaluation. Many queries are given in error. Explicitly state events, persons, locations and objects by name and include surrounding context clues.>
 
 ANALYSIS:
-- character trying retrieve information: <yes or no>.
-- answer contained in current scene: <yes or no>.
-- location, event, off-scene person or object mentioned: <yes or no>.
-- query valid based on the above: <yes or no>.
+- character trying retrieve information: <yes or no>
+- answer contained in current scene: <yes or no>
+- location, event, off-scene person or object mentioned: <yes or no>
+- query valid based on the above: <yes or no>
+
 
 <Quick Analysis of the provided information>
 
-{% else %}
+{% elif not can_dig %}
 ANALYSIS: <Quick Analysis of the provided information>
 
 {% endif -%}
@@ -132,4 +133,4 @@ CALL:
 abort()
 ```
 DONE
-{{ bot_token }}{% if is_initial %}QUERY:{% else %}ANALYSIS:{% endif %}
+{{ bot_token }}{% if is_initial %}QUERY:{% elif can_dig %}FUNCTION SELECTED:{% else %}ANALYSIS:{% endif %}

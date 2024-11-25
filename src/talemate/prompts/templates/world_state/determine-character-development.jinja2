@@ -1,0 +1,30 @@
+{% block rendered_context -%}
+<|SECTION:CHARACTER|>
+{{ character.sheet }}
+
+{{ character.description }}
+L<|CLOSE_SECTION|>
+{% endblock %}
+{% set scene_history = scene.context_history(budget=max_tokens-512-count_tokens(self.rendered_context()), keep_context_investigation=False) -%}
+<|SECTION:STORY|>
+{% for scene_context in scene_history -%}
+{{ scene_context }}
+
+{% endfor -%}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Identify if {{ character.name }} has had any MAJOR character development in the scene.
+
+Do this by comparin the previous character description and sheet with has happened in the story.
+
+If there has been any major character development, describe it in detail what should be updated in the character sheet and description.
+
+Your instructions will be given to the author to make the necessary changes.
+
+Your response should follow this format exactly:
+
+ANALYSIS: <Analysis of the character's previous state and what has happened to them throughout the story.>
+
+SUGGESTIONS: <Suggestions for changes to the character sheet and description. You may add, remove, or modify any information. Simply put "None" if no changes are necessary at this point.>
+<|CLOSE_SECTION|>
+{{ bot_token }}ANALYSIS:

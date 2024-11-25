@@ -959,6 +959,7 @@ class SummarizeAgent(Agent):
                     "context": context,
                     "character": character,
                     "analysis": result["analysis"],
+                    "dig_question": dig_question,
                 },
                 dedupe_enabled=False,
             )
@@ -1098,7 +1099,7 @@ class SummarizeAgent(Agent):
                 except IndexError:
                     log.error("dig_layered_history", error="Invalid argument for `answer`", arg=function_call)
                     continue
-                answers.append(f"{dig_question}\n\n{answer}")
+                answers.append(f"{dig_question}\n\n{answer}" if dig_question else answer)
                 break
             else:
                 # Treat contents of code block as a single answer

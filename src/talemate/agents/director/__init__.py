@@ -1,29 +1,25 @@
 from __future__ import annotations
 
-import asyncio
 import random
-import re
-from typing import TYPE_CHECKING, Callable, List, Optional, Union
+from typing import TYPE_CHECKING, List
 
 import structlog
 
-import talemate.automated_action as automated_action
 import talemate.emit.async_signals
 import talemate.instance as instance
 import talemate.util as util
 from talemate.agents.conversation import ConversationAgentEmission
-from talemate.automated_action import AutomatedAction
-from talemate.emit import emit, wait_for_input
+from talemate.emit import emit
 from talemate.events import GameLoopActorIterEvent, GameLoopStartEvent, SceneStateEvent
 from talemate.game.engine import GameInstructionsMixin
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, NarratorMessage, CharacterMessage
 
-from .base import Agent, AgentAction, AgentActionConfig, set_processing
-from .registry import register
+from talemate.agents.base import Agent, AgentAction, AgentActionConfig, set_processing
+from talemate.agents.registry import register
 
 if TYPE_CHECKING:
-    from talemate import Actor, Character, Player, Scene
+    from talemate import Character
 
 log = structlog.get_logger("talemate.agent.director")
 

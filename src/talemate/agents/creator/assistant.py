@@ -175,6 +175,7 @@ class AssistantMixin:
         """
 
         context_typ, context_name = generation_context.computed_context
+        editor = get_agent("editor")
 
         if generation_context.length < 100:
             kind = "create_short"
@@ -224,9 +225,7 @@ class AssistantMixin:
             if not content.startswith(generation_context.character + ":"):
                 content = generation_context.character + ": " + content
             content = util.strip_partial_sentences(content)
-            content = util.ensure_dialog_format(
-                content, talking_character=generation_context.character
-            )
+            content = await editor.fix_exposition(content, generation_context.character.name)
             return content
 
         return content.strip().strip("*").strip()

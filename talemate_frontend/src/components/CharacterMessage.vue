@@ -32,7 +32,7 @@
         >
       </v-textarea>
       <div v-else class="character-text" @dblclick="startEdit()">
-        <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(part.isNarrative ? 'narrator' : 'character')">
+        <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(styleHandlerFromPart(part))">
           <span>{{ part.text }}</span>
         </span>
       </div>
@@ -69,21 +69,72 @@ export default {
   props: ['character', 'text', 'color', 'message_id', 'uxLocked'],
   inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle'],
   computed: {
+    patterns() {
+      // Define patterns with their type, matching regex, and how to extract the text
+      return [
+        {
+          type: '"',
+          regex: /"([^"]*)"/g,
+          extract: match => `"${match[1]}"` // Preserve quotes
+        },
+        {
+          type: '*',
+          regex: /\*(.*?)\*/g,
+          extract: match => match[1] // Remove asterisks
+        }
+        // Easy to add new patterns:
+        // {
+        //   type: '_',
+        //   regex: /_(.*?)_/g,
+        //   extract: match => match[1]
+        // }
+      ];
+    },
+
     parts() {
       const parts = [];
-      let start = 0;
-      let match;
-      const regex = /\*(.*?)\*/g;
-      while ((match = regex.exec(this.text)) !== null) {
-        if (match.index > start) {
-          parts.push({ text: this.text.slice(start, match.index), isNarrative: false });
+      let remaining = this.text;
+
+      while (remaining) {
+        // Find the earliest match among all patterns
+        let earliestMatch = null;
+        let matchedPattern = null;
+
+        for (const pattern of this.patterns) {
+          pattern.regex.lastIndex = 0; // Reset regex state
+          const match = pattern.regex.exec(remaining);
+          if (match && (!earliestMatch || match.index < earliestMatch.index)) {
+            earliestMatch = match;
+            matchedPattern = pattern;
+          }
         }
-        parts.push({ text: match[1], isNarrative: true });
-        start = match.index + match[0].length;
+
+        if (!earliestMatch) {
+          // No more matches, add remaining text and break
+          if (remaining) {
+            parts.push({ text: remaining, type: '' });
+          }
+          break;
+        }
+
+        // Add text before the match if there is any
+        if (earliestMatch.index > 0) {
+          parts.push({
+            text: remaining.slice(0, earliestMatch.index),
+            type: ''
+          });
+        }
+
+        // Add the matched text
+        parts.push({
+          text: matchedPattern.extract(earliestMatch),
+          type: matchedPattern.type
+        });
+
+        // Update remaining text
+        remaining = remaining.slice(earliestMatch.index + earliestMatch[0].length);
       }
-      if (start < this.text.length) {
-        parts.push({ text: this.text.slice(start), isNarrative: false });
-      }
+
       return parts;
     }
   },
@@ -96,6 +147,13 @@ export default {
     }
   },
   methods: {
+
+    styleHandlerFromPart(part) {
+      if(part.type === '"') {
+        return 'character';
+      }
+      return 'narrator';
+    },
 
     handleEnter(event) {
       // if ctrl -> autocomplete

@@ -51,6 +51,21 @@ class EditorAgent(Agent):
                         description="Will attempt to fix exposition issues in narrator messages",
                         value=True,
                     ),
+                    "user_input": AgentActionConfig(
+                        type="bool",
+                        label="Fix user input",
+                        description="Will attempt to fix exposition issues in user input",
+                        value=True,
+                    ),
+                    "formatting": AgentActionConfig(
+                        type="text",
+                        label="Formatting",
+                        description="The formatting to use for exposition.",
+                        value="chat",
+                        choices=[
+                            {"label": "Chat RP: *{narration}*", "value": "chat"},
+                        ]
+                    ),
                 },
             ),
             "add_detail": AgentAction(
@@ -76,6 +91,23 @@ class EditorAgent(Agent):
     @property
     def experimental(self):
         return True
+    
+    @property
+    def fix_exposition_enabled(self):
+        return self.actions["fix_exposition"].enabled
+    
+    @property
+    def fix_exposition_formatting(self):
+        return self.actions["fix_exposition"].config["formatting"].value
+
+    @property
+    def fix_exposition_narrator(self):
+        return self.actions["fix_exposition"].config["narrator"].value
+    
+    @property
+    def fix_exposition_user_input(self):
+        return self.actions["fix_exposition"].config["user_input"].value
+    
 
     def connect(self, scene):
         super().connect(scene)
@@ -85,6 +117,19 @@ class EditorAgent(Agent):
         talemate.emit.async_signals.get("agent.narrator.generated").connect(
             self.on_narrator_generated
         )
+
+    def fix_exposition_in_text(self, text: str, character: Character | None = None):
+        if self.fix_exposition_formatting == "chat":
+            formatting = "md"
+        else:
+            formatting = None
+        
+        return util.ensure_dialog_format(
+            text, 
+            talking_character=character.name if character else None, 
+            formatting=formatting
+        )
+
 
     async def on_conversation_generated(self, emission: ConversationAgentEmission):
         """
@@ -155,7 +200,7 @@ class EditorAgent(Agent):
 
         content = util.clean_dialogue(content, main_name=character.name)
         content = util.strip_partial_sentences(content)
-        content = util.ensure_dialog_format(content, talking_character=character.name)
+        content = self.fix_exposition_in_text(content, character)
 
         return content
 
@@ -170,11 +215,23 @@ class EditorAgent(Agent):
         content = util.strip_partial_sentences(content)
 
         if '"' not in content:
-            content = f"*{content.strip('*')}*"
+            if self.fix_exposition_formatting == "chat":
+                content = f"*{content.strip('*')}*"
         else:
-            content = util.ensure_dialog_format(content)
+            content = self.fix_exposition_in_text(content, None)
 
         return content
+
+    @set_processing
+    async def fix_exposition_on_user_input(self, text: str):
+        if not self.fix_exposition_user_input or not self.fix_exposition_enabled:
+            return text
+        
+        if '"' not in text and "*" not in text:
+            text = f'"{text}"'
+        
+        return self.fix_exposition_in_text(text)
+        
 
     @set_processing
     async def add_detail(self, content: str, character: Character):

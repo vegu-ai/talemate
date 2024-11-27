@@ -985,7 +985,7 @@ def replace_exposition_markers(s: str) -> str:
     return s
 
 
-def ensure_dialog_format(line: str, talking_character: str = None) -> str:
+def ensure_dialog_format(line: str, talking_character: str = None, formatting:str = "md") -> str:
     # if "*" not in line and '"' not in line:
     #    if talking_character:
     #        line = line[len(talking_character)+1:].lstrip()
@@ -1036,6 +1036,9 @@ def ensure_dialog_format(line: str, talking_character: str = None) -> str:
 
     if talking_character:
         line = f"{talking_character}: {line}"
+
+    if formatting != "md":
+        line = line.replace("*", "")
 
     return line
 

@@ -656,10 +656,9 @@ class Player(Actor):
             message = self.message
 
         elif not commands.Manager.is_command(message):
-            if '"' not in message and "*" not in message:
-                message = f'"{message}"'
+            editor = self.scene.get_helper("editor").agent
 
-            message = util.ensure_dialog_format(message)
+            message = await editor.fix_exposition_on_user_input(message)
 
             log.warning("player_message", message=message, act_as=act_as)
 
@@ -706,6 +705,7 @@ class Player(Actor):
         conversation = self.scene.get_helper("conversation").agent
         director = self.scene.get_helper("director").agent
         narrator = self.scene.get_helper("narrator").agent
+        editor = self.scene.get_helper("editor").agent
         
         # sensory checks
         sensory_checks = ["look", "listen", "smell", "taste", "touch", "feel"]
@@ -744,7 +744,7 @@ class Player(Actor):
         messages = await conversation.converse(actor, only_generate=True, instruction=choice)
         
         message = messages[0]
-        message = util.ensure_dialog_format(message.strip(), character.name)
+        message = await editor.fix_exposition(message.strip(), character)
         character_message = CharacterMessage(
             message, source="player" if isinstance(actor, Player) else "ai", from_choice=choice
         )
@@ -1421,10 +1421,12 @@ class Scene(Emitter):
         except AttributeError:
             intro = self.intro
             
-        if '"' not in intro and "*" not in intro:
-            intro = f"*{intro}*"
+        editor = self.get_helper("editor").agent
             
-        intro = util.ensure_dialog_format(intro)
+        if editor.fix_exposition_enabled and editor.fix_exposition_narrator:
+            if '"' not in intro and "*" not in intro:
+                intro = f"*{intro}*"
+            intro = editor.fix_exposition_in_text(intro)
 
         return intro
 

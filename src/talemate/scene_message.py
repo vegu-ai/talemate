@@ -151,7 +151,7 @@ class CharacterMessage(SceneMessage):
         {dialogue}
         """
 
-        message = self.message.split(":", 1)[1].replace('"', "").strip()
+        message = self.message.split(":", 1)[1].strip()
 
         return f"\n{self.character_name.upper()}\n{message}\nEND-OF-LINE\n"
 

@@ -63,7 +63,7 @@ class EditorAgent(Agent):
                         description="The formatting to use for exposition.",
                         value="chat",
                         choices=[
-                            {"label": "Chat RP: *{narration}*", "value": "chat"},
+                            {"label": "Chat RP: \"Speech\" *narration*", "value": "chat"},
                         ]
                     ),
                 },

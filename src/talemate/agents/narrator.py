@@ -213,13 +213,9 @@ class NarratorAgent(Agent):
         result = "\n".join(cleaned)
         
         result = util.strip_partial_sentences(result)
+        editor = get_agent("editor")
         
-        if force_narrative:
-            if "*" not in result and '"' not in result:
-                result = f"*{result.strip()}*"
-        
-        if ensure_dialog_format:
-            editor = get_agent("editor")
+        if ensure_dialog_format or force_narrative:
             if editor.fix_exposition_enabled and editor.fix_exposition_narrator:
                 result = editor.fix_exposition_in_text(result)
             

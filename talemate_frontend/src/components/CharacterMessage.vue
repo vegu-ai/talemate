@@ -65,77 +65,14 @@
 </template>
   
 <script>
+import { parseText } from '@/utils/textParser';
+
 export default {
   props: ['character', 'text', 'color', 'message_id', 'uxLocked'],
   inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle'],
   computed: {
-    patterns() {
-      // Define patterns with their type, matching regex, and how to extract the text
-      return [
-        {
-          type: '"',
-          regex: /"([^"]*)"/g,
-          extract: match => `"${match[1]}"` // Preserve quotes
-        },
-        {
-          type: '*',
-          regex: /\*(.*?)\*/g,
-          extract: match => match[1] // Remove asterisks
-        }
-        // Easy to add new patterns:
-        // {
-        //   type: '_',
-        //   regex: /_(.*?)_/g,
-        //   extract: match => match[1]
-        // }
-      ];
-    },
-
     parts() {
-      const parts = [];
-      let remaining = this.text;
-
-      while (remaining) {
-        // Find the earliest match among all patterns
-        let earliestMatch = null;
-        let matchedPattern = null;
-
-        for (const pattern of this.patterns) {
-          pattern.regex.lastIndex = 0; // Reset regex state
-          const match = pattern.regex.exec(remaining);
-          if (match && (!earliestMatch || match.index < earliestMatch.index)) {
-            earliestMatch = match;
-            matchedPattern = pattern;
-          }
-        }
-
-        if (!earliestMatch) {
-          // No more matches, add remaining text and break
-          if (remaining) {
-            parts.push({ text: remaining, type: '' });
-          }
-          break;
-        }
-
-        // Add text before the match if there is any
-        if (earliestMatch.index > 0) {
-          parts.push({
-            text: remaining.slice(0, earliestMatch.index),
-            type: ''
-          });
-        }
-
-        // Add the matched text
-        parts.push({
-          text: matchedPattern.extract(earliestMatch),
-          type: matchedPattern.type
-        });
-
-        // Update remaining text
-        remaining = remaining.slice(earliestMatch.index + earliestMatch[0].length);
-      }
-
-      return parts;
+      return parseText(this.text);
     }
   },
   data() {

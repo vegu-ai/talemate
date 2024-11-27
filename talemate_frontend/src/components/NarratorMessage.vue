@@ -24,7 +24,7 @@
         @keydown.escape.prevent="cancelEdit()">
       </v-textarea>
       <div v-else class="narrator-text" @dblclick="startEdit()">
-        <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(part.isNarrative ? 'narrator' : 'character')">
+        <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(styleHandlerFromPart(part))">
           {{ part.text }}
         </span>
       </div>
@@ -49,27 +49,14 @@
 </template>
   
 <script>
+import { parseText } from '@/utils/textParser';
+
 export default {
   props: ['text', 'message_id', 'uxLocked'],
   inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle'],
   computed: {
     parts() {
-      const parts = [];
-      let start = 0;
-      let match;
-      // Using [\s\S] instead of . to match across multiple lines
-      const regex = /\*([\s\S]*?)\*/g;
-      while ((match = regex.exec(this.text)) !== null) {
-        if (match.index > start) {
-          parts.push({ text: this.text.slice(start, match.index), isNarrative: false });
-        }
-        parts.push({ text: match[1], isNarrative: true });
-        start = match.index + match[0].length;
-      }
-      if (start < this.text.length) {
-        parts.push({ text: this.text.slice(start), isNarrative: false });
-      }
-      return parts;
+      return parseText(this.text);
     }
   },
   data() {
@@ -81,6 +68,13 @@ export default {
     }
   },
   methods: {
+    styleHandlerFromPart(part) {
+      if(part.type === '"') {
+        return 'character';
+      }
+      return 'narrator';
+    },
+
     handleEnter(event) {
       // if ctrl -> autocomplete
       // else -> submit

@@ -1,0 +1,39 @@
+{% block rendered_context -%}
+<|SECTION:CHARACTER|>
+{{ character.sheet }}
+
+{{ character.description }}
+L<|CLOSE_SECTION|>
+{% endblock %}
+{% set scene_history = scene.context_history(budget=max_tokens-512-count_tokens(self.rendered_context()), keep_context_investigation=False) -%}
+<|SECTION:STORY|>
+{% for scene_context in scene_history -%}
+{{ scene_context }}
+
+{% endfor -%}
+<|CLOSE_SECTION|>
+<|SECTION:INSTRUCTIONS|>
+{{ instructions}}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Read the instructions and provide new or updated attributes for {{ character.name }}'s character sheet.
+
+Description can be long, attributes should be concise and to the point.
+
+Do not lean into any instructions too strongly. We must avoid making the character one-dimensional or boring.
+
+You must match the tone and style of the existing character sheet and description.
+
+To set an attribute in the character sheet, use the following format:
+
+SET ATTRIBUTE: <Attribute Name> - <Attribute Description>
+
+To remove an attribute from the character sheet, use the following format:
+
+REMOVE ATTRIBUTE: <Attribute Name, nothing else.>
+
+To update the character description, use the following format:
+
+UPDATE DESCRIPTION: <Full updated description.>
+<|CLOSE_SECTION|>
+{{ bot_token }}

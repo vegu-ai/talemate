@@ -371,6 +371,7 @@ class CmdDetermineCharacterDevelopment(TalemateCommand):
         scene = self.scene
 
         world_state = get_agent("world_state")
+        creator = get_agent("creator")
 
         if not len(self.args):
             raise ValueError("No character name provided.")
@@ -382,4 +383,6 @@ class CmdDetermineCharacterDevelopment(TalemateCommand):
         if not character:
             raise ValueError(f"Character {character_name} not found.")
 
-        await world_state.determine_character_development(character)
+        instructions = await world_state.determine_character_development(character)
+        
+        updates = await creator.update_character_sheet(character, instructions)

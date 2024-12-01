@@ -124,11 +124,18 @@ class EditorAgent(Agent):
         else:
             formatting = None
         
-        return util.ensure_dialog_format(
+        if self.fix_exposition_formatting == "chat":
+            text = text.replace("**", "*")
+            text = text.replace("[", "*").replace("]", "*")
+            text = text.replace("(", "*").replace(")", "*")
+        
+        cleaned = util.ensure_dialog_format(
             text, 
             talking_character=character.name if character else None, 
             formatting=formatting
         )
+        
+        return cleaned
 
 
     async def on_conversation_generated(self, emission: ConversationAgentEmission):
@@ -177,7 +184,7 @@ class EditorAgent(Agent):
         Edits a text to make sure all narrative exposition and emotes is encased in *
         """
 
-        if not self.actions["fix_exposition"].enabled:
+        if not self.fix_exposition_enabled:
             return content
 
         # if not content was generated, return it as is

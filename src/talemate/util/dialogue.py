@@ -1,6 +1,9 @@
 import re
 
-__all__ = ["handle_endofline_special_delimiter"]
+__all__ = [
+    "handle_endofline_special_delimiter",
+    "remove_trailing_markers",
+]
 
 
 def handle_endofline_special_delimiter(content: str) -> str:
@@ -16,3 +19,30 @@ def handle_endofline_special_delimiter(content: str) -> str:
     content = content.split("END-OF-LINE")[0].strip()
 
     return content
+
+
+def remove_trailing_markers(content: str, pair_markers:list[str] = None, enclosure_markers:list[str] = None) -> str:
+    """
+    Will check for uneven balance in the specified markers
+    and remove the trailing ones
+    """
+    
+    if not pair_markers:
+        pair_markers = ['"', '*']
+        
+    if not enclosure_markers:
+        enclosure_markers = ['(', '[', '{']
+    
+    content = content.rstrip()
+    
+    for marker in pair_markers:
+        if content.count(marker) % 2 == 1 and content.endswith(marker):
+            content = content[:-1]
+            content = content.rstrip()
+            
+    for marker in enclosure_markers:
+        if content.endswith(marker):
+            content = content[:-1]
+            content = content.rstrip()
+            
+    return content.rstrip()

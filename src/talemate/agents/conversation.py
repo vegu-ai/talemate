@@ -671,7 +671,6 @@ class ConversationAgent(Agent):
             result = result.split("(Internal")[0]
 
         result = result.replace(" :", ":")
-        result = result.replace("**", "*")
 
         result = util.handle_endofline_special_delimiter(result)
         result = util.remove_trailing_markers(result)

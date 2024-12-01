@@ -45,6 +45,15 @@ class EditorAgent(Agent):
                 label="Fix exposition",
                 description="Will attempt to fix exposition and emotes, making sure they are displayed in italics. Runs automatically after each AI dialogue.",
                 config={
+                    "formatting": AgentActionConfig(
+                        type="text",
+                        label="Formatting",
+                        description="The formatting to use for exposition.",
+                        value="chat",
+                        choices=[
+                            {"label": "Chat RP: \"Speech\" *narration*", "value": "chat"},
+                        ]
+                    ),
                     "narrator": AgentActionConfig(
                         type="bool",
                         label="Fix narrator messages",
@@ -56,15 +65,6 @@ class EditorAgent(Agent):
                         label="Fix user input",
                         description="Will attempt to fix exposition issues in user input",
                         value=True,
-                    ),
-                    "formatting": AgentActionConfig(
-                        type="text",
-                        label="Formatting",
-                        description="The formatting to use for exposition.",
-                        value="chat",
-                        choices=[
-                            {"label": "Chat RP: \"Speech\" *narration*", "value": "chat"},
-                        ]
                     ),
                 },
             ),

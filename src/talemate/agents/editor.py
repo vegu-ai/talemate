@@ -152,7 +152,7 @@ class EditorAgent(Agent):
         for text in emission.generation:
             edit = await self.add_detail(text, emission.character)
 
-            edit = await self.fix_exposition(edit, emission.character)
+            edit = await self.cleanup_character_message(edit, emission.character)
 
             edit = await self.check_continuity_errors(edit, emission.character)
 
@@ -173,28 +173,22 @@ class EditorAgent(Agent):
         edited = []
 
         for text in emission.generation:
-            edit = await self.fix_exposition_on_narrator(text)
+            edit = await self.clean_up_narration(text)
             edited.append(edit)
 
         emission.generation = edited
 
     @set_processing
-    async def fix_exposition(self, content: str, character: Character):
+    async def cleanup_character_message(self, content: str, character: Character):
         """
         Edits a text to make sure all narrative exposition and emotes is encased in *
         """
         
-        if content:
-            content = util.strip_partial_sentences(content)
-
-        if not self.fix_exposition_enabled:
-            return content
-
         # if not content was generated, return it as is
         if not content:
             return content
 
-        if not character.is_player:
+        if not character.is_player and self.fix_exposition_enabled:
             if '"' not in content and "*" not in content:
                 character_prefix = f"{character.name}: "
                 message = content.split(character_prefix)[1]
@@ -209,31 +203,28 @@ class EditorAgent(Agent):
 
         content = util.clean_dialogue(content, main_name=character.name)
         content = util.strip_partial_sentences(content)
+        
+        if not self.fix_exposition_enabled:
+            return content
+        
         content = self.fix_exposition_in_text(content, character)
 
         return content
 
     @set_processing
-    async def fix_exposition_on_narrator(self, content: str):
-        if content:
-            content = util.strip_partial_sentences(content)
-
-        if not self.fix_exposition_enabled:
-            return content
-
-        if not self.fix_exposition_narrator:
-            return content
-
-        if '"' not in content:
-            if self.fix_exposition_formatting == "chat":
-                content = f"*{content.strip('*')}*"
-        else:
-            content = self.fix_exposition_in_text(content, None)
+    async def clean_up_narration(self, content: str):
+        content = util.strip_partial_sentences(content)
+        if self.fix_exposition_enabled and self.fix_exposition_narrator:
+            if '"' not in content:
+                if self.fix_exposition_formatting == "chat":
+                    content = f"*{content.strip('*')}*"
+            else:
+                content = self.fix_exposition_in_text(content, None)
 
         return content
 
     @set_processing
-    async def fix_exposition_on_user_input(self, text: str):
+    async def cleanup_user_input(self, text: str):
         if not self.fix_exposition_user_input or not self.fix_exposition_enabled:
             return text
         

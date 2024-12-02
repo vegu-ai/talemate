@@ -348,7 +348,7 @@ def strip_partial_sentences(text: str) -> str:
 
     for i in range(len(text) - 1, -1, -1):
         if text[i] in sentence_endings:
-            return text[: i + 1]
+            return remove_trailing_markers(text[: i + 1])
 
     return text
 

@@ -658,7 +658,7 @@ class Player(Actor):
         elif not commands.Manager.is_command(message):
             editor = self.scene.get_helper("editor").agent
 
-            message = await editor.fix_exposition_on_user_input(message)
+            message = await editor.cleanup_user_input(message)
 
             log.warning("player_message", message=message, act_as=act_as)
 
@@ -744,7 +744,7 @@ class Player(Actor):
         messages = await conversation.converse(actor, only_generate=True, instruction=choice)
         
         message = messages[0]
-        message = await editor.fix_exposition(message.strip(), character)
+        message = await editor.cleanup_character_message(message.strip(), character)
         character_message = CharacterMessage(
             message, source="player" if isinstance(actor, Player) else "ai", from_choice=choice
         )

@@ -225,7 +225,7 @@ class AssistantMixin:
             if not content.startswith(generation_context.character + ":"):
                 content = generation_context.character + ": " + content
             content = util.strip_partial_sentences(content)
-            content = await editor.fix_exposition(content, generation_context.character.name)
+            content = await editor.cleanup_character_message(content, generation_context.character.name)
             return content
 
         return content.strip().strip("*").strip()

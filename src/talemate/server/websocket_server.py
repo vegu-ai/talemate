@@ -821,7 +821,7 @@ class WebsocketHandler(Receiver):
             character = self.scene.get_character(message.character_name)
             loop = asyncio.get_event_loop()
             new_text = loop.run_until_complete(
-                editor.fix_exposition(new_text, character)
+                editor.cleanup_character_message(new_text, character)
             )
 
         self.scene.edit_message(message_id, new_text)

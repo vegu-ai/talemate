@@ -183,6 +183,9 @@ class EditorAgent(Agent):
         """
         Edits a text to make sure all narrative exposition and emotes is encased in *
         """
+        
+        if content:
+            content = util.strip_partial_sentences(content)
 
         if not self.fix_exposition_enabled:
             return content
@@ -193,7 +196,6 @@ class EditorAgent(Agent):
 
         if not character.is_player:
             if '"' not in content and "*" not in content:
-                content = util.strip_partial_sentences(content)
                 character_prefix = f"{character.name}: "
                 message = content.split(character_prefix)[1]
                 content = f'{character_prefix}"{message.strip()}"'
@@ -213,13 +215,14 @@ class EditorAgent(Agent):
 
     @set_processing
     async def fix_exposition_on_narrator(self, content: str):
-        if not self.actions["fix_exposition"].enabled:
+        if content:
+            content = util.strip_partial_sentences(content)
+
+        if not self.fix_exposition_enabled:
             return content
 
-        if not self.actions["fix_exposition"].config["narrator"].value:
+        if not self.fix_exposition_narrator:
             return content
-
-        content = util.strip_partial_sentences(content)
 
         if '"' not in content:
             if self.fix_exposition_formatting == "chat":

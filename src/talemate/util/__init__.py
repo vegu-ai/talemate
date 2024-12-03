@@ -405,8 +405,6 @@ def clean_paragraph(paragraph: str) -> str:
 def clean_message(message: str) -> str:
     message = message.strip()
     message = re.sub(r" +", " ", message)
-    message = message.replace("(", "*").replace(")", "*")
-    message = message.replace("[", "*").replace("]", "*")
     return message
 
 

@@ -9,6 +9,16 @@ const defaultPatterns = [
       type: '*',
       regex: /\*(.*?)\*/g,
       extract: match => match[1] // Remove asterisks
+    },
+    {
+      type: "()",
+      regex: /\((.*?)\)/g,
+      extract: match => match[1] // Remove parentheses
+    },
+    {
+      type: '[]',
+      regex: /\[(.*?)\]/g,
+      extract: match => match[1] // Remove brackets
     }
   ];
   

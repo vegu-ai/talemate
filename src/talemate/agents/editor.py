@@ -52,6 +52,7 @@ class EditorAgent(Agent):
                         value="chat",
                         choices=[
                             {"label": "Chat RP: \"Speech\" *narration*", "value": "chat"},
+                            {"label": "Novel: \"Speech\" narration", "value": "novel"},
                         ]
                     ),
                     "narrator": AgentActionConfig(
@@ -128,6 +129,10 @@ class EditorAgent(Agent):
             text = text.replace("**", "*")
             text = text.replace("[", "*").replace("]", "*")
             text = text.replace("(", "*").replace(")", "*")
+        elif self.fix_exposition_formatting == "novel":
+            text = text.replace("*", "")
+            text = text.replace("[", "").replace("]", "")
+            text = text.replace("(", "").replace(")", "")
         
         cleaned = util.ensure_dialog_format(
             text, 
@@ -189,17 +194,21 @@ class EditorAgent(Agent):
             return content
 
         if not character.is_player and self.fix_exposition_enabled:
-            if '"' not in content and "*" not in content:
-                character_prefix = f"{character.name}: "
-                message = content.split(character_prefix)[1]
-                content = f'{character_prefix}"{message.strip()}"'
-                return content
-            elif '"' in content:
-                # silly hack to clean up some LLMs that always start with a quote
-                # even though the immediate next thing is a narration (indicated by *)
-                content = content.replace(
-                    f'{character.name}: "*', f"{character.name}: *"
-                )
+            if self.fix_exposition_formatting == "chat":
+                if '"' not in content and "*" not in content:
+                    character_prefix = f"{character.name}: "
+                    message = content.split(character_prefix)[1]
+                    content = f'{character_prefix}"{message.strip()}"'
+                    return content
+                elif '"' in content:
+                    # silly hack to clean up some LLMs that always start with a quote
+                    # even though the immediate next thing is a narration (indicated by *)
+                    content = content.replace(
+                        f'{character.name}: "*', f"{character.name}: *"
+                    )
+            elif self.fix_exposition_formatting == "novel":
+                if '"' not in content:
+                    content = f'"{content.strip()}"'
 
         content = util.clean_dialogue(content, main_name=character.name)
         content = util.strip_partial_sentences(content)

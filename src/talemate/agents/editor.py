@@ -206,9 +206,6 @@ class EditorAgent(Agent):
                     content = content.replace(
                         f'{character.name}: "*', f"{character.name}: *"
                     )
-            elif self.fix_exposition_formatting == "novel":
-                if '"' not in content:
-                    content = f'"{content.strip()}"'
 
         content = util.clean_dialogue(content, main_name=character.name)
         content = util.strip_partial_sentences(content)
@@ -237,8 +234,9 @@ class EditorAgent(Agent):
         if not self.fix_exposition_user_input or not self.fix_exposition_enabled:
             return text
         
-        if '"' not in text and "*" not in text:
-            text = f'"{text}"'
+        if self.fix_exposition_formatting == "chat":
+            if '"' not in text and "*" not in text:
+                text = f'"{text}"'
         
         return self.fix_exposition_in_text(text)
         

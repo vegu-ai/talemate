@@ -780,7 +780,7 @@ class ConversationAgent(Agent):
         total_result = util.clean_dialogue(total_result, main_name=character.name)
 
         # Check if total_result starts with character name, if not, prepend it
-        if not total_result.startswith(character.name):
+        if not total_result.startswith(character.name+":"):
             total_result = f"{character.name}: {total_result}"
 
         total_result = total_result.strip()

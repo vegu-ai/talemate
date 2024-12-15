@@ -63,6 +63,11 @@ YOU MUST ONLY WRITE NEW DIALOGUE FOR {{ talking_character.name.upper() }}.
 {% if scene.count_messages() >= 5 and not talking_character.dialogue_instructions %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is informal, conversational, natural, and spontaneous, with a sense of immediacy.
 {% endif -%}
 <|CLOSE_SECTION|>
+
+{% for dynamic_instruction in dynamic_instructions %}
+{{ dynamic_instruction }}
+{% endfor %}
+
 <|SECTION:How to use internal notes|>
 Internal notes may be given to you to help you with consistency when writing.
 

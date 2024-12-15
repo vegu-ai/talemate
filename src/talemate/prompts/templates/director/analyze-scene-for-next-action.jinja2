@@ -1,0 +1,22 @@
+{% block rendered_context -%}
+{% include "character-context.jinja2" -%}
+{% endblock %}
+<|SECTION:SCENE|>
+{% block scene_history -%}
+{% set scene_context = scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=False) -%}
+{% for scene_line in scene_context -%}
+{{ scene_line }}
+
+{% endfor %}
+{% endblock -%}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Your task is to analyze the scene progression so far and how it informs whatever {{ character.name }}'s next line or action in the scene will be.
+
+Make statements about context, meaning and facts established.
+
+Also note who was the last person talking and what the meaning of their dialogue was.
+
+The information you write will be given to the other script editors to write Rachel's next action in the scene. Use plain text formatting.
+{% if length == "medium" %}Your analysis should be 2 - 3 paragraphs long. {% elif length == "short" %}Your analysis should be 1 - 2 paragraphs long. {% endif %}
+<|CLOSE_SECTION|>

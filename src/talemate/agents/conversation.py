@@ -44,10 +44,13 @@ class ConversationAgentEmission(AgentEmission):
     actor: Actor
     character: Character
     generation: list[str]
+    dynamic_instructions: list[str] = None
 
 
 talemate.emit.async_signals.register(
-    "agent.conversation.before_generate", "agent.conversation.generated"
+    "agent.conversation.before_generate", 
+    "agent.conversation.inject_instructions",
+    "agent.conversation.generated"
 )
 
 
@@ -535,6 +538,21 @@ class ConversationAgent(Agent):
             
         if self.investigate_context:
             await self.run_context_investigation(character)
+            
+        dynamic_instructions = []
+        
+        await talemate.emit.async_signals.get(
+            "agent.conversation.inject_instructions"
+        ).send(ConversationAgentEmission(
+            agent=self,
+            generation="", 
+            actor=None, 
+            character=character, 
+            dynamic_instructions=dynamic_instructions
+        ))
+        
+        log.debug("Dynamic instructions", dynamic_instructions=dynamic_instructions)
+
 
         conversation_format = self.conversation_format
         prompt = Prompt.get(
@@ -557,6 +575,7 @@ class ConversationAgent(Agent):
                 "actor_instructions_offset": self.generation_settings_actor_instructions_offset,
                 "direct_instruction": instruction,
                 "decensor": self.client.decensor_enabled,
+                "dynamic_instructions": dynamic_instructions,
             },
         )
 

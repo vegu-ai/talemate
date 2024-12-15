@@ -103,6 +103,13 @@ class SceneMessage:
     @property
     def hidden(self):
         return self.flags & Flags.HIDDEN
+    
+    @property
+    def fingerprint(self) -> str:
+        """
+        Returns a unique hash fingerprint for the message
+        """
+        return str(hash(self.message))[:16]
 
     def hide(self):
         self.flags |= Flags.HIDDEN

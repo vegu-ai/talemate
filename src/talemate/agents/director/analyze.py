@@ -21,7 +21,7 @@ class SceneAnalyzationMixin:
     @classmethod
     def add_actions(cls, director):
         director.actions["guide_scene"] = AgentAction(
-            enabled=True,
+            enabled=False,
             container=True,
             can_be_disabled=True,
             experimental=True,

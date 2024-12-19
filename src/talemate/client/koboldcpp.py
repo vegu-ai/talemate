@@ -111,6 +111,14 @@ class KoboldCppClient(ClientBase):
                     client_parameter="stop_sequence",
                 ),
                 "temperature",
+                
+                "xtc_threshold",
+                "xtc_probability",
+                "dry_multiplier",
+                "dry_base",
+                "dry_allowed_length",
+                "dry_sequence_breakers",
+                "smoothing_factor",
             ]
 
         else:

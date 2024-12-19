@@ -258,6 +258,18 @@ class InferenceParameters(BaseModel):
     frequency_penalty: float | None = 0.05
     repetition_penalty: float | None = 1.0
     repetition_penalty_range: int | None = 1024
+    
+    xtc_threshold: float | None = 0.1
+    xtc_probability: float | None = 0.0
+    
+    dry_multiplier: float | None = 0.0
+    dry_base: float | None = 1.75
+    dry_allowed_length: int | None = 2
+    dry_sequence_breakers: str | None = '"\\n", ":", "\\"", "*"'
+    
+    smoothing_factor: float | None = 0.0
+    smoothing_curve: float | None = 1.0
+    
     # this determines whether or not it should be persisted
     # to the config file
     changed: bool = False

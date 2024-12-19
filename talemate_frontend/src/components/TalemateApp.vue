@@ -311,6 +311,7 @@ export default {
       ],
       version: null,
       loading: false,
+      favicon: null,
       sceneActive: false,
       drawer: false,
       sceneDrawer: true,
@@ -397,6 +398,7 @@ export default {
   },
   mounted() {
     this.connect();
+    this.favicon = document.querySelector('link[rel="icon"]');
   },
   beforeUnmount() {
     // Close the WebSocket connection when the component is destroyed
@@ -662,6 +664,20 @@ export default {
         this.agentStatus[data.name].recentlyActiveTimeout = setTimeout(() => {
           this.agentStatus[data.name].recentlyActive = false;
         }, recentlyActiveDuration);
+      }
+
+      // if any agents are busy show the browser's native loading spinner in the tab
+      // 
+      // favicon.ico vs favicon-loading.ico
+
+      if(Object.values(this.agentStatus).find(agent => agent.busy)) {
+        if(this.favicon) {
+          this.favicon.href = '/favicon-loading.ico';
+        }
+      } else {
+        if(this.favicon) {
+          this.favicon.href = '/favicon.ico';
+        }
       }
 
     },

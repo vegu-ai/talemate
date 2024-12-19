@@ -128,3 +128,22 @@ class CharacterCreatorMixin:
         await character.set_detail("goals", goals.strip())
 
         return goals.strip()
+
+    @set_processing
+    async def update_character_sheet(
+        self,
+        character: Character,
+        instructions: str,
+    ):
+        character_sheet = await Prompt.request(
+            f"creator.update-character-sheet",
+            self.client,
+            "create_long",
+            vars={
+                "character": character,
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "instructions": instructions,
+            },
+        )
+        return character_sheet.strip()

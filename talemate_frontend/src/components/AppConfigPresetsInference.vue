@@ -32,6 +32,19 @@
                 repetition_penalty: float | None= 1.1
                 repetition_penalty_range: int | None = 1024
 
+                EXTRA
+
+                xtc_threshold: float | None = 0.1
+                xtc_probability: float | None = 0.0
+
+                dry_multiplier: float | None = 0.0
+                dry_base: float | None = 1.75
+                dry_allowed_length: int | None = 2
+                dry_sequence_breakers: str | None = '"\\n", ":", "\\"", "*"'
+
+                smoothing_factor: float | None = 0.0
+                smoothing_curve: float | None = 1.0
+
             Display editable form for the selected preset
 
             Will use sliders for float and int values, and checkboxes for bool values
@@ -50,7 +63,7 @@
                             </v-row>
                         </v-card-title>
 
-                        <v-card-text>
+                        <v-card-text overflow-y-visible>
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].temperature" min="0.1" max="2.0" step="0.05" label="Temperature" @update:model-value="setPresetChanged(selected[0])"></v-slider>
 
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].top_p" min="0.1" max="1.0" step="0.05" label="Top P" @update:model-value="setPresetChanged(selected[0])"></v-slider>
@@ -63,9 +76,69 @@
 
                             <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].frequency_penalty" min="0" max="1.0" step="0.01" label="Frequency Penalty" @update:model-value="setPresetChanged(selected[0])"></v-slider>
 
-                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].repetition_penalty" min="1.0" max="1.20" step="0.01" label="Repetition Penalty" @update:model-value="setPresetChanged(selected[0])"></v-slider>
 
-                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].repetition_penalty_range" min="0" max="4096" step="256" label="Repetition Penalty Range" @update:model-value="setPresetChanged(selected[0])"></v-slider>
+
+                            <v-row no-gutters>
+                                <v-col cols="6">
+                                    <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].repetition_penalty" min="1.0" max="1.20" step="0.01" label="Repetition Penalty" @update:model-value="setPresetChanged(selected[0])"></v-slider>
+                                </v-col>
+                                <v-col cols="6">
+                                    <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].repetition_penalty_range" min="0" max="4096" step="256" label="Range" @update:model-value="setPresetChanged(selected[0])"></v-slider>
+                                </v-col>
+                            </v-row>
+
+                            <v-divider></v-divider>
+
+                            <v-tabs v-model="extra_tab" background-color="transparent" color="secondary" density="compact">
+                                <v-tab value="xtc">XTC</v-tab>
+                                <v-tab value="dry">DRY</v-tab>
+                                <v-tab value="smoothing">Smoothing</v-tab>
+                            </v-tabs>
+
+                            <v-window v-model="extra_tab">
+                                <!-- XTC (Exclude top choices) -->
+                                <v-window-item value="xtc">
+                                    <v-row no-gutters class="mt-8">
+                                        <v-col cols="6">
+                                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].xtc_threshold" min="0" max="1.0" step="0.01" label="Threshold" @update:model-value="setPresetChanged(selected[0])"></v-slider>
+                                        </v-col>
+                                        <v-col cols="6">
+                                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].xtc_probability" min="0" max="1.0" step="0.01" label="Probability" @update:model-value="setPresetChanged(selected[0])"></v-slider>
+                                        </v-col>
+                                    </v-row>
+                                </v-window-item>
+
+                                <!-- DRY -->
+                                <v-window-item value="dry">
+                                    <v-row no-gutters class="mt-8">
+                                        <v-col cols="4">
+                                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].dry_multiplier" min="0" max="4.0" step="0.1" label="Multiplier" @update:model-value="setPresetChanged(selected[0])"></v-slider>
+                                        </v-col>
+                                        <v-col cols="4">
+                                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].dry_base" min="1.0" max="3.0" step="0.01" label="Base" @update:model-value="setPresetChanged(selected[0])"></v-slider>
+                                        </v-col>
+                                        <v-col cols="4">
+                                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].dry_allowed_length" min="1" max="10" step="1" label="Allowed Length" @update:model-value="setPresetChanged(selected[0])"></v-slider>
+                                        </v-col>
+                                    </v-row>
+                                    <v-text-field v-model="config.inference[selected[0]].dry_sequence_breakers" label="Sequence Breakers" @update:model-value="setPresetChanged(selected[0])"></v-text-field>
+                                </v-window-item>
+
+                                <!-- Smoothing Factor -->
+                                <v-window-item value="smoothing">
+                                    <v-row no-gutters class="mt-8">
+                                        <v-col cols="6">
+                                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].smoothing_factor" min="0" max="1.0" step="0.01" label="Factor" @update:model-value="setPresetChanged(selected[0])"></v-slider>
+                                        </v-col>
+                                        <v-col cols="6">
+                                            <v-slider thumb-label="always" density="compact" v-model="config.inference[selected[0]].smoothing_curve" min="0" max="1.0" step="0.01" label="Curve" @update:model-value="setPresetChanged(selected[0])"></v-slider>
+                                        </v-col>
+                                    </v-row>
+                                </v-window-item>
+                            </v-window>
+
+                            <v-divider></v-divider>
+
 
                             <v-checkbox density="compact" v-model="config.inference[selected[0]].temperature_last" label="Sample temperature last" @update:model-value="setPresetChanged(selected[0])"></v-checkbox>
 
@@ -113,6 +186,7 @@ export default {
             config: {
                 inference: {},
             },
+            extra_tab: 'xtc',
         }
     },
     methods: {

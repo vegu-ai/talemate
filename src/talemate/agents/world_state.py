@@ -24,6 +24,9 @@ from talemate.world_state import InsertionMode
 from .base import Agent, AgentAction, AgentActionConfig, AgentEmission, set_processing
 from .registry import register
 
+if TYPE_CHECKING:
+    from talemate.tale_mate import Character
+
 log = structlog.get_logger("talemate.agents.world_state")
 
 talemate.emit.async_signals.register("agent.world_state.time")
@@ -798,3 +801,25 @@ class WorldStateAgent(Agent):
                 error=e,
             )
             raise
+
+
+    @set_processing
+    async def determine_character_development(self, character: Character):
+        """
+        Determine character development
+        """
+    
+        response = await Prompt.request(
+            "world_state.determine-character-development",
+            self.client,
+            "analyze_freeform_long",
+            vars={
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "character": character,
+            },
+        )
+
+        log.debug("determine_character_development", response=response)
+
+        return response

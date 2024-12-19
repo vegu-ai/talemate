@@ -103,6 +103,13 @@ class SceneMessage:
     @property
     def hidden(self):
         return self.flags & Flags.HIDDEN
+    
+    @property
+    def fingerprint(self) -> str:
+        """
+        Returns a unique hash fingerprint for the message
+        """
+        return str(hash(self.message))[:16]
 
     def hide(self):
         self.flags |= Flags.HIDDEN
@@ -151,7 +158,7 @@ class CharacterMessage(SceneMessage):
         {dialogue}
         """
 
-        message = self.message.split(":", 1)[1].replace('"', "").strip()
+        message = self.message.split(":", 1)[1].strip()
 
         return f"\n{self.character_name.upper()}\n{message}\nEND-OF-LINE\n"
 

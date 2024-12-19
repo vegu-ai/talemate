@@ -213,14 +213,12 @@ class NarratorAgent(Agent):
         result = "\n".join(cleaned)
         
         result = util.strip_partial_sentences(result)
+        editor = get_agent("editor")
         
-        if force_narrative:
-            if "*" not in result and '"' not in result:
-                result = f"*{result.strip()}*"
-        
-        if ensure_dialog_format:
-            result = util.ensure_dialog_format(result)
-
+        if ensure_dialog_format or force_narrative:
+            if editor.fix_exposition_enabled and editor.fix_exposition_narrator:
+                result = editor.fix_exposition_in_text(result)
+            
         
         return result
 
@@ -600,9 +598,9 @@ class NarratorAgent(Agent):
         """
         Pass through narration message as is
         """
-        narration = narration.replace("*", "")
-        narration = f"*{narration}*"
-        narration = util.ensure_dialog_format(narration)
+        editor = get_agent("editor")
+        if editor.fix_exposition_enabled and editor.fix_exposition_narrator:
+            narration = editor.fix_exposition_in_text(narration)
         return narration
 
     def action_to_source(

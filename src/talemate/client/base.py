@@ -272,7 +272,7 @@ class ClientBase:
 
             if "narrate" in kind:
                 return system_prompts.NARRATOR
-            if "director" in kind:
+            if "director" in kind or "direction" in kind:
                 return system_prompts.DIRECTOR
             if "create" in kind:
                 return system_prompts.CREATOR
@@ -303,7 +303,7 @@ class ClientBase:
 
             if "narrate" in kind:
                 return system_prompts.NARRATOR_NO_DECENSOR
-            if "director" in kind:
+            if "director" in kind or "direction" in kind:
                 return system_prompts.DIRECTOR_NO_DECENSOR
             if "create" in kind:
                 return system_prompts.CREATOR_NO_DECENSOR

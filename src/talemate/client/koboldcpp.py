@@ -110,8 +110,7 @@ class KoboldCppClient(ClientBase):
                     talemate_parameter="stopping_strings",
                     client_parameter="stop_sequence",
                 ),
-                "temperature",
-                
+
                 "xtc_threshold",
                 "xtc_probability",
                 "dry_multiplier",
@@ -119,6 +118,8 @@ class KoboldCppClient(ClientBase):
                 "dry_allowed_length",
                 "dry_sequence_breakers",
                 "smoothing_factor",
+                
+                "temperature",
             ]
 
         else:

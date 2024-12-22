@@ -81,6 +81,7 @@ def set_preset(parameters: dict, kind: str, client: "ClientBase"):
 PRESET_SUBSTRING_MAPPINGS = {
     "deterministic": "deterministic",
     "creative": "creative",
+    "create": "creative",
     "analytical": "analytical",
     "analyze": "analytical",
     "direction": "scene_direction",

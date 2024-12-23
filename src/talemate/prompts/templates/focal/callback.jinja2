@@ -1,0 +1,4 @@
+{{ usage }}:
+{{ state.callback_prefix }}
+{{ callback.pretty_name }}: {% for argument in arguments %}<{{ argument_usage[argument.name ]}}>{% if not loop.last %} {{ state.argument_delimiter }} {% endif %}{% endfor %}
+{{ state.callback_suffix }}

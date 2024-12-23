@@ -7,6 +7,8 @@ import structlog
 from talemate.agents.base import set_processing
 from talemate.prompts import Prompt
 
+import talemate.game.focal as focal
+
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
 
@@ -135,15 +137,71 @@ class CharacterCreatorMixin:
         character: Character,
         instructions: str,
     ):
-        character_sheet = await Prompt.request(
-            f"creator.update-character-sheet",
+        
+        focal_update_character_sheet = focal.Focal(
             self.client,
-            "create_long",
-            vars={
-                "character": character,
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "instructions": instructions,
-            },
+            
+            # callbacks
+            callbacks = [
+                focal.Callback(
+                    name = "add_attribute",
+                    arguments = [
+                        focal.Argument(name="name", type="str"),
+                        focal.Argument(name="description", type="str"),
+                    ],
+                    fn = lambda name, description: print(f"Setting attribute {name} to {description}")
+                ),
+                focal.Callback(
+                    name = "update_attribute",
+                    arguments = [
+                        focal.Argument(name="name", type="str"),
+                        focal.Argument(name="description", type="str"),
+                    ],
+                    fn = lambda name, description: print(f"Updating attribute {name} to {description}")
+                ),
+                focal.Callback(
+                    name = "remove_attribute",
+                    arguments = [
+                        focal.Argument(name="name", type="str"),
+                    ],
+                    fn = lambda name: print(f"Removing attribute {name}")
+                ),
+                focal.Callback(
+                    name = "add_to_description",
+                    arguments = [
+                        focal.Argument(name="description", type="str"),
+                    ],
+                    fn = lambda description: print(f"Adding to description: {description}")
+                ),
+                focal.Callback(
+                    name = "update_description",
+                    arguments = [
+                        focal.Argument(name="description", type="str"),
+                    ],
+                    fn = lambda description: print(f"Updating description: {description}")
+                ),
+            ],
+            
+            # context
+            character = character,
+            scene = self.scene,
+            instructions = instructions,
         )
+        
+        character_sheet = await focal_update_character_sheet.request(
+            "creator.update-character-sheet"
+        )
+        
+        
+        #character_sheet = await Prompt.request(
+        #    f"creator.update-character-sheet",
+        #    self.client,
+        #    "create_long",
+        #    vars={
+        #        "character": character,
+        #        "scene": self.scene,
+        #        "max_tokens": self.client.max_token_length,
+        #        "instructions": instructions,
+        #    },
+        #)
         return character_sheet.strip()

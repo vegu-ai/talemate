@@ -385,4 +385,4 @@ class CmdDetermineCharacterDevelopment(TalemateCommand):
 
         instructions = await world_state.determine_character_development(character)
         
-        updates = await creator.update_character_sheet(character, instructions)
+        # updates = await creator.update_character_sheet(character, instructions)

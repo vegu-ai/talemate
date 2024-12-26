@@ -23,6 +23,7 @@ from talemate.world_state import InsertionMode
 
 from .base import Agent, AgentAction, AgentActionConfig, AgentEmission, set_processing
 from .registry import register
+import talemate.game.focal as focal
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -808,18 +809,83 @@ class WorldStateAgent(Agent):
         """
         Determine character development
         """
-    
-        response = await Prompt.request(
-            "world_state.determine-character-development",
+        
+        creator = get_agent("creator")
+        
+        async def add_attribute(name: str, instructions: str):
+            attribute_value = await creator.generate_character_attribute(
+                character,
+                attribute_name = name,
+                instructions = instructions,
+            )
+            log.debug("add_attribute", name=name, instructions=instructions, value=attribute_value)
+            
+        async def update_attribute(name: str, instructions: str):
+            attribute_value = await creator.generate_character_attribute(
+                character,
+                attribute_name = name,
+                instructions = instructions,
+                original = character.base_attributes.get(name),
+            )
+            log.debug("update_attribute", name=name, instructions=instructions, value=attribute_value, original=character.base_attributes.get(name))
+        
+        async def remove_attribute(name: str):
+            print(f"Removing attribute {name}")
+            
+        async def update_description(instructions: str):
+            description = await creator.generate_character_detail(
+                character,
+                detail_name = "description",
+                instructions = instructions,
+                original = character.description,
+                length=1024,
+            )
+            log.debug("update_description", instructions=instructions, description=description)
+                 
+        focal_handler = focal.Focal(
             self.client,
-            "analyze_freeform_long",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "character": character,
-            },
+            
+            # callbacks
+            callbacks = [
+                focal.Callback(
+                    name = "add_attribute",
+                    arguments = [
+                        focal.Argument(name="name", type="str"),
+                        focal.Argument(name="instructions", type="str"),
+                    ],
+                    fn = add_attribute
+                ),
+                focal.Callback(
+                    name = "update_attribute",
+                    arguments = [
+                        focal.Argument(name="name", type="str"),
+                        focal.Argument(name="instructions", type="str"),
+                    ],
+                    fn = update_attribute
+                ),
+                focal.Callback(
+                    name = "remove_attribute",
+                    arguments = [
+                        focal.Argument(name="name", type="str"),
+                    ],
+                    fn = remove_attribute
+                ),
+                focal.Callback(
+                    name = "update_description",
+                    arguments = [
+                        focal.Argument(name="instructions", type="str"),
+                    ],
+                    fn = update_description
+                ),
+            ],
+            
+            # context
+            character = character,
+            scene = self.scene,
         )
-
-        log.debug("determine_character_development", response=response)
-
-        return response
+        
+        response = await focal_handler.request(
+            "world_state.determine-character-development",
+        )
+        
+        return response.strip()

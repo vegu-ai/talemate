@@ -130,7 +130,7 @@ class Focal:
                 args = [arg.strip() for arg in args_text.split(state.argument_delimiter)]
                 
                 # Validate argument count
-                if len(args) != len(callback.arguments):
+                if len(args) < len(callback.arguments):
                     log.warning(
                         "focal.execute.argument_count_mismatch",
                         expected=len(callback.arguments),
@@ -140,7 +140,8 @@ class Focal:
                 
                 # Execute the callback
                 try:
-                    callback.fn(*args)
+                    args = args[:len(callback.arguments)]
+                    await callback.fn(*args)
                 except Exception as e:
                     log.error(
                         "focal.execute.callback_error",

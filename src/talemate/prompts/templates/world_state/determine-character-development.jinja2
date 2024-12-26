@@ -2,7 +2,11 @@
 <|SECTION:CHARACTER|>
 {{ character.sheet }}
 
-{{ character.description }}
+{% for n,v in character.details.items() %}
+{{ n }}: {{ v }}
+{% endfor %}
+
+DESCRIPTION: {{ character.description }}
 L<|CLOSE_SECTION|>
 {% endblock %}
 {% set scene_history = scene.context_history(budget=max_tokens-512-count_tokens(self.rendered_context()), keep_context_investigation=False) -%}
@@ -13,22 +17,26 @@ L<|CLOSE_SECTION|>
 {% endfor -%}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-Identify if {{ character.name }} has had any MAJOR character development in the scene.
+Identify if {{ character.name }} has had any MAJOR character developments not yet reflected in their current character sheet and description.
+
+Give instructions to the story writers on how to update the character sheet and description to reflect these changes.
 
 Do this by comparing the previous character description and sheet with has happened in the story.
 
-If there has been any major character development, describe it in detail what should be updated in the character sheet and description.
+Your recommendations must be nuanced and multidimensional. Avoid making the character one-dimensional or boring.
 
-Your instructions will be given to the author to make the necessary changes.
+Your recommendations must be sourced from the story and not from your own imagination.
 
-Do not lean into any change too strongly. We must avoid making the character one-dimensional or boring.
+ATTRIBUTE = A short, concise description of a character trait, attribute, or skill. 1 paragraph.
+DESCRIPTION = The complete overview of the character. Multiple paragraphs.
 
-You must only provide suggestions for {{ character.name }}. Other characters will be analyzed separately.
+{{ focal.render_instructions() }}
 
-Your response should follow this format exactly:
+{{ focal.callbacks.add_attribute.render("Add a new attribute in the character sheet", name="Short Attribute Name, don't make this a phrase.", instructions="Instructions on what to add tp the character sheet.") }}
 
-ANALYSIS: <Analysis of the character's previous state and what has happened to them throughout the story.>
+{{ focal.callbacks.update_attribute.render("Update an existing attribute in the character sheet", name="Exact Attribute Name", instructions="Instructions on what to update in a specific existing attribute. Be very clear about what you want to keep, add or remove.") }}
 
-SUGGESTIONS: <Suggest 1 - 3 changes to the character sheet and description. You may add, remove, or modify any information. Simply put "None" if no changes are necessary at this point.>
-<|CLOSE_SECTION|>
-{{ bot_token }}ANALYSIS:
+{{ focal.callbacks.remove_attribute.render("Remove an attribute from the character sheet. This action has no instructional text. Just provide the attribute name.", name="Exact Attribute Name") }}
+
+{{ focal.callbacks.update_description.render("Update "+character.name+"'s character description - Use this when the character has changed drastically", instructions="Instructions on how the character description should be changed. Be very clear about what you want to keep, add or remove.") }}
+{{ bot_token }}

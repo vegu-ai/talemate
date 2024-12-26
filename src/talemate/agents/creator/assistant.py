@@ -32,6 +32,10 @@ class ContentGenerationContext(pydantic.BaseModel):
     A context for generating content.
     """
 
+    # character attribute:Attribute name
+    # character detail:Detail name
+    # character dialogue:
+    # scene intro:
     context: str
     instructions: str = ""
     length: int = 100
@@ -229,6 +233,44 @@ class AssistantMixin:
             return content
 
         return content.strip().strip("*").strip()
+
+    @set_processing
+    async def generate_character_attribute(
+        self,
+        character: "Character",
+        attribute_name: str,
+        instructions: str = "",
+        original: str | None = None,
+    ) -> str:
+        """
+        Wrapper for contextual_generate that generates a character attribute.
+        """        
+        return await self.contextual_generate_from_args(
+            context=f"character attribute:{attribute_name}",
+            character=character.name,
+            instructions=instructions,
+            original=original,
+        )
+        
+    @set_processing
+    async def generate_character_detail(
+        self,
+        character: "Character",
+        detail_name: str,
+        instructions: str = "",
+        original: str | None = None,
+        length: int = 512,
+    ) -> str:
+        """
+        Wrapper for contextual_generate that generates a character detail.
+        """        
+        return await self.contextual_generate_from_args(
+            context=f"character detail:{detail_name}",
+            character=character.name,
+            instructions=instructions,
+            original=original,
+            length=length,
+        )
 
     @set_processing
     async def autocomplete_dialogue(

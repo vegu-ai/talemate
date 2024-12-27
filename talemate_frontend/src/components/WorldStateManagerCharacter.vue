@@ -65,7 +65,19 @@
                         </v-list>
                             
                         <v-list v-if="character !== null">
-                            
+
+                            <!-- GENERATE CHANGE SUGGESTIONS -->
+                            <div>
+                                <v-list-item>
+                                    <v-tooltip max-width="300" :text="`Generate change suggestions for ${character.name}. This will provide a list of suggestions for changes to the character, based on the progression of the story thus far.`">
+                                        <template v-slot:activator="{ props }">
+                                            <v-btn @click.stop="suggestChanges(character.name)" v-bind="props" variant="tonal" block color="primary" prepend-icon="mdi-lightbulb-on">Suggest Changes</v-btn>
+                                        </template>
+                                    </v-tooltip>
+                                </v-list-item>
+                            </div>
+
+                            <v-divider></v-divider>
 
                             <!-- DEACTIVATE CHARACTER -->
                             <div v-if="!character.is_player">
@@ -391,6 +403,14 @@ export default {
                 }
             }));
         },
+        suggestChanges(name) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'request_suggestions',
+                suggestion_type: 'character',
+                name: name,
+            }));
+        },
 
         handleMessage(message) {
             if(message.type == "image_generated") {
@@ -418,7 +438,7 @@ export default {
                 if(this.selected === message.data.name) {
                     this.loadCharacter(this.selected)
                 }
-            } 
+            }
         },
     },
     created() {

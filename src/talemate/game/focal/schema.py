@@ -1,14 +1,17 @@
 from typing import Callable
 import pydantic
+import uuid
 
 from talemate.prompts.base import Prompt
 
-__all__ = ["Argument", "Callback", "State"]
+__all__ = ["Argument", "Call", "Callback", "State"]
 
 class State(pydantic.BaseModel):
     argument_delimiter: str = "|"
     callback_prefix: str = "START"
     callback_suffix: str = "COMMIT"
+    
+    calls:list["Call"] = pydantic.Field(default_factory=list)
     
     def set(self, name:str, value:str):
         
@@ -20,6 +23,13 @@ class State(pydantic.BaseModel):
 class Argument(pydantic.BaseModel):
     name: str
     type: str
+    
+class Call(pydantic.BaseModel):
+    name: str
+    arguments: dict[str, str] = pydantic.Field(default_factory=dict)
+    result: str | int | float | bool | None = None
+    uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
+    called: bool = False
 
 class Callback(pydantic.BaseModel):
     name: str

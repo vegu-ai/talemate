@@ -28,7 +28,8 @@ Your recommendations must be nuanced and multidimensional. Avoid making the char
 Your recommendations must be sourced from the story and not from your own imagination.
 
 ATTRIBUTE = A short, concise description of a character trait, attribute, or skill. 1 paragraph.
-DESCRIPTION = The complete overview of the character. Multiple paragraphs.
+DESCRIPTION = The complete overview of the character. Multiple paragraphs. This should not be a specific situational
+description but a general overview of the character, telling us who they are, what they want, and how they act.
 
 {{ focal.render_instructions() }}
 
@@ -38,5 +39,5 @@ DESCRIPTION = The complete overview of the character. Multiple paragraphs.
 
 {{ focal.callbacks.remove_attribute.render("Remove an attribute from the character sheet. This action has no instructional text. Just provide the attribute name.", name="Exact Attribute Name") }}
 
-{{ focal.callbacks.update_description.render("Update "+character.name+"'s character description - Use this when the character has changed drastically", instructions="Instructions on how the character description should be changed. Be very clear about what you want to keep, add or remove.") }}
+{{ focal.callbacks.update_description.render("Update "+character.name+"'s character description - Use this when the character has changed drastically. You can only use this once.", instructions="Instructions on how the character description should be changed. Be very clear about what you want to keep, add or remove.") }}
 {{ bot_token }}

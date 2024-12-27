@@ -15,6 +15,7 @@ from talemate.emit import emit
 from talemate.events import GameLoopEvent
 from talemate.instance import get_agent
 from talemate.prompts import Prompt
+from talemate.status import set_loading
 from talemate.scene_message import (
     ReinforcementMessage,
     TimePassageMessage,
@@ -805,42 +806,45 @@ class WorldStateAgent(Agent):
 
 
     @set_processing
-    async def determine_character_development(self, character: Character):
+    async def determine_character_development(
+        self, 
+        character: Character,
+    ) -> list[focal.Call]:
         """
         Determine character development
         """
         
         creator = get_agent("creator")
         
-        async def add_attribute(name: str, instructions: str):
-            attribute_value = await creator.generate_character_attribute(
+        @set_loading("Generating new character attribute", cancellable=True)
+        async def add_attribute(name: str, instructions: str) -> str:
+            return await creator.generate_character_attribute(
                 character,
                 attribute_name = name,
                 instructions = instructions,
             )
-            log.debug("add_attribute", name=name, instructions=instructions, value=attribute_value)
             
-        async def update_attribute(name: str, instructions: str):
-            attribute_value = await creator.generate_character_attribute(
+        @set_loading("Updating character attribute", cancellable=True)
+        async def update_attribute(name: str, instructions: str) -> str:
+            return await creator.generate_character_attribute(
                 character,
                 attribute_name = name,
                 instructions = instructions,
                 original = character.base_attributes.get(name),
             )
-            log.debug("update_attribute", name=name, instructions=instructions, value=attribute_value, original=character.base_attributes.get(name))
         
-        async def remove_attribute(name: str):
-            print(f"Removing attribute {name}")
+        async def remove_attribute(name: str) -> str:
+            return None
             
-        async def update_description(instructions: str):
-            description = await creator.generate_character_detail(
+        @set_loading("Updating character description", cancellable=True)
+        async def update_description(instructions: str) -> str:
+            return await creator.generate_character_detail(
                 character,
                 detail_name = "description",
                 instructions = instructions,
                 original = character.description,
                 length=1024,
             )
-            log.debug("update_description", instructions=instructions, description=description)
                  
         focal_handler = focal.Focal(
             self.client,
@@ -884,8 +888,10 @@ class WorldStateAgent(Agent):
             scene = self.scene,
         )
         
-        response = await focal_handler.request(
+        await focal_handler.request(
             "world_state.determine-character-development",
         )
         
-        return response.strip()
+        log.debug("determine_character_development", calls=focal_handler.state.calls)
+        
+        return focal_handler.state.calls

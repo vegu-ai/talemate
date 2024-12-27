@@ -17,19 +17,42 @@ on a separate phase to SEPARATE the structured function call from the creative c
 """
 
 import structlog
+from contextvars import ContextVar
+from typing import Callable
 
 from talemate.client.base import ClientBase
 from talemate.prompts.base import Prompt
 
-from .schema import Argument, Callback, State
+from .schema import Argument, Call, Callback, State
 
 __all__ = [
     "Argument",
+    "Call",
     "Callback",
     "Focal",
+    "FocalContext",
+    "current_focal_context",
 ]
 
 log = structlog.get_logger("talemate.game.focal")
+
+current_focal_context = ContextVar("current_focal_context", default=None)
+
+class FocalContext:
+    def __init__(self):
+        self.hooks_before_call = []
+        self.hooks_after_call = []
+        
+    def __enter__(self):
+        self.token = current_focal_context.set(self)
+        return self
+    
+    def __exit__(self, *args):
+        current_focal_context.reset(self.token)
+        
+    async def process_hooks(self, call:Call):
+        for hook in self.hooks_after_call:
+            await hook(call)
 
 class Focal:
     
@@ -92,6 +115,9 @@ class Focal:
             response (str): The text containing callback instructions
             state (State): State object containing delimiter and prefix/suffix settings
         """
+        
+        focal_context = current_focal_context.get()
+        
         # Continue processing until we don't find any more callback sections
         while True:
             # Find the next callback section
@@ -141,7 +167,28 @@ class Focal:
                 # Execute the callback
                 try:
                     args = args[:len(callback.arguments)]
-                    await callback.fn(*args)
+                    
+                    # make an arg dict based on order
+                    arg_objects = {}
+                    for i, arg in enumerate(args):
+                        arg_objects[callback.arguments[i].name] = arg
+                    
+                    call = Call(name=callback_name, arguments=arg_objects)
+                    
+                    # if we have a focal context, process additional hooks (before call)
+                    if focal_context:
+                        await focal_context.process_hooks(call)
+                                            
+                    result = await callback.fn(*args)
+                    call.result = result
+                    call.called = True
+                    
+                    self.state.calls.append(call)
+                    
+                    # if we have a focal context, process additional hooks (after call)
+                    if focal_context:
+                        await focal_context.process_hooks(call)
+                    
                 except Exception as e:
                     log.error(
                         "focal.execute.callback_error",

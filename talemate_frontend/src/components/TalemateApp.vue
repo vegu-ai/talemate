@@ -65,6 +65,7 @@
   
       <v-spacer></v-spacer>
 
+      <WorldStateSuggestions ref="worldStateSuggestions" />
       <VisualQueue ref="visualQueue" />
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
@@ -243,6 +244,7 @@ import StatusNotification from './StatusNotification.vue';
 import VisualQueue from './VisualQueue.vue';
 import WorldStateManager from './WorldStateManager.vue';
 import WorldStateManagerMenu from './WorldStateManagerMenu.vue';
+import WorldStateSuggestions from './WorldStateSuggestions.vue';
 import IntroView from './IntroView.vue';
 
 export default {
@@ -265,6 +267,7 @@ export default {
     VisualQueue,
     WorldStateManager,
     WorldStateManagerMenu,
+    WorldStateSuggestions,
   },
   name: 'TalemateApp',
   data() {

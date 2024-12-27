@@ -101,6 +101,7 @@ export default {
                 return;
             }
             this.selectedSuggestion.suggestions = [];
+            this.selected = null;
             this.queue = this.queue.filter(item => item !== this.selectedSuggestion);
         },
 

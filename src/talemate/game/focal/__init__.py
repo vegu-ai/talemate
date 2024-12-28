@@ -18,7 +18,6 @@ on a separate phase to SEPARATE the structured function call from the creative c
 
 import structlog
 from contextvars import ContextVar
-from typing import Callable
 
 from talemate.client.base import ClientBase
 from talemate.prompts.base import Prompt

@@ -29,6 +29,7 @@ export default createVuetify({
           highlight4: colors.red.lighten1,
           highlight5: colors.amber.lighten3,
           dirty: colors.orange.lighten2,
+          instructions: colors.orange.lighten4,
 
           // messages
           narrator: colors.deepPurple.lighten3,

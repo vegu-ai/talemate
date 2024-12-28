@@ -24,7 +24,8 @@
                             </v-list-item-subtitle>
                         </v-list-item>
                         <v-alert v-if="!suggestionsAvailable" variant="text" color="muted" density="compact">
-                            No suggestions available
+                            <div v-if="!busy">No suggestions available</div>
+                            <div v-else>Generating...</div>
                         </v-alert>
                     </v-list>
                 </v-col>
@@ -96,13 +97,24 @@ export default {
             this.open = false;
         },
 
+        removeEmptySuggestions() {
+            this.queue = this.queue.filter(item => item.suggestions.length > 0);
+        },
+
+        removeEmptySuggestionItems() {
+            if(!this.selectedSuggestion) {
+                return;
+            }
+            this.selectedSuggestion.suggestions = this.selectedSuggestion.suggestions.filter(suggestion => suggestion.result !== "");
+        },
+
         onDeleteSuggestionItems() {
             if(!this.selectedSuggestion) {
                 return;
             }
             this.selectedSuggestion.suggestions = [];
             this.selected = null;
-            this.queue = this.queue.filter(item => item !== this.selectedSuggestion);
+            this.removeEmptySuggestions();
         },
 
         onDeleteSuggestionItem(idx) {
@@ -113,9 +125,9 @@ export default {
 
             // if not suggestions left, remove the item
             if(this.selectedSuggestion.suggestions.length === 0) {
-                this.queue = this.queue.filter(item => item !== this.selectedSuggestion);
                 this.selected = null;
             }
+            this.removeEmptySuggestions();
         },
 
         requestSuggestionsForCharacter(character_name) {
@@ -163,6 +175,7 @@ export default {
                 }
             } else if (message.action === 'operation_done') {
                 this.busy = false;
+                this.removeEmptySuggestionItems();
             }
         }
     },

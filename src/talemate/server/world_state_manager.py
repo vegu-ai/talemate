@@ -175,12 +175,7 @@ class RequestSuggestionPayload(pydantic.BaseModel):
     suggestion_type: str
     auto_apply: bool = False
     
-class AcceptCharacterChangePayload(pydantic.BaseModel):
-    name: str
-    attributes: dict[str, str | None]
-    details: dict[str, str | None]
-    description: str
-
+    
 class WorldStateManagerPlugin:
     router = "world_state_manager"
 
@@ -1128,4 +1123,3 @@ class WorldStateManagerPlugin:
                 #)
                 
                 task.add_done_callback(lambda _: asyncio.create_task(self.signal_operation_done()))
-    

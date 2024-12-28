@@ -43,6 +43,17 @@
         @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
         />
     </div>
+    <div v-else-if="tab === 'suggestions'">
+        <WorldStateManagerMenuSuggestionsTools 
+        ref="suggestionsTools" 
+        :scene="scene" 
+        :manager="manager"
+        :tool="tool"
+        :tool_state="tool_state"
+        :world-state-templates="worldStateTemplates"
+        @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
+        />
+    </div>
 </template>
 
 
@@ -53,6 +64,7 @@ import WorldStateManagerMenuTemplateTools from './WorldStateManagerMenuTemplateT
 import WorldStateManagerMenuWorldTools from './WorldStateManagerMenuWorldTools.vue';
 import WorldStateManagerMenuSceneTools from './WorldStateManagerMenuSceneTools.vue';
 import WorldStateManagerMenuHistoryTools from './WorldStateManagerMenuHistoryTools.vue';
+import WorldStateManagerMenuSuggestionsTools from './WorldStateManagerMenuSuggestionsTools.vue';
 
 export default {
     name: 'WorldStateManagerMenu',
@@ -62,6 +74,7 @@ export default {
         WorldStateManagerMenuWorldTools,
         WorldStateManagerMenuSceneTools,
         WorldStateManagerMenuHistoryTools,
+        WorldStateManagerMenuSuggestionsTools,
     },
     props: {
         scene: Object,
@@ -94,6 +107,8 @@ export default {
             tab: "scene",
             character: null,
             manager: null,
+            tool: null,
+            tool_state: null,
         }
     },
     emits: [
@@ -104,6 +119,13 @@ export default {
         update(tab, meta) {
             this.manager = meta.manager;
             this.tab = tab;
+            this.tool = meta.tool;
+            this.tool_state = meta.tool_state;
+
+            // back-reference to the menu component through $refs on tool
+            if(this.tool && this.$refs) {
+                this.tool.menu = this.$refs[`${tab}Tools`];
+            }
         },
         setCharacter(character) {
             this.character = character;

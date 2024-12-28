@@ -50,6 +50,7 @@
                 ref="characters" 
                 @require-scene-save="requireSceneSave = true"
                 @selected-character="(character) => { $emit('selected-character', character) }"
+                @world-state-manager-navigate="show"
                 :generation-options="generationOptions"
                 :templates="templates"
                 :scene="scene"
@@ -100,6 +101,13 @@
                 ref="pins" />
             </v-window-item>
 
+            <!-- SUGGESTIONS -->
+            <v-window-item value="suggestions">
+                <WorldStateManagerSuggestions
+                ref="suggestions" 
+                />
+            </v-window-item>
+
             <!-- TEMPLATES -->
             <v-window-item value="templates">
                 <WorldStateManagerTemplates 
@@ -123,8 +131,10 @@ import WorldStateManagerContextDB from './WorldStateManagerContextDB.vue';
 import WorldStateManagerPins from './WorldStateManagerPins.vue';
 import WorldStateManagerScene from './WorldStateManagerScene.vue';
 import WorldStateManagerHistory from './WorldStateManagerHistory.vue';
+import WorldStateManagerSuggestions from './WorldStateManagerSuggestions.vue';
 import GenerationOptions from './GenerationOptions.vue';
 import RequestInput from './RequestInput.vue';
+
 
 export default {
     name: 'WorldStateManager',
@@ -136,6 +146,7 @@ export default {
         WorldStateManagerPins,
         WorldStateManagerScene,
         WorldStateManagerHistory,
+        WorldStateManagerSuggestions,
         GenerationOptions,
         RequestInput,
     },
@@ -188,6 +199,11 @@ export default {
                     name: "pins",
                     title: "Pins",
                     icon: "mdi-pin"
+                },
+                {
+                    name: "suggestions",
+                    title: "Suggestions",
+                    icon: "mdi-lightbulb-on"
                 },
                 {
                     name: "templates",
@@ -309,6 +325,34 @@ export default {
 
             meta['manager'] = this;
 
+            // select tool based on tab ($refs)
+            let tool = null;
+
+            if(tab === 'characters') {
+                tool = this.$refs.characters;
+            } else if(tab === 'world') {
+                tool = this.$refs.world;
+            } else if(tab === 'contextdb') {
+                tool = this.$refs.contextdb;
+            } else if(tab === 'history') {
+                tool = this.$refs.history;
+            } else if(tab === 'pins') {
+                tool = this.$refs.pins;
+            } else if(tab === 'suggestions') {
+                tool = this.$refs.suggestions;
+            } else if(tab === 'templates') {
+                tool = this.$refs.templates;
+            }
+
+            if(tool) {
+                meta['tool'] = tool;
+            }
+
+            // if the tool as a shareState method, call it on the meta object
+            if(tool && tool.shareState) {
+                tool.shareState(meta);
+            }
+
             this.$emit('navigate-r', tab || this.tab, meta);
         },
 
@@ -358,13 +402,21 @@ export default {
                         this.loadContextDBEntry(sub1);
                     });
                 }
-            }  else if (tab == 'history') {
+            } else if (tab == 'history') {
                 this.$nextTick(() => {
                     this.$refs.history.requestSceneHistory()
                 });
+            } else if (tab == 'suggestions') {
+                this.$nextTick(() => {
+                    if(sub1) {
+                        this.$refs.suggestions.selectSuggestion(sub1)
+                    }
+                });
             }
 
-            this.emitEditorState(tab)
+            this.$nextTick(() => {
+                this.emitEditorState(tab)
+            });
         },
         reset() {
             this.characterList = {

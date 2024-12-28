@@ -7,7 +7,7 @@
             <v-card-text>
                 <div v-if="suggestion.name === 'add_attribute' || suggestion.name === 'update_attribute'">
                     <v-alert color="muted" density="compact" elevation="7" variant="outlined" class="mb-2" icon="mdi-script">
-                        <div class="text-caption">{{ suggestion.arguments.instructions }}</div>
+                        {{ suggestion.arguments.instructions }}
                     </v-alert>
                     <v-alert color="mutedheader" density="compact" elevation="7" variant="outlined" class="mb-2">
                         <template v-slot:prepend>
@@ -15,7 +15,8 @@
                             <v-progress-circular size="24" v-else indeterminate="disable-shrink"
                             color="primary"></v-progress-circular>   
                         </template>
-                        <v-alert-title>Set Attribute <v-chip class="ml-4" label size="small" color="primary" variant="tonal">{{ suggestion.arguments.name }}</v-chip></v-alert-title>
+                        <v-alert-title v-if="suggestion.called">Set Attribute <v-chip class="ml-4" label size="small" color="primary" variant="tonal">{{ suggestion.arguments.name }}</v-chip></v-alert-title>
+                        <v-alert-title v-else>Generating proposal...</v-alert-title>
                         
                         {{ suggestion.result }}
                     </v-alert>
@@ -30,7 +31,7 @@
                 </div>
                 <div v-else-if="suggestion.name === 'update_description'">
                     <v-alert color="muted" density="compact" elevation="7" variant="outlined" class="mb-2" icon="mdi-script">
-                        <div class="text-caption">{{ suggestion.arguments.instructions }}</div>
+                        {{ suggestion.arguments.instructions }}
                     </v-alert>
                     <v-alert color="mutedheader" density="compact" elevation="7" variant="outlined" class="mb-2">
                         <template v-slot:prepend>
@@ -38,8 +39,10 @@
                             <v-progress-circular size="24" v-else indeterminate="disable-shrink"
                             color="primary"></v-progress-circular>   
                         </template>
-                        <v-alert-title>Update Description</v-alert-title>
-                        
+                        <v-alert-title v-if="suggestion.called">Update Description</v-alert-title>
+                        <v-alert-title v-else>Generating proposal...
+                        </v-alert-title>
+
                         <div class="formatted">{{ suggestion.result }}</div>
                     </v-alert>
                 </div>
@@ -68,29 +71,36 @@
 <script>
 
 export default {
-    name: 'WorldStateSuggestionsCharacter',
+    name: 'WorldStateManagerSuggestionsCharacter',
     props: {
+        // current selected suggestion state
+        // holds the label of the character and the suggestions
         suggestionState: Object,
+
+        // whether the component is busy or not
         busy: Boolean,
     },
     emits: ['delete-suggestion', 'delete-suggestions'],
-    data() {
-        return {
-            selected: null,
-        }
-    },
     inject: [
         'getWebsocket',
-        'registerMessageHandler',
-        'unregisterMessageHandler',
     ],
     methods: {
 
-
+        /**
+         * Applies the suggested removal of an attribute
+         * @method removeAttribute
+         * @param {string} attribute_name - The name of the attribute to remove
+         */
         removeAttribute(attribute_name) {
             this.applyAttribute(attribute_name, "");
         },
 
+
+        /**
+         * Applies the suggested addition or update of an attribute
+         * @method applyAttribute
+         * @param {string} attribute_name - The name of the attribute to add or update
+         */
         applyAttribute(attribute_name, attribute_value) {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
@@ -101,6 +111,11 @@ export default {
             }));
         },
 
+        /**
+         * Applies the suggested update of the character description
+         * @method updateDescription
+         * @param {string} description - The new description
+         */
         updateDescription(description) {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
@@ -111,6 +126,10 @@ export default {
             }));
         },
 
+        /**
+         * Applies all suggestions
+         * @method applyAllSuggestions
+         */
         applyAllSuggestions() {
             for(let suggestion in this.suggestionState.suggestions) {
                 this.applySuggestion(suggestion);
@@ -118,6 +137,11 @@ export default {
             this.deleteAllSuggestions();
         },
         
+        /**
+         * Applies a single suggestion
+         * @method applySuggestion
+         * @param {number} idx - The index of the suggestion to apply
+         */
         applySuggestion(idx) {
             let suggestion = this.suggestionState.suggestions[idx];
             if(suggestion.name === 'add_attribute') {
@@ -132,10 +156,19 @@ export default {
             this.deleteSuggestion(idx);
         },
 
+        /**
+         * Deletes all suggestions
+         * @method deleteAllSuggestions
+         */
         deleteAllSuggestions() {
             this.$emit('delete-suggestions');
         },
 
+        /**
+         * Deletes a single suggestion
+         * @method deleteSuggestion
+         * @param {number} idx - The index of the suggestion to delete
+         */
         deleteSuggestion(idx) {
             this.$emit('delete-suggestion', idx);
         }

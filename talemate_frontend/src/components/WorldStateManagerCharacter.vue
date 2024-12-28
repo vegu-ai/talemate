@@ -310,6 +310,7 @@ export default {
     emits:[
         'require-scene-save',
         'selected-character',
+        'world-state-manager-navigate',
     ],
     methods: {
         reset() {
@@ -404,6 +405,7 @@ export default {
             }));
         },
         suggestChanges(name) {
+            this.$emit('world-state-manager-navigate', 'suggestions');
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'request_suggestions',

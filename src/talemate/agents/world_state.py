@@ -816,7 +816,7 @@ class WorldStateAgent(Agent):
         
         creator = get_agent("creator")
         
-        @set_loading("Generating new character attribute", cancellable=True)
+        @set_loading("Generating character attribute", cancellable=True)
         async def add_attribute(name: str, instructions: str) -> str:
             return await creator.generate_character_attribute(
                 character,
@@ -824,7 +824,7 @@ class WorldStateAgent(Agent):
                 instructions = instructions,
             )
             
-        @set_loading("Updating character attribute", cancellable=True)
+        @set_loading("Generating character attribute", cancellable=True)
         async def update_attribute(name: str, instructions: str) -> str:
             return await creator.generate_character_attribute(
                 character,
@@ -836,7 +836,7 @@ class WorldStateAgent(Agent):
         async def remove_attribute(name: str) -> str:
             return None
             
-        @set_loading("Updating character description", cancellable=True)
+        @set_loading("Generating character description", cancellable=True)
         async def update_description(instructions: str) -> str:
             return await creator.generate_character_detail(
                 character,

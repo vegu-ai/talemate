@@ -1087,6 +1087,7 @@ class WorldStateManagerPlugin:
                     "suggestion_type": payload.suggestion_type,
                     "name": payload.name,
                     "data": call.model_dump(),
+                    "id": f"{payload.suggestion_type}-{payload.name}",
                 }
             )
             

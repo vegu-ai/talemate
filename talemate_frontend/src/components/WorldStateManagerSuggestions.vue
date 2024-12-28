@@ -1,65 +1,28 @@
 <template>
-<v-chip v-if="suggestionsAvailable" color="secondary" class="text-caption" label transition="scroll-x-reverse-transition" @click="openDialog" variant="text" append-icon="mdi-lightbulb-on-outline">Suggestions</v-chip>
-<v-dialog v-model="open" max-width="1080px">
-    <v-card>
-        <v-card-title><v-icon size="small" class="mr-2">mdi-lightbulb-on-outline</v-icon>Suggestions</v-card-title>
-
-        <v-card-text>
-            <p v-if="busy">
-                <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
-            </p>
-            <!-- suggestion queue, suggestion review -->
-            <v-row>
-                <v-col cols="3">
-                    <v-list selectable v-model:selected="selected" color="primary">
-                        <v-list-item v-for="item in queue" :key="item.type+':'+item.label" :value="item.type+':'+item.label">
-                            <template v-slot:prepend>
-                                <v-icon v-if="item.type === 'character'">mdi-account</v-icon>
-                            </template>
-                            <v-list-item-title>
-                                {{ item.label }}
-                            </v-list-item-title>
-                            <v-list-item-subtitle>
-                                <v-chip v-if="item.type === 'character'" label size="x-small" color="primary" variant="outlined" class="mr-1">Character Development</v-chip>
-                            </v-list-item-subtitle>
-                        </v-list-item>
-                        <v-alert v-if="!suggestionsAvailable" variant="text" color="muted" density="compact">
-                            <div v-if="!busy">No suggestions available</div>
-                            <div v-else>Generating...</div>
-                        </v-alert>
-                    </v-list>
-                </v-col>
-                <v-col cols="9">
-                    <div v-if="selectedSuggestion !== null">
-                        <v-card elevated="7">
-                            <WorldStateSuggestionsCharacter 
-                            :busy="busy" 
-                            :suggestionState="selectedSuggestion" 
-                            @delete-suggestions="onDeleteSuggestionItems"
-                            @delete-suggestion="(idx) => { onDeleteSuggestionItem(idx); }" />
-                        </v-card>
-                    </div>
-                </v-col>
-            </v-row>
-        </v-card-text>
-
-    </v-card>
-</v-dialog>
+    <div v-if="selectedSuggestion !== null">
+        <v-card elevated="7">
+            <WorldStateManagerSuggestionsCharacter 
+            :busy="busy" 
+            :suggestionState="selectedSuggestion" 
+            @delete-suggestions="onDeleteSuggestionItems"
+            @delete-suggestion="(idx) => { onDeleteSuggestionItem(idx); }" />
+        </v-card>
+    </div>
 </template>
 <script>
 
-import WorldStateSuggestionsCharacter from './WorldStateSuggestionsCharacter.vue';
+import WorldStateManagerSuggestionsCharacter from './WorldStateManagerSuggestionsCharacter.vue';
 
 export default {
-    name: 'WorldStateSuggestions',
+    name: 'WorldStateManagerSuggestions',
     components: {
-        WorldStateSuggestionsCharacter,
+        WorldStateManagerSuggestionsCharacter,
     },
     data() {
         return {
             open: false,
             queue: [],
-            selected: null,
+            selectedSuggestion: null,
             busy: false,
         }
     },
@@ -68,21 +31,6 @@ export default {
             // queue needs to have at least one item in it where suggestions are available
             return this.queue.some(item => item.suggestions.length > 0);
         },
-        selectedSuggestion() {
-            if(!this.selected) {
-                return null;
-            }
-            console.log("selected", this.selected);
-            let [type, label] = this.selected[0].split(':');
-            return this.queue.find(item => item.type === type && item.label === label);
-        }
-    },
-    watch: {
-        suggestionsAvailable(newVal) {
-            if(!newVal) {
-                this.closeDialog();
-            }
-        }
     },
     inject: [
         'getWebsocket',
@@ -97,6 +45,15 @@ export default {
             this.open = false;
         },
 
+        shareState(state) {
+            let tool_state = {
+                queue: this.queue,
+                selectedSuggestion: this.selectedSuggestion,
+                busy: this.busy,
+            }
+            state.tool_state = tool_state;
+        },
+
         removeEmptySuggestions() {
             this.queue = this.queue.filter(item => item.suggestions.length > 0);
         },
@@ -108,12 +65,17 @@ export default {
             this.selectedSuggestion.suggestions = this.selectedSuggestion.suggestions.filter(suggestion => suggestion.result !== "");
         },
 
+        selectSuggestion(id) {
+            this.selectedSuggestion = this.queue.find(item => item.id === id);
+            console.log("DEBUG: selectSuggestion", id, this.selectedSuggestion, this.queue);
+        },
+
         onDeleteSuggestionItems() {
             if(!this.selectedSuggestion) {
                 return;
             }
             this.selectedSuggestion.suggestions = [];
-            this.selected = null;
+            this.selectedSuggestion = null;
             this.removeEmptySuggestions();
         },
 
@@ -125,7 +87,7 @@ export default {
 
             // if not suggestions left, remove the item
             if(this.selectedSuggestion.suggestions.length === 0) {
-                this.selected = null;
+                this.selectedSuggestion = null;
             }
             this.removeEmptySuggestions();
         },
@@ -145,7 +107,6 @@ export default {
             }
 
             if(message.action === 'request_suggestions') {
-                this.openDialog();
                 this.busy = true;
             } else if (message.action === 'suggest') {
                 let character = this.queue.find(item => item.label === message.name && item.type === message.suggestion_type);
@@ -167,12 +128,11 @@ export default {
                     this.queue.push({
                         type: 'character',
                         label: message.name,
+                        id: message.id,
                         suggestions: [message.data],
                     })
                 }
-                if(!this.selected) {
-                    this.selected = [message.suggestion_type+":"+message.name];
-                }
+
             } else if (message.action === 'operation_done') {
                 this.busy = false;
                 this.removeEmptySuggestionItems();

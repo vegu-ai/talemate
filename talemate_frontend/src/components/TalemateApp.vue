@@ -221,8 +221,8 @@
     <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
-    <StatusNotification />
   </v-app>
+  <StatusNotification />
 </template>
   
 <script>

@@ -21,6 +21,7 @@ from talemate.scene_message import (
     TimePassageMessage,
 )
 from talemate.world_state import InsertionMode
+import talemate.world_state.templates as world_state_templates
 
 from .base import Agent, AgentAction, AgentActionConfig, AgentEmission, set_processing
 from .registry import register
@@ -809,10 +810,13 @@ class WorldStateAgent(Agent):
     async def determine_character_development(
         self, 
         character: Character,
+        generation_options: world_state_templates.GenerationOptions | None = None
     ) -> list[focal.Call]:
         """
         Determine character development
         """
+        
+        log.debug("determine_character_development", character=character, generation_options=generation_options)
         
         creator = get_agent("creator")
         
@@ -822,6 +826,7 @@ class WorldStateAgent(Agent):
                 character,
                 attribute_name = name,
                 instructions = instructions,
+                generation_options = generation_options,
             )
             
         @set_loading("Generating character attribute", cancellable=True)
@@ -831,6 +836,7 @@ class WorldStateAgent(Agent):
                 attribute_name = name,
                 instructions = instructions,
                 original = character.base_attributes.get(name),
+                generation_options = generation_options,
             )
         
         async def remove_attribute(name: str) -> str:
@@ -844,6 +850,7 @@ class WorldStateAgent(Agent):
                 instructions = instructions,
                 original = character.description,
                 length=1024,
+                generation_options = generation_options,
             )
                  
         focal_handler = focal.Focal(

@@ -241,15 +241,21 @@ class AssistantMixin:
         attribute_name: str,
         instructions: str = "",
         original: str | None = None,
+        generation_options: GenerationOptions = None,
     ) -> str:
         """
         Wrapper for contextual_generate that generates a character attribute.
-        """        
+        """
+        
+        if not generation_options:
+            generation_options = GenerationOptions()
+        
         return await self.contextual_generate_from_args(
             context=f"character attribute:{attribute_name}",
             character=character.name,
             instructions=instructions,
             original=original,
+            **generation_options.model_dump(),
         )
         
     @set_processing
@@ -260,16 +266,22 @@ class AssistantMixin:
         instructions: str = "",
         original: str | None = None,
         length: int = 512,
+        generation_options: GenerationOptions = None,
     ) -> str:
         """
         Wrapper for contextual_generate that generates a character detail.
         """        
+
+        if not generation_options:
+            generation_options = GenerationOptions()
+        
         return await self.contextual_generate_from_args(
             context=f"character detail:{detail_name}",
             character=character.name,
             instructions=instructions,
             original=original,
             length=length,
+            **generation_options.model_dump(),
         )
 
     @set_processing

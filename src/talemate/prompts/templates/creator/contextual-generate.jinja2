@@ -113,10 +113,10 @@ It must setup an interesting entry point for the reader to participate in the sc
 {% endif %}
 {{ generation_context.spice }}
 
-{{ generation_context.style }}
-
 {% if generation_context.instructions %}### Editorial Instructions
 {{ generation_context.instructions }}{% endif %}
+
+{{ generation_context.style }}
 <|CLOSE_SECTION|>
 {% if context_typ == "list" and can_coerce -%}
   {% if action_task == "Add to the existing" -%}

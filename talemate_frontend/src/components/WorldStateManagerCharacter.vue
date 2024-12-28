@@ -410,6 +410,7 @@ export default {
                 type: 'world_state_manager',
                 action: 'request_suggestions',
                 suggestion_type: 'character',
+                generation_options: this.generationOptions,
                 name: name,
             }));
         },

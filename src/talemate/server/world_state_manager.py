@@ -174,7 +174,7 @@ class RequestSuggestionPayload(pydantic.BaseModel):
     name: str
     suggestion_type: str
     auto_apply: bool = False
-    
+    generation_options: world_state_templates.GenerationOptions | None = None
     
 class WorldStateManagerPlugin:
     router = "world_state_manager"
@@ -1115,7 +1115,7 @@ class WorldStateManagerPlugin:
                     
                 @set_loading("Analyzing character development", cancellable=True, set_success=True, set_error=True)
                 async def task_wrapper():
-                    await world_state.determine_character_development(character)
+                    await world_state.determine_character_development(character, generation_options=payload.generation_options)
                 
                 task = asyncio.create_task(task_wrapper())
                 

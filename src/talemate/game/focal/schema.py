@@ -8,18 +8,7 @@ from talemate.prompts.base import Prompt
 __all__ = ["Argument", "Call", "Callback", "State"]
 
 class State(pydantic.BaseModel):
-    argument_delimiter: str = "|"
-    callback_prefix: str = "START"
-    callback_suffix: str = "COMMIT"
-    
     calls:list["Call"] = pydantic.Field(default_factory=list)
-    
-    def set(self, name:str, value:str):
-        
-        if name not in ["argument_delimiter", "callback_prefix", "callback_suffix"]:
-            raise ValueError(f"Invalid state attribute: {name}")
-        
-        setattr(self, name, value)
 
 class Argument(pydantic.BaseModel):
     name: str

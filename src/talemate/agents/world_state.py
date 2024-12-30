@@ -886,7 +886,8 @@ class WorldStateAgent(Agent):
                     arguments = [
                         focal.Argument(name="instructions", type="str"),
                     ],
-                    fn = update_description
+                    fn = update_description,
+                    multiple=False
                 ),
             ],
             

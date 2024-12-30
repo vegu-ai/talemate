@@ -49,6 +49,11 @@ log = structlog.get_logger("talemate")
 
 prepended_template_dirs = ContextVar("prepended_template_dirs", default=[])
 
+class PydanticJsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, "model_dump"):
+            return obj.model_dump()
+        return super().default(obj)
 
 class PrependTemplateDirectories:
     def __init__(self, prepend_dir: list):
@@ -382,6 +387,7 @@ class Prompt:
             dedupe_string(x, debug=False)
         )
         env.globals["print"] = lambda x: print(x)
+        env.globals["json"]= lambda x: json.dumps(x, indent=2, cls=PydanticJsonEncoder)
         env.globals["emit_status"] = self.emit_status
         env.globals["emit_system"] = lambda status, message: emit(
             "system", status=status, message=message

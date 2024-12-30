@@ -3,17 +3,7 @@ FOCAL (Function Orchestration and Creative Argument Layer) separates structured 
 
 Talemate uses these for tasks where a structured function call is needed with creative content, such as in the case of generating a story, characters or dialogue.
 
-This does NOT use API specific function calling (like openai or anthropic), but rather builds its own set of instructions,
-so opensource and private APIs can be used interchangeably.
-
-Function Orchestration:
-
-The AI will be given instructions to call functions using a strict JSON schema.
-
-Creative argument injection:
-
-The AI will be given instructions to fill in the arguments of the functions with creative content. This is done
-on a separate phase to SEPARATE the structured function call from the creative content.
+This does NOT use API specific function calling (like openai or anthropic), but rather builds its own set of instructions, so opensource and private APIs can be used interchangeably (in theory).
 """
 
 import structlog
@@ -92,12 +82,13 @@ class Focal:
         response = await Prompt.request(
             template_name,
             self.client,
-            "create",
+            "analyze_long",
             vars={
                 **self.context, 
                 "focal": self,
                 "max_tokens":self.client.max_token_length
-            }
+            },
+            dedupe_enabled=False,
         )
         
         log.debug("focal.request", template_name=template_name, context=self.context, response=response)
@@ -107,6 +98,64 @@ class Focal:
         return response
     
     async def _execute(self, response: str, state: State):
+        try:
+            calls: list[Call] = await self._extract(response)
+        except Exception as e:
+            log.error("focal.extract_error", error=str(e))
+            return
+        
+        focal_context = current_focal_context.get()
+        
+        for call in calls:
+            if call.name not in self.callbacks:
+                log.warning("focal.execute.unknown_callback", name=call.name)
+                continue
+                
+            callback = self.callbacks[call.name]
+            
+            try:
+                
+                # if we have a focal context, process additional hooks (before call)
+                if focal_context:
+                    await focal_context.process_hooks(call)
+                
+                result = await callback.fn(**call.arguments)
+                call.result = result
+                call.called = True
+                
+                # if we have a focal context, process additional hooks (after call)
+                if focal_context:
+                    await focal_context.process_hooks(call)
+                
+            except Exception as e:
+                log.error(
+                    "focal.execute.callback_error",
+                    callback=call.name,
+                    error=str(e)
+                )
+                
+            self.state.calls.append(call)
+    
+    async def _extract(self, response:str) -> list[Call]:
+        _, calls_json = await Prompt.request(
+            "focal.extract_calls",
+            self.client,
+            "analyze_long",
+            vars={
+                **self.context,
+                "text": response,
+                "focal": self,
+                "max_tokens": self.client.max_token_length,
+            },
+        )
+
+        calls = [Call(**call) for call in calls_json.get("calls", [])]
+        
+        log.debug("focal.extract", calls=calls)
+        
+        return calls
+    
+    async def _execute_old(self, response: str, state: State):
         """
         Execute callbacks found in the response text.
         

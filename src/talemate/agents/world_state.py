@@ -810,7 +810,8 @@ class WorldStateAgent(Agent):
     async def determine_character_development(
         self, 
         character: Character,
-        generation_options: world_state_templates.GenerationOptions | None = None
+        generation_options: world_state_templates.GenerationOptions | None = None,
+        instructions: str = None,
     ) -> list[focal.Call]:
         """
         Determine character development
@@ -878,6 +879,7 @@ class WorldStateAgent(Agent):
                     name = "remove_attribute",
                     arguments = [
                         focal.Argument(name="name", type="str"),
+                        focal.Argument(name="reason", type="str"),
                     ],
                     fn = remove_attribute
                 ),
@@ -894,6 +896,7 @@ class WorldStateAgent(Agent):
             # context
             character = character,
             scene = self.scene,
+            instructions = instructions,
         )
         
         await focal_handler.request(

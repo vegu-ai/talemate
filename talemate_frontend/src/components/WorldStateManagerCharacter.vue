@@ -69,9 +69,14 @@
                             <!-- GENERATE CHANGE SUGGESTIONS -->
                             <div>
                                 <v-list-item>
-                                    <v-tooltip max-width="300" :text="`Generate change suggestions for ${character.name}. This will provide a list of suggestions for changes to the character, based on the progression of the story thus far.`">
+                                    <v-tooltip max-width="300" :text="`Generate change suggestions for ${character.name}. This will provide a list of suggestions for changes to the character, based on the progression of the story thus far. [Ctrl: Provide instructions]`">
                                         <template v-slot:activator="{ props }">
-                                            <v-btn @click.stop="suggestChanges(character.name)" v-bind="props" variant="tonal" block color="primary" prepend-icon="mdi-lightbulb-on">Suggest Changes</v-btn>
+                                            <v-btn 
+                                            @click.stop="(event) => { suggestChanges(character.name, event.ctrlKey)}"
+                                            v-bind="props" 
+                                            variant="tonal" 
+                                            block 
+                                            color="primary" prepend-icon="mdi-lightbulb-on">Suggest Changes</v-btn>
                                         </template>
                                     </v-tooltip>
                                 </v-list-item>
@@ -263,9 +268,12 @@
             </p>
         </v-card-text>
     </v-card>
+    <RequestInput ref="suggestChangesInstructions" title="Suggest Changes" inputType="multiline" instructions="Provide a brief description of the changes you would like to suggest for the character. This will be used to generate a new proposal for the character." @continue="(input,params) => { suggestChanges(params.name, input)}" />
 </template>
 <script>
 import CoverImage from './CoverImage.vue';
+
+import RequestInput from './RequestInput.vue';
 
 import WorldStateManagerCharacterAttributes from './WorldStateManagerCharacterAttributes.vue';
 import WorldStateManagerCharacterDescription from './WorldStateManagerCharacterDescription.vue';
@@ -278,6 +286,7 @@ export default {
     name: 'WorldStateManagerCharacter',
     components: {
         CoverImage,
+        RequestInput,
         WorldStateManagerCharacterAttributes,
         WorldStateManagerCharacterDescription,
         WorldStateManagerCharacterDetails,
@@ -404,13 +413,22 @@ export default {
                 }
             }));
         },
-        suggestChanges(name) {
+        suggestChanges(name, requestInstructions) {
+
+            if(requestInstructions === true) {
+                this.$refs.suggestChangesInstructions.openDialog({
+                    name: name,
+                });
+                return;
+            }
+
             this.$emit('world-state-manager-navigate', 'suggestions');
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'request_suggestions',
                 suggestion_type: 'character',
                 generation_options: this.generationOptions,
+                instructions: requestInstructions || null,
                 name: name,
             }));
         },

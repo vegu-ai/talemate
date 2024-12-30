@@ -175,6 +175,7 @@ class RequestSuggestionPayload(pydantic.BaseModel):
     suggestion_type: str
     auto_apply: bool = False
     generation_options: world_state_templates.GenerationOptions | None = None
+    instructions: str | None = None
     
 class WorldStateManagerPlugin:
     router = "world_state_manager"
@@ -1079,6 +1080,8 @@ class WorldStateManagerPlugin:
         world_state = get_agent("world_state")
         payload = RequestSuggestionPayload(**data)
         
+        log.debug("Request suggestions", payload=payload)
+        
         async def send_suggestion(call:focal.Call):
             self.websocket_handler.queue_put(
                 {
@@ -1104,6 +1107,7 @@ class WorldStateManagerPlugin:
                     {
                         "type": "world_state_manager",
                         "action": "request_suggestions",
+                        "instructions": payload.instructions,
                         "suggestion_type": payload.suggestion_type,
                         "name": payload.name,
                     }
@@ -1115,7 +1119,11 @@ class WorldStateManagerPlugin:
                     
                 @set_loading("Analyzing character development", cancellable=True, set_success=True, set_error=True)
                 async def task_wrapper():
-                    await world_state.determine_character_development(character, generation_options=payload.generation_options)
+                    await world_state.determine_character_development(
+                        character, 
+                        generation_options=payload.generation_options,
+                        instructions=payload.instructions,
+                    )
                 
                 task = asyncio.create_task(task_wrapper())
                 

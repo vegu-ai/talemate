@@ -49,10 +49,12 @@ class Focal:
         self, 
         client: ClientBase,
         callbacks: list[Callback],
+        max_calls: int = 5,
         **kwargs
     ):
         self.client = client
         self.context = kwargs
+        self.max_calls = max_calls
         self.state = State()
         self.callbacks = {
             callback.name: callback
@@ -67,6 +69,7 @@ class Focal:
         prompt = Prompt.get(
             "focal.instructions",
             {
+                "max_calls": self.max_calls,
                 "state": self.state,
             }
         )
@@ -86,7 +89,8 @@ class Focal:
             vars={
                 **self.context, 
                 "focal": self,
-                "max_tokens":self.client.max_token_length
+                "max_tokens":self.client.max_token_length,
+                "max_calls": self.max_calls,
             },
             dedupe_enabled=False,
         )

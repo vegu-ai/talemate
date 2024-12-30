@@ -23,7 +23,7 @@
                 </div>
                 <div v-else-if="suggestion.name === 'remove_attribute'">
                     <v-alert color="muted" density="compact" elevation="7" variant="outlined" class="mb-2" icon="mdi-script">
-                        <div class="text-caption">{{ suggestion.arguments.instructions }}</div>
+                        <div class="text-caption">{{ suggestion.arguments.reason }}</div>
                     </v-alert>
                     <v-alert color="highlight4" density="compact" elevation="7" variant="outlined" class="mb-2" icon="mdi-format-list-bulleted-type">
                         <v-alert-title>Remove Attribute <v-chip class="ml-4" label size="small" color="primary" variant="tonal">{{ suggestion.arguments.name }}</v-chip></v-alert-title>

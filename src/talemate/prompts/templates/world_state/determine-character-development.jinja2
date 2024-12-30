@@ -19,6 +19,8 @@ L<|CLOSE_SECTION|>
 <|SECTION:TASK|>
 Identify if {{ character.name }} has had any MAJOR character developments not yet reflected in their current character sheet and description. If there are no MAJOR character developments, do nothing and call no functions.
 
+{% if instructions %}{{ instructions }}{% endif %}
+
 Give instructions to the story writers on how to update the character sheet and description to reflect these changes.
 
 Do this by comparing the previous character description and sheet with has happened in the story.
@@ -26,6 +28,8 @@ Do this by comparing the previous character description and sheet with has happe
 Your recommendations must be nuanced and multidimensional. Avoid making the character one-dimensional or boring.
 
 Your recommendations must be sourced from the story and not from your own imagination.
+
+Keep your explanations short and to the point, to leave room for your function calls.
 
 ATTRIBUTE = A short, concise description of a character trait, attribute, or skill. 1 paragraph.
 DESCRIPTION = The complete overview of the character. Multiple paragraphs. This should not be a specific situational
@@ -59,8 +63,9 @@ description but a general overview of the character, telling us who they are, wh
     focal.callbacks.remove_attribute.render(
         "Remove an attribute from the character sheet. This action has no instructional text. Just provide the attribute name.", 
         name="Exact Attribute Name",
+        reason="Reason for removing the attribute.",
         examples=[
-            {"name": "Appearance"},
+            {"name": "Social anxiety", "reason": "The character has overcome their social anxiety."},
         ]
     ) 
 }}

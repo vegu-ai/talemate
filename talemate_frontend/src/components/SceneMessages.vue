@@ -408,9 +408,7 @@ export default {
 }
 
 .message {
-    padding: 10px;
     white-space: pre-wrap;
-    margin-bottom: 10px;
 }
 
 .message.system {

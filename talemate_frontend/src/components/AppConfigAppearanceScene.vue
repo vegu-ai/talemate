@@ -3,7 +3,10 @@
     <v-row class="ma-5" no-gutters>
         <v-col cols="12">
             <v-form v-for="config, typ in config" :key="typ">
-                <v-row>
+
+                <!-- *_messages -->
+
+                <v-row no-gutters v-if="typ.endsWith('_messages')">
                     <v-col cols="3" :class="(colorPickerTarget === typ ? 'text-highlight5' : '')">
                         <div class="text-caption">{{ typLabelMap[typ] }}</div>
                     </v-col>
@@ -22,6 +25,7 @@
                     </v-col>
 
                 </v-row>
+
             </v-form>
         </v-col>
     </v-row>

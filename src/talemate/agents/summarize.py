@@ -18,6 +18,7 @@ from talemate.scene_message import (
 )
 from talemate.world_state.templates import GenerationOptions
 from talemate.tale_mate import Character
+from talemate.instance import get_agent
 from talemate.exceptions import GenerationCancelled
 import talemate.game.focal as focal
 
@@ -1158,12 +1159,16 @@ class SummarizeAgent(Agent):
         else:
             entries = self.scene.layered_history[layer-2][entry["start"]:entry["end"]+1]    
         
-        async def answer(query:str, answer:str) -> str:
-            log.debug("Answering context investigation", query=query, answer=answer)
-            #message = ContextInvestigationMessage(message=f"{query}\n\n{answer}")
-            #self.scene.push_history([message])
-            #emit("context_investigation", message)
-            return answer
+        async def answer(query:str, instructions:str) -> str:
+            log.debug("Answering context investigation", query=query, instructions=answer)
+            
+            world_state = get_agent("world_state")
+            
+            return await world_state.analyze_history_and_follow_instructions(
+                entries,
+                f"{query}\n{instructions}",
+            )
+            
             
         async def abort():
             log.debug("Aborting context investigation")
@@ -1182,8 +1187,8 @@ class SummarizeAgent(Agent):
                 focal.Callback(
                     name="answer",
                     arguments = [ 
-                        focal.Argument(name="query", type="str"),
-                        focal.Argument(name="answer", type="str")
+                        focal.Argument(name="instructions", type="str"),
+                        focal.Argument(name="query", type="str")
                     ],
                     fn=answer
                 ),

@@ -412,6 +412,32 @@ class WorldStateAgent(Agent):
         )
 
         return response
+    
+    @set_processing
+    async def analyze_history_and_follow_instructions(
+        self,
+        entries: list[dict],
+        instructions: str,
+    ) -> str:
+        
+        """
+        Takes a list of archived_history or layered_history entries
+        and follows the instructions to generate a response.
+        """
+        
+        response = await Prompt.request(
+            "world_state.analyze-history-and-follow-instructions",
+            self.client,
+            "analyze_freeform",
+            vars={
+                "instructions": instructions,
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "entries": entries,
+            },
+        )
+        
+        return response.strip()
 
     @set_processing
     async def answer_query_true_or_false(

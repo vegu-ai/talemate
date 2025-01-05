@@ -1,0 +1,12 @@
+{% block rendered_context -%}
+<|SECTION:TEXT|>
+{% for entry in entries %}
+{{ time_diff(entry.get("ts_end", entry.get("ts"))) }}
+{{ entry["text"] }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endblock %}
+<|SECTION:TASK|>
+{{ instructions }}
+
+Your response should be 1 to 3 sentences long. Keep it concise but informative.

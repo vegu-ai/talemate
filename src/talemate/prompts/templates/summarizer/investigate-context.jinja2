@@ -29,12 +29,12 @@ Investigate the story and answer the following question: "{{ query }}".
 {% if layer == 1 %}
 {{
     focal.callbacks.answer.render(
-        "Answer the question or instruction.", 
-        query="The question or instruction you are answering. What information are you trying to retrieve?",
-        answer="A brief answer to the question or instruction. What information did you find? Include information on when this information was true. (e.g., this happened 3 years ago)",
+        "Instruct the narrator to answer the query.", 
+        query="The question being answered. What information are you trying to retrieve?",
+        instructions="The instructions to the narrator on how to answer the query. Make sure to ask him to provide information of how long ago the information was true.",
         examples=[
-            { "query": "Where did they buy the gun?", "answer": "They bought the gun at the local gun store." },
-            { "query": "What was the name of the woman in the red dress?", "answer": "Her name was Clarice." },
+            { "query": "Where did they buy the gun?", "instructions": "Provide the location and the time of the purchase." },
+            { "query": "What was the name of the woman in the red dress?", "instructions": "Provide the name of the woman in the red dress and how and when the name was revealed." }
         ]
     )
 }}

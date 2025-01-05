@@ -6,10 +6,12 @@ from talemate.agents.base import (
     AgentActionConfig
 )
 from talemate.prompts import Prompt
+from talemate.emit import emit
 from talemate.instance import get_agent
 import talemate.emit.async_signals
 from talemate.agents.conversation import ConversationAgentEmission
 import talemate.game.focal as focal
+from talemate.scene_message import ContextInvestigationMessage
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Character
@@ -148,6 +150,10 @@ class SceneAnalyzationMixin:
             },
         )
         
+        if not response.strip():
+            log.warning("analyze_scene_for_next_action.empty_response")
+            return response
+        
         summarizer = get_agent("summarizer")
         
         ci_calls:list[focal.Call] = await summarizer.request_context_investigations(response)
@@ -155,7 +161,13 @@ class SceneAnalyzationMixin:
         log.debug("analyze_scene_for_next_action", ci_calls=ci_calls)
         
         # append call queries and answers to the response
+        ci_text = ""
         for ci_call in ci_calls:
-            response += f"\n\n{ci_call.arguments['query']}\n{ci_call.arguments['answer']}"
+            ci_text += f"\n\nQUESTION:{ci_call.arguments['query']}\nANSWER:{ci_call.result}"
+        
+        if ci_text.strip():
+            message = ContextInvestigationMessage(message=ci_text.strip())
+            self.scene.push_history([message])
+            emit("context_investigation", message)
         
         return response

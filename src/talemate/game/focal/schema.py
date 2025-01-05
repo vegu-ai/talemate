@@ -15,7 +15,7 @@ class Argument(pydantic.BaseModel):
     type: str
     
 class Call(pydantic.BaseModel):
-    name: str = pydantic.Field(alias="function")
+    name: str = pydantic.Field(validation_alias=pydantic.AliasChoices('name', 'function'))
     arguments: dict[str, str] = pydantic.Field(default_factory=dict)
     result: str | int | float | bool | None = None
     uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))

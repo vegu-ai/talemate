@@ -3,7 +3,15 @@
 {% endblock %}
 <|SECTION:SCENE|>
 {% block scene_history -%}
-{% set scene_context = scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=False) -%}
+{% set scene_context = scene.context_history(
+    budget=max_tokens-300-count_tokens(self.rendered_context()), 
+    min_dialogue=15, 
+    sections=False, 
+    keep_director=False, 
+    chapter_labels=True
+    ) 
+-%}
+{% set final_line_number=len(scene_context) %}
 {% for scene_line in scene_context -%}
 {{ scene_line }}
 
@@ -17,7 +25,20 @@ Make statements about context, meaning and facts established.
 
 Quickly list who the characters in the scene are to each other.
 
-Also note who was the last person talking and what the meaning of their dialogue was.
+{% set last_message = scene.last_message_of_type("character") %}
+{% if last_message %}
+Analyze the meaning of {{ last_message.character_name }}'s final line the scene. What was the meaning of their dialogue and actions?
+
+``` {{ last_message.character_name }}'s final line
+{{ last_message }}
+```
+
+Then briefly list what we understand from any internal notes given.
+
+Finally, the chapters are summarizations, list up to 2 chapter queries that may provide additional context to help guide the scene. Do this in the following format: "Read through Chapter 1.1 to find out ..."
+
+Only list the chapter queries if you believe they are necessary to inform the next action. Avoid re-investigating information already given through internal notes as those are the results from previous chapter queries you have done.
+{% endif %}
 
 The information you write will be given to the other script editors to write {{ character.name }}'s next action in the scene. Use plain text formatting.
 {% if length == "medium" %}Your analysis should be 2 - 3 paragraphs long.{% elif length == "short" %}Your analysis should be 1 - 2 paragraphs long.{% endif %}

@@ -7,6 +7,7 @@ This does NOT use API specific function calling (like openai or anthropic), but 
 """
 
 import structlog
+from typing import Callable
 from contextvars import ContextVar
 
 from talemate.client.base import ClientBase
@@ -20,6 +21,7 @@ __all__ = [
     "Callback",
     "Focal",
     "FocalContext",
+    "collect_calls",
     "current_focal_context",
 ]
 
@@ -31,6 +33,7 @@ class FocalContext:
     def __init__(self):
         self.hooks_before_call = []
         self.hooks_after_call = []
+        self.value = {}
         
     def __enter__(self):
         self.token = current_focal_context.set(self)
@@ -95,6 +98,10 @@ class Focal:
             dedupe_enabled=False,
         )
         
+        if not response.strip():
+            log.warning("focal.request.empty_response")
+            return response
+        
         log.debug("focal.request", template_name=template_name, context=self.context, response=response)
         
         await self._execute(response, State())
@@ -110,7 +117,14 @@ class Focal:
         
         focal_context = current_focal_context.get()
         
+        calls_made = 0
+        
         for call in calls:
+            
+            if calls_made >= self.max_calls:
+                log.warning("focal.execute.max_calls_reached", max_calls=self.max_calls)
+                break
+            
             if call.name not in self.callbacks:
                 log.warning("focal.execute.unknown_callback", name=call.name)
                 continue
@@ -126,6 +140,7 @@ class Focal:
                 result = await callback.fn(**call.arguments)
                 call.result = result
                 call.called = True
+                calls_made += 1
                 
                 # if we have a focal context, process additional hooks (after call)
                 if focal_context:
@@ -151,6 +166,7 @@ class Focal:
                 "focal": self,
                 "max_tokens": self.client.max_token_length,
             },
+            dedupe_enabled=False,
         )
 
         calls = [Call(**call) for call in calls_json.get("calls", [])]
@@ -158,3 +174,32 @@ class Focal:
         log.debug("focal.extract", calls=calls)
         
         return calls
+    
+    
+def collect_calls(calls:list[Call], nested:bool=False, filter: Callable=None) -> list:
+    
+    """
+    Takes a list of calls and collects into a list.
+    
+    If nested is True and call result is a list of calls, it will also collect those.
+    
+    If a filter function is provided, it will be used to filter the results.
+    """
+    
+    results = []
+    
+    for call in calls:
+        
+        result_is_list_of_calls = isinstance(call.result, list) and all([isinstance(result, Call) for result in call.result])
+        
+        # we need to filter the results
+        # but if nested is True, we need to collect nested results regardless
+        
+        if not filter or filter(call):
+            results.append(call)
+            
+        if nested and result_is_list_of_calls:
+            results.extend(collect_calls(call.result, nested=True, filter=filter))
+        
+    
+    return results

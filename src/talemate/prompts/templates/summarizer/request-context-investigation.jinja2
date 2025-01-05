@@ -1,0 +1,26 @@
+{% block rendered_context -%}
+<|SECTION:TEXT|>
+{{ text }}
+<|CLOSE_SECTION|>
+{% endblock %}
+<|SECTION:TASK|>
+In the provided text there may be instructions to query specific story chapters for more information.
+
+Each instruction will contain a chapter nummber and a question or instruction for analysis.
+
+Call the appropriate function(s) to query the chapters. If there are no instructions, do nothing and call no functions.
+
+{{ focal.render_instructions() }}
+
+{{ 
+    focal.callbacks.investigate_context.render(
+        "Execute context investigation request.", 
+        chapter_number="The number of the chapter to investigate. (e.g., 1.1 or 2.3)",
+        query="The question or instruction to analyze the chapter for. What information are you trying to retrieve? This can be more than one question.",
+        examples=[
+            { "chapter_number": "1.1", "query": "Where did they buy the gun?" },
+            { "chapter_number": "2.3", "query": "What was the name of the woman in the red dress?" }
+        ]
+    ) 
+}}
+<|CLOSE_SECTION|>

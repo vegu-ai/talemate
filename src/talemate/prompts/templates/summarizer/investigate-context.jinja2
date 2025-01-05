@@ -1,0 +1,49 @@
+{% block rendered_context -%}
+<|SECTION:TEXT|>
+{% for entry in entries %}
+### Chapter {{ layer }}.{{ loop.index }}
+{{ time_diff(entry.get("ts_end", entry.get("ts"))) }}
+{{ entry["text"] }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endblock %}
+<|SECTION:TASK|>
+Investigate the story and answer the following question: "{{ query }}".
+
+{{ focal.render_instructions() }}
+
+{% if layer > 1 %}
+{{ 
+    focal.callbacks.investigate_context.render(
+        "Further investigate a specific chapter for more information.", 
+        chapter_number="The number of the chapter to investigate. (e.g., 1.1 or 2.3)",
+        query="The question or instruction to analyze the chapter for. What information are you trying to retrieve?",
+        examples=[
+            { "chapter_number": "1.1", "query": "Where did they buy the gun?" },
+            { "chapter_number": "2.3", "query": "What was the name of the woman in the red dress?" }
+        ]
+    ) 
+}}
+{% endif %}
+
+{% if layer == 1 %}
+{{
+    focal.callbacks.answer.render(
+        "Answer the question or instruction.", 
+        query="The question or instruction you are answering. What information are you trying to retrieve?",
+        answer="A brief answer to the question or instruction. What information did you find? Include information on when this information was true. (e.g., this happened 3 years ago)",
+        examples=[
+            { "query": "Where did they buy the gun?", "answer": "They bought the gun at the local gun store." },
+            { "query": "What was the name of the woman in the red dress?", "answer": "Her name was Clarice." },
+        ]
+    )
+}}
+{% endif %}
+
+{{
+    focal.callbacks.abort.render(
+        "Abort the context investigation request. Use this if you are unable to find the information requested.",
+        examples=[{}]
+    )
+}}
+<|CLOSE_SECTION|>

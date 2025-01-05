@@ -1,16 +1,20 @@
 from typing import TYPE_CHECKING
-
+import structlog
 from talemate.agents.base import (
     set_processing,
     AgentAction,
     AgentActionConfig
 )
 from talemate.prompts import Prompt
+from talemate.instance import get_agent
 import talemate.emit.async_signals
 from talemate.agents.conversation import ConversationAgentEmission
+import talemate.game.focal as focal
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Character
+
+log = structlog.get_logger()
 
 class SceneAnalyzationMixin:
     
@@ -139,8 +143,19 @@ class SceneAnalyzationMixin:
                 "max_tokens": self.client.max_token_length,
                 "scene": self.scene,
                 "character": character,
-                "length": length
+                "length": length,
+                "max_chapter_queries": 3,
             },
         )
+        
+        summarizer = get_agent("summarizer")
+        
+        ci_calls:list[focal.Call] = await summarizer.request_context_investigations(response)
+        
+        log.debug("analyze_scene_for_next_action", ci_calls=ci_calls)
+        
+        # append call queries and answers to the response
+        for ci_call in ci_calls:
+            response += f"\n\n{ci_call.arguments['query']}\n{ci_call.arguments['answer']}"
         
         return response

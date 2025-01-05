@@ -244,7 +244,7 @@ export default {
 
 .btn-delete {
     position: absolute;
-    bottom: 0px;
+    top: 0px;
     right: 0px;
 }
 

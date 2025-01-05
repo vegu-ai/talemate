@@ -1504,6 +1504,8 @@ class Scene(Emitter):
         layered_history_enabled = self.get_helper("summarizer").agent.layered_history_enabled
         include_reinfocements = kwargs.get("include_reinfocements", True)
         assured_dialogue_num = kwargs.get("assured_dialogue_num", 5)
+        
+        chapter_labels = kwargs.get("chapter_labels", False)
 
         history_len = len(self.history)
 
@@ -1532,8 +1534,10 @@ class Scene(Emitter):
 
                 if count_tokens(parts_context) + count_tokens(text) > budget_context:
                     break
-
-                parts_context.insert(0, condensed(text))
+                
+                text = condensed(text)
+                
+                parts_context.insert(0, text)
                     
         else:
             
@@ -1541,6 +1545,7 @@ class Scene(Emitter):
             # start with the last layer and work backwards
             
             next_layer_start = None
+            num_layers = len(self.layered_history)
             
             for i in range(len(self.layered_history) - 1, -1, -1):
                 
@@ -1548,6 +1553,8 @@ class Scene(Emitter):
                 
                 if not self.layered_history[i]:
                     continue
+                
+                k = 0
                 
                 for layered_history_entry in self.layered_history[i][next_layer_start if next_layer_start is not None else 0:]:
                     
@@ -1563,7 +1570,14 @@ class Scene(Emitter):
                     else:
                         time_message = f"Start:{time_message_start}, End:{time_message_end}" if time_message_start != time_message_end else time_message_start
                     text = f"{time_message} {layered_history_entry['text']}"
+                    
+                    # prepend chapter labels
+                    if chapter_labels:
+                        text = f"### Chapter {num_layers - i}.{k + 1}\n{text}"
+                    
                     parts_context.append(text)
+                    
+                    k += 1
                     
                 next_layer_start = layered_history_entry["end"] + 1
             
@@ -1572,13 +1586,26 @@ class Scene(Emitter):
             base_layer_start = self.layered_history[0][-1]["end"] + 1 if self.layered_history[0] else None
             
             if base_layer_start is not None:
+                i = 0
+                
+                # if chapter labels have been appanded, we need to
+                # open a new section for the current scene
+                
+                if chapter_labels:
+                    parts_context.append("### Current\n")
+                
                 for archive_history_entry in self.archived_history[base_layer_start:]:
                     time_message = util.iso8601_diff_to_human(
                         archive_history_entry["ts"], self.ts
                     )
                     
                     text = f"{time_message}: {archive_history_entry['text']}"
-                    parts_context.append(condensed(text))
+                    
+                    text = condensed(text)
+                    
+                    parts_context.append(text)
+
+                    i += 1
 
         # log.warn if parts_context token count > budget_context
         if count_tokens(parts_context) > budget_context:

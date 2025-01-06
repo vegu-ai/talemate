@@ -822,6 +822,7 @@ class Scene(Emitter):
         self.environment = "scene"
         self.world_state = WorldState()
         self.game_state = GameState()
+        self.agent_state = {}
         self.ts = "PT0S"
         self.active = False
 
@@ -1914,6 +1915,7 @@ class Scene(Emitter):
                 "auto_progress": self.auto_progress,
                 "can_auto_save": self.can_auto_save(),
                 "game_state": self.game_state.model_dump(),
+                "agent_state": self.agent_state,
                 "active_pins": [pin.model_dump() for pin in self.active_pins],
                 "experimental": self.experimental,
                 "immutable_save": self.immutable_save,
@@ -2504,6 +2506,7 @@ class Scene(Emitter):
             "context": scene.context,
             "world_state": scene.world_state.model_dump(),
             "game_state": scene.game_state.model_dump(),
+            "agent_state": scene.agent_state,
             "assets": scene.assets.dict(),
             "memory_id": scene.memory_id,
             "memory_session_id": scene.memory_session_id,
@@ -2624,6 +2627,7 @@ class Scene(Emitter):
             "context": scene.context,
             "world_state": scene.world_state.model_dump(),
             "game_state": scene.game_state.model_dump(),
+            "agent_state": scene.agent_state,
             "assets": scene.assets.dict(),
             "memory_id": scene.memory_id,
             "memory_session_id": scene.memory_session_id,

@@ -214,7 +214,21 @@ class Agent(ABC):
             return {}
 
         return {k: v.model_dump() for k, v in self.actions.items()}
-
+    
+    
+    def get_scene_state(self, key:str):
+        agent_state = self.scene.agent_state.get(self.agent_type, {})
+        return agent_state.get(key)
+        
+    def set_scene_states(self, **kwargs):
+        agent_state = self.scene.agent_state.get(self.agent_type, {})
+        for key, value in kwargs.items():
+            agent_state[key] = value
+        self.scene.agent_state[self.agent_type] = agent_state
+    
+    def dump_scene_state(self):
+        return self.scene.agent_state.get(self.agent_type, {})
+        
     async def _handle_ready_check(self, fut: asyncio.Future):
         callback_failure = getattr(self, "on_ready_check_failure", None)
         if fut.cancelled():

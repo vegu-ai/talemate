@@ -38,9 +38,6 @@ class SummaryLongerThanOriginalError(ValueError):
 class SummarizeAgent(Agent):
     """
     An agent that can be used to summarize text
-
-    Ideally used with a GPT model or vicuna+wizard or or gpt-3.5
-    gpt4-x-vicuna is also great here.
     """
 
     agent_type = "summarizer"
@@ -1220,6 +1217,9 @@ class SummarizeAgent(Agent):
         Requests context investigations for the given analysis.
         """
         
+        async def abort():
+            log.debug("Aborting context investigations")
+        
         async def investigate_context(chapter_number:str, query:str) -> str:
             # look for \d.\d in the chapter number, extract as layer and index
             match = re.match(r"(\d+)\.(\d+)", chapter_number)
@@ -1245,6 +1245,10 @@ class SummarizeAgent(Agent):
                         focal.Argument(name="query", type="str")
                     ],
                     fn=investigate_context
+                ),
+                focal.Callback(
+                    name="abort",
+                    fn=abort
                 )
             ],
             scene=self.scene,

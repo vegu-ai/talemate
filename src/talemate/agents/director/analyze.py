@@ -86,6 +86,9 @@ class SceneAnalyzationMixin:
         talemate.emit.async_signals.get("agent.conversation.inject_instructions").connect(
             self.on_conversation_inject_instructions
         )
+        talemate.emit.async_signals.get("agent.conversation.inject_instructions").connect(
+            self.on_conversation_inject_context_investigation
+        )
         
     async def on_conversation_inject_instructions(self, emission:ConversationAgentEmission):
         """
@@ -121,11 +124,26 @@ class SceneAnalyzationMixin:
             
         emission.dynamic_instructions.append("\n".join(
             [
-                "<|SECTION:DIRECTOR ANALYSIS|>",
+                "<|SECTION:SCENE ANALYSIS|>",
                 guidance,
                 "<|CLOSE_SECTION|>"
             ]
         ))
+        
+    async def on_conversation_inject_context_investigation(self, emission:ConversationAgentEmission):
+        """
+        Injects context investigation into the conversation.
+        """
+        
+        context_investigation = self.get_scene_state("context_investigation")
+        if context_investigation:
+            emission.dynamic_instructions.append("\n".join(
+                [
+                    "<|SECTION:HISTORIC CONTEXT|>",
+                    context_investigation,
+                    "<|CLOSE_SECTION|>"
+                ]
+            ))
     
     # actions
 
@@ -146,6 +164,7 @@ class SceneAnalyzationMixin:
                 "scene": self.scene,
                 "character": character,
                 "length": length,
+                "context_investigation": self.get_scene_state("context_investigation"),
                 "max_chapter_queries": 3,
             },
         )
@@ -161,13 +180,10 @@ class SceneAnalyzationMixin:
         log.debug("analyze_scene_for_next_action", ci_calls=ci_calls)
         
         # append call queries and answers to the response
-        ci_text = ""
+        ci_text = []
         for ci_call in ci_calls:
-            ci_text += f"\n\nQUESTION:{ci_call.arguments['query']}\nANSWER:{ci_call.result}"
+            ci_text.append(f"{ci_call.arguments['query']}\n{ci_call.result}")
         
-        if ci_text.strip():
-            message = ContextInvestigationMessage(message=ci_text.strip())
-            self.scene.push_history([message])
-            emit("context_investigation", message)
+        self.set_scene_states(context_investigation="\n\n".join(ci_text if ci_text else []))
         
         return response

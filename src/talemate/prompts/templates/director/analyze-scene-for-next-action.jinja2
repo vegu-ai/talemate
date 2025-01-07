@@ -25,6 +25,9 @@
 {% endblock -%}
 <|SECTION:TASK|>
 Your task is to analyze the scene progression so far and how it informs whatever {{ character.name }}'s next line or action in the scene will be.
+
+The information you write will be given to the other script editors to write {{ character.name }}'s next action in the scene. Use plain text formatting.
+
 {% set bullet_num=1 %}
 
 {{ bullet_num }}) Make statements about context, meaning and facts established.
@@ -44,13 +47,12 @@ Your task is to analyze the scene progression so far and how it informs whatever
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly explain what you understand from the historical context.
 {% endif %}
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) The chapters are summarizations, you may request chapter queries that may provide additional context to help guide the scene. Do this in the following format: "Read through Chapter 1.1 to find out ..."
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Tell the script editors to read through any chapter(s) that may provide additional information to help guide them in writing the continuation of the scene for {{ character.name }}. To do this simply state "Read through chapter {number} to find out ..." followed by a specific detail you wish to understand. What question are you looking to answer? Avoid general queries.
 
-Only list the chapter queries if you believe they are necessary to inform {{ character_name }}'s next action and the answers are not already contained in the scene{% if context_investigation -%} or historic context.{% else %}.{% endif %}
+You may instruct them to read 1 chapter(s).
 
-Maximum allowed chapter queries: 1
+The chapter number is always two digits separated by a period.
 {% endif %}
 
-The information you write will be given to the other script editors to write {{ character.name }}'s next action in the scene. Use plain text formatting.
 {% if length == "medium" %}Your analysis should be 2 - 3 paragraphs long.{% elif length == "short" %}Your analysis should be 1 - 2 paragraphs long.{% endif %}
 <|CLOSE_SECTION|>

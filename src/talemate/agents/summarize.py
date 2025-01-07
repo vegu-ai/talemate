@@ -1137,7 +1137,7 @@ class SummarizeAgent(Agent):
         return await self.investigate_context(layer, index, query)
     
     @set_processing
-    async def investigate_context(self, layer:int, index:int, query:str) -> str:
+    async def investigate_context(self, layer:int, index:int, query:str, analysis:str="") -> str:
         """
         Processes a context investigation.
         
@@ -1164,6 +1164,7 @@ class SummarizeAgent(Agent):
             return await world_state.analyze_history_and_follow_instructions(
                 entries,
                 f"{query}\n{instructions}",
+                analysis=analysis
             )
             
             
@@ -1200,6 +1201,7 @@ class SummarizeAgent(Agent):
             index=index,
             query=query,
             entries=entries,
+            analysis=analysis,
         )
         
         await focal_handler.request(
@@ -1233,7 +1235,7 @@ class SummarizeAgent(Agent):
             # index comes in 1-based, convert to 0-based
             index -= 1
             
-            return await self.investigate_context(layer, index, query)
+            return await self.investigate_context(layer, index, query, analysis)
         
         focal_handler: focal.Focal = focal.Focal(
             self.client,
@@ -1268,6 +1270,14 @@ class SummarizeAgent(Agent):
         )
         
         # return focal_handler.state.calls    
+    
+    @set_processing
+    async def update_context_investigation(
+        self,
+        current_context_investigation:str,
+        new_context_investigation:str,
+    ):
+        pass
     
     # CLIENT CALLBACKS
     

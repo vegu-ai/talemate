@@ -1,4 +1,9 @@
 {% block rendered_context -%}
+{% if analysis %}
+<|SECTION:ANLYSIS|>
+{{ analysis }}
+<|CLOSE_SECTION|>
+{% endif %}
 <|SECTION:TEXT|>
 {% for entry in entries %}
 {{ time_diff(entry.get("ts_end", entry.get("ts"))) }}

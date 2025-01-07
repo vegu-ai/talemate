@@ -418,6 +418,7 @@ class WorldStateAgent(Agent):
         self,
         entries: list[dict],
         instructions: str,
+        analysis: str = "",
     ) -> str:
         
         """
@@ -434,6 +435,7 @@ class WorldStateAgent(Agent):
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "entries": entries,
+                "analysis": analysis,
             },
         )
         

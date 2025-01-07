@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Any
 import pydantic
 import uuid
 import json
@@ -20,6 +20,13 @@ class Call(pydantic.BaseModel):
     result: str | int | float | bool | None = None
     uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     called: bool = False
+
+    @pydantic.field_validator('arguments')
+    def join_string_lists(cls, v: dict[str, Any]) -> dict[str, str]:
+        return {
+            key: '\n'.join(str(item) for item in value) if isinstance(value, list) else value
+            for key, value in v.items()
+        }
 
 class Callback(pydantic.BaseModel):
     name: str

@@ -22,8 +22,10 @@ from talemate.instance import get_agent
 from talemate.exceptions import GenerationCancelled
 import talemate.game.focal as focal
 
-from .base import Agent, AgentAction, AgentActionConfig, set_processing
-from .registry import register
+from talemate.agents.base import Agent, AgentAction, AgentActionConfig, set_processing
+from talemate.agents.registry import register
+
+from .analyze_scene import SceneAnalyzationMixin
 
 log = structlog.get_logger("talemate.agents.summarize")
 
@@ -35,7 +37,10 @@ class SummaryLongerThanOriginalError(ValueError):
         super().__init__(f"Summarized text is longer than original text: {summarized_length} > {original_length}")
 
 @register()
-class SummarizeAgent(Agent):
+class SummarizeAgent(
+    SceneAnalyzationMixin, 
+    Agent
+):
     """
     An agent that can be used to summarize text
     """
@@ -127,6 +132,8 @@ class SummarizeAgent(Agent):
                 },
             ),
         }
+        
+        SceneAnalyzationMixin.add_actions(self)
 
     @property
     def threshold(self):
@@ -1276,8 +1283,22 @@ class SummarizeAgent(Agent):
         self,
         current_context_investigation:str,
         new_context_investigation:str,
+        analysis:str,
     ):
-        pass
+        response = await Prompt.request(
+            "summarizer.update-context-investigation",
+            self.client,
+            "analyze_freeform",
+            vars={
+                "current_context_investigation": current_context_investigation,
+                "new_context_investigation": new_context_investigation,
+                "analysis": analysis,
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+            },
+        )
+        
+        return response.strip()
     
     # CLIENT CALLBACKS
     

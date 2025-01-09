@@ -1,0 +1,40 @@
+{% block rendered_context -%}
+{% include "character-context.jinja2" -%}
+{% endblock %}
+<|SECTION:SCENE|>
+{% block scene_history -%}
+{% set scene_context = scene.context_history(
+    budget=max_tokens-300-count_tokens(self.rendered_context()), 
+    min_dialogue=15, 
+    sections=False, 
+    keep_director=False, 
+    chapter_labels=True
+    ) 
+-%}
+{% set final_line_number=len(scene_context) %}
+{% for scene_line in scene_context -%}
+{{ scene_line }}
+
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:ANALYSIS|>
+{{ analysis }}
+<|CLOSE_SECTION|>
+<|SECTION:HISTORIC CONTEXT|>
+{{ current_context_investigation }}
+<|CLOSE_SECTION|>
+<|SECTION:PROPOSAL FOR ADDITIONAL CONTEXT|>
+{{ new_context_investigation }}
+<|CLOSE_SECTION|>
+{% endblock -%}
+<|SECTION:TASK|>
+The Historic Context is a collection of context clues and details that may be relevant to the state of the current
+scene.
+
+Your are given a proposal for additional context that may be relevant to the scene. 
+
+1. Identify no longer relevant context in the Historic Context.
+2. Merge the new context into the Historic Context, removing any duplicate information and summarize the new historical context.
+
+Your response must only be the new historical context. Use plain text formatting.
+<|CLOSE_SECTION|>

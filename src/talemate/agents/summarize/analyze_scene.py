@@ -21,51 +21,40 @@ log = structlog.get_logger()
 class SceneAnalyzationMixin:
     
     """
-    Director agent mixin that provides functionality for scene analyzation.
+    Summarizer agent mixin that provides functionality for scene analyzation.
     """
     
     @classmethod
-    def add_actions(cls, director):
-        director.actions["guide_scene"] = AgentAction(
+    def add_actions(cls, summarizer):
+        summarizer.actions["analyze_scene"] = AgentAction(
             enabled=False,
             container=True,
             can_be_disabled=True,
             experimental=True,
-            label="Guide Scene",
+            label="Scene Analysis",
             icon="mdi-lightbulb",
-            description="Analyzes the scene and provides guidance to the actors or the narrator.",
+            description="Analyzes the scene, providing extra understanding and context to the other agents.",
             config={
-                "guide_actors": AgentActionConfig(
-                    type="bool",
-                    label="Guide actors",
-                    description="Whether to guide the actors in the scene. This happens during every actor turn.",
-                    value=True
-                ),
-                "analyze_scene": AgentActionConfig(
-                    type="bool",
-                    label="Analyze Scene",
-                    description="Whether to perform an analysis of the scene.",
-                    value=True
-                ),
                 "deep_analysis": AgentActionConfig(
                     type="bool",
                     label="Deep analysis",
-                    description="Whether to perform a deep analysis of the scene. This will perform a context investigation. The `Analyze Scene` option must be enabled for this to work.",
+                    description="Perform a deep analysis of the scene. This will perform one or more context investigations, based on the initial analysis.",
                     value=True,
                     expensive=True,
                 ),
                 "deep_analysis_max_chapter_queries": AgentActionConfig(
                     type="number",
-                    label="Deep analyss - Max chapter queries",
+                    label="Max. chapter queries",
                     description="The maximum number of chapter queries to perform during deep analysis.",
                     value=1,
                     min=1,
-                    max=5
+                    max=5,
+                    step=1,
                 ),
                 "cache_analysis": AgentActionConfig(
                     type="bool",
                     label="Cache analysis",
-                    description="Whether to cache the analysis results for the scene. This means analysis will not be regenerated when regenerating the actor or narrator's output.",
+                    description="Cache the analysis results for the scene. This means analysis will not be regenerated when regenerating the actor or narrator's output.",
                     value=True
                 ),
                 "analysis_length": AgentActionConfig(
@@ -85,32 +74,24 @@ class SceneAnalyzationMixin:
     # config property helpers
         
     @property
-    def guide_scene(self) -> bool:
-        return self.actions["guide_scene"].enabled
-    
-    @property
-    def guide_actors(self) -> bool:
-        return self.actions["guide_scene"].config["guide_actors"].value
+    def analyze_scene(self) -> bool:
+        return self.actions["analyze_scene"].enabled
     
     @property
     def analysis_length(self) -> str:
-        return self.actions["guide_scene"].config["analysis_length"].value
+        return self.actions["analyze_scene"].config["analysis_length"].value
     
     @property
     def cache_analysis(self) -> bool:
-        return self.actions["guide_scene"].config["cache_analysis"].value
+        return self.actions["analyze_scene"].config["cache_analysis"].value
     
     @property
     def deep_analysis(self) -> bool:
-        return self.actions["guide_scene"].config["deep_analysis"].value
+        return self.actions["analyze_scene"].config["deep_analysis"].value
     
     @property
     def deep_analysis_max_chapter_queries(self) -> int:
-        return self.actions["guide_scene"].config["deep_analysis_max_chapter_queries"].value
-    
-    @property
-    def analyze_scene(self) -> bool:
-        return self.actions["guide_scene"].config["analyze_scene"].value
+        return self.actions["analyze_scene"].config["deep_analysis_max_chapter_queries"].value
     
     # signal connect
         
@@ -128,7 +109,7 @@ class SceneAnalyzationMixin:
         Injects instructions into the conversation.
         """
         
-        if not self.guide_scene:
+        if not self.analyze_scene:
             return
         
         analysis = None
@@ -181,7 +162,7 @@ class SceneAnalyzationMixin:
     # actions
 
     @set_processing
-    async def analyze_scene_for_next_action(self, character:"Character", length:str="medium") -> str:
+    async def analyze_scene_for_next_action(self, character:"Character"=None, length:str="medium") -> str:
         
         """
         Analyzes the current scene progress and gives a suggestion for the next action.
@@ -189,9 +170,9 @@ class SceneAnalyzationMixin:
         """
         
         response = await Prompt.request(
-            "director.analyze-scene-for-next-action",
+            "summarizer.analyze-scene-for-next-action",
             self.client,
-            f"direction_{length}",
+            f"analyze_freeform_{length}",
             vars={
                 "max_tokens": self.client.max_token_length,
                 "scene": self.scene,

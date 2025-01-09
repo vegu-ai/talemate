@@ -18,7 +18,7 @@ from talemate.scene_message import DirectorMessage, NarratorMessage, CharacterMe
 from talemate.agents.base import Agent, AgentAction, AgentActionConfig, set_processing
 from talemate.agents.registry import register
 
-from talemate.agents.director.analyze import SceneAnalyzationMixin
+from talemate.agents.director.guide import GuideSceneMixin
 
 if TYPE_CHECKING:
     from talemate import Character
@@ -27,7 +27,7 @@ log = structlog.get_logger("talemate.agent.director")
 
 
 @register()
-class DirectorAgent(SceneAnalyzationMixin, GameInstructionsMixin, Agent):
+class DirectorAgent(GuideSceneMixin, GameInstructionsMixin, Agent):
     agent_type = "director"
     verbose_name = "Director"
 
@@ -128,7 +128,7 @@ class DirectorAgent(SceneAnalyzationMixin, GameInstructionsMixin, Agent):
                 
         }
         
-        SceneAnalyzationMixin.add_actions(self)
+        GuideSceneMixin.add_actions(self)
 
     @property
     def enabled(self):

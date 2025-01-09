@@ -49,7 +49,7 @@ The information you write will be given to the other script editors to write {{ 
 
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Tell the script editors to read through any chapter(s) that may provide additional information to help guide them in writing the continuation of the scene for {{ character.name }}. To do this simply state "Read through chapter {number} to find out ..." followed by a specific detail you wish to understand. What question are you looking to answer? Avoid general queries.
 
-You may instruct them to read 1 chapter(s).
+You may instruct them to read {{ max_chapter_queries }} chapter(s).
 
 The chapter number is always two digits separated by a period.
 {% endif %}

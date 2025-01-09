@@ -4,7 +4,7 @@ import dataclasses
 import random
 import re
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
 import structlog
 
@@ -21,7 +21,7 @@ from talemate.emit import emit
 from talemate.events import GameLoopEvent
 from talemate.exceptions import LLMAccuracyError
 from talemate.prompts import Prompt
-from talemate.scene_message import CharacterMessage, DirectorMessage, ContextInvestigationMessage, NarratorMessage
+from talemate.scene_message import CharacterMessage, DirectorMessage
 
 from .base import (
     Agent,
@@ -203,27 +203,6 @@ class ConversationAgent(Agent):
                     ),
                 },
             ),
-            "investigate_context": AgentAction(
-                enabled=False,
-                label="Context Investigation",
-                container=True,
-                icon="mdi-text-search",
-                can_be_disabled=True,
-                experimental=True,
-                description="Will investigate the layered history of the scene to extract relevant information. This can be very slow, especially as number of layers increase. Layered history needs to be enabled in the summarizer agent.",
-                config={
-                    "trigger": AgentActionConfig(
-                        type="text",
-                        label="Trigger",
-                        description="The trigger to start the context investigation",
-                        value="ai",
-                        choices=[
-                            {"label": "Agent decides", "value": "ai"},
-                            {"label": "Only when a question is asked", "value": "question"},
-                        ]
-                    ),
-                }
-            ),
         }
 
     @property
@@ -274,14 +253,6 @@ class ConversationAgent(Agent):
     def generation_settings_actor_instructions_offset(self):
         return self.actions["generation_override"].config["actor_instructions_offset"].value
 
-    @property
-    def investigate_context(self):
-        return self.actions["investigate_context"].enabled 
-    
-    @property
-    def investigate_context_trigger(self):
-        return self.actions["investigate_context"].config["trigger"].value
-    
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("game_loop").connect(self.on_game_loop)
@@ -536,9 +507,6 @@ class ConversationAgent(Agent):
         except IndexError:
             director_message = False
             
-        if self.investigate_context:
-            await self.run_context_investigation(character)
-            
         dynamic_instructions = []
         
         await talemate.emit.async_signals.get(
@@ -646,36 +614,6 @@ class ConversationAgent(Agent):
             self.current_memory_context = context
 
         return self.current_memory_context
-
-    async def run_context_investigation(self, character: Character | None = None):
-        
-        # go backwards in the history if there is a ContextInvestigation message before
-        # there is a character or narrator message, just return
-        for idx in range(len(self.scene.history) - 1, -1, -1):
-            if isinstance(self.scene.history[idx], ContextInvestigationMessage):
-                return
-
-            if isinstance(self.scene.history[idx], (CharacterMessage, NarratorMessage)):
-                break
-        
-        last_message = self.scene.last_message_of_type(["character", "narrator"])
-        
-        if self.investigate_context_trigger == "question":
-            if not last_message:
-                return
-
-            if "?" not in str(last_message):
-                return
-        
-        summarizer = instance.get_agent("summarizer")
-        result = await summarizer.dig_layered_history(str(last_message), character=character) 
-        
-        if not result.strip():
-            return
-        
-        message = ContextInvestigationMessage(message=result)
-        self.scene.push_history([message])
-        emit("context_investigation", message)
 
     async def build_prompt(self, character, char_message: str = "", instruction:str = None):
         fn = self.build_prompt_default

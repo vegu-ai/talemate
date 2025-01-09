@@ -228,23 +228,3 @@ class CmdSummarizerResetLayeredHistory(TalemateCommand):
         summarizer = get_agent("summarizer")
         self.scene.layered_history = []
         await summarizer.summarize_to_layered_history()
-        
-@register
-class CmdSummarizerDigLayeredHistory(TalemateCommand):
-    """
-    Command class for the 'summarizer_dig_layered_history' command
-    """
-
-    name = "summarizer_dig_layered_history"
-    description = "Dig into the layered history"
-    aliases = ["dig_layered_history"]
-
-    async def run(self):
-        if not self.args:
-            self.emit("system", "You must specify a query")
-            
-        query = self.args[0]
-        
-        summarizer = get_agent("summarizer")
-        
-        await summarizer.dig_layered_history(query)

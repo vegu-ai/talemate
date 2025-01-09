@@ -41,6 +41,27 @@ class SceneAnalyzationMixin:
                     description="Whether to guide the actors in the scene. This happens during every actor turn.",
                     value=True
                 ),
+                "analyze_scene": AgentActionConfig(
+                    type="bool",
+                    label="Analyze Scene",
+                    description="Whether to perform an analysis of the scene.",
+                    value=True
+                ),
+                "deep_analysis": AgentActionConfig(
+                    type="bool",
+                    label="Deep analysis",
+                    description="Whether to perform a deep analysis of the scene. This will perform a context investigation. The `Analyze Scene` option must be enabled for this to work.",
+                    value=True,
+                    expensive=True,
+                ),
+                "deep_analysis_max_chapter_queries": AgentActionConfig(
+                    type="number",
+                    label="Deep analyss - Max chapter queries",
+                    description="The maximum number of chapter queries to perform during deep analysis.",
+                    value=1,
+                    min=1,
+                    max=5
+                ),
                 "cache_analysis": AgentActionConfig(
                     type="bool",
                     label="Cache analysis",
@@ -79,6 +100,18 @@ class SceneAnalyzationMixin:
     def cache_analysis(self) -> bool:
         return self.actions["guide_scene"].config["cache_analysis"].value
     
+    @property
+    def deep_analysis(self) -> bool:
+        return self.actions["guide_scene"].config["deep_analysis"].value
+    
+    @property
+    def deep_analysis_max_chapter_queries(self) -> int:
+        return self.actions["guide_scene"].config["deep_analysis_max_chapter_queries"].value
+    
+    @property
+    def analyze_scene(self) -> bool:
+        return self.actions["guide_scene"].config["analyze_scene"].value
+    
     # signal connect
         
     def connect(self, scene):
@@ -95,10 +128,10 @@ class SceneAnalyzationMixin:
         Injects instructions into the conversation.
         """
         
-        if not self.guide_scene or not self.guide_actors:
+        if not self.guide_scene:
             return
         
-        guidance = None
+        analysis = None
         
         if self.cache_analysis:
             # check if the analysis is already cached
@@ -106,26 +139,26 @@ class SceneAnalyzationMixin:
             
             cached_analysis = getattr(self, "cached_analysis", None)
             if cached_analysis and cached_analysis.get("fp") == scene.history[-1].fingerprint:
-                guidance = cached_analysis["guidance"]
+                analysis = cached_analysis["guidance"]
         
         
-        if not guidance:
+        if not analysis and self.analyze_scene:
             # analyze the scene for the next action
-            guidance = await self.analyze_scene_for_next_action(emission.character, self.analysis_length)
+            analysis = await self.analyze_scene_for_next_action(emission.character, self.analysis_length)
             
             if self.cache_analysis:
                 self.cached_analysis = {
                     "fp": scene.history[-1].fingerprint,
-                    "guidance": guidance
+                    "guidance": analysis
                 }
             
-        if not guidance:
+        if not analysis:
             return
             
         emission.dynamic_instructions.append("\n".join(
             [
                 "<|SECTION:SCENE ANALYSIS|>",
-                guidance,
+                analysis,
                 "<|CLOSE_SECTION|>"
             ]
         ))
@@ -184,6 +217,13 @@ class SceneAnalyzationMixin:
         for ci_call in ci_calls:
             ci_text.append(f"{ci_call.arguments['query']}\n{ci_call.result}")
         
-        self.set_scene_states(context_investigation="\n\n".join(ci_text if ci_text else []))
+        context_investigation="\n\n".join(ci_text if ci_text else [])
+        current_context_investigation = self.get_scene_state("context_investigation")
+        if current_context_investigation and context_investigation:
+            context_investigation = await summarizer.update_context_investigation(
+                current_context_investigation, ci_text, response
+            )
+        
+        self.set_scene_states(context_investigation=context_investigation)
         
         return response

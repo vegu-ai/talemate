@@ -29,6 +29,7 @@ __all__ = [
     "AgentActionConfig",
     "AgentDetail",
     "AgentEmission",
+    "AgentTemplateEmission",
     "set_processing",
 ]
 
@@ -456,3 +457,8 @@ class Agent(ABC):
 @dataclasses.dataclass
 class AgentEmission:
     agent: Agent
+
+@dataclasses.dataclass
+class AgentTemplateEmission(AgentEmission):
+    template_vars: dict = dataclasses.field(default_factory=dict)
+    response: str = None

@@ -17,7 +17,6 @@ __all__ = [
     "CmdSummarizerGenerateTimeline",
     "CmdSummarizerUpdatedLayeredHistory",
     "CmdSummarizerResetLayeredHistory",
-    "CmdSummarizerDigLayeredHistory",
 ]
 
 log = structlog.get_logger("talemate.commands.cmd_debug_tools")

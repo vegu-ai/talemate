@@ -1,9 +1,12 @@
 from typing import TYPE_CHECKING
 import structlog
+import dataclasses
 from talemate.agents.base import (
     set_processing,
     AgentAction,
-    AgentActionConfig
+    AgentActionConfig,
+    AgentEmission,
+    AgentTemplateEmission,
 )
 from talemate.prompts import Prompt
 from talemate.emit import emit
@@ -17,6 +20,23 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Character
 
 log = structlog.get_logger()
+
+
+talemate.emit.async_signals.register(
+    "agent.summarization.scene_analysis.before",
+    "agent.summarization.scene_analysis.after",
+    "agent.summarization.scene_analysis.before_deep_analysis",
+    "agent.summarization.scene_analysis.after_deep_analysis",   
+)
+
+@dataclasses.dataclass
+class SceneAnalysisEmission(AgentTemplateEmission):
+    pass
+
+@dataclasses.dataclass
+class SceneAnalysisDeepAnalysisEmission(AgentEmission):
+    analysis: str
+
 
 class SceneAnalyzationMixin:
     
@@ -42,10 +62,10 @@ class SceneAnalyzationMixin:
                     value=True,
                     expensive=True,
                 ),
-                "deep_analysis_max_chapter_queries": AgentActionConfig(
+                "deep_analysis_max_context_investigations": AgentActionConfig(
                     type="number",
-                    label="Max. chapter queries",
-                    description="The maximum number of chapter queries to perform during deep analysis.",
+                    label="Max. context investigations",
+                    description="The maximum number of context investigations to perform during deep analysis.",
                     value=1,
                     min=1,
                     max=5,
@@ -90,8 +110,8 @@ class SceneAnalyzationMixin:
         return self.actions["analyze_scene"].config["deep_analysis"].value
     
     @property
-    def deep_analysis_max_chapter_queries(self) -> int:
-        return self.actions["analyze_scene"].config["deep_analysis_max_chapter_queries"].value
+    def deep_analysis_max_context_investigations(self) -> int:
+        return self.actions["analyze_scene"].config["deep_analysis_max_context_investigations"].value
     
     # signal connect
         
@@ -99,9 +119,6 @@ class SceneAnalyzationMixin:
         super().connect(scene)
         talemate.emit.async_signals.get("agent.conversation.inject_instructions").connect(
             self.on_conversation_inject_instructions
-        )
-        talemate.emit.async_signals.get("agent.conversation.inject_instructions").connect(
-            self.on_conversation_inject_context_investigation
         )
         
     async def on_conversation_inject_instructions(self, emission:ConversationAgentEmission):
@@ -143,21 +160,6 @@ class SceneAnalyzationMixin:
                 "<|CLOSE_SECTION|>"
             ]
         ))
-        
-    async def on_conversation_inject_context_investigation(self, emission:ConversationAgentEmission):
-        """
-        Injects context investigation into the conversation.
-        """
-        
-        context_investigation = self.get_scene_state("context_investigation")
-        if context_investigation:
-            emission.dynamic_instructions.append("\n".join(
-                [
-                    "<|SECTION:HISTORIC CONTEXT|>",
-                    context_investigation,
-                    "<|CLOSE_SECTION|>"
-                ]
-            ))
     
     # actions
 
@@ -169,42 +171,44 @@ class SceneAnalyzationMixin:
         taken by the given actor.
         """
         
+        template_vars = {
+            "max_tokens": self.client.max_token_length,
+            "scene": self.scene,
+            "character": character,
+            "length": length,
+            "deep_analysis": self.deep_analysis,
+            "context_investigation": self.get_scene_state("context_investigation"),
+            "max_content_investigations": self.deep_analysis_max_context_investigations,
+        }
+        
+        await talemate.emit.async_signals.get("agent.summarization.scene_analysis.before").send(
+            SceneAnalysisEmission(agent=self, template_vars=template_vars)
+        )
+        
         response = await Prompt.request(
             "summarizer.analyze-scene-for-next-action",
             self.client,
             f"analyze_freeform_{length}",
-            vars={
-                "max_tokens": self.client.max_token_length,
-                "scene": self.scene,
-                "character": character,
-                "length": length,
-                "context_investigation": self.get_scene_state("context_investigation"),
-                "max_chapter_queries": 3,
-            },
+            vars=template_vars,
         )
         
         if not response.strip():
             log.warning("analyze_scene_for_next_action.empty_response")
             return response
         
-        summarizer = get_agent("summarizer")
-        
-        ci_calls:list[focal.Call] = await summarizer.request_context_investigations(response)
-        
-        log.debug("analyze_scene_for_next_action", ci_calls=ci_calls)
-        
-        # append call queries and answers to the response
-        ci_text = []
-        for ci_call in ci_calls:
-            ci_text.append(f"{ci_call.arguments['query']}\n{ci_call.result}")
-        
-        context_investigation="\n\n".join(ci_text if ci_text else [])
-        current_context_investigation = self.get_scene_state("context_investigation")
-        if current_context_investigation and context_investigation:
-            context_investigation = await summarizer.update_context_investigation(
-                current_context_investigation, ci_text, response
+        if self.deep_analysis:
+            
+            await talemate.emit.async_signals.get("agent.summarization.scene_analysis.before_deep_analysis").send(
+                SceneAnalysisDeepAnalysisEmission(agent=self, analysis=response)
+            )
+            
+            await talemate.emit.async_signals.get("agent.summarization.scene_analysis.after_deep_analysis").send(
+                SceneAnalysisDeepAnalysisEmission(agent=self, analysis=response)
             )
         
-        self.set_scene_states(context_investigation=context_investigation)
+        
+        await talemate.emit.async_signals.get("agent.summarization.scene_analysis.after").send(
+            SceneAnalysisEmission(agent=self, template_vars=template_vars, response=response)
+        )
         
         return response

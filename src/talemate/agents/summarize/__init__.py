@@ -26,6 +26,7 @@ from talemate.agents.base import Agent, AgentAction, AgentActionConfig, set_proc
 from talemate.agents.registry import register
 
 from .analyze_scene import SceneAnalyzationMixin
+from .context_investigation import ContextInvestigationMixin
 
 log = structlog.get_logger("talemate.agents.summarize")
 
@@ -38,7 +39,8 @@ class SummaryLongerThanOriginalError(ValueError):
 
 @register()
 class SummarizeAgent(
-    SceneAnalyzationMixin, 
+    SceneAnalyzationMixin,
+    ContextInvestigationMixin,
     Agent
 ):
     """
@@ -134,6 +136,7 @@ class SummarizeAgent(
         }
         
         SceneAnalyzationMixin.add_actions(self)
+        ContextInvestigationMixin.add_actions(self)
 
     @property
     def threshold(self):
@@ -873,177 +876,3 @@ class SummarizeAgent(
             log.info("Generation cancelled, stopping rebuild of historical layered history")
             emit("status", message="Rebuilding of layered history cancelled", status="info")
             return
-    
-    # CONTEXT INVESTIGATIONS
-    
-    async def _investigate_context(self, chapter_number:str, query:str) -> str:
-        # look for \d.\d in the chapter number, extract as layer and index
-        match = re.match(r"(\d+)\.(\d+)", chapter_number)
-        if not match:
-            log.error("summarizer.investigate_context", error="Invalid chapter number", chapter_number=chapter_number)
-            return ""
-        
-        layer = int(match.group(1))
-        index = int(match.group(2))
-        
-        # index comes in 1-based, convert to 0-based
-        index -= 1
-        
-        return await self.investigate_context(layer, index, query)
-    
-    @set_processing
-    async def investigate_context(self, layer:int, index:int, query:str, analysis:str="") -> str:
-        """
-        Processes a context investigation.
-        
-        Arguments:
-        
-        - layer: The layer to investigate
-        - index: The index in the layer to investigate
-        - query: The query to investigate
-        """
-        
-        log.debug("summarizer.investigate_context", layer=layer, index=index, query=query)
-        entry = self.scene.layered_history[layer-1][index]  
-        
-        if layer == 1:
-            entries = self.scene.archived_history[entry["start"]:entry["end"]+1]
-        else:
-            entries = self.scene.layered_history[layer-2][entry["start"]:entry["end"]+1]    
-        
-        async def answer(query:str, instructions:str) -> str:
-            log.debug("Answering context investigation", query=query, instructions=answer)
-            
-            world_state = get_agent("world_state")
-            
-            return await world_state.analyze_history_and_follow_instructions(
-                entries,
-                f"{query}\n{instructions}",
-                analysis=analysis
-            )
-            
-            
-        async def abort():
-            log.debug("Aborting context investigation")
-        
-        focal_handler: focal.Focal = focal.Focal(
-            self.client,
-            callbacks=[
-                focal.Callback(
-                    name="investigate_context",
-                    arguments = [ 
-                        focal.Argument(name="chapter_number", type="str"),
-                        focal.Argument(name="query", type="str")
-                    ],
-                    fn=self._investigate_context
-                ),
-                focal.Callback(
-                    name="answer",
-                    arguments = [ 
-                        focal.Argument(name="instructions", type="str"),
-                        focal.Argument(name="query", type="str")
-                    ],
-                    fn=answer
-                ),
-                focal.Callback(
-                    name="abort",
-                    fn=abort
-                )
-            ],
-            max_calls=3,
-            scene=self.scene,
-            layer=layer,
-            index=index,
-            query=query,
-            entries=entries,
-            analysis=analysis,
-        )
-        
-        await focal_handler.request(
-            "summarizer.investigate-context",
-        )
-        
-        log.debug("summarizer.investigate_context", calls=focal_handler.state.calls)
-        
-        return focal_handler.state.calls    
-
-    @set_processing
-    async def request_context_investigations(self, analysis:str) -> list[focal.Call]:
-        
-        """
-        Requests context investigations for the given analysis.
-        """
-        
-        async def abort():
-            log.debug("Aborting context investigations")
-        
-        async def investigate_context(chapter_number:str, query:str) -> str:
-            # look for \d.\d in the chapter number, extract as layer and index
-            match = re.match(r"(\d+)\.(\d+)", chapter_number)
-            if not match:
-                log.error("summarizer.request_context_investigations.investigate_context", error="Invalid chapter number", chapter_number=chapter_number)
-                return ""
-
-            layer = int(match.group(1))
-            index = int(match.group(2))
-            
-            # index comes in 1-based, convert to 0-based
-            index -= 1
-            
-            return await self.investigate_context(layer, index, query, analysis)
-        
-        focal_handler: focal.Focal = focal.Focal(
-            self.client,
-            callbacks=[
-                focal.Callback(
-                    name="investigate_context",
-                    arguments = [ 
-                        focal.Argument(name="chapter_number", type="str"),
-                        focal.Argument(name="query", type="str")
-                    ],
-                    fn=investigate_context
-                ),
-                focal.Callback(
-                    name="abort",
-                    fn=abort
-                )
-            ],
-            scene=self.scene,
-            text=analysis
-        )
-        
-        await focal_handler.request(
-            "summarizer.request-context-investigation",
-        )
-        
-        log.debug("summarizer.request_context_investigations", calls=focal_handler.state.calls)
-        
-        return focal.collect_calls(
-            focal_handler.state.calls,
-            nested=True,
-            filter=lambda c: c.name == "answer"
-        )
-        
-        # return focal_handler.state.calls    
-    
-    @set_processing
-    async def update_context_investigation(
-        self,
-        current_context_investigation:str,
-        new_context_investigation:str,
-        analysis:str,
-    ):
-        response = await Prompt.request(
-            "summarizer.update-context-investigation",
-            self.client,
-            "analyze_freeform",
-            vars={
-                "current_context_investigation": current_context_investigation,
-                "new_context_investigation": new_context_investigation,
-                "analysis": analysis,
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-            },
-        )
-        
-        return response.strip()

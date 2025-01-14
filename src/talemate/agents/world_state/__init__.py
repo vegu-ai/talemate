@@ -3,8 +3,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import time
-import uuid
-from typing import TYPE_CHECKING, Callable, List, Optional, Union
+from typing import TYPE_CHECKING
 
 import isodate
 import structlog
@@ -20,11 +19,10 @@ from talemate.scene_message import (
     ReinforcementMessage,
     TimePassageMessage,
 )
-from talemate.world_state import InsertionMode
 import talemate.world_state.templates as world_state_templates
 
-from .base import Agent, AgentAction, AgentActionConfig, AgentEmission, set_processing
-from .registry import register
+from talemate.agents.base import Agent, AgentAction, AgentActionConfig, AgentEmission, set_processing
+from talemate.agents.registry import register
 import talemate.game.focal as focal
 
 if TYPE_CHECKING:

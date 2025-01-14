@@ -1,4 +1,3 @@
-from typing import TYPE_CHECKING
 import structlog
 import re
 from talemate.agents.base import (
@@ -7,15 +6,10 @@ from talemate.agents.base import (
     AgentActionConfig
 )
 from talemate.prompts import Prompt
-from talemate.emit import emit
 from talemate.instance import get_agent
 import talemate.emit.async_signals
 from talemate.agents.conversation import ConversationAgentEmission
 import talemate.game.focal as focal
-from talemate.scene_message import ContextInvestigationMessage
-
-if TYPE_CHECKING:
-    from talemate.tale_mate import Scene, Character
 
 log = structlog.get_logger()
 

@@ -217,12 +217,15 @@ class SceneAnalyzationMixin:
         taken by the given actor.
         """
         
+            # deep analysis is only available if the scene has a layered history
+        deep_analysis = self.deep_analysis and self.layered_history_available
+        
         template_vars = {
             "max_tokens": self.client.max_token_length,
             "scene": self.scene,
             "character": character,
             "length": length,
-            "deep_analysis": self.deep_analysis,
+            "deep_analysis": deep_analysis,
             "context_investigation": self.get_scene_state("context_investigation"),
             "max_content_investigations": self.deep_analysis_max_context_investigations,
             "analysis_type": typ,
@@ -243,7 +246,7 @@ class SceneAnalyzationMixin:
             log.warning("analyze_scene_for_next_action.empty_response")
             return response
         
-        if self.deep_analysis:
+        if deep_analysis:
             
             await talemate.emit.async_signals.get("agent.summarization.scene_analysis.before_deep_analysis").send(
                 SceneAnalysisDeepAnalysisEmission(agent=self, analysis=response)

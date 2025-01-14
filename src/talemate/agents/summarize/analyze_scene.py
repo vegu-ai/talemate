@@ -55,6 +55,17 @@ class SceneAnalyzationMixin:
             icon="mdi-lightbulb",
             description="Analyzes the scene, providing extra understanding and context to the other agents.",
             config={
+                "analysis_length": AgentActionConfig(
+                    type="text",
+                    label="Length of analysis",
+                    description="The length of the analysis to be performed.",
+                    value="1024",
+                    choices=[
+                        {"label": "Short", "value": "256"},
+                        {"label": "Medium", "value": "512"},
+                        {"label": "Long", "value": "1024"}
+                    ]
+                ),
                 "for_conversation": AgentActionConfig(
                     type="bool",
                     label="Conversation",
@@ -89,17 +100,6 @@ class SceneAnalyzationMixin:
                     description="Cache the analysis results for the scene. This means analysis will not be regenerated when regenerating the actor or narrator's output.",
                     value=True
                 ),
-                "analysis_length": AgentActionConfig(
-                    type="text",
-                    label="Length of analysis",
-                    description="The length of the analysis to be performed.",
-                    value="long",
-                    choices=[
-                        {"label": "Short", "value": "short"},
-                        {"label": "Medium", "value": "medium"},
-                        {"label": "Long", "value": "long"}
-                    ]
-                )
             }
         )
     
@@ -110,8 +110,8 @@ class SceneAnalyzationMixin:
         return self.actions["analyze_scene"].enabled
     
     @property
-    def analysis_length(self) -> str:
-        return self.actions["analyze_scene"].config["analysis_length"].value
+    def analysis_length(self) -> int:
+        return int(self.actions["analyze_scene"].config["analysis_length"].value)
     
     @property
     def cache_analysis(self) -> bool:
@@ -210,7 +210,7 @@ class SceneAnalyzationMixin:
     # actions
 
     @set_processing
-    async def analyze_scene_for_next_action(self, typ:str, character:"Character"=None, length:str="medium") -> str:
+    async def analyze_scene_for_next_action(self, typ:str, character:"Character"=None, length:int=1024) -> str:
         
         """
         Analyzes the current scene progress and gives a suggestion for the next action.
@@ -235,7 +235,7 @@ class SceneAnalyzationMixin:
         response = await Prompt.request(
             f"summarizer.analyze-scene-for-next-{typ}",
             self.client,
-            f"analyze_freeform_{length}",
+            f"investigate_{length}",
             vars=template_vars,
         )
         

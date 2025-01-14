@@ -43,7 +43,7 @@ class ContextInvestigationMixin:
                     type="text",
                     label="Answer Length",
                     description="The maximum length of the answer to return, per investigation.",
-                    value="medium2",
+                    value="512",
                     choices=[
                         {"label": "Short", "value": "256"},
                         {"label": "Medium", "value": "512"},

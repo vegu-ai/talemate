@@ -84,6 +84,7 @@ PRESET_SUBSTRING_MAPPINGS = {
     "create": "creative",
     "analytical": "analytical",
     "analyze": "analytical",
+    "investigate": "analytical",
     "direction": "scene_direction",
     "summarize": "summarization",
 }
@@ -181,4 +182,11 @@ def max_tokens_for_kind(kind: str, total_budget: int) -> int:
             return value
     if token_value is not None:
         return token_value
+    
+    # finally check if splitting last item off of _ is a number, and then just
+    # return that number
+    kind_split = kind.split("_")[-1]
+    if kind_split.isdigit():
+        return int(kind_split)
+    
     return 150  # Default value if none of the kinds match

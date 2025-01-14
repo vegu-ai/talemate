@@ -288,7 +288,7 @@ class ClientBase:
                 return system_prompts.EDITOR
             if "world_state" in kind:
                 return system_prompts.WORLD_STATE
-            if "analyze_freeform" in kind:
+            if "analyze_freeform" in kind or "investigate" in kind:
                 return system_prompts.ANALYST_FREEFORM
             if "analyst" in kind:
                 return system_prompts.ANALYST
@@ -319,7 +319,7 @@ class ClientBase:
                 return system_prompts.EDITOR_NO_DECENSOR
             if "world_state" in kind:
                 return system_prompts.WORLD_STATE_NO_DECENSOR
-            if "analyze_freeform" in kind:
+            if "analyze_freeform" in kind or "investigate" in kind:
                 return system_prompts.ANALYST_FREEFORM_NO_DECENSOR
             if "analyst" in kind:
                 return system_prompts.ANALYST_NO_DECENSOR

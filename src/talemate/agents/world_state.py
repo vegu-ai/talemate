@@ -419,6 +419,7 @@ class WorldStateAgent(Agent):
         entries: list[dict],
         instructions: str,
         analysis: str = "",
+        response_length: int = 512
     ) -> str:
         
         """
@@ -429,13 +430,14 @@ class WorldStateAgent(Agent):
         response = await Prompt.request(
             "world_state.analyze-history-and-follow-instructions",
             self.client,
-            "analyze_freeform",
+            f"investigate_{response_length}",
             vars={
                 "instructions": instructions,
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "entries": entries,
                 "analysis": analysis,
+                "response_length": response_length,
             },
         )
         

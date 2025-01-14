@@ -30,20 +30,38 @@ class ContextInvestigationMixin:
     
     @classmethod
     def add_actions(cls, summarizer):
-        return
         summarizer.actions["context_investigation"] = AgentAction(
             enabled=True,
             container=True,
-            can_be_disabled=False,
+            can_be_disabled=True,
             experimental=True,
             label="Context Investigation",
             icon="mdi-layers-search",
             description="Investigates the layered history to augment the context with additional information.",
             config={
+                "answer_length": AgentActionConfig(
+                    type="text",
+                    label="Answer Length",
+                    description="The maximum length of the answer to return, per investigation.",
+                    value="medium2",
+                    choices=[
+                        {"label": "Short", "value": "256"},
+                        {"label": "Medium", "value": "512"},
+                        {"label": "Long", "value": "1024"},
+                    ]
+                )
             }
         )
     
     # config property helpers
+    
+    @property
+    def context_investigation_enabled(self):
+        return self.actions["context_investigation"].enabled
+    
+    @property
+    def context_investigation_answer_length(self) -> int:
+        return int(self.actions["context_investigation"].config["answer_length"].value)
     
     # signal connect
     
@@ -60,6 +78,9 @@ class ContextInvestigationMixin:
         """
         Handles context investigation for deep scene analysis.
         """
+        
+        if not self.context_investigation_enabled:
+            return
         
         response = emission.analysis
                     
@@ -87,7 +108,11 @@ class ContextInvestigationMixin:
         Injects context investigation into the conversation.
         """
         
+        if not self.context_investigation_enabled:
+            return
+        
         context_investigation = self.get_scene_state("context_investigation")
+        log.debug("summarizer.on_conversation_inject_context_investigation", context_investigation=context_investigation)
         if context_investigation:
             emission.dynamic_instructions.append("\n".join(
                 [
@@ -142,7 +167,8 @@ class ContextInvestigationMixin:
             return await world_state.analyze_history_and_follow_instructions(
                 entries,
                 f"{query}\n{instructions}",
-                analysis=analysis
+                analysis=analysis,
+                response_length=self.context_investigation_answer_length
             )
             
             

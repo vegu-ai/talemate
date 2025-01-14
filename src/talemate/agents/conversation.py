@@ -49,6 +49,7 @@ class ConversationAgentEmission(AgentEmission):
 
 talemate.emit.async_signals.register(
     "agent.conversation.before_generate", 
+    "agent.conversation.before_inject_instructions",
     "agent.conversation.inject_instructions",
     "agent.conversation.generated"
 )
@@ -509,15 +510,16 @@ class ConversationAgent(Agent):
             
         dynamic_instructions = []
         
-        await talemate.emit.async_signals.get(
-            "agent.conversation.inject_instructions"
-        ).send(ConversationAgentEmission(
+        inject_instructions_emission = ConversationAgentEmission(
             agent=self,
             generation="", 
             actor=None, 
             character=character, 
             dynamic_instructions=dynamic_instructions
-        ))
+        )
+        await talemate.emit.async_signals.get(
+            "agent.conversation.inject_instructions"
+        ).send(inject_instructions_emission)
         
         log.debug("Dynamic instructions", dynamic_instructions=dynamic_instructions)
 

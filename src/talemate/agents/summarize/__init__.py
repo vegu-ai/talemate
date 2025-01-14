@@ -39,8 +39,9 @@ class SummaryLongerThanOriginalError(ValueError):
 
 @register()
 class SummarizeAgent(
-    SceneAnalyzationMixin,
     ContextInvestigationMixin,
+    # Needs to be after ContextInvestigationMixin so signals are connected in the right order
+    SceneAnalyzationMixin,
     Agent
 ):
     """

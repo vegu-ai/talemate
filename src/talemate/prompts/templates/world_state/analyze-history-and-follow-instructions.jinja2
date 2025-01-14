@@ -14,4 +14,8 @@
 <|SECTION:TASK|>
 {{ instructions }}
 
+{% if response_length < 512 %}
 Your response should be 1 to 3 sentences long. Keep it concise but informative.
+{% elif response_length < 1024 %}
+Your response should be 2 to 4 sentences long.
+{%  endif %}

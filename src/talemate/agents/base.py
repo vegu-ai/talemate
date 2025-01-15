@@ -218,9 +218,9 @@ class Agent(ABC):
         return {k: v.model_dump() for k, v in self.actions.items()}
     
     
-    def get_scene_state(self, key:str):
+    def get_scene_state(self, key:str, default=None):
         agent_state = self.scene.agent_state.get(self.agent_type, {})
-        return agent_state.get(key)
+        return agent_state.get(key, default)
         
     def set_scene_states(self, **kwargs):
         agent_state = self.scene.agent_state.get(self.agent_type, {})

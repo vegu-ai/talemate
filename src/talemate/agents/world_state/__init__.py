@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 import dataclasses
 import json
 import time
-from typing import TYPE_CHECKING
 
 import isodate
 import structlog
@@ -14,20 +14,21 @@ from talemate.emit import emit
 from talemate.events import GameLoopEvent
 from talemate.instance import get_agent
 from talemate.prompts import Prompt
-from talemate.status import set_loading
 from talemate.scene_message import (
     ReinforcementMessage,
     TimePassageMessage,
 )
-import talemate.world_state.templates as world_state_templates
+
 
 from talemate.agents.base import Agent, AgentAction, AgentActionConfig, AgentEmission, set_processing
 from talemate.agents.registry import register
-import talemate.game.focal as focal
+
+
+from .character_progression import CharacterProgressionMixin
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
-
+    
 log = structlog.get_logger("talemate.agents.world_state")
 
 talemate.emit.async_signals.register("agent.world_state.time")
@@ -54,7 +55,10 @@ class TimePassageEmission(WorldStateAgentEmission):
 
 
 @register()
-class WorldStateAgent(Agent):
+class WorldStateAgent(
+    CharacterProgressionMixin,
+    Agent
+):
     """
     An agent that handles world state related tasks.
     """
@@ -108,6 +112,8 @@ class WorldStateAgent(Agent):
 
         self.next_update = 0
         self.next_pin_check = 0
+        
+        CharacterProgressionMixin.add_actions(self)
 
     @property
     def enabled(self):
@@ -832,105 +838,3 @@ class WorldStateAgent(Agent):
                 error=e,
             )
             raise
-
-
-    @set_processing
-    async def determine_character_development(
-        self, 
-        character: Character,
-        generation_options: world_state_templates.GenerationOptions | None = None,
-        instructions: str = None,
-    ) -> list[focal.Call]:
-        """
-        Determine character development
-        """
-        
-        log.debug("determine_character_development", character=character, generation_options=generation_options)
-        
-        creator = get_agent("creator")
-        
-        @set_loading("Generating character attribute", cancellable=True)
-        async def add_attribute(name: str, instructions: str) -> str:
-            return await creator.generate_character_attribute(
-                character,
-                attribute_name = name,
-                instructions = instructions,
-                generation_options = generation_options,
-            )
-            
-        @set_loading("Generating character attribute", cancellable=True)
-        async def update_attribute(name: str, instructions: str) -> str:
-            return await creator.generate_character_attribute(
-                character,
-                attribute_name = name,
-                instructions = instructions,
-                original = character.base_attributes.get(name),
-                generation_options = generation_options,
-            )
-        
-        async def remove_attribute(name: str) -> str:
-            return None
-            
-        @set_loading("Generating character description", cancellable=True)
-        async def update_description(instructions: str) -> str:
-            return await creator.generate_character_detail(
-                character,
-                detail_name = "description",
-                instructions = instructions,
-                original = character.description,
-                length=1024,
-                generation_options = generation_options,
-            )
-                 
-        focal_handler = focal.Focal(
-            self.client,
-            
-            # callbacks
-            callbacks = [
-                focal.Callback(
-                    name = "add_attribute",
-                    arguments = [
-                        focal.Argument(name="name", type="str"),
-                        focal.Argument(name="instructions", type="str"),
-                    ],
-                    fn = add_attribute
-                ),
-                focal.Callback(
-                    name = "update_attribute",
-                    arguments = [
-                        focal.Argument(name="name", type="str"),
-                        focal.Argument(name="instructions", type="str"),
-                    ],
-                    fn = update_attribute
-                ),
-                focal.Callback(
-                    name = "remove_attribute",
-                    arguments = [
-                        focal.Argument(name="name", type="str"),
-                        focal.Argument(name="reason", type="str"),
-                    ],
-                    fn = remove_attribute
-                ),
-                focal.Callback(
-                    name = "update_description",
-                    arguments = [
-                        focal.Argument(name="instructions", type="str"),
-                    ],
-                    fn = update_description,
-                    multiple=False
-                ),
-            ],
-            
-            # context
-            character = character,
-            scene = self.scene,
-            instructions = instructions,
-        )
-        
-        await focal_handler.request(
-            "world_state.determine-character-development",
-        )
-        
-        log.debug("determine_character_development", calls=focal_handler.state.calls)
-        
-        return focal_handler.state.calls

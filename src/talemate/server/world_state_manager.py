@@ -1127,8 +1127,4 @@ class WorldStateManagerPlugin:
                 
                 task = asyncio.create_task(task_wrapper())
                 
-                #await world_state.determine_character_development(
-                #    character, 
-                #)
-                
                 task.add_done_callback(lambda _: asyncio.create_task(self.signal_operation_done()))

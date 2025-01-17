@@ -9,7 +9,7 @@ import talemate.world_state.templates as world_state_templates
 from talemate.export import ExportOptions, export
 from talemate.history import history_with_relative_time, rebuild_history
 from talemate.instance import get_agent
-from talemate.world_state.manager import WorldStateManager
+from talemate.world_state.manager import WorldStateManager, Suggestion
 from talemate.status import set_loading
 import talemate.game.focal as focal
 
@@ -170,13 +170,17 @@ class RegenerateHistoryPayload(pydantic.BaseModel):
     generation_options: world_state_templates.GenerationOptions | None = None
 
 
-class RequestSuggestionPayload(pydantic.BaseModel):
+class GenerateSuggestionPayload(pydantic.BaseModel):
     name: str
     suggestion_type: str
     auto_apply: bool = False
     generation_options: world_state_templates.GenerationOptions | None = None
     instructions: str | None = None
-    
+
+class SuggestionPayload(pydantic.BaseModel):
+    id: str
+    proposal_uid: str | None = None
+
 class WorldStateManagerPlugin:
     router = "world_state_manager"
 
@@ -1076,22 +1080,58 @@ class WorldStateManagerPlugin:
         # when task is done,  queue a message to the client
         task.add_done_callback(lambda _: asyncio.create_task(done()))
     
+    # Suggestions
+    
     async def handle_request_suggestions(self, data):
-        world_state = get_agent("world_state")
-        payload = RequestSuggestionPayload(**data)
+        """
+        Request current suggestions from the world state.
+        """
         
-        log.debug("Request suggestions", payload=payload)
+        world_state_dict = self.scene.world_state.model_dump()
+        suggestions = world_state_dict.get("suggestions", [])
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "request_suggestions",
+                "data": suggestions,
+            }
+        )
+        
+    async def handle_remove_suggestion(self, data):
+        payload = SuggestionPayload(**data)
+        if not payload.proposal_uid:
+            await self.world_state_manager.remove_suggestion(payload.id)
+        else:
+            await self.world_state_manager.remove_suggestion_proposal(payload.id, payload.proposal_uid)
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "suggestion_removed",
+                "data": payload.model_dump(),
+            }
+        )
+    
+
+    async def handle_generate_suggestions(self, data):
+        """
+        Generate's suggestions for character development.
+        """
+        
+        world_state = get_agent("world_state")
+        world_state_manager:WorldStateManager = self.scene.world_state_manager
+        payload = GenerateSuggestionPayload(**data)
+        
+        log.debug("Generate suggestions", payload=payload)
         
         async def send_suggestion(call:focal.Call):
-            self.websocket_handler.queue_put(
-                {
-                    "type": "world_state_manager",
-                    "action": "suggest",
-                    "suggestion_type": payload.suggestion_type,
-                    "name": payload.name,
-                    "data": call.model_dump(),
-                    "id": f"{payload.suggestion_type}-{payload.name}",
-                }
+            await world_state_manager.add_suggestion(
+                Suggestion(
+                    name=payload.name,
+                    type=payload.suggestion_type,
+                    id=f"{payload.suggestion_type}-{payload.name}",
+                    proposals=[call]
+                )
             )
             
         with focal.FocalContext() as focal_context:
@@ -1106,7 +1146,7 @@ class WorldStateManagerPlugin:
                 self.websocket_handler.queue_put(
                     {
                         "type": "world_state_manager",
-                        "action": "request_suggestions",
+                        "action": "generate_suggestions",
                         "instructions": payload.instructions,
                         "suggestion_type": payload.suggestion_type,
                         "name": payload.name,
@@ -1127,4 +1167,5 @@ class WorldStateManagerPlugin:
                 
                 task = asyncio.create_task(task_wrapper())
                 
+                task.add_done_callback(lambda _: asyncio.create_task(self.handle_request_suggestions({})))
                 task.add_done_callback(lambda _: asyncio.create_task(self.signal_operation_done()))

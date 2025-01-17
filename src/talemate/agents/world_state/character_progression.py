@@ -15,6 +15,8 @@ from talemate.emit import emit
 import talemate.emit.async_signals
 import talemate.game.focal as focal
 import talemate.world_state.templates as world_state_templates
+from talemate.world_state.manager import WorldStateManager
+from talemate.world_state import Suggestion
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -48,12 +50,26 @@ class CharacterProgressionMixin:
                     max=100,
                     step=1,
                 ),
+                "as_suggestions": AgentActionConfig(
+                    type="bool",
+                    label="Propose as suggestions",
+                    description="Propose changes as suggestions that need to be manually accepted.",
+                    value=True
+                ),
                 "player_character": AgentActionConfig(
                     type="bool",
                     label="Player character",
-                    description="Whether to track the player character's progression.",
+                    description="Track the player character's progression.",
                     value=True
                 ),
+                "max_changes": AgentActionConfig(
+                    type="number",
+                    label="Max. number of changes proposed / applied",
+                    description="Maximum number of changes to propose or apply per character.",
+                    value=1,
+                    min=1,
+                    max=5,
+                )
             }
         )
         
@@ -70,6 +86,14 @@ class CharacterProgressionMixin:
     @property
     def character_progression_player_character(self) -> bool:
         return self.actions["character_progression"].config["player_character"].value
+
+    @property
+    def character_progression_max_changes(self) -> int:
+        return self.actions["character_progression"].config["max_changes"].value
+    
+    @property
+    def character_progression_as_suggestions(self) -> bool:
+        return self.actions["character_progression"].config["as_suggestions"].value
 
     # signal connect
 
@@ -103,7 +127,11 @@ class CharacterProgressionMixin:
                 continue
             
             calls:list[focal.Call] = await self.determine_character_development(character)
-            await self.character_progression_process_calls(character, calls)
+            await self.character_progression_process_calls(
+                character = character,
+                calls = calls,
+                as_suggestions = self.character_progression_as_suggestions,
+            )
         
     # methods
     
@@ -112,19 +140,24 @@ class CharacterProgressionMixin:
         
         for call in calls:
             if as_suggestions:
-                emit(
-                    "world_state_manager",
-                    data=call.model_dump(),
-                    websocket_passthrough=True,
-                    kwargs={
-                        "action": "suggest",
-                        "suggestion_type": "character",
-                        "name": character.name,
-                        "id": f"character-{character.name}",
-                    }
+                world_state_manager:WorldStateManager = self.scene.world_state_manager
+                world_state_manager.add_suggestion(
+                    Suggestion(
+                        name=character.name,
+                        type="character",
+                        id=f"character-{character.name}",
+                        data=call
+                    )
                 )
-        
-    
+            else:
+                # changes will be applied directly to the character
+                if call.name in ["add_attribute", "update_attribute"]:
+                    await character.set_base_attribute(call.arguments["name"], call.result)
+                elif call.name == "remove_attribute":
+                    await character.set_base_attribute(call.arguments["name"], None)
+                elif call.name == "update_description":
+                    await character.set_description(call.result)
+                
     @set_processing
     async def determine_character_development(
         self, 
@@ -211,6 +244,8 @@ class CharacterProgressionMixin:
                     multiple=False
                 ),
             ],
+            
+            max_calls = self.character_progression_max_changes,
             
             # context
             character = character,

@@ -1,69 +1,69 @@
 <template>
     <v-card-title>
-        {{ suggestionState.label }}
+        {{ suggestionState.name }}
     </v-card-title>
     <v-card-text>
-        <v-card v-for="suggestion, idx in suggestionState.suggestions" :key="idx" class="mb-2" elevation="7">
+        <v-card v-for="proposal, idx in suggestionState.proposals" :key="idx" class="mb-2" elevation="7">
             <v-card-text>
-                <div v-if="suggestion.name === 'add_attribute' || suggestion.name === 'update_attribute'">
+                <div v-if="proposal.name === 'add_attribute' || proposal.name === 'update_attribute'">
                     <v-alert color="muted" density="compact" elevation="7" variant="outlined" class="mb-2" icon="mdi-script">
-                        {{ suggestion.arguments.instructions }}
+                        {{ proposal.arguments.instructions }}
                     </v-alert>
                     <v-alert color="mutedheader" density="compact" elevation="7" variant="outlined" class="mb-2">
                         <template v-slot:prepend>
-                            <v-icon v-if="suggestion.called">mdi-format-list-bulleted-type</v-icon>
+                            <v-icon v-if="proposal.called">mdi-format-list-bulleted-type</v-icon>
                             <v-progress-circular size="24" v-else indeterminate="disable-shrink"
                             color="primary"></v-progress-circular>   
                         </template>
-                        <v-alert-title v-if="suggestion.called">Set Attribute <v-chip class="ml-4" label size="small" color="primary" variant="tonal">{{ suggestion.arguments.name }}</v-chip></v-alert-title>
+                        <v-alert-title v-if="proposal.called">Set Attribute <v-chip class="ml-4" label size="small" color="primary" variant="tonal">{{ proposal.arguments.name }}</v-chip></v-alert-title>
                         <v-alert-title v-else>Generating proposal...</v-alert-title>
                         
-                        {{ suggestion.result }}
+                        {{ proposal.result }}
                     </v-alert>
                 </div>
-                <div v-else-if="suggestion.name === 'remove_attribute'">
+                <div v-else-if="proposal.name === 'remove_attribute'">
                     <v-alert color="muted" density="compact" elevation="7" variant="outlined" class="mb-2" icon="mdi-script">
-                        <div class="text-caption">{{ suggestion.arguments.reason }}</div>
+                        <div class="text-caption">{{ proposal.arguments.reason }}</div>
                     </v-alert>
                     <v-alert color="highlight4" density="compact" elevation="7" variant="outlined" class="mb-2" icon="mdi-format-list-bulleted-type">
-                        <v-alert-title>Remove Attribute <v-chip class="ml-4" label size="small" color="primary" variant="tonal">{{ suggestion.arguments.name }}</v-chip></v-alert-title>
+                        <v-alert-title>Remove Attribute <v-chip class="ml-4" label size="small" color="primary" variant="tonal">{{ proposal.arguments.name }}</v-chip></v-alert-title>
                     </v-alert>
                 </div>
-                <div v-else-if="suggestion.name === 'update_description'">
+                <div v-else-if="proposal.name === 'update_description'">
                     <v-alert color="muted" density="compact" elevation="7" variant="outlined" class="mb-2" icon="mdi-script">
-                        {{ suggestion.arguments.instructions }}
+                        {{ proposal.arguments.instructions }}
                     </v-alert>
                     <v-alert color="mutedheader" density="compact" elevation="7" variant="outlined" class="mb-2">
                         <template v-slot:prepend>
-                            <v-icon v-if="suggestion.called">mdi-text-account</v-icon>
+                            <v-icon v-if="proposal.called">mdi-text-account</v-icon>
                             <v-progress-circular size="24" v-else indeterminate="disable-shrink"
                             color="primary"></v-progress-circular>   
                         </template>
-                        <v-alert-title v-if="suggestion.called">Update Description</v-alert-title>
+                        <v-alert-title v-if="proposal.called">Update Description</v-alert-title>
                         <v-alert-title v-else>Generating proposal...
                         </v-alert-title>
 
-                        <div class="formatted">{{ suggestion.result }}</div>
+                        <div class="formatted">{{ proposal.result }}</div>
                     </v-alert>
                 </div>
             </v-card-text>
             <v-card-actions>
-                <v-btn variant="text" color="delete" :disabled="busy" prepend-icon="mdi-close-box-outline" @click="deleteSuggestion(idx)">
+                <v-btn variant="text" color="delete" :disabled="busy" prepend-icon="mdi-close-box-outline" @click="deleteProposal(proposal)">
                     Discard
                 </v-btn>
                 <v-spacer></v-spacer>
-                <v-btn variant="text" color="primary" :disabled="busy" prepend-icon="mdi-check-circle-outline" @click="applySuggestion(idx)">
+                <v-btn variant="text" color="primary" :disabled="busy" prepend-icon="mdi-check-circle-outline" @click="applyProposal(proposal)">
                     Apply
                 </v-btn>
             </v-card-actions>
         </v-card>
     </v-card-text>
     <v-card-actions>
-        <v-btn variant="text" color="delete" :disabled="busy" prepend-icon="mdi-close-box-outline" @click="deleteAllSuggestions">
+        <v-btn variant="text" color="delete" :disabled="busy" prepend-icon="mdi-close-box-outline" @click="deleteAllProposals">
             Discard all
         </v-btn>
         <v-spacer></v-spacer>
-        <v-btn variant="text" color="primary" :disabled="busy" prepend-icon="mdi-check-circle-outline" @click="applyAllSuggestions">
+        <v-btn variant="text" color="primary" :disabled="busy" prepend-icon="mdi-check-circle-outline" @click="applyAllProposals">
             Apply all
         </v-btn>
     </v-card-actions>
@@ -80,7 +80,7 @@ export default {
         // whether the component is busy or not
         busy: Boolean,
     },
-    emits: ['delete-suggestion', 'delete-suggestions'],
+    emits: ['delete-proposal', 'delete-proposals'],
     inject: [
         'getWebsocket',
     ],
@@ -105,7 +105,7 @@ export default {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'update_character_attribute',
-                name: this.suggestionState.label,
+                name: this.suggestionState.name,
                 attribute: attribute_name,
                 value: attribute_value,
             }));
@@ -120,7 +120,7 @@ export default {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'update_character_description',
-                name: this.suggestionState.label,
+                name: this.suggestionState.name,
                 attribute: "description",
                 value: description,
             }));
@@ -128,49 +128,48 @@ export default {
 
         /**
          * Applies all suggestions
-         * @method applyAllSuggestions
+         * @method applyAllProposals
          */
-        applyAllSuggestions() {
-            for(let suggestion in this.suggestionState.suggestions) {
-                this.applySuggestion(suggestion);
+        applyAllProposals() {
+            for(let suggestion in this.suggestionState.proposals) {
+                this.applyProposal(suggestion);
             }
-            this.deleteAllSuggestions();
+            this.deleteAllProposals();
         },
         
         /**
          * Applies a single suggestion
-         * @method applySuggestion
-         * @param {number} idx - The index of the suggestion to apply
+         * @method applyProposal
+         * @param {Object} proposal - The suggestion to apply
          */
-        applySuggestion(idx) {
-            let suggestion = this.suggestionState.suggestions[idx];
-            if(suggestion.name === 'add_attribute') {
-                this.applyAttribute(suggestion.arguments.name, suggestion.result);
-            } else if(suggestion.name === 'update_attribute') {
-                this.applyAttribute(suggestion.arguments.name, suggestion.result);
-            } else if(suggestion.name === 'remove_attribute') {
-                this.removeAttribute(suggestion.arguments.name);
-            } else if(suggestion.name === 'update_description') {
-                this.updateDescription(suggestion.result);
+        applyProposal(proposal) {
+            if(proposal.name === 'add_attribute') {
+                this.applyAttribute(proposal.arguments.name, proposal.result);
+            } else if(proposal.name === 'update_attribute') {
+                this.applyAttribute(proposal.arguments.name, proposal.result);
+            } else if(proposal.name === 'remove_attribute') {
+                this.removeAttribute(proposal.arguments.name);
+            } else if(proposal.name === 'update_description') {
+                this.updateDescription(proposal.result);
             }
-            this.deleteSuggestion(idx);
+            this.deleteProposal(proposal);
         },
 
         /**
          * Deletes all suggestions
-         * @method deleteAllSuggestions
+         * @method deleteAllProposals
          */
-        deleteAllSuggestions() {
-            this.$emit('delete-suggestions');
+        deleteAllProposals() {
+            this.$emit('delete-proposals', this.suggestionState.id);
         },
 
         /**
          * Deletes a single suggestion
-         * @method deleteSuggestion
+         * @method deleteProposal
          * @param {number} idx - The index of the suggestion to delete
          */
-        deleteSuggestion(idx) {
-            this.$emit('delete-suggestion', idx);
+        deleteProposal(proposal) {
+            this.$emit('delete-proposal', this.suggestionState.id, proposal.uid);
         }
     }
 }

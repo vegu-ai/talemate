@@ -425,7 +425,7 @@ export default {
             this.$emit('world-state-manager-navigate', 'suggestions');
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
-                action: 'request_suggestions',
+                action: 'generate_suggestions',
                 suggestion_type: 'character',
                 generation_options: this.generationOptions,
                 instructions: requestInstructions || null,

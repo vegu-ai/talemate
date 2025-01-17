@@ -245,7 +245,10 @@ export default {
             }
         },
         tab(val) {
-            this.emitEditorState(val)
+            this.$nextTick(() => {
+                this.emitEditorState(val)
+            });
+
             if(val === 'world') {
                 this.$nextTick(() => {
                     this.requestWorld()
@@ -265,6 +268,10 @@ export default {
             } else if(val === 'templates') {
                 this.$nextTick(() => {
                     this.requestTemplates()
+                });
+            } else if(val === 'suggestions') {
+                this.$nextTick(() => {
+                    this.$refs.suggestions.requestSuggestions()
                 });
             }
         },

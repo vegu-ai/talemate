@@ -4,8 +4,8 @@
             <WorldStateManagerSuggestionsCharacter 
             :busy="busy" 
             :suggestionState="selectedSuggestion" 
-            @delete-suggestions="onDeleteSuggestionItems"
-            @delete-suggestion="(idx) => { onDeleteSuggestionItem(idx); }" />
+            @delete-proposals="(suggestion_id) => { onDeleteProposals(suggestion_id); }"
+            @delete-proposal="(suggestion_id, proposal_uid) => { onDeleteProposal(suggestion_id, proposal_uid); }" />
         </v-card>
     </div>
 </template>
@@ -29,7 +29,7 @@ export default {
     computed: {
         suggestionsAvailable() {
             // queue needs to have at least one item in it where suggestions are available
-            return this.queue.some(item => item.suggestions.length > 0);
+            return this.queue.some(item => item.proposals.length > 0);
         },
     },
     inject: [
@@ -55,14 +55,17 @@ export default {
         },
 
         removeEmptySuggestions() {
-            this.queue = this.queue.filter(item => item.suggestions.length > 0);
+            this.queue = this.queue.filter(item => item.proposals.length > 0);
+            if(this.selectedSuggestion && this.selectedSuggestion.proposals.length === 0) {
+                this.selectedSuggestion = null;
+            }
         },
 
-        removeEmptySuggestionItems() {
+        removeEmptyProposals() {
             if(!this.selectedSuggestion) {
                 return;
             }
-            this.selectedSuggestion.suggestions = this.selectedSuggestion.suggestions.filter(suggestion => suggestion.result !== "");
+            this.selectedSuggestion.proposals = this.selectedSuggestion.proposals.filter(proposal => proposal.result !== "");
         },
 
         selectSuggestion(id) {
@@ -70,32 +73,35 @@ export default {
             console.log("DEBUG: selectSuggestion", id, this.selectedSuggestion, this.queue);
         },
 
-        onDeleteSuggestionItems() {
-            if(!this.selectedSuggestion) {
-                return;
-            }
-            this.selectedSuggestion.suggestions = [];
-            this.selectedSuggestion = null;
-            this.removeEmptySuggestions();
+        onDeleteProposals(suggestion_id) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'remove_suggestion',
+                id: suggestion_id,
+            }));
         },
 
-        onDeleteSuggestionItem(idx) {
-            if(!this.selectedSuggestion) {
-                return;
-            }
-            this.selectedSuggestion.suggestions.splice(idx, 1);
-
-            // if not suggestions left, remove the item
-            if(this.selectedSuggestion.suggestions.length === 0) {
-                this.selectedSuggestion = null;
-            }
-            this.removeEmptySuggestions();
+        onDeleteProposal(suggestion_id, proposal_uid) {
+            console.log("DEBUG: onDeleteProposal", suggestion_id, proposal_uid);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'remove_suggestion',
+                id: suggestion_id,
+                proposal_uid: proposal_uid,
+            }));
         },
 
-        requestSuggestionsForCharacter(character_name) {
+        requestSuggestions() {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'request_suggestions',
+            }));
+        },
+
+        generateSuggestionsForCharacter(character_name) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'generate_suggestions',
                 suggestion_type: 'character',
                 name: character_name,
             }));
@@ -106,36 +112,62 @@ export default {
                 return;
             }
 
-            if(message.action === 'request_suggestions') {
+            if(message.action === 'generate_suggestions') {
                 this.busy = true;
+            } else if (message.action === 'request_suggestions') {
+                console.log("DEBUG: request_suggestions", message.data);
+                this.queue = message.data;
+                if(!this.queue.length)
+                    this.selectedSuggestion = null;
+            } else if (message.action === 'suggestion_removed') {
+                console.log("DEBUG: suggestion_removed", message.data);
+                if(message.data.proposal_uid) {
+                    // specific proposal removed from a suggestion
+                    let suggestion = this.queue.find(item => item.id === message.data.id);
+                    console.log("DEBUG: suggestion_removed (1)", suggestion);
+                    if(suggestion) {
+                        suggestion.proposals = suggestion.proposals.filter(proposal => proposal.uid !== message.data.proposal_uid);
+                        if(this.selectedSuggestion && this.selectedSuggestion.id === message.data.id) {
+                            this.selectedSuggestion = suggestion;
+                        }
+                    }
+                } else {
+                    // entire suggestion removed
+                    this.queue = this.queue.filter(item => item.id !== message.data.id);
+                    if(this.selectedSuggestion && this.selectedSuggestion.id === message.data.id) {
+                        this.selectedSuggestion = null;
+                    }
+                }
+                this.removeEmptySuggestions();
+
             } else if (message.action === 'suggest') {
-                let character = this.queue.find(item => item.label === message.name && item.type === message.suggestion_type);
-                if(character) {
+                let suggestion = this.queue.find(item => item.id === message.id);
+                if(suggestion) {
 
                     // character already in queue
                     // see if suggestion with matching data.uid already exists
-                    let existing = character.suggestions.find(suggestion => suggestion.uid === message.data.uid);
+                    let existing = suggestion.proposals.find(proposal => proposal.uid === message.data.uid);
 
                     if(existing) {
                         // update existing suggestion
                         Object.assign(existing, message.data);
                     } else {
                         // add new suggestion
-                        character.suggestions.push(message.data);
+                        suggestion.proposals.push(message.data);
                     }
 
                 } else {
                     this.queue.push({
-                        type: 'character',
-                        label: message.name,
+                        type:  message.suggestion_type,
+                        name: message.name,
                         id: message.id,
-                        suggestions: [message.data],
+                        proposals: [message.data],
                     })
                 }
 
             } else if (message.action === 'operation_done') {
                 this.busy = false;
-                this.removeEmptySuggestionItems();
+                this.removeEmptyProposals();
             }
         }
     },

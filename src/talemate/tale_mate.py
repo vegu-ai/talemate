@@ -942,7 +942,7 @@ class Scene(Emitter):
         return self.config.get("game", {}).get("general", {}).get("auto_progress", True)
 
     @property
-    def world_state_manager(self):
+    def world_state_manager(self) -> WorldStateManager:
         return WorldStateManager(self)
 
     @property

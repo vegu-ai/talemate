@@ -12,7 +12,7 @@
                 <v-icon v-if="suggestion_target.type === 'character'">mdi-account</v-icon>
                 <v-icon v-else>mdi-earth</v-icon>
             </template>
-            <v-list-item-title>{{ suggestion_target.label }}</v-list-item-title>
+            <v-list-item-title>{{ suggestion_target.name }}</v-list-item-title>
             <v-list-item-subtitle>
                 <v-chip label color="highlight1" elevation="7" size="x-small" variant="tonal" v-if="suggestion_target.type === 'character'">Character Changes</v-chip>
             </v-list-item-subtitle>
@@ -41,7 +41,8 @@ export default {
         selected: {
             immediate: true,
             handler(selected) {
-                if(selected && selected.length > 0)
+                console.log("TOOL", this.tool);
+                if(selected && selected.length > 0 && this.tool)
                     this.tool.selectSuggestion(selected[0]);
             }
         }
@@ -79,7 +80,7 @@ export default {
                 return;
             }
 
-            if(message.action === 'request_suggestions') {
+            if(message.action === 'generate_suggestions') {
                 this.busy = true;
             } else if (message.action === 'suggest') {
                 // select the suggestion if nothing is selected

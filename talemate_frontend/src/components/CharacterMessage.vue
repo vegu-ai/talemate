@@ -86,7 +86,7 @@ export default {
   methods: {
 
     styleHandlerFromPart(part) {
-      if(part.type === '"') {
+      if(part.type === '"' || part.type === "") {
         return 'character';
       }
       return 'narrator';

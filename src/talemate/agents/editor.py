@@ -43,7 +43,7 @@ class EditorAgent(Agent):
             "fix_exposition": AgentAction(
                 enabled=True,
                 label="Fix exposition",
-                description="Will attempt to fix exposition and emotes, making sure they are displayed in italics. Runs automatically after each AI dialogue.",
+                description="Attempt to fix exposition and emotes, making sure they are displayed in italics. Runs automatically after each AI dialogue.",
                 config={
                     "formatting": AgentActionConfig(
                         type="text",
@@ -58,13 +58,13 @@ class EditorAgent(Agent):
                     "narrator": AgentActionConfig(
                         type="bool",
                         label="Fix narrator messages",
-                        description="Will attempt to fix exposition issues in narrator messages",
+                        description="Attempt to fix exposition issues in narrator messages",
                         value=True,
                     ),
                     "user_input": AgentActionConfig(
                         type="bool",
                         label="Fix user input",
-                        description="Will attempt to fix exposition issues in user input",
+                        description="Attempt to fix exposition issues in user input",
                         value=True,
                     ),
                 },
@@ -72,12 +72,12 @@ class EditorAgent(Agent):
             "add_detail": AgentAction(
                 enabled=False,
                 label="Add detail",
-                description="Will attempt to add extra detail and exposition to the dialogue. Runs automatically after each AI dialogue.",
+                description="Attempt to add extra detail and exposition to the dialogue. Runs automatically after each AI dialogue.",
             ),
             "check_continuity_errors": AgentAction(
                 enabled=False,
                 label="Check continuity errors",
-                description="Will attempt to fix continuity errors in the dialogue. Runs automatically after each AI dialogue. (super experimental)",
+                description="Attempt to fix continuity errors in the dialogue. Runs automatically after each AI dialogue. (super experimental)",
             ),
         }
 

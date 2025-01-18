@@ -301,17 +301,21 @@ class WorldStateAgent(
         text: str,
         goal: str,
         include_character_context: bool = False,
+        response_length=1024,
+        num_queries=1,
     ):
         response = await Prompt.request(
             "world_state.analyze-text-and-extract-context",
             self.client,
-            "analyze_freeform_long",
+            f"investigate_{response_length}",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "text": text,
                 "goal": goal,
                 "include_character_context": include_character_context,
+                "response_length": response_length,
+                "num_queries": num_queries,
             },
         )
 
@@ -327,17 +331,21 @@ class WorldStateAgent(
         text: str,
         goal: str,
         include_character_context: bool = False,
+        response_length=1024,
+        num_queries=1,
     ) -> list[str]:
         response = await Prompt.request(
             "world_state.analyze-text-and-generate-rag-queries",
             self.client,
-            "analyze_freeform",
+            f"investigate_{response_length}",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "text": text,
                 "goal": goal,
                 "include_character_context": include_character_context,
+                "response_length": response_length,
+                "num_queries": num_queries,
             },
         )
 
@@ -393,9 +401,9 @@ class WorldStateAgent(
         self,
         text: str,
         query: str,
-        short: bool = False,
+        response_length: int = 512,
     ):
-        kind = "analyze_freeform_short" if short else "analyze_freeform"
+        kind = f"investigate_{response_length}"
         response = await Prompt.request(
             "world_state.analyze-text-and-answer-question",
             self.client,
@@ -455,7 +463,7 @@ class WorldStateAgent(
     ) -> bool:
         query = f"{query} Answer with a yes or no."
         response = await self.analyze_text_and_answer_question(
-            query=query, text=text, short=True
+            query=query, text=text, response_length=10
         )
         return response.lower().startswith("y")
 
@@ -787,7 +795,8 @@ class WorldStateAgent(
 
         is_present = await self.analyze_text_and_answer_question(
             text=text,
-            query=f"Is {character} present AND active in the current scene? Answert with 'yes' or 'no'.",
+            query=f"Is {character} present AND active in the current scene? Answer with 'yes' or 'no'.",
+            response_length=10,
         )
 
         return is_present.lower().startswith("y")
@@ -809,7 +818,8 @@ class WorldStateAgent(
 
         is_leaving = await self.analyze_text_and_answer_question(
             text=text,
-            query=f"Is {character} leaving the current scene? Answert with 'yes' or 'no'.",
+            query=f"Is {character} leaving the current scene? Answer with 'yes' or 'no'.",
+            response_length=10,
         )
 
         return is_leaving.lower().startswith("y")

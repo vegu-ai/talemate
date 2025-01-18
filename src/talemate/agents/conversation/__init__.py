@@ -178,8 +178,11 @@ class ConversationAgent(Agent):
             ),
             "use_long_term_memory": AgentAction(
                 enabled=True,
+                container=True,
+                can_be_disabled=True,
+                icon="mdi-brain",
                 label="Long Term Memory",
-                description="Will augment the conversation prompt with long term memory.",
+                description="Will augment the conversation context with long term memory.",
                 config={
                     "retrieval_method": AgentActionConfig(
                         type="text",
@@ -201,9 +204,46 @@ class ConversationAgent(Agent):
                             }
                         ],
                     ),
+                    "number_of_queries": AgentActionConfig(
+                        type="number",
+                        label="Number of Queries",
+                        description="The number of queries to use when retrieving context from the long term memory.",
+                        value=3,
+                        min=1,
+                        max=10,
+                        step=1,
+                    ),
+                    "answer_length": AgentActionConfig(
+                        type="text",
+                        label="Answer Length",
+                        description="The maximum length of long term memory response.",
+                        value="512",
+                        choices=[
+                            {"label": "Short (256)", "value": "256"},
+                            {"label": "Medium (512)", "value": "512"},
+                            {"label": "Long (1024)", "value": "1024"},
+                            {"label": "Very Long (2048)", "value": "2048"},
+                        ]
+                    )
                 },
             ),
         }
+
+    @property
+    def long_term_memory_enabled(self):
+        return self.actions["use_long_term_memory"].enabled
+    
+    @property
+    def long_term_memory_retrieval_method(self):
+        return self.actions["use_long_term_memory"].config["retrieval_method"].value
+
+    @property
+    def long_term_memory_number_of_queries(self):
+        return self.actions["use_long_term_memory"].config["number_of_queries"].value
+    
+    @property
+    def long_term_memory_answer_length(self):
+        return int(self.actions["use_long_term_memory"].config["answer_length"].value)
 
     @property
     def conversation_format(self):
@@ -569,10 +609,8 @@ class ConversationAgent(Agent):
             return self.current_memory_context
 
         self.current_memory_context = ""
-        retrieval_method = (
-            self.actions["use_long_term_memory"].config["retrieval_method"].value
-        )
-
+        retrieval_method = self.long_term_memory_retrieval_method
+        
         if retrieval_method != "direct":
             world_state = instance.get_agent("world_state")
             history = self.scene.context_history(
@@ -590,14 +628,19 @@ class ConversationAgent(Agent):
                 self.current_memory_context = (
                     await world_state.analyze_text_and_extract_context(
                         text, f"continue the conversation as {character.name}",
-                        include_character_context=True
+                        include_character_context=True,
+                        response_length=self.long_term_memory_answer_length,
+                        num_queries=self.long_term_memory_number_of_queries
                     )
                 ).split("\n")
             elif retrieval_method == "queries":
                 self.current_memory_context = (
                     await world_state.analyze_text_and_extract_context_via_queries(
                         text, f"continue the conversation as {character.name}",
-                        include_character_context=True
+                        include_character_context=True,
+                        response_length=self.long_term_memory_answer_length,
+                        num_queries=self.long_term_memory_number_of_queries
+                        
                     )
                 )
 

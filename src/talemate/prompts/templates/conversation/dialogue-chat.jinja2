@@ -63,8 +63,8 @@ They may be instructions on how the character should act or simply add some cont
 
 {% set general_reinforcements = scene.world_state.filter_reinforcements(insert=['all-context']) %}
 {% set char_reinforcements = scene.world_state.filter_reinforcements(character=talking_character.name, insert=["conversation-context"]) %}
-{% if memory or scene.active_pins or general_reinforcements -%} {# EXTRA CONTEXT #}
-<|SECTION:EXTRA CONTEXT|>
+{% if memory or scene.active_pins or general_reinforcements -%} {# ADDITIONAL INFORMATION #}
+<|SECTION:ADDITIONAL INFORMATION|>
 {#- MEMORY #}
 {%- for mem in memory %}
 {{ mem|condensed }}
@@ -87,14 +87,14 @@ They may be instructions on how the character should act or simply add some cont
 {# END CHARACTER SPECIFIC CONVERSATION REINFORCEMENTS #}
 
 {# ACTIVE PINS #}
-<|SECTION:IMPORTANT CONTEXT|>
+<|SECTION:IMPORTANT INFORMATION|>
 {%- for pin in scene.active_pins %}
 {{ pin.time_aware_text|condensed }}
 
 {% endfor %}
 {# END ACTIVE PINS #}
 <|CLOSE_SECTION|>
-{% endif -%} {# END EXTRA CONTEXT #}
+{% endif -%} {# END ADDITIONAL INFORMATION #}
 
 <|SECTION:SCENE|>
 {% endblock -%}

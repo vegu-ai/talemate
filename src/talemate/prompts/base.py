@@ -540,7 +540,7 @@ class Prompt:
                 f"Answer: "
                 + loop.run_until_complete(
                     world_state.analyze_text_and_answer_question(
-                        text, query, short=short
+                        text, query, response_length=10 if short else 512
                     )
                 ),
             ]

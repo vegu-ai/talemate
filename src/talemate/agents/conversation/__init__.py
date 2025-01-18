@@ -17,13 +17,12 @@ from talemate.client.context import (
     set_client_context_attribute,
     set_conversation_context_attribute,
 )
-from talemate.emit import emit
 from talemate.events import GameLoopEvent
 from talemate.exceptions import LLMAccuracyError
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage, DirectorMessage
 
-from .base import (
+from talemate.agents.base import (
     Agent,
     AgentAction,
     AgentActionConfig,
@@ -31,10 +30,10 @@ from .base import (
     AgentEmission,
     set_processing,
 )
-from .registry import register
+from talemate.agents.registry import register
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Actor, Character, Scene
+    from talemate.tale_mate import Actor, Character
 
 log = structlog.get_logger("talemate.agents.conversation")
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import random
 from functools import wraps
-from typing import TYPE_CHECKING, Callable, List, Optional, Union
+from typing import TYPE_CHECKING
 
 import structlog
 
@@ -24,10 +24,10 @@ from talemate.scene_message import NarratorMessage
 
 from talemate.instance import get_agent
 
-from .registry import register
+from talemate.agents.registry import register
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Actor, Character, Player
+    from talemate.tale_mate import Character
 
 log = structlog.get_logger("talemate.agents.narrator")
 

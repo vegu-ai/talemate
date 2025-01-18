@@ -207,6 +207,7 @@
             :scene="scene"
             :agent-status="agentStatus"
             :app-config="appConfig"
+            :app-busy="busy"
             @navigate-r="onWorldStateManagerNavigateR"
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />
@@ -348,6 +349,7 @@ export default {
       // received from the backend
       lastAgentUpdate: null,
       lastClientUpdate: null,
+      busy: false,
     }
   },
   watch:{
@@ -358,7 +360,21 @@ export default {
       if(!tabs.find(tab => tab.value == this.tab)) {
         this.tab = tabs[0].value;
       }
-    }
+    },
+    agentStatus: {
+      // check if any of the agent's is busy in a blocking manner
+      // this means agentStatus[agent].busy is true and agentStatus[agent].busy_bg is false
+      handler: function() {
+        for(let agent in this.agentStatus) {
+          if(this.agentStatus[agent].busy && !this.agentStatus[agent].busy_bg) {
+            this.busy = true;
+            return;
+          }
+        }
+        this.busy = false;
+      },
+      deep: true,
+    },
   },
   computed: {
     availableTabs() {

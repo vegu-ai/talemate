@@ -55,7 +55,8 @@
                 :templates="templates"
                 :scene="scene"
                 :agent-status="agentStatus"
-                :character-list="characterList" />
+                :character-list="characterList"
+                :app-busy="appBusy" />
             </v-window-item>
 
             <!-- WORLD -->
@@ -164,6 +165,7 @@ export default {
         worldStateTemplates: Object,
         agentStatus: Object,
         appConfig: Object,
+        appBusy: Boolean,
     },
     data() {
         return {

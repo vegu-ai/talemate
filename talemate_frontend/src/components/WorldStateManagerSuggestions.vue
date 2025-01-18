@@ -73,6 +73,20 @@ export default {
             console.log("DEBUG: selectSuggestion", id, this.selectedSuggestion, this.queue);
         },
 
+        selectSuggestionViaMenu(id, retries = 5) {
+            if(this.menu) {
+                this.menu.selected = [id];
+            } else {
+                if(retries <= 0) {
+                    console.error("Could not select suggestion via menu", id);
+                    return;
+                }
+                setTimeout(() => {
+                    this.selectSuggestionViaMenu(id, retries-1);
+                }, 500);
+            }
+        },
+
         onDeleteProposals(suggestion_id) {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',

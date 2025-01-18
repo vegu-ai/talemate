@@ -418,7 +418,7 @@ export default {
             } else if (tab == 'suggestions') {
                 this.$nextTick(() => {
                     if(sub1) {
-                        this.$refs.suggestions.selectSuggestion(sub1)
+                        this.$refs.suggestions.selectSuggestionViaMenu(sub1)
                     }
                 });
             }

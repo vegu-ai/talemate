@@ -915,6 +915,7 @@ class WorldStateManager:
         Clears all suggestions from the scene.
         """
         self.scene.world_state.suggestions = []
+        self.scene.world_state.emit()
     
     async def add_suggestion(self, suggestion: Suggestion):
         """
@@ -943,6 +944,8 @@ class WorldStateManager:
                     "id": suggestion.id,
                 }
             )
+        
+        self.scene.world_state.emit()
                 
         
     async def get_suggestion_by_id(self, id:str) -> Suggestion:
@@ -953,6 +956,9 @@ class WorldStateManager:
         for s in self.scene.world_state.suggestions:
             if s.id == id:
                 return s
+        
+        self.scene.world_state.emit()
+        
         
     async def remove_suggestion(self, suggestion:str | Suggestion):
         """
@@ -965,6 +971,7 @@ class WorldStateManager:
             return
         
         self.scene.world_state.suggestions.remove(suggestion)
+        self.scene.world_state.emit()
         
         
     async def remove_suggestion_proposal(self, suggestion_id:str, proposal_uid:str):
@@ -982,4 +989,5 @@ class WorldStateManager:
         # if suggestion is empty, remove it
         if not suggestion.proposals:
             await self.remove_suggestion(suggestion)
+        self.scene.world_state.emit()
         

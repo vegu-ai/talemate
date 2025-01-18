@@ -124,7 +124,9 @@ export default {
 
             // back-reference to the menu component through $refs on tool
             if(this.tool && this.$refs) {
-                this.tool.menu = this.$refs[`${tab}Tools`];
+                this.$nextTick(() => {
+                    this.tool.menu = this.$refs[`${tab}Tools`];
+                });
             }
         },
         setCharacter(character) {

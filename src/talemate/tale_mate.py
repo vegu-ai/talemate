@@ -1137,15 +1137,27 @@ class Scene(Emitter):
                 if self.history[idx].source == "player":
                     return self.history[idx]
                 
-    def last_message_of_type(self, typ: str | list[str], source: str = None):
+    def last_message_of_type(self, typ: str | list[str], source: str = None, max_iterations: int = None) -> SceneMessage | None:
         """
         Returns the last message of the given type and source
+        
+        Arguments:
+        - typ: str | list[str] - the type of message to find
+        - source: str - the source of the message
+        - max_iterations: int - the maximum number of iterations to search for the message
         """
         
         if not isinstance(typ, list):
             typ = [typ]
+            
+        num_iterations = 0
         
         for idx in range(len(self.history) - 1, -1, -1):
+            if max_iterations is not None and num_iterations >= max_iterations:
+                return None
+            
+            num_iterations += 1
+            
             if self.history[idx].typ in typ and (
                 self.history[idx].source == source or not source
             ):

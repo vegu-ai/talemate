@@ -29,6 +29,7 @@ from talemate.agents.base import (
     AgentDetail,
     AgentEmission,
     set_processing,
+    store_context_state,
 )
 from talemate.agents.registry import register
 
@@ -561,7 +562,6 @@ class ConversationAgent(Agent):
         
         log.debug("Dynamic instructions", dynamic_instructions=dynamic_instructions)
 
-
         conversation_format = self.conversation_format
         prompt = Prompt.get(
             f"conversation.dialogue-{conversation_format}",
@@ -696,6 +696,7 @@ class ConversationAgent(Agent):
                 set_client_context_attribute("nuke_repetition", nuke_repetition)
 
     @set_processing
+    @store_context_state('instruction')
     async def converse(self, actor, only_generate:bool = False, instruction:str = None) -> list[str] | list[CharacterMessage]:
         """
         Have a conversation with the AI

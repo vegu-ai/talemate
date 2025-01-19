@@ -27,6 +27,9 @@ Content Classification: {{ scene.context }}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) -%}
 {% set character_direction=scene.last_message_of_type("director", source=character.name, max_iterations=3) -%}
+{% if agent_context_state["conversation__instruction"] -%}
+{% set character_direction=agent_context_state["conversation__instruction"] -%}
+{% endif -%}
 {% set bullet_num=0 -%}
 Your task is to analyze the scene progression so far and how it informs what {{ character.name }}'s next line or action in the scene will be.
 

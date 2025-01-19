@@ -112,10 +112,13 @@ They may be instructions on how the character should act or simply add some cont
 
 <|SECTION:SCENE|>
 {% endblock -%}
+{% set director_guidance = agent_context_state["director__actor_guidance"] -%}
 {% block scene_history -%}
 {% set scene_context = scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=talking_character.name) -%}
+{% if not director_guidance -%}
 {%- if actor_instructions_offset > 0 and talking_character.dialogue_instructions and scene.count_messages() > actor_instructions_offset -%}
     {%- set _ = scene_context.insert(-actor_instructions_offset, "(Internal acting instructions for "+talking_character.name+": "+talking_character.dialogue_instructions+" "+actor_instructions+")") -%}
+{% endif -%}
 {% endif -%}
 {% for scene_line in scene_context -%}
 {{ scene_line }}
@@ -124,7 +127,9 @@ They may be instructions on how the character should act or simply add some cont
 {% endblock -%}
 <|CLOSE_SECTION|>
 {% if scene.count_messages() < actor_instructions_offset or actor_instructions_offset == 0 %}
+{% if not director_guidance -%}
 {% if not talking_character.dialogue_instructions %}({% if actor_instructions %} {{ actor_instructions }}{% else %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is informal, conversational, natural, and spontaneous, with a sense of immediacy.{% endif -%}){% else %}(Internal acting instructions for {{ talking_character.name }}: {{ talking_character.dialogue_instructions }}{% if actor_instructions %} {{ actor_instructions }}{% endif %}){% endif -%}
+{% endif -%}
 {% endif -%}
 {% if rerun_context and rerun_context.direction -%}
 {% if rerun_context.method == 'replace' -%}
@@ -135,7 +140,7 @@ They may be instructions on how the character should act or simply add some cont
 # Requested changes: {{ rerun_context.direction }}
 {% endif -%}
 {% endif -%}
-{% if agent_context_state["director__actor_guidance"] %}{{ talking_character.name }}'s next action: {{ agent_context_state["director__actor_guidance"] }}){% endif %}
+{% if director_guidance %}({{ talking_character.name }}'s next action: {{ director_guidance }}){% endif %}
 {% if direct_instruction -%}
 {{ talking_character.name }}'s next action: {{ direct_instruction }}
 

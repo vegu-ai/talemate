@@ -16,12 +16,19 @@ Content Classification: {{ scene.context }}
 <|SECTION:ANLYSIS OF SCENE|>
 {{ analysis }}
 <|CLOSE_SECTION|>
+{% if character.dialogue_instructions -%}
+<|SECTION:GENERAL CHARACTER GUIDE FOR {{ character.name|upper }}|>
+{{ character.dialogue_instructions }}
+<|CLOSE_SECTION|>
+{% endif %}
 <|SECTION:TASK|>
-Based on the scene and the scene analysis give acting instructions to {{ character.name }} that will inform their immediate next action.
+Based on the scene and the scene analysis, provide guidance for writing {{ character.name }}'s next action or line of dialogue. Frame your guidance as telling the writer what information {{ character.name }} needs to convey to other characters.
 
-Your instructions should be short, simple and easy to understand and focus only on the next line of dialogue in the script. This means telling the actor what their next action is as if talking to them in person.
+The instructions should be short and simple, using natural phrasing like "have {{ character.name }} tell [other character] about [plot point]" or "show {{ character.name }} revealing [information] to [other character]". Be specific about which elements from the scene analysis need to be conveyed.
+
+The instructions must be worded naturally as if having a conversation with the scriptwriter. Refer to the character as '{{ character.name }}'.
 
 Keep it short, 1 - 2 sentences.
 
-YOU MUST ONLY PROVIDE ACTING INSTRUCTIONS TO THE ACTOR. Do not write dialogue but instead instruct the actor on what to say and do.
+YOU MUST ONLY PROVIDE WRITING INSTRUCTIONS FOR THE CHARACTER'S NEXT ACTION/DIALOGUE. Frame all dialogue instructions as "have them tell/reveal/explain" rather than suggesting specific lines. {% if character.dialogue_instructions -%}Remind them how {{ character.name }} should be portrayed in the scene, based on the character guide provided. {% endif %}
 <|CLOSE_SECTION|>

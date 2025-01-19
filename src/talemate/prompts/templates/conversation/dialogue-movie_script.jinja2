@@ -135,10 +135,11 @@ They may be instructions on how the character should act or simply add some cont
 # Requested changes: {{ rerun_context.direction }}
 {% endif -%}
 {% endif -%}
+{% if agent_context_state["director__actor_guidance"] %}{{ talking_character.name }}'s next action: {{ agent_context_state["director__actor_guidance"] }}){% endif %}
 {% if direct_instruction -%}
 {{ talking_character.name }}'s next action: {{ direct_instruction }}
 
-You must not add additional actions. You must not add additional actions. Dialogue generated should be natural sounding and realistic. Less is more.
+You must not add additional actions. Dialogue generated should be natural sounding and realistic. Less is more.
 {% endif -%}
 {{ bot_token }}{{ talking_character.name.upper() }}
 {% if partial_message -%}

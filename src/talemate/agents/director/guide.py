@@ -15,6 +15,7 @@ from talemate.scene_message import ContextInvestigationMessage
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Character
+    from talemate.agents.summarize.analyze_scene import SceneAnalysisEmission
 
 log = structlog.get_logger()
 
@@ -34,7 +35,7 @@ class GuideSceneMixin:
             experimental=True,
             label="Guide Scene",
             icon="mdi-lightbulb",
-            description="Analyzes the scene and provides guidance to the actors or the narrator.",
+            description="Guide actors and the narrator during the scene progression. This uses the summarizer agent's scene analysis, which needs to be enabled for this to work.",
             config={
                 "guide_actors": AgentActionConfig(
                     type="bool",
@@ -54,3 +55,60 @@ class GuideSceneMixin:
     @property
     def guide_actors(self) -> bool:
         return self.actions["guide_scene"].config["guide_actors"].value
+    
+    # signal connect
+    
+    def connect(self, scene):
+        super().connect(scene)
+        talemate.emit.async_signals.get("agent.summarization.scene_analysis.after").connect(
+            self.on_summarization_scene_analysis_after
+        )
+        talemate.emit.async_signals.get("agent.summarization.scene_analysis.cached").connect(
+            self.on_summarization_scene_analysis_after
+        )
+        
+    async def on_summarization_scene_analysis_after(self, emission: "SceneAnalysisEmission"):
+        
+        log.warning("director.guide_scene.on_summarization_scene_analysis_after", emission=emission)
+        
+        if not self.guide_scene:
+            return
+        
+        if emission.analysis_type == "narration":
+            return # TODO
+        
+        if emission.analysis_type == "conversation" and self.guide_actors:   
+            guidance = await self.guide_actor_off_of_scene_analysis(
+                emission.response,
+                emission.template_vars.get("character"),
+            )
+            
+            if not guidance:
+                log.warning("director.guide_scene.conversation: Empty resonse")
+                return
+            
+            self.set_context_states(actor_guidance=guidance)
+            
+    # methods
+    
+    @set_processing
+    async def guide_actor_off_of_scene_analysis(self, analysis: str, character: "Character", response_length: int = 256):
+        """
+        Guides the actor based on the scene analysis.
+        """
+        
+        log.debug("director.guide_actor_off_of_scene_analysis", analysis=analysis, character=character)
+        
+        response = await Prompt.request(
+            "director.guide-conversation",
+            self.client,
+            f"direction_{response_length}",
+            vars={
+                "analysis": analysis,
+                "scene": self.scene,
+                "character": character,
+                "response_length": response_length,
+                "max_tokens": self.client.max_token_length,
+            },
+        )
+        return response.strip()

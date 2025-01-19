@@ -24,13 +24,14 @@ log = structlog.get_logger()
 talemate.emit.async_signals.register(
     "agent.summarization.scene_analysis.before",
     "agent.summarization.scene_analysis.after",
+    "agent.summarization.scene_analysis.cached",
     "agent.summarization.scene_analysis.before_deep_analysis",
     "agent.summarization.scene_analysis.after_deep_analysis",   
 )
 
 @dataclasses.dataclass
 class SceneAnalysisEmission(AgentTemplateEmission):
-    pass
+    analysis_type: str | None = None
 
 @dataclasses.dataclass
 class SceneAnalysisDeepAnalysisEmission(AgentEmission):
@@ -173,6 +174,12 @@ class SceneAnalyzationMixin:
         
         if self.cache_analysis:
             analysis = await self.get_cached_analysis(emission_type)
+            if analysis:
+                await talemate.emit.async_signals.get("agent.summarization.scene_analysis.cached").send(
+                    SceneAnalysisEmission(agent=self, analysis_type=emission_type, response=analysis, template_vars={
+                        "character": emission.character if hasattr(emission, "character") else None,
+                    })
+                )
         
         if not analysis and self.analyze_scene:
             # analyze the scene for the next action
@@ -246,7 +253,7 @@ class SceneAnalyzationMixin:
         }
         
         await talemate.emit.async_signals.get("agent.summarization.scene_analysis.before").send(
-            SceneAnalysisEmission(agent=self, template_vars=template_vars)
+            SceneAnalysisEmission(agent=self, template_vars=template_vars, analysis_type=typ)
         )
         
         response = await Prompt.request(
@@ -272,7 +279,7 @@ class SceneAnalyzationMixin:
         
         
         await talemate.emit.async_signals.get("agent.summarization.scene_analysis.after").send(
-            SceneAnalysisEmission(agent=self, template_vars=template_vars, response=response)
+            SceneAnalysisEmission(agent=self, template_vars=template_vars, response=response, analysis_type=typ)
         )
         
         self.set_context_states(scene_analysis=response)

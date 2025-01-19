@@ -332,7 +332,7 @@ class NarratorAgent(
         event.game_loop.had_passive_narration = True
 
     @set_processing
-    @store_context_state('narrative_direction', sensory_narration=True)
+    @store_context_state('narrative_direction', visual_narration=True)
     async def narrate_scene(self, narrative_direction: str | None = None):
         """
         Narrate the scene
@@ -428,6 +428,7 @@ class NarratorAgent(
         return response
     
     @set_processing
+    @store_context_state('character', visual_narration=True)
     async def narrate_character(self, character):
         """
         Narrate a specific character
@@ -554,8 +555,9 @@ class NarratorAgent(
         return response
 
     @set_processing
+    @store_context_state('narrative_direction', 'character')
     async def narrate_character_entry(
-        self, character: Character, direction: str = None
+        self, character: Character, narrative_direction: str = None
     ):
         """
         Narrate a character entering the scene
@@ -569,7 +571,7 @@ class NarratorAgent(
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "character": character,
-                "direction": direction,
+                "narrative_direction": narrative_direction,
                 "extra_instructions": self.extra_instructions,
             },
         )
@@ -579,7 +581,12 @@ class NarratorAgent(
         return response
 
     @set_processing
-    async def narrate_character_exit(self, character: Character, direction: str = None):
+    @store_context_state('narrative_direction', 'character')
+    async def narrate_character_exit(
+        self, 
+        character: Character, 
+        narrative_direction: str = None
+    ):
         """
         Narrate a character exiting the scene
         """
@@ -592,7 +599,7 @@ class NarratorAgent(
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "character": character,
-                "direction": direction,
+                "narrative_direction": narrative_direction,
                 "extra_instructions": self.extra_instructions,
             },
         )

@@ -154,6 +154,9 @@ def set_processing(fn):
                         )
                         if getattr(fn, "store_context_state_kwargs", None) is not None:
                             all_args.update(getattr(fn, "store_context_state_kwargs", {}))
+                        
+                        all_args[f"fn_{fn.__name__}"] = True
+                            
                         self.set_context_states(**all_args)
         
                     return await fn(self, *args, **kwargs)

@@ -4,7 +4,7 @@ Scenario Premise:
 
 Content Classifciation: This is a specific scene from {{ scene.context }}
 <|CLOSE_SECTION|>
-{% block context -%}
+<|SECTION:CONTEXT|>
 {% block rendered_context_static %}
 {# GENERAL REINFORCEMENTS #}
 {% set general_reinforcements = scene.world_state.filter_reinforcements(insert=['all-context']) %}
@@ -28,9 +28,4 @@ Content Classifciation: This is a specific scene from {{ scene.context }}
 {% endfor %}
 {% endif %}
 {# END DYNAMIC INSTRUCTIONS #}
-{% endblock -%}
-{% if self.context() and self.context().strip() %}
-<|SECTION:CONTEXT|>
-{{ self.context() }}
 <|CLOSE_SECTION|>
-{% endif %}

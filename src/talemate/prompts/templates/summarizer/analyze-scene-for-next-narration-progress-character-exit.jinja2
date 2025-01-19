@@ -1,0 +1,47 @@
+Your task is to guide the story editors in crafting {{ character.name }}'s exit from the current scene.
+
+{% if agent_context_state["narrator__narrative_direction"] %}The story editors were given the following direction: "{{ agent_context_state["narrator__narrative_direction"] }}".
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean for {{ character.name }}'s departure?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors create an exit that fulfills the direction.
+{% else %}
+How would you guide the story editors to bring {{ character.name }} out of the current scene.
+{% endif %}
+
+{% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
+{% if last_message %}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Analyze the meaning of final line the scene. How does it set up {{ character.name }}'s exit?
+
+``` the final line in the scene
+{{ last_message }}
+```
+{% endif %}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Analyze the immediate scene context:
+- What is {{ character.name }} currently doing?
+- What motivates or prompts their departure?
+- What state are they leaving in (emotional, physical, etc)?
+- How does their exit affect the ongoing scene?
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Based on {{ character.name }}'s character profile:
+- How do they typically handle departures?
+- What parting gestures or behaviors are characteristic of them?
+
+{% if context_investigation -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Consider the scene's immediate dynamics:
+- Unfinished business they're leaving behind
+- Impact of their departure on other characters present
+- Any objects or items they need to take or leave
+{% endif %}
+
+{% if deep_analysis -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) that show notable exits by {{ character.name }}.
+
+Explain how the referenced chapter demonstrates:
+- Their exit patterns in similar situations and how they handle leaving unresolved matters
+- Any missing context that could inform their current departure
+
+Then state "Read through chapter {number}."
+
+You may instruct them to read {{ max_content_investigations }} chapter(s).
+
+The chapter number is always two digits separated by a period.
+{% endif %}

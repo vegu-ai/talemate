@@ -25,15 +25,30 @@
 {% endblock -%}
 <|SECTION:TASK|>
 {% set bullet_num=0 %}
+{% set character=agent_context_state["narrator__character"] %}
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
 {# Query narration #}{% if agent_context_state["narrator__query_narration"] %}
 {% include "analyze-scene-for-next-narration-query.jinja2" %}
 {# Sensory narration #}{% elif agent_context_state["narrator__sensory_narration"] %}
 {% include "analyze-scene-for-next-narration-sensory.jinja2" %}
+{# Visual narration - Character #}{% elif agent_context_state["narrator__visual_narration"] and character %}
+{% with character=character -%}
+    {% include "analyze-scene-for-next-narration-visual-character.jinja2" %}
+{% endwith %}
+{# Visual narration #}{% elif agent_context_state["narrator__visual_narration"] %}
+{% include "analyze-scene-for-next-narration-visual.jinja2" %}
+{# Progressive narration - Character Entry #}{% elif agent_context_state["narrator__fn_narrate_character_entry"] %}
+{% with character=character -%}
+    {% include "analyze-scene-for-next-narration-progress-character-entry.jinja2" %}
+{% endwith %}
+{# Progressive narration - Character Exit #}{% elif agent_context_state["narrator__fn_narrate_character_exit"] %}
+{% with character=character -%}
+    {% include "analyze-scene-for-next-narration-progress-character-exit.jinja2" %}
+{% endwith %}
 {# Progressive narration #}{% else %}
 {% include "analyze-scene-for-next-narration-progress.jinja2" %}
 {# Common instructions #}{% endif %}
 {% if length == "medium" %}Your analysis should be 2 - 3 paragraphs long.{% elif length == "short" %}Your analysis should be 1 - 2 paragraphs long.{% endif %}
 The information you write will be given to the story editors to write the next narrative segment.
-Use natural and easy to follow language in your response.
+Use natural and easy to read language and formatting in your response.
 <|CLOSE_SECTION|>

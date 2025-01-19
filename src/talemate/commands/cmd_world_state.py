@@ -163,7 +163,7 @@ class CmdPersistCharacter(TalemateCommand):
         if not is_present and not never_narrate:
             loading_status("Narrating character entrance...")
             entry_narration = await narrator.narrate_character_entry(
-                character, direction=extra_instructions
+                character, narrative_direction=extra_instructions
             )
             message = NarratorMessage(
                 entry_narration, source=f"narrate_character_entry:{character.name}"

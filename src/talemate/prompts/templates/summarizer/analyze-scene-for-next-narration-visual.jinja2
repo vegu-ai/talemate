@@ -1,0 +1,41 @@
+Your task is to analyze the current moment in the scene to guide the story editors to generate visual details about the scene.
+
+{% if agent_context_state["narrator__narrative_direction"] %}The story editors were given the following direction: "{{ agent_context_state["narrator__narrative_direction"] }}".
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean for the visual elements?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors emphasize visual details that fulfill the direction.
+{% endif %}
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the immediate visual state of the scene:
+- What actions or movements can be seen?
+- What lighting conditions are present (natural/artificial, intensity, shadows)?
+- What colors and patterns are visible in the environment?
+- What specific details about character appearances are noteworthy?
+- What objects or items are visually prominent?
+
+{% if context_investigation -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Based on the scene's previous context, describe:
+- Established visual elements from earlier in the scene
+- Previously described features of the environment
+- Known details about character appearances
+- Significant objects or items mentioned before
+- Any visual changes that have occurred during the scene
+
+Note that the 'Context' section has been filled in from a previous prompt and may not be relevant at all.
+{% endif %}
+
+{% if deep_analysis -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) that may provide additional visual details.
+
+Explain how the referenced chapter contains specific details about:
+- Light and shadow descriptions
+- Color and pattern details
+- Visual characteristics of spaces
+- Character appearance descriptions
+- Notable object appearances
+
+Then state "Read through chapter {number}."
+
+You may instruct them to read {{ max_content_investigations }} chapter(s).
+
+The chapter number is always two digits separated by a period.
+{% endif %}

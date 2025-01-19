@@ -1,0 +1,35 @@
+Your task is to analyze the current moment in the scene to guide the story editors to generate visual details about {{ character.name }}.
+
+{% if agent_context_state["narrator__narrative_direction"] %}The story editors were given the following direction: "{{ agent_context_state["narrator__narrative_direction"] }}".
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean for describing {{ character.name }}?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors emphasize visual details that fulfill the direction.
+{% endif %}
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe {{ character.name }}'s immediate visual state:
+- What actions or movements are they making?
+- What is notable about their current appearance and expression?
+- What details about their clothing or carried items stand out?
+
+{% if context_investigation -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Based on the scene's previous context, describe:
+- Previously established details about {{ character.name }}'s appearance
+- Changes to their appearance during this scene
+- Notable gestures or mannerisms shown before
+
+Note that the 'Context' section has been filled in from a previous prompt and may not be relevant at all.
+{% endif %}
+
+{% if deep_analysis -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) that provide additional details about {{ character.name }}'s appearance.
+
+Explain how the referenced chapter contains specific details about:
+- Physical appearance and features
+- Characteristic movements or expressions
+- Clothing or personal items
+
+Then state "Read through chapter {number}."
+
+You may instruct them to read {{ max_content_investigations }} chapter(s).
+
+The chapter number is always two digits separated by a period.
+{% endif %}

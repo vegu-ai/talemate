@@ -1,0 +1,44 @@
+Your task is to guide the story editors in bringing {{ character.name }} into the current scene narrative.
+
+{% if agent_context_state["narrator__narrative_direction"] %}The story editors were given the following direction: "{{ agent_context_state["narrator__narrative_direction"] }}".
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean for {{ character.name }}'s involvement in the scene?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors establish their presence as directed.
+{% else %}A character entering the scene does not necessarily mean a physical presence, but rather their involvement in the unfolding events (phone call, text messages etc.). How would you guide the story editors to bring {{ character.name }} into the narrative?
+{% endif %}
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Quickly list who the characters in the scene are to each other. Who is {{ character.name }} in relation to the others?
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly determine {{ character.name }}'s current status:
+- Have they been involved in this story before?
+- If yes, what was their last known state or action?
+- If no, when and where were they last involved in the story?
+- What was their last known situation or condition?
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyze the current scene context:
+- What's currently happening that relates to {{ character.name }}?
+- How might they naturally become part of this moment?
+- What state would they likely be in upon joining?
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Based on {{ character.name }}'s character profile:
+- How do they typically interact in similar situations?
+- What behaviors or mannerisms are characteristic of them?
+- What impact does their presence usually have?
+
+{% if context_investigation -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly explain what you understand from the historical context and if you think it's relevant. Note that the 'Historical Context' section has been filled in from a previous prompt and may not be relevant at all.
+{% endif %}
+
+{% if deep_analysis -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) containing {{ character.name }}'s recent activities or similar scene involvement.
+
+Explain how the referenced chapter establishes:
+- Their recent situation and actions
+- Typical patterns of interaction
+- Relationships with current scene elements
+
+Then state "Read through chapter {number}."
+
+You may instruct them to read {{ max_content_investigations }} chapter(s).
+
+The chapter number is always two digits separated by a period.
+{% endif %}

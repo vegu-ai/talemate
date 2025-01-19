@@ -34,12 +34,10 @@ The information you write will be given to the other story editors to write {{ c
 
 {{ bullet_num }}) Make statements about context, meaning and facts established.
 
-
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Quickly list who the characters in the scene are to each other.
 
-{% set last_message = scene.last_message_of_type("character") %}
-
-{% if last_message %}
+{% set last_message = scene.last_message_of_type("character") -%}
+{% if last_message -%}
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Analyze the meaning of {{ last_message.character_name }}'s final line the scene. What was the meaning of their dialogue and actions?
 
 ``` {{ last_message.character_name }}'s final line
@@ -47,7 +45,7 @@ The information you write will be given to the other story editors to write {{ c
 ```
 
 {% if context_investigation -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly explain what you understand from the historical context.
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly explain what you understand from the historical context and if you think it's relevant. Note that the 'Historical Context' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
 {% endif %}
 

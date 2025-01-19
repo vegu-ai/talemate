@@ -1,35 +1,28 @@
-{% block rendered_context -%}
-<|SECTION:CONTEXT|>
+{% block extra_context -%}
 {% include "extra-context.jinja2" %}
+<|SECTION:{{ character.name|upper }}|>
+{{ character.sheet}}
 <|CLOSE_SECTION|>
-{% endblock -%}
-<|SECTION:SCENE|>
-{% set scene_history=scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context()), min_dialogue=20) %}
-{% set final_line_number=len(scene_history) %}
-{% for scene_context in scene_history -%}
-{{ loop.index }}. {{ scene_context }}
-{% endfor %}
-<|CLOSE_SECTION|>
-
-<|SECTION:INFORMATION|>
-{{ query_memory("How old is {character.name}?") }}
-{{ query_memory("What does {character.name} look like? Provide a visual description.") }}
-{{ query_scene("Where is {character.name}? What is {character.name} doing? What is {character.name} wearing?") }}
-<|CLOSE_SECTION|>
-
+{% endblock %}
+{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
-Questions: Where is {{ character.name}} currently and what are they doing? What is {{ character.name }}'s appearance at the end of the dialogue? What are they wearing? What position are they in?
+{% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
+Describe {{ character.name }}'s appearance at the end of the dialogue and summarize into a narrative description. Focus on the character's physical appearance, gestures, and expressions. Pay attention to the character's clothing, posture and actions taken in the moment.
+{% if last_message %}
+``` the final line in the scene
+{{ last_message }}
+```
+{% endif %}
+Describe {{ character.name }}'s appearance at the end of the dialogue and summarize into a narrative description. Focus on the character's physical appearance, gestures, and expressions. Pay attention to the character's clothing, posture and actions taken in the moment.
 
-Answer the questions to describe {{ character.name }}'s appearance at the end of the dialogue and summarize into narrative description. Use the whole dialogue for context. You must fill in gaps using imagination as long as it fits the existing context. You will provide a confident and decisive answer to the question.
+You must fill in gaps using imagination as long as it fits the existing context. 
 
-Your answer must be a brief summarized visual description of {{ character.name }}'s appearance at the end of the dialogue at {{ final_line_number }}. 
+You must provide a confident and decisive answer to the question.
 
-Respect the scene progression and answer in the context of line {{ final_line_number }}.
+Respect the scene progression, your answer must be a brief summarized visual description of {{ character.name }}'s appearance at the current point in the scene. 
 
-Use an informal and colloquial register with a conversational tone. Overall, the narrative is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
-
-Write 2 to 3 sentences.
+Your new narration should be 2 to 3 sentences in length.
 {{ extra_instructions }}
 {% include "rerun-context.jinja2" -%}
 <|CLOSE_SECTION|>
-{{ bot_token }}At the end of the dialogue, 

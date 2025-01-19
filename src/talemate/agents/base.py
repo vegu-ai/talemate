@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+from inspect import signature
 import re
 from abc import ABC
 from functools import wraps
@@ -14,7 +15,7 @@ from blinker import signal
 import talemate.emit.async_signals
 import talemate.instance as instance
 import talemate.util as util
-from talemate.agents.context import ActiveAgent
+from talemate.agents.context import ActiveAgent, active_agent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
@@ -31,6 +32,7 @@ __all__ = [
     "AgentEmission",
     "AgentTemplateEmission",
     "set_processing",
+    "store_context_state",
 ]
 
 log = structlog.get_logger("talemate.agents.base")
@@ -77,6 +79,52 @@ class AgentDetail(pydantic.BaseModel):
     icon: Union[str, None] = None
     color: str = "grey"
 
+def args_and_kwargs_to_dict(fn, args: list, kwargs: dict, filter:list[str] = None) -> dict:
+    """
+    Takes a list of arguments and a dict of keyword arguments and returns
+    a dict mapping parameter names to their values.
+    
+    Args:
+        fn: The function whose parameters we want to map
+        args: List of positional arguments
+        kwargs: Dictionary of keyword arguments
+        filter: List of parameter names to include in the result, if None all parameters are included
+    
+    Returns:
+        Dict mapping parameter names to their values
+    """
+    sig = signature(fn)
+    bound_args = sig.bind(*args, **kwargs)
+    bound_args.apply_defaults()
+    rv = dict(bound_args.arguments)
+    rv.pop("self", None)
+    
+    if filter:
+        for key in list(rv.keys()):
+            if key not in filter:
+                rv.pop(key)
+    
+    return rv
+
+
+class store_context_state:
+    """
+    Flag to store a function's arguments in the agent's context state.
+    
+    Any arguments passed to the function will be stored in the agent's context
+    
+    If no arguments are passed, all arguments will be stored.
+    
+    Keyword arguments can be passed to store additional values in the context state.
+    """
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+        
+    def __call__(self, fn):
+        fn.store_context_state = self.args
+        fn.store_context_state_kwargs = self.kwargs
+        return fn
 
 def set_processing(fn):
     """
@@ -98,6 +146,16 @@ def set_processing(fn):
             with ActiveAgent(self, fn):
                 try:
                     await self.emit_status(processing=True)
+                    
+                    # Now pass the complete args list
+                    if getattr(fn, "store_context_state", None) is not None:
+                        all_args = args_and_kwargs_to_dict(
+                            fn, [self] + list(args), kwargs, getattr(fn, "store_context_state", [])
+                        )
+                        if getattr(fn, "store_context_state_kwargs", None) is not None:
+                            all_args.update(getattr(fn, "store_context_state_kwargs", {}))
+                        self.set_context_states(**all_args)
+        
                     return await fn(self, *args, **kwargs)
                 finally:
                     try:
@@ -217,6 +275,7 @@ class Agent(ABC):
 
         return {k: v.model_dump() for k, v in self.actions.items()}
     
+    # scene state
     
     def get_scene_state(self, key:str, default=None):
         agent_state = self.scene.agent_state.get(self.agent_type, {})
@@ -230,7 +289,34 @@ class Agent(ABC):
     
     def dump_scene_state(self):
         return self.scene.agent_state.get(self.agent_type, {})
+    
+    # active agent context state
+    
+    def get_context_state(self, key:str, default=None):
+        key = f"{self.agent_type}__{key}"
+        try:
+            return active_agent.get().state.get(key, default)
+        except AttributeError:
+            log.warning("get_context_state error", agent=self.agent_type, key=key)
+            return default
         
+    def set_context_states(self, **kwargs):
+        try:
+            
+            items = {f"{self.agent_type}__{k}": v for k, v in kwargs.items()}
+            active_agent.get().state.update(items)
+            log.debug("set_context_states", agent=self.agent_type, state=active_agent.get().state)
+        except AttributeError:
+            log.error("set_context_states error", agent=self.agent_type, kwargs=kwargs)
+        
+    def dump_context_state(self):
+        try:
+            return active_agent.get().state
+        except AttributeError:
+            return {}
+    
+    ###
+    
     async def _handle_ready_check(self, fut: asyncio.Future):
         callback_failure = getattr(self, "on_ready_check_failure", None)
         if fut.cancelled():

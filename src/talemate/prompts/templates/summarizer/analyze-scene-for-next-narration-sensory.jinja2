@@ -1,0 +1,42 @@
+Your task is to analyze the current moment in the scene to guide the story editors to generate sensory details about the scene.
+
+{% if agent_context_state["narrator__narrative_direction"] %}The story editors were given the following direction: "{{ agent_context_state["narrator__narrative_direction"] }}".
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors to write the next narrative segment that fulfills the direction.
+{% endif %}
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the immediate state of the scene:
+- What physical actions or movements are in progress?
+- What can be heard in this moment (sounds, voices, ambient noise)?
+- What textures or physical sensations are present (temperature, air movement, surface feel)?
+- What scents or smells are in the air?
+- What specific colors, shapes, or visual details are visible?
+- What tastes are relevant (if any characters are eating/drinking)?
+
+{% if context_investigation -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Based on the historical context, describe:
+- Common sounds that would be heard in this setting
+- Typical smells associated with this time/place
+- Physical textures of common materials/objects
+- Distinctive visual details from this period
+- Traditional tastes/flavors if relevant
+
+Note that the 'Historical Context' section has been filled in from a previous prompt and may not be relevant at all.
+{% endif %}
+
+{% if deep_analysis -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) that may provide additional details to help inform their understanding of objects, places, items or the physical state of a character.
+
+Explain how the referenced chapter contains specific physical details about (any of the following):
+- The acoustic properties of spaces/environments
+- Material descriptions of objects/surfaces
+- Atmospheric conditions (air quality, temperature, humidity)
+- Visual details of settings/objects
+- Taste/smell descriptions if present
+
+Then state "Read through chapter {number}."
+
+You may instruct them to read {{ max_content_investigations }} chapter(s).
+
+The chapter number is always two digits separated by a period.
+{% endif %}

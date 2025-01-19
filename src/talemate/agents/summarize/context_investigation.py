@@ -9,6 +9,7 @@ from talemate.prompts import Prompt
 from talemate.instance import get_agent
 import talemate.emit.async_signals
 from talemate.agents.conversation import ConversationAgentEmission
+from talemate.agents.narrator import NarratorAgentEmission
 import talemate.game.focal as focal
 
 log = structlog.get_logger()
@@ -62,7 +63,10 @@ class ContextInvestigationMixin:
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("agent.conversation.inject_instructions").connect(
-            self.on_conversation_inject_context_investigation
+            self.on_inject_context_investigation
+        )
+        talemate.emit.async_signals.get("agent.narrator.inject_instructions").connect(
+            self.on_inject_context_investigation
         )
         talemate.emit.async_signals.get("agent.summarization.scene_analysis.before_deep_analysis").connect(
             self.on_summarization_scene_analysis_before_deep_analysis
@@ -91,13 +95,15 @@ class ContextInvestigationMixin:
         current_context_investigation = self.get_scene_state("context_investigation")
         if current_context_investigation and context_investigation:
             context_investigation = await self.update_context_investigation(
-                current_context_investigation, ci_text, response
+                current_context_investigation, context_investigation, response
             )
         
         self.set_scene_states(context_investigation=context_investigation)
+        self.set_context_states(context_investigation=context_investigation)
+        
             
     
-    async def on_conversation_inject_context_investigation(self, emission:ConversationAgentEmission):
+    async def on_inject_context_investigation(self, emission:ConversationAgentEmission | NarratorAgentEmission):
         """
         Injects context investigation into the conversation.
         """
@@ -106,7 +112,7 @@ class ContextInvestigationMixin:
             return
         
         context_investigation = self.get_scene_state("context_investigation")
-        log.debug("summarizer.on_conversation_inject_context_investigation", context_investigation=context_investigation)
+        log.debug("summarizer.on_inject_context_investigation", context_investigation=context_investigation, emission=emission)
         if context_investigation:
             emission.dynamic_instructions.append("\n".join(
                 [

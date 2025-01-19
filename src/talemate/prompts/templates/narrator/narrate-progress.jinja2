@@ -4,8 +4,6 @@
     {% include "extra-context.jinja2" %}
 {% endwith %}
 
-NPCs: {{ npc_names }}
-Player Character: {{ player_character.name }}
 <|CLOSE_SECTION|>
 {% endblock -%}
 <|SECTION:SCENE|>
@@ -14,22 +12,11 @@ Player Character: {{ player_character.name }}
 {% endfor %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-Maintain the existing writing style consistently throughout your narration.
-Advance the scene through vivid narration. Focus on the protagonist's actions, thoughts, and surroundings.
-Maintain continuity with the overall context. Prioritize scene progression.
-Use sensory details and internal monologue for immersion.
-Adopt an informal, conversational tone similar to 90s adventure games.
-Narrate as an omniscient storyteller, describing scenes and characters' inner experiences.
-Generate descriptive prose and internal thoughts. Avoid direct speech.
-Begin the next scene if the current one has ended.
-Speak only as the narrator, guiding the reader through the story world.
+As the omniscient narrator, guide readers through the story with vivid, immersive descriptions that capture characters' actions, thoughts, and surroundings. Move the scene forward through sensory details and internal monologue while maintaining consistency with the established context. Weave in characters' inner experiences and environmental details to create a rich narrative tapestry, focusing on descriptive prose rather than dialogue. When one scene concludes, transition smoothly into the next, always maintaining your role as the all-seeing storyteller who draws readers deep into the story world.
 
-Remember: You are the all-seeing narrator. Immerse the reader in the story through your descriptions and insights.
-{% if narrative_direction %}
-Directions for new narration: {{ narrative_direction }}
+Maintain an informal, conversational tone similar to 90s adventure games.
 
-These are directions and the events described have not happened yet, you are writing the narrative based on the directions.
-{% endif %}
+{% include "narrative-direction.jinja2" %}
 
 Write 2 to 4 sentences. {{ extra_instructions }}
 {% include "rerun-context.jinja2" -%}

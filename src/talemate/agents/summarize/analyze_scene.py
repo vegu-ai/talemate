@@ -13,11 +13,10 @@ from talemate.emit import emit
 from talemate.instance import get_agent
 import talemate.emit.async_signals
 from talemate.agents.conversation import ConversationAgentEmission
-import talemate.game.focal as focal
-from talemate.scene_message import ContextInvestigationMessage
+from talemate.agents.narrator import NarratorAgentEmission
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Scene, Character
+    from talemate.tale_mate import Character
 
 log = structlog.get_logger()
 
@@ -138,18 +137,33 @@ class SceneAnalyzationMixin:
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("agent.conversation.inject_instructions").connect(
-            self.on_conversation_inject_instructions
+            self.on_inject_instructions
+        )
+        talemate.emit.async_signals.get("agent.narrator.inject_instructions").connect(
+            self.on_inject_instructions
         )
         
-    async def on_conversation_inject_instructions(self, emission:ConversationAgentEmission):
+    async def on_inject_instructions(
+        self, 
+        emission:ConversationAgentEmission | NarratorAgentEmission,
+    ):
         """
         Injects instructions into the conversation.
         """
         
+        if isinstance(emission, ConversationAgentEmission):
+            emission_type = "conversation"
+        elif isinstance(emission, NarratorAgentEmission):
+            emission_type = "narration"
+        else:
+            raise ValueError("Invalid emission type.")
+        
         if not self.analyze_scene:
             return
         
-        if not self.analyze_scene_for_conversation:
+        analyze_scene_for_type = getattr(self, f"analyze_scene_for_{emission_type}")
+        
+        if not analyze_scene_for_type:
             return
         
         analysis = None
@@ -158,18 +172,18 @@ class SceneAnalyzationMixin:
         # cached analysis in scene states
         
         if self.cache_analysis:
-            analysis = await self.get_cached_analysis("conversation")
+            analysis = await self.get_cached_analysis(emission_type)
         
         if not analysis and self.analyze_scene:
             # analyze the scene for the next action
             analysis = await self.analyze_scene_for_next_action(
-                "conversation",
-                emission.character, 
+                emission_type,
+                emission.character if hasattr(emission, "character") else None,
                 self.analysis_length
             )
             
             if self.cache_analysis:
-                await self.set_cached_analysis("conversation", analysis)
+                await self.set_cached_analysis(emission_type, analysis)
             
         if not analysis:
             return
@@ -260,5 +274,7 @@ class SceneAnalyzationMixin:
         await talemate.emit.async_signals.get("agent.summarization.scene_analysis.after").send(
             SceneAnalysisEmission(agent=self, template_vars=template_vars, response=response)
         )
+        
+        self.set_context_states(scene_analysis=response)
         
         return response

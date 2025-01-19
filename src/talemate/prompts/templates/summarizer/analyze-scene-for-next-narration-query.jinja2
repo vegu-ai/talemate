@@ -1,0 +1,18 @@
+Your task is to guide and help the story editors to write the next narrative segment that answers the following question: "{{ agent_context_state["narrator__query"] }}".
+
+The information and instructions you write must help them complete this task.
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyze the meaning of the question, what is the context and what is the question asking for?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors answer the question. Be careful not to assume, investigate the chapters. 
+
+{% if context_investigation -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly explain what you understand from the historical context and if you think it's relevant. Note that the 'Historical Context' section has been filled in from a previous prompt and may not be relevant at all.
+{% endif %}
+
+{% if deep_analysis -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) that may provide additional information about this specific question. To do this simply state "Read through chapter {number} to find out ..." followed by a specific detail you wish to understand. What question are you looking to answer? Avoid generic and broad queries and explain why the answer will help guide the story editors.
+
+You may instruct them to read {{ max_content_investigations }} chapter(s).
+
+The chapter number is always two digits separated by a period.
+{% endif %}

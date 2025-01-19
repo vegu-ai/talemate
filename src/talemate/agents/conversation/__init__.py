@@ -48,7 +48,6 @@ class ConversationAgentEmission(AgentEmission):
 
 talemate.emit.async_signals.register(
     "agent.conversation.before_generate", 
-    "agent.conversation.before_inject_instructions",
     "agent.conversation.inject_instructions",
     "agent.conversation.generated"
 )

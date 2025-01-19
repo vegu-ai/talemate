@@ -16,6 +16,7 @@ class ActiveAgentContext(pydantic.BaseModel):
     fn: Callable
     agent_stack: list = pydantic.Field(default_factory=list)
     agent_stack_uid: str | None = None
+    state: dict = pydantic.Field(default_factory=dict)
 
     class Config:
         arbitrary_types_allowed = True
@@ -26,7 +27,7 @@ class ActiveAgentContext(pydantic.BaseModel):
 
     def __str__(self):
         return f"{self.agent.verbose_name}.{self.action}"
-
+    
 
 class ActiveAgent:
     def __init__(self, agent, fn):
@@ -39,6 +40,7 @@ class ActiveAgent:
         if previous_agent:
             self.agent.agent_stack = previous_agent.agent_stack + [str(self.agent)]
             self.agent.agent_stack_uid = previous_agent.agent_stack_uid
+            self.agent.state = previous_agent.state
         else:
             self.agent.agent_stack = [str(self.agent)]
             self.agent.agent_stack_uid = str(uuid.uuid4())

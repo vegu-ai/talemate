@@ -1,0 +1,7 @@
+{% if narrative_direction %}
+Directions for new narration: {{ narrative_direction }}
+
+These are directions and the events described have not happened yet, you are writing new narration based on the directions.
+{% endif %}
+{% if agent_context_state["summarizer__scene_analysis"] %}Use the scene analysis to help ground your narration.{% endif %}
+{% if agent_context_state["summarizer__context_investigation"] %}Use the historical context to help ground your narration.{% endif %}

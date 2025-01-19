@@ -27,3 +27,10 @@ Content Context: This is a specific scene from {{ scene.context }}
 {% endfor -%}
 {% endif -%}
 {# END MEMORY #}
+{# DYNAMIC INSTRUCTIONS #}
+{% if active_agent and active_agent.state.dynamic_instructions %}
+{% for dynamic_instruction in active_agent.state.dynamic_instructions %}
+{{ dynamic_instruction }}
+{% endfor %}
+{% endif %}
+{# END DYNAMIC INSTRUCTIONS #}

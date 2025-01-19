@@ -1,0 +1,37 @@
+Your task is to analyze the current moment in the scene to guide natural narrative progression.
+
+{% if agent_context_state["narrator__narrative_direction"] %}The story editors were given the following direction: "{{ agent_context_state["narrator__narrative_direction"] }}".
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors to write the next narrative segment that fulfills the direction.
+{% endif %}
+
+{% if last_message -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Analyze the meaning of the final line in the scene. What was the meaning?
+
+``` the final line in the scene
+{{ last_message }}
+```
+{% endif %}
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the immediate state of the scene:
+- What physical actions or movements are in progress?
+- What sensory details are present but not yet highlighted?
+- What is the current focus of attention?
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly note any subtle elements in the current moment that could be naturally expanded through narration:
+- Environmental details that mirror the mood
+- Unspoken reactions or tensions
+- Immediate physical sensations or atmospheric qualities
+- Brief but meaningful observations about the present situation
+
+{% if context_investigation -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly explain what you understand from the historical context and if you think it's relevant. Note that the 'Historical Context' section has been filled in from a previous prompt and may not be relevant at all.
+{% endif %}
+
+{% if deep_analysis -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) that may provide additional information about this specific moment or setting. To do this simply state "Read through chapter {number} to find out ..." followed by a specific detail you wish to understand. What question are you looking to answer? Avoid generic and broad queries and explain why the answer will help guide the story editors.
+
+You may instruct them to read {{ max_content_investigations }} chapter(s).
+
+The chapter number is always two digits separated by a period.
+{% endif %}

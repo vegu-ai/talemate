@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import random
 from functools import wraps
+from inspect import signature
 from typing import TYPE_CHECKING
 
 import structlog
@@ -14,8 +15,10 @@ from talemate.client.context import (
 )
 import talemate.emit.async_signals
 import talemate.util as util
-from talemate.agents.base import Agent, AgentAction, AgentActionConfig, AgentEmission
+from talemate.agents.base import Agent, AgentAction, AgentActionConfig, AgentEmission, store_context_state
 from talemate.agents.base import set_processing as _set_processing
+from talemate.agents.context import active_agent
+from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.world_state import TimePassageEmission
 from talemate.emit import emit
 from talemate.events import GameLoopActorIterEvent
@@ -35,10 +38,14 @@ log = structlog.get_logger("talemate.agents.narrator")
 @dataclasses.dataclass
 class NarratorAgentEmission(AgentEmission):
     generation: list[str] = dataclasses.field(default_factory=list)
+    dynamic_instructions: list[str] = dataclasses.field(default_factory=list)
 
 
-talemate.emit.async_signals.register("agent.narrator.generated")
-
+talemate.emit.async_signals.register(
+    "agent.narrator.before_generate", 
+    "agent.narrator.inject_instructions",
+    "agent.narrator.generated",
+)
 
 def set_processing(fn):
     """
@@ -49,11 +56,16 @@ def set_processing(fn):
     @_set_processing
     @wraps(fn)
     async def narration_wrapper(self, *args, **kwargs):
+        emission: NarratorAgentEmission = NarratorAgentEmission(agent=self)
+        
+        await talemate.emit.async_signals.get("agent.narrator.before_generate").send(emission)
+        await talemate.emit.async_signals.get("agent.narrator.inject_instructions").send(emission)
+        
+        agent_context = active_agent.get()
+        agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
+        
         response = await fn(self, *args, **kwargs)
-        emission = NarratorAgentEmission(
-            agent=self,
-            generation=[response],
-        )
+        emission.generation = [response]
         await talemate.emit.async_signals.get("agent.narrator.generated").send(emission)
         return emission.generation[0]
 
@@ -177,6 +189,26 @@ class NarratorAgent(Agent):
         if self.actions["generation_override"].enabled:
             return self.actions["generation_override"].config["length"].value
         return 128
+        
+    @property
+    def narrate_time_passage_enabled(self) -> bool:
+        return self.actions["narrate_time_passage"].enabled
+    
+    @property
+    def narrate_dialogue_enabled(self) -> bool:
+        return self.actions["narrate_dialogue"].enabled
+
+    @property
+    def narrate_dialogue_ai_chance(self) -> float: 
+        return self.actions["narrate_dialogue"].config["ai_dialog"].value
+    
+    @property
+    def narrate_dialogue_player_chance(self) -> float:
+        return self.actions["narrate_dialogue"].config["player_dialog"].value
+    
+    @property
+    def narrate_dialogue_generate_dialogue(self) -> bool:
+        return self.actions["narrate_dialogue"].config["generate_dialogue"].value
 
     def clean_result(self, result:str, ensure_dialog_format:bool=True, force_narrative:bool=True) -> str:
         """
@@ -255,9 +287,9 @@ class NarratorAgent(Agent):
         Handles dialogue narration, if enabled
         """
 
-        if not self.actions["narrate_dialogue"].enabled:
+        if not self.narrate_dialogue_enabled:
             return
-
+        
         if event.game_loop.had_passive_narration:
             log.debug(
                 "narrate on dialog",
@@ -266,12 +298,8 @@ class NarratorAgent(Agent):
             )
             return
 
-        narrate_on_ai_chance = (
-            self.actions["narrate_dialogue"].config["ai_dialog"].value
-        )
-        narrate_on_player_chance = (
-            self.actions["narrate_dialogue"].config["player_dialog"].value
-        )
+        narrate_on_ai_chance = self.narrate_dialogue_ai_chance
+        narrate_on_player_chance = self.narrate_dialogue_player_chance
         narrate_on_ai = random.random() < narrate_on_ai_chance
         narrate_on_player = random.random() < narrate_on_player_chance
 
@@ -320,6 +348,7 @@ class NarratorAgent(Agent):
         return response
 
     @set_processing
+    @store_context_state('narrative_direction')
     async def progress_story(self, narrative_direction: str | None = None):
         """
         Narrate scene progression, moving the plot forward.
@@ -340,7 +369,7 @@ class NarratorAgent(Agent):
         self.scene.log.info(
             "narrative_direction", narrative_direction=narrative_direction
         )
-
+        
         response = await Prompt.request(
             "narrator.narrate-progress",
             self.client,
@@ -363,6 +392,7 @@ class NarratorAgent(Agent):
         return response
 
     @set_processing
+    @store_context_state('query', query_narration=True)
     async def narrate_query(
         self, query: str, at_the_end: bool = False, as_narrative: bool = True
     ):
@@ -389,7 +419,7 @@ class NarratorAgent(Agent):
         )
 
         return response
-
+    
     @set_processing
     async def narrate_character(self, character):
         """
@@ -488,7 +518,12 @@ class NarratorAgent(Agent):
         return response
 
     @set_processing
-    async def narrate_after_dialogue(self, character: Character):
+    @store_context_state('narrative_direction', sensory_narration=True)
+    async def narrate_after_dialogue(
+        self,
+        character: Character,
+        narrative_direction: str = None,
+    ):
         """
         Narrate after a line of dialogue
         """
@@ -501,26 +536,14 @@ class NarratorAgent(Agent):
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "character": character,
-                "last_line": str(self.scene.history[-1]),
                 "extra_instructions": self.extra_instructions,
+                "narrative_direction": narrative_direction,
             },
         )
 
         log.info("narrate_after_dialogue", response=response)
 
-        response = self.clean_result(response.strip().strip("*"))
-        response = f"*{response}*"
-
-        allow_dialogue = (
-            self.actions["narrate_dialogue"].config["generate_dialogue"].value
-        )
-
-        if not allow_dialogue:
-            response = response.split('"')[0].strip()
-            response = response.replace("*", "")
-            response = util.strip_partial_sentences(response)
-            response = f"*{response}*"
-
+        response = self.clean_result(response.strip())
         return response
 
     @set_processing

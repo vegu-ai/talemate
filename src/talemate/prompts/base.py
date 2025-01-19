@@ -35,6 +35,7 @@ from talemate.util import (
     iso8601_diff_to_human,
 )
 from talemate.util.prompt import condensed
+from talemate.agents.context import active_agent
 
 __all__ = [
     "Prompt",
@@ -351,6 +352,8 @@ class Prompt:
             "bot_token": "<|BOT|>",
             "thematic_generator": thematic_generators.ThematicGenerator(),
             "rerun_context": rerun_context.get(),
+            "active_agent": active_agent.get(),
+            "agent_context_state": active_agent.get().state if active_agent.get() else {},
         }
 
         env.globals["render_template"] = self.render_template

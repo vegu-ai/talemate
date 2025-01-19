@@ -226,6 +226,8 @@ class EditorAgent(Agent):
                     content = f"*{content.strip('*')}*"
             else:
                 content = self.fix_exposition_in_text(content, None)
+                if self.fix_exposition_formatting == "chat":
+                    content = f"*{content.strip('*')}*"
 
         return content
 

@@ -1,23 +1,14 @@
-{% block rendered_context %}
-<|SECTION:CONTEXT|>
-{%- with memory_query=query -%}
-    {% include "extra-context.jinja2" %}
-{% endwith -%}
+{% block extra_context -%}
+{% include "extra-context.jinja2" %}
 {% set related_character = scene.parse_character_from_line(query) -%}
 {% if related_character -%}
 <|SECTION:{{ related_character.name|upper }}|>
 {{ related_character.sheet}}
+<|CLOSE_SECTION|>
 {% endif %}
-<|CLOSE_SECTION|>
 {% endblock %}
-<|SECTION:SCENE|>
-{% set scene_history=scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()))  %}
-{% set final_line_number=len(scene_history) %}
-{% for scene_context in scene_history -%}
-{{ scene_context }}
-
-{% endfor %}
-<|CLOSE_SECTION|>
+{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
 {% if query.endswith("?") -%}

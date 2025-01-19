@@ -1,18 +1,16 @@
-{% block rendered_context -%}
-<|SECTION:CONTEXT|>
-{%- with memory_query=scene.snapshot() -%}
-    {% include "extra-context.jinja2" %}
-{% endwith %}
-
-<|CLOSE_SECTION|>
-{% endblock -%}
-<|SECTION:SCENE|>
-{% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context()), min_dialogue=20, sections=False) -%}
-{{ scene_context }}
-{% endfor %}
-<|CLOSE_SECTION|>
+{% block extra_context -%}{% include "extra-context.jinja2" %}{% endblock %}
+{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
+{% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
 As the omniscient narrator, guide readers through the story with vivid, immersive descriptions that capture characters' actions, thoughts, and surroundings. Move the scene forward through sensory details and internal monologue while maintaining consistency with the established context. Weave in characters' inner experiences and environmental details to create a rich narrative tapestry, focusing on descriptive prose rather than dialogue. When one scene concludes, transition smoothly into the next, always maintaining your role as the all-seeing storyteller who draws readers deep into the story world.
+
+{% if last_message %}
+``` the final line in the scene
+{{ last_message }}
+```
+Your narration should build upon this final line, progressing from there.
+{% endif -%}
 
 Maintain an informal, conversational tone similar to 90s adventure games.
 

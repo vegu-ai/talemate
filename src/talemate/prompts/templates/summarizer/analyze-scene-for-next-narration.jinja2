@@ -1,0 +1,39 @@
+{% block rendered_context -%}
+{% include "character-context.jinja2" -%}
+{% endblock %}
+<|SECTION:SCENE|>
+{% block scene_history -%}
+{% set scene_context = scene.context_history(
+    budget=max_tokens-300-count_tokens(self.rendered_context()), 
+    min_dialogue=15, 
+    sections=False, 
+    keep_director=False, 
+    chapter_labels=True
+    ) 
+-%}
+{% set final_line_number=len(scene_context) %}
+{% for scene_line in scene_context -%}
+{{ scene_line }}
+
+{% endfor %}
+<|CLOSE_SECTION|>
+{% if context_investigation %}
+<|SECTION:HISTORIC CONTEXT|>
+{{ context_investigation }}
+<|CLOSE_SECTION|>
+{% endif %}
+{% endblock -%}
+<|SECTION:TASK|>
+{% set bullet_num=0 %}
+{% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
+{# Query narration #}{% if agent_context_state["narrator__query_narration"] %}
+{% include "analyze-scene-for-next-narration-query.jinja2" %}
+{# Sensory narration #}{% elif agent_context_state["narrator__sensory_narration"] %}
+{% include "analyze-scene-for-next-narration-sensory.jinja2" %}
+{# Progressive narration #}{% else %}
+{% include "analyze-scene-for-next-narration-progress.jinja2" %}
+{# Common instructions #}{% endif %}
+{% if length == "medium" %}Your analysis should be 2 - 3 paragraphs long.{% elif length == "short" %}Your analysis should be 1 - 2 paragraphs long.{% endif %}
+The information you write will be given to the story editors to write the next narrative segment.
+Use natural and easy to follow language in your response.
+<|CLOSE_SECTION|>

@@ -1,16 +1,25 @@
-{% block rendered_context -%}
-<|SECTION:CONTEXT|>
-{% include "extra-context.jinja2" %}
-<|CLOSE_SECTION|>
-{% endblock -%}
-<|SECTION:SCENE|>
-{% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context())) -%}
-{{ scene_context }}
-{% endfor %}
-<|CLOSE_SECTION|>
+{% block extra_context -%}{% include "extra-context.jinja2" %}{% endblock %}
+{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
-Provide a visual description of what is currently happening in the scene. Don't progress the scene.
+{% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
+{% if last_message %}
+``` the final line in the scene
+{{ last_message }}
+```
+{% endif -%}
+Following the last line in the scene, generate new narration that describes the current actions and movements taking place.
+
+Focus on describing the environment and what characters are physically doing, their gestures, expressions, and movements. You must not include any character's internal thoughts, feelings, or dialogue. Your narration should elaborate on the immediate actions happening in response to the last line, without moving the scene forward in time.
+Be precise and specific about the actions being performed, but stay true to the setting and context of the story so far.
+
+YOU MUST NOT WRITE DIALOGUE.
+YOU MUST NOT PROGRESS THE SCENE.
+
+Your new narration should be 2 to 3 sentences in length and focus solely on actions currently in progress.
+
+{% include "narrative-direction.jinja2" %}
+
 {{ extra_instructions }}
 {% include "rerun-context.jinja2" -%}
 <|CLOSE_SECTION|>
-{{ bot_token }}At the end of the scene we currently see that

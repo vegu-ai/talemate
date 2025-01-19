@@ -18,8 +18,8 @@ import talemate.util as util
 from talemate.agents.base import Agent, AgentAction, AgentActionConfig, AgentEmission, store_context_state
 from talemate.agents.base import set_processing as _set_processing
 from talemate.agents.context import active_agent
-from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.world_state import TimePassageEmission
+from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.emit import emit
 from talemate.events import GameLoopActorIterEvent
 from talemate.prompts import Prompt
@@ -73,7 +73,10 @@ def set_processing(fn):
 
 
 @register()
-class NarratorAgent(Agent):
+class NarratorAgent(
+    MemoryRAGMixin,
+    Agent
+):
     """
     Handles narration of the story
     """
@@ -171,6 +174,8 @@ class NarratorAgent(Agent):
                 },
             ),
         }
+        
+        MemoryRAGMixin.add_actions(self)
 
     @property
     def extra_instructions(self) -> str:
@@ -327,7 +332,8 @@ class NarratorAgent(Agent):
         event.game_loop.had_passive_narration = True
 
     @set_processing
-    async def narrate_scene(self):
+    @store_context_state('narrative_direction', sensory_narration=True)
+    async def narrate_scene(self, narrative_direction: str | None = None):
         """
         Narrate the scene
         """
@@ -340,6 +346,7 @@ class NarratorAgent(Agent):
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "extra_instructions": self.extra_instructions,
+                "narrative_direction": narrative_direction,
             },
         )
 

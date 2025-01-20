@@ -40,9 +40,9 @@ class ContextInvestigationMixin:
                     description="The maximum length of the answer to return, per investigation.",
                     value="512",
                     choices=[
-                        {"label": "Short", "value": "256"},
-                        {"label": "Medium", "value": "512"},
-                        {"label": "Long", "value": "1024"},
+                        {"label": "Short (256)", "value": "256"},
+                        {"label": "Medium (512)", "value": "512"},
+                        {"label": "Long (1024)", "value": "1024"},
                     ]
                 )
             }
@@ -89,7 +89,10 @@ class ContextInvestigationMixin:
         # append call queries and answers to the response
         ci_text = []
         for ci_call in ci_calls:
-            ci_text.append(f"{ci_call.arguments['query']}\n{ci_call.result}")
+            try:
+                ci_text.append(f"{ci_call.arguments['query']}\n{ci_call.result}")
+            except KeyError as e:
+                log.error("analyze_scene_for_next_action", error="Missing key in call", ci_call=ci_call)
         
         context_investigation="\n\n".join(ci_text if ci_text else [])
         current_context_investigation = self.get_scene_state("context_investigation")

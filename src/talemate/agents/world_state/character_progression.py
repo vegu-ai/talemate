@@ -138,18 +138,18 @@ class CharacterProgressionMixin:
     @set_processing
     async def character_progression_process_calls(self, character:"Character", calls:list[focal.Call], as_suggestions:bool=True):
         
-        for call in calls:
-            if as_suggestions:
-                world_state_manager:WorldStateManager = self.scene.world_state_manager
-                world_state_manager.add_suggestion(
-                    Suggestion(
-                        name=character.name,
-                        type="character",
-                        id=f"character-{character.name}",
-                        data=call
-                    )
+        world_state_manager:WorldStateManager = self.scene.world_state_manager
+        if as_suggestions:
+            await world_state_manager.add_suggestion(
+                Suggestion(
+                    name=character.name,
+                    type="character",
+                    id=f"character-{character.name}",
+                    proposals=calls
                 )
-            else:
+            )
+        else:
+            for call in calls:
                 # changes will be applied directly to the character
                 if call.name in ["add_attribute", "update_attribute"]:
                     await character.set_base_attribute(call.arguments["name"], call.result)

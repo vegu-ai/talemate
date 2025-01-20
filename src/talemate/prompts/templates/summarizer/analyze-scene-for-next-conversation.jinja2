@@ -65,7 +65,7 @@ You may instruct them to read {{ max_content_investigations }} chapter(s).
 The chapter number is always two digits separated by a period.
 {% endif %}
 
-{% if length == "medium" %}Your analysis should be 2 - 3 paragraphs long.{% elif length == "short" %}Your analysis should be 1 - 2 paragraphs long.{% endif %}
+{% if length <= 256 %}Your analysis should be 1 - 2 paragraphs long.{% elif length <= 512 %}Your analysis should be 2 - 3 paragraphs long.{% endif %}
 
 Use natural and easy to read language and plain-text formatting in your response. 
 <|CLOSE_SECTION|>

@@ -50,7 +50,9 @@ Content Classification: {{ scene.context }}
 {# Progressive narration #}{% else %}
 {% include "analyze-scene-for-next-narration-progress.jinja2" %}
 {# Common instructions #}{% endif %}
-{% if length == "medium" %}Your analysis should be 2 - 3 paragraphs long.{% elif length == "short" %}Your analysis should be 1 - 2 paragraphs long.{% endif %}
+
+{% if length <= 256 %}Your analysis should be 1 - 2 paragraphs long.{% elif length <= 512 %}Your analysis should be 2 - 3 paragraphs long.{% endif %}
+
 The information you write will be given to the story editors to write the next narrative segment.
 Use natural and easy to read language and formatting in your response.
 <|CLOSE_SECTION|>

@@ -9,8 +9,7 @@ from talemate.agents.base import (
     AgentTemplateEmission,
 )
 from talemate.prompts import Prompt
-from talemate.emit import emit
-from talemate.instance import get_agent
+from talemate.util import strip_partial_sentences
 import talemate.emit.async_signals
 from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
@@ -61,9 +60,9 @@ class SceneAnalyzationMixin:
                     description="The length of the analysis to be performed.",
                     value="1024",
                     choices=[
-                        {"label": "Short", "value": "256"},
-                        {"label": "Medium", "value": "512"},
-                        {"label": "Long", "value": "1024"}
+                        {"label": "Short (256)", "value": "256"},
+                        {"label": "Medium (512)", "value": "512"},
+                        {"label": "Long (1024)", "value": "1024"}
                     ]
                 ),
                 "for_conversation": AgentActionConfig(
@@ -262,6 +261,8 @@ class SceneAnalyzationMixin:
             f"investigate_{length}",
             vars=template_vars,
         )
+        
+        response = strip_partial_sentences(response)
         
         if not response.strip():
             log.warning("analyze_scene_for_next_action.empty_response")

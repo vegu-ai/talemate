@@ -37,7 +37,7 @@ The information you write will be given to the other story editors to write {{ c
 
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly make statements about context, meaning and facts established relevant to the current moment in the scene. Facts are sourced from the existing story, don't assume, only state things that are explicitly true.
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Brielfy list who the characters in the scene are to each other. (Include {{ character.name }})
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Brielfy list who the characters in the scene are to each other. (Active or referenced)
 
 {% if character_direction %}{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) The story editors were given the following direction: "{{ character_direction }}". Briefly analyse the direction, what does it mean for {{ character.name }}'s next action? Are they already following the direction or do they need to change course?
 
@@ -52,7 +52,7 @@ The information you write will be given to the other story editors to write {{ c
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Is {{ character.name }} aware of the current moment? This is IMPORTANT - It cannot affect their next action if they are not aware. You must be very explicit about this and either say Yes or No.
 {% endif %}
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) What is the cadence and nature of the current dialogue? Is it ongoing or is a new dialogue starting? 
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) What is the cadence and nature of the current dialogue? Is it ongoing or is a new dialogue starting? Who is talking to who?
 
 {% if context_investigation -%}
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly explain what you understand from the historical context and if you think it's relevant. Note that the 'Historical Context' section has been filled in from a previous prompt and may not be relevant at all.

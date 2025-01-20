@@ -30,14 +30,18 @@ Based on the scene and the scene analysis, provide guidance for writing {{ chara
 ```
 {{ last_message }}
 ```
+
+How does {{ character.name }} react / respond to this moment? What do they say or do next?
 {% endif %}
-The instructions should be short and simple, using natural phrasing like "have {{ character.name }} tell [other character] about [plot point]" or "show {{ character.name }} revealing [information] to [other character]". Be specific about which elements from the scene analysis need to be conveyed.
+The instructions should be short and simple, using natural phrasing like "have {{ character.name }} tell [other character] about [plot point]" or "show {{ character.name }} revealing [information] to [other character]" or "{{ character.name }} should [perform an action]". Be specific about which elements from the scene analysis need to be conveyed.
 
-The instructions must be worded naturally as if having a conversation with the scriptwriter. Refer to the character as '{{ character.name }}'.
+The instructions must be worded naturally as if having a intimate conversation with the scriptwriter. Refer to the character as '{{ character.name }}'.
 
-Identify repetition in recent dialogue and guide the editor to avoid repetition going forward. If there is repetition specify which phrasing to avoid going forward.
+Frame all dialogue instructions as "have them tell/reveal/explain" rather than suggesting specific lines. {% if character.dialogue_instructions -%}Remind them how {{ character.name }} should be portrayed in the scene, based on the character guide provided. The script writer is not aware of the guide, so you need convey this information.{% endif %}
 
-Keep it short, 2 - 3 sentences.
+{% if response_length > 300 %}State who {{ character.name }} is talking to and how they relate to them.{% endif %}
 
-YOU MUST ONLY PROVIDE WRITING INSTRUCTIONS FOR THE CHARACTER'S NEXT ACTION/DIALOGUE. Frame all dialogue instructions as "have them tell/reveal/explain" rather than suggesting specific lines. {% if character.dialogue_instructions -%}Remind them how {{ character.name }} should be portrayed in the scene, based on the character guide provided. {% endif %}
+{% if response_length > 300 %}Finally provide a condensed summarzation of your understanding of the scene analysis and how it is relevant to {{ character.name }}'s next action or line of dialogue. This should be a brief {% if response_length > 500 %}2-3{% else %}1-2{% endif %} sentence summary.{% endif %}
+
+Ensure the dialogue will be written in the character's voice and is consistent with the character's personality and the scene's context. Natural and relatable dialogue is key.
 <|CLOSE_SECTION|>

@@ -23,25 +23,35 @@ Content Classification: {{ scene.context }}
 {% endif %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
-Based on the scene and the scene analysis, provide guidance for writing {{ character.name }}'s next action or line of dialogue. Frame your guidance as telling the writer what information {{ character.name }} needs to convey to other characters.
+Guide the writer on {{ character.name }}'s next action/dialogue. Since the writer doesn't know {{ character.name }}'s background or speaking style, you'll need to share relevant details about how they talk and what memories/knowledge influence this moment.
 
 {% if last_message -%}
-{{ character.name }}'s next dialogue / action will immediately follow after the following moment:
+Following this moment:
 ```
 {{ last_message }}
 ```
-
-How does {{ character.name }} react / respond to this moment? What do they say or do next?
 {% endif %}
-The instructions should be short and simple, using natural phrasing like "have {{ character.name }} tell [other character] about [plot point]" or "show {{ character.name }} revealing [information] to [other character]" or "{{ character.name }} should [perform an action]". Be specific about which elements from the scene analysis need to be conveyed.
 
-The instructions must be worded naturally as if having a intimate conversation with the scriptwriter. Refer to the character as '{{ character.name }}'.
+Provide only directional guidance (e.g., "have {{ character.name }} reveal their concern about X" or "{{ character.name }} should express doubt about Y"). DO NOT write specific dialogue or suggest exact phrasing. Be specific about what information needs to be conveyed while letting the writer craft the actual lines.
 
-Frame all dialogue instructions as "have them tell/reveal/explain" rather than suggesting specific lines. {% if character.dialogue_instructions -%}Remind them how {{ character.name }} should be portrayed in the scene, based on the character guide provided. The script writer is not aware of the guide, so you need convey this information.{% endif %}
+{% if character.dialogue_instructions -%}
+Explain {{ character.name }}'s way of speaking and mannerisms to guide the writer's portrayal, but avoid suggesting specific phrasings or expressions.
+{% endif %}
 
-{% if response_length > 300 %}State who {{ character.name }} is talking to and how they relate to them.{% endif %}
+{% if response_length > 300 -%}
+- Establish who {{ character.name }} is speaking to and their relationship
+- Share relevant background about {{ character.name }}'s experiences with this person/situation
+- Summarize the scene analysis and its relevance to {{ character.name }}'s next moment
+{% endif %}
 
-{% if response_length > 300 %}Finally provide a condensed summarzation of your understanding of the scene analysis and how it is relevant to {{ character.name }}'s next action or line of dialogue. This should be a brief {% if response_length > 500 %}2-3{% else %}1-2{% endif %} sentence summary.{% endif %}
+Focus solely on WHAT needs to be conveyed. Trust the writer to capture {{ character.name }}'s personality and style based on your character description.
 
-Ensure the dialogue will be written in the character's voice and is consistent with the character's personality and the scene's context. Natural and relatable dialogue is key.
+{% if response_length < 200 %}{% set num_sentences="1-2" %}
+{% elif response_length < 300 %}{% set num_sentences="2-3" %}
+{% elif response_length < 500 %}{% set num_sentences="3-4" %}
+{% elif response_length < 700 %}{% set num_sentences="4-5" %}
+{% elif response_length < 1000 %}{% set num_sentences="6-7" %}
+{% else %}{% set num_sentences="7-8" %}
+{% endif %}Fit your instructions within {{ num_sentences }} sentences.
+
 <|CLOSE_SECTION|>

@@ -6,15 +6,11 @@ from talemate.agents.base import (
     AgentActionConfig
 )
 from talemate.prompts import Prompt
-from talemate.emit import emit
-from talemate.instance import get_agent
 import talemate.emit.async_signals
-from talemate.agents.conversation import ConversationAgentEmission
-import talemate.game.focal as focal
-from talemate.scene_message import ContextInvestigationMessage
+from talemate.util import strip_partial_sentences
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Scene, Character
+    from talemate.tale_mate import Character
     from talemate.agents.summarize.analyze_scene import SceneAnalysisEmission
 
 log = structlog.get_logger()
@@ -130,4 +126,4 @@ class GuideSceneMixin:
                 "max_tokens": self.client.max_token_length,
             },
         )
-        return response.strip()
+        return strip_partial_sentences(response).strip()

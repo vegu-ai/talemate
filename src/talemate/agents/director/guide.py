@@ -43,6 +43,20 @@ class GuideSceneMixin:
                     description="Whether to guide the actors in the scene. This happens during every actor turn.",
                     value=True
                 ),
+                "guidance_length": AgentActionConfig(
+                    type="text",
+                    label="Max. Guidance Length",
+                    description="The maximum length of the guidance to provide to the actors. This text will be inserted very close to end of the prompt. Selecting bigger values can have a detremental effect on the quality of generation.",
+                    value="384",
+                    choices=[
+                        {"label": "Tiny (128)", "value": "128"},
+                        {"label": "Short (256)", "value": "256"},
+                        {"label": "Brief (384)", "value": "384"},
+                        {"label": "Medium (512)", "value": "512"},
+                        {"label": "Medium Long (768)", "value": "768"},
+                        {"label": "Long (1024)", "value": "1024"},
+                    ]
+                )
             }
         )
     
@@ -55,6 +69,10 @@ class GuideSceneMixin:
     @property
     def guide_actors(self) -> bool:
         return self.actions["guide_scene"].config["guide_actors"].value
+    
+    @property
+    def guide_scene_guidance_length(self) -> int:
+        return int(self.actions["guide_scene"].config["guidance_length"].value)
     
     # signal connect
     
@@ -81,6 +99,7 @@ class GuideSceneMixin:
             guidance = await self.guide_actor_off_of_scene_analysis(
                 emission.response,
                 emission.template_vars.get("character"),
+                response_length=self.guide_scene_guidance_length,
             )
             
             if not guidance:

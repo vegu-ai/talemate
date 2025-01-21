@@ -24,7 +24,7 @@ class MemoryRAGMixin:
             can_be_disabled=True,
             icon="mdi-brain",
             label="Long Term Memory",
-            description="Will augment the context with long term memory.",
+            description="Will augment the context with long term memory based on similarity queries.",
             config={
                 "retrieval_method": AgentActionConfig(
                     type="text",
@@ -64,7 +64,6 @@ class MemoryRAGMixin:
                         {"label": "Short (256)", "value": "256"},
                         {"label": "Medium (512)", "value": "512"},
                         {"label": "Long (1024)", "value": "1024"},
-                        {"label": "Very Long (2048)", "value": "2048"},
                     ]
                 )
             },

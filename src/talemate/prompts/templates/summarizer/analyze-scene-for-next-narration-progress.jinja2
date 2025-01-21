@@ -1,6 +1,6 @@
 Your task is to analyze the current moment in the scene to guide natural narrative progression.
-
-{% if agent_context_state["narrator__narrative_direction"] %}The story editors were given the following direction: "{{ agent_context_state["narrator__narrative_direction"] }}".
+{% set narrative_direction = agent_context_state.get("narrator__narrative_direction") or "Slightly move the current scene forward." %}
+{% if narrative_direction %}The story editors were given the following direction: "{{ narrative_direction }}".
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean?
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors to write the next narrative segment that fulfills the direction.
 {% endif %}

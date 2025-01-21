@@ -35,6 +35,7 @@ class SceneAnalysisEmission(AgentTemplateEmission):
 @dataclasses.dataclass
 class SceneAnalysisDeepAnalysisEmission(AgentEmission):
     analysis: str
+    max_content_investigations: int = 1
 
 
 class SceneAnalyzationMixin:
@@ -270,12 +271,14 @@ class SceneAnalyzationMixin:
         
         if deep_analysis:
             
+            emission = SceneAnalysisDeepAnalysisEmission(agent=self, analysis=response, max_content_investigations=self.deep_analysis_max_context_investigations)
+            
             await talemate.emit.async_signals.get("agent.summarization.scene_analysis.before_deep_analysis").send(
-                SceneAnalysisDeepAnalysisEmission(agent=self, analysis=response)
+                emission
             )
             
             await talemate.emit.async_signals.get("agent.summarization.scene_analysis.after_deep_analysis").send(
-                SceneAnalysisDeepAnalysisEmission(agent=self, analysis=response)
+                emission
             )
         
         

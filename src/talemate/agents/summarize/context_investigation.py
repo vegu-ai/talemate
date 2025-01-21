@@ -82,7 +82,7 @@ class ContextInvestigationMixin:
         
         response = emission.analysis
                     
-        ci_calls:list[focal.Call] = await self.request_context_investigations(response)
+        ci_calls:list[focal.Call] = await self.request_context_investigations(response, max_calls=emission.max_content_investigations)
         
         log.debug("analyze_scene_for_next_action", ci_calls=ci_calls)
         
@@ -220,7 +220,11 @@ class ContextInvestigationMixin:
         return focal_handler.state.calls    
 
     @set_processing
-    async def request_context_investigations(self, analysis:str) -> list[focal.Call]:
+    async def request_context_investigations(
+        self, 
+        analysis:str,
+        max_calls:int=3,
+    ) -> list[focal.Call]:
         
         """
         Requests context investigations for the given analysis.
@@ -260,6 +264,7 @@ class ContextInvestigationMixin:
                     fn=abort
                 )
             ],
+            max_calls=max_calls,
             scene=self.scene,
             text=analysis
         )

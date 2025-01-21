@@ -35,7 +35,7 @@ export default createVuetify({
           narrator: colors.deepPurple.lighten3,
           character: colors.shades.white,
           director: colors.deepOrange.base,
-          time: colors.deepPurple.lighten3,
+          time: colors.amber.lighten4,
           context_investigation: colors.blueGrey.base,
 
           // html colors

@@ -53,11 +53,9 @@
                             <span class="ml-1">Stop looking at the fox.</span>
                         </div>
                         <div class="mt-3">
-
-                            <v-chip :color="getColor('time_messages', config.time_messages.color)">
-                                <v-icon class="mr-2">mdi-clock-outline</v-icon>
-                                <span>3 days later</span>
-                            </v-chip>
+                            <span :style="buildCssStyles('time_messages', config.time_messages)">
+                                3 days layer
+                            </span>
                         </div>
                         <div class="mt-3">
                             <!-- context investigations, similar to director messages, with both chip and text -->
@@ -126,7 +124,7 @@ export default {
                 "narrator_messages": "#B39DDB",
                 "character_messages": "#FFFFFF",
                 "director_messages": "#FF5722",
-                "time_messages": "#B39DDB",
+                "time_messages": "#FFECB3",
                 "context_investigation_messages": "#607D8B",
             },
             typLabelMap: {

@@ -1,9 +1,12 @@
 <template>
   <div class="time-container" v-if="show && minimized" >
-    <v-chip closable @click:close="deleteMessage()" :color="getMessageColor('time',null)" :disabled="uxLocked">
-      <v-icon class="mr-2">mdi-clock-outline</v-icon>
+    
+    <v-alert color="time" icon="mdi-clock-outline" variant="text">
       <span>{{ text }}</span>
-    </v-chip>
+    </v-alert>
+
+    <v-divider class="mb-4"></v-divider>
+    
   </div>
 </template>
   

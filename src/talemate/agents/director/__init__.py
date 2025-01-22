@@ -339,6 +339,14 @@ class DirectorAgent(GuideSceneMixin, GameInstructionsMixin, Agent):
 
     @set_processing
     async def direct_scene(self, character: Character, prompt: str):
+        """
+        TODO: character direction through this function has been deprecated
+        and replaced with the guide mixin. 
+        
+        The call to run_scene_instructions should be removed from this and
+        moved to its own mixin or called directly.
+        """
+        
         if not character and self.scene.game_state.game_won:
             # we are not directing a character, and the game has been won
             # so we don't need to direct the scene any further

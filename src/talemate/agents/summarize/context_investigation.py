@@ -127,23 +127,9 @@ class ContextInvestigationMixin:
     
     # methods
         
-    async def _investigate_context(self, chapter_number:str, query:str) -> str:
-        # look for \d.\d in the chapter number, extract as layer and index
-        match = re.match(r"(\d+)\.(\d+)", chapter_number)
-        if not match:
-            log.error("summarizer.investigate_context", error="Invalid chapter number", chapter_number=chapter_number)
-            return ""
-        
-        layer = int(match.group(1))
-        index = int(match.group(2))
-        
-        # index comes in 1-based, convert to 0-based
-        index -= 1
-        
-        return await self.investigate_context(layer, index, query)
-    
+
     @set_processing
-    async def investigate_context(self, layer:int, index:int, query:str, analysis:str="") -> str:
+    async def investigate_context(self, layer:int, index:int, query:str, analysis:str="", max_calls:int=3) -> str:
         """
         Processes a context investigation.
         
@@ -155,12 +141,14 @@ class ContextInvestigationMixin:
         """
         
         log.debug("summarizer.investigate_context", layer=layer, index=index, query=query)
-        entry = self.scene.layered_history[layer-1][index]  
+        entry = self.scene.layered_history[layer][index]
         
-        if layer == 1:
+        layer_to_investigate = layer - 1
+        
+        if layer_to_investigate == -1:
             entries = self.scene.archived_history[entry["start"]:entry["end"]+1]
         else:
-            entries = self.scene.layered_history[layer-2][entry["start"]:entry["end"]+1]    
+            entries = self.scene.layered_history[layer_to_investigate][entry["start"]:entry["end"]+1]    
         
         async def answer(query:str, instructions:str) -> str:
             log.debug("Answering context investigation", query=query, instructions=answer)
@@ -174,7 +162,20 @@ class ContextInvestigationMixin:
                 response_length=self.context_investigation_answer_length
             )
             
+
+        async def investigate_context(chapter_number:str, query:str) -> str:
+            # look for \d.\d in the chapter number, extract as layer and index
+            match = re.match(r"(\d+)\.(\d+)", chapter_number)
+            if not match:
+                log.error("summarizer.investigate_context", error="Invalid chapter number", chapter_number=chapter_number)
+                return ""
             
+            layer = int(match.group(1))
+            index = int(match.group(2))
+            
+            return await self.investigate_context(layer-1, index-1, query, max_calls=max_calls)
+        
+
         async def abort():
             log.debug("Aborting context investigation")
         
@@ -187,7 +188,7 @@ class ContextInvestigationMixin:
                         focal.Argument(name="chapter_number", type="str"),
                         focal.Argument(name="query", type="str")
                     ],
-                    fn=self._investigate_context
+                    fn=investigate_context
                 ),
                 focal.Callback(
                     name="answer",
@@ -202,9 +203,10 @@ class ContextInvestigationMixin:
                     fn=abort
                 )
             ],
-            max_calls=3,
+            max_calls=max_calls,
             scene=self.scene,
-            layer=layer,
+            layer=layer_to_investigate + 1,
+            layer_to_investigate=layer_to_investigate,
             index=index,
             query=query,
             entries=entries,
@@ -243,10 +245,9 @@ class ContextInvestigationMixin:
             layer = int(match.group(1))
             index = int(match.group(2))
             
-            # index comes in 1-based, convert to 0-based
-            index -= 1
+            num_layers = len(self.scene.layered_history)
             
-            return await self.investigate_context(layer, index, query, analysis)
+            return await self.investigate_context(num_layers - layer, index-1, query, analysis, max_calls=max_calls)
         
         focal_handler: focal.Focal = focal.Focal(
             self.client,

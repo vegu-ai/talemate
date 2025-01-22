@@ -386,6 +386,7 @@ class Prompt:
         env.globals["join"] = lambda x, y: y.join(x)
         env.globals["make_list"] = lambda: JoinableList()
         env.globals["make_dict"] = lambda: {}
+        env.globals["join"] = lambda x, y: y.join(x)
         env.globals["count_tokens"] = lambda x: count_tokens(
             dedupe_string(x, debug=False)
         )

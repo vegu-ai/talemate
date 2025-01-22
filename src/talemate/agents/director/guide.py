@@ -36,7 +36,13 @@ class GuideSceneMixin:
                 "guide_actors": AgentActionConfig(
                     type="bool",
                     label="Guide actors",
-                    description="Whether to guide the actors in the scene. This happens during every actor turn.",
+                    description="Guide the actors in the scene. This happens during every actor turn.",
+                    value=True
+                ),
+                "guide_narrator": AgentActionConfig(
+                    type="bool",
+                    label="Guide narrator",
+                    description="Guide the narrator during the scene. This happens during the narrator's turn.",
                     value=True
                 ),
                 "guidance_length": AgentActionConfig(
@@ -67,6 +73,10 @@ class GuideSceneMixin:
         return self.actions["guide_scene"].config["guide_actors"].value
     
     @property
+    def guide_narrator(self) -> bool:
+        return self.actions["guide_scene"].config["guide_narrator"].value
+    
+    @property
     def guide_scene_guidance_length(self) -> int:
         return int(self.actions["guide_scene"].config["guidance_length"].value)
     
@@ -88,10 +98,21 @@ class GuideSceneMixin:
         if not self.guide_scene:
             return
         
-        if emission.analysis_type == "narration":
-            return # TODO
+        guidance = None
         
-        if emission.analysis_type == "conversation" and self.guide_actors:   
+        if emission.analysis_type == "narration" and self.guide_narrator:
+            guidance = await self.guide_narrator_off_of_scene_analysis(
+                emission.response,
+                response_length=self.guide_scene_guidance_length,
+            )
+            
+            if not guidance:
+                log.warning("director.guide_scene.narration: Empty resonse")
+                return
+            
+            self.set_context_states(narrator_guidance=guidance)
+        
+        elif emission.analysis_type == "conversation" and self.guide_actors:   
             guidance = await self.guide_actor_off_of_scene_analysis(
                 emission.response,
                 emission.template_vars.get("character"),
@@ -122,6 +143,31 @@ class GuideSceneMixin:
                 "analysis": analysis,
                 "scene": self.scene,
                 "character": character,
+                "response_length": response_length,
+                "max_tokens": self.client.max_token_length,
+            },
+        )
+        return strip_partial_sentences(response).strip()
+    
+    @set_processing
+    async def guide_narrator_off_of_scene_analysis(
+        self, 
+        analysis: str,
+        response_length: int = 256
+    ):
+        """
+        Guides the narrator based on the scene analysis.
+        """
+        
+        log.debug("director.guide_narrator_off_of_scene_analysis", analysis=analysis)
+        
+        response = await Prompt.request(
+            "director.guide-narration",
+            self.client,
+            f"direction_{response_length}",
+            vars={
+                "analysis": analysis,
+                "scene": self.scene,
                 "response_length": response_length,
                 "max_tokens": self.client.max_token_length,
             },

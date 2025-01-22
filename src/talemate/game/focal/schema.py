@@ -16,7 +16,7 @@ class Argument(pydantic.BaseModel):
     
 class Call(pydantic.BaseModel):
     name: str = pydantic.Field(validation_alias=pydantic.AliasChoices('name', 'function'))
-    arguments: dict[str, str] = pydantic.Field(default_factory=dict)
+    arguments: dict[str, Any] = pydantic.Field(default_factory=dict)
     result: str | int | float | bool | None = None
     uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     called: bool = False
@@ -24,7 +24,7 @@ class Call(pydantic.BaseModel):
     @pydantic.field_validator('arguments')
     def join_string_lists(cls, v: dict[str, Any]) -> dict[str, str]:
         return {
-            key: '\n'.join(str(item) for item in value) if isinstance(value, list) else value
+            key: '\n'.join(str(item) for item in value) if isinstance(value, list) else str(value)
             for key, value in v.items()
         }
 

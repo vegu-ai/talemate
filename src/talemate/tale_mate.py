@@ -21,6 +21,7 @@ import talemate.emit.async_signals as async_signals
 import talemate.events as events
 import talemate.save as save
 import talemate.util as util
+from talemate.agents.context import active_agent
 from talemate.client.context import ClientContext, ConversationContext
 from talemate.config import Config, SceneConfig, load_config
 from talemate.context import interaction, rerun_context
@@ -1500,6 +1501,7 @@ class Scene(Emitter):
 
         return summary
 
+
     def context_history(
         self, budget: int = 8192, **kwargs
     ):
@@ -1519,6 +1521,7 @@ class Scene(Emitter):
         assured_dialogue_num = kwargs.get("assured_dialogue_num", 5)
         
         chapter_labels = kwargs.get("chapter_labels", False)
+        chapter_numbers = []
 
         history_len = len(self.history)
 
@@ -1567,7 +1570,7 @@ class Scene(Emitter):
                 if not self.layered_history[i]:
                     continue
                 
-                k = 0
+                k = next_layer_start if next_layer_start is not None else 0
                 
                 for layered_history_entry in self.layered_history[i][next_layer_start if next_layer_start is not None else 0:]:
                     
@@ -1586,7 +1589,9 @@ class Scene(Emitter):
                     
                     # prepend chapter labels
                     if chapter_labels:
-                        text = f"### Chapter {num_layers - i}.{k + 1}\n{text}"
+                        chapter_number = f"{num_layers - i}.{k + 1}"
+                        text = f"### Chapter {chapter_number}\n{text}"
+                        chapter_numbers.append(chapter_number)
                     
                     parts_context.append(text)
                     
@@ -1699,7 +1704,9 @@ class Scene(Emitter):
                 parts_context.insert(0, intro)
                 
 
-            
+        active_agent_ctx = active_agent.get()
+        if active_agent_ctx:
+            active_agent_ctx.state["chapter_numbers"] = chapter_numbers
 
         return list(map(str, parts_context)) + list(map(str, parts_dialogue))
 

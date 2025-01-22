@@ -454,6 +454,7 @@ class SummarizeAgent(
         extra_instructions: str = None,
         generation_options: GenerationOptions | None = None,
         source_type: str = "dialogue",
+        layer:int = None,
     ):
         """
         Summarize the given text
@@ -475,7 +476,9 @@ class SummarizeAgent(
                 "num_extra_context": len(extra_context) if extra_context else 0,
                 "extra_instructions": extra_instructions or "",
                 "generation_options": generation_options,
+                "layer": layer,
             },
+            dedupe_enabled=False
         )
 
         self.scene.log.info(
@@ -771,6 +774,7 @@ class SummarizeAgent(
                                 method=method,
                                 source_type="events",
                                 extra_context=extra_context + "\n\n".join(summaries),
+                                layer=next_layer_index,
                             )
                             noop = False
                             

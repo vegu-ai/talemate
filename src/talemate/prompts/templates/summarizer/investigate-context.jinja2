@@ -1,12 +1,7 @@
 {% block rendered_context -%}
-{% if analysis %}
-<|SECTION:ANLYSIS|>
-{{ analysis }}
-<|CLOSE_SECTION|>
-{% endif %}
 <|SECTION:TEXT|>
 {% for entry in entries %}
-### Chapter {{ layer }}.{{ loop.index }}
+{% if layer > 0 %}### Chapter {{ layer }}.{{ loop.index }}{% endif %}
 {{ time_diff(entry.get("ts_end", entry.get("ts"))) }}
 {{ entry["text"] }}
 {% endfor %}
@@ -17,12 +12,12 @@ Investigate the story and answer the following question: "{{ query }}".
 
 {{ focal.render_instructions() }}
 
-{% if layer > 1 %}
+{% if layer > 0 %}
 {{ 
     focal.callbacks.investigate_context.render(
         "Further investigate a specific chapter for more information.", 
         chapter_number="The number of the chapter to investigate. (e.g., 1.1 or 2.3)",
-        query="The question or instruction to analyze the chapter for. What information are you trying to retrieve?",
+        query="The question or instruction to analyze the chapter for. What information are you trying to retrieve? This is a single text string and NEVER a list.",
         examples=[
             { "chapter_number": "1.1", "query": "Where did they buy the gun?" },
             { "chapter_number": "2.3", "query": "What was the name of the woman in the red dress?" }
@@ -31,7 +26,6 @@ Investigate the story and answer the following question: "{{ query }}".
 }}
 {% endif %}
 
-{% if layer == 1 %}
 {{
     focal.callbacks.answer.render(
         "Instruct the narrator to answer the query.", 
@@ -43,7 +37,6 @@ Investigate the story and answer the following question: "{{ query }}".
         ]
     )
 }}
-{% endif %}
 
 {{
     focal.callbacks.abort.render(

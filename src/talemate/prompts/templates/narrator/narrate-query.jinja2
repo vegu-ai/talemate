@@ -36,6 +36,10 @@ Embody the narrator's role completely, using a unique narrative voice.
 
 Answer questions confidently and decisively through your perspective, without progressing the story.
 
+{% if agent_context_state["director__narrator_guidance"] -%}
+{{ agent_context_state["director__narrator_guidance"] }}
+{% endif %}
+
 {{ extra_instructions }}
 
 Context: This scene is set within {{ scene.context }}.

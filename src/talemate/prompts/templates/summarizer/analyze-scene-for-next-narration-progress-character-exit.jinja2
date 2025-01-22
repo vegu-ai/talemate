@@ -26,10 +26,13 @@ How would you guide the story editors to bring {{ character.name }} out of the c
 - What parting gestures or behaviors are characteristic of them?
 
 {% if context_investigation -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Consider the scene's immediate dynamics:
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+
 - Unfinished business they're leaving behind
 - Impact of their departure on other characters present
 - Any objects or items they need to take or leave
+
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
 
 {% if deep_analysis -%}
@@ -40,8 +43,4 @@ Explain how the referenced chapter demonstrates:
 - Any missing context that could inform their current departure
 
 Then state "Read through chapter {number}."
-
-You may instruct them to read {{ max_content_investigations }} chapter(s).
-
-The chapter number is always two digits separated by a period.
 {% endif %}

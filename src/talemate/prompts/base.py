@@ -34,7 +34,7 @@ from talemate.util import (
     remove_extra_linebreaks,
     iso8601_diff_to_human,
 )
-from talemate.util.prompt import condensed
+from talemate.util.prompt import condensed, no_chapters
 from talemate.agents.context import active_agent
 
 __all__ = [
@@ -402,6 +402,7 @@ class Prompt:
         env.globals["text_to_chunks"] = self.text_to_chunks
         env.globals["emit_narrator"] = lambda message: emit("system", message=message)
         env.filters["condensed"] = condensed
+        env.filters["no_chapters"] = no_chapters
         ctx.update(self.vars)
 
         if "decensor" not in ctx:

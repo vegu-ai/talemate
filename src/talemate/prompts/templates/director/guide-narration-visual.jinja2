@@ -1,0 +1,29 @@
+Guide the story writer to write a visual description of the current moment in the scene.
+
+{% if last_event -%}
+Following this moment:
+```
+{{ last_event }}
+```
+{% endif %}
+
+{% if narrative_direction -%}
+The writer has been given specific instructions:
+
+```
+{{ narrative_direction }}
+```
+{% endif %}
+Help them achieve this by providing guidance on how to describe the scene visually.
+
+Provide directional guidance (e.g., "describe the gathering storm clouds" or "show the tension through environmental details"). DO NOT write specific descriptions or suggest exact phrasing. Be specific about what elements need to be portrayed while letting the writer craft the actual narrative.
+
+Make sure they understand the focus is a visual description of the current moment in the scene.
+
+{% if response_length > 300 -%}
+Briefly let the writer know what key elements should be included in the description, based on the scene analysis.
+
+They need to pepper in some visual details (e.g., "Tell us what [character] is wearing." or "Provide a visual description of the car, including type, paintjob and any visible damage.").
+{% endif %}
+
+Finally let them know they have some creative freedom to invent new details that fit the scene.

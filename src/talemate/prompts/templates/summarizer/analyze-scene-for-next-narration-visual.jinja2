@@ -7,35 +7,31 @@ Your task is to analyze the current moment in the scene to guide the story edito
 
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the immediate visual state of the scene:
 - What actions or movements can be seen?
-- What lighting conditions are present (natural/artificial, intensity, shadows)?
-- What colors and patterns are visible in the environment?
+- What is the state of the environment?
 - What specific details about character appearances are noteworthy?
 - What objects or items are visually prominent?
 
 {% if context_investigation -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Based on the scene's previous context, describe:
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+
 - Established visual elements from earlier in the scene
 - Previously described features of the environment
 - Known details about character appearances
 - Significant objects or items mentioned before
 - Any visual changes that have occurred during the scene
 
-Note that the 'Context' section has been filled in from a previous prompt and may not be relevant at all.
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
 
 {% if deep_analysis -%}
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) that may provide additional visual details.
 
 Explain how the referenced chapter contains specific details about:
-- Light and shadow descriptions
-- Color and pattern details
-- Visual characteristics of spaces
+- General environmental details
 - Character appearance descriptions
-- Notable object appearances
+- Object or item visual characteristics
 
-Then state "Read through chapter {number}."
+In addition to the chapter number, you need to be specific about what event you are inquiring this information for and how it relates to the current moment. Make sure to instruct that information gathered this way explicitly states what event it was gathered from. (e.g., we need to know when and where the information was true down the line.)
 
-You may instruct them to read {{ max_content_investigations }} chapter(s).
-
-The chapter number is always two digits separated by a period.
+Then state "Read through chapter {number}, specifically when [event] occurred."
 {% endif %}

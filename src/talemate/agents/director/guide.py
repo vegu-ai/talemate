@@ -1,10 +1,14 @@
 from typing import TYPE_CHECKING
 import structlog
+from functools import wraps
+import dataclasses
 from talemate.agents.base import (
-    set_processing,
+    set_processing as _set_processing,
     AgentAction,
-    AgentActionConfig
+    AgentActionConfig,
+    AgentEmission,
 )
+from talemate.agents.context import active_agent
 from talemate.prompts import Prompt
 import talemate.emit.async_signals
 from talemate.util import strip_partial_sentences
@@ -14,6 +18,45 @@ if TYPE_CHECKING:
     from talemate.agents.summarize.analyze_scene import SceneAnalysisEmission
 
 log = structlog.get_logger()
+
+talemate.emit.async_signals.register(
+    "agent.director.guide.before_generate", 
+    "agent.director.guide.inject_instructions",
+    "agent.director.guide.generated",
+)
+
+
+@dataclasses.dataclass
+class DirectorGuidanceEmission(AgentEmission):
+    generation: str = ""
+    dynamic_instructions: list[str] = dataclasses.field(default_factory=list)
+
+
+def set_processing(fn):
+    """
+    Custom decorator that emits the agent status as processing while the function
+    is running and then emits the result of the function as a DirectorGuidanceEmission
+    """
+
+    @_set_processing
+    @wraps(fn)
+    async def wrapper(self, *args, **kwargs):
+        emission: DirectorGuidanceEmission = DirectorGuidanceEmission(agent=self)
+        
+        await talemate.emit.async_signals.get("agent.director.guide.before_generate").send(emission)
+        await talemate.emit.async_signals.get("agent.director.guide.inject_instructions").send(emission)
+        
+        agent_context = active_agent.get()
+        agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
+        
+        response = await fn(self, *args, **kwargs)
+        emission.generation = [response]
+        await talemate.emit.async_signals.get("agent.director.guide.generated").send(emission)
+        return emission.generation[0]
+
+    return wrapper
+
+
 
 class GuideSceneMixin:
     
@@ -134,7 +177,6 @@ class GuideSceneMixin:
         """
         
         log.debug("director.guide_actor_off_of_scene_analysis", analysis=analysis, character=character)
-        
         response = await Prompt.request(
             "director.guide-conversation",
             self.client,

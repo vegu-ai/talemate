@@ -44,6 +44,16 @@ class ContextInvestigationMixin:
                         {"label": "Medium (512)", "value": "512"},
                         {"label": "Long (1024)", "value": "1024"},
                     ]
+                ),
+                "update_method": AgentActionConfig(
+                    type="text",
+                    label="Update Method",
+                    description="The method to use to update exsiting context investigation.",
+                    value="replace",
+                    choices=[
+                        {"label": "Replace", "value": "replace"},
+                        {"label": "Smart Merge", "value": "merge"},
+                    ]
                 )
             }
         )
@@ -58,6 +68,10 @@ class ContextInvestigationMixin:
     def context_investigation_answer_length(self) -> int:
         return int(self.actions["context_investigation"].config["answer_length"].value)
     
+    @property
+    def context_investigation_update_method(self) -> str:
+        return self.actions["context_investigation"].config["update_method"].value
+    
     # signal connect
     
     def connect(self, scene):
@@ -66,6 +80,9 @@ class ContextInvestigationMixin:
             self.on_inject_context_investigation
         )
         talemate.emit.async_signals.get("agent.narrator.inject_instructions").connect(
+            self.on_inject_context_investigation
+        )
+        talemate.emit.async_signals.get("agent.director.guide.inject_instructions").connect(
             self.on_inject_context_investigation
         )
         talemate.emit.async_signals.get("agent.summarization.scene_analysis.before_deep_analysis").connect(
@@ -97,9 +114,10 @@ class ContextInvestigationMixin:
         context_investigation="\n\n".join(ci_text if ci_text else [])
         current_context_investigation = self.get_scene_state("context_investigation")
         if current_context_investigation and context_investigation:
-            context_investigation = await self.update_context_investigation(
-                current_context_investigation, context_investigation, response
-            )
+            if self.context_investigation_update_method == "merge":
+                context_investigation = await self.update_context_investigation(
+                    current_context_investigation, context_investigation, response
+                )
         
         self.set_scene_states(context_investigation=context_investigation)
         self.set_context_states(context_investigation=context_investigation)
@@ -129,7 +147,15 @@ class ContextInvestigationMixin:
         
 
     @set_processing
-    async def investigate_context(self, layer:int, index:int, query:str, analysis:str="", max_calls:int=3) -> str:
+    async def investigate_context(
+        self, 
+        layer:int, 
+        index:int, 
+        query:str, 
+        analysis:str="", 
+        max_calls:int=3,
+        pad_entries:int=5,
+    ) -> str:
         """
         Processes a context investigation.
         
@@ -138,6 +164,8 @@ class ContextInvestigationMixin:
         - layer: The layer to investigate
         - index: The index in the layer to investigate
         - query: The query to investigate
+        - analysis: Scene analysis text
+        - pad_entries: if > 0 will pad the entries with the given number of entries before and after the start and end index
         """
         
         log.debug("summarizer.investigate_context", layer=layer, index=index, query=query)
@@ -145,11 +173,14 @@ class ContextInvestigationMixin:
         
         layer_to_investigate = layer - 1
         
-        if layer_to_investigate == -1:
-            entries = self.scene.archived_history[entry["start"]:entry["end"]+1]
-        else:
-            entries = self.scene.layered_history[layer_to_investigate][entry["start"]:entry["end"]+1]    
+        start = max(entry["start"] - pad_entries, 0)
+        end = entry["end"] + pad_entries + 1
         
+        if layer_to_investigate == -1:
+            entries = self.scene.archived_history[start:end]
+        else:
+            entries = self.scene.layered_history[layer_to_investigate][start:end]
+            
         async def answer(query:str, instructions:str) -> str:
             log.debug("Answering context investigation", query=query, instructions=answer)
             
@@ -173,7 +204,7 @@ class ContextInvestigationMixin:
             layer = int(match.group(1))
             index = int(match.group(2))
             
-            return await self.investigate_context(layer-1, index-1, query, max_calls=max_calls)
+            return await self.investigate_context(layer-1, index-1, query, analysis=analysis, max_calls=max_calls)
         
 
         async def abort():

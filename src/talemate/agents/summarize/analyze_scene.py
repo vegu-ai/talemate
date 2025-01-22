@@ -189,12 +189,10 @@ class SceneAnalyzationMixin:
                 self.analysis_length
             )
             
-            if self.cache_analysis:
-                await self.set_cached_analysis(emission_type, analysis)
+            await self.set_cached_analysis(emission_type, analysis)
             
         if not analysis:
             return
-            
         emission.dynamic_instructions.append("\n".join(
             [
                 "<|SECTION:SCENE ANALYSIS|>",

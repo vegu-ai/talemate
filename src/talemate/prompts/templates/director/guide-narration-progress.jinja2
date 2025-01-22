@@ -1,0 +1,22 @@
+Help the narrator complete the following task, using the full scene context and the scene analysis.
+
+```
+{{ narrative_direction }}
+```
+
+{% if last_event -%}
+Following this moment:
+```
+{{ last_event }}
+```
+{% endif %}
+
+The direction is to progress the scene, provide guidance on what key events should happen next and how they should unfold. Otherwise, provide directional guidance (e.g., "describe the gathering storm clouds" or "show the tension through environmental details"). DO NOT write specific descriptions or suggest exact phrasing. Be specific about what elements need to be portrayed while letting the writer craft the actual narrative.
+
+{% if response_length > 300 -%}
+- Establish the focal point of this narrative moment
+- Share relevant context about the scene's atmosphere and mood
+- Summarize how this moment connects to the broader narrative arc
+{% endif %}
+
+Focus solely on WHAT needs to be shown. Trust the writer to develop the appropriate tone and style based on the scene's context.

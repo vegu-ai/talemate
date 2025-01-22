@@ -1,6 +1,6 @@
 {# MEMORY #}
 {% if agent_context_state["narrator__query_narration"] %}
-{% set memory_goal="answer the following quesiton: \""+agent_context_state["narrator__query"]+"\"" %}
+{% set memory_goal="answer the following question: \""+agent_context_state["narrator__query"]+"\"" %}
 {% endif %}
 {% set memory_stack = agent_action("narrator", "rag_build", prompt=memory_prompt, sub_instruction=memory_goal) %}
 {% if memory_stack %}

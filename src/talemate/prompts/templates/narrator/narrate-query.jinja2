@@ -1,11 +1,11 @@
 {% block extra_context -%}
-{% include "extra-context.jinja2" %}
-{% set related_character = scene.parse_character_from_line(query) -%}
 {% if related_character -%}
 <|SECTION:{{ related_character.name|upper }}|>
 {{ related_character.sheet}}
 <|CLOSE_SECTION|>
 {% endif %}
+{% include "extra-context.jinja2" %}
+{% set related_character = scene.parse_character_from_line(query) -%}
 {% endblock %}
 {% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
@@ -34,7 +34,7 @@ Respond with 1-2 sentences of concise narration fitting the scene's context.
 Avoid direct speech or dialogue. Focus on descriptive prose and implied experiences.
 Embody the narrator's role completely, using a unique narrative voice.
 
-Answer questions confidently and decisively through your perspective, without progressing the story.
+{% if query.endswith("?") -%}Answer questions{% else %}Provide information{% endif %} confidently and decisively through your perspective, without progressing the story.
 
 {% if agent_context_state["director__narrator_guidance"] -%}
 {{ agent_context_state["director__narrator_guidance"] }}
@@ -42,8 +42,7 @@ Answer questions confidently and decisively through your perspective, without pr
 
 {{ extra_instructions }}
 
-Context: This scene is set within {{ scene.context }}.
-Question(s): {{query}}
+{% if query.endswith("?") -%}Question(s){% else %}Instruction{% endif %}: {{query}}
 {% include "rerun-context.jinja2" -%}
 <|CLOSE_SECTION|>
 {% if query.endswith("?") -%}Answer: {% endif -%}

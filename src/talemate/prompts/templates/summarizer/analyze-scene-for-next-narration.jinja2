@@ -1,6 +1,11 @@
 {% block rendered_context -%}
 {% include "character-context.jinja2" -%}
 {% endblock %}
+{% if context_investigation %}
+<|SECTION:POTENTIALLY RELEVANT INFORMATION|>
+{{ context_investigation }}
+<|CLOSE_SECTION|>
+{% endif %}
 <|SECTION:SCENE|>
 {% block scene_history -%}
 Content Classification: {{ scene.context }}
@@ -19,11 +24,6 @@ Content Classification: {{ scene.context }}
 
 {% endfor %}
 <|CLOSE_SECTION|>
-{% if context_investigation %}
-<|SECTION:HISTORIC CONTEXT|>
-{{ context_investigation }}
-<|CLOSE_SECTION|>
-{% endif %}
 {% endblock -%}
 <|SECTION:TASK|>
 {% set bullet_num=0 %}
@@ -50,6 +50,11 @@ Content Classification: {{ scene.context }}
 {# Progressive narration #}{% else %}
 {% include "analyze-scene-for-next-narration-progress.jinja2" %}
 {# Common instructions #}{% endif %}
+{% if deep_analysis -%}You may instruct them to read up to {{ max_content_investigations }} chapter(s).
+
+Available chapters: {{ join(agent_context_state["chapter_numbers"], ", ") }}
+
+The chapter number is always two digits separated by a period.{% endif %}
 
 {% if length <= 256 %}Your analysis should be 1 - 2 paragraphs long.{% elif length <= 512 %}Your analysis should be 2 - 3 paragraphs long.{% endif %}
 

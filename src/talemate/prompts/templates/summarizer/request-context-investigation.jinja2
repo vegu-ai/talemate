@@ -6,11 +6,15 @@
 <|SECTION:TASK|>
 In the provided text there may be instructions to read specific story chapters for more information.
 
-First analyze the text and answer the following question: Have the story editors been instructed to read any chapters? 
+STEP 1: Identify any instructions to read additional chapters for more information and repeat them back.
 
-Each instruction will contain a chapter number and a question or instruction for analysis.
+Each instruction will state a chapter number and a question or instruction for analysis.
 
-Call the appropriate function(s) to investigate the chapters.
+STEP 2: State your understanding of the broader task based on the analysis.
+
+STEP 3: Call the appropriate function(s) to investigate the chapters.
+
+Be very specific about the details you want to gather and reiterate the task requirement in the query.
 
 {{ focal.render_instructions() }}
 
@@ -20,15 +24,16 @@ Call the appropriate function(s) to investigate the chapters.
         chapter_number="The number of the chapter to investigate. (e.g., 1.1 or 2.3)",
         query="The question or instruction to analyze the chapter for. What information are you trying to retrieve? This can be more than one question. Be very specific about the details you want to gather.",
         examples=[
-            { "chapter_number": "1.1", "query": "Where did they buy the gun?" },
-            { "chapter_number": "2.3", "query": "What was the name of the woman in the red dress?" }
+            { "chapter_number": "1.1", "query": "Where did they buy the gun? Provide a detailed summary of the location." },
+            { "chapter_number": "2.3", "query": "What was the name of the woman in the red dress?" },
+            { "chapter_number": "1.4", "query": "What happened during the fight at the bar? Gather details on how it started, who was involved, and how it ended." },
         ]
     ) 
 }}
 
 {{
     focal.callbacks.abort.render(
-        "Abort the context investigation request. Use this if there are no explicit instructions to query any chapters.",
+        "Abort the context investigation request. Use this if there are no instructions to read any chapters in the provided text.",
         examples=[{}],
         multiple=False,
     )

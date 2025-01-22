@@ -1,21 +1,20 @@
-Your task is to guide and help the story editors to write the next narrative segment that answers the following question: "{{ agent_context_state["narrator__query"] }}".
+{% set query = agent_context_state["narrator__query"] -%}
+{% set is_question = query.strip().endswith("?") %}
+{% if is_question %}Help the narrator answer the following question: "{{ query }}". Do this by gaathering information and identifying where additional information may be found. 
+{% else %}Help the narrator with the task: "{{ query }}".{% endif %}
 
-The information and instructions you write must help them complete this task.
+The information and instructions you write must help complete this task.
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyze the meaning of the question, what is the context and what is the question asking for?
+{% if is_question %}{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyze the meaning of the question, what is the context and what is the question asking for?
+{% else %}{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyze the task. What is the context and meaning? What is the likely expectation of the reader by giving us this task?{% endif %}
+
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Is this question / task refering to a specific event? If yes, pinpoint the chapter in which it occurs.
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Add any insight that helps with the task, from the information that's available to you right now.
-
 {% if context_investigation -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly explain what you understand from the historical context and if you think it's relevant. Note that the 'Historical Context' section has been filled in from a previous prompt and may not be relevant at all.
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
-
 {% if deep_analysis -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) that may provide additional information about this specific question. To do this simply state "Read through chapter {number} to find out ..." followed by a specific detail you wish to understand. What question are you looking to answer? Avoid generic and broad queries and explain why the answer will help guide the story editors. Example: "Read through chapter {number} and gather information about [event]"
-
-You may instruct them to read {{ max_content_investigations }} chapter(s).
-
-Available chapters: {{ join(agent_context_state["chapter_numbers"], ", ") }}
-
-The chapter number is always two digits separated by a period.
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the narrator to read through any chapter(s) that may provide additional information about this specific question. To do this simply state "Read through chapter {number} to find out ..." followed by a specific detail you wish to understand. What question are you looking to answer? Avoid generic and broad queries and explain why the answer will help guide the narrator. Example: "Read through chapter {number} and gather information about [event]" or "Read through chapter {number} and tell us what happens during [event]"
 {% endif %}

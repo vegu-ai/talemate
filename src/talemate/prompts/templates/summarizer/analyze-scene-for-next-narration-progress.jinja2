@@ -25,13 +25,11 @@ Your task is to analyze the current moment in the scene to guide natural narrati
 - Brief but meaningful observations about the present situation
 
 {% if context_investigation -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly explain what you understand from the historical context and if you think it's relevant. Note that the 'Historical Context' section has been filled in from a previous prompt and may not be relevant at all.
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
 
 {% if deep_analysis -%}
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) that may provide additional information about this specific moment or setting. To do this simply state "Read through chapter {number} to find out ..." followed by a specific detail you wish to understand. What question are you looking to answer? Avoid generic and broad queries and explain why the answer will help guide the story editors.
-
-You may instruct them to read {{ max_content_investigations }} chapter(s).
-
-The chapter number is always two digits separated by a period.
 {% endif %}

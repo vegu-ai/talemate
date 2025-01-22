@@ -14,14 +14,14 @@ Your task is to analyze the current moment in the scene to guide the story edito
 - What tastes are relevant (if any characters are eating/drinking)?
 
 {% if context_investigation -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Based on the historical context, describe:
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 - Common sounds that would be heard in this setting
 - Typical smells associated with this time/place
 - Physical textures of common materials/objects
 - Distinctive visual details from this period
 - Traditional tastes/flavors if relevant
 
-Note that the 'Historical Context' section has been filled in from a previous prompt and may not be relevant at all.
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
 
 {% if deep_analysis -%}
@@ -35,8 +35,4 @@ Explain how the referenced chapter contains specific physical details about (any
 - Taste/smell descriptions if present
 
 Then state "Read through chapter {number}."
-
-You may instruct them to read {{ max_content_investigations }} chapter(s).
-
-The chapter number is always two digits separated by a period.
 {% endif %}

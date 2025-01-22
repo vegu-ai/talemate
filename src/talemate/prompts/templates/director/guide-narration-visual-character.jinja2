@@ -1,0 +1,24 @@
+{% set character = agent_context_state.narrator__character %}
+Guide the story writer to write a visual description of {{ character.name }} as they are currently in the scene.
+
+{% if last_event -%}
+Following this moment:
+```
+{{ last_event }}
+```
+{% endif %}
+
+{% if narrative_direction -%}
+The writer has been given specific instructions:
+
+```
+{{ narrative_direction }}
+```
+{% endif %}
+Help them achieve this by providing guidance on how to describe {{ character.name }} visually.
+
+Provide directional guidance (e.g., "describe [character]'s facial expression" or "show [character]'s reaction to the news" or "provide a vivid description of [character]'s clothing."). DO NOT write specific descriptions or suggest exact phrasing. Be specific about what elements need to be portrayed while letting the writer craft the actual narrative.
+
+{% if response_length > 300 -%}
+Briefly let the writer know what key elements should be included in the description, based on the scene analysis.
+{% endif %}

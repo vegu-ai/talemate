@@ -14,7 +14,6 @@ __all__ = [
     "CmdDebugOff",
     "CmdPromptChangeSectioning",
     "CmdRunAutomatic",
-    "CmdSummarizerGenerateTimeline",
     "CmdSummarizerUpdatedLayeredHistory",
     "CmdSummarizerResetLayeredHistory",
 ]
@@ -183,21 +182,6 @@ class CmdDumpSceneSerialization(TalemateCommand):
     async def run(self):
         log.debug("dump_scene_serialization", serialization=self.scene.json)
 
-@register
-class CmdSummarizerGenerateTimeline(TalemateCommand):
-    """
-    Command class for the 'summarizer_generate_timeline' command
-    """
-
-    name = "summarizer_generate_timeline"
-    description = "Generate a timeline from the scene"
-    aliases = ["generate_timeline"]
-
-    async def run(self):
-        summarizer = get_agent("summarizer")
-
-        await summarizer.generate_timeline()
-        
 @register
 class CmdSummarizerUpdatedLayeredHistory(TalemateCommand):
     """

@@ -31,14 +31,16 @@ Specifically mention characters, locations and objects by name.
 
 Consider the other chunks and the history to inform the context of the summarizations. Each chunk must be summarized in a way that it leads into the next chunk.
 
+YOU MUST SUMMARIZE ALL CHUNKS.
 YOU MUST NOT ADD COMMENTARY.
 YOU MUST NOT ADD COMBINED SUMMARIZATION OF ALL CHUNKS.
 YOU MUST NOT GET LOST IN DETAILS. THESE SUMMARIES SHOULD BE OUTLINES.
 
 You must provide your response in the following format:
 
-{% for chunk in text_to_chunks(dialogue, chunk_size=1200) %}
-ANALYSIS OF CHUNK {{ loop.index }}: "<briefly explain your understanding of chunk {{ loop.index }}>""
+{% for chunk in text_to_chunks(dialogue, chunk_size=chunk_size) %}
+{% if analyze_chunks %}ANALYSIS OF CHUNK {{ loop.index }}: "<briefly explain your understanding of chunk {{ loop.index }}>""
+{% endif -%}
 CHUNK {{ loop.index }}: "<brief summary of this chunk>"
 
 {% endfor %}
@@ -48,4 +50,4 @@ CHUNK {{ loop.index }}: "<brief summary of this chunk>"
 {{ generation_options.writing_style.instructions }}
 <|CLOSE_SECTION|>
 {% endif %}
-{{ set_prepared_response("ANALYSIS OF CHUNK 1: \"")}}
+{% if analyze_chunks %}{{ set_prepared_response("ANALYSIS OF CHUNK 1: \"")}}{% else %}{{ set_prepared_response("CHUNK 1: \"")}}{% endif %}

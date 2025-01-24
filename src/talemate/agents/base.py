@@ -143,7 +143,7 @@ def set_processing(fn):
             if scene:
                 scene.continue_actions()
             
-            with ActiveAgent(self, fn):
+            with ActiveAgent(self, fn, args, kwargs) as active_agent_context:
                 try:
                     await self.emit_status(processing=True)
                     
@@ -156,6 +156,8 @@ def set_processing(fn):
                             all_args.update(getattr(fn, "store_context_state_kwargs", {}))
                         
                         all_args[f"fn_{fn.__name__}"] = True
+                        
+                        active_agent_context.state_params = all_args
                             
                         self.set_context_states(**all_args)
         

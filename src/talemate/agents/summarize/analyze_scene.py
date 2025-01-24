@@ -213,7 +213,15 @@ class SceneAnalyzationMixin:
         """
         
         cached_analysis = self.get_scene_state(f"cached_analysis_{typ}")
-        if cached_analysis and cached_analysis.get("fp") == self.scene.history[-1].fingerprint:
+        
+        if not cached_analysis:
+            return None
+        
+        active_agent_context = active_agent.get()
+        
+        fingerprint = f"{self.scene.history[-1].fingerprint}-{active_agent_context.first.fingerprint}"
+        
+        if cached_analysis.get("fp") == fingerprint:
             return cached_analysis["guidance"]
         
         return None
@@ -223,10 +231,14 @@ class SceneAnalyzationMixin:
         Sets the cached analysis for the given type.
         """
         
+        active_agent_context = active_agent.get()
+        
+        fingerprint = f"{self.scene.history[-1].fingerprint}-{active_agent_context.first.fingerprint}"
+        
         self.set_scene_states(
             **{f"cached_analysis_{typ}": {
-                "fp": self.scene.history[-1].fingerprint,
-                "guidance": analysis
+                "fp": fingerprint,
+                "guidance": analysis,
             }}
         )
         

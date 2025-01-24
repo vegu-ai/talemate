@@ -267,10 +267,10 @@ class SceneAnalyzationMixin:
             return "visual"
         
         if state.get("narrator__fn_narrate_character_entry"):
-            return "character-entry"
+            return "progress-character-entry"
         
         if state.get("narrator__fn_narrate_character_exit"):
-            return "character-exit"
+            return "progress-character-exit"
         
         return "progress"
         

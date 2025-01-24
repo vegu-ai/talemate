@@ -34,13 +34,3 @@ How would you guide the story editors to bring {{ character.name }} out of the c
 
 Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
-
-{% if deep_analysis -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) that show notable exits by {{ character.name }}.
-
-Explain how the referenced chapter demonstrates:
-- Their exit patterns in similar situations and how they handle leaving unresolved matters
-- Any missing context that could inform their current departure
-
-Then state "Read through chapter {number}."
-{% endif %}

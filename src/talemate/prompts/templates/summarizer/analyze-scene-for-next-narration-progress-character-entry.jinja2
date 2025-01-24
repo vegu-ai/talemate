@@ -29,14 +29,3 @@ Your task is to guide the story editors in bringing {{ character.name }} into th
 
 Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
-
-{% if deep_analysis -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) containing {{ character.name }}'s recent activities or similar scene involvement.
-
-Explain how the referenced chapter establishes:
-- Their recent situation and actions
-- Typical patterns of interaction
-- Relationships with current scene elements
-
-Then state "Read through chapter {number}."
-{% endif %}

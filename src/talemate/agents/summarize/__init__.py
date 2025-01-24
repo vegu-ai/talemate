@@ -459,10 +459,16 @@ class SummarizeAgent(
         """
         Summarize the given text
         """
+        
+        if source_type == "events":
+            length = 2048
+        else:
+            length = 1024
+        
         response = await Prompt.request(
             f"summarizer.summarize-{source_type}",
             self.client,
-            "summarize_long",
+            f"summarize_{length}",
             vars={
                 "dialogue": text,
                 "scene": self.scene,
@@ -778,6 +784,12 @@ class SummarizeAgent(
                             )
                             noop = False
                             
+                            # remove all quote marks
+                            summary_text = summary_text.replace('"', "")
+                            
+                            # remove all lines that begin with "ANALYSIS OF CHUNK \d+:"
+                            summary_text = "\n".join([line for line in summary_text.split("\n") if not line.startswith("ANALYSIS OF CHUNK")])
+                                                        
                             # strip all occurences of "CHUNK \d+: " from the summary
                             summary_text = re.sub(r"(CHUNK|CHAPTER) \d+:\s+", "", summary_text)
                             
@@ -836,6 +848,7 @@ class SummarizeAgent(
                 
         except SummaryLongerThanOriginalError as exc:
             log.error("summarize_to_layered_history", error=exc, layer="base")
+            emit("status", status="error", message="Layered history update failed.")
             return
         except GenerationCancelled:
             log.info("Generation cancelled, stopping rebuild of historical layered history")

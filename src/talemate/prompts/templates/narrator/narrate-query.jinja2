@@ -40,6 +40,10 @@ Embody the narrator's role completely, using a unique narrative voice.
 {{ agent_context_state["director__narrator_guidance"] }}
 {% endif %}
 
+{% if agent_context_state["summarizer__context_investigation"] %}Information that may be relevant to your response:
+{{ agent_context_state["summarizer__context_investigation"] }}
+{% endif %}
+
 {{ extra_instructions }}
 
 {% if query.endswith("?") -%}Question(s){% else %}Instruction{% endif %}: {{query}}

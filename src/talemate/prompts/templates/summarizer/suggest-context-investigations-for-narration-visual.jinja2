@@ -1,0 +1,20 @@
+{% include "suggest-context-investigations-header.jinja2" %}
+{% set narrative_direction = agent_context_state.get("narrator__narrative_direction") %}
+<|SECTION:TASK|>
+First, explain your understanding of the analysis.
+
+Then, based on the analysis above, suggest any chapters to read that may help guide the story editors in writing the next bit of narration that paints a visual picture of the scene.
+
+{% if narrative_direction %}The story editors were given the following direction: "{{ narrative_direction }}".{% endif %}
+
+You may tell the story editors to read through any chapter(s) that may provide additional visual details.
+
+Explain how the referenced chapter contains specific details about:
+- General environmental details
+- Character appearance descriptions
+- Object or item visual characteristics
+
+In addition to the chapter number, you need to be specific about what event you are inquiring this information for and how it relates to the current moment. Explain why the answer will provide the necessary visual details to guide the story editors.
+
+Then state "Read through chapter {number}, specifically when [event] occurred."
+{% include "suggest-context-investigations-footer.jinja2" %}

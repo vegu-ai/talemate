@@ -1,5 +1,6 @@
 import structlog
 import re
+from typing import TYPE_CHECKING
 from talemate.agents.base import (
     set_processing,
     AgentAction,
@@ -12,9 +13,14 @@ from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
 import talemate.game.focal as focal
 
+from .analyze_scene import SceneAnalysisDeepAnalysisEmission
+
+if TYPE_CHECKING:
+    from talemate.tale_mate import Character
+
 log = structlog.get_logger()
 
-from .analyze_scene import SceneAnalysisDeepAnalysisEmission
+
 
 class ContextInvestigationMixin:
     
@@ -65,6 +71,13 @@ class ContextInvestigationMixin:
         return self.actions["context_investigation"].enabled
     
     @property
+    def context_investigation_available(self):
+        return (
+            self.context_investigation_enabled and
+            self.layered_history_available
+        )
+    
+    @property
     def context_investigation_answer_length(self) -> int:
         return int(self.actions["context_investigation"].config["answer_length"].value)
     
@@ -97,9 +110,20 @@ class ContextInvestigationMixin:
         if not self.context_investigation_enabled:
             return
         
+        suggested_investigations = await self.suggest_context_investigations(
+            emission.analysis,
+            emission.analysis_type,
+            emission.analysis_sub_type,
+            max_calls=emission.max_content_investigations,
+            character=emission.character,
+        )
+        
         response = emission.analysis
                     
-        ci_calls:list[focal.Call] = await self.request_context_investigations(response, max_calls=emission.max_content_investigations)
+        ci_calls:list[focal.Call] = await self.request_context_investigations(
+            suggested_investigations, 
+            max_calls=emission.max_content_investigations
+        )
         
         log.debug("analyze_scene_for_next_action", ci_calls=ci_calls)
         
@@ -137,13 +161,51 @@ class ContextInvestigationMixin:
         if context_investigation:
             emission.dynamic_instructions.append("\n".join(
                 [
-                    "<|SECTION:HISTORIC CONTEXT|>",
+                    "<|SECTION:CONTEXT INVESTIGATION|>",
                     context_investigation,
                     "<|CLOSE_SECTION|>"
                 ]
             ))
     
     # methods
+    
+    @set_processing
+    async def suggest_context_investigations(
+        self,
+        analysis:str,
+        analysis_type:str,
+        analysis_sub_type:str="",
+        max_calls:int=3,
+        character:"Character"=None,
+    ) -> str:
+        
+        template_vars = {
+            "max_tokens": self.client.max_token_length,
+            "scene": self.scene,
+            "character": character,
+            "response_length": 512,
+            "context_investigation": self.get_scene_state("context_investigation"),
+            "max_content_investigations": max_calls,
+            "analysis": analysis,
+            "analysis_type": analysis_type,
+            "analysis_sub_type": analysis_sub_type,
+        }
+        
+        if not analysis_sub_type:
+            template = f"summarizer.suggest-context-investigations-for-{analysis_type}"
+        else:
+            template = f"summarizer.suggest-context-investigations-for-{analysis_type}-{analysis_sub_type}"
+        
+        log.debug("summarizer.suggest_context_investigations", template=template, template_vars=template_vars)
+        
+        response = await Prompt.request(
+            template,
+            self.client,
+            "investigate_512",
+            vars=template_vars,
+        )
+        
+        return response.strip()
         
 
     @set_processing

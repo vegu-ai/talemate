@@ -1,0 +1,17 @@
+{% include "suggest-context-investigations-header.jinja2" %}
+{% set narrative_direction = agent_context_state.get("narrator__narrative_direction") %}
+<|SECTION:TASK|>
+First, explain your understanding of the analysis.
+
+Then, based on the analysis above, suggest any chapters to read that may help guide the story editors in writing a captivating narration that emphasizes sensory details.
+
+{% if narrative_direction %}The story editors were given the following direction: "{{ narrative_direction }}".{% endif %}
+
+You may tell the story editors to read through any chapter(s) that may provide additional details to help inform their understanding of objects, places, items or the physical state of a character.
+
+YOU ARE NEVER LOOKING FOR ABSTRACT, NON-TANGIBLE DETAILS. YOU ARE LOOKING FOR DETAILS THAT CAN BE SEEN, HEARD, SMELLED, TASTED, OR TOUCHED.
+
+Explain why you think the references chapter will provide additional details relevant to the environment. (e.g. "Read through chapter {number} to find out what the hat looked like that [character] is currently holding in his hands" or "Read through chapter {number} to find out what the room smelled like when [character] entered it")
+
+Then state "Read through chapter {number}."
+{% include "suggest-context-investigations-footer.jinja2" %}

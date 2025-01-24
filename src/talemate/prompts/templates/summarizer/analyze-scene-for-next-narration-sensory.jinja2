@@ -23,16 +23,3 @@ Your task is to analyze the current moment in the scene to guide the story edito
 
 Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
-
-{% if deep_analysis -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) that may provide additional details to help inform their understanding of objects, places, items or the physical state of a character.
-
-Explain how the referenced chapter contains specific physical details about (any of the following):
-- The acoustic properties of spaces/environments
-- Material descriptions of objects/surfaces
-- Atmospheric conditions (air quality, temperature, humidity)
-- Visual details of settings/objects
-- Taste/smell descriptions if present
-
-Then state "Read through chapter {number}."
-{% endif %}

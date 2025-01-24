@@ -22,16 +22,3 @@ Your task is to analyze the current moment in the scene to guide the story edito
 
 Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
-
-{% if deep_analysis -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) You may tell the story editors to read through any chapter(s) that may provide additional visual details.
-
-Explain how the referenced chapter contains specific details about:
-- General environmental details
-- Character appearance descriptions
-- Object or item visual characteristics
-
-In addition to the chapter number, you need to be specific about what event you are inquiring this information for and how it relates to the current moment. Make sure to instruct that information gathered this way explicitly states what event it was gathered from. (e.g., we need to know when and where the information was true down the line.)
-
-Then state "Read through chapter {number}, specifically when [event] occurred."
-{% endif %}

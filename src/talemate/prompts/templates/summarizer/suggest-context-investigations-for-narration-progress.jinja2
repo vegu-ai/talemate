@@ -1,0 +1,11 @@
+{% include "suggest-context-investigations-header.jinja2" %}
+{% set narrative_direction = agent_context_state.get("narrator__narrative_direction") or "Slightly move the current scene forward." %}
+<|SECTION:TASK|>
+First, explain your understanding of the analysis.
+
+Then, based on the analysis above, suggest any chapters to read that may help guide the story editors in writing the next bit of narration that moves the story forward.
+
+{% if narrative_direction %}The story editors were given the following direction: "{{ narrative_direction }}".{% endif %}
+
+You may tell the story editors to read through any chapter(s) that may provide additional information about this specific moment or setting. To do this simply state "Read through chapter {number} to find out ..." followed by a specific detail you wish to understand. What question are you looking to answer? Avoid generic and broad queries and explain why the answer will help guide the story editors.
+{% include "suggest-context-investigations-footer.jinja2" %}

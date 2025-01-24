@@ -13,6 +13,7 @@ from talemate.util import strip_partial_sentences
 import talemate.emit.async_signals
 from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
+from talemate.agents.context import active_agent
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -35,7 +36,10 @@ class SceneAnalysisEmission(AgentTemplateEmission):
 @dataclasses.dataclass
 class SceneAnalysisDeepAnalysisEmission(AgentEmission):
     analysis: str
+    analysis_type: str | None = None
+    analysis_sub_type: str | None = None
     max_content_investigations: int = 1
+    character: "Character" = None
 
 
 class SceneAnalyzationMixin:
@@ -225,6 +229,51 @@ class SceneAnalyzationMixin:
                 "guidance": analysis
             }}
         )
+        
+    async def analyze_scene_sub_type(self, analysis_type:str) -> str:
+        """
+        Analyzes the active agent context to figure out the appropriate sub type
+        """
+        
+        fn = getattr(self, f"analyze_scene_{analysis_type}_sub_type", None)
+        
+        if fn:
+            return await fn()
+        
+        return ""
+    
+    async def analyze_scene_narration_sub_type(self) -> str:
+        """
+        Analyzes the active agent context to figure out the appropriate sub type
+        for narration analysis. (progress, query etc.)
+        """
+        
+        active_agent_context = active_agent.get()
+        
+        if not active_agent_context:
+            return "progress"
+        
+        state = active_agent_context.state
+        
+        if state.get("narrator__query_narration"):
+            return "query"
+        
+        if state.get("narrator__sensory_narration"):
+            return "sensory"
+
+        if state.get("narrator__visual_narration"):
+            if state.get("narrator__character"):
+                return "visual-character"
+            return "visual"
+        
+        if state.get("narrator__fn_narrate_character_entry"):
+            return "character-entry"
+        
+        if state.get("narrator__fn_narrate_character_exit"):
+            return "character-exit"
+        
+        return "progress"
+        
     
     # actions
 
@@ -236,8 +285,10 @@ class SceneAnalyzationMixin:
         taken by the given actor.
         """
         
-            # deep analysis is only available if the scene has a layered history
-        deep_analysis = self.deep_analysis and self.layered_history_available
+        # deep analysis is only available if the scene has a layered history
+        # and context investigation is enabled
+        deep_analysis = (self.deep_analysis and self.context_investigation_available)
+        analysis_sub_type = await self.analyze_scene_sub_type(typ)
         
         template_vars = {
             "max_tokens": self.client.max_token_length,
@@ -248,6 +299,7 @@ class SceneAnalyzationMixin:
             "context_investigation": self.get_scene_state("context_investigation"),
             "max_content_investigations": self.deep_analysis_max_context_investigations,
             "analysis_type": typ,
+            "analysis_sub_type": analysis_sub_type,
         }
         
         await talemate.emit.async_signals.get("agent.summarization.scene_analysis.before").send(
@@ -269,7 +321,14 @@ class SceneAnalyzationMixin:
         
         if deep_analysis:
             
-            emission = SceneAnalysisDeepAnalysisEmission(agent=self, analysis=response, max_content_investigations=self.deep_analysis_max_context_investigations)
+            emission = SceneAnalysisDeepAnalysisEmission(
+                agent=self, 
+                analysis=response,
+                analysis_type=typ,
+                analysis_sub_type=analysis_sub_type,
+                character=character,
+                max_content_investigations=self.deep_analysis_max_context_investigations
+            )
             
             await talemate.emit.async_signals.get("agent.summarization.scene_analysis.before_deep_analysis").send(
                 emission

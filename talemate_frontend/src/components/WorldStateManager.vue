@@ -28,7 +28,7 @@
             <span v-if="!scene.saved" class="text-muted text-caption mr-1">Unsaved changes.</span>
             <v-chip v-if="scene && scene.data != null" size="x-small" prepend-icon="mdi-file" label class="text-caption text-muted">{{ scene.data.filename }}</v-chip>
             <v-spacer></v-spacer>
-            <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { generationOptions = opt }" />
+            <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { updateGenerationOptions(opt) }" />
         </v-toolbar>
 
         <v-window v-model="tab">
@@ -234,6 +234,9 @@ export default {
             generationOptions: {},
             worldEntries: {},
             worldStates: {},
+
+            // load writing style template
+            loadWritingStyleTemplate: true,
         }
     },
     emits: [
@@ -326,6 +329,11 @@ export default {
     ],
     methods: {
 
+        updateGenerationOptions(options) {
+            this.generationOptions = options;
+        },
+
+    
         emitEditorState(tab, meta) {
 
             if(meta === undefined) {
@@ -436,6 +444,7 @@ export default {
             this.deferSelectedCharacter = null;
             this.deferedNavigation = null;
             this.tab = 'scene';
+            this.loadWritingStyleTemplate = true;
 
             if(this.$refs.characters) {
                 this.$refs.characters.reset()
@@ -593,6 +602,12 @@ export default {
             }
             else if (message.action == 'templates') {
                 this.templates = message.data;
+                this.$nextTick(() => {
+                    if(this.loadWritingStyleTemplate) {
+                        this.$refs.generationOptions.loadWritingStyle(this.scene.data.writing_style_template);
+                        this.loadWritingStyleTemplate = false;
+                    }
+                });
             }
             else if(message.action === 'character_deleted') {
                 this.requestCharacterList()

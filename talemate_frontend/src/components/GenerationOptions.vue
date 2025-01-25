@@ -129,6 +129,9 @@ export default {
         }
     },
     methods: {
+        loadWritingStyle(template_uid) {
+            this.generationOptions.writing_style = this.templates.by_type.writing_style[template_uid] || null;
+        },
         openTemplates() {
             this.showManagerEditor("templates");
         },

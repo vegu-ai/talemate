@@ -56,12 +56,15 @@ def set_processing(fn):
     @_set_processing
     @wraps(fn)
     async def narration_wrapper(self, *args, **kwargs):
+        agent_context = active_agent.get()
         emission: NarratorAgentEmission = NarratorAgentEmission(agent=self)
-        
+
+        if self.content_use_writing_style:
+            self.set_context_states(writing_style=self.scene.writing_style)
+
         await talemate.emit.async_signals.get("agent.narrator.before_generate").send(emission)
         await talemate.emit.async_signals.get("agent.narrator.inject_instructions").send(emission)
         
-        agent_context = active_agent.get()
         agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
         
         response = await fn(self, *args, **kwargs)
@@ -129,9 +132,28 @@ class NarratorAgent(
                 label="Auto Break Repetition",
                 description="Will attempt to automatically break AI repetition.",
             ),
+            "content": AgentAction(
+                enabled=True,
+                can_be_disabled=False,
+                container=True,
+                label="Content",
+                icon="mdi-script-text",
+                description="Content control settings",
+                config={
+                    "use_writing_style": AgentActionConfig(
+                        type="bool",
+                        label="Use Writing Style",
+                        description="Use the writing style selected in the scene settings",
+                        value=True,
+                    ),
+                }
+            ),
             "narrate_time_passage": AgentAction(
                 enabled=True,
+                container=True,
+                can_be_disabled=True,
                 label="Narrate Time Passage",
+                icon="mdi-clock-fast",
                 description="Whenever you indicate passage of time, narrate right after",
                 config={
                     "ask_for_prompt": AgentActionConfig(
@@ -144,7 +166,10 @@ class NarratorAgent(
             ),
             "narrate_dialogue": AgentAction(
                 enabled=False,
+                container=True,
+                can_be_disabled=True,
                 label="Narrate after Dialogue",
+                icon="mdi-forum-plus-outline",
                 description="Narrator will get a chance to narrate after every line of dialogue",
                 config={
                     "ai_dialog": AgentActionConfig(
@@ -164,12 +189,6 @@ class NarratorAgent(
                         min=0.0,
                         max=1.0,
                         step=0.1,
-                    ),
-                    "generate_dialogue": AgentActionConfig(
-                        type="bool",
-                        label="Allow Dialogue in Narration",
-                        description="Allow the narrator to generate dialogue in narration",
-                        value=False,
                     ),
                 },
             ),
@@ -212,9 +231,9 @@ class NarratorAgent(
         return self.actions["narrate_dialogue"].config["player_dialog"].value
     
     @property
-    def narrate_dialogue_generate_dialogue(self) -> bool:
-        return self.actions["narrate_dialogue"].config["generate_dialogue"].value
-
+    def content_use_writing_style(self) -> bool:
+        return self.actions["content"].config["use_writing_style"].value
+    
     def clean_result(self, result:str, ensure_dialog_format:bool=True, force_narrative:bool=True) -> str:
         """
         Cleans the result of a narration

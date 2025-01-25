@@ -97,7 +97,7 @@ class WorldStateManager:
         scene = self.scene
         if not hasattr(scene, "_world_state_templates"):
             scene._world_state_templates = world_state_templates.Collection.load()
-            # log.debug("loaded world state templates", templates=scene._world_state_templates)
+            log.warning("loaded world state templates", templates=scene._world_state_templates)
         return scene._world_state_templates
 
     def __init__(self, scene: "Scene"):
@@ -899,11 +899,13 @@ class WorldStateManager:
         self,
         immutable_save: bool = False,
         experimental: bool = False,
+        writing_style_template: str | None = None,
     ) -> "Scene":
 
         scene = self.scene
         scene.immutable_save = immutable_save
         scene.experimental = experimental
+        scene.writing_style_template = writing_style_template
 
         return scene
 

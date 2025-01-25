@@ -21,6 +21,7 @@ import talemate.emit.async_signals as async_signals
 import talemate.events as events
 import talemate.save as save
 import talemate.util as util
+import talemate.world_state.templates as world_state_templates
 from talemate.agents.context import active_agent
 from talemate.client.context import ClientContext, ConversationContext
 from talemate.config import Config, SceneConfig, load_config
@@ -798,6 +799,7 @@ class Scene(Emitter):
         self.max_tokens = 2048
         self.next_actor = None
         self.title = ""
+        self.writing_style_template = None
 
         self.experimental = False
         self.help = ""
@@ -826,7 +828,6 @@ class Scene(Emitter):
         self.agent_state = {}
         self.ts = "PT0S"
         self.active = False
-
         self.Actor = Actor
         self.Player = Player
         self.Character = Character
@@ -949,6 +950,19 @@ class Scene(Emitter):
     @property
     def conversation_format(self):
         return self.get_helper("conversation").agent.conversation_format
+
+    @property
+    def writing_style(self) -> world_state_templates.WritingStyle | None:
+        
+        if not self.writing_style_template:
+            return None
+        
+        try:
+            group_uid, template_uid = self.writing_style_template.split("__", 1)
+            return self._world_state_templates.find_template(group_uid, template_uid)
+        except ValueError:
+            return None
+        
 
     def set_description(self, description: str):
         self.description = description
@@ -1944,6 +1958,7 @@ class Scene(Emitter):
                 "description": self.description,
                 "intro": self.intro,
                 "help": self.help,
+                "writing_style_template": self.writing_style_template,
             },
         )
 
@@ -2537,6 +2552,7 @@ class Scene(Emitter):
             "ts": scene.ts,
             "help": scene.help,
             "experimental": scene.experimental,
+            "writing_style_template": scene.writing_style_template,
         }
 
         if not auto:
@@ -2659,6 +2675,7 @@ class Scene(Emitter):
             "help": scene.help,
             "experimental": scene.experimental,
             "restore_from": scene.restore_from,
+            "writing_style_template": scene.writing_style_template,
         }
 
     @property

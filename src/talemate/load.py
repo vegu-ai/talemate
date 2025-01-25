@@ -219,6 +219,7 @@ async def load_scene_from_data(
     scene.help = scene_data.get("help", "")
     scene.restore_from = scene_data.get("restore_from", "")
     scene.title = scene_data.get("title", "")
+    scene.writing_style_template = scene_data.get("writing_style_template", "")
 
     # reset = True
 

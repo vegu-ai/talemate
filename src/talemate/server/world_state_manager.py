@@ -159,6 +159,7 @@ class SceneOutlinePayload(pydantic.BaseModel):
 class SceneSettingsPayload(pydantic.BaseModel):
     experimental: bool = False
     immutable_save: bool = False
+    writing_style_template: str | None = None
 
 
 class SaveScenePayload(pydantic.BaseModel):

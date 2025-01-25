@@ -310,6 +310,7 @@ class ReinforcementMessage(SceneMessage):
 class ContextInvestigationMessage(SceneMessage):
     typ = "context_investigation"
     source: str = "ai"
+    sub_type: str | None = None
     
     def __str__(self):
         return (

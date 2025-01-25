@@ -11,6 +11,7 @@ import talemate.emit.async_signals
 from talemate.exceptions import GenerationCancelled
 from talemate.world_state.templates import GenerationOptions
 from talemate.emit import emit
+from talemate.context import handle_generation_cancelled
 import talemate.util as util
 
 if TYPE_CHECKING:
@@ -420,9 +421,10 @@ class LayeredHistoryMixin:
             log.error("summarize_to_layered_history", error=exc, layer="base")
             emit("status", status="error", message="Layered history update failed.")
             return
-        except GenerationCancelled:
+        except GenerationCancelled as e:
             log.info("Generation cancelled, stopping rebuild of historical layered history")
             emit("status", message="Rebuilding of layered history cancelled", status="info")
+            handle_generation_cancelled(e)
             return
             
         # process layers
@@ -460,7 +462,8 @@ class LayeredHistoryMixin:
             log.error("summarize_to_layered_history", error=exc, layer="subsequent")
             emit("status", status="error", message="Layered history update failed.")
             return
-        except GenerationCancelled:
+        except GenerationCancelled as e:
             log.info("Generation cancelled, stopping rebuild of historical layered history")
             emit("status", message="Rebuilding of layered history cancelled", status="info")
+            handle_generation_cancelled(e)
             return

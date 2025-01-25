@@ -188,3 +188,6 @@ class Emitter:
 
     def player_message(self, message: str, character: Character):
         self.emit("player", message, character=character)
+        
+    def context_investigation_message(self, message: str):
+        self.emit("context_investigation", message)

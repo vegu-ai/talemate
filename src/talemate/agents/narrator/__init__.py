@@ -29,6 +29,8 @@ from talemate.instance import get_agent
 
 from talemate.agents.registry import register
 
+from .websocket_handler import NarratorWebsocketHandler
+
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
 
@@ -86,6 +88,8 @@ class NarratorAgent(
 
     agent_type = "narrator"
     verbose_name = "Narrator"
+    
+    websocket_handler = NarratorWebsocketHandler
 
     def __init__(
         self,
@@ -447,8 +451,8 @@ class NarratorAgent(
         return response
     
     @set_processing
-    @store_context_state('character', visual_narration=True)
-    async def narrate_character(self, character):
+    @store_context_state('character', 'narrative_direction', visual_narration=True)
+    async def narrate_character(self, character:"Character", narrative_direction: str = None):
         """
         Narrate a specific character
         """
@@ -462,6 +466,7 @@ class NarratorAgent(
                 "character": character,
                 "max_tokens": self.client.max_token_length,
                 "extra_instructions": self.extra_instructions,
+                "narrative_direction": narrative_direction,
             },
         )
 
@@ -572,6 +577,17 @@ class NarratorAgent(
 
         response = self.clean_result(response.strip())
         return response
+
+    async def narrate_environment(self, narrative_direction: str = None):
+        """
+        Narrate the environment
+        
+        Wraps narrate_after_dialogue with the player character
+        as the perspective character
+        """
+        
+        pc = self.scene.get_player_character()
+        return await self.narrate_after_dialogue(pc, narrative_direction)
 
     @set_processing
     @store_context_state('narrative_direction', 'character')

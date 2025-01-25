@@ -3,7 +3,6 @@ import json
 import os
 
 import structlog
-from dotenv import load_dotenv
 
 import talemate.events as events
 import talemate.instance as instance
@@ -11,7 +10,6 @@ from talemate import Actor, Character, Player, Scene
 from talemate.character import deactivate_character
 from talemate.config import load_config
 from talemate.context import SceneIsLoading
-from talemate.emit import emit
 from talemate.exceptions import UnknownDataSpec
 from talemate.game.state import GameState
 from talemate.scene_message import (

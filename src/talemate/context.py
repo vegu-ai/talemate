@@ -3,7 +3,7 @@ from contextvars import ContextVar
 import pydantic
 import structlog
 
-from talemate.exceptions import SceneInactiveError
+from talemate.exceptions import SceneInactiveError, GenerationCancelled
 
 __all__ = [
     "assert_active_scene",
@@ -15,6 +15,7 @@ __all__ = [
     "RerunContext",
     "ActiveScene",
     "Interaction",
+    "handle_generation_cancelled",
 ]
 
 log = structlog.get_logger(__name__)
@@ -30,6 +31,14 @@ scene_is_loading = ContextVar("scene_is_loading", default=None)
 rerun_context = ContextVar("rerun_context", default=None)
 active_scene = ContextVar("active_scene", default=None)
 interaction = ContextVar("interaction", default=InteractionState())
+
+def handle_generation_cancelled(exc: GenerationCancelled):
+    # set cancel_requested to False on the active_scene
+    
+    scene = active_scene.get()
+    
+    if scene:
+        scene.cancel_requested = False
 
 
 class SceneIsLoading:

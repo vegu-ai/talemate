@@ -168,6 +168,7 @@
                   @open-world-state-manager="onOpenWorldStateManager"
                   :messageInput="messageInput"
                   :agent-status="agentStatus"
+                  :app-busy="busy"
                   :worldStateTemplates="worldStateTemplates"
                   :playerCharacterName="getPlayerCharacterName()"
                   :passiveCharacters="passiveCharacters"
@@ -185,7 +186,7 @@
                   @keydown.enter.prevent="sendMessage"
                   @keydown.tab.prevent="cycleActAs"
                   :hint="messageInputLongHint()"
-                  :disabled="isInputDisabled()"
+                  :disabled="busy"
                   :loading="autocompleting"
                   :prepend-inner-icon="messageInputIcon()"
                   :color="messageInputColor()">

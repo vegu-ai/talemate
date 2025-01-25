@@ -1,0 +1,274 @@
+<template>
+    <v-menu>
+        <template v-slot:activator="{ props }">
+            <v-btn class="hotkey mx-3" v-bind="props" :disabled="disabled" color="primary" icon>
+                <v-icon>mdi-script-text</v-icon>
+            </v-btn>
+        </template>
+        <v-list>
+            <v-list-subheader>Narrator Actions</v-list-subheader>
+
+            <!-- NEW (defined in template) -->
+
+            <!-- Progress Story -->
+            <v-list-item 
+                density="compact"
+                @click="actionProgress" 
+                prepend-icon="mdi-script-text-play"
+            >
+                <v-list-item-title>Progress Story <v-chip variant="text" color="highlight5" class="ml-1" size="x-small">Ctrl: Provide direction</v-chip></v-list-item-title>
+            </v-list-item>
+
+            <!-- Environment -->
+            <v-list-item 
+                density="compact"
+                @click="actionNarrateEnvironment" 
+                prepend-icon="mdi-waves"
+            >
+                <v-list-item-title>Narrate Environment <v-chip variant="text" color="highlight5" class="ml-1" size="x-small">Ctrl: Provide direction</v-chip></v-list-item-title>
+            </v-list-item>
+
+            <!-- Look at Scene -->
+            <v-list-item 
+                density="compact"
+                @click="actionLookAtScene" 
+                prepend-icon="mdi-image-filter-hdr"
+            >
+                <v-list-item-title>Look at Scene <v-chip variant="text" color="highlight5" class="ml-1" size="x-small">Ctrl: Provide direction</v-chip></v-list-item-title>
+            </v-list-item>
+
+            <!-- Look at NPCs -->
+            <v-list-item 
+                v-for="(npc_name, index) in npcCharacters" 
+                :key="index"
+                @click="(ev) => { actionLookAtCharacter(ev, null, {character: npc_name}) }" 
+                prepend-icon="mdi-account-eye"
+            >
+                <v-list-item-title>Look at {{ npc_name }} <v-chip variant="text" color="highlight5" class="ml-1" size="x-small">Ctrl: Provide direction</v-chip></v-list-item-title>
+            </v-list-item>
+
+            <!-- Query -->
+            <v-list-item 
+                density="compact"
+                @click="() => { actionQuery() }" 
+                prepend-icon="mdi-crystal-ball"
+            >
+                <v-list-item-title>Query</v-list-item-title>
+                <v-list-item-subtitle>Ask a question or give a task to the narrator</v-list-item-subtitle>
+            </v-list-item>
+
+
+
+            <!-- OLD - DEPRECATE
+            <v-list-item density="compact" v-for="(option, index) in actions" :key="index"
+                @click="(option.fn === undefined ? sendHotButtonMessage('!' + option.value) : option.fn())"
+                :prepend-icon="option.icon">
+                <v-list-item-title>{{ option.title }}</v-list-item-title>
+                <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item density="compact" v-for="npc_name in npc_characters" :key="npc_name"
+                @click="sendHotButtonMessage('!narrate_c:' + npc_name)" prepend-icon="mdi-eye">
+                <v-list-item-title>Look at {{ npc_name }}</v-list-item-title>
+                <v-list-item-subtitle>Look at a character</v-list-item-subtitle>
+            </v-list-item>
+             -->
+        </v-list>
+    </v-menu>
+
+    <!-- request input for query action -->
+    <RequestInput ref="actionQueryInput" title="Narrator Query"
+        :instructions="'Ask a question or give a task to the narrator.\n\nThis is not a permanent instruction.'"
+        input-type="multiline" icon="mdi-crystal-ball" :size="750" @continue="actionQuery" />
+
+    <!-- narrative direction input -->
+    <RequestInput ref="narrativeDirectionInput" title="Narrator Prompt"
+        :instructions="'Prompt direction - provide an instruction for the narrator to follow for this action'"
+        input-type="multiline" icon="mdi-script-text-play" :size="750" @continue="applyDirection" />
+
+</template>
+
+<script>
+import RequestInput from './RequestInput.vue';
+
+export default {
+    name: "SceneToolsNarrator",
+    components: {
+        RequestInput,
+    },
+    props: {
+        npcCharacters: Array,
+        disabled: Boolean,
+    },
+    inject: ['sendHotButtonMessage', 'getWebsocket'],
+    data() {
+        return {
+            actions: [
+                {
+                    value: "narrate_progress",
+                    title: "Progress Story",
+                    icon: "mdi-script-text-play",
+                    description: "Progress the story"
+                },
+                {
+                    value: "narrate_progress_directed",
+                    title: "Progress Story with Direction",
+                    icon: "mdi-script-text-play",
+                    description: "Progress the story (Provide prompt)"
+                },
+                {
+                    value: "narrate_dialogue",
+                    title: "Narrate Environment",
+                    icon: "mdi-waves",
+                    description: "Describe visuals, smells and sounds based on the recent dialogue."
+                },
+                {
+                    fn: this.actionQuery,
+                    title: "Query",
+                    icon: "mdi-crystal-ball",
+                    description: "Ask the narrator a question, or instruct to tell something."
+                },
+                {
+                    value: "narrate",
+                    title: "Look at Scene",
+                    icon: "mdi-table-headers-eye",
+                    description: "Look at the current scene"
+                }
+            ],
+        }
+    },
+    methods: {
+
+        requestDirection(params) {
+            this.$nextTick(() => {
+                this.$refs.narrativeDirectionInput.openDialog(params);
+            });
+        },
+
+        applyDirection(input, params){
+            let callback = this[`action${params.action}`];
+            if(callback){
+                callback({}, input, params);
+            }
+        },
+
+        // Narrator actions
+
+        /**
+         * Send a message to the narrator to query something or give a one-time instruction.
+         * @method actionQuery
+         * @param {string} input - The query or instruction to send to the narrator. If not provided, open the dialog.
+         */
+
+        actionQuery(input) {
+
+            if (!input) {
+                this.$refs.actionQueryInput.openDialog();
+                return;
+            }
+
+            this.getWebsocket().send(JSON.stringify(
+                {
+                    type: 'narrator',
+                    action: 'query',
+                    query: input,
+                }
+            ));
+
+        },
+
+        /**
+         * Progress the story
+         * @method actionProgress
+         * @param {string} narrativeDirection - The direction to progress the story in
+         */
+
+        actionProgress(ev, narrativeDirection="") {
+
+            if (ev.ctrlKey) {
+                this.requestDirection({action: 'Progress'});
+                return;
+            }
+
+            this.getWebsocket().send(JSON.stringify(
+                {
+                    type: 'narrator',
+                    action: 'progress',
+                    narrative_direction: narrativeDirection || "",
+                }
+            ));
+        },
+
+        /**
+         * Narrate the environment
+         * @method actionNarrateEnvironment
+         * @param {string} narrativeDirection - The direction to narrate the environment in
+         */
+
+        actionNarrateEnvironment(ev, narrativeDirection="") {
+
+            if (ev.ctrlKey) {
+                this.requestDirection({action: 'NarrateEnvironment'});
+                return;
+            }
+
+            this.getWebsocket().send(JSON.stringify(
+                {
+                    type: 'narrator',
+                    action: 'narrate_environment',
+                    narrative_direction: narrativeDirection || "",
+                }
+            ));
+
+        },
+
+        /**
+         * Look at the scene
+         * @method actionLookAtScene
+         * @param {string} narrativeDirection - The direction to narrate the scene in
+         */
+
+        actionLookAtScene(ev, narrativeDirection="") {
+
+            if (ev.ctrlKey) {
+                this.requestDirection({action: 'LookAtScene'});
+                return;
+            }
+
+            this.getWebsocket().send(JSON.stringify(
+                {
+                    type: 'narrator',
+                    action: 'look_at_scene',
+                    narrative_direction: narrativeDirection || "",
+                }
+            ));
+        },
+
+        /**
+         * Look at a character
+         * @method actionLookAtCharacter
+         * @param {string} character - The character to look at
+         * @param {string} narrativeDirection - The direction to narrate the character in
+         */
+
+        actionLookAtCharacter(ev, narrativeDirection="", params) {
+            
+            if (ev.ctrlKey) {
+                this.requestDirection({action: 'LookAtCharacter', ...params});
+                return;
+            }
+
+            this.getWebsocket().send(JSON.stringify(
+                {
+                    type: 'narrator',
+                    action: 'look_at_character',
+                    character: params.character,
+                    narrative_direction: narrativeDirection || "",
+                }
+            ));
+        },
+
+
+    }
+}
+
+</script>

@@ -2392,6 +2392,7 @@ class Scene(Emitter):
                 signal_game_loop = False
                 skip_to_player = True
                 self.next_actor = None
+                self.cancel_requested = False
                 self.log.warning("Generation cancelled, skipping to player")
             except TalemateInterrupt:
                 raise
@@ -2442,6 +2443,7 @@ class Scene(Emitter):
                 self.saved = False
                 self.emit_status()
             except GenerationCancelled:
+                self.cancel_requested = False
                 continue
             except TalemateInterrupt:
                 raise

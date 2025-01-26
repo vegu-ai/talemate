@@ -82,15 +82,9 @@ They may be instructions on how the character should act or simply add some cont
 (Internal notes - historic context: {{ layered_history_investigation }})
 {% endif -%}
 {% endif -%}
-{% if rerun_context and rerun_context.direction -%}
-{% if rerun_context.method == 'replace' -%}
-# Final instructions for generating the next line of dialogue: {{ rerun_context.direction }}
-{% elif rerun_context.method == 'edit' and rerun_context.message -%}
-# Edit and respond with your changed version of the following line of dialogue: {{ rerun_context.message|condensed }}
 
-# Requested changes: {{ rerun_context.direction }}
-{% endif -%}
-{% endif -%}
+{% with direct=direct_instruction, character=talking_character %}{% include "rerun-context.jinja2" %}{% endwith %}
+
 {% if director_guidance %}# {{ talking_character.name }}'s next action: {{ director_guidance|condensed }}{% endif %}
 {% if direct_instruction -%}# {{ talking_character.name }}'s next action: {{ direct_instruction|condensed }}. You must not add additional actions.{% endif -%}
 {{ bot_token }}{{ talking_character.name }}:{{ partial_message }}

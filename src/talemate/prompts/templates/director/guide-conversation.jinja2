@@ -33,7 +33,9 @@ Following this moment:
 ```
 {% endif %}
 
-{% if character_direction %}
+{% if rerun_context and rerun_context.direction %}
+{% with original_instructions=character_direction %}{% include "guide-conversation-rerun-context.jinja2" %}{% endwith %}
+{% elif character_direction %}
 The writer was given the following direction: "{{ character_direction }}". Analyze the direction and explain how it affects {{ character.name }}'s next action/dialogue.
 {% endif %}
 

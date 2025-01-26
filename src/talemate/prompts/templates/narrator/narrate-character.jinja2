@@ -19,7 +19,9 @@ You must provide a confident and decisive answer to the question.
 
 Respect the scene progression, your answer must be a brief summarized visual description of {{ character.name }}'s appearance at the current point in the scene. 
 
-Your new narration should be 2 to 3 sentences in length.
-{{ extra_instructions }}
+{% include "narrative-direction.jinja2" %}
+
+Your new narration should be 2 to 3 sentences in length. {{ extra_instructions }}
+
 {% include "rerun-context.jinja2" -%}
 <|CLOSE_SECTION|>

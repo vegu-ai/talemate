@@ -57,17 +57,9 @@
                                 3 days layer
                             </span>
                         </div>
-                        <div class="mt-3">
-                            <!-- context investigations, similar to director messages, with both chip and text -->
-
-                            <v-chip :color="getColor('context_investigation_messages', config.context_investigation_messages.color)">
-                                <v-icon class="mr-2">mdi-text-search</v-icon>
-                                <span>Context Investigation</span>
-                            </v-chip>
-                        </div>
                         <div class="mt-3" :style="buildCssStyles('context_investigation_messages', config.context_investigation_messages)">
                             <span>
-                                "The fox was last seen in the forest"
+                                Context Investigation - "The fox was last seen in the forest"
                             </span>
                         </div>
                     </div>
@@ -125,7 +117,7 @@ export default {
                 "character_messages": "#FFFFFF",
                 "director_messages": "#FF5722",
                 "time_messages": "#FFECB3",
-                "context_investigation_messages": "#607D8B",
+                "context_investigation_messages": "#FFE0B2",
             },
             typLabelMap: {
                 "narrator_messages": "Narrator Messages",

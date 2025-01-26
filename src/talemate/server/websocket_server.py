@@ -482,6 +482,10 @@ class WebsocketHandler(Receiver):
         self.queue_put(
             {
                 "type": "context_investigation",
+                "sub_type": emission.message_object.sub_type if emission.message_object else None,
+                "source_agent": emission.message_object.source_agent if emission.message_object else None,
+                "source_function": emission.message_object.source_function if emission.message_object else None,
+                "source_arguments": emission.message_object.source_arguments if emission.message_object else None,
                 "message": emission.message,
                 "id": emission.id,
                 "flags": (

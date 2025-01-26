@@ -56,22 +56,6 @@
                 <v-list-item-title>Query</v-list-item-title>
                 <v-list-item-subtitle>Ask a question or give a task to the narrator</v-list-item-subtitle>
             </v-list-item>
-
-
-
-            <!-- OLD - DEPRECATE
-            <v-list-item density="compact" v-for="(option, index) in actions" :key="index"
-                @click="(option.fn === undefined ? sendHotButtonMessage('!' + option.value) : option.fn())"
-                :prepend-icon="option.icon">
-                <v-list-item-title>{{ option.title }}</v-list-item-title>
-                <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
-            </v-list-item>
-            <v-list-item density="compact" v-for="npc_name in npc_characters" :key="npc_name"
-                @click="sendHotButtonMessage('!narrate_c:' + npc_name)" prepend-icon="mdi-eye">
-                <v-list-item-title>Look at {{ npc_name }}</v-list-item-title>
-                <v-list-item-subtitle>Look at a character</v-list-item-subtitle>
-            </v-list-item>
-             -->
         </v-list>
     </v-menu>
 
@@ -99,7 +83,7 @@ export default {
         npcCharacters: Array,
         disabled: Boolean,
     },
-    inject: ['sendHotButtonMessage', 'getWebsocket'],
+    inject: ['getWebsocket'],
     data() {
         return {
             actions: [

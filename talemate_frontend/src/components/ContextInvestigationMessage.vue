@@ -1,75 +1,77 @@
 <template>
-  <div>
-    <div class="context-investigation-container" v-if="show && minimized" >
-      <v-chip closable :color="getMessageColor('context_investigation', null)" class="clickable" @click:close="deleteMessage()" :disabled="uxLocked">
-        <v-icon class="mr-2">{{ icon }}</v-icon>
-        <span @click="toggle()">Context Investigation</span>
-      </v-chip>
-    </div>
-    <v-alert @click="toggle()" v-else-if="show" class="clickable" variant="text" type="info" :icon="icon" elevation="0" density="compact" @click:close="deleteMessage()" :color="getMessageColor('context_investigation', null)">
-      <span>{{ text }}</span>
-      <v-sheet color="transparent">
-        <v-btn color="secondary" variant="text" size="x-small" prepend-icon="mdi-eye-off" @click.stop="openAppConfig('appearance', 'scene')">Hide these messages</v-btn>
-        <v-btn color="primary" variant="text" size="x-small" prepend-icon="mdi-cogs" @click.stop="openAgentSettings('conversation', 'investigate_context')">Disable context Investigations.</v-btn>
-      </v-sheet>
+  <div v-if="show">
+    <v-alert @click="toggle()" class="clickable" variant="text" type="info" :icon="icon" elevation="7" density="compact" :color="getMessageColor('context_investigation', null)">
+      <template v-slot:close>
+        <v-btn size="x-small" icon @click="deleteMessage" :disabled="uxLocked">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </template>
+      <v-alert-title v-if="title !== ''" class="muted-title text-caption">{{ title }}</v-alert-title>
+      <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(styleHandlerFromPart(part))">
+        {{ part.text }}
+      </span>
     </v-alert>
   </div>
 </template>
   
 <script>
+import { parseText } from '@/utils/textParser';
+
 export default {
   name: 'ContextInvestigationMessage',
   data() {
     return {
       show: true,
-      minimized: true
     }
   },
   computed: {
+    title() {
+      switch(this.message.sub_type) {
+        case "visual-character":
+          return `Observing ${this.message.source_arguments.character}`;
+        case "visual-scene":
+          return "Observing the moment.";
+        case "query":
+          return this.message.source_arguments.query;
+      }
+      return "";
+    },
     icon() {
+      switch(this.message.sub_type) {
+        case "visual-character":
+          return "mdi-account-eye";
+        case "visual-scene":
+          return "mdi-image-frame";
+        case "query":
+          return "mdi-text-search";
+      }
       return "mdi-text-search";
+    },
+    parts() {
+      return parseText(this.message.text);
     }
   },
-  props: ['text', 'message_id', 'uxLocked'],
-  inject: ['requestDeleteMessage', 'getMessageStyle', 'getMessageColor', 'openAppConfig', 'openAgentSettings'],
+  props: {
+    message: Object,
+    uxLocked: Boolean,
+  },
+  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'getMessageColor'],
   methods: {
+    styleHandlerFromPart() {
+      return 'context_investigation';
+    },
     toggle() {
       this.minimized = !this.minimized;
     },
     deleteMessage() {
-      this.requestDeleteMessage(this.message_id);
+      this.requestDeleteMessage(this.message.id);
     }
   }
 }
 </script>
   
 <style scoped>
-.highlight {
-  font-style: italic;
-  margin-left: 2px;
-  margin-right: 2px;
-}
-
-.clickable {
-  cursor: pointer;
-}
-
-.highlight:before {
-  --content: "*";
-}
-
-.highlight:after {
-  --content: "*";
-}
-
-.context-investigation-container {
-  margin-left: 10px;
-}
-
-.context-investigation-text::after {
-  content: '"';
-}
-.context-investigation-text::before {
-  content: '"';
+.muted-title {
+  opacity: 0.75;
 }
 </style>

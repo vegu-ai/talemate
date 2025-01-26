@@ -33,7 +33,6 @@ class set_loading:
 
     def __call__(self, fn):
         async def wrapper(*args, **kwargs):
-            log.warning("ENTERING WRAPPER", args=args, kwargs=kwargs)
             if self.set_busy:
                 status_data = {}
                 if self.cancellable:
@@ -62,7 +61,6 @@ class set_loading:
         
         if self.as_async:
             async def async_wrapper(*args, **kwargs):
-                log.warning("ENTERING ASYNC WRAPPER", args=args, kwargs=kwargs)
                 return asyncio.create_task(wrapper(*args, **kwargs))
 
             return async_wrapper

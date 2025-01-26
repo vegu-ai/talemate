@@ -71,8 +71,10 @@ class NarratorWebsocketHandler(Plugin):
         
         narration = await self.narrator.narrate_query(**payload.model_dump())
         message: ContextInvestigationMessage = ContextInvestigationMessage(
-            narration, source=f"narrator.narrate_query:{payload.query.replace(':', '-')}", sub_type="query"
+            narration,  sub_type="query"
         )
+        message.set_source("narrator", "narrate_query", **payload.model_dump())
+        
         
         emit("context_investigation", message=message)
         self.scene.push_history(message)
@@ -89,8 +91,9 @@ class NarratorWebsocketHandler(Plugin):
         narration = await self.narrator.narrate_scene(narrative_direction=payload.narrative_direction)
         
         message: ContextInvestigationMessage = ContextInvestigationMessage(
-            narration, source=f"narrator.narrate_scene", sub_type="visual"
+            narration, sub_type="visual-scene"
         )
+        message.set_source("narrator", "narrate_scene", **payload.model_dump())
         
         emit("context_investigation", message=message)
         self.scene.push_history(message)
@@ -111,8 +114,9 @@ class NarratorWebsocketHandler(Plugin):
         )
         
         message: ContextInvestigationMessage = ContextInvestigationMessage(
-            narration, source=f"narrator.narrate_character:{payload.character.replace(':', '-')}", sub_type="visual"
+            narration, sub_type="visual-character"
         )
+        message.set_source("narrator", "narrate_character", **payload.model_dump())
         
         emit("context_investigation", message=message)
         self.scene.push_history(message)

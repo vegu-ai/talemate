@@ -1745,7 +1745,7 @@ class Scene(Emitter):
 
         popped_reinforcement_messages = []
 
-        while isinstance(message, (ReinforcementMessage, ContextInvestigationMessage)):
+        while isinstance(message, (ReinforcementMessage,)):
             popped_reinforcement_messages.append(self.history.pop())
             message = self.history[idx]
 
@@ -1768,6 +1768,9 @@ class Scene(Emitter):
         elif isinstance(message, DirectorMessage):
             self.history.pop()
             await self._rerun_director_message(message)
+        elif isinstance(message, ContextInvestigationMessage):
+            self.history.pop()
+            await self._rerun_context_investigation_message(message)
         else:
             return
 
@@ -1893,6 +1896,37 @@ class Scene(Emitter):
         question, character_name = message.source.split(":")
 
         await world_state_agent.update_reinforcement(question, character_name)
+
+    async def _rerun_context_investigation_message(self, message):
+        emit("remove_message", "", id=message.id)
+        
+        agent_name:str = message.source_agent
+        function_name:str = message.source_function
+        arguments:dict = message.source_arguments
+        
+        log.info(f"Rerunning context investigation message: {message} [{message.id}]", agent=agent_name, function=function_name, arguments=arguments)
+        
+        if not agent_name or not function_name:
+            log.error(f"Could not find agent or function for context investigation message", source=message.source)
+            return
+        
+        agent = self.get_helper(agent_name)
+        
+        if not agent:
+            log.error(f"Could not find agent {agent_name} for context investigation message", source=message.source)
+            return
+        
+        fn = getattr(agent.agent, function_name, None)
+        
+        if not fn:
+            log.error(f"Could not find function {function_name} for agent {agent_name} for context investigation message", source=message.source)
+            return
+        
+        message.message = await fn(*arguments)
+        
+        self.push_history(message)
+        emit("context_investigation", message)
+        
 
     def delete_message(self, message_id: int):
         """

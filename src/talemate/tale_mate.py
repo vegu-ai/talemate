@@ -1902,7 +1902,7 @@ class Scene(Emitter):
         
         agent_name:str = message.source_agent
         function_name:str = message.source_function
-        arguments:dict = message.source_arguments
+        arguments:dict = message.source_arguments.copy()
         
         log.info(f"Rerunning context investigation message: {message} [{message.id}]", agent=agent_name, function=function_name, arguments=arguments)
         
@@ -1922,7 +1922,11 @@ class Scene(Emitter):
             log.error(f"Could not find function {function_name} for agent {agent_name} for context investigation message", source=message.source)
             return
         
-        message.message = await fn(*arguments)
+        # if character is in the arguments, find the character object
+        if arguments.get("character"):
+            arguments["character"] = self.get_character(arguments["character"])
+        
+        message.message = await fn(**arguments)
         
         self.push_history(message)
         emit("context_investigation", message)

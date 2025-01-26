@@ -20,8 +20,8 @@ Directions for new narration: {{ narrative }}
 These are directions and the events described have not happened yet, you are writing the narrative based on the directions.
 {% endif %}
 
-{{ extra_instructions }}
-{% include "rerun-context.jinja2" -%}
-Write 1 to 3 sentences.
+{% include "narrative-direction.jinja2" %}
+
+Write 2 to 4 sentences. {{ extra_instructions }}
 <|CLOSE_SECTION|>
 {{ bot_token }}{{ time_passed }}:

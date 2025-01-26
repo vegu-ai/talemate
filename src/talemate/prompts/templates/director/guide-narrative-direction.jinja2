@@ -1,0 +1,9 @@
+{# rerun context #}{% if rerun_context and rerun_context.direction %}
+{% with original_instructions=narrative_direction %}{% include "guide-narrative-rerun-context.jinja2" %}{% endwith %}
+{# narrative direction #}{% elif narrative_direction -%}
+The writer has been given specific instructions:
+
+```
+{{ narrative_direction }}
+```
+{% endif %}

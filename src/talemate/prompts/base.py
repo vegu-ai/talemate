@@ -427,7 +427,7 @@ class Prompt:
             else:
                 self.prompt = sectioning_handler(self)
         except jinja2.exceptions.TemplateError as e:
-            log.error("prompt.render", prompt=self.name, error=e)
+            log.exception("prompt.render", prompt=self.name, error=e)
             emit(
                 "system",
                 status="error",

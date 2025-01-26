@@ -456,7 +456,7 @@ class NarratorAgent(
         """
         Narrate a specific character
         """
-
+        
         response = await Prompt.request(
             "narrator.narrate-character",
             self.client,

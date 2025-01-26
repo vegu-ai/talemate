@@ -219,7 +219,11 @@ class SceneAnalyzationMixin:
         
         active_agent_context = active_agent.get()
         
-        fingerprint = f"{self.scene.history[-1].fingerprint}-{active_agent_context.first.fingerprint}"
+        if self.scene.history:
+            fingerprint = f"{self.scene.history[-1].fingerprint}-{active_agent_context.first.fingerprint}"
+        else:
+            fingerprint = f"START-{active_agent_context.first.fingerprint}"
+        
         
         if cached_analysis.get("fp") == fingerprint:
             return cached_analysis["guidance"]
@@ -233,7 +237,10 @@ class SceneAnalyzationMixin:
         
         active_agent_context = active_agent.get()
         
-        fingerprint = f"{self.scene.history[-1].fingerprint}-{active_agent_context.first.fingerprint}"
+        if self.scene.history:
+            fingerprint = f"{self.scene.history[-1].fingerprint}-{active_agent_context.first.fingerprint}"
+        else:
+            fingerprint = f"START-{active_agent_context.first.fingerprint}"
         
         self.set_scene_states(
             **{f"cached_analysis_{typ}": {

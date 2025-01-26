@@ -32,7 +32,7 @@ class ContextInvestigationMixin:
     @classmethod
     def add_actions(cls, summarizer):
         summarizer.actions["context_investigation"] = AgentAction(
-            enabled=True,
+            enabled=False,
             container=True,
             can_be_disabled=True,
             experimental=True,

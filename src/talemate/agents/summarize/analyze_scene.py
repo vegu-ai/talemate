@@ -86,7 +86,7 @@ class SceneAnalyzationMixin:
                     type="bool",
                     label="Deep analysis",
                     description="Perform a deep analysis of the scene. This will perform one or more context investigations, based on the initial analysis.",
-                    value=True,
+                    value=False,
                     expensive=True,
                 ),
                 "deep_analysis_max_context_investigations": AgentActionConfig(

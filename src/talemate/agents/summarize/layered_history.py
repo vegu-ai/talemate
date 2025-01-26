@@ -75,7 +75,7 @@ class LayeredHistoryMixin:
                 "chunk_size": AgentActionConfig(
                     type="number",
                     label="Chunk size",
-                    description="Within the tokens to process this will further split the text into chunks. Allowing each chunk to be treated individually. This will help retain details in the summarization.",
+                    description="Within the tokens to process this will further split the text into chunks. Allowing each chunk to be treated individually. This will help retain details in the summarization. This is number of characters, NOT tokens.",
                     value=1280,
                     min=512,
                     max=2048,

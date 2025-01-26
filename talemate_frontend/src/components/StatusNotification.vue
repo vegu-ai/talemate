@@ -1,9 +1,20 @@
 <template>
     <v-snackbar v-model="statusMessage" location="top" :color="notificationColor()" close-on-content-click :timeout="notificationTimeout()" elevation="5">
-        <v-progress-circular v-if="statusMessageType === 'busy'" indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular>
-        <v-icon v-else>{{ notificationIcon() }}</v-icon>
-        <span class="ml-2">{{ statusMessageText }}</span>
-        <v-btn v-if="cancellable" class="ml-2" size="small" color="delete" icon rounded="0" elevation="0" variant="text" @click="cancel"><v-icon>mdi-cancel</v-icon></v-btn>
+
+        <v-row no-gutters class="mb-0">
+            <v-col cols="1">
+                <v-progress-circular v-if="statusMessageType === 'busy'" indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular>
+                <v-icon v-else>{{ notificationIcon() }}</v-icon>
+            </v-col>
+            <v-col cols="8">
+                <div v-if="statusTitle" class="text-caption text-mutedheader">{{ statusTitle }}</div>
+                <div class="text-caption text-muted">{{ statusMessageText }}</div>
+            </v-col>
+            <v-col cols="3" class="text-right">
+                <v-btn v-if="cancellable" color="delete" rounded="0" elevation="0" variant="text" size="20" @click="cancel"><v-icon>mdi-cancel</v-icon></v-btn>
+            </v-col>
+        </v-row>
+
     </v-snackbar>
 </template>
 
@@ -12,6 +23,7 @@
 export default {
     data() {
         return {
+            statusTitle: '',
             statusMessage: false,
             statusMessageText: '',
             statusMessageType: '',

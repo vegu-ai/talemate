@@ -64,10 +64,6 @@ class TextGeneratorWebuiClient(ClientBase):
             # arethese needed?
             "max_new_tokens",
             "stop",
-            # talemate internal
-            # These will be removed before sending to the API
-            # but we keep them here since they are used during the prompt finalization
-            "extra_stopping_strings",
             "xtc_threshold",
             "xtc_probability",
             "dry_multiplier",
@@ -76,6 +72,10 @@ class TextGeneratorWebuiClient(ClientBase):
             "dry_sequence_breakers",
             "smoothing_factor",
             "smoothing_curve",
+            # talemate internal
+            # These will be removed before sending to the API
+            # but we keep them here since they are used during the prompt finalization
+            "extra_stopping_strings",
         ]
 
     def __init__(self, **kwargs):

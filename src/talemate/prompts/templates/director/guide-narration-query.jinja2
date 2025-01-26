@@ -10,11 +10,9 @@ Help the narrator answer the following question, using the full scene context an
 {% else %}
 Help the narrator complete the following task, using the full scene context and the scene analysis.
 {% endif %}
-{% if narrative_direction -%}
-```
-{{ narrative_direction }}
-```
-{% endif %}
+
+{% with narrative_direction=narrative_direction %}{% include "guide-narrative-direction.jinja2" %}{% endwith %}
+
 {% if last_event and not narrative_query -%}
 Current moment in the scene (use for grounding the answer, if needed):
 ```

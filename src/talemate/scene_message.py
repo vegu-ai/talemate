@@ -335,10 +335,40 @@ class ContextInvestigationMessage(SceneMessage):
     typ = "context_investigation"
     source: str = "ai"
     sub_type: str | None = None
+
+    @property
+    def character(self) -> str:
+        return self.source_arguments.get("character", "character")
+    
+    @property
+    def query(self) -> str:
+        return self.source_arguments.get("query", "query")
+    
+    @property
+    def title(self) -> str:
+        """
+        The title will differ based on sub_type
+        
+        Current sub_types:
+        
+        - visual-character
+        - visual-scene
+        - query
+        
+        A natural language title will be generated based on the sub_type
+        """
+        
+        if self.sub_type == "visual-character":
+            return f"Visual description of {self.character} in the current moment"
+        elif self.sub_type == "visual-scene":
+            return "Visual description of the current moment"
+        elif self.sub_type == "query":
+            return f"Query: {self.query}"
+        return "Internal note"
     
     def __str__(self):
         return (
-            f"# Internal note - {self.message}"
+            f"# {self.title}: {self.message}"
         )
 
     def __dict__(self) -> dict:
@@ -349,8 +379,8 @@ class ContextInvestigationMessage(SceneMessage):
     def as_format(self, format: str, **kwargs) -> str:
         if format == "movie_script":
             message = str(self)[2:]
-            return f"\n({message})\n"
-        return f"\n{self.message}\n"
+            return f"\n({message})\n".replace("*", "")
+        return f"\n{self.message}\n".replace("*", "")
 
 
 

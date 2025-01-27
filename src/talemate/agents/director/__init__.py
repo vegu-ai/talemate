@@ -19,6 +19,7 @@ from talemate.agents.base import Agent, AgentAction, AgentActionConfig, set_proc
 from talemate.agents.registry import register
 
 from talemate.agents.director.guide import GuideSceneMixin
+from talemate.agents.memory.rag import MemoryRAGMixin
 
 if TYPE_CHECKING:
     from talemate import Character
@@ -27,7 +28,12 @@ log = structlog.get_logger("talemate.agent.director")
 
 
 @register()
-class DirectorAgent(GuideSceneMixin, GameInstructionsMixin, Agent):
+class DirectorAgent(
+    GuideSceneMixin,
+    MemoryRAGMixin,
+    GameInstructionsMixin,
+    Agent
+):
     agent_type = "director"
     verbose_name = "Director"
 
@@ -128,6 +134,7 @@ class DirectorAgent(GuideSceneMixin, GameInstructionsMixin, Agent):
                 
         }
         
+        MemoryRAGMixin.add_actions(self)
         GuideSceneMixin.add_actions(self)
 
     @property

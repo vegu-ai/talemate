@@ -26,6 +26,7 @@ import talemate.emit.async_signals
 
 from talemate.agents.base import Agent, AgentAction, AgentActionConfig, set_processing, AgentEmission
 from talemate.agents.registry import register
+from talemate.agents.memory.rag import MemoryRAGMixin
 
 from .analyze_scene import SceneAnalyzationMixin
 from .context_investigation import ContextInvestigationMixin
@@ -44,6 +45,7 @@ class BuildArchiveEmission(AgentEmission):
 
 @register()
 class SummarizeAgent(
+    MemoryRAGMixin,
     LayeredHistoryMixin,
     ContextInvestigationMixin,
     # Needs to be after ContextInvestigationMixin so signals are connected in the right order
@@ -103,6 +105,7 @@ class SummarizeAgent(
         }
         
         LayeredHistoryMixin.add_actions(self)
+        MemoryRAGMixin.add_actions(self)
         SceneAnalyzationMixin.add_actions(self)
         ContextInvestigationMixin.add_actions(self)
 

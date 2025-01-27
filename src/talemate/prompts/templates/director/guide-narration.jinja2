@@ -10,6 +10,7 @@
 {% endif -%}
 {% block rendered_context -%}
 {% include "character-context.jinja2" -%}
+{% include "memory-context.jinja2" -%}
 {% endblock %}
 {# DYNAMIC INSTRUCTIONS #}
 {% if active_agent and active_agent.state.dynamic_instructions %}

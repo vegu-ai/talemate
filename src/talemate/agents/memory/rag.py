@@ -18,6 +18,7 @@ class MemoryRAGMixin:
     
     @classmethod
     def add_actions(cls, agent):
+        
         agent.actions["use_long_term_memory"] = AgentAction(
             enabled=True,
             container=True,
@@ -65,6 +66,13 @@ class MemoryRAGMixin:
                         {"label": "Medium (512)", "value": "512"},
                         {"label": "Long (1024)", "value": "1024"},
                     ]
+                ),
+                "cache": AgentActionConfig(
+                    type="bool",
+                    label="Cache",
+                    description="Cache the long term memory for faster retrieval.",
+                    note="This is a cross-agent cache, assuming they use the same options.",
+                    value=True
                 )
             },
         )
@@ -87,7 +95,51 @@ class MemoryRAGMixin:
     def long_term_memory_answer_length(self):
         return int(self.actions["use_long_term_memory"].config["answer_length"].value)
     
+    @property
+    def long_term_memory_cache(self):
+        return self.actions["use_long_term_memory"].config["cache"].value
+    
+    @property
+    def long_term_memory_cache_key(self):
+        """
+        Build the key from the various options
+        """
+        
+        parts = [
+            self.long_term_memory_retrieval_method,
+            self.long_term_memory_number_of_queries,
+            self.long_term_memory_answer_length
+        ]
+        
+        return "-".join(map(str, parts))
+    
+    
+    def connect(self, scene):
+        super().connect(scene)
+        
+        # new scene, reset cache
+        scene.rag_cache = {}
+    
     # methods
+    
+    async def rag_set_cache(self, content:list[str]):
+        self.scene.rag_cache[self.long_term_memory_cache_key] = {
+            "content": content,
+            "message_id": self.scene.history[-1].id if self.scene.history else 0 
+        }
+        
+    async def rag_get_cache(self) -> list[str] | None:
+        
+        if not self.long_term_memory_cache:
+            return None
+        
+        message_id = self.scene.history[-1].id if self.scene.history else 0
+        cache = self.scene.rag_cache.get(self.long_term_memory_cache_key)
+        
+        if cache and cache["message_id"] == message_id:
+            return cache["content"]
+        
+        return None
             
     async def rag_build(
         self, 
@@ -101,6 +153,12 @@ class MemoryRAGMixin:
 
         if not self.long_term_memory_enabled:
             return []
+        
+        cached = await self.rag_get_cache()
+        
+        if cached:
+            log.debug(f"Using cached long term memory", agent=self.agent_type, key=self.long_term_memory_cache_key)
+            return cached
 
         memory_context = ""
         retrieval_method = self.long_term_memory_retrieval_method
@@ -159,5 +217,7 @@ class MemoryRAGMixin:
             memory = instance.get_agent("memory")
             context = await memory.multi_query(history, max_tokens=500, iterate=5)
             memory_context = context
+
+        await self.rag_set_cache(memory_context)
 
         return memory_context

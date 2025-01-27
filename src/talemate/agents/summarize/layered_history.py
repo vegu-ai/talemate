@@ -82,14 +82,14 @@ class LayeredHistoryMixin:
                     step=128,
                 ),
                 "analyze_chunks": AgentActionConfig(
-                    type="boolean",
+                    type="bool",
                     label="Enable analysation",
                     description="Anlyse chunks to improve the quality of the summarization. Each chunk will be analysed individually.",
                     value=False,
                 ),
                 "response_length": AgentActionConfig(
                     type="text",
-                    label="Maximim response length",
+                    label="Maximum response length",
                     description="The maximum length of the summarization response. When analysing chunks, make sure this is big enough to hold the entire response.",
                     value="2048",
                     choices=[

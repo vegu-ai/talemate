@@ -1,5 +1,5 @@
 <|SECTION:CHARACTERS|>
-{% for character in scene.characters %}
+{# active characters #}{% for character in scene.characters %}
 ### {{ character.name }}
 {% if max_tokens > 6000 -%}
 {{ character.sheet }}
@@ -9,4 +9,10 @@
 {% endif %}
 {{ character.description }}
 {% endfor %}
+{# mentioned characters #}{% if mentioned_characters -%}
+{% for character in mentioned_characters -%}
+### {{ character.name }}
+{{ character.description }}
+{% endfor %}
+{% endif %}
 <|CLOSE_SECTION|>

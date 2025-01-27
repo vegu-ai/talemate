@@ -472,6 +472,14 @@ class SummarizeAgent(
         Summarize the given text
         """
         
+        if not extra_context:
+            extra_context = ""
+            
+        mentioned_characters: list[Character] = self.scene.parse_characters_from_text(
+            text + extra_context,
+            exclude_active=True
+        )
+        
         response = await Prompt.request(
             f"summarizer.summarize-events",
             self.client,
@@ -480,13 +488,14 @@ class SummarizeAgent(
                 "dialogue": text,
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
-                "extra_context": extra_context or "",
-                "num_extra_context": len(extra_context) if extra_context else 0,
+                "extra_context": extra_context,
+                "num_extra_context": len(extra_context),
                 "extra_instructions": extra_instructions or "",
                 "generation_options": generation_options,
                 "analyze_chunks": analyze_chunks,
                 "chunk_size": chunk_size,
                 "response_length": response_length,
+                "mentioned_characters": mentioned_characters,
             },
             dedupe_enabled=False
         )

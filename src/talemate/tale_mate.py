@@ -1408,6 +1408,28 @@ class Scene(Emitter):
             if actor.character.name.lower() in line.lower():
                 return actor.character
 
+    def parse_characters_from_text(self, text: str, exclude_active:bool=False) -> list[Character]:
+        """
+        Parse characters from a block of text
+        """
+
+        characters = []
+        text = condensed(text.lower())
+
+        # active characters
+        if not exclude_active:
+            for actor in self.actors:
+                # use regex with word boundaries to match whole words
+                if re.search(rf"\b{actor.character.name.lower()}\b", text):
+                    characters.append(actor.character)
+                    
+        # inactive characters
+        for character in self.inactive_characters.values():
+            if re.search(rf"\b{character.name.lower()}\b", text):
+                characters.append(character)
+
+        return sorted(characters, key=lambda x: len(x.name))
+
     def get_characters(self) -> Generator[Character, None, None]:
         """
         Returns a list of all characters in the scene

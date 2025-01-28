@@ -27,7 +27,7 @@
                     <v-textarea
                         v-model="config[selectedKey]"
                         :placeholder="systemPromptDefaults ? systemPromptDefaults[selectedKey] : ''"
-                        rows="5"
+                        rows="10"
                         auto-grow
                         clearable
                         @update:model-value="dropIfEmpty(selectedKey);"

@@ -151,6 +151,10 @@ class GroqConfig(BaseModel):
     api_key: Union[str, None] = None
 
 
+class DeepSeekConfig(BaseModel):
+    api_key: Union[str, None] = None
+
+
 class RunPodConfig(BaseModel):
     api_key: Union[str, None] = None
 
@@ -483,6 +487,8 @@ class Config(BaseModel):
     creator: CreatorConfig = CreatorConfig()
 
     openai: OpenAIConfig = OpenAIConfig()
+    
+    deepseek: DeepSeekConfig = DeepSeekConfig()
 
     mistralai: MistralAIConfig = MistralAIConfig()
 

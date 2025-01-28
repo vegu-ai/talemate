@@ -34,6 +34,13 @@
                         :label="labelFromValue(selected[0], tab === 'decensor')"
                     ></v-textarea>
                 </v-card-text>
+
+                
+                <v-alert v-if="tab == 'decensor'" density="compact" color="primary" variant="text">
+                    <p class="text-caption text-grey mt-4">
+                        <v-icon color="warning" class="mr-2">mdi-alert</v-icon>Only local API clients will currently make use of the <span class="text-primary">uncensored</span> prompts. A toggle will be added for more control of this in the future.
+                    </p>
+                </v-alert>
             </v-card>
 
             <v-alert v-else density="compact" color="primary" variant="text" class="mt-10">
@@ -42,8 +49,6 @@
                 </p>
                 <p class="text-caption text-grey">
                     These will be used when there are no client specific overrides configured in the client.
-
-                    Only local API clients will currently make use of the uncensored prompts. A toggle will be added for more control of this in the future.
                 </p>
             </v-alert>
         </v-col>

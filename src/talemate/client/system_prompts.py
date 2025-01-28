@@ -30,16 +30,16 @@ PROMPT_TEMPLATE_MAP = {
     
     # contains some minor attempts at keeping the LLM from generating
     # refusals to generate certain types of content
-    "roleplay_decensored": "conversation.system",
-    "narrator_decensored": "narrator.system",
-    "creator_decensored": "creator.system",
-    "director_decensored": "director.system",
-    "analyst_decensored": "world_state.system-analyst",
-    "analyst_freeform_decensored": "world_state.system-analyst-freeform",
-    "editor_decensored": "editor.system",
-    "world_state_decensored": "world_state.system-analyst",
-    "summarize_decensored": "summarizer.system",
-    "visualize_decensored": "visual.system",
+    "roleplay_decensor": "conversation.system",
+    "narrator_decensor": "narrator.system",
+    "creator_decensor": "creator.system",
+    "director_decensor": "director.system",
+    "analyst_decensor": "world_state.system-analyst",
+    "analyst_freeform_decensor": "world_state.system-analyst-freeform",
+    "editor_decensor": "editor.system",
+    "world_state_decensor": "world_state.system-analyst",
+    "summarize_decensor": "summarizer.system",
+    "visualize_decensor": "visual.system",
 }
 
 def cache_all() -> dict:
@@ -57,7 +57,7 @@ def render_prompt(kind:str, decensor:bool=False):
         return ""
     
     if decensor:
-        key = f"{kind}_decensored"
+        key = f"{kind}_decensor"
     else:
         key = kind
         

@@ -41,6 +41,12 @@
           <v-icon class="mr-1">mdi-pin</v-icon>
           Create Pin
         </v-chip>
+
+        <!-- fork scene -->
+        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered" variant="outlined" @click="forkSceneInitiate(message_id)" :disabled="uxLocked">
+          <v-icon class="mr-1">mdi-source-fork</v-icon>
+          Fork Scene
+        </v-chip>
     </v-sheet>
     <div v-else style="height:24px">
 
@@ -53,7 +59,7 @@ import { parseText } from '@/utils/textParser';
 
 export default {
   props: ['text', 'message_id', 'uxLocked'],
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle'],
+  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle'],
   computed: {
     parts() {
       return parseText(this.text);

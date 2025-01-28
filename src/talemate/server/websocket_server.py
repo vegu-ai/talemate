@@ -268,6 +268,7 @@ class WebsocketHandler(Receiver):
                 "name": client["name"],
                 "type": client["type"],
                 "enabled": client.get("enabled", True),
+                "system_prompts": client.get("system_prompts", {}),
             }
             for dfl_key in client_cls.Meta().defaults.dict().keys():
                 client_config[dfl_key] = client.get(

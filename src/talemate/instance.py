@@ -44,8 +44,12 @@ def destroy_client(name: str):
 def get_client(name: str, *create_args, **create_kwargs):
     client = CLIENTS.get(name)
 
+    system_prompts = create_kwargs.pop("system_prompts", None)
+
     if client:
         if create_kwargs:
+            if system_prompts:
+                client.set_system_prompts(system_prompts) 
             client.reconfigure(**create_kwargs)
         return client
 
@@ -53,6 +57,10 @@ def get_client(name: str, *create_args, **create_kwargs):
         typ = create_kwargs.get("type")
         cls = clients.get_client_class(typ)
         client = cls(name=name, *create_args, **create_kwargs)
+        
+        if system_prompts:
+            client.set_system_prompts(system_prompts)
+        
         set_client(name, client)
         return client
 

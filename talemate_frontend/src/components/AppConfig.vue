@@ -499,6 +499,7 @@ export default {
 
                 let inferenceConfig = this.$refs.presets.inference_config();
                 let embeddingsConfig = this.$refs.presets.embeddings_config();
+                let systemPromptsConfig = this.$refs.presets.system_prompts_config();
 
                 if(inferenceConfig) {
                     this.app_config.presets.inference = inferenceConfig;
@@ -507,6 +508,11 @@ export default {
                 if(embeddingsConfig) {
                     this.app_config.presets.embeddings = embeddingsConfig;
                 }
+
+                if(systemPromptsConfig) {
+                    this.app_config.system_prompts = systemPromptsConfig;
+                }
+
             }
 
             // check if appearance component is present

@@ -567,6 +567,7 @@ export default {
 
       if (data.type === 'app_config') {
         this.appConfig = data.data;
+        console.log("App Config", this.appConfig);
         if(data.version)
           this.version = data.version;
         return;

@@ -12,6 +12,7 @@ from typing_extensions import Annotated
 
 from talemate.agents.registry import get_agent_class
 from talemate.client.registry import get_client_class
+from talemate.client.system_prompts import SystemPrompts, RENDER_CACHE as SYSTEM_PROMPTS_RENDER_CACHE
 from talemate.emit import emit
 from talemate.scene_assets import Asset
 
@@ -40,6 +41,8 @@ class Client(BaseModel):
     max_token_length: int = 8192
     double_coercion: Union[str, None] = None
     enabled: bool = True
+    
+    system_prompts: SystemPrompts = SystemPrompts()
 
     class Config:
         extra = "ignore"
@@ -513,6 +516,10 @@ class Config(BaseModel):
     presets: Presets = Presets()
     
     appearance: Appearance = Appearance()
+    
+    system_prompts: SystemPrompts = SystemPrompts()
+    
+    system_prompt_defaults: dict[str, str] = pydantic.Field(default_factory=lambda: SYSTEM_PROMPTS_RENDER_CACHE)
 
     class Config:
         extra = "ignore"
@@ -592,6 +599,14 @@ def save_config(config, file_path: str = "./config.yaml"):
     # if presets is empty, remove it
     if not config["presets"]["inference"]:
         config.pop("presets")
+        
+    # if system_prompt_defaults is set, remove it
+    if "system_prompt_defaults" in config:
+        config.pop("system_prompt_defaults")
+        
+    # if system_prompts is empty, remove it
+    if not config["system_prompts"]:
+        config.pop("system_prompts")
 
     with open(file_path, "w") as file:
         yaml.dump(config, file)

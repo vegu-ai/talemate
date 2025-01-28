@@ -295,6 +295,7 @@ export default {
           client.double_coercion = data.data.double_coercion;
           client.data = data.data;
           client.enabled = data.data.enabled;
+          client.system_prompts = data.data.system_prompts;
           for (let key in client.data.meta.extra_fields) {
             if (client.data[key] === null || client.data[key] === undefined) {
               client.data[key] = client.data.meta.defaults[key];
@@ -317,6 +318,7 @@ export default {
             double_coercion: data.data.double_coercion,
             data: data.data,
             enabled: data.data.enabled,
+            system_prompts: data.data.system_prompts,
           });
 
           // apply extra field defaults

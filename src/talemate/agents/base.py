@@ -20,7 +20,8 @@ from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
 from talemate.client.context import (
-    ClientContext
+    ClientContext,
+    set_client_context_attribute,
 )
 
 __all__ = [
@@ -142,6 +143,9 @@ def set_processing(fn):
             
             if scene:
                 scene.continue_actions()
+                
+            if getattr(scene, "config", None):
+                set_client_context_attribute("app_config_system_prompts", scene.config.get("system_prompts", {}))
             
             with ActiveAgent(self, fn, args, kwargs) as active_agent_context:
                 try:

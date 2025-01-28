@@ -123,23 +123,35 @@ class SystemPrompts(pydantic.BaseModel):
         if "narrate" in alias:
             return "narrator"
         
-        if "direction" in alias:
+        if "direction" in alias or "director" in alias:
             return "director"
         
         if "create" in alias:
             return "creator"
         
-        if "conversation" in alias:
+        if "conversation" in alias or "roleplay" in alias:
             return "roleplay"
+        
+        if "basic" in alias:
+            return "basic"
         
         if "edit" in alias:
             return "editor"
         
+        if "world_state" in alias:
+            return "world_state"
+        
         if "analyze_freeform" in alias or "investigate" in alias:
             return "analyst_freeform"
         
-        if "analyze" in alias:
+        if "analyze" in alias or "analyst" in alias:
             return "analyst"
+        
+        if "summarize" in alias:
+            return "summarize"
+        
+        if "visual" in alias:
+            return "visualize"
         
         return alias
         

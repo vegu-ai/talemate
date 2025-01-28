@@ -1,0 +1,32 @@
+Your task is to analyze the current moment in the scene to guide the story editors in crafting the narrative that explains what happens during the time passage.
+
+{% set narrative_direction = agent_context_state.get("narrator__narrative_direction") %}
+{% if narrative_direction %}The story editors were given the following direction: "{{ narrative_direction }}".
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors to write the next narrative segment that fulfills the direction.
+{% endif %}
+
+{% if last_message -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Analyze the meaning of the final line before the time passage. What is its meaning?
+
+``` the final line before the time passage
+{{ last_message }}
+```
+{% endif %}
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the state of the Scene BEFORE the time passage:
+- Who was there?
+- What was happening?
+- Where was the scene set?
+- What was the mood or atmosphere?
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the state of the Scene AFTER the time passage:
+- Who is likely to be there?
+- What is likely to be happening?
+- What is the progression from the previous state that lead to this upcoming moment?
+
+{% if context_investigation -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
+{% endif %}

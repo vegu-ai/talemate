@@ -48,6 +48,10 @@ Content Classification: {{ scene.context }}
 {% with narrative_direction=narrative_direction, last_event=last_event -%}
     {% include "guide-narration-sensory.jinja2" %}
 {% endwith %}
+{# time #}{% elif agent_context_state.narrator__time_narration -%}
+{% with narrative_direction=narrative_direction, last_event=last_event -%}
+    {% include "guide-narration-time.jinja2" %}
+{% endwith %}
 {# query #}{% elif narrative_query -%}
 {% with narrative_direction=narrative_direction, last_event=last_event -%}
     {% include "guide-narration-query.jinja2" %}

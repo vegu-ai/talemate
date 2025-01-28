@@ -7,6 +7,8 @@
 {% include "analyze-scene-for-next-narration-query.jinja2" %}
 {# Sensory narration #}{% elif agent_context_state["narrator__sensory_narration"] %}
 {% include "analyze-scene-for-next-narration-sensory.jinja2" %}
+{# Time narration #}{% elif agent_context_state["narrator__time_narration"] %}
+{% include "analyze-scene-for-next-narration-time.jinja2" %}
 {# Visual narration - Character #}{% elif agent_context_state["narrator__visual_narration"] and character %}
 {% with character=character -%}
     {% include "analyze-scene-for-next-narration-visual-character.jinja2" %}

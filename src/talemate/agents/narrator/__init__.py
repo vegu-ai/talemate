@@ -522,8 +522,9 @@ class NarratorAgent(
         return list(zip(questions, answers))
 
     @set_processing
+    @store_context_state('narrative_direction', time_narration=True)
     async def narrate_time_passage(
-        self, duration: str, time_passed: str, narrative: str
+        self, duration: str, time_passed: str, narrative_direction: str
     ):
         """
         Narrate a specific character
@@ -538,7 +539,8 @@ class NarratorAgent(
                 "max_tokens": self.client.max_token_length,
                 "duration": duration,
                 "time_passed": time_passed,
-                "narrative": narrative,
+                "narrative": narrative_direction, # backwards compatibility
+                "narrative_direction": narrative_direction,
                 "extra_instructions": self.extra_instructions,
             },
         )

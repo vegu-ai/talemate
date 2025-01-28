@@ -125,7 +125,7 @@ class MemoryRAGMixin:
     async def rag_set_cache(self, content:list[str]):
         self.scene.rag_cache[self.long_term_memory_cache_key] = {
             "content": content,
-            "message_id": self.scene.history[-1].id if self.scene.history else 0 
+            "fingerprint": self.scene.history[-1].fingerprint if self.scene.history else 0 
         }
         
     async def rag_get_cache(self) -> list[str] | None:
@@ -133,10 +133,10 @@ class MemoryRAGMixin:
         if not self.long_term_memory_cache:
             return None
         
-        message_id = self.scene.history[-1].id if self.scene.history else 0
+        fingerprint = self.scene.history[-1].fingerprint if self.scene.history else 0
         cache = self.scene.rag_cache.get(self.long_term_memory_cache_key)
         
-        if cache and cache["message_id"] == message_id:
+        if cache and cache["fingerprint"] == fingerprint:
             return cache["content"]
         
         return None

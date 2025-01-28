@@ -10,6 +10,7 @@ import websockets
 import talemate.instance as instance
 from talemate import VERSION
 from talemate.config import load_config
+from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.server.websocket_server import WebsocketHandler
 
 log = structlog.get_logger("talemate")
@@ -187,10 +188,14 @@ async def websocket_endpoint(websocket, path):
                         handler.scene.interrupt()
                     elif action_type == "request_app_config":
                         log.info("request_app_config")
+                        
+                        config = load_config()
+                        config.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
+                        
                         await message_queue.put(
                             {
                                 "type": "app_config",
-                                "data": load_config(),
+                                "data": config,
                                 "version": VERSION,
                             }
                         )

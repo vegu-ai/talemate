@@ -20,7 +20,12 @@
             ></AppConfigPresetsEmbeddings>
         </v-window-item>
         <v-window-item value="system_prompts">
-            <AppConfigPresetsSystemPrompts ref="system_prompts" :immutableConfig="immutableConfig" @update="() => $emit('update', config)"></AppConfigPresetsSystemPrompts>
+            <AppConfigPresetsSystemPrompts 
+                ref="system_prompts"
+                :immutableConfig="immutableConfig"
+                :system-prompt-defaults="immutableConfig ? immutableConfig.system_prompt_defaults : {}"
+                @update="() => $emit('update', config)"
+            ></AppConfigPresetsSystemPrompts>
         </v-window-item>
     </v-window>
 </template>

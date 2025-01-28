@@ -1,11 +1,11 @@
 <template>
 
     <v-row>
-        <v-col cols="4">
+        <v-col :cols="(scope == 'client' ? 3 : 4)">
             <v-list density="compact">
 
                 <v-tabs v-model="tab" density="compact" color="highlight5">
-                    <v-tab v-for="t in tabs" :key="t.value" :value="t.value">
+                    <v-tab v-for="t in availableTabs" :key="t.value" :value="t.value">
                         {{ t.title }}
                     </v-tab>
                 </v-tabs>
@@ -17,7 +17,7 @@
                 </v-list>
             </v-list>
         </v-col>
-        <v-col cols="8">
+        <v-col :cols="(scope == 'client' ? 9 : 8)">
 
             <v-card v-if="selectedKey !== null">
                 <v-card-text>
@@ -26,11 +26,12 @@
                     </div>
                     <v-textarea
                         v-model="config[selectedKey]"
-                        :placeholder="immutableConfig.system_prompt_defaults ? immutableConfig.system_prompt_defaults[selectedKey] : ''"
+                        :placeholder="systemPromptDefaults ? systemPromptDefaults[selectedKey] : ''"
                         rows="5"
                         auto-grow
                         clearable
-                        @update:model-value="dropIfEmpty(selectedKey); $emit('update', {system_prompts: config})"
+                        @update:model-value="dropIfEmpty(selectedKey);"
+                        @blur="$emit('update', {system_prompts: config})"
                         :label="labelFromValue(selected[0], tab === 'decensor')"
                     ></v-textarea>
                 </v-card-text>
@@ -43,12 +44,24 @@
                 </v-alert>
             </v-card>
 
-            <v-alert v-else density="compact" color="primary" variant="text" class="mt-10">
+            <v-alert v-else-if="scope=='app'" density="compact" color="primary" variant="text" class="mt-10">
                 <p>
                     App wide override for the various system prompts based on action type.
                 </p>
                 <p class="text-caption text-grey">
                     These will be used when there are no client specific overrides configured in the client.
+                </p>
+            </v-alert>
+
+            <v-alert v-else-if="scope=='client'" density="compact" color="primary" variant="text" class="mt-10">
+                <p>
+                    Client specific override for the various system prompts based on action type.
+                </p>
+                <p class="text-caption text-grey">
+                    These system prompts will only be used by this client.
+                </p>
+                <p class="text-caption text-grey">
+                    You can specify global overrides in the <span class="text-primary"><v-icon>mdi-cog</v-icon> Settings</span> window.
                 </p>
             </v-alert>
         </v-col>
@@ -58,34 +71,19 @@
 
 <script>
 
-/*
-    roleplay: str | None = None
-    narrator: str | None = None
-    creator: str | None = None
-    director: str | None = None
-    analyst: str | None = None
-    analyst_freeform: str | None = None
-    editor: str | None = None
-    world_state: str | None = None
-    summarize: str | None = None
-    visualize: str | None = None
-    
-    roleplay_decensor: str | None = None
-    narrator_decensor: str | None = None
-    creator_decensor: str | None = None
-    director_decensor: str | None = None
-    analyst_decensor: str | None = None
-    analyst_freeform_decensor: str | None = None
-    editor_decensor: str | None = None
-    world_state_decensor: str | None = None
-    summarize_decensor: str | None = None
-    visualize_decensor: str | None = None
-*/
-
 export default {
     name: 'AppConfigPresetsSystemPrompts',
     props: {
-        immutableConfig: Object
+        immutableConfig: Object,
+        systemPromptDefaults: Object,
+        scope: {
+            type: String,
+            default: 'app',
+        },
+        decensorAvailable: {
+            type: Boolean,
+            default: true,
+        }
     },
     watch: {
         immutableConfig: {
@@ -104,6 +102,9 @@ export default {
         'update',
     ],
     computed:{
+        availableTabs() {
+            return this.tabs.filter(t => t.condition());
+        },
         selectedKey() {
             // selected[0] will hold the kind
             // if tab is decensor, append _decensor
@@ -114,8 +115,8 @@ export default {
         return {
             tab: "normal",
             tabs: [
-                { title: 'Normal', value: 'normal' },
-                { title: 'Uncensored', value: 'decensor' },
+                { title: 'Normal', value: 'normal', condition: ()=> { return (this.scope == 'app' || !this.decensorAvailable) } },
+                { title: 'Uncensored', value: 'decensor', condition: ()=> { return (this.scope == 'app' || this.decensorAvailable) } },
             ],
             config: {
             },
@@ -142,8 +143,8 @@ export default {
         },
 
         applyDefault() {
-            if(this.immutableConfig.system_prompt_defaults && this.selectedKey in this.immutableConfig.system_prompt_defaults) {
-                this.config[this.selectedKey] = this.immutableConfig.system_prompt_defaults[this.selectedKey];
+            if(this.systemPromptDefaults && this.selectedKey in this.systemPromptDefaults) {
+                this.config[this.selectedKey] = this.systemPromptDefaults[this.selectedKey];
             }
         },
 

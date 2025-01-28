@@ -9,6 +9,7 @@ import talemate.instance as instance
 from talemate import Helper, Scene
 from talemate.client.base import ClientBase
 from talemate.client.registry import CLIENT_CLASSES
+from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.config import SceneAssetUpload, load_config, save_config
 from talemate.context import ActiveScene, active_scene
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
@@ -538,6 +539,9 @@ class WebsocketHandler(Receiver):
         )
 
     def handle_config_saved(self, emission: Emission):
+        
+        emission.data.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
+        
         self.queue_put(
             {
                 "type": "app_config",

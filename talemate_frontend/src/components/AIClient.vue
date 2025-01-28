@@ -99,7 +99,14 @@
       </v-list>
     </div>
 
-    <ClientModal :dialog="state.dialog" :formTitle="state.formTitle" @save="saveClient" @error="propagateError" @update:dialog="updateDialog"></ClientModal>
+    <ClientModal 
+      :dialog="state.dialog" 
+      :formTitle="state.formTitle" 
+      :immutable-config="immutableConfig"
+      @save="saveClient" 
+      @error="propagateError" 
+      @update:dialog="updateDialog">
+    </ClientModal>
     <v-alert type="warning" variant="tonal" v-if="state.clients.length === 0">You have no LLM clients configured. Add one.</v-alert>
     <v-btn @click="openModal" elevation="0" prepend-icon="mdi-plus-box">Add client</v-btn>
   </div>
@@ -109,6 +116,9 @@
 import ClientModal from './ClientModal.vue';
 
 export default {
+  props: {
+    immutableConfig: Object,
+  },
   components: {
     ClientModal,
   },

@@ -31,22 +31,29 @@
 
     </div>
     <v-sheet v-if="hovered" rounded="sm" color="transparent">
-      <v-chip size="x-small" color="indigo-lighten-4" v-if="editing">
-        <v-icon class="mr-1">mdi-pencil</v-icon>
-        Editing - Press `enter` to submit. Click anywhere to cancel.</v-chip>
-      <v-chip size="x-small" color="grey-lighten-1" v-else-if="!editing && hovered" variant="text" class="mr-1">
-        <v-icon>mdi-pencil</v-icon>
-        Double-click to edit.</v-chip>
-        <v-chip size="x-small" label color="success" v-if="!editing && hovered" variant="outlined" @click="createPin(message_id)">
+      <div v-if="message_id">
+        <v-chip size="x-small" color="indigo-lighten-4" v-if="editing">
+          <v-icon class="mr-1">mdi-pencil</v-icon>
+          Editing - Press `enter` to submit. Click anywhere to cancel.</v-chip>
+        <v-chip size="x-small" color="grey-lighten-1" v-else-if="!editing && hovered" variant="text" class="mr-1">
+          <v-icon>mdi-pencil</v-icon>
+          Double-click to edit.</v-chip>
+        <v-chip size="x-small" label color="success" v-if="!editing && hovered" variant="outlined"
+          @click="createPin(message_id)">
           <v-icon class="mr-1">mdi-pin</v-icon>
           Create Pin
         </v-chip>
 
         <!-- fork scene -->
-        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered" variant="outlined" @click="forkSceneInitiate(message_id)" :disabled="uxLocked">
+        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered" variant="outlined"
+          @click="forkSceneInitiate(message_id)" :disabled="uxLocked">
           <v-icon class="mr-1">mdi-source-fork</v-icon>
           Fork Scene
         </v-chip>
+      </div>
+      <div v-else>
+        <span class="text-muted text-caption">To edit the intro message open the <v-btn size="x-small" variant="text" color="primary" @click="openWorldStateManager('scene')"><v-icon>mdi-script</v-icon>Scene Editor</v-btn></span>
+      </div>
     </v-sheet>
     <div v-else style="height:24px">
 
@@ -59,7 +66,7 @@ import { parseText } from '@/utils/textParser';
 
 export default {
   props: ['text', 'message_id', 'uxLocked'],
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle'],
+  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'openWorldStateManager'],
   computed: {
     parts() {
       return parseText(this.text);

@@ -45,7 +45,7 @@
                 ></v-select>
             </v-col>
             <v-col>
-                <v-btn color="delete" variant="text" prepend-icon="mdi-backup-restore" @click="restoreScene(false)">Restore Scene</v-btn>
+                <v-btn :disabled="!scene.data.restore_from" color="delete" variant="text" prepend-icon="mdi-backup-restore" @click="restoreScene(false)">Restore Scene</v-btn>
                 <v-alert density="compact" variant="text" color="muted">This will restore the scene from the selected save file.
                 </v-alert>
             </v-col>

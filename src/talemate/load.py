@@ -191,6 +191,9 @@ async def load_scene_from_character_card(scene, file_path):
 
     scene.saved = False
 
+    await scene.save_restore("initial.json")
+    scene.restore_from = "initial.json"
+
     return scene
 
 

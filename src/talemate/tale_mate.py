@@ -2616,36 +2616,8 @@ class Scene(Emitter):
         filepath = os.path.join(saves_dir, self.filename)
 
         # Create a dictionary to store the scene data
-        scene_data = {
-            "description": scene.description,
-            "intro": scene.intro,
-            "name": scene.name,
-            "title": scene.title,
-            "history": scene.history,
-            "environment": scene.environment,
-            "archived_history": scene.archived_history,
-            "layered_history": scene.layered_history,
-            "characters": [actor.character.serialize for actor in scene.actors],
-            "inactive_characters": {
-                name: character.serialize
-                for name, character in scene.inactive_characters.items()
-            },
-            "context": scene.context,
-            "world_state": scene.world_state.model_dump(),
-            "game_state": scene.game_state.model_dump(),
-            "agent_state": scene.agent_state,
-            "assets": scene.assets.dict(),
-            "memory_id": scene.memory_id,
-            "memory_session_id": scene.memory_session_id,
-            "saved_memory_session_id": scene.saved_memory_session_id,
-            "immutable_save": scene.immutable_save,
-            "ts": scene.ts,
-            "help": scene.help,
-            "experimental": scene.experimental,
-            "writing_style_template": scene.writing_style_template,
-            "restore_from": scene.restore_from,
-        }
-
+        scene_data = self.serialize
+        
         if not auto:
             emit("status", status="success", message="Saved scene")
 
@@ -2661,6 +2633,23 @@ class Scene(Emitter):
 
         # add this scene to recent scenes in config
         await self.add_to_recent_scenes()
+
+    async def save_restore(self, filename:str):
+        """
+        Serializes the scene to a file.
+        
+        immutable_save will be set to True
+        memory_sesion_id will be randomized
+        """
+        
+        serialized = self.serialize
+        serialized["immutable_save"] = True
+        serialized["memory_session_id"] = str(uuid.uuid4())[:10]
+        serialized["saved_memory_session_id"] = self.memory_session_id
+        serialized["memory_id"] = str(uuid.uuid4())[:10]
+        filepath = os.path.join(self.save_dir, filename)
+        with open(filepath, "w") as f:
+            json.dump(serialized, f, indent=2, cls=save.SceneEncoder)
 
     async def add_to_recent_scenes(self):
         log.debug("add_to_recent_scenes", filename=self.filename)
@@ -2712,6 +2701,14 @@ class Scene(Emitter):
 
         self.actors = []
 
+    async def reset_memory(self):
+        memory_agent = self.get_helper("memory").agent
+        memory_agent.close_db(self)
+        self.memory_id = str(uuid.uuid4())[:10]
+        await self.commit_to_memory()
+
+        self.set_new_memory_session_id()
+
     async def restore(self, save_as:str | None=None):
         try:
             self.log.info("Restoring", source=self.restore_from)
@@ -2734,13 +2731,14 @@ class Scene(Emitter):
                 self.get_helper("conversation").agent.client,
             )
             
+            await self.reset_memory()
+            
             if save_as:
                 self.restore_from = restore_from
                 await self.save(save_as=True, copy_name=save_as)
             else:
                 self.filename = None
             self.emit_status(restored=True)
-            
             
             interaction_state = interaction.get()
             
@@ -2756,12 +2754,13 @@ class Scene(Emitter):
         loop.run_until_complete(self.restore())
 
     @property
-    def serialize(self):
+    def serialize(self) -> dict:
         scene = self
         return {
             "description": scene.description,
             "intro": scene.intro,
             "name": scene.name,
+            "title": scene.title,
             "history": scene.history,
             "environment": scene.environment,
             "archived_history": scene.archived_history,
@@ -2783,8 +2782,8 @@ class Scene(Emitter):
             "ts": scene.ts,
             "help": scene.help,
             "experimental": scene.experimental,
-            "restore_from": scene.restore_from,
             "writing_style_template": scene.writing_style_template,
+            "restore_from": scene.restore_from,
         }
 
     @property

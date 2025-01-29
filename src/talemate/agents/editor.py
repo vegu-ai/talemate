@@ -210,6 +210,10 @@ class EditorAgent(Agent):
         content = util.clean_dialogue(content, main_name=character.name)
         content = util.strip_partial_sentences(content)
         
+        # if there are uneven quotation marks, fix them by adding a closing quote
+        if '"' in content and content.count('"') % 2 != 0:
+            content += '"'
+        
         if not self.fix_exposition_enabled:
             return content
         

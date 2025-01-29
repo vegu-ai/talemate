@@ -23,7 +23,10 @@ Content Classification: {{ scene.context }}
 <|CLOSE_SECTION|>
 {% endif %}
 <|SECTION:TASK|>
-{% set character_direction=scene.last_message_of_type("director", source=character.name, max_iterations=3) -%}
+{% set character_direction=scene.last_message_of_type("director", source=character.name, max_iterations=3) or conversation_instruction  -%}
+{% if agent_context_state["conversation__instruction"] -%}
+{% set character_direction=agent_context_state["conversation__instruction"] -%}
+{% endif -%}
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
 Guide the writer on {{ character.name }}'s next action/dialogue. Since the writer doesn't know {{ character.name }}'s background or speaking style, you'll need to share relevant details about how they talk and what memories/knowledge influence this moment.
 

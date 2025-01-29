@@ -34,10 +34,10 @@
                                 </template>
                                 <v-list density="compact">
                                     <v-list-subheader>Remove</v-list-subheader>
-                                    <v-list-item prepend-icon="mdi-table-large-remove" @click.stop="removeFromRecentScenes(scene)">
+                                    <v-list-item prepend-icon="mdi-table-large-remove" @click="removeFromRecentScenes(scene)">
                                         <v-list-item-title>Remove from Quick Load</v-list-item-title>
                                     </v-list-item>
-                                    <v-list-item prepend-icon="mdi-file-remove-outline" @click.stop="deleteScene(scene)">
+                                    <v-list-item prepend-icon="mdi-file-remove-outline" @click="deleteScene(scene)">
                                         <v-list-item-title>Delete</v-list-item-title>
                                     </v-list-item>
                                 </v-list>

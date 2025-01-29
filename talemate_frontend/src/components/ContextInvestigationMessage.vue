@@ -1,6 +1,6 @@
 <template>
   <div v-if="show">
-    <v-alert @click="toggle()" class="clickable" variant="text" type="info" :icon="icon" elevation="7" density="compact" :color="getMessageColor('context_investigation', null)">
+    <v-alert @click="toggle()" class="clickable" variant="text" :icon="icon" elevation="7" density="compact" :color="getMessageColor('context_investigation', null)">
       <template v-slot:close>
         <v-btn size="x-small" icon @click="deleteMessage" :disabled="uxLocked">
           <v-icon>mdi-close</v-icon>

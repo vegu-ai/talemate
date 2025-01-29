@@ -34,7 +34,7 @@ RUN python -m venv /app/talemate_env
 # Activate virtual environment and install dependencies
 RUN . /app/talemate_env/bin/activate && \
     poetry config virtualenvs.create false && \
-    poetry install --no-dev --no-root
+    poetry install  --only main --no-root
 
 # Copy the Python source code
 COPY ./src /app/src

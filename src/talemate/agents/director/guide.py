@@ -80,13 +80,13 @@ class GuideSceneMixin:
                     type="bool",
                     label="Guide actors",
                     description="Guide the actors in the scene. This happens during every actor turn.",
-                    value=True
+                    value=False
                 ),
                 "guide_narrator": AgentActionConfig(
                     type="bool",
                     label="Guide narrator",
                     description="Guide the narrator during the scene. This happens during the narrator's turn.",
-                    value=True
+                    value=False
                 ),
                 "guidance_length": AgentActionConfig(
                     type="text",

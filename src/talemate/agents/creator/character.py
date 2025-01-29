@@ -38,6 +38,7 @@ class CharacterCreatorMixin:
     async def determine_character_dialogue_instructions(
         self,
         character: Character,
+        instructions: str = "",
     ):
         instructions = await Prompt.request(
             f"creator.determine-character-dialogue-instructions",
@@ -47,6 +48,7 @@ class CharacterCreatorMixin:
                 "character": character,
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
+                "instructions": instructions,
             },
         )
 

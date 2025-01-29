@@ -35,7 +35,16 @@ class AssistantPlugin:
     async def handle_contextual_generate(self, data: dict):
         payload = ContentGenerationContext(**data)
         creator = get_agent("creator")
-        content = await creator.contextual_generate(payload)
+        
+        log.warning("contextual_generate", computed_context=payload.computed_context, payload=payload)
+        
+        if payload.computed_context[0] == "acting_instructions":
+            content = await creator.determine_character_dialogue_instructions(
+                self.scene.get_character(payload.character), instructions=payload.instructions
+            )
+        else:
+            content = await creator.contextual_generate(payload)
+        
         self.websocket_handler.queue_put(
             {
                 "type": self.router,

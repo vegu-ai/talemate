@@ -109,7 +109,7 @@ async def emit_clients_status():
     Will emit status of all clients
     """
     # log.debug("emit", type="client status")
-    for client in CLIENTS.values():
+    for client in list(CLIENTS.values()):
         if client:
             await client.status()
 

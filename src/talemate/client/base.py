@@ -110,6 +110,8 @@ class ClientBase:
     double_coercion: Union[str, None] = None
     client_type = "base"
     
+    status_request_timeout:int = 2
+    
     system_prompts = SystemPrompts()
 
     class Meta(pydantic.BaseModel):
@@ -381,7 +383,7 @@ class ClientBase:
             model_prompt.create_user_override(template, self.model_name)
 
     async def get_model_name(self):
-        models = await self.client.models.list()
+        models = await self.client.models.list(timeout=self.status_request_timeout)
         try:
             return models.data[0].id
         except IndexError:

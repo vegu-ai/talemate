@@ -150,7 +150,7 @@
                                         <v-icon size="small">mdi-image-auto-adjust</v-icon>
                                         States
                                     </v-tab>
-                                    <v-tab value="actor" :disabled="character.is_player">
+                                    <v-tab value="actor">
                                         <v-icon size="small">mdi-bullhorn</v-icon>
                                         Actor
                                     </v-tab>

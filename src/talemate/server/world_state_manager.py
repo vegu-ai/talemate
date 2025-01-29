@@ -160,6 +160,7 @@ class SceneSettingsPayload(pydantic.BaseModel):
     experimental: bool = False
     immutable_save: bool = False
     writing_style_template: str | None = None
+    restore_from: str | None = None
 
 
 class SaveScenePayload(pydantic.BaseModel):
@@ -1011,6 +1012,12 @@ class WorldStateManagerPlugin:
             }
         )
         await self.signal_operation_done()
+
+    async def handle_restore_scene(self, data):
+        await self.scene.restore()
+        await self.signal_operation_done()
+        await self.scene.emit_history()
+        self.scene.world_state.emit()
 
     async def handle_save_scene(self, data):
         payload = SaveScenePayload(**data)

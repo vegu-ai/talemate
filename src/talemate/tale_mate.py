@@ -900,8 +900,27 @@ class Scene(Emitter):
         ).model_dump()
 
     @property
-    def project_name(self):
+    def project_name(self) -> str:
         return self.name.replace(" ", "-").replace("'", "").lower()
+
+    @property
+    def save_files(self) -> list[str]:
+        """
+        Returns list of save files for the current scene (*.json files
+        in the save_dir)
+        """
+        if hasattr(self, "_save_files"):
+            return self._save_files
+        
+        save_files = []
+        
+        for file in os.listdir(self.save_dir):
+            if file.endswith(".json"):
+                save_files.append(file)
+                
+        self._save_files = sorted(save_files)
+        
+        return self._save_files
 
     @property
     def num_history_entries(self):
@@ -1983,7 +2002,7 @@ class Scene(Emitter):
 
         return self.filename and not self.immutable_save
 
-    def emit_status(self):
+    def emit_status(self, restored: bool = False):
         player_character = self.get_player_character()
         emit(
             "scene_status",
@@ -1992,6 +2011,10 @@ class Scene(Emitter):
             data={
                 "path": self.full_path,
                 "filename": self.filename,
+                "prject_name": self.project_name,
+                "save_files": self.save_files,
+                "restore_from": self.restore_from,
+                "restored": restored,
                 "title": self.title or self.name,
                 "environment": self.environment,
                 "scene_config": self.scene_config,
@@ -2620,6 +2643,7 @@ class Scene(Emitter):
             "help": scene.help,
             "experimental": scene.experimental,
             "writing_style_template": scene.writing_style_template,
+            "restore_from": scene.restore_from,
         }
 
         if not auto:
@@ -2629,6 +2653,9 @@ class Scene(Emitter):
             json.dump(scene_data, f, indent=2, cls=save.SceneEncoder)
 
         self.saved = True
+
+        if hasattr(self, "_save_files"):
+            delattr(self, "_save_files")
 
         self.emit_status()
 
@@ -2685,12 +2712,14 @@ class Scene(Emitter):
 
         self.actors = []
 
-    async def restore(self):
+    async def restore(self, save_as:str | None=None):
         try:
             self.log.info("Restoring", source=self.restore_from)
 
+            restore_from = self.restore_from
+
             if not self.restore_from:
-                self.log.error("No restore_from set")
+                self.log.error("No save file specified to restore from.")
                 return
 
             self.reset()
@@ -2704,8 +2733,21 @@ class Scene(Emitter):
                 os.path.join(self.save_dir, self.restore_from),
                 self.get_helper("conversation").agent.client,
             )
-
-            self.emit_status()
+            
+            if save_as:
+                self.restore_from = restore_from
+                await self.save(save_as=True, copy_name=save_as)
+            else:
+                self.filename = None
+            self.emit_status(restored=True)
+            
+            
+            interaction_state = interaction.get()
+            
+            if interaction_state:
+                # Break and restart the game loop
+                interaction_state.reset_requested = True
+            
         except Exception as e:
             self.log.error("restore", error=e, traceback=traceback.format_exc())
 

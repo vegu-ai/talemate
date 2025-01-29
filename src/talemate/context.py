@@ -25,6 +25,7 @@ class InteractionState(pydantic.BaseModel):
     act_as: str | None = None
     from_choice: str | None = None
     input: str | None = None
+    reset_requested: bool = False
 
 
 scene_is_loading = ContextVar("scene_is_loading", default=None)

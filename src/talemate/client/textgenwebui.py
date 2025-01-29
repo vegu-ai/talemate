@@ -142,7 +142,7 @@ class TextGeneratorWebuiClient(ClientBase):
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{self.api_url}/v1/internal/model/info",
-                timeout=30,
+                timeout=6,
                 headers=self.request_headers,
             )
         if response.status_code == 404:

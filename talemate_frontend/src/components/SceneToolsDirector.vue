@@ -14,6 +14,7 @@
                 prepend-icon="mdi-tournament"
             >
                 <v-list-item-title>Generate dynamic actions<v-chip variant="text" color="highlight5" class="ml-1" size="x-small">Ctrl: Provide direction</v-chip></v-list-item-title>
+                <v-list-item-subtitle>{{ getActAsCharacterName() }}</v-list-item-subtitle>
             </v-list-item>
 
         </v-list>
@@ -38,7 +39,7 @@ export default {
         npcCharacters: Array,
         disabled: Boolean,
     },
-    inject: ['getWebsocket'],
+    inject: ['getWebsocket', 'getActAsCharacterName'],
     data() {
         return {}
     },
@@ -77,6 +78,7 @@ export default {
                     type: 'director',
                     action: 'request_dynamic_choices',
                     instructions: instructions || "",
+                    character: this.getActAsCharacterName(),
                 }
             ));
         },

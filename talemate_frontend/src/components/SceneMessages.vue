@@ -58,7 +58,7 @@
             </div>
             <div v-else-if="message.type === 'player_choice'" :class="`message ${message.type}`">
                 <div class="player-choice-message"  :id="`message-player-choice`">
-                    <PlayerChoiceMessage :choices="message.data.choices" @close="closePlayerChoice" :uxLocked="uxLocked" />
+                    <PlayerChoiceMessage :choices="message.data.choices" :character="message.data.character" @close="closePlayerChoice" :uxLocked="uxLocked" />
                 </div>
             </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">

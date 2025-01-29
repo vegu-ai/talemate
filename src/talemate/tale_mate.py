@@ -597,6 +597,80 @@ class Actor:
 
         return messages
 
+    async def generate_from_choice(self, choice:str, process:bool=True, character:Character=None, immediate:bool=False) -> CharacterMessage:
+        character = self.character if not character else character
+        
+        if not character:
+            raise TalemateError("Character not found during generate_from_choice")
+        
+        actor = character.actor
+        conversation = self.scene.get_helper("conversation").agent
+        director = self.scene.get_helper("director").agent
+        narrator = self.scene.get_helper("narrator").agent
+        editor = self.scene.get_helper("editor").agent
+        
+        # sensory checks
+        sensory_checks = ["look", "listen", "smell", "taste", "touch", "feel"]
+        
+        sensory_action = {
+            "look": "see",
+            "inspect": "see",
+            "examine": "see",
+            "observe": "see",
+            "watch": "see",
+            "view": "see",
+            "see": "see",
+            "listen": "hear",
+            "smell": "smell",
+            "taste": "taste",
+            "touch": "feel",
+            "feel": "feel",
+        }
+        
+        if choice.lower().startswith(tuple(sensory_checks)):
+            
+            # extract the sensory type
+            sensory_type = choice.split(" ", 1)[0].lower()
+            
+            sensory_suffix = sensory_action.get(sensory_type, "experience")
+            
+            log.debug("generate_from_choice", choice=choice, sensory_checks=True)
+            # sensory checks should trigger a narrator query instead of conversation
+            await narrator.action_to_narration(
+                "narrate_query",
+                emit_message=True,
+                query=f"{character.name} wants to \"{choice}\" - what does {character.name} {sensory_suffix} (your answer must be descriptive and detailed)?",
+            )
+            return
+        
+        messages = await conversation.converse(actor, only_generate=True, instruction=choice)
+        
+        message = messages[0]
+        message = await editor.cleanup_character_message(message.strip(), character)
+        character_message = CharacterMessage(
+            message, source="player" if isinstance(actor, Player) else "ai", from_choice=choice
+        )
+        
+        if not process:
+            return character_message
+        
+        interaction_state = interaction.get()
+        
+        if immediate or director.generate_choices_never_auto_progress:
+            self.scene.push_history(character_message)
+            if not character.is_player:
+                self.scene.process_npc_dialogue(character.actor, [character_message])
+            else:
+                emit("character", character_message, character=character)
+        else:
+            interaction_state.from_choice = choice
+            interaction_state.input = character_message.without_name
+            if not character.is_player:
+                interaction_state.act_as = character.name
+            
+        return character_message
+
+
 
 class Player(Actor):
     muted = 0
@@ -696,75 +770,6 @@ class Player(Actor):
                 emit("character", self.history[-1], character=self.character)
 
         return message
-
-    async def generate_from_choice(self, choice:str, process:bool=True, character:Character=None) -> CharacterMessage:
-        character = self.character if not character else character
-        
-        if not character:
-            raise TalemateError("Character not found during generate_from_choice")
-        
-        actor = character.actor
-        conversation = self.scene.get_helper("conversation").agent
-        director = self.scene.get_helper("director").agent
-        narrator = self.scene.get_helper("narrator").agent
-        editor = self.scene.get_helper("editor").agent
-        
-        # sensory checks
-        sensory_checks = ["look", "listen", "smell", "taste", "touch", "feel"]
-        
-        sensory_action = {
-            "look": "see",
-            "inspect": "see",
-            "examine": "see",
-            "observe": "see",
-            "watch": "see",
-            "view": "see",
-            "see": "see",
-            "listen": "hear",
-            "smell": "smell",
-            "taste": "taste",
-            "touch": "feel",
-            "feel": "feel",
-        }
-        
-        if choice.lower().startswith(tuple(sensory_checks)):
-            
-            # extract the sensory type
-            sensory_type = choice.split(" ", 1)[0].lower()
-            
-            sensory_suffix = sensory_action.get(sensory_type, "experience")
-            
-            log.debug("generate_from_choice", choice=choice, sensory_checks=True)
-            # sensory checks should trigger a narrator query instead of conversation
-            await narrator.action_to_narration(
-                "narrate_query",
-                emit_message=True,
-                query=f"{character.name} wants to \"{choice}\" - what does {character.name} {sensory_suffix} (your answer must be descriptive and detailed)?",
-            )
-            return
-        
-        messages = await conversation.converse(actor, only_generate=True, instruction=choice)
-        
-        message = messages[0]
-        message = await editor.cleanup_character_message(message.strip(), character)
-        character_message = CharacterMessage(
-            message, source="player" if isinstance(actor, Player) else "ai", from_choice=choice
-        )
-        
-        if not process:
-            return character_message
-        
-        interaction_state = interaction.get()
-        
-        if director.generate_choices_never_auto_progress:
-            self.scene.push_history(character_message)
-            emit("character", character_message, character=character)
-        else:
-            interaction_state.from_choice = choice
-            interaction_state.input = character_message.without_name
-            
-        return character_message
-
 
 class Scene(Emitter):
     """

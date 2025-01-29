@@ -28,6 +28,8 @@ talemate.emit.async_signals.register(
     "agent.director.generate_choices.generated",
 )
 
+if TYPE_CHECKING:
+    from talemate.tale_mate import Character
 
 @dataclasses.dataclass
 class GenerateChoicesEmission(AgentEmission):
@@ -170,9 +172,16 @@ class GenerateChoicesMixin:
     async def generate_choices(
         self,
         instructions: str = None,
+        character: "Character | str | None" = None,
     ):
         
         log.info("generate_choices")
+        
+        if isinstance(character, str):
+            character = self.scene.get_character(character)
+            
+        if not character:
+            character = self.scene.get_player_character()
         
         response = await Prompt.request(
             "director.generate-choices",
@@ -181,7 +190,7 @@ class GenerateChoicesMixin:
             vars={
                 "max_tokens": self.client.max_token_length,
                 "scene": self.scene,
-                "player_character": self.scene.get_player_character(),
+                "character": character,
                 "num_choices": self.generate_choices_num_choices,
                 "instructions": instructions or self.generate_choices_instructions,
             },
@@ -206,7 +215,8 @@ class GenerateChoicesMixin:
             "player_choice",
             response,
             data = {
-                "choices": choices
+                "choices": choices,
+                "character": character.name,
             },
             websocket_passthrough=True
         )

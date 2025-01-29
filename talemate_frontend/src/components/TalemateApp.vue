@@ -450,6 +450,7 @@ export default {
       getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
       getTrackedWorldState: (question) => this.$refs.worldState.trackedWorldState(question),
       getPlayerCharacterName: () => this.getPlayerCharacterName(),
+      getActAsCharacterName: () => this.actAs || this.getPlayerCharacterName(),
       formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
       autocompleteRequest: (partialInput, callback, focus_element, delay) => this.autocompleteRequest(partialInput, callback, focus_element, delay),
       autocompleteInfoMessage: (active) => this.autocompleteInfoMessage(active),

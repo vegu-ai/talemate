@@ -16,6 +16,7 @@ class InstructionPayload(pydantic.BaseModel):
 
 class SelectChoicePayload(pydantic.BaseModel):
     choice: str
+    character:str = ""
 
 class CharacterPayload(InstructionPayload):
     character:str = ""
@@ -36,12 +37,23 @@ class DirectorWebsocketHandler(Plugin):
         """
         Generate clickable actions for the user
         """
-        payload = InstructionPayload(**data)
-        await self.director.generate_choices(instructions=payload.instructions)
+        payload = CharacterPayload(**data)
+        await self.director.generate_choices(**payload.model_dump())
         
     async def handle_select_choice(self, data: dict):
         payload = SelectChoicePayload(**data)
-        character = self.scene.get_player_character()
+        
+        log.debug("selecting choice", payload=payload)
+        
+        if payload.character:
+            character = self.scene.get_character(payload.character)
+        else:
+            character = self.scene.get_player_character()
+        
+        if not character:
+            log.error("handle_select_choice: could not find character", payload=payload)
+            return
+        
         actor = character.actor
         
-        await actor.generate_from_choice(payload.choice)
+        await actor.generate_from_choice(payload.choice, immediate=(not character.is_player))

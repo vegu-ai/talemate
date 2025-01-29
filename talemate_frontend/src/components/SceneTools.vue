@@ -141,6 +141,10 @@
 
                 <SceneToolsNarrator :disabled="appBusy" ref="narratorTools" :npc-characters="npc_characters" />
 
+                <!-- director actions -->
+
+                <SceneToolsDirector :disabled="appBusy" ref="directorTools" :npc-characters="npc_characters" />
+
                 <!-- advance time -->
 
                 <v-menu>
@@ -356,12 +360,14 @@
 
 
 <script>
+import SceneToolsDirector from './SceneToolsDirector.vue';
 import SceneToolsNarrator from './SceneToolsNarrator.vue';
 
 export default {
 
     name: 'SceneTools',
     components: {
+        SceneToolsDirector,
         SceneToolsNarrator,
     },
     props: {

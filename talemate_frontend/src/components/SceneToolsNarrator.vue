@@ -86,38 +86,6 @@ export default {
     inject: ['getWebsocket'],
     data() {
         return {
-            actions: [
-                {
-                    value: "narrate_progress",
-                    title: "Progress Story",
-                    icon: "mdi-script-text-play",
-                    description: "Progress the story"
-                },
-                {
-                    value: "narrate_progress_directed",
-                    title: "Progress Story with Direction",
-                    icon: "mdi-script-text-play",
-                    description: "Progress the story (Provide prompt)"
-                },
-                {
-                    value: "narrate_dialogue",
-                    title: "Narrate Environment",
-                    icon: "mdi-waves",
-                    description: "Describe visuals, smells and sounds based on the recent dialogue."
-                },
-                {
-                    fn: this.actionQuery,
-                    title: "Query",
-                    icon: "mdi-crystal-ball",
-                    description: "Ask the narrator a question, or instruct to tell something."
-                },
-                {
-                    value: "narrate",
-                    title: "Look at Scene",
-                    icon: "mdi-table-headers-eye",
-                    description: "Look at the current scene"
-                }
-            ],
         }
     },
     methods: {

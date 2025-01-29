@@ -71,7 +71,7 @@ export default {
             this.busy = true;
             this.getWebsocket().send(JSON.stringify({
                 type: "director",
-                action: "generate_choices",
+                action: "request_dynamic_choices",
             }));
         },
     }

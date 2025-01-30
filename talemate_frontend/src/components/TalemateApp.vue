@@ -517,6 +517,7 @@ export default {
         if (data.id === 'scene.loaded') {
           this.loading = false;
           this.sceneActive = true;
+          this.actAs = null;
           this.requestAppConfig();
           this.requestWorldStateTemplates();
           this.$nextTick(() => {

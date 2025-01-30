@@ -241,7 +241,6 @@ class TabbyAPIClient(ClientBase):
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
 
-        log.warning("reconfigure", kwargs=kwargs)
         self.set_client(**kwargs)
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:

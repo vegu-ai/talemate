@@ -820,7 +820,6 @@ class ChromaDBMemoryAgent(MemoryAgent):
             active_memory_request.add_result(doc, distance, meta)
 
             if not meta:
-                log.warning("chromadb agent get", error="no meta", doc=doc)
                 continue
 
             ts = meta.get("ts")

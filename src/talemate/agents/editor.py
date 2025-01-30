@@ -295,12 +295,6 @@ class EditorAgent(Agent):
         count = util.count_tokens(content)
 
         if count > MAX_CONTENT_LENGTH:
-            log.warning(
-                "check_continuity_errors content too long",
-                length=count,
-                max=MAX_CONTENT_LENGTH,
-                content=content[:255],
-            )
             return content
 
         log.debug(

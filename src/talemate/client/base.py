@@ -285,7 +285,6 @@ class ClientBase:
         app_config_system_prompts = client_context_attribute("app_config_system_prompts")
         
         if app_config_system_prompts:
-            log.warning("using app_config_system_prompts", kind=kind, app_config_system_prompts=app_config_system_prompts)
             self.system_prompts.parent = SystemPrompts(**app_config_system_prompts)
         
         return self.system_prompts.get(kind, self.decensor_enabled)

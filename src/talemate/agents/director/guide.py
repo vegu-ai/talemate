@@ -136,8 +136,6 @@ class GuideSceneMixin:
         
     async def on_summarization_scene_analysis_after(self, emission: "SceneAnalysisEmission"):
         
-        log.warning("director.guide_scene.on_summarization_scene_analysis_after", emission=emission)
-        
         if not self.guide_scene:
             return
         

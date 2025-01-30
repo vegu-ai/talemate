@@ -736,8 +736,6 @@ class Player(Actor):
 
             message = await editor.cleanup_user_input(message)
 
-            log.warning("player_message", message=message, act_as=act_as)
-
             if act_as == "$narrator":
                 # acting as the narrator
                 message = NarratorMessage(message, source="player")
@@ -1687,12 +1685,6 @@ class Scene(Emitter):
 
         # log.warn if parts_context token count > budget_context
         if count_tokens(parts_context) > budget_context:
-            log.warning(
-                "context_history",
-                message="context exceeds budget",
-                context_tokens=count_tokens(parts_context),
-                budget=budget_context,
-            )
             # chop off the top until it fits
             while count_tokens(parts_context) > budget_context:
                 parts_context.pop(0)

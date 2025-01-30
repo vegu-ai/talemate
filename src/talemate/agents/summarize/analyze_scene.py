@@ -335,7 +335,6 @@ class SceneAnalyzationMixin:
         response = strip_partial_sentences(response)
         
         if not response.strip():
-            log.warning("analyze_scene_for_next_action.empty_response")
             return response
         
         if deep_analysis:

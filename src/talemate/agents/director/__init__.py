@@ -145,7 +145,6 @@ class DirectorAgent(
         if not self.enabled:
             if await self.scene_has_instructions(self.scene):
                 self.is_enabled = True
-                log.warning("on_scene_init - enabling director", scene=self.scene)
             else:
                 return
 
@@ -313,12 +312,6 @@ class DirectorAgent(
     async def persist_characters_from_worldstate(
         self, exclude: list[str] = None
     ) -> List[Character]:
-        log.warning(
-            "persist_characters_from_worldstate",
-            world_state_characters=self.scene.world_state.characters,
-            scene_characters=self.scene.character_names,
-        )
-
         created_characters = []
 
         for character_name in self.scene.world_state.characters.keys():

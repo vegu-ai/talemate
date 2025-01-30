@@ -693,7 +693,7 @@ class WorldStateAgent(
 
         for entry_id, answer in answers.items():
             if entry_id not in world_state.pins:
-                log.warning(
+                log.debug(
                     "check_pin_conditions",
                     entry_id=entry_id,
                     answer=answer,

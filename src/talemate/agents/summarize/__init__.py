@@ -185,7 +185,6 @@ class SummarizeAgent(
         num_previous = self.actions["archive"].config["include_previous"].value
         if recent_entry and num_previous > 0:
             if self.layered_history_available:
-                log.warning("build_archive with layered history")
                 extra_context = self.compile_layered_history(include_base_layer=True)
             else:
                 extra_context = [
@@ -284,7 +283,7 @@ class SummarizeAgent(
                     dialogue_entries = adjusted_dialogue
                     end = start + len(dialogue_entries) - 1
                 else:
-                    log.warning("build_archive", message="Ignoring termination", start=start, end=end, adjusted_dialogue=adjusted_dialogue)
+                    log.debug("build_archive", message="Ignoring termination", start=start, end=end, adjusted_dialogue=adjusted_dialogue)
 
         if dialogue_entries:
             

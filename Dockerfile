@@ -34,7 +34,7 @@ RUN python -m venv /app/talemate_env
 # Activate virtual environment and install dependencies
 RUN . /app/talemate_env/bin/activate && \
     poetry config virtualenvs.create false && \
-    poetry install --no-dev --no-root
+    poetry install  --only main --no-root
 
 # Copy the Python source code
 COPY ./src /app/src
@@ -83,4 +83,4 @@ EXPOSE 5050
 EXPOSE 8080
 
 # Use bash as the shell, activate the virtual environment, and run backend server
-CMD ["poetry run src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050 --frontend-host 0.0.0.0 --frontend-port 8080"]
+CMD ["/bin/bash", "-c", "source /app/talemate_env/bin/activate && python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050 --frontend-host 0.0.0.0 --frontend-port 8080"]

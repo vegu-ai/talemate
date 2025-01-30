@@ -1,10 +1,12 @@
 Your task is to analyze the current moment in the scene to guide the story editors to generate visual details about {{ character.name }}.
 
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Give a brief overview of {{ character.name }}'s persona in the current moment.
+
 {% if agent_context_state["narrator__narrative_direction"] %}The story editors were given the following direction: "{{ agent_context_state["narrator__narrative_direction"] }}".
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean for describing {{ character.name }}?
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors emphasize visual details that fulfill the direction.
 {% endif %}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Give a brief overview of {{ character.name }} physical appearance in the current scene.
+
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe {{ character.name }}'s immediate visual state:
 - What actions or movements are they making?
 - What is notable about their current appearance and expression?

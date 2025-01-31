@@ -85,7 +85,7 @@ class WebsocketHandler(Receiver):
 
         for agent_type, agent in instance.AGENTS.items():
             handler_cls = getattr(agent, "websocket_handler", None)
-            if not handler_cls:
+            if not handler_cls or handler_cls.router in self.routes:
                 continue
 
             log.info(
@@ -126,6 +126,8 @@ class WebsocketHandler(Receiver):
         if not self.llm_clients:
             instance.emit_agents_status()
             return
+
+        self.set_agent_routers()
 
         for agent_typ, agent_config in self.agents.items():
             try:

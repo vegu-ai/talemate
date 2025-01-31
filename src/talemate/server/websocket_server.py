@@ -52,14 +52,6 @@ class WebsocketHandler(Receiver):
 
         instance.get_agent("memory", self.scene)
 
-        # unconveniently named function, this `connect` method is called
-        # to connect signals handlers to the websocket handler
-        self.connect()
-
-        # connect LLM clients
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.connect_llm_clients())
-
         self.routes = {
             assistant.AssistantPlugin.router: assistant.AssistantPlugin(self),
             character_importer.CharacterImporterServerPlugin.router: character_importer.CharacterImporterServerPlugin(
@@ -74,6 +66,14 @@ class WebsocketHandler(Receiver):
             ),
             devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
         }
+
+        # unconveniently named function, this `connect` method is called
+        # to connect signals handlers to the websocket handler
+        self.connect()
+
+        # connect LLM clients
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.connect_llm_clients())
 
         self.set_agent_routers()
 

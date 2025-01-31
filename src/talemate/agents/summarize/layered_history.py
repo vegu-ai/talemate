@@ -85,7 +85,7 @@ class LayeredHistoryMixin:
                     type="bool",
                     label="Enable analysation",
                     description="Anlyse chunks to improve the quality of the summarization. Each chunk will be analysed individually.",
-                    value=False,
+                    value=True,
                 ),
                 "response_length": AgentActionConfig(
                     type="text",

@@ -193,7 +193,11 @@ class EditorAgent(Agent):
         if not content:
             return content
 
+        exposition_fixed = False
+
         if not character.is_player and self.fix_exposition_enabled:
+            content = self.fix_exposition_in_text(content, character)
+            exposition_fixed = True
             if self.fix_exposition_formatting == "chat":
                 if '"' not in content and "*" not in content:
                     character_prefix = f"{character.name}: "
@@ -214,7 +218,7 @@ class EditorAgent(Agent):
         if '"' in content and content.count('"') % 2 != 0:
             content += '"'
         
-        if not self.fix_exposition_enabled:
+        if not self.fix_exposition_enabled and not exposition_fixed:
             return content
         
         content = self.fix_exposition_in_text(content, character)

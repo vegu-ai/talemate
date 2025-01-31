@@ -39,6 +39,7 @@ class ContextInvestigationMixin:
             label="Context Investigation",
             icon="mdi-layers-search",
             description="Investigates the layered history to augment the context with additional information.",
+            warning="This can potentially send many extra prompts depending on the depth of the layered history.",
             config={
                 "answer_length": AgentActionConfig(
                     type="text",

@@ -42,9 +42,14 @@
                         </template>
 
                       </v-checkbox>
-                      <p v-else-if="action.container" class="text-muted mt-2">
+                      <div v-else-if="action.container" class="text-muted mt-2">
                         {{ agent.data.actions[key].description }}
-                      </p>
+                        
+                        <p v-if="agent.data.actions[key].warning" class="text-warning mt-2 text-caption">
+                          <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
+                          {{ agent.data.actions[key].warning }}
+                        </p>
+                      </div>
                     </div>
                     <div class="mt-2">
 
@@ -69,11 +74,14 @@
                             <!-- template details slot -->
                             <template v-slot:message="{ message }">
                               <span class="text-caption text-grey">{{ message }}</span>
+                              <span v-if="action_config.expensive" class="text-warning mt-2 text-caption">
+                                <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
+                                Potential for many additional prompts.
+                              </span>
                             </template>
 
 
                           </v-checkbox>
-                            
                           <v-alert v-if="action_config.note != null" variant="outlined" density="compact" color="grey-darken-1" icon="mdi-information">
                             <div class="text-caption text-mutedheader">{{ action_config.label }}</div>
                             {{ action_config.note }}

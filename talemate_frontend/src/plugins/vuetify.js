@@ -31,6 +31,9 @@ export default createVuetify({
           dirty: colors.orange.lighten2,
           instructions: colors.orange.lighten4,
 
+          enabled: colors.green.lighten2,
+          disabled: colors.red.lighten2,
+
           // messages
           narrator: colors.deepPurple.lighten3,
           character: colors.shades.white,

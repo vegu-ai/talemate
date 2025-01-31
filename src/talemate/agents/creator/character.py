@@ -27,12 +27,12 @@ class CharacterCreatorMixin:
         content_context = await Prompt.request(
             f"creator.determine-content-context",
             self.client,
-            "create",
+            "create_192",
             vars={
                 "character": character,
             },
         )
-        return content_context.strip()
+        return content_context.split("\n")[0].strip()
 
     @set_processing
     async def determine_character_dialogue_instructions(

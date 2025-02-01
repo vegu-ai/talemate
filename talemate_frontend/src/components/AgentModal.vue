@@ -42,14 +42,19 @@
                         </template>
 
                       </v-checkbox>
-                      <p v-else-if="action.container" class="text-muted mt-2">
+                      <div v-else-if="action.container" class="text-muted mt-2">
                         {{ agent.data.actions[key].description }}
-                      </p>
+                        
+                        <p v-if="agent.data.actions[key].warning" class="text-warning mt-2 text-caption">
+                          <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
+                          {{ agent.data.actions[key].warning }}
+                        </p>
+                      </div>
                     </div>
                     <div class="mt-2">
 
                       <div v-if="action.container && action.can_be_disabled">
-                        <v-checkbox :label="'Enable '+action.label" color="primary" v-model="action.enabled" @update:modelValue="save(false)">
+                        <v-checkbox :label="'Enable '+action.label" color="primary" v-model="action.enabled" @update:modelValue="save(false)" density="compact">
                           <!-- template details slot -->
                         </v-checkbox>
                       </div>
@@ -61,7 +66,7 @@
 
                           <v-textarea v-else-if="action_config.type === 'blob'" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" density="compact" @keyup="save(true)" rows="5"></v-textarea>
 
-                          <v-autocomplete v-else-if="action_config.type === 'text' && action_config.choices !== null" v-model="action.config[config_key].value" :items="action_config.choices" :label="action_config.label" :hint="action_config.description" density="compact" item-title="label" item-value="value" @update:modelValue="save(false)"></v-autocomplete>
+                          <v-select v-else-if="action_config.type === 'text' && action_config.choices !== null" v-model="action.config[config_key].value" :items="action_config.choices" :label="action_config.label" :hint="action_config.description" density="compact" item-title="label" item-value="value" @update:modelValue="save(false)" class="mt-3"></v-select>
 
                           <v-slider v-if="action_config.type === 'number' && action_config.step !== null" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" :min="action_config.min" :max="action_config.max" :step="action_config.step" density="compact" @update:modelValue="save(true)" color="primary" thumb-label="always"></v-slider>
 
@@ -69,11 +74,14 @@
                             <!-- template details slot -->
                             <template v-slot:message="{ message }">
                               <span class="text-caption text-grey">{{ message }}</span>
+                              <span v-if="action_config.expensive" class="text-warning mt-2 text-caption">
+                                <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
+                                Potential for many additional prompts.
+                              </span>
                             </template>
 
 
                           </v-checkbox>
-                            
                           <v-alert v-if="action_config.note != null" variant="outlined" density="compact" color="grey-darken-1" icon="mdi-information">
                             <div class="text-caption text-mutedheader">{{ action_config.label }}</div>
                             {{ action_config.note }}

@@ -1,4 +1,4 @@
-__all__ = ["AGENT_CLASSES", "register", "get_agent_class"]
+__all__ = ["AGENT_CLASSES", "register", "get_agent_class", "get_agent_types"]
 
 AGENT_CLASSES = {}
 
@@ -21,3 +21,7 @@ class register:
 
 def get_agent_class(name):
     return AGENT_CLASSES.get(name)
+
+
+def get_agent_types() -> list[str]:
+    return list(AGENT_CLASSES.keys())

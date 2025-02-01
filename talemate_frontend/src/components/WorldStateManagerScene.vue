@@ -46,6 +46,7 @@
                     <v-window-item value="settings">
                         <WorldStateManagerSceneSettings 
                             :app-config="appConfig"
+                            :templates="templates"
                             :generation-options="generationOptions"
                             :immutableScene="scene">
                         </WorldStateManagerSceneSettings>

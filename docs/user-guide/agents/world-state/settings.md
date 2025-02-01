@@ -1,6 +1,8 @@
 # Settings
 
-![World state agent settings](/talemate/img/0.26.0/world-state-agent-settings.png)
+## General
+
+![World state agent settings](/talemate/img/0.29.0/world-state-general-settings.png)
 
 ##### Update world state
 
@@ -25,3 +27,23 @@ Will attempt to evaluate and update any due [conditional context pins](/talemate
 ###### Turns
 
 How many turns to wait before the conditional context pins are updated.
+
+## Character Progression
+
+![World state agent character progression settings](/talemate/img/0.29.0/world-state-character-progression-settings.png)
+
+##### Frquency of checks
+
+How often ot check for character progression.
+
+This is in terms of full rounds, not individual turns.
+
+##### Propose as suggestions
+
+If enabled, the proposed changes will be presented as suggestions to the player.
+
+--8<-- "docs/snippets/tips.md:character_change_proposals"
+
+##### Player character
+
+Enable this to have the player character be included in the progression checks.

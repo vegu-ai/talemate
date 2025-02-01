@@ -31,11 +31,14 @@ SUPPORTED_MODELS = [
     "gpt-4o-2024-05-13",
     "gpt-4o-2024-08-06",
     "gpt-4o-2024-11-20",
-    "gpt-4o-latest",
+    "gpt-4o-realtime-preview",
+    "gpt-4o-mini-realtime-preview",
     "gpt-4o",
     "gpt-4o-mini",
+    "o1",
     "o1-preview",
     "o1-mini",
+    "o3-mini",
 ]
 
 # any model starting with gpt-4- is assumed to support 'json_object'
@@ -43,12 +46,11 @@ SUPPORTED_MODELS = [
 JSON_OBJECT_RESPONSE_MODELS = [
     "gpt-4o-2024-08-06",
     "gpt-4o-2024-11-20",
-    "gpt-4o-latest",
+    "gpt-4o-realtime-preview",
+    "gpt-4o-mini-realtime-preview",
     "gpt-4o",
     "gpt-4o-mini",
     "gpt-3.5-turbo-0125",
-    "o1-preview",
-    "o1-mini",
 ]
 
 
@@ -57,7 +59,6 @@ def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
-        print("Warning: model not found. Using cl100k_base encoding.")
         encoding = tiktoken.get_encoding("cl100k_base")
     if model in {
         "gpt-3.5-turbo-0613",
@@ -76,11 +77,8 @@ def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0
         )
         tokens_per_name = -1  # if there's a name, the role is omitted
     elif "gpt-3.5-turbo" in model:
-        print(
-            "Warning: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0613."
-        )
         return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613")
-    elif "gpt-4" in model or "o1" in model:
+    elif "gpt-4" in model or "o1" in model or "o3" in model:
         print(
             "Warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613."
         )
@@ -222,7 +220,7 @@ class OpenAIClient(ClientBase):
         elif model == "gpt-4-1106-preview":
             self.max_token_length = min(max_token_length or 128000, 128000)
         else:
-            self.max_token_length = max_token_length or 2048
+            self.max_token_length = max_token_length or 8192
 
         if not self.api_key_status:
             if self.api_key_status is False:
@@ -295,6 +293,32 @@ class OpenAIClient(ClientBase):
 
         human_message = {"role": "user", "content": prompt.strip()}
         system_message = {"role": "system", "content": self.get_system_message(kind)}
+        
+        # o1 and o3 models don't support system_message
+        if "o1" in self.model_name or "o3" in self.model_name:
+            messages=[human_message]
+            # paramters need to be munged
+            # `max_tokens` becomes `max_completion_tokens`
+            if "max_tokens" in parameters:
+                parameters["max_completion_tokens"] = parameters.pop("max_tokens")
+                
+            # temperature forced to 1
+            if "temperature" in parameters:
+                log.warning(f"{self.model_name} do not support temperature, forcing to 1")
+                parameters["temperature"] = 1
+                
+            unsupported_params = [
+                "presence_penalty",
+                "top_p",
+            ]
+            
+            for param in unsupported_params:
+                if param in parameters:
+                    log.warning(f"{self.model_name} does not support {param}, removing")
+                    parameters.pop(param)
+                    
+        else:
+            messages=[system_message, human_message]
 
         self.log.debug(
             "generate",
@@ -306,7 +330,7 @@ class OpenAIClient(ClientBase):
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,
-                messages=[system_message, human_message],
+                messages=messages,
                 **parameters,
             )
 

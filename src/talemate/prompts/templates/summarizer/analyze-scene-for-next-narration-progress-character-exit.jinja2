@@ -1,0 +1,36 @@
+Your task is to guide the story editors in crafting {{ character.name }}'s exit from the current scene.
+
+{% if agent_context_state["narrator__narrative_direction"] %}The story editors were given the following direction: "{{ agent_context_state["narrator__narrative_direction"] }}".
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean for {{ character.name }}'s departure?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors create an exit that fulfills the direction.
+{% else %}
+How would you guide the story editors to bring {{ character.name }} out of the current scene.
+{% endif %}
+
+{% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
+{% if last_message %}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Analyze the meaning of final line the scene. How does it set up {{ character.name }}'s exit?
+
+``` the final line in the scene
+{{ last_message }}
+```
+{% endif %}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Analyze the immediate scene context:
+- What is {{ character.name }} currently doing?
+- What motivates or prompts their departure?
+- What state are they leaving in (emotional, physical, etc)?
+- How does their exit affect the ongoing scene?
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Based on {{ character.name }}'s character profile:
+- How do they typically handle departures?
+- What parting gestures or behaviors are characteristic of them?
+
+{% if context_investigation -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+
+- Unfinished business they're leaving behind
+- Impact of their departure on other characters present
+- Any objects or items they need to take or leave
+
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
+{% endif %}

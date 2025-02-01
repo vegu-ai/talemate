@@ -21,6 +21,29 @@
                     <v-card :disabled="!sceneLoadingAvailable || sceneIsLoading" density="compact" elevation="7"  @click="loadScene(scene)" color="primary" variant="outlined">
                         <v-card-title>
                             {{ filenameToTitle(scene.filename) }}
+
+                            <v-menu>
+                                <template v-slot:activator="{ props }">
+                                    <v-btn 
+                                    class="btn-delete"
+                                    v-bind="props"
+                                    color="delete" 
+                                    icon 
+                                    variant="text"
+                                    size="small"><v-icon>mdi-close-circle-outline</v-icon></v-btn>
+                                </template>
+                                <v-list density="compact">
+                                    <v-list-subheader>Remove</v-list-subheader>
+                                    <v-list-item prepend-icon="mdi-table-large-remove" @click="removeFromRecentScenes(scene)">
+                                        <v-list-item-title>Remove from Quick Load</v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item prepend-icon="mdi-file-remove-outline" @click="deleteScene(scene)">
+                                        <v-list-item-title>Delete</v-list-item-title>
+                                    </v-list-item>
+                                </v-list>
+                            </v-menu>
+
+
                         </v-card-title>
                         <v-card-subtitle>
                             {{ scene.name }}
@@ -36,11 +59,24 @@
             </div>
         </v-card-text>
     </v-card>
+    <ConfirmActionPrompt
+        ref="deleteScenePrompt"
+        actionLabel="Delete Scene"
+        description="Are you sure you want to delete this scene?"
+        icon="mdi-delete"
+        color="delete"
+        @confirm="(params) => deleteScene(params.scene, true)"
+    ></ConfirmActionPrompt>
 </template>
 <script>
 
+import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+
 export default {
     name: 'IntroRecentScenes',
+    components: {
+        ConfirmActionPrompt,
+    },
     props: {
         sceneIsLoading: Boolean,
         sceneLoadingAvailable: Boolean,
@@ -128,6 +164,26 @@ export default {
             }
         },
 
+        deleteScene(scene, confirmed) {
+            if(!confirmed) {
+                this.$refs.deleteScenePrompt.initiateAction({scene: scene});
+            } else {
+                this.getWebsocket().send(JSON.stringify({
+                    type: 'config',
+                    action: 'delete_scene',
+                    path: scene.path,
+                }));
+            }
+        },
+
+        removeFromRecentScenes(scene) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'config',
+                action: 'remove_scene_from_recents',
+                path: scene.path,
+            }));
+        },
+
         handleMessage(data) {
             if(data.type === 'assets') {
                 for(let id in data.assets) {
@@ -136,6 +192,10 @@ export default {
                         base64: asset.base64,
                         mediaType: asset.mediaType,
                     };
+                }
+            } else if(data.type == "config") {
+                if(data.action == "delete_scene_complete") {
+                    this.requestCoverImages();
                 }
             }
         },
@@ -180,6 +240,12 @@ export default {
 
 .v-card:disabled {
     opacity: 0.5;
+}
+
+.btn-delete {
+    position: absolute;
+    top: 0px;
+    right: 0px;
 }
 
 </style>

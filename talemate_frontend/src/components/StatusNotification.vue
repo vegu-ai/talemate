@@ -1,9 +1,12 @@
 <template>
     <v-snackbar v-model="statusMessage" location="top" :color="notificationColor()" close-on-content-click :timeout="notificationTimeout()" elevation="5">
+        <template v-slot:actions>
+            <v-btn v-if="cancellable" color="delete" rounded="0" elevation="0" variant="text" @click="cancel"><v-icon>mdi-cancel</v-icon></v-btn>
+        </template>
+
         <v-progress-circular v-if="statusMessageType === 'busy'" indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular>
         <v-icon v-else>{{ notificationIcon() }}</v-icon>
         <span class="ml-2">{{ statusMessageText }}</span>
-        <v-btn v-if="cancellable" class="ml-2" size="small" color="delete" icon rounded="0" elevation="0" variant="text" @click="cancel"><v-icon>mdi-cancel</v-icon></v-btn>
     </v-snackbar>
 </template>
 
@@ -12,6 +15,7 @@
 export default {
     data() {
         return {
+            statusTitle: '',
             statusMessage: false,
             statusMessageText: '',
             statusMessageType: '',

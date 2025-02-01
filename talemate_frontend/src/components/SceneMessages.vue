@@ -5,7 +5,7 @@
     instructions="A new copy of the scene will be forked from the message you've selected. All progress after the message will be removed, allowing you to make new choices and take the scene in a different direction."
     @continue="(name, params) => { forkScene(params.message_id, name) }" /> 
 
-    <div class="message-container" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;">
+    <div class="message-container mb-8" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;">
         <div v-for="(message, index) in messages" :key="index">
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
@@ -58,12 +58,12 @@
             </div>
             <div v-else-if="message.type === 'player_choice'" :class="`message ${message.type}`">
                 <div class="player-choice-message"  :id="`message-player-choice`">
-                    <PlayerChoiceMessage :choices="message.data.choices" @close="closePlayerChoice" :uxLocked="uxLocked" />
+                    <PlayerChoiceMessage :choices="message.data.choices" :character="message.data.character" @close="closePlayerChoice" :uxLocked="uxLocked" />
                 </div>
             </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="context-investigation-message"  :id="`message-${message.id}`">
-                    <ContextInvestigationMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" />
+                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" />
                 </div>
             </div>
 
@@ -118,7 +118,7 @@ export default {
                 "character": "#FFFFFF",
                 "director": "#FF5722",
                 "time": "#B39DDB",
-                "context_investigation": "#607D8B",
+                "context_investigation": "#FFE0B2",
             },
         }
     },
@@ -359,6 +359,16 @@ export default {
                             action: data.action
                         }
                     );
+                } else if (data.type === 'context_investigation') {
+                    this.messages.push({
+                        id: data.id,
+                        type: data.type,
+                        sub_type: data.sub_type,
+                        source_arguments: data.source_arguments,
+                        source_agent: data.source_agent,
+                        source_function: data.source_function,
+                        text: data.message,
+                    });
                 } else if (data.type === 'player_choice') {
                     console.log('player_choice', data);
                     this.messages.push({ id: data.id, type: data.type, data: data.data });
@@ -408,9 +418,7 @@ export default {
 }
 
 .message {
-    padding: 10px;
     white-space: pre-wrap;
-    margin-bottom: 10px;
 }
 
 .message.system {

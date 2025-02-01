@@ -1,0 +1,14 @@
+<|SECTION:TEXT CONTAINING FUNCTION CALLS|>
+{{ text }}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+You have been given a text that contains natural language and function calls. Function calls are placed in code blocks.
+
+Identify the function calls and extract them from the text. Respond with the extracted function calls in a json list called `calls`. 
+
+You must copy the function names and all the arguments as they are.
+
+If there are no function calls to be extracted the list must be empty.
+<|CLOSE_SECTION|>
+{{ set_json_response(dict(calls=[{}]), cutoff=3) }}

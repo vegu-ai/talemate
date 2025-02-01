@@ -1,0 +1,41 @@
+{% block rendered_context -%}
+<|SECTION:TEXT|>
+{{ text }}
+<|CLOSE_SECTION|>
+{% endblock %}
+<|SECTION:TASK|>
+In the provided text there may be instructions to read specific story chapters for more information.
+
+STEP 1: Identify any instructions to read additional chapters for more information and repeat them back.
+
+Each instruction will state a chapter number and a question or instruction for analysis.
+
+STEP 2: State your understanding of the broader task based on the analysis.
+
+STEP 3: Call the appropriate function(s) to investigate the chapters.
+
+Be very specific about the details you want to gather and reiterate the task requirement in the query.
+
+{{ focal.render_instructions() }}
+
+{{ 
+    focal.callbacks.investigate_context.render(
+        "Execute context investigation request.", 
+        chapter_number="The number of the chapter to investigate. (e.g., 1.1 or 2.3)",
+        query="The question or instruction to analyze the chapter for. What information are you trying to retrieve? This can be more than one question. Be very specific about the details you want to gather.",
+        examples=[
+            { "chapter_number": "1.1", "query": "Where did they buy the gun? Provide a detailed summary of the location." },
+            { "chapter_number": "2.3", "query": "What was the name of the woman in the red dress?" },
+            { "chapter_number": "1.4", "query": "What happened during the fight at the bar? Gather details on how it started, who was involved, and how it ended." },
+        ]
+    ) 
+}}
+
+{{
+    focal.callbacks.abort.render(
+        "Abort the context investigation request. Use this if there are no instructions to read any chapters in the provided text.",
+        examples=[{}],
+        multiple=False,
+    )
+}}
+<|CLOSE_SECTION|>

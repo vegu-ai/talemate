@@ -3,11 +3,12 @@ from enum import Enum
 from typing import Any, Union
 
 import structlog
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import talemate.instance as instance
 from talemate.emit import emit
 from talemate.prompts import Prompt
+import talemate.game.focal.schema as focal_schema 
 
 ANY_CHARACTER = "__any_character__"
 
@@ -66,6 +67,28 @@ class ContextPin(BaseModel):
     active: bool = False
 
 
+class Suggestion(BaseModel):
+    type: str
+    name: str
+    id: str
+    proposals: list[focal_schema.Call] = Field(default_factory=list)
+
+    def remove_proposal(self, uid: str):
+        self.proposals = [proposal for proposal in self.proposals if proposal.uid != uid]
+
+    def merge(self, other:"Suggestion"):
+        assert self.id == other.id, "Suggestion ids must match"
+        
+        # loop through proposals, and override existing proposals if ids match
+        # otherwise append the new proposal
+        for proposal in other.proposals:
+            for idx, self_proposal in enumerate(self.proposals):
+                if self_proposal.uid == proposal.uid:
+                    self.proposals[idx] = proposal
+                    break
+            else:
+                self.proposals.append(proposal)
+        
 class WorldState(BaseModel):
     # characters in the scene by name
     characters: dict[str, CharacterState] = {}
@@ -86,6 +109,8 @@ class WorldState(BaseModel):
     manual_context: dict[str, ManualContext] = {}
 
     character_name_mappings: dict[str, list[str]] = {}
+
+    suggestions: list[Suggestion] = Field(default_factory=list)
 
     @property
     def agent(self):

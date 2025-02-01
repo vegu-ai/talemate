@@ -11,13 +11,13 @@
 {% endblock -%}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-Generate {{ num_choices }} interesting actions for {{ player_character.name }} to advance the current scene in this text adventure game. Consider:
+Generate {{ num_choices }} interesting actions for {{ character.name }} to advance the current scene in this text adventure game. Consider:
 
 1. Examining intriguing objects or characters for more detail
 2. Interacting with the environment in meaningful ways
 3. Taking actions that naturally progress the story
 
-Format each action as a short, concise command from {{ player_character.name }}'s perspective, such as:
+Format each action as a short, concise command from {{ character.name }}'s perspective, such as:
 "Look at the strange artifact."
 "Ask the merchant about the rumors."
 "Climb the crumbling staircase."
@@ -42,7 +42,7 @@ Expected Response:
 You MUST provide your response in the following format:
 
 ANALYSIS: <Brief analysis of what happens at the end of the scene. Specifically pay attention to whether or not another character has had dialogue that could be responded to.>
-PLANNING: <Think through directions to take the scene next. The directions must make sense in relation to the ending state of the scene as it is currently. If another character has said something, include direct responses to that character. Remember, {{ player_character.name }} is the next one to act, so plan from {{ player_character.name }}'s perspective.>
+PLANNING: <Think through directions to take the scene next. The directions must make sense in relation to the ending state of the scene as it is currently. If another character has said something, include direct responses to that character. Remember, {{ character.name }} is the next one to act, so plan from {{ character.name }}'s perspective.>
 ACTIONS: 
 1. <first action choice, formatted as a short button label>
 2. <second action choice, formatted as a short button label>

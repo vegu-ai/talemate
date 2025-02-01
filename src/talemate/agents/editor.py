@@ -43,12 +43,28 @@ class EditorAgent(Agent):
             "fix_exposition": AgentAction(
                 enabled=True,
                 label="Fix exposition",
-                description="Will attempt to fix exposition and emotes, making sure they are displayed in italics. Runs automatically after each AI dialogue.",
+                description="Attempt to fix exposition and emotes, making sure they are displayed in italics. Runs automatically after each AI dialogue.",
                 config={
+                    "formatting": AgentActionConfig(
+                        type="text",
+                        label="Formatting",
+                        description="The formatting to use for exposition.",
+                        value="chat",
+                        choices=[
+                            {"label": "Chat RP: \"Speech\" *narration*", "value": "chat"},
+                            {"label": "Novel: \"Speech\" narration", "value": "novel"},
+                        ]
+                    ),
                     "narrator": AgentActionConfig(
                         type="bool",
                         label="Fix narrator messages",
-                        description="Will attempt to fix exposition issues in narrator messages",
+                        description="Attempt to fix exposition issues in narrator messages",
+                        value=True,
+                    ),
+                    "user_input": AgentActionConfig(
+                        type="bool",
+                        label="Fix user input",
+                        description="Attempt to fix exposition issues in user input",
                         value=True,
                     ),
                 },
@@ -56,12 +72,12 @@ class EditorAgent(Agent):
             "add_detail": AgentAction(
                 enabled=False,
                 label="Add detail",
-                description="Will attempt to add extra detail and exposition to the dialogue. Runs automatically after each AI dialogue.",
+                description="Attempt to add extra detail and exposition to the dialogue. Runs automatically after each AI dialogue.",
             ),
             "check_continuity_errors": AgentAction(
                 enabled=False,
                 label="Check continuity errors",
-                description="Will attempt to fix continuity errors in the dialogue. Runs automatically after each AI dialogue. (super experimental)",
+                description="Attempt to fix continuity errors in the dialogue. Runs automatically after each AI dialogue. (super experimental)",
             ),
         }
 
@@ -76,6 +92,23 @@ class EditorAgent(Agent):
     @property
     def experimental(self):
         return True
+    
+    @property
+    def fix_exposition_enabled(self):
+        return self.actions["fix_exposition"].enabled
+    
+    @property
+    def fix_exposition_formatting(self):
+        return self.actions["fix_exposition"].config["formatting"].value
+
+    @property
+    def fix_exposition_narrator(self):
+        return self.actions["fix_exposition"].config["narrator"].value
+    
+    @property
+    def fix_exposition_user_input(self):
+        return self.actions["fix_exposition"].config["user_input"].value
+    
 
     def connect(self, scene):
         super().connect(scene)
@@ -85,6 +118,30 @@ class EditorAgent(Agent):
         talemate.emit.async_signals.get("agent.narrator.generated").connect(
             self.on_narrator_generated
         )
+
+    def fix_exposition_in_text(self, text: str, character: Character | None = None):
+        if self.fix_exposition_formatting == "chat":
+            formatting = "md"
+        else:
+            formatting = None
+        
+        if self.fix_exposition_formatting == "chat":
+            text = text.replace("**", "*")
+            text = text.replace("[", "*").replace("]", "*")
+            text = text.replace("(", "*").replace(")", "*")
+        elif self.fix_exposition_formatting == "novel":
+            text = text.replace("*", "")
+            text = text.replace("[", "").replace("]", "")
+            text = text.replace("(", "").replace(")", "")
+        
+        cleaned = util.ensure_dialog_format(
+            text, 
+            talking_character=character.name if character else None, 
+            formatting=formatting
+        )
+        
+        return cleaned
+
 
     async def on_conversation_generated(self, emission: ConversationAgentEmission):
         """
@@ -100,7 +157,7 @@ class EditorAgent(Agent):
         for text in emission.generation:
             edit = await self.add_detail(text, emission.character)
 
-            edit = await self.fix_exposition(edit, emission.character)
+            edit = await self.cleanup_character_message(edit, emission.character)
 
             edit = await self.check_continuity_errors(edit, emission.character)
 
@@ -121,60 +178,78 @@ class EditorAgent(Agent):
         edited = []
 
         for text in emission.generation:
-            edit = await self.fix_exposition_on_narrator(text)
+            edit = await self.clean_up_narration(text)
             edited.append(edit)
 
         emission.generation = edited
 
     @set_processing
-    async def fix_exposition(self, content: str, character: Character):
+    async def cleanup_character_message(self, content: str, character: Character):
         """
         Edits a text to make sure all narrative exposition and emotes is encased in *
         """
-
-        if not self.actions["fix_exposition"].enabled:
-            return content
-
+        
         # if not content was generated, return it as is
         if not content:
             return content
 
-        if not character.is_player:
-            if '"' not in content and "*" not in content:
-                content = util.strip_partial_sentences(content)
-                character_prefix = f"{character.name}: "
-                message = content.split(character_prefix)[1]
-                content = f'{character_prefix}"{message.strip()}"'
-                return content
-            elif '"' in content:
-                # silly hack to clean up some LLMs that always start with a quote
-                # even though the immediate next thing is a narration (indicated by *)
-                content = content.replace(
-                    f'{character.name}: "*', f"{character.name}: *"
-                )
+        exposition_fixed = False
+
+        if not character.is_player and self.fix_exposition_enabled:
+            content = self.fix_exposition_in_text(content, character)
+            exposition_fixed = True
+            if self.fix_exposition_formatting == "chat":
+                if '"' not in content and "*" not in content:
+                    character_prefix = f"{character.name}: "
+                    message = content.split(character_prefix)[1]
+                    content = f'{character_prefix}"{message.strip()}"'
+                    return content
+                elif '"' in content:
+                    # silly hack to clean up some LLMs that always start with a quote
+                    # even though the immediate next thing is a narration (indicated by *)
+                    content = content.replace(
+                        f'{character.name}: "*', f"{character.name}: *"
+                    )
 
         content = util.clean_dialogue(content, main_name=character.name)
         content = util.strip_partial_sentences(content)
-        content = util.ensure_dialog_format(content, talking_character=character.name)
+        
+        # if there are uneven quotation marks, fix them by adding a closing quote
+        if '"' in content and content.count('"') % 2 != 0:
+            content += '"'
+        
+        if not self.fix_exposition_enabled and not exposition_fixed:
+            return content
+        
+        content = self.fix_exposition_in_text(content, character)
 
         return content
 
     @set_processing
-    async def fix_exposition_on_narrator(self, content: str):
-        if not self.actions["fix_exposition"].enabled:
-            return content
-
-        if not self.actions["fix_exposition"].config["narrator"].value:
-            return content
-
+    async def clean_up_narration(self, content: str):
         content = util.strip_partial_sentences(content)
-
-        if '"' not in content:
-            content = f"*{content.strip('*')}*"
-        else:
-            content = util.ensure_dialog_format(content)
+        if self.fix_exposition_enabled and self.fix_exposition_narrator:
+            if '"' not in content:
+                if self.fix_exposition_formatting == "chat":
+                    content = f"*{content.strip('*')}*"
+            else:
+                content = self.fix_exposition_in_text(content, None)
+                if self.fix_exposition_formatting == "chat":
+                    content = f"*{content.strip('*')}*"
 
         return content
+
+    @set_processing
+    async def cleanup_user_input(self, text: str):
+        if not self.fix_exposition_user_input or not self.fix_exposition_enabled:
+            return text
+        
+        if self.fix_exposition_formatting == "chat":
+            if '"' not in text and "*" not in text:
+                text = f'"{text}"'
+        
+        return self.fix_exposition_in_text(text)
+        
 
     @set_processing
     async def add_detail(self, content: str, character: Character):
@@ -224,12 +299,6 @@ class EditorAgent(Agent):
         count = util.count_tokens(content)
 
         if count > MAX_CONTENT_LENGTH:
-            log.warning(
-                "check_continuity_errors content too long",
-                length=count,
-                max=MAX_CONTENT_LENGTH,
-                content=content[:255],
-            )
             return content
 
         log.debug(

@@ -1,0 +1,17 @@
+{% include "suggest-context-investigations-header.jinja2" %}
+{% set narrative_direction = agent_context_state.get("narrator__narrative_direction") or "Slightly move the current scene forward." %}
+<|SECTION:TASK|>
+First, explain your understanding of the analysis.
+
+Then, based on the analysis above, suggest any chapters to read that may help guide the story editors in writing the next bit of narration that causes {{ character.name }} to exit the scene.
+
+{% if narrative_direction %}The story editors were given the following direction: "{{ narrative_direction }}".{% endif %}
+
+You may tell the story editors to read through any chapter(s) that show notable exits by {{ character.name }}.
+
+Explain how the referenced chapter demonstrates:
+- Their exit patterns in similar situations and how they handle leaving unresolved matters
+- Any missing context that could inform their current departure
+
+Then state "Read through chapter {number}."
+{% include "suggest-context-investigations-footer.jinja2" %}

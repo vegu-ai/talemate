@@ -6,6 +6,7 @@ import os
 import talemate.client as client
 from talemate.agents.base import Agent, set_processing
 from talemate.agents.registry import register
+from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.emit import emit
 from talemate.prompts import Prompt
 
@@ -22,6 +23,7 @@ class CreatorAgent(
     CharacterCreatorMixin,
     ScenarioCreatorMixin,
     AssistantMixin,
+    MemoryRAGMixin,
     Agent,
 ):
     """
@@ -37,6 +39,9 @@ class CreatorAgent(
         **kwargs,
     ):
         self.client = client
+        self.actions = {}
+        
+        MemoryRAGMixin.add_actions(self)
 
     def clean_result(self, result):
         if "#" in result:

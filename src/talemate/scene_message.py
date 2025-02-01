@@ -51,6 +51,8 @@ class SceneMessage:
 
     # the source of the message (e.g. "ai", "progress_story", "director")
     source: str = ""
+    
+    meta: dict | None = None
 
     flags: Flags = Flags.NONE
 
@@ -71,14 +73,19 @@ class SceneMessage:
     def __contains__(self, other):
         return self.message in other
 
-    def __dict__(self):
-        return {
+    def __dict__(self) -> dict:
+        rv = {
             "message": self.message,
             "id": self.id,
             "typ": self.typ,
             "source": self.source,
             "flags": int(self.flags),
         }
+        
+        if self.meta:
+            rv["meta"] = self.meta
+        
+        return rv
 
     def __iter__(self):
         return iter(self.message)
@@ -103,6 +110,25 @@ class SceneMessage:
     @property
     def hidden(self):
         return self.flags & Flags.HIDDEN
+    
+    @property
+    def fingerprint(self) -> str:
+        """
+        Returns a unique hash fingerprint for the message
+        """
+        return str(hash(self.message))[:16]
+
+    @property
+    def source_agent(self) -> str | None:
+        return (self.meta or {}).get("agent", None)
+        
+    @property
+    def source_function(self) -> str | None:
+        return (self.meta or {}).get("function", None)
+    
+    @property
+    def source_arguments(self) -> dict:
+        return (self.meta or {}).get("arguments", {})
 
     def hide(self):
         self.flags |= Flags.HIDDEN
@@ -114,7 +140,18 @@ class SceneMessage:
         if format == "movie_script":
             return self.message.rstrip("\n") + "\n"
         return self.message
-
+    
+    def set_source(self, agent: str, function: str, **kwargs):
+        if not self.meta:
+            self.meta = {}
+        self.meta["agent"] = agent
+        self.meta["function"] = function
+        self.meta["arguments"] = kwargs
+    
+    def set_meta(self, **kwargs):
+        if not self.meta:
+            self.meta = {}
+        self.meta.update(kwargs)
 
 @dataclass
 class CharacterMessage(SceneMessage):
@@ -151,11 +188,11 @@ class CharacterMessage(SceneMessage):
         {dialogue}
         """
 
-        message = self.message.split(":", 1)[1].replace('"', "").strip()
+        message = self.message.split(":", 1)[1].strip()
 
         return f"\n{self.character_name.upper()}\n{message}\nEND-OF-LINE\n"
 
-    def __dict__(self):
+    def __dict__(self) -> dict:
         rv = super().__dict__()
 
         if self.from_choice:
@@ -233,7 +270,7 @@ class DirectorMessage(SceneMessage):
     def as_story_progression(self):
         return f"{self.character_name}'s next action: {self.instructions}"
 
-    def __dict__(self):
+    def __dict__(self) -> dict:
         rv = super().__dict__()
 
         if self.action:
@@ -267,16 +304,10 @@ class TimePassageMessage(SceneMessage):
     source: str = "manual"
     typ = "time"
 
-    def __dict__(self):
-        return {
-            "message": self.message,
-            "id": self.id,
-            "typ": "time",
-            "source": self.source,
-            "ts": self.ts,
-            "flags": int(self.flags),
-        }
-
+    def __dict__(self) -> dict:
+        rv = super().__dict__()
+        rv["ts"] = self.ts
+        return rv
 
 @dataclass
 class ReinforcementMessage(SceneMessage):
@@ -303,17 +334,53 @@ class ReinforcementMessage(SceneMessage):
 class ContextInvestigationMessage(SceneMessage):
     typ = "context_investigation"
     source: str = "ai"
+    sub_type: str | None = None
+
+    @property
+    def character(self) -> str:
+        return self.source_arguments.get("character", "character")
+    
+    @property
+    def query(self) -> str:
+        return self.source_arguments.get("query", "query")
+    
+    @property
+    def title(self) -> str:
+        """
+        The title will differ based on sub_type
+        
+        Current sub_types:
+        
+        - visual-character
+        - visual-scene
+        - query
+        
+        A natural language title will be generated based on the sub_type
+        """
+        
+        if self.sub_type == "visual-character":
+            return f"Visual description of {self.character} in the current moment"
+        elif self.sub_type == "visual-scene":
+            return "Visual description of the current moment"
+        elif self.sub_type == "query":
+            return f"Query: {self.query}"
+        return "Internal note"
     
     def __str__(self):
         return (
-            f"# Internal note - {self.message}"
+            f"# {self.title}: {self.message}"
         )
 
+    def __dict__(self) -> dict:
+        rv = super().__dict__()
+        rv["sub_type"] = self.sub_type
+        return rv
+        
     def as_format(self, format: str, **kwargs) -> str:
         if format == "movie_script":
             message = str(self)[2:]
-            return f"\n({message})\n"
-        return f"\n{self.message}\n"
+            return f"\n({message})\n".replace("*", "")
+        return f"\n{self.message}\n".replace("*", "")
 
 
 

@@ -1,0 +1,12 @@
+{% include "suggest-context-investigations-header.jinja2" %}
+{% set query = agent_context_state["narrator__query"] -%}
+{% set is_question = query.strip().endswith("?") %}
+<|SECTION:TASK|>
+First, explain your understanding of the analysis.
+
+Then, based on the analysis above, suggest any chapters to read that may help{% if is_question %} answer the following question: "{{ query }}".{% else %} guide the story editors accomplush the following task: "{{ query }}"{% endif %}
+
+{% if is_question %}You may tell the narrator to read through any chapter(s) that may provide additional information about this specific question. To do this simply state "Read through chapter {number} to find out ..." followed by a specific detail you wish to understand. What question are you looking to answer? Avoid generic and broad queries and explain why the answer will help guide the narrator. Example: "Read through chapter {number} and gather information about [event]" or "Read through chapter {number} and tell us what happens during [event]"
+{% else %}You may tell the narrator to read through any chapter(s) that may provide additional information to help guide them in completing the task. To do this simply state "Read through chapter {number} and ..." followed by what you want them to do. If the task is to describe a specific event, let them know to just that!{% endif %}
+
+{% include "suggest-context-investigations-footer.jinja2" %}

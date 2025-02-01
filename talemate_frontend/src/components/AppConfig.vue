@@ -192,6 +192,23 @@
                                         </v-row>
                                     </div>
 
+                                    <!-- DEEPSEEK API -->
+                                    <div v-if="applicationPageSelected === 'deepseek_api'">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
+                                            <v-alert-title>DeepSeek</v-alert-title>
+                                            <div class="text-grey">
+                                                Configure your DeepSeek API key here. You can get one from <a href="https://platform.deepseek.com/" target="_blank">https://platform.deepseek.com/</a>
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-text-field type="password" v-model="app_config.deepseek.api_key"
+                                                    label="DeepSeek API Key"></v-text-field>
+                                            </v-col>
+                                        </v-row>
+                                    </div>
+
                                     <!-- GROQ API -->
                                     <div v-if="applicationPageSelected === 'groq_api'">
                                         <v-alert color="white" variant="text" icon="mdi-api" density="compact">
@@ -387,6 +404,7 @@ export default {
                     {title: 'Anthropic', icon: 'mdi-api', value: 'anthropic_api'},
                     {title: 'Cohere', icon: 'mdi-api', value: 'cohere_api'},
                     {title: 'groq', icon: 'mdi-api', value: 'groq_api'},
+                    {title: 'DeepSeek', icon: 'mdi-api', value: 'deepseek_api'},
                     {title: 'Google Cloud', icon: 'mdi-google-cloud', value: 'google_api'},
                     {title: 'ElevenLabs', icon: 'mdi-api', value: 'elevenlabs_api'},
                     {title: 'RunPod', icon: 'mdi-api', value: 'runpod_api'},
@@ -481,6 +499,7 @@ export default {
 
                 let inferenceConfig = this.$refs.presets.inference_config();
                 let embeddingsConfig = this.$refs.presets.embeddings_config();
+                let systemPromptsConfig = this.$refs.presets.system_prompts_config();
 
                 if(inferenceConfig) {
                     this.app_config.presets.inference = inferenceConfig;
@@ -489,6 +508,11 @@ export default {
                 if(embeddingsConfig) {
                     this.app_config.presets.embeddings = embeddingsConfig;
                 }
+
+                if(systemPromptsConfig) {
+                    this.app_config.system_prompts = systemPromptsConfig;
+                }
+
             }
 
             // check if appearance component is present

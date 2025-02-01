@@ -1,5 +1,6 @@
 import pydantic
 import structlog
+import os
 
 from talemate import VERSION
 from talemate.client.model_prompts import model_prompt
@@ -36,6 +37,9 @@ class ToggleClientPayload(pydantic.BaseModel):
     name: str
     state: bool
 
+
+class DeleteScenePayload(pydantic.BaseModel):
+    path: str
 
 class ConfigPlugin:
     router = "config"
@@ -215,3 +219,56 @@ class ConfigPlugin:
         )
 
         await emit_clients_status()
+
+
+    async def handle_remove_scene_from_recents(self, data):
+        payload = DeleteScenePayload(**data)
+
+        log.info("Removing scene from recents", path=payload.path)
+
+        current_config = load_config(as_model=True)
+
+        for recent_scene in list(current_config.recent_scenes.scenes):
+            if recent_scene.path == payload.path:
+                current_config.recent_scenes.scenes.remove(recent_scene)
+
+        save_config(current_config)
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "config",
+                "action": "remove_scene_from_recents_complete",
+                "data": {
+                    "path": payload.path,
+                },
+            }
+        )
+        
+        self.websocket_handler.queue_put(
+            {"type": "app_config", "data": load_config(), "version": VERSION}
+        )
+        
+    async def handle_delete_scene(self, data):
+        payload = DeleteScenePayload(**data)
+
+        log.info("Deleting scene", path=payload.path)
+
+        # remove the file
+        try:
+            os.remove(payload.path)
+        except FileNotFoundError:
+            log.warning("File not found", path=payload.path)
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "config",
+                "action": "delete_scene_complete",
+                "data": {
+                    "path": payload.path,
+                },
+            }
+        )
+
+        self.websocket_handler.queue_put(
+            {"type": "app_config", "data": load_config(), "version": VERSION}
+        )

@@ -16,7 +16,7 @@
                 </v-alert>
 
                 <v-alert density="compact" icon="mdi-text-box" variant="text" color="grey">
-                    {{ context }}
+                    {{ contextTypeLabel }}
                 </v-alert>
 
                 <v-alert v-if="generationOptions.writing_style" density="compact" icon="mdi-script-text" variant="text" color="grey">
@@ -138,11 +138,22 @@ export default {
         "unregisterMessageHandler",
     ],
     computed: {
+
+        contextTypeLabel: function() {
+            let [target, context] = this.context.split(":");
+            let targetLabel = target.replace(/_/g, " ");
+            let contextLabel = (context || "").replace(/_/g, " ");
+            if(contextLabel.length > 0)
+                return `${targetLabel}: ${contextLabel}`;
+            else
+                return targetLabel;
+        },
+
         tooltipText() {
             if(this.rewriteEnabled)
-                return "Generate "+this.context+"\n[+ctrl to provide instructions]\n[+alt to rewrite existing content]";
+                return "Generate "+this.contextTypeLabel+"\n[+ctrl to provide instructions]\n[+alt to rewrite existing content]";
             else
-                return "Generate "+this.context+"\n[+ctrl to provide instructions]";
+                return "Generate "+this.contextTypeLabel+"\n[+ctrl to provide instructions]";
         },
     },
     methods: {

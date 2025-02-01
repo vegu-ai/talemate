@@ -36,9 +36,11 @@
 
                     <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
                         {{ name }}
-                        <v-chip v-if="character.emotion !== null && character.emotion !== ''" label size="x-small" variant="outlined" class="ml-1">{{ character.emotion }}</v-chip>
+                        <!-- <v-chip v-if="character.emotion !== null && character.emotion !== ''" label size="x-small" variant="outlined" class="ml-1">{{ character.emotion }}</v-chip> -->
+                        <span class="text-caption ml-1 text-muted">{{ character.emotion }}</span>
                         <template v-slot:actions>
-                            <v-icon icon="mdi-account"></v-icon>
+                            <v-icon v-if="characterSuggestions(name)" color="highlight5" class="mr-1">mdi-lightbulb-on</v-icon>
+                            <v-icon v-else icon="mdi-account"></v-icon>
                         </template>
                     </v-expansion-panel-title>
 
@@ -71,6 +73,12 @@
                             <v-tooltip v-if="characterSheet().characterExists(name)" text="Manage character">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openWorldStateManager('characters', name, 'description')" icon="mdi-book-open-page-variant"></v-btn>
+
+                                </template>
+                            </v-tooltip>
+                            <v-tooltip v-if="characterSuggestions(name)" text="Review proposed changes for this character">
+                                <template v-slot:activator="{ props }">
+                                    <v-btn size="x-small" color="highlight5" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openWorldStateManager('suggestions', 'character-'+name)" icon="mdi-lightbulb-on"></v-btn>
 
                                 </template>
                             </v-tooltip>
@@ -214,6 +222,7 @@ export default {
     data() {
         return {
             characters: {},
+            suggestions: [],
             items: {},
             location: null,
             requesting: false,
@@ -329,7 +338,6 @@ export default {
             
             return states;
         },
-
         trackedWorldState(question) {
             // cycle through reinforce and return true if the world has a tracked state for this question
             // by checking the `character` property of the reinforce object
@@ -356,9 +364,19 @@ export default {
             return states;
         },
 
+        characterSuggestions(name) {
+            for(let suggestion of this.suggestions) {
+                if(suggestion.name === name && suggestion.type === 'character') {
+                    return true;
+                }
+            }
+            return false;
+        },
+
         handleMessage(data) {
             if(data.type === 'world_state') {
                 this.characters = data.data.characters;
+                this.suggestions = data.data.suggestions;
                 this.items = data.data.items;
                 this.location = data.data.location;
                 this.requesting = (data.status==="requested")

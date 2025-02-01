@@ -1,0 +1,34 @@
+{% set narrative_query = agent_context_state.narrator__query -%}
+{% set query_is_question = narrative_query and narrative_query.endswith("?") -%}
+{% if query_is_question -%}
+    {% set narrative_direction = "Answer the following question: \""+narrative_query+"\"" %}
+{% else -%}
+    {% set narrative_direction = narrative_query -%}
+{% endif -%}
+{% if query_is_question -%}
+Help the narrator answer the following question, using the full scene context and the scene analysis.
+{% else %}
+Help the narrator complete the following task, using the full scene context and the scene analysis.
+{% endif %}
+
+{% with narrative_direction=narrative_direction %}{% include "guide-narrative-direction.jinja2" %}{% endwith %}
+
+{% if last_event and not narrative_query -%}
+Current moment in the scene (use for grounding the answer, if needed):
+```
+{{ last_event }}
+```
+
+Determine whether or not the questions is about the current moment, or something in the past, or not at all relevant to any moment in time.
+{% endif %}
+
+{% if query_is_question %}
+Inform the narrator on how to answer the question, providing guidance on what key elements should be included in the response. Be specific about what information needs to be conveyed while letting the writer craft the answer.
+{% else %}
+Provide guidance on how to complete the task, offering specific details or elements that should be included in the response. Be specific about what information needs to be conveyed while letting the writer craft the response.
+{% endif %}
+
+
+{% if response_length > 300 -%}
+Briefly expand on your understanding of the scene analysis and what the expectations for the answer are.
+{% endif %}

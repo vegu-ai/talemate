@@ -8,6 +8,7 @@ import structlog
 
 from talemate.context import interaction
 from talemate.scene_message import SceneMessage
+from talemate.exceptions import RestartSceneLoop
 
 from .signals import handlers
 
@@ -41,6 +42,7 @@ class Emission:
     data: dict = None
     websocket_passthrough: bool = False
     meta: dict = dataclasses.field(default_factory=dict)
+    kwargs: dict = dataclasses.field(default_factory=dict)
 
 
 def emit(
@@ -126,6 +128,10 @@ async def wait_for_input(
         
         interaction_state = interaction.get()
         
+        if interaction_state.reset_requested:
+            interaction_state.reset_requested = False
+            raise RestartSceneLoop()
+        
         if interaction_state.input:
             input_received["message"] = interaction_state.input
             input_received["interaction"] = interaction_state
@@ -187,3 +193,6 @@ class Emitter:
 
     def player_message(self, message: str, character: Character):
         self.emit("player", message, character=character)
+        
+    def context_investigation_message(self, message: str):
+        self.emit("context_investigation", message)

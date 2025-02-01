@@ -2,7 +2,7 @@
 
 ## General
 
-![Director agent settings](/talemate/img/0.28.0/director-general-settings.png)
+![Director agent settings](/talemate/img/0.29.0/director-general-settings.png)
 
 ##### Direct
 
@@ -35,11 +35,15 @@ If `Direction` is selected, the actor will be given the direction as a direct in
 
 If `Inner Monologue` is selected, the actor will be given the direction as a thought.
 
+## Long Term Memory
+
+--8<-- "docs/snippets/tips.md:agent_long_term_memory_settings"
+
 ## Dynamic Actions
 
 Dynamic actions are introduced in `0.28.0` and allow the director to generate a set of clickable choices for the player to choose from.
 
-![Director agent dynamic actions settings](/talemate/img/0.28.0/director-dynamic-actions-settings.png)
+![Director agent dynamic actions settings](/talemate/img/0.29.0/director-dynamic-actions-settings.png)
 
 ##### Enable Dynamic Actions
 
@@ -64,3 +68,24 @@ If this is checked and you pick an action, the scene will NOT automatically pass
 Allows you to provide extra specific instructions to director on how to generate the dynamic actions.
 
 For example you could provide a list of actions to choose from, or a list of actions to avoid. Or specify that you always want a certain action to be included.
+
+## Guide Scene
+
+![Director agent guide scene settings](/talemate/img/0.29.0/director-guide-scene-settings.png)
+
+The director can use the summarizer agent's scene analysis to guide characters and the narrator for the next generation, hopefully improving the quality of the generated content.
+
+!!! danger "This may break dumber models"
+    The guidance generated is inserted **after** the message history and **right before** the next generation. Some older models may struggle with this and generate incoherent responses.
+
+##### Guide Actors
+
+If enabled the director will guide the actors in the scene.
+
+##### Guide Narrator
+
+If enabled the director will guide the narrator in the scene.
+
+##### Max. Guidance Length
+
+The maximum number of tokens for the guidance. (e.g., how long should the guidance be).

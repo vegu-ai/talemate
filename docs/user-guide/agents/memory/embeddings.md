@@ -6,6 +6,7 @@ You can manage your available embeddings through the application settings.
 
 In the settings dialogue go to **:material-tune: Presets** and then **:material-cube-unfolded: Embeddings**.
 
+<!--- --8<-- [start:embeddings_setup] -->
 ## Pre-configured Embeddings
 
 ### all-MiniLM-L6-v2
@@ -79,3 +80,4 @@ This is a tag to mark the embedding as needing a GPU. It doesn't actually do any
 ##### Local
 
 This is a tag to mark the embedding as local. It doesn't actually do anything, but can be useful for sorting later on.
+<!--- --8<-- [end:embeddings_setup] -->

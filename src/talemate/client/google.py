@@ -259,7 +259,6 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
     def clean_prompt_parameters(self, parameters: dict):
         super().clean_prompt_parameters(parameters)
 
-        log.warning("clean_prompt_parameters", parameters=parameters)
         # if top_k is 0, remove it
         if "top_k" in parameters and parameters["top_k"] == 0:
             del parameters["top_k"]

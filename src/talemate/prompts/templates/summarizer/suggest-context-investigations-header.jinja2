@@ -1,0 +1,10 @@
+{% include "scene-context.jinja2" %}
+{% set last_message = scene.last_message_of_type(["character", "narrator"]) -%}
+<|SECTION:ANALYSIS|>
+{{ analysis }}
+{% if last_message %}
+``` current moment in the scene
+{{ last_message }}
+```
+{% endif %}
+<|CLOSE_SECTION|>

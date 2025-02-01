@@ -416,17 +416,9 @@ class VisualBase(Agent):
         context = visual_context.get()
 
         if not self.enabled:
-            log.warning("generate", skipped="Visual agent not enabled")
             return
 
         if automatic and not self.allow_automatic_generation:
-            log.warning(
-                "generate",
-                skipped="Automatic generation disabled",
-                prompt=prompt,
-                format=format,
-                context=context,
-            )
             return
 
         if not context and not prompt:

@@ -3,7 +3,6 @@ import json
 import os
 
 import structlog
-from dotenv import load_dotenv
 
 import talemate.events as events
 import talemate.instance as instance
@@ -11,7 +10,6 @@ from talemate import Actor, Character, Player, Scene
 from talemate.character import deactivate_character
 from talemate.config import load_config
 from talemate.context import SceneIsLoading
-from talemate.emit import emit
 from talemate.exceptions import UnknownDataSpec
 from talemate.game.state import GameState
 from talemate.scene_message import (
@@ -193,6 +191,9 @@ async def load_scene_from_character_card(scene, file_path):
 
     scene.saved = False
 
+    await scene.save_restore("initial.json")
+    scene.restore_from = "initial.json"
+
     return scene
 
 
@@ -219,6 +220,7 @@ async def load_scene_from_data(
     scene.help = scene_data.get("help", "")
     scene.restore_from = scene_data.get("restore_from", "")
     scene.title = scene_data.get("title", "")
+    scene.writing_style_template = scene_data.get("writing_style_template", "")
 
     # reset = True
 
@@ -231,6 +233,7 @@ async def load_scene_from_data(
         scene.layered_history = scene_data.get("layered_history", [])
         scene.world_state = WorldState(**scene_data.get("world_state", {}))
         scene.game_state = GameState(**scene_data.get("game_state", {}))
+        scene.agent_state = scene_data.get("agent_state", {})
         scene.context = scene_data.get("context", "")
         scene.filename = os.path.basename(
             name or scene.name.lower().replace(" ", "_") + ".json"

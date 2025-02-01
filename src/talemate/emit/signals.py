@@ -44,6 +44,8 @@ AutocompleteSuggestion = signal("autocomplete_suggestion")
 
 SpiceApplied = signal("spice_applied")
 
+WorldSateManager = signal("world_state_manager")
+
 handlers = {
     "system": SystemMessage,
     "narrator": NarratorMessage,
@@ -77,4 +79,5 @@ handlers = {
     "spice_applied": SpiceApplied,
     "memory_request": MemoryRequest,
     "player_choice": PlayerChoiceMessage,
+    "world_state_manager": WorldSateManager,
 }

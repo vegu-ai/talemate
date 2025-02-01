@@ -15,7 +15,6 @@ import urllib3
 from openai import AsyncOpenAI, PermissionDeniedError
 
 import talemate.client.presets as presets
-import talemate.client.system_prompts as system_prompts
 import talemate.instance as instance
 import talemate.util as util
 from talemate.agents.context import active_agent
@@ -24,6 +23,8 @@ from talemate.client.model_prompts import model_prompt
 from talemate.context import active_scene
 from talemate.emit import emit
 from talemate.exceptions import SceneInactiveError, GenerationCancelled
+
+from talemate.client.system_prompts import SystemPrompts
 
 # Set up logging level for httpx to WARNING to suppress debug logs.
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -108,6 +109,10 @@ class ClientBase:
     finalizers: list[str] = []
     double_coercion: Union[str, None] = None
     client_type = "base"
+    
+    status_request_timeout:int = 2
+    
+    system_prompts = SystemPrompts()
 
     class Meta(pydantic.BaseModel):
         experimental: Union[None, str] = None
@@ -120,7 +125,7 @@ class ClientBase:
     def __init__(
         self,
         api_url: str = None,
-        name=None,
+        name: str = None,
         **kwargs,
     ):
         self.api_url = api_url
@@ -133,6 +138,7 @@ class ClientBase:
             self.max_token_length = (
                 int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 8192
             )
+            
         self.set_client(max_token_length=self.max_token_length)
 
     def __str__(self):
@@ -164,6 +170,14 @@ class ClientBase:
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
+
+    def set_system_prompts(self, system_prompts: dict | SystemPrompts):
+        if isinstance(system_prompts, dict):
+            self.system_prompts = SystemPrompts(**system_prompts)
+        elif not isinstance(system_prompts, SystemPrompts):
+            raise ValueError("system_prompts must be a `dict` or `SystemPrompts` instance")
+        else:
+            self.system_prompts = system_prompts
 
     def prompt_template(self, sys_msg: str, prompt: str):
         """
@@ -267,70 +281,13 @@ class ClientBase:
 
         - kind: the kind of generation
         """
-
-        if self.decensor_enabled:
-
-            if "narrate" in kind:
-                return system_prompts.NARRATOR
-            if "director" in kind:
-                return system_prompts.DIRECTOR
-            if "create" in kind:
-                return system_prompts.CREATOR
-            if "roleplay" in kind:
-                return system_prompts.ROLEPLAY
-            if "conversation" in kind:
-                return system_prompts.ROLEPLAY
-            if "basic" in kind:
-                return system_prompts.BASIC
-            if "editor" in kind:
-                return system_prompts.EDITOR
-            if "edit" in kind:
-                return system_prompts.EDITOR
-            if "world_state" in kind:
-                return system_prompts.WORLD_STATE
-            if "analyze_freeform" in kind:
-                return system_prompts.ANALYST_FREEFORM
-            if "analyst" in kind:
-                return system_prompts.ANALYST
-            if "analyze" in kind:
-                return system_prompts.ANALYST
-            if "summarize" in kind:
-                return system_prompts.SUMMARIZE
-            if "visualize" in kind:
-                return system_prompts.VISUALIZE
-
-        else:
-
-            if "narrate" in kind:
-                return system_prompts.NARRATOR_NO_DECENSOR
-            if "director" in kind:
-                return system_prompts.DIRECTOR_NO_DECENSOR
-            if "create" in kind:
-                return system_prompts.CREATOR_NO_DECENSOR
-            if "roleplay" in kind:
-                return system_prompts.ROLEPLAY_NO_DECENSOR
-            if "conversation" in kind:
-                return system_prompts.ROLEPLAY_NO_DECENSOR
-            if "basic" in kind:
-                return system_prompts.BASIC
-            if "editor" in kind:
-                return system_prompts.EDITOR_NO_DECENSOR
-            if "edit" in kind:
-                return system_prompts.EDITOR_NO_DECENSOR
-            if "world_state" in kind:
-                return system_prompts.WORLD_STATE_NO_DECENSOR
-            if "analyze_freeform" in kind:
-                return system_prompts.ANALYST_FREEFORM_NO_DECENSOR
-            if "analyst" in kind:
-                return system_prompts.ANALYST_NO_DECENSOR
-            if "analyze" in kind:
-                return system_prompts.ANALYST_NO_DECENSOR
-            if "summarize" in kind:
-                return system_prompts.SUMMARIZE_NO_DECENSOR
-            if "visualize" in kind:
-                return system_prompts.VISUALIZE_NO_DECENSOR
-
-        return system_prompts.BASIC
+        
+        app_config_system_prompts = client_context_attribute("app_config_system_prompts")
+        
+        if app_config_system_prompts:
+            self.system_prompts.parent = SystemPrompts(**app_config_system_prompts)
+        
+        return self.system_prompts.get(kind, self.decensor_enabled)
 
     def emit_status(self, processing: bool = None):
         """
@@ -389,6 +346,7 @@ class ClientBase:
             "error_action": None,
             "double_coercion": self.double_coercion,
             "enabled": self.enabled,
+            "system_prompts": self.system_prompts.model_dump(),
         }
 
         for field_name in getattr(self.Meta(), "extra_fields", {}).keys():
@@ -424,7 +382,7 @@ class ClientBase:
             model_prompt.create_user_override(template, self.model_name)
 
     async def get_model_name(self):
-        models = await self.client.models.list()
+        models = await self.client.models.list(timeout=self.status_request_timeout)
         try:
             return models.data[0].id
         except IndexError:

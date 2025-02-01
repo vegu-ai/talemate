@@ -1,0 +1,31 @@
+Your task is to analyze the current moment in the scene to guide natural narrative progression.
+{% set narrative_direction = agent_context_state.get("narrator__narrative_direction") or "Slightly move the current scene forward." %}
+{% if narrative_direction %}The story editors were given the following direction: "{{ narrative_direction }}".
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors to write the next narrative segment that fulfills the direction.
+{% endif %}
+
+{% if last_message -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Analyze the meaning of the final line in the scene. What was the meaning?
+
+``` the final line in the scene
+{{ last_message }}
+```
+{% endif %}
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the immediate state of the scene:
+- What physical actions or movements are in progress?
+- What sensory details are present but not yet highlighted?
+- What is the current focus of attention?
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly note any subtle elements in the current moment that could be naturally expanded through narration:
+- Environmental details that mirror the mood
+- Unspoken reactions or tensions
+- Immediate physical sensations or atmospheric qualities
+- Brief but meaningful observations about the present situation
+
+{% if context_investigation -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
+{% endif %}

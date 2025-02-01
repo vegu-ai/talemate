@@ -8,7 +8,7 @@
         <v-card-title class="text-subtitle-1">
             The
             <span class="text-director text-secondary"><v-icon size="small">mdi-bullhorn</v-icon> Director</span> 
-            suggests some actions
+            suggests some actions for <span class="text-primary">{{ character }}</span>
 
             <v-btn variant="text" size="small" color="secondary" prepend-icon="mdi-refresh" @click="regenerate" :disabled="busy">Regenerate</v-btn>
             <v-btn variant="text" size="small" color="primary" prepend-icon="mdi-cogs" @click="settings" :disabled="busy">Settings</v-btn>
@@ -39,6 +39,7 @@ export default {
     name: 'PlayerChoiceMessage',
     props: {
         choices: Array,
+        character: String,
     },
     data() {
         return {
@@ -59,6 +60,7 @@ export default {
                 type: "director",
                 action: "select_choice",
                 choice: this.choices[index],
+                character: this.character,
             }));
         },
         settings() {
@@ -71,7 +73,8 @@ export default {
             this.busy = true;
             this.getWebsocket().send(JSON.stringify({
                 type: "director",
-                action: "generate_choices",
+                action: "request_dynamic_choices",
+                character: this.character,
             }));
         },
     }

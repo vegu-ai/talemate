@@ -1,42 +1,55 @@
-{% block rendered_context %}
-<|SECTION:CONTEXT|>
-{%- with memory_query=query -%}
-    {% include "extra-context.jinja2" %}
-{% endwith -%}
-{% set related_character = scene.parse_character_from_line(query) -%}
+{% block extra_context -%}
 {% if related_character -%}
 <|SECTION:{{ related_character.name|upper }}|>
 {{ related_character.sheet}}
-{% endif %}
 <|CLOSE_SECTION|>
+{% endif %}
+{% include "extra-context.jinja2" %}
+{% set related_character = scene.parse_character_from_line(query) -%}
 {% endblock %}
-{% set scene_history=scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()))  %}
-{% set final_line_number=len(scene_history) %}
-{% for scene_context in scene_history -%}
-{{ loop.index }}. {{ scene_context }}
-
-{% endfor %}
+{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
+{% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
 {% if query.endswith("?") -%}
 Instruction: Analyze Context, History and Dialogue and then answer the question: "{{ query }}". 
 {% else -%}
 Instruction: {{ query }}
 {% endif %}
 Answer queries about the current scene or world without advancing the plot.
-Use the established context to inform your responses, anchoring them to line {{ final_line_number }}.
-Provide information that maintains continuity with everything up to and including line {{ final_line_number }}.
-Use vivid, descriptive language. Convey information through sensory details and implied thoughts.
+
+Use the established context to inform your responses, anchoring them to final line in the scene.
+
+{% if last_message %}
+``` the final line in the scene
+{{ last_message }}
+```
+{% endif -%}
+
+Provide information that maintains continuity with everything up to and including the final line.
+
 Respond as an omniscient, all-seeing narrator with deep knowledge of the story world.
-Maintain an informal, conversational tone similar to 90s adventure games.
 Respond with 1-2 sentences of concise narration fitting the scene's context.
 Avoid direct speech or dialogue. Focus on descriptive prose and implied experiences.
 Embody the narrator's role completely, using a unique narrative voice.
 
-Remember: You are the narrator. Answer questions confidently and decisively through your perspective, without progressing beyond line {{ final_line_number }}.
-Context: This scene is set within {{ scene.context }}.
-Final Line Number: {{ final_line_number }}
-Question(s): {{query}}
+{% if query.endswith("?") -%}Answer questions{% else %}Provide information{% endif %} confidently and decisively through your perspective, without progressing the story.
+
+{% if agent_context_state["director__narrator_guidance"] -%}
+{{ agent_context_state["director__narrator_guidance"] }}
+{% elif agent_context_state["narrator__writing_style"] %}
+{{ agent_context_state["narrator__writing_style"].instructions }}
+{% else %}
+Maintain an informal, conversational tone similar to 90s adventure games.
+{% endif %}
+
+{% if agent_context_state["summarizer__context_investigation"] %}Information that may be relevant to your response:
+{{ agent_context_state["summarizer__context_investigation"] }}
+{% endif %}
+
 {{ extra_instructions }}
+
+{% if query.endswith("?") -%}Question(s){% else %}Instruction{% endif %}: {{query}}
 {% include "rerun-context.jinja2" -%}
 <|CLOSE_SECTION|>
 {% if query.endswith("?") -%}Answer: {% endif -%}

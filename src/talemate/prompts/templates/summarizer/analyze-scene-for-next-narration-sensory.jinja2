@@ -1,0 +1,25 @@
+Your task is to analyze the current moment in the scene to guide the story editors to generate sensory details about the scene.
+
+{% if agent_context_state["narrator__narrative_direction"] %}The story editors were given the following direction: "{{ agent_context_state["narrator__narrative_direction"] }}".
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors to write the next narrative segment that fulfills the direction.
+{% endif %}
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the immediate state of the scene:
+- What physical actions or movements are in progress?
+- What can be heard in this moment (sounds, voices, ambient noise)?
+- What textures or physical sensations are present (temperature, air movement, surface feel)?
+- What scents or smells are in the air?
+- What specific colors, shapes, or visual details are visible?
+- What tastes are relevant (if any characters are eating/drinking)?
+
+{% if context_investigation -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+- Common sounds that would be heard in this setting
+- Typical smells associated with this time/place
+- Physical textures of common materials/objects
+- Distinctive visual details from this period
+- Traditional tastes/flavors if relevant
+
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
+{% endif %}

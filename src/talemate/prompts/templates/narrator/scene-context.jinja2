@@ -1,0 +1,11 @@
+{% set history = scene.context_history(
+    budget=budget, 
+    min_dialogue=20, 
+    sections=False) 
+%}
+{% with memory_prompt = history %}{% include "memory-context.jinja2" %}{% endwith %}
+<|SECTION:SCENE|>
+{% for scene_context in history -%}
+{{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>

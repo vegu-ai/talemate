@@ -1,0 +1,23 @@
+{% set time_message = scene.last_message_of_type(["time"]) %}
+Help the story writer as they write the narrative that explains what happens during the time passage.
+
+{% include "guide-narrative-direction.jinja2" %}
+
+{% if last_event -%}
+Previously:
+```
+{{ last_event }}
+```
+
+The reader now finds themselves {{ time_message }}. What happened between then and now?
+{% endif %}
+
+The direction is to narrate the passage of time that just occurred and set up the next scene. Focus on what happened during the time passage. Provide guidance on what key events may have occurred and how they should be portrayed. DO NOT write specific descriptions or suggest exact phrasing. Be specific about what elements need to be portrayed while letting the writer craft the actual narrative. (e.g., "show that the characters finished their meal" or "describe the change in the weather").
+
+{% if response_length > 300 -%}
+- Establish the focal point of this narrative moment
+- Describe the key events that occurred during the time passage
+- Describe how the time passage leads into the next scene
+{% endif %}
+
+Focus solely on WHAT needs to be shown. Trust the writer to develop the appropriate tone and style based on the scene's context.

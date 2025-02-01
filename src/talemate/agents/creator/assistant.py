@@ -32,6 +32,10 @@ class ContentGenerationContext(pydantic.BaseModel):
     A context for generating content.
     """
 
+    # character attribute:Attribute name
+    # character detail:Detail name
+    # character dialogue:
+    # scene intro:
     context: str
     instructions: str = ""
     length: int = 100
@@ -175,6 +179,7 @@ class AssistantMixin:
         """
 
         context_typ, context_name = generation_context.computed_context
+        editor = get_agent("editor")
 
         if generation_context.length < 100:
             kind = "create_short"
@@ -224,12 +229,60 @@ class AssistantMixin:
             if not content.startswith(generation_context.character + ":"):
                 content = generation_context.character + ": " + content
             content = util.strip_partial_sentences(content)
-            content = util.ensure_dialog_format(
-                content, talking_character=generation_context.character
-            )
+            content = await editor.cleanup_character_message(content, generation_context.character.name)
             return content
 
         return content.strip().strip("*").strip()
+
+    @set_processing
+    async def generate_character_attribute(
+        self,
+        character: "Character",
+        attribute_name: str,
+        instructions: str = "",
+        original: str | None = None,
+        generation_options: GenerationOptions = None,
+    ) -> str:
+        """
+        Wrapper for contextual_generate that generates a character attribute.
+        """
+        
+        if not generation_options:
+            generation_options = GenerationOptions()
+        
+        return await self.contextual_generate_from_args(
+            context=f"character attribute:{attribute_name}",
+            character=character.name,
+            instructions=instructions,
+            original=original,
+            **generation_options.model_dump(),
+        )
+        
+    @set_processing
+    async def generate_character_detail(
+        self,
+        character: "Character",
+        detail_name: str,
+        instructions: str = "",
+        original: str | None = None,
+        length: int = 512,
+        generation_options: GenerationOptions = None,
+    ) -> str:
+        """
+        Wrapper for contextual_generate that generates a character detail.
+        """        
+
+        if not generation_options:
+            generation_options = GenerationOptions()
+        
+        return await self.contextual_generate_from_args(
+            context=f"character detail:{detail_name}",
+            character=character.name,
+            instructions=instructions,
+            original=original,
+            length=length,
+            **generation_options.model_dump(),
+        )
 
     @set_processing
     async def autocomplete_dialogue(

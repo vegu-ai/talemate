@@ -21,6 +21,7 @@ __all__ = [
     "CmdCheckPinConditions",
     "CmdApplyWorldStateTemplate",
     "CmdSummarizeAndPin",
+    "CmdDetermineCharacterDevelopment",
 ]
 
 
@@ -162,7 +163,7 @@ class CmdPersistCharacter(TalemateCommand):
         if not is_present and not never_narrate:
             loading_status("Narrating character entrance...")
             entry_narration = await narrator.narrate_character_entry(
-                character, direction=extra_instructions
+                character, narrative_direction=extra_instructions
             )
             message = NarratorMessage(
                 entry_narration, source=f"narrate_character_entry:{character.name}"
@@ -353,3 +354,35 @@ class CmdSummarizeAndPin(TalemateCommand):
         num_messages = int(self.args[1]) if len(self.args) > 1 else 5
 
         await world_state.summarize_and_pin(message_id, num_messages=num_messages)
+
+
+@register
+class CmdDetermineCharacterDevelopment(TalemateCommand):
+    """
+    Will analyze whether or not the specified character has had
+    some major development in the story.
+    """
+
+    name = "determine_character_development"
+    description = "Determine the development of a character"
+    aliases = ["ws_dcd"]
+
+    async def run(self):
+        scene = self.scene
+
+        world_state = get_agent("world_state")
+        creator = get_agent("creator")
+
+        if not len(self.args):
+            raise ValueError("No character name provided.")
+
+        character_name = self.args[0]
+        
+        character = scene.get_character(character_name)
+        
+        if not character:
+            raise ValueError(f"Character {character_name} not found.")
+
+        instructions = await world_state.determine_character_development(character)
+        
+        # updates = await creator.update_character_sheet(character, instructions)

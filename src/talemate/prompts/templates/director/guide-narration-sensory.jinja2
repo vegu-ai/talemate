@@ -1,0 +1,20 @@
+Guide the story writer to write a narrative description of the sensory details of the current moment.
+
+We are looking to expand on smells, sounds, textures, tastes and visuals that may enrich the scene.
+
+{% if last_event -%}
+Following this moment:
+```
+{{ last_event }}
+```
+{% endif %}
+
+{% include "guide-narrative-direction.jinja2" %}
+
+Help them achieve this by providing guidance on how to expand on the sensory details of the scene. (e.g., "The flowers that [character] just walked by, tell us what they smell like." or "Describe the sound of the wind rustling through the trees." or "What does [character] feel as they stick their hand into the box of coffee beans?")
+
+{% if response_length > 300 -%}
+Briefly let the writer know what key elements should be included in the description, based on the scene analysis. What is the likely goal of this sensory narration? What are we looking to accomplish..
+{% endif %}
+
+Finally let them know they have some creative freedom to invent new details that fit the scene.

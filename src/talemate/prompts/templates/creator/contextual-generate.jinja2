@@ -57,9 +57,9 @@
 {{ action_task }} list of 20 items. The list MUST BE plain text numbered list with one item per line.
 {#- CHARACTER ATTRIBUTE -#}
 {% elif context_typ == "character attribute" %}
-{{ action_task }} "{{ context_name }}" attribute for {{ character_name }}. This must be a general description and not a continuation of the current narrative. Keep it short, similar length to {{ character_name }}'s other attributes in the sheet.
+{{ action_task }} "{{ context_name }}" attribute for {{ character_name }}. This must be a general description and not a continuation of the current narrative. Keep it short and concise.
 
-YOUR RESPONSE MUST ONLY CONTAIN THE NEW ATTRIBUTE TEXT.
+YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE ATTRIBUTE TEXT.
 {#- CHARACTER DETAIL -#}
 {% elif context_typ == "character detail" %}
 {% if context_name.endswith("?") -%}
@@ -69,7 +69,7 @@ YOUR RESPONSE MUST ONLY CONTAIN THE ANSWER.
 {% else -%}
 {{ action_task }} "{{ context_name }}" detail for {{ character_name }}. This must be a general description and not a continuation of the current narrative. Use paragraphs to separate different details.
 
-YOUR RESPONSE MUST ONLY CONTAIN THE NEW DETAIL TEXT.
+YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE DETAIL TEXT.
 {% endif -%}
 {#- CHARACTER EXAMPLE DIALOGUE -#}
 {% elif context_typ == "character dialogue" %}
@@ -113,9 +113,10 @@ It must setup an interesting entry point for the reader to participate in the sc
 {% endif %}
 {{ generation_context.spice }}
 
-{{ generation_context.style }}
+{% if generation_context.instructions %}### Editorial Instructions
+{{ generation_context.instructions }}{% endif %}
 
-{% if generation_context.instructions %}Additional instructions: {{ generation_context.instructions }}{% endif %}
+{{ generation_context.style }}
 <|CLOSE_SECTION|>
 {% if context_typ == "list" and can_coerce -%}
   {% if action_task == "Add to the existing" -%}

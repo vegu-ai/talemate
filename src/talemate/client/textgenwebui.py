@@ -64,6 +64,14 @@ class TextGeneratorWebuiClient(ClientBase):
             # arethese needed?
             "max_new_tokens",
             "stop",
+            "xtc_threshold",
+            "xtc_probability",
+            "dry_multiplier",
+            "dry_base",
+            "dry_allowed_length",
+            "dry_sequence_breakers",
+            "smoothing_factor",
+            "smoothing_curve",
             # talemate internal
             # These will be removed before sending to the API
             # but we keep them here since they are used during the prompt finalization
@@ -134,7 +142,7 @@ class TextGeneratorWebuiClient(ClientBase):
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{self.api_url}/v1/internal/model/info",
-                timeout=2,
+                timeout=self.status_request_timeout,
                 headers=self.request_headers,
             )
         if response.status_code == 404:

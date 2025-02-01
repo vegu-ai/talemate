@@ -12,6 +12,7 @@ from typing_extensions import Annotated
 
 from talemate.agents.registry import get_agent_class
 from talemate.client.registry import get_client_class
+from talemate.client.system_prompts import SystemPrompts
 from talemate.emit import emit
 from talemate.scene_assets import Asset
 
@@ -40,6 +41,8 @@ class Client(BaseModel):
     max_token_length: int = 8192
     double_coercion: Union[str, None] = None
     enabled: bool = True
+    
+    system_prompts: SystemPrompts = SystemPrompts()
 
     class Config:
         extra = "ignore"
@@ -151,6 +154,10 @@ class GroqConfig(BaseModel):
     api_key: Union[str, None] = None
 
 
+class DeepSeekConfig(BaseModel):
+    api_key: Union[str, None] = None
+
+
 class RunPodConfig(BaseModel):
     api_key: Union[str, None] = None
 
@@ -258,6 +265,18 @@ class InferenceParameters(BaseModel):
     frequency_penalty: float | None = 0.05
     repetition_penalty: float | None = 1.0
     repetition_penalty_range: int | None = 1024
+    
+    xtc_threshold: float | None = 0.1
+    xtc_probability: float | None = 0.0
+    
+    dry_multiplier: float | None = 0.0
+    dry_base: float | None = 1.75
+    dry_allowed_length: int | None = 2
+    dry_sequence_breakers: str | None = '"\\n", ":", "\\"", "*"'
+    
+    smoothing_factor: float | None = 0.0
+    smoothing_curve: float | None = 1.0
+    
     # this determines whether or not it should be persisted
     # to the config file
     changed: bool = False
@@ -471,6 +490,8 @@ class Config(BaseModel):
     creator: CreatorConfig = CreatorConfig()
 
     openai: OpenAIConfig = OpenAIConfig()
+    
+    deepseek: DeepSeekConfig = DeepSeekConfig()
 
     mistralai: MistralAIConfig = MistralAIConfig()
 
@@ -495,7 +516,9 @@ class Config(BaseModel):
     presets: Presets = Presets()
     
     appearance: Appearance = Appearance()
-
+    
+    system_prompts: SystemPrompts = SystemPrompts()
+    
     class Config:
         extra = "ignore"
 
@@ -574,6 +597,10 @@ def save_config(config, file_path: str = "./config.yaml"):
     # if presets is empty, remove it
     if not config["presets"]["inference"]:
         config.pop("presets")
+        
+    # if system_prompts is empty, remove it
+    if not config["system_prompts"]:
+        config.pop("system_prompts")
 
     with open(file_path, "w") as file:
         yaml.dump(config, file)

@@ -97,15 +97,30 @@ def run_server(args):
 
     import talemate.agents.custom
     import talemate.client.custom
+    from talemate.agents.registry import get_agent_types
     from talemate.world_state.templates import Collection
-    from talemate.world_state.templates.defaults import (
-        create_defaults_if_empty_collection,
-    )
+    from talemate.prompts.overrides import get_template_overrides
+    import talemate.client.system_prompts as system_prompts
 
     config = talemate.config.cleanup()
 
     if config.game.world_state.templates.state_reinforcement:
         Collection.create_from_legacy_config(config)
+        
+    # pre-cache system prompts
+    system_prompts.cache_all()
+    
+    for agent_type in get_agent_types():
+        template_overrides = get_template_overrides(agent_type)
+        for template_override in template_overrides:
+            if not template_override.override_newer:
+                continue
+            log.warning(
+                "Outdated Template Override",
+                agent_type=agent_type,
+                template=template_override.template_name,
+                age=template_override.age_difference,
+            )
 
     loop = asyncio.get_event_loop()
     

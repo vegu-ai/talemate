@@ -24,10 +24,10 @@
 {{ scene.description }}
 <|CLOSE_SECTION|>
 {% endif -%}
-<|SECTION:TASK|>
+{# TASK #}<|SECTION:TASK|>
 This is a roleplaying session between {{main_character.name}} and {{formatted_names}}.
 
-Content Context: {{ scene.context }}
+Content Classification: This is a specific moment from {{ scene.context }}
 
 Continue the dialogue and respond as the character of {{ talking_character.name }}. ONLY ACT AS {{ talking_character.name.upper() }}.
 
@@ -51,72 +51,40 @@ Always contain dialogue in quotation marks. For example, {{ talking_character.na
 {% endif -%}
 <|CLOSE_SECTION|>
 
-{% set general_reinforcements = scene.world_state.filter_reinforcements(insert=['all-context']) %}
-{% set char_reinforcements = scene.world_state.filter_reinforcements(character=talking_character.name, insert=["conversation-context"]) %}
-{% if memory or scene.active_pins or general_reinforcements -%} {# EXTRA CONTEXT #}
-<|SECTION:EXTRA CONTEXT|>
-{#- MEMORY #}
-{%- for mem in memory %}
-{{ mem|condensed }}
+<|SECTION:How to use internal notes|>
+Internal notes may be given to you to help you with consistency when writing.
 
-{% endfor %}
-{# END MEMORY #}
-
-{# GENERAL REINFORCEMENTS #}
-{%- for reinforce in general_reinforcements %}
-{{ reinforce.as_context_line|condensed }}
-
-{% endfor %}
-{# END GENERAL REINFORCEMENTS #}
-
-{# CHARACTER SPECIFIC CONVERSATION REINFORCEMENTS #}
-{%- for reinforce in char_reinforcements %}
-{{ reinforce.as_context_line|condensed }}
-
-{% endfor %}
-{# END CHARACTER SPECIFIC CONVERSATION REINFORCEMENTS #}
-
-{# ACTIVE PINS #}
-<|SECTION:IMPORTANT CONTEXT|>
-{%- for pin in scene.active_pins %}
-{{ pin.time_aware_text|condensed }}
-
-{% endfor %}
-{# END ACTIVE PINS #}
+They may be instructions on how the character should act or simply add some context that may inform the character's next dialogue.
 <|CLOSE_SECTION|>
-{% endif -%} {# END EXTRA CONTEXT #}
-
-<|SECTION:SCENE|>
+{# EXTRA CONTEXT #}{% block extra_context -%}{% include "extra-context.jinja2" %}{% endblock %}
 {% endblock -%}
-{% block scene_history -%}
-{% set scene_context = scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=talking_character.name) -%}
+{% set director_guidance = agent_context_state["director__actor_guidance"] -%}
+{% set scene_history = scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=talking_character.name) -%}
+{# RAG CONTEXT #}{% with memory_prompt = scene_history %}{% include "memory-context.jinja2" %}{% endwith %}
+{# SCENE HISTORY #}<|SECTION:SCENE|>
+{% block scene_history_block -%}
+{% if not director_guidance -%}
 {%- if actor_instructions_offset > 0 and talking_character.dialogue_instructions and scene.count_messages() > actor_instructions_offset -%}
-    {%- set _ = scene_context.insert(-actor_instructions_offset, "(Internal acting instructions for "+talking_character.name+": "+talking_character.dialogue_instructions+" "+actor_instructions+")") -%}
+    {%- set _ = scene_history.insert(-actor_instructions_offset, "(Internal acting instructions for "+talking_character.name+": "+talking_character.dialogue_instructions+" "+actor_instructions+")") -%}
 {% endif -%}
-{% for scene_line in scene_context -%}
+{% endif -%}
+{% for scene_line in scene_history -%}
 {{ scene_line }}
 
 {% endfor %}
 {% endblock -%}
 <|CLOSE_SECTION|>
 {% if scene.count_messages() < actor_instructions_offset or actor_instructions_offset == 0 %}
+{% if not director_guidance -%}
 {% if not talking_character.dialogue_instructions %}({% if actor_instructions %} {{ actor_instructions }}{% else %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is informal, conversational, natural, and spontaneous, with a sense of immediacy.{% endif -%}){% else %}(Internal acting instructions for {{ talking_character.name }}: {{ talking_character.dialogue_instructions }}{% if actor_instructions %} {{ actor_instructions }}{% endif %}){% endif -%}
 {% endif -%}
 {% if layered_history_investigation %}
 (Internal notes - historic context: {{ layered_history_investigation }})
 {% endif -%}
-{% if rerun_context and rerun_context.direction -%}
-{% if rerun_context.method == 'replace' -%}
-# Final instructions for generating the next line of dialogue: {{ rerun_context.direction }}
-{% elif rerun_context.method == 'edit' and rerun_context.message -%}
-# Edit and respond with your changed version of the following line of dialogue: {{ rerun_context.message|condensed }}
+{% endif -%}
 
-# Requested changes: {{ rerun_context.direction }}
-{% endif -%}
-{% endif -%}
-{% if direct_instruction -%}
-{{ talking_character.name }}'s next action: {{ direct_instruction }}
+{% with direct=direct_instruction, character=talking_character %}{% include "rerun-context.jinja2" %}{% endwith %}
 
-You must not add additional actions.
-{% endif -%}
+{% if director_guidance %}# {{ talking_character.name }}'s next action: {{ director_guidance|condensed }}{% endif %}
+{% if direct_instruction -%}# {{ talking_character.name }}'s next action: {{ direct_instruction|condensed }}. You must not add additional actions.{% endif -%}
 {{ bot_token }}{{ talking_character.name }}:{{ partial_message }}

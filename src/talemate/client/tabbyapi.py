@@ -136,6 +136,14 @@ class TabbyAPIClient(ClientBase):
             "repetition_penalty_range",
             "min_p",
             "top_p",
+            "xtc_threshold",
+            "xtc_probability",
+            "dry_multiplier",
+            "dry_base",
+            "dry_allowed_length",
+            "dry_sequence_breakers",
+            # dry_range ?
+            "smoothing_factor",
             "temperature_last",
             "temperature",
         ]
@@ -233,7 +241,6 @@ class TabbyAPIClient(ClientBase):
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
 
-        log.warning("reconfigure", kwargs=kwargs)
         self.set_client(**kwargs)
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:

@@ -363,6 +363,12 @@ class Collection(pydantic.BaseModel):
                 return group
         return None
 
+    def find_template(self, group_uid: str, template_uid: str) -> Template | None:
+        group = self.find(group_uid)
+        if group:
+            return group.find(template_uid)
+        return None
+
     def remove(self, group: Group, save: bool = True):
         self.groups.remove(group)
         if save:

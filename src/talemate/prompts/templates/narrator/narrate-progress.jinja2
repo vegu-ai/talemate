@@ -1,36 +1,18 @@
-{% block rendered_context -%}
-<|SECTION:CONTEXT|>
-{%- with memory_query=scene.snapshot() -%}
-    {% include "extra-context.jinja2" %}
-{% endwith %}
-
-NPCs: {{ npc_names }}
-Player Character: {{ player_character.name }}
-<|CLOSE_SECTION|>
-{% endblock -%}
-<|SECTION:SCENE|>
-{% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context()), min_dialogue=20, sections=False) -%}
-{{ scene_context }}
-{% endfor %}
-<|CLOSE_SECTION|>
+{% block extra_context -%}{% include "extra-context.jinja2" %}{% endblock %}
+{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
-Maintain the existing writing style consistently throughout your narration.
-Advance the scene through vivid narration. Focus on the protagonist's actions, thoughts, and surroundings.
-Maintain continuity with the overall context. Prioritize scene progression.
-Use sensory details and internal monologue for immersion.
-Adopt an informal, conversational tone similar to 90s adventure games.
-Narrate as an omniscient storyteller, describing scenes and characters' inner experiences.
-Generate descriptive prose and internal thoughts. Avoid direct speech.
-Begin the next scene if the current one has ended.
-Speak only as the narrator, guiding the reader through the story world.
+{% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
+Drive the story forward through vivid action and purposeful events, letting atmospheric details emerge naturally through movement and consequence. Paint the scene in bold strokes as characters act and react, their choices rippling outward to shape what happens next. Weave sensory impressions and emotional undertones into the action without letting them slow the narrative's momentum. Each scene should push toward the next through decisions made, promises broken, or circumstances changed - while maintaining a distinct voice that brings the world and characters to life. When transitioning between moments, use crisp imagery and telling details that serve both atmosphere and forward motion.
 
-Remember: You are the all-seeing narrator. Immerse the reader in the story through your descriptions and insights.
-{% if narrative_direction %}
-Directions for new narration: {{ narrative_direction }}
+{% if last_message %}
+``` the final line in the scene
+{{ last_message }}
+```
+Your narration should build upon this final line, progressing from there.
+{% endif -%}
 
-These are directions and the events described have not happened yet, you are writing the narrative based on the directions.
-{% endif %}
+{% include "narrative-direction.jinja2" %}
 
 Write 2 to 4 sentences. {{ extra_instructions }}
-{% include "rerun-context.jinja2" -%}
 <|CLOSE_SECTION|>

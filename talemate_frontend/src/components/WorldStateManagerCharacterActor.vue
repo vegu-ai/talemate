@@ -15,14 +15,15 @@
 
 
             <div v-if="tab == 'instructions'">
-                <v-sheet class="text-right">
-                    <v-spacer></v-spacer>
-                    <v-tooltip class="pre-wrap" :text="tooltipText" max-width="250" >
-                        <template v-slot:activator="{ props }">
-                            <v-btn v-bind="props" color="primary" @click.stop="generateCharacterDialogueInstructions" variant="text" size="x-small" prepend-icon="mdi-auto-fix">Generate</v-btn>
-                        </template>
-                    </v-tooltip>
-                </v-sheet>
+                <ContextualGenerate 
+                    ref="contextualGenerate"
+                    uid="wsm.character_acting_instructions"
+                    :context="'acting_instructions:'" 
+                    :character="character.name"
+                    :rewrite-enabled="false"
+                    :generation-options="generationOptions"
+                    @generate="content => { setCharacterDialogueInstructions(content); updateCharacterActor(); }"
+                />
                 <v-textarea 
                 :loading="dialogueInstructionsBusy"
                 :disabled="dialogueInstructionsBusy"
@@ -100,11 +101,13 @@ export default {
             dialogueExample: "",
             dialogueInstructions: null,
             dialogueInstructionsDirty: false,
-            dialogueInstructionsBusy: false,
             updateCharacterActorTimeout: null,
         }
     },
     computed: {
+        dialogueInstructionsBusy() {
+            return this.$refs.contextualGenerate && this.$refs.contextualGenerate.busy;
+        },
         dialogueExamplesWithNameStripped() {
             return this.dialogueExamples.map((example) => {
                 return example.replace(this.character.name + ': ', '');
@@ -147,6 +150,11 @@ export default {
                 dialogue_instructions: this.dialogueInstructions,
                 dialogue_examples: this.dialogueExamples,
             }));
+        },
+
+        setCharacterDialogueInstructions(instructions) {
+            this.dialogueInstructions = instructions;
+            this.dialogueInstructionsDirty = true;
         },
 
         generateCharacterDialogueInstructions() {

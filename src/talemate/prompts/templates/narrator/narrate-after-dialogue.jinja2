@@ -1,32 +1,24 @@
-{% block rendered_context %}
-<|SECTION:CONTEXT|>
-{%- with memory_query=last_line -%}
-    {% include "extra-context.jinja2" %}
-{% endwith -%}
-<|CLOSE_SECTION|>
-{% endblock %}
-<|SECTION:SCENE|>
-{% for scene_context in scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=25) -%}
-{{ scene_context }}
-{% endfor %}
-<|CLOSE_SECTION|>
-
+{% block extra_context -%}{% include "extra-context.jinja2" %}{% endblock %}
+{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
-In response to "{{ last_line}}"
+{% set last_message = scene.last_message_of_type(["character", "narrator"]) -%}
+``` last line in the scene
+{{ last_message }}
+```
+Following the last line in the scene, generate new narration that provides sensory details about the scene.
 
-Generate a line of new narration that provides sensory details about the scene.
-
-This line should focus solely on describing sensory details (like sounds, sights, smells, tactile sensations) or external actions that move the story forward. Avoid including any character's internal thoughts, feelings, or dialogue. Your narration should directly response to the last line either by elaborating on the immediate scene or by subtly advancing the plot. Generate exactly one sentence of new narration. If the character is trying to determine some state, truth or situation, try to answer as part of the narration.
+Focus solely on describing sensory details about the characters or the environment (like sounds, sights, smells, tactile sensations). You must not any character's internal thoughts, feelings, or dialogue. Your narration should directly response to the last line either by elaborating on the immediate scene or by subtly advancing the plot. If the character is trying to determine some state, truth or situation, try to answer as part of the narration.
 
 Be creative and generate something new and interesting, but stay true to the setting and context of the story so far.
 
-Use an informal and colloquial register with a conversational tone. Overall, the narrative is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
+YOU MUST NOT WRITE DIALOGUE - Your narration may lead into dialogue but must not include it.
 
-Narration style should be that of a 90s point and click adventure game. You are omniscient and can describe the scene in detail.
+Your new narration should be 2 to 3 sentences in length.
+
+{% include "narrative-direction.jinja2" %}
 
 [$REPETITION|Narration is getting repetitive. Try to choose different words to break up the repetitive text.]
-Only generate new narration. {{ extra_instructions }}
-{% include "rerun-context.jinja2" -%}
 
+{{ extra_instructions }}
 <|CLOSE_SECTION|>
-{{ bot_token }}New Narration:

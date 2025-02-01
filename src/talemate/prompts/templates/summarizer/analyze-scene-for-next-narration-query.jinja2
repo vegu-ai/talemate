@@ -1,0 +1,16 @@
+{% set query = agent_context_state["narrator__query"] -%}
+{% set is_question = query.strip().endswith("?") %}
+{% if is_question %}Help the narrator answer the following question: "{{ query }}". Do this by gathering information and identifying where additional information may be found. 
+{% else %}Help the narrator with the task: "{{ query }}".{% endif %}
+
+The information and instructions you write must help complete this task.
+
+{% if is_question %}{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyze the meaning of the question, what is the context and what is the question asking for? What is it not asking for? Carefully analyze the question to understand the expectations of the reader.
+{% else %}{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyze the task. What is the context and meaning? What is the likely expectation of the reader by giving us this task?{% endif %}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Is this question / task refering to a specific event? If yes, pinpoint the chapter in which it occurs. Available chapters: {{ join(agent_context_state["chapter_numbers"], ", ") }}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Add any insight that helps with the task, from the information that's available to you right now.
+{% if context_investigation -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
+{% endif %}

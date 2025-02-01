@@ -17,8 +17,11 @@ log = structlog.get_logger("talemate")
 # Edit this to add new models / remove old models
 SUPPORTED_MODELS = [
     "command",
+    "command-light",
     "command-r",
     "command-r-plus",
+    "command-r-plus-08-2024",
+    "command-r7b-12-2024",
 ]
 
 

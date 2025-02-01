@@ -1,0 +1,54 @@
+{% block rendered_context -%}
+<|SECTION:TEXT|>
+{% for entry in entries %}
+{% if layer > 0 %}### Chapter {{ layer }}.{{ loop.index }}{% endif %}
+{{ time_diff(entry.get("ts_end", entry.get("ts"))) }}
+{{ entry["text"] }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% if analysis and False %}
+<|SECTION:ANALYSIS|>
+{{ analysis|no_chapters }}
+<|CLOSE_SECTION|>
+{% endif %}
+{% endblock %}
+<|SECTION:TASK|>
+Investigate the story and answer the following question: "{{ query }}".
+
+{{ focal.render_instructions() }}
+
+{% if layer > 0 %}
+{{ 
+    focal.callbacks.investigate_context.render(
+        "Further investigate a specific chapter for more information.", 
+        chapter_number="The number of the chapter to investigate. (e.g., 1.1 or 2.3)",
+        query="The question or instruction to analyze the chapter for. What information are you trying to retrieve? This can be more than one question. Be very specific about the details you want to gather.",
+        examples=[
+            { "chapter_number": "1.1", "query": "Where did they buy the gun?" },
+            { "chapter_number": "2.3", "query": "What was the name of the woman in the red dress?" },
+            { "chapter_number": "1.4", "query": "What happened during the fight at the bar? Gather details."},
+        ]
+    ) 
+
+}}
+{% endif %}
+
+{{
+    focal.callbacks.answer.render(
+        "Instruct the narrator to answer the query.", 
+        query="The question being answered. What information are you trying to retrieve?",
+        instructions="The instructions to the narrator on how to answer the query. Make sure to ask him to provide information of how long ago the information was true.",
+        examples=[
+            { "query": "Where did they buy the gun?", "instructions": "Provide the location and the time of the purchase." },
+            { "query": "What was the name of the woman in the red dress?", "instructions": "Provide the name of the woman in the red dress and how and when the name was revealed." }
+        ]
+    )
+}}
+
+{{
+    focal.callbacks.abort.render(
+        "Abort the context investigation request. Use this if you are unable to find the information requested.",
+        examples=[{}]
+    )
+}}
+<|CLOSE_SECTION|>

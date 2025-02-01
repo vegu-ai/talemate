@@ -4,6 +4,7 @@ import talemate.client.runpod
 from talemate.client.anthropic import AnthropicClient
 from talemate.client.base import ClientBase, ClientDisabledError
 from talemate.client.cohere import CohereClient
+from talemate.client.deepseek import DeepSeekClient
 from talemate.client.google import GoogleClient
 from talemate.client.groq import GroqClient
 from talemate.client.koboldcpp import KoboldCppClient

@@ -15,6 +15,7 @@ from talemate.scene_message import SceneMessage
 from talemate.util import iso8601_diff_to_human
 from talemate.world_state.templates import GenerationOptions
 from talemate.exceptions import GenerationCancelled
+from talemate.context import handle_generation_cancelled
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -144,9 +145,10 @@ async def rebuild_history(
             entries += 1
             if not more:
                 break
-    except GenerationCancelled:
+    except GenerationCancelled as e:
         log.info("Generation cancelled, stopping rebuild of historical archive")
         emit("status", message="Rebuilding of archive cancelled", status="info")
+        handle_generation_cancelled(e)
         return
     except Exception as e:
         log.exception("Error rebuilding historical archive", error=e)

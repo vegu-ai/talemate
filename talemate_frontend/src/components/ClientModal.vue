@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="localDialog" max-width="960px">
+  <v-dialog v-model="localDialog" max-width="1080px">
     <v-card>
       <v-card-title>
         <v-icon>mdi-network-outline</v-icon>
@@ -109,7 +109,19 @@
                       hint=""></v-textarea>
                   </div>
                 </v-window-item>
+                <!-- SYSTEM PROMPTS -->
+                <v-window-item value="system_prompts">
+                  <AppConfigPresetsSystemPrompts 
+                    :immutable-config="client"
+                    :decensor-available="clientMeta().requires_prompt_template"
+                    :system-prompt-defaults="immutableConfig ? immutableConfig.system_prompt_defaults : {}"
+                    @update="(config) => client.system_prompts = config.system_prompts"
+                    scope="client"
+                  >
+                  </AppConfigPresetsSystemPrompts>
+                </v-window-item>
               </v-window>
+
             </v-col>
           </v-row>
         </v-form>
@@ -125,10 +137,17 @@
 </template>
 
 <script>
+
+import AppConfigPresetsSystemPrompts from './AppConfigPresetsSystemPrompts.vue';
+
 export default {
   props: {
     dialog: Boolean,
-    formTitle: String
+    formTitle: String,
+    immutableConfig: Object,
+  },
+  components: {
+    AppConfigPresetsSystemPrompts,
   },
   inject: [
     'state',
@@ -165,6 +184,11 @@ export default {
             return this.clientMeta().requires_prompt_template;
           },
         },
+        system_prompts: {
+          title: 'System Prompts',
+          value: 'system_prompts',
+          icon: 'mdi-text-box',
+        },
       }
     };
   },
@@ -195,6 +219,9 @@ export default {
     }
   },
   methods: {
+    setSystemPrompts(systemPrompts) {
+      this.client.system_prompts = systemPrompts;
+    },
     resetToDefaults() {
       const defaults = this.defaultValuesByCLientType[this.client.type];
       if (defaults) {

@@ -9,6 +9,7 @@ from talemate.client.base import ClientBase
 from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.exceptions import GenerationCancelled
+from talemate.context import handle_generation_cancelled
 
 if TYPE_CHECKING:
     from talemate.agents.director import DirectorAgent
@@ -97,6 +98,7 @@ class GameInstructionScope:
         except GenerationCancelled as exc:
             if callable(self.on_generation_cancelled):
                 self.on_generation_cancelled(self, exc)
+            handle_generation_cancelled(exc)
 
     def emit_status(self, status: str, message: str, **kwargs):
         if kwargs:

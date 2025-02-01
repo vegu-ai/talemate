@@ -29,13 +29,17 @@ export default createVuetify({
           highlight4: colors.red.lighten1,
           highlight5: colors.amber.lighten3,
           dirty: colors.orange.lighten2,
+          instructions: colors.orange.lighten4,
+
+          enabled: colors.green.lighten2,
+          disabled: colors.red.lighten2,
 
           // messages
           narrator: colors.deepPurple.lighten3,
           character: colors.shades.white,
           director: colors.deepOrange.base,
-          time: colors.deepPurple.lighten3,
-          context_investigation: colors.blueGrey.base,
+          time: colors.amber.lighten4,
+          context_investigation: colors.orange.lighten4,
 
           // html colors
           cornflowerblue: "#6495ED",

@@ -67,22 +67,9 @@ export default {
 </script>
   
 <style scoped>
-.highlight {
-  font-style: italic;
-  margin-left: 2px;
-  margin-right: 2px;
-}
 
 .clickable {
   cursor: pointer;
-}
-
-.highlight:before {
-  --content: "*";
-}
-
-.highlight:after {
-  --content: "*";
 }
 
 .director-container {

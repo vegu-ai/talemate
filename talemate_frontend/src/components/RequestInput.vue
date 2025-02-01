@@ -1,13 +1,14 @@
 <template>
-    <v-dialog v-model="open" max-width="500">
+    <v-dialog v-model="open" :max-width="size">
         <v-card>
             <v-card-title>
+                <v-icon v-if="icon" size="small" class="mr-2" color="primary">{{ icon }}</v-icon>
                 <span class="headline">{{ title }}</span>
             </v-card-title>
             <v-card-text>
 
                 <v-alert v-if="instructions" color="muted" variant="text">
-                    {{ instructions }}
+                    <div class="instructions">{{ instructions }}</div>
                 </v-alert>
 
                 <v-form @submit.prevent="proceed" ref="form" v-model="valid">
@@ -15,8 +16,11 @@
                         <v-col cols="12">
                             <v-textarea
                                 v-model="input"
+                                ref="input_multiline"
+                                @keydown.enter.ctrl="proceed"
                                 :label="title"
                                 :rules="[rules.required]"
+                                messages="Press Ctrl+Enter to submit"
                             ></v-textarea>
                         </v-col>
                     </v-row>
@@ -24,8 +28,11 @@
                         <v-col cols="12">
                             <v-text-field
                                 v-model="input"
+                                ref="input_text"
+                                @keydown.enter.ctrl="proceed"
                                 :label="title"
                                 :rules="[rules.required]"
+                                messages="Press Ctrl+Enter to submit"
                             ></v-text-field>
                         </v-col>
                     </v-row>
@@ -51,6 +58,11 @@ export default {
     props: {
         title: String,
         instructions: String,
+        icon: String,
+        size: {
+            type: Number,
+            default: 500,
+        },
         inputType: {
             type: String,
             default: 'text',
@@ -87,9 +99,23 @@ export default {
             this.open = true;
             this.extra_params = extra_params;
             this.input = '';
+            // auto focus on input next tick
+            this.$nextTick(() => {
+                if(this.inputType === 'multiline') {
+                    this.$refs.input_multiline.focus();
+                } else {
+                    this.$refs.input_text.focus();
+                }
+            });
         }
     }
 }
 
 
 </script>
+
+<style scoped>
+.instructions {
+    white-space: pre-wrap;
+}
+</style>

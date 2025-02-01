@@ -117,7 +117,7 @@
         </v-alert>
 
         <v-list>
-          <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig"></AIClient>
+          <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" :immutable-config="appConfig"></AIClient>
           <v-divider></v-divider>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
           <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents"></AIAgent>
@@ -168,6 +168,7 @@
                   @open-world-state-manager="onOpenWorldStateManager"
                   :messageInput="messageInput"
                   :agent-status="agentStatus"
+                  :app-busy="busy"
                   :worldStateTemplates="worldStateTemplates"
                   :playerCharacterName="getPlayerCharacterName()"
                   :passiveCharacters="passiveCharacters"
@@ -185,7 +186,7 @@
                   @keydown.enter.prevent="sendMessage"
                   @keydown.tab.prevent="cycleActAs"
                   :hint="messageInputLongHint()"
-                  :disabled="isInputDisabled()"
+                  :disabled="busy"
                   :loading="autocompleting"
                   :prepend-inner-icon="messageInputIcon()"
                   :color="messageInputColor()">
@@ -207,6 +208,7 @@
             :scene="scene"
             :agent-status="agentStatus"
             :app-config="appConfig"
+            :app-busy="busy"
             @navigate-r="onWorldStateManagerNavigateR"
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />
@@ -221,8 +223,8 @@
     <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
-    <StatusNotification />
   </v-app>
+  <StatusNotification />
 </template>
   
 <script>
@@ -311,6 +313,7 @@ export default {
       ],
       version: null,
       loading: false,
+      favicon: null,
       sceneActive: false,
       drawer: false,
       sceneDrawer: true,
@@ -347,6 +350,7 @@ export default {
       // received from the backend
       lastAgentUpdate: null,
       lastClientUpdate: null,
+      busy: false,
     }
   },
   watch:{
@@ -357,7 +361,21 @@ export default {
       if(!tabs.find(tab => tab.value == this.tab)) {
         this.tab = tabs[0].value;
       }
-    }
+    },
+    agentStatus: {
+      // check if any of the agent's is busy in a blocking manner
+      // this means agentStatus[agent].busy is true and agentStatus[agent].busy_bg is false
+      handler: function() {
+        for(let agent in this.agentStatus) {
+          if(this.agentStatus[agent].busy && !this.agentStatus[agent].busy_bg) {
+            this.busy = true;
+            return;
+          }
+        }
+        this.busy = false;
+      },
+      deep: true,
+    },
   },
   computed: {
     availableTabs() {
@@ -397,6 +415,7 @@ export default {
   },
   mounted() {
     this.connect();
+    this.favicon = document.querySelector('link[rel="icon"]');
   },
   beforeUnmount() {
     // Close the WebSocket connection when the component is destroyed
@@ -431,10 +450,12 @@ export default {
       getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
       getTrackedWorldState: (question) => this.$refs.worldState.trackedWorldState(question),
       getPlayerCharacterName: () => this.getPlayerCharacterName(),
+      getActAsCharacterName: () => this.actAs || this.getPlayerCharacterName(),
       formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
       autocompleteRequest: (partialInput, callback, focus_element, delay) => this.autocompleteRequest(partialInput, callback, focus_element, delay),
       autocompleteInfoMessage: (active) => this.autocompleteInfoMessage(active),
       toLabel: (value) => this.toLabel(value),
+      openWorldStateManager: this.onOpenWorldStateManager,
     };
   },
   methods: {
@@ -496,6 +517,7 @@ export default {
         if (data.id === 'scene.loaded') {
           this.loading = false;
           this.sceneActive = true;
+          this.actAs = null;
           this.requestAppConfig();
           this.requestWorldStateTemplates();
           this.$nextTick(() => {
@@ -548,6 +570,7 @@ export default {
 
       if (data.type === 'app_config') {
         this.appConfig = data.data;
+        console.log("App Config", this.appConfig);
         if(data.version)
           this.version = data.version;
         return;
@@ -662,6 +685,20 @@ export default {
         this.agentStatus[data.name].recentlyActiveTimeout = setTimeout(() => {
           this.agentStatus[data.name].recentlyActive = false;
         }, recentlyActiveDuration);
+      }
+
+      // if any agents are busy show the browser's native loading spinner in the tab
+      // 
+      // favicon.ico vs favicon-loading.ico
+
+      if(Object.values(this.agentStatus).find(agent => agent.busy)) {
+        if(this.favicon) {
+          this.favicon.href = '/favicon-loading.ico';
+        }
+      } else {
+        if(this.favicon) {
+          this.favicon.href = '/favicon.ico';
+        }
       }
 
     },

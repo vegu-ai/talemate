@@ -28,7 +28,7 @@
             <span v-if="!scene.saved" class="text-muted text-caption mr-1">Unsaved changes.</span>
             <v-chip v-if="scene && scene.data != null" size="x-small" prepend-icon="mdi-file" label class="text-caption text-muted">{{ scene.data.filename }}</v-chip>
             <v-spacer></v-spacer>
-            <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { generationOptions = opt }" />
+            <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { updateGenerationOptions(opt) }" />
         </v-toolbar>
 
         <v-window v-model="tab">
@@ -50,11 +50,13 @@
                 ref="characters" 
                 @require-scene-save="requireSceneSave = true"
                 @selected-character="(character) => { $emit('selected-character', character) }"
+                @world-state-manager-navigate="show"
                 :generation-options="generationOptions"
                 :templates="templates"
                 :scene="scene"
                 :agent-status="agentStatus"
-                :character-list="characterList" />
+                :character-list="characterList"
+                :app-busy="appBusy" />
             </v-window-item>
 
             <!-- WORLD -->
@@ -100,6 +102,13 @@
                 ref="pins" />
             </v-window-item>
 
+            <!-- SUGGESTIONS -->
+            <v-window-item value="suggestions">
+                <WorldStateManagerSuggestions
+                ref="suggestions" 
+                />
+            </v-window-item>
+
             <!-- TEMPLATES -->
             <v-window-item value="templates">
                 <WorldStateManagerTemplates 
@@ -123,8 +132,10 @@ import WorldStateManagerContextDB from './WorldStateManagerContextDB.vue';
 import WorldStateManagerPins from './WorldStateManagerPins.vue';
 import WorldStateManagerScene from './WorldStateManagerScene.vue';
 import WorldStateManagerHistory from './WorldStateManagerHistory.vue';
+import WorldStateManagerSuggestions from './WorldStateManagerSuggestions.vue';
 import GenerationOptions from './GenerationOptions.vue';
 import RequestInput from './RequestInput.vue';
+
 
 export default {
     name: 'WorldStateManager',
@@ -136,6 +147,7 @@ export default {
         WorldStateManagerPins,
         WorldStateManagerScene,
         WorldStateManagerHistory,
+        WorldStateManagerSuggestions,
         GenerationOptions,
         RequestInput,
     },
@@ -153,6 +165,7 @@ export default {
         worldStateTemplates: Object,
         agentStatus: Object,
         appConfig: Object,
+        appBusy: Boolean,
     },
     data() {
         return {
@@ -190,6 +203,11 @@ export default {
                     icon: "mdi-pin"
                 },
                 {
+                    name: "suggestions",
+                    title: "Suggestions",
+                    icon: "mdi-lightbulb-on"
+                },
+                {
                     name: "templates",
                     title: "Templates",
                     icon: "mdi-cube-scan"
@@ -216,6 +234,9 @@ export default {
             generationOptions: {},
             worldEntries: {},
             worldStates: {},
+
+            // load writing style template
+            loadWritingStyleTemplate: true,
         }
     },
     emits: [
@@ -229,7 +250,10 @@ export default {
             }
         },
         tab(val) {
-            this.emitEditorState(val)
+            this.$nextTick(() => {
+                this.emitEditorState(val)
+            });
+
             if(val === 'world') {
                 this.$nextTick(() => {
                     this.requestWorld()
@@ -249,6 +273,10 @@ export default {
             } else if(val === 'templates') {
                 this.$nextTick(() => {
                     this.requestTemplates()
+                });
+            } else if(val === 'suggestions') {
+                this.$nextTick(() => {
+                    this.$refs.suggestions.requestSuggestions()
                 });
             }
         },
@@ -301,6 +329,11 @@ export default {
     ],
     methods: {
 
+        updateGenerationOptions(options) {
+            this.generationOptions = options;
+        },
+
+    
         emitEditorState(tab, meta) {
 
             if(meta === undefined) {
@@ -308,6 +341,34 @@ export default {
             }
 
             meta['manager'] = this;
+
+            // select tool based on tab ($refs)
+            let tool = null;
+
+            if(tab === 'characters') {
+                tool = this.$refs.characters;
+            } else if(tab === 'world') {
+                tool = this.$refs.world;
+            } else if(tab === 'contextdb') {
+                tool = this.$refs.contextdb;
+            } else if(tab === 'history') {
+                tool = this.$refs.history;
+            } else if(tab === 'pins') {
+                tool = this.$refs.pins;
+            } else if(tab === 'suggestions') {
+                tool = this.$refs.suggestions;
+            } else if(tab === 'templates') {
+                tool = this.$refs.templates;
+            }
+
+            if(tool) {
+                meta['tool'] = tool;
+            }
+
+            // if the tool as a shareState method, call it on the meta object
+            if(tool && tool.shareState) {
+                tool.shareState(meta);
+            }
 
             this.$emit('navigate-r', tab || this.tab, meta);
         },
@@ -358,13 +419,21 @@ export default {
                         this.loadContextDBEntry(sub1);
                     });
                 }
-            }  else if (tab == 'history') {
+            } else if (tab == 'history') {
                 this.$nextTick(() => {
                     this.$refs.history.requestSceneHistory()
                 });
+            } else if (tab == 'suggestions') {
+                this.$nextTick(() => {
+                    if(sub1) {
+                        this.$refs.suggestions.selectSuggestionViaMenu(sub1)
+                    }
+                });
             }
 
-            this.emitEditorState(tab)
+            this.$nextTick(() => {
+                this.emitEditorState(tab)
+            });
         },
         reset() {
             this.characterList = {
@@ -375,6 +444,7 @@ export default {
             this.deferSelectedCharacter = null;
             this.deferedNavigation = null;
             this.tab = 'scene';
+            this.loadWritingStyleTemplate = true;
 
             if(this.$refs.characters) {
                 this.$refs.characters.reset()
@@ -532,6 +602,12 @@ export default {
             }
             else if (message.action == 'templates') {
                 this.templates = message.data;
+                this.$nextTick(() => {
+                    if(this.loadWritingStyleTemplate) {
+                        this.$refs.generationOptions.loadWritingStyle(this.scene.data.writing_style_template);
+                        this.loadWritingStyleTemplate = false;
+                    }
+                });
             }
             else if(message.action === 'character_deleted') {
                 this.requestCharacterList()

@@ -9,6 +9,7 @@ import talemate.instance as instance
 from talemate import Helper, Scene
 from talemate.client.base import ClientBase
 from talemate.client.registry import CLIENT_CLASSES
+from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.config import SceneAssetUpload, load_config, save_config
 from talemate.context import ActiveScene, active_scene
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
@@ -21,7 +22,6 @@ from talemate.server import (
     character_importer,
     config,
     devtools,
-    director,
     quick_settings,
     world_state_manager,
 )
@@ -52,14 +52,6 @@ class WebsocketHandler(Receiver):
 
         instance.get_agent("memory", self.scene)
 
-        # unconveniently named function, this `connect` method is called
-        # to connect signals handlers to the websocket handler
-        self.connect()
-
-        # connect LLM clients
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.connect_llm_clients())
-
         self.routes = {
             assistant.AssistantPlugin.router: assistant.AssistantPlugin(self),
             character_importer.CharacterImporterServerPlugin.router: character_importer.CharacterImporterServerPlugin(
@@ -73,8 +65,15 @@ class WebsocketHandler(Receiver):
                 self
             ),
             devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
-            director.DirectorPlugin.router: director.DirectorPlugin(self),
         }
+
+        # unconveniently named function, this `connect` method is called
+        # to connect signals handlers to the websocket handler
+        self.connect()
+
+        # connect LLM clients
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.connect_llm_clients())
 
         self.set_agent_routers()
 
@@ -86,7 +85,7 @@ class WebsocketHandler(Receiver):
 
         for agent_type, agent in instance.AGENTS.items():
             handler_cls = getattr(agent, "websocket_handler", None)
-            if not handler_cls:
+            if not handler_cls or handler_cls.router in self.routes:
                 continue
 
             log.info(
@@ -127,6 +126,8 @@ class WebsocketHandler(Receiver):
         if not self.llm_clients:
             instance.emit_agents_status()
             return
+
+        self.set_agent_routers()
 
         for agent_typ, agent_config in self.agents.items():
             try:
@@ -268,6 +269,7 @@ class WebsocketHandler(Receiver):
                 "name": client["name"],
                 "type": client["type"],
                 "enabled": client.get("enabled", True),
+                "system_prompts": client.get("system_prompts", {}),
             }
             for dfl_key in client_cls.Meta().defaults.dict().keys():
                 client_config[dfl_key] = client.get(
@@ -385,6 +387,7 @@ class WebsocketHandler(Receiver):
                         "message": emission.message,
                         "data": emission.data,
                         "meta": emission.meta,
+                        **emission.kwargs,
                     }
                 )
             except Exception as e:
@@ -481,6 +484,10 @@ class WebsocketHandler(Receiver):
         self.queue_put(
             {
                 "type": "context_investigation",
+                "sub_type": emission.message_object.sub_type if emission.message_object else None,
+                "source_agent": emission.message_object.source_agent if emission.message_object else None,
+                "source_function": emission.message_object.source_function if emission.message_object else None,
+                "source_arguments": emission.message_object.source_arguments if emission.message_object else None,
                 "message": emission.message,
                 "id": emission.id,
                 "flags": (
@@ -532,6 +539,9 @@ class WebsocketHandler(Receiver):
         )
 
     def handle_config_saved(self, emission: Emission):
+        
+        emission.data.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
+        
         self.queue_put(
             {
                 "type": "app_config",
@@ -821,7 +831,7 @@ class WebsocketHandler(Receiver):
             character = self.scene.get_character(message.character_name)
             loop = asyncio.get_event_loop()
             new_text = loop.run_until_complete(
-                editor.fix_exposition(new_text, character)
+                editor.cleanup_character_message(new_text, character)
             )
 
         self.scene.edit_message(message_id, new_text)

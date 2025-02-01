@@ -1,0 +1,90 @@
+{% block rendered_context -%}
+<|SECTION:CHARACTER|>
+### Attributes
+{{ character.sheet }}
+
+{% for n,v in character.details.items() %}
+{{ n }}: {{ v }}
+{% endfor %}
+
+### Description Text
+{{ character.description }}
+<|CLOSE_SECTION|>
+{% endblock %}
+{% set scene_history = scene.context_history(budget=max_tokens-512-count_tokens(self.rendered_context()), keep_context_investigation=False) -%}
+<|SECTION:STORY|>
+{% for scene_context in scene_history -%}
+{{ scene_context }}
+
+{% endfor -%}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Identify if {{ character.name }} has had any MAJOR character developments not yet reflected in their current character sheet and description. If there are no MAJOR character developments, do nothing and call no functions.
+
+{% if instructions %}{{ instructions }}{% endif %}
+
+Give instructions to the story writers on how to update the character sheet and description to reflect these changes.
+
+You are limited to {{ focal.max_calls }} {% if focal.max_calls == 1 %}change{% else %}changes{% endif %}, indicate that you understand this limitation by clearly stating how many changes you are allowed to make.
+
+Compare the previous character description and sheet with has happened in the story. It is important to differentiate between the description text and individual attributes. Changes may already exist in the description text that are not reflected in attributes yet, and vice versa. Write a very brief analysis of how the description compares to the attributes, this will help you identify where to focus your attention.
+
+Very Important: The description text exists separately from the attributes, and they may be out of sync. You CANNOT update_description to propagate changes to the attributes. If attributes are lagging behind the description, those are your priortiy.
+
+Your recommendations must be nuanced and multidimensional. Avoid making the character one-dimensional or boring.
+
+Your recommendations must be sourced from the story and not from your own imagination.
+
+Your recommendations must be based on things that have happened and are true at the current moment in the story.
+
+Keep your explanations short and to the point, to leave room for your function calls.
+
+ATTRIBUTE = A short, concise description of a character trait, attribute, or skill. 1 paragraph.
+DESCRIPTION = The summarized overview of the character. Multiple paragraphs. This should not be a specific situational
+description but a general overview of the character, telling us who they are, what they want, and how they act.
+
+{{ focal.render_instructions() }}
+
+{{ 
+    focal.callbacks.add_attribute.render(
+        "Add a new attribute in the character sheet.", 
+        name="Short Attribute Name, don't make this a phrase. Use natural language.", 
+        instructions="Instructions on what to add tp the character sheet.",
+        examples=[
+            {"name": "Appearance", "instructions": "Add a description of the character's appearance, taking into account..."},
+        ]
+    ) 
+}}
+
+{{ 
+    focal.callbacks.update_attribute.render(
+        "Update an existing attribute in the character sheet", 
+        name="Exact Attribute Name", 
+        instructions="Instructions on what to update in a specific existing attribute. Be very clear about what you want to keep, add or remove.",
+        examples=[
+            {"name": "Appearance", "instructions": "Update the character's appearance to reflect the changes in the story. Make sure to include..."},
+        ]
+    ) 
+}}
+
+{{ 
+    focal.callbacks.remove_attribute.render(
+        "Remove an attribute from the character sheet. This action has no instructional text. Just provide the attribute name.", 
+        name="Exact Attribute Name",
+        reason="Reason for removing the attribute.",
+        examples=[
+            {"name": "Social anxiety", "reason": "The character has overcome their social anxiety."},
+        ]
+    ) 
+}}
+
+{{ 
+    focal.callbacks.update_description.render(
+        "Update "+character.name+"'s character description summary text - Use this when the character has changed drastically. You can only use this once.", 
+        instructions="Instructions on how the character description should be changed. Be very clear about what you want to keep, add or remove.",
+        examples=[
+            {"name": "Update character description to reflect their new lockpicking skills."},
+        ]
+    ) 
+}}
+{{ bot_token }}

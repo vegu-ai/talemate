@@ -1,0 +1,24 @@
+Your task is to analyze the current moment in the scene to guide the story editors to generate visual details about the scene.
+
+{% if agent_context_state["narrator__narrative_direction"] %}The story editors were given the following direction: "{{ agent_context_state["narrator__narrative_direction"] }}".
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean for the visual elements?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors emphasize visual details that fulfill the direction.
+{% endif %}
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the immediate visual state of the scene:
+- What actions or movements can be seen?
+- What is the state of the environment?
+- What specific details about character appearances are noteworthy?
+- What objects or items are visually prominent?
+
+{% if context_investigation -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+
+- Established visual elements from earlier in the scene
+- Previously described features of the environment
+- Known details about character appearances
+- Significant objects or items mentioned before
+- Any visual changes that have occurred during the scene
+
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
+{% endif %}

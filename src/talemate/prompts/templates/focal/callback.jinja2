@@ -1,0 +1,19 @@
+### {{ callback.pretty_name }} ({{ callback.name }})
+
+{{ usage }}
+
+{% if callback.multiple %}You may call this function multiple times. {% else %}You may only call this function once. {% endif %}
+
+#### {{ callback.name }} arguments
+
+```json
+{{ callback.json_usage(argument_usage)}}
+```
+
+{% if examples %}#### {{ callback.name }} examples
+{% for example in examples %}
+```json
+{{ callback.json_example(example) }}
+```
+{% endfor %}
+{% endif %}

@@ -348,7 +348,7 @@ def strip_partial_sentences(text: str) -> str:
 
     for i in range(len(text) - 1, -1, -1):
         if text[i] in sentence_endings:
-            return text[: i + 1]
+            return remove_trailing_markers(text[: i + 1])
 
     return text
 
@@ -405,8 +405,6 @@ def clean_paragraph(paragraph: str) -> str:
 def clean_message(message: str) -> str:
     message = message.strip()
     message = re.sub(r" +", " ", message)
-    message = message.replace("(", "*").replace(")", "*")
-    message = message.replace("[", "*").replace("]", "*")
     return message
 
 
@@ -927,7 +925,8 @@ def dedupe_string(
     s: str, min_length: int = 32, similarity_threshold: int = 95, debug: bool = False
 ) -> str:
     """
-    Removes duplicate lines from a string going from the bottom up.
+    Removes duplicate lines from a string going from the bottom up, excluding content within code blocks.
+    Code blocks are identified by lines starting with triple backticks.
 
     Arguments:
         s (str): The input string.
@@ -938,15 +937,39 @@ def dedupe_string(
     Returns:
         str: The deduplicated string.
     """
-
     lines = s.split("\n")
     deduped = []
-
+    current_in_codeblock = False
+    existing_in_codeblock = False
+    
     for line in reversed(lines):
         stripped_line = line.strip()
+        
+        # Check for code block markers in current line
+        if stripped_line.startswith("```"):
+            current_in_codeblock = not current_in_codeblock
+            deduped.append(line)
+            continue
+            
+        # Skip deduping for lines in code blocks
+        if current_in_codeblock:
+            deduped.append(line)
+            continue
+            
         if len(stripped_line) > min_length:
             similar_found = False
+            existing_in_codeblock = False
+            
             for existing_line in deduped:
+                # Track code block state for existing lines
+                if existing_line.strip().startswith("```"):
+                    existing_in_codeblock = not existing_in_codeblock
+                    continue
+                
+                # Skip comparing if either line is in a code block    
+                if existing_in_codeblock:
+                    continue
+                    
                 similarity = fuzz.ratio(stripped_line, existing_line.strip())
                 if similarity >= similarity_threshold:
                     similar_found = True
@@ -961,10 +984,9 @@ def dedupe_string(
             if not similar_found:
                 deduped.append(line)
         else:
-            deduped.append(line)  # Allow shorter strings without dupe check
+            deduped.append(line)
 
     return "\n".join(reversed(deduped))
-
 
 def remove_extra_linebreaks(s: str) -> str:
     """
@@ -985,7 +1007,7 @@ def replace_exposition_markers(s: str) -> str:
     return s
 
 
-def ensure_dialog_format(line: str, talking_character: str = None) -> str:
+def ensure_dialog_format(line: str, talking_character: str = None, formatting:str = "md") -> str:
     # if "*" not in line and '"' not in line:
     #    if talking_character:
     #        line = line[len(talking_character)+1:].lstrip()
@@ -996,7 +1018,7 @@ def ensure_dialog_format(line: str, talking_character: str = None) -> str:
     if talking_character:
         line = line[len(talking_character) + 1 :].lstrip()
         
-    if line.startswith('*') and line.startswith('*'):
+    if line.startswith('*') and line.endswith('*'):
         if line.count("*") == 2 and not line.count('"'):
             return f"{talking_character}: {line}" if talking_character else line
 
@@ -1036,6 +1058,9 @@ def ensure_dialog_format(line: str, talking_character: str = None) -> str:
 
     if talking_character:
         line = f"{talking_character}: {line}"
+
+    if formatting != "md":
+        line = line.replace("*", "")
 
     return line
 

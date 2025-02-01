@@ -1,27 +1,10 @@
-{% block rendered_context -%}
-<|SECTION:CONTEXT|>
-{% include "extra-context.jinja2" %}
-
-NPCs: {{ scene.npc_character_names }}
-Player Character: {{ scene.get_player_character().name }}
-<|CLOSE_SECTION|>
-{% endblock -%}
-<|SECTION:SCENE|>
-{% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context())) -%}
-{{ scene_context }}
-{% endfor %}
-<|CLOSE_SECTION|>
+{% block extra_context -%}{% include "extra-context.jinja2" %}{% endblock %}
+{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 Narrate the passage of time that just occured, subtly move the story forward, and set up the next scene. Your main goal is to fill in what happened during the time passage.
 
-{% if narrative %}
-Directions for new narration: {{ narrative }}
-
-These are directions and the events described have not happened yet, you are writing the narrative based on the directions.
-{% endif %}
-
-{{ extra_instructions }}
-{% include "rerun-context.jinja2" -%}
-Write 1 to 3 sentences.
+{% include "narrative-direction.jinja2" %}
+Write 2 to 4 sentences. {{ extra_instructions }}
 <|CLOSE_SECTION|>
 {{ bot_token }}{{ time_passed }}:

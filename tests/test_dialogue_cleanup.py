@@ -1,5 +1,5 @@
 import pytest
-from talemate.util import ensure_dialog_format, clean_dialogue
+from talemate.util import ensure_dialog_format, clean_dialogue, remove_trailing_markers
 
 @pytest.mark.parametrize("input, expected", [
     ('Hello how are you?', 'Hello how are you?'),
@@ -42,3 +42,25 @@ def test_dialogue_cleanup(input, expected):
 def test_clean_dialogue(input, expected, main_name):
     others = ["alice", "charlie"]
     assert clean_dialogue(input, main_name) == expected
+    
+    
+@pytest.mark.parametrize("input, expected", [
+    ('Hello how are you? "', 'Hello how are you?'),
+    ('Hello how are you? *', 'Hello how are you?'),
+    ('Hello how are you? {', 'Hello how are you?'),
+    ('Hello how are you? [', 'Hello how are you?'),
+    ('Hello how are you? (', 'Hello how are you?'),
+    ('"Hello how are you?"', '"Hello how are you?"'),
+    ('"Hello how are you?" "', '"Hello how are you?"'),
+    ('"Hello how are you?" *', '"Hello how are you?"'),
+    ('"Hello how are you?" *"', '"Hello how are you?"'), 
+    ('*He says* "Hello how are you?"', '*He says* "Hello how are you?"'),
+    ('*He says* "Hello how are you?" *', '*He says* "Hello how are you?"'),
+    ('*He says* "Hello how are you?" *"', '*He says* "Hello how are you?"'),
+    ('(Some thoughts)', '(Some thoughts)'),
+    ('(Some thoughts) ', '(Some thoughts)'),
+    ('(Some thoughts) (', '(Some thoughts)'),
+    ('(Some thoughts) [', '(Some thoughts)'),
+])
+def test_remove_trailing_markers(input, expected):
+    assert remove_trailing_markers(input) == expected

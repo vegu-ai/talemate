@@ -5,7 +5,7 @@
         <!-- quick settings as v-chips -->
         <v-chip size="x-small" v-for="(option, index) in quickSettings" :key="index" @click="toggleQuickSetting(option.value)"
             :color="option.status() === true ? 'success' : 'grey'"
-            :disabled="isInputDisabled()" class="ma-1">
+            :disabled="appBusy" class="ma-1">
             <v-icon class="mr-1">{{ option.icon }}</v-icon>
             {{ option.title }}
             <v-icon class="ml-1" v-if="option.status() === true">mdi-check-circle-outline</v-icon>
@@ -45,12 +45,12 @@
 
         <v-card class="hotbuttons-section-1">
             <v-card-actions>
-                <v-progress-circular class="ml-1 mr-3" size="24" v-if="!isWaitingForInput()" indeterminate="disable-shrink"
+                <v-progress-circular class="ml-1 mr-3" size="24" v-if="appBusy" indeterminate="disable-shrink"
                     color="primary"></v-progress-circular>                
                 <v-icon class="ml-1 mr-3" v-else-if="isWaitingForInput()">mdi-keyboard</v-icon>
                 <v-icon class="ml-1 mr-3" v-else>mdi-circle-outline</v-icon>
 
-                <v-tooltip v-if="!isWaitingForInput()" location="top"
+                <v-tooltip v-if="appBusy" location="top"
                     text="Interrupt the current generation(s)"
                     class="pre-wrap"
                     max-width="300px">
@@ -65,24 +65,24 @@
                 <v-divider vertical></v-divider>
 
 
-                <v-tooltip v-if="isEnvironment('scene')" :disabled="isInputDisabled()" location="top"
+                <v-tooltip v-if="isEnvironment('scene')" :disabled="appBusy" location="top"
                     :text="'Redo most recent AI message.\n[Ctrl: Provide instructions, +Alt: Rewrite]'"
                     class="pre-wrap"
                     max-width="300px">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey" v-bind="props" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey" v-bind="props" :disabled="appBusy"
                             @click="rerun" color="primary" icon>
                             <v-icon>mdi-refresh</v-icon>
                         </v-btn>
                     </template>
                 </v-tooltip>
 
-                <v-tooltip v-if="isEnvironment('scene')" :disabled="isInputDisabled()" location="top"
+                <v-tooltip v-if="isEnvironment('scene')" :disabled="appBusy" location="top"
                     :text="'Redo most recent AI message (Nuke Option - use this to attempt to break out of repetition) \n[Ctrl: Provide instructions, +Alt: Rewrite]'"
                     class="pre-wrap"
                     max-width="300px">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey" v-bind="props" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey" v-bind="props" :disabled="appBusy"
                             @click="rerunNuke" color="primary" icon>
                             <v-icon>mdi-nuke</v-icon>
                         </v-btn>
@@ -113,7 +113,7 @@
 
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled() || npc_characters.length === 0" color="primary" icon>
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy || npc_characters.length === 0" color="primary" icon>
                             <v-icon>mdi-account-voice</v-icon>
                         </v-btn>
                     </template>
@@ -139,33 +139,17 @@
 
                 <!-- narrator actions -->
 
-                <v-menu>
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
-                            <v-icon>mdi-script-text</v-icon>
-                        </v-btn>
-                    </template>
-                    <v-list>
-                        <v-list-subheader>Narrator Actions</v-list-subheader>
+                <SceneToolsNarrator :disabled="appBusy" ref="narratorTools" :npc-characters="npc_characters" />
 
-                        <v-list-item density="compact" v-for="(option, index) in narratorActions" :key="index"
-                            @click="sendHotButtonMessage('!' + option.value)" :prepend-icon="option.icon">
-                            <v-list-item-title>{{ option.title }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
-                        </v-list-item>
-                        <v-list-item density="compact" v-for="npc_name in npc_characters" :key="npc_name"
-                            @click="sendHotButtonMessage('!narrate_c:' + npc_name)" prepend-icon="mdi-eye">
-                            <v-list-item-title>Look at {{ npc_name }}</v-list-item-title>
-                            <v-list-item-subtitle>Look at a character</v-list-item-subtitle>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
+                <!-- director actions -->
+
+                <SceneToolsDirector :disabled="appBusy" ref="directorTools" :npc-characters="npc_characters" />
 
                 <!-- advance time -->
 
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy" color="primary" icon>
                             <v-icon>mdi-clock</v-icon>
                         </v-btn>
                     </template>
@@ -190,7 +174,7 @@
 
                 <v-menu max-width="500px" v-if="isEnvironment('scene')">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy" color="primary" icon>
                             <v-icon>mdi-earth</v-icon>
                         </v-btn>
                     </template>
@@ -267,7 +251,7 @@
 
                 <v-menu v-if="isEnvironment('scene')">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy" color="primary" icon>
                             <v-icon>mdi-puzzle-edit</v-icon>
                             <v-icon v-if="potentialNewCharactersExist()" class="btn-notification" color="warning">mdi-human-greeting</v-icon>
                         </v-btn>
@@ -314,9 +298,9 @@
                         </v-list-item>
                     </v-list>
                 </v-menu>
-                <v-tooltip v-else-if="isEnvironment('creative')" :disabled="isInputDisabled()" location="top" text="Switch to game mode">
+                <v-tooltip v-else-if="isEnvironment('creative')" :disabled="appBusy" location="top" text="Switch to game mode">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()"
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy"
                             @click="sendHotButtonMessage('!setenv_scene')" color="primary" icon>
                             <v-icon>mdi-gamepad-square</v-icon>
                         </v-btn>
@@ -329,7 +313,7 @@
                     <template v-slot:activator="{ props }">
                         <v-progress-circular class="ml-1 mr-3" size="24" v-if="agentStatus.visual && agentStatus.visual.busy" indeterminate="disable-shrink"
                         color="secondary"></v-progress-circular>   
-                        <v-btn v-else class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled() || !visualAgentReady" color="primary" icon>
+                        <v-btn v-else class="hotkey mx-3" v-bind="props" :disabled="appBusy || !visualAgentReady" color="primary" icon>
                             <v-icon>mdi-image-frame</v-icon>
                         </v-btn>
                     </template>
@@ -353,7 +337,7 @@
 
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="isInputDisabled()" color="primary" icon>
+                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy" color="primary" icon>
                             <v-icon>mdi-content-save</v-icon>
                         </v-btn>
                     </template>
@@ -372,16 +356,22 @@
         </v-card>
 
     </div>
-    
 </template>
 
 
 <script>
+import SceneToolsDirector from './SceneToolsDirector.vue';
+import SceneToolsNarrator from './SceneToolsNarrator.vue';
 
 export default {
 
     name: 'SceneTools',
+    components: {
+        SceneToolsDirector,
+        SceneToolsNarrator,
+    },
     props: {
+        appBusy: Boolean,
         passiveCharacters: Array,
         inactiveCharacters: Array,
         activeCharacters: Array,
@@ -435,14 +425,6 @@ export default {
                 {"value": "save", "title": "Save", "icon": "mdi-content-save", "description": "Save the current scene"},
             ],
 
-            narratorActions: [
-                {"value": "narrate_progress", "title": "Progress Story", "icon": "mdi-script-text-play", "description": "Progress the story"},
-                {"value": "narrate_progress_directed", "title": "Progress Story with Direction", "icon": "mdi-script-text-play", "description": "Progress the story (Provide prompt)"},
-                {"value": "narrate_dialogue", "title": "Narrate Environment", "icon": "mdi-waves", "description": "Describe visuals, smells and sounds based on the recent dialogue."},
-                {"value": "narrate_q", "title": "Query", "icon": "mdi-crystal-ball", "description": "Ask the narrator a question, or instruct to tell something."},
-                {"value": "narrate", "title": "Look at Scene", "icon": "mdi-table-headers-eye", "description": "Look at the current scene"},
-            ],
-
             actorActions: [
                 {"value": "ai_dialogue", "title": "Talk", "icon": "mdi-comment-text-outline", "description": "Generate dialogue"},
             ],
@@ -480,7 +462,6 @@ export default {
     inject: [
         'getWebsocket',
         'registerMessageHandler',
-        'isInputDisabled',
         'setInputDisabled',
         'isWaitingForInput',
         'scene',
@@ -553,7 +534,7 @@ export default {
         },
 
         sendHotButtonMessage(message) {
-            if (message == "!abort" || !this.isInputDisabled()) {
+            if (message == "!abort" || !this.appBusy) {
                 this.getWebsocket().send(JSON.stringify({ type: 'interact', text: message }));
                 this.setInputDisabled(true);
             }
@@ -703,6 +684,8 @@ export default {
         interruptScene() {
             this.getWebsocket().send(JSON.stringify({ type: 'interrupt' }));
         },
+
+        // Handle incoming messages
 
         handleMessage(data) {
 

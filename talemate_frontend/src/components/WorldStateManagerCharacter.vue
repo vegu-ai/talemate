@@ -65,7 +65,25 @@
                         </v-list>
                             
                         <v-list v-if="character !== null">
-                            
+
+                            <!-- GENERATE CHANGE SUGGESTIONS -->
+                            <div>
+                                <v-list-item>
+                                    <v-tooltip max-width="300" :text="`Generate change suggestions for ${character.name}. This will provide a list of suggestions for changes to the character, based on the progression of the story thus far. [Ctrl: Provide instructions]`">
+                                        <template v-slot:activator="{ props }">
+                                            <v-btn 
+                                            @click.stop="(event) => { suggestChanges(character.name, event.ctrlKey)}"
+                                            v-bind="props" 
+                                            variant="tonal" 
+                                            :disabled="appBusy"
+                                            block 
+                                            color="primary" prepend-icon="mdi-lightbulb-on">Suggest Changes</v-btn>
+                                        </template>
+                                    </v-tooltip>
+                                </v-list-item>
+                            </div>
+
+                            <v-divider></v-divider>
 
                             <!-- DEACTIVATE CHARACTER -->
                             <div v-if="!character.is_player">
@@ -132,7 +150,7 @@
                                         <v-icon size="small">mdi-image-auto-adjust</v-icon>
                                         States
                                     </v-tab>
-                                    <v-tab value="actor" :disabled="character.is_player">
+                                    <v-tab value="actor">
                                         <v-icon size="small">mdi-bullhorn</v-icon>
                                         Actor
                                     </v-tab>
@@ -251,9 +269,12 @@
             </p>
         </v-card-text>
     </v-card>
+    <RequestInput ref="suggestChangesInstructions" title="Suggest Changes" inputType="multiline" instructions="Provide a brief description of the changes you would like to suggest for the character. This will be used to generate a new proposal for the character." @continue="(input,params) => { suggestChanges(params.name, input)}" />
 </template>
 <script>
 import CoverImage from './CoverImage.vue';
+
+import RequestInput from './RequestInput.vue';
 
 import WorldStateManagerCharacterAttributes from './WorldStateManagerCharacterAttributes.vue';
 import WorldStateManagerCharacterDescription from './WorldStateManagerCharacterDescription.vue';
@@ -266,6 +287,7 @@ export default {
     name: 'WorldStateManagerCharacter',
     components: {
         CoverImage,
+        RequestInput,
         WorldStateManagerCharacterAttributes,
         WorldStateManagerCharacterDescription,
         WorldStateManagerCharacterDetails,
@@ -278,6 +300,7 @@ export default {
         characterList: Object,
         templates: Object,
         agentStatus: Object,
+        appBusy: Boolean,
         generationOptions: Object,
     },
     inject: [
@@ -298,6 +321,7 @@ export default {
     emits:[
         'require-scene-save',
         'selected-character',
+        'world-state-manager-navigate',
     ],
     methods: {
         reset() {
@@ -391,6 +415,25 @@ export default {
                 }
             }));
         },
+        suggestChanges(name, requestInstructions) {
+
+            if(requestInstructions === true) {
+                this.$refs.suggestChangesInstructions.openDialog({
+                    name: name,
+                });
+                return;
+            }
+
+            this.$emit('world-state-manager-navigate', 'suggestions');
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'generate_suggestions',
+                suggestion_type: 'character',
+                generation_options: this.generationOptions,
+                instructions: requestInstructions || null,
+                name: name,
+            }));
+        },
 
         handleMessage(message) {
             if(message.type == "image_generated") {
@@ -418,7 +461,7 @@ export default {
                 if(this.selected === message.data.name) {
                     this.loadCharacter(this.selected)
                 }
-            } 
+            }
         },
     },
     created() {

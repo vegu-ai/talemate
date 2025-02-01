@@ -35,9 +35,15 @@ class LMStudioClient(ClientBase):
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
 
+    def reconfigure(self, **kwargs):
+        super().reconfigure(**kwargs)
+        
+        if self.client and self.client.base_url != self.api_url:
+            self.set_client()
+
     async def get_model_name(self):
         model_name = await super().get_model_name()
-
+        
         # model name comes back as a file path, so we need to extract the model name
         # the path could be windows or linux so it needs to handle both backslash and forward slash
 

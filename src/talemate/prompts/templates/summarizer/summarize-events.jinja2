@@ -7,7 +7,7 @@
 {% endif -%}
 <|SECTION:{{ section_name }}|>
 {{ section_name.upper() }} START
-{% for chunk in text_to_chunks(dialogue, chunk_size=2500) %}
+{% for chunk in text_to_chunks(dialogue, chunk_size=1200) %}
 CHUNK {{ loop.index }}: 
 {{ chunk }}
 
@@ -19,28 +19,35 @@ Provide a compressed, short summary for {{ section_name }}.
 
 Do not repeat any information from the previous context. 
 
-Compress each individual chunk, keeping the start and ending points as anchors. 
+The chapter is presented to you in chronological chunks. Each chunk is a part of the story that is separated by a significant event or change in the story.
 
-Ensure the persistence of all important moments, decisions and story developments. 
+Compress each individual chunk, keeping the start and ending points as anchors.
+
+Each summarization should be 1-3 sentences long and be a broad strokes summary of the events.
+
+Ensure the persistence of all pivotal moments, decisions and story developments. These are moments that have big character progression. Think broad strokes, long term altering event.s
 
 Specifically mention characters, locations and objects by name. 
 
 Consider the other chunks and the history to inform the context of the summarizations. Each chunk must be summarized in a way that it leads into the next chunk.
 
+YOU MUST SUMMARIZE ALL CHUNKS.
 YOU MUST NOT ADD COMMENTARY.
 YOU MUST NOT ADD COMBINED SUMMARIZATION OF ALL CHUNKS.
+YOU MUST NOT GET LOST IN DETAILS. THESE SUMMARIES SHOULD BE OUTLINES.
 
 You must provide your response in the following format:
 
-CHUNK 1: <summary of the first chunk>
+{% for chunk in text_to_chunks(dialogue, chunk_size=chunk_size) %}
+{% if analyze_chunks %}ANALYSIS OF CHUNK {{ loop.index }}: "<briefly explain your understanding of chunk {{ loop.index }}>""
+{% endif -%}
+CHUNK {{ loop.index }}: "<brief summary of this chunk>"
 
-CHUNK 2: <summary of the second chunk>
-
-...
+{% endfor %}
 <|CLOSE_SECTION|>
 {% if generation_options and generation_options.writing_style %}
 <|SECTION:WRITING STYLE|>
 {{ generation_options.writing_style.instructions }}
 <|CLOSE_SECTION|>
 {% endif %}
-{{ set_prepared_response("CHUNK 1:")}}
+{% if analyze_chunks %}{{ set_prepared_response("ANALYSIS OF CHUNK 1: \"")}}{% else %}{{ set_prepared_response("CHUNK 1: \"")}}{% endif %}

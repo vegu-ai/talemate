@@ -34,7 +34,8 @@ from talemate.util import (
     remove_extra_linebreaks,
     iso8601_diff_to_human,
 )
-from talemate.util.prompt import condensed
+from talemate.util.prompt import condensed, no_chapters
+from talemate.agents.context import active_agent
 
 __all__ = [
     "Prompt",
@@ -49,6 +50,11 @@ log = structlog.get_logger("talemate")
 
 prepended_template_dirs = ContextVar("prepended_template_dirs", default=[])
 
+class PydanticJsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, "model_dump"):
+            return obj.model_dump()
+        return super().default(obj)
 
 class PrependTemplateDirectories:
     def __init__(self, prepend_dir: list):
@@ -346,6 +352,8 @@ class Prompt:
             "bot_token": "<|BOT|>",
             "thematic_generator": thematic_generators.ThematicGenerator(),
             "rerun_context": rerun_context.get(),
+            "active_agent": active_agent.get(),
+            "agent_context_state": active_agent.get().state if active_agent.get() else {},
         }
 
         env.globals["render_template"] = self.render_template
@@ -378,10 +386,12 @@ class Prompt:
         env.globals["join"] = lambda x, y: y.join(x)
         env.globals["make_list"] = lambda: JoinableList()
         env.globals["make_dict"] = lambda: {}
+        env.globals["join"] = lambda x, y: y.join(x)
         env.globals["count_tokens"] = lambda x: count_tokens(
             dedupe_string(x, debug=False)
         )
         env.globals["print"] = lambda x: print(x)
+        env.globals["json"]= lambda x: json.dumps(x, indent=2, cls=PydanticJsonEncoder)
         env.globals["emit_status"] = self.emit_status
         env.globals["emit_system"] = lambda status, message: emit(
             "system", status=status, message=message
@@ -392,6 +402,7 @@ class Prompt:
         env.globals["text_to_chunks"] = self.text_to_chunks
         env.globals["emit_narrator"] = lambda message: emit("system", message=message)
         env.filters["condensed"] = condensed
+        env.filters["no_chapters"] = no_chapters
         ctx.update(self.vars)
 
         if "decensor" not in ctx:
@@ -416,7 +427,7 @@ class Prompt:
             else:
                 self.prompt = sectioning_handler(self)
         except jinja2.exceptions.TemplateError as e:
-            log.error("prompt.render", prompt=self.name, error=e)
+            log.exception("prompt.render", prompt=self.name, error=e)
             emit(
                 "system",
                 status="error",
@@ -534,7 +545,7 @@ class Prompt:
                 f"Answer: "
                 + loop.run_until_complete(
                     world_state.analyze_text_and_answer_question(
-                        text, query, short=short
+                        text, query, response_length=10 if short else 512
                     )
                 ),
             ]

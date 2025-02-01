@@ -178,66 +178,71 @@ class ModelPrompt:
     def query_hf_for_prompt_template_suggestion(self, model_name: str):
         api = huggingface_hub.HfApi()
 
-        try:
-            author, model_name = model_name.split("_", 1)
-        except ValueError:
-            return None
+        log.info("query_hf_for_prompt_template_suggestion", model_name=model_name)
+
+        # if file ends with .gguf, split - and remove the last part
+        if model_name.endswith(".gguf"):
+            model_name = model_name.rsplit("-", 1)[0]
+            model_name_alt = f"{model_name}-GGUF"
+        else:
+            model_name_alt = None
+
+        log.info("query_hf_for_prompt_template_suggestion", model_name=model_name)
 
         branch_name = "main"
 
-        # special popular cases
-
-        # bartowski
-
-        if author == "bartowski" and "exl2" in model_name:
-            # split model_name by exl2 and take the first part with "exl2" readded
-            # the second part is the branch name
-            model_name, branch_name = model_name.split("exl2_", 1)
-            model_name = f"{model_name}exl2"
-
-        models = list(api.list_models(model_name=model_name, author=author))
+        models = list(api.list_models(model_name=model_name))
 
         if not models:
-            return None
+            if model_name_alt:
+                models = list(api.list_models(model_name=model_name_alt))
+            if not models:
+                return None
 
         model = models[0]
 
-        repo_id = f"{author}/{model_name}"
+        repo_id = f"{model.id}"
 
         # Check README.md
-        with tempfile.TemporaryDirectory() as tmpdir:
-            readme_path = huggingface_hub.hf_hub_download(
-                repo_id=repo_id,
-                filename="README.md",
-                cache_dir=tmpdir,
-                revision=branch_name,
-            )
-            if not readme_path:
-                return None
-            with open(readme_path) as f:
-                readme = f.read()
-                for identifer_cls in TEMPLATE_IDENTIFIERS:
-                    identifier = identifer_cls()
-                    if identifier(readme):
-                        return f"{identifier.template_str}.jinja2"
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                readme_path = huggingface_hub.hf_hub_download(
+                    repo_id=repo_id,
+                    filename="README.md",
+                    cache_dir=tmpdir,
+                    revision=branch_name,
+                )
+                if not readme_path:
+                    return None
+                with open(readme_path) as f:
+                    readme = f.read()
+                    for identifer_cls in TEMPLATE_IDENTIFIERS:
+                        identifier = identifer_cls()
+                        if identifier(readme):
+                            return f"{identifier.template_str}.jinja2"
+        except Exception as e:
+            log.error("query_hf_for_prompt_template_suggestion", error=str(e))
 
-        # Check tokenizer_config.json
-        # "chat_template" key
-        with tempfile.TemporaryDirectory() as tmpdir:
-            config_path = huggingface_hub.hf_hub_download(
-                repo_id=repo_id,
-                filename="tokenizer_config.json",
-                cache_dir=tmpdir,
-                revision=branch_name,
-            )
-            if not config_path:
-                return None
-            with open(config_path) as f:
-                config = json.load(f)
-                for identifer_cls in TEMPLATE_IDENTIFIERS:
-                    identifier = identifer_cls()
-                    if identifier(config.get("chat_template", "")):
-                        return f"{identifier.template_str}.jinja2"
+        try:
+            # Check tokenizer_config.json
+            # "chat_template" key
+            with tempfile.TemporaryDirectory() as tmpdir:
+                config_path = huggingface_hub.hf_hub_download(
+                    repo_id=repo_id,
+                    filename="tokenizer_config.json",
+                    cache_dir=tmpdir,
+                    revision=branch_name,
+                )
+                if not config_path:
+                    return None
+                with open(config_path) as f:
+                    config = json.load(f)
+                    for identifer_cls in TEMPLATE_IDENTIFIERS:
+                        identifier = identifer_cls()
+                        if identifier(config.get("chat_template", "")):
+                            return f"{identifier.template_str}.jinja2"
+        except Exception as e:
+            log.error("query_hf_for_prompt_template_suggestion", error=str(e))
 
 
 model_prompt = ModelPrompt()
@@ -249,8 +254,8 @@ class TemplateIdentifier:
 
 
 @register_template_identifier
-class Llama2Identifier(TemplateIdentifier):
-    template_str = "Llama2"
+class MistralIdentifier(TemplateIdentifier):
+    template_str = "Mistral"
 
     def __call__(self, content: str):
         return "[INST]" in content and "[/INST]" in content

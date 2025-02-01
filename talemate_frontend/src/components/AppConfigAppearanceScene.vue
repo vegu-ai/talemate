@@ -3,7 +3,10 @@
     <v-row class="ma-5" no-gutters>
         <v-col cols="12">
             <v-form v-for="config, typ in config" :key="typ">
-                <v-row>
+
+                <!-- *_messages -->
+
+                <v-row no-gutters v-if="typ.endsWith('_messages')">
                     <v-col cols="3" :class="(colorPickerTarget === typ ? 'text-highlight5' : '')">
                         <div class="text-caption">{{ typLabelMap[typ] }}</div>
                     </v-col>
@@ -22,6 +25,7 @@
                     </v-col>
 
                 </v-row>
+
             </v-form>
         </v-col>
     </v-row>
@@ -49,23 +53,13 @@
                             <span class="ml-1">Stop looking at the fox.</span>
                         </div>
                         <div class="mt-3">
-
-                            <v-chip :color="getColor('time_messages', config.time_messages.color)">
-                                <v-icon class="mr-2">mdi-clock-outline</v-icon>
-                                <span>3 days later</span>
-                            </v-chip>
-                        </div>
-                        <div class="mt-3">
-                            <!-- context investigations, similar to director messages, with both chip and text -->
-
-                            <v-chip :color="getColor('context_investigation_messages', config.context_investigation_messages.color)">
-                                <v-icon class="mr-2">mdi-text-search</v-icon>
-                                <span>Context Investigation</span>
-                            </v-chip>
+                            <span :style="buildCssStyles('time_messages', config.time_messages)">
+                                3 days layer
+                            </span>
                         </div>
                         <div class="mt-3" :style="buildCssStyles('context_investigation_messages', config.context_investigation_messages)">
                             <span>
-                                "The fox was last seen in the forest"
+                                Context Investigation - "The fox was last seen in the forest"
                             </span>
                         </div>
                     </div>
@@ -122,8 +116,8 @@ export default {
                 "narrator_messages": "#B39DDB",
                 "character_messages": "#FFFFFF",
                 "director_messages": "#FF5722",
-                "time_messages": "#B39DDB",
-                "context_investigation_messages": "#607D8B",
+                "time_messages": "#FFECB3",
+                "context_investigation_messages": "#FFE0B2",
             },
             typLabelMap: {
                 "narrator_messages": "Narrator Messages",

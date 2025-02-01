@@ -7,6 +7,8 @@ import structlog
 from talemate.agents.base import set_processing
 from talemate.prompts import Prompt
 
+import talemate.game.focal as focal
+
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
 
@@ -25,17 +27,18 @@ class CharacterCreatorMixin:
         content_context = await Prompt.request(
             f"creator.determine-content-context",
             self.client,
-            "create",
+            "create_192",
             vars={
                 "character": character,
             },
         )
-        return content_context.strip()
+        return content_context.split("\n")[0].strip()
 
     @set_processing
     async def determine_character_dialogue_instructions(
         self,
         character: Character,
+        instructions: str = "",
     ):
         instructions = await Prompt.request(
             f"creator.determine-character-dialogue-instructions",
@@ -45,6 +48,7 @@ class CharacterCreatorMixin:
                 "character": character,
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
+                "instructions": instructions,
             },
         )
 

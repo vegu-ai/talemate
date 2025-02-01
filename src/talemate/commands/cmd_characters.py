@@ -80,7 +80,7 @@ class CmdDeactivateCharacter(TalemateCommand):
             message = await narrator.action_to_narration(
                 "narrate_character_exit",
                 character=self.scene.get_character(character_name),
-                direction=direction,
+                narrative_direction=direction,
             )
             self.narrator_message(message)
 
@@ -160,7 +160,7 @@ class CmdActivateCharacter(TalemateCommand):
             message = await narrator.action_to_narration(
                 "narrate_character_entry",
                 character=self.scene.get_character(character_name),
-                direction=direction,
+                narrative_direction=direction,
             )
             self.narrator_message(message)
 

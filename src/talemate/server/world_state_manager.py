@@ -9,7 +9,9 @@ import talemate.world_state.templates as world_state_templates
 from talemate.export import ExportOptions, export
 from talemate.history import history_with_relative_time, rebuild_history
 from talemate.instance import get_agent
-from talemate.world_state.manager import WorldStateManager
+from talemate.world_state.manager import WorldStateManager, Suggestion
+from talemate.status import set_loading
+import talemate.game.focal as focal
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -157,6 +159,8 @@ class SceneOutlinePayload(pydantic.BaseModel):
 class SceneSettingsPayload(pydantic.BaseModel):
     experimental: bool = False
     immutable_save: bool = False
+    writing_style_template: str | None = None
+    restore_from: str | None = None
 
 
 class SaveScenePayload(pydantic.BaseModel):
@@ -167,6 +171,17 @@ class SaveScenePayload(pydantic.BaseModel):
 class RegenerateHistoryPayload(pydantic.BaseModel):
     generation_options: world_state_templates.GenerationOptions | None = None
 
+
+class GenerateSuggestionPayload(pydantic.BaseModel):
+    name: str
+    suggestion_type: str
+    auto_apply: bool = False
+    generation_options: world_state_templates.GenerationOptions | None = None
+    instructions: str | None = None
+
+class SuggestionPayload(pydantic.BaseModel):
+    id: str
+    proposal_uid: str | None = None
 
 class WorldStateManagerPlugin:
     router = "world_state_manager"
@@ -998,6 +1013,12 @@ class WorldStateManagerPlugin:
         )
         await self.signal_operation_done()
 
+    async def handle_restore_scene(self, data):
+        await self.scene.restore()
+        await self.signal_operation_done()
+        await self.scene.emit_history()
+        self.scene.world_state.emit()
+
     async def handle_save_scene(self, data):
         payload = SaveScenePayload(**data)
 
@@ -1067,5 +1088,92 @@ class WorldStateManagerPlugin:
         # when task is done,  queue a message to the client
         task.add_done_callback(lambda _: asyncio.create_task(done()))
     
+    # Suggestions
+    
+    async def handle_request_suggestions(self, data):
+        """
+        Request current suggestions from the world state.
+        """
+        
+        world_state_dict = self.scene.world_state.model_dump()
+        suggestions = world_state_dict.get("suggestions", [])
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "request_suggestions",
+                "data": suggestions,
+            }
+        )
+        
+    async def handle_remove_suggestion(self, data):
+        payload = SuggestionPayload(**data)
+        if not payload.proposal_uid:
+            await self.world_state_manager.remove_suggestion(payload.id)
+        else:
+            await self.world_state_manager.remove_suggestion_proposal(payload.id, payload.proposal_uid)
 
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "suggestion_removed",
+                "data": payload.model_dump(),
+            }
+        )
+    
 
+    async def handle_generate_suggestions(self, data):
+        """
+        Generate's suggestions for character development.
+        """
+        
+        world_state = get_agent("world_state")
+        world_state_manager:WorldStateManager = self.scene.world_state_manager
+        payload = GenerateSuggestionPayload(**data)
+        
+        log.debug("Generate suggestions", payload=payload)
+        
+        async def send_suggestion(call:focal.Call):
+            await world_state_manager.add_suggestion(
+                Suggestion(
+                    name=payload.name,
+                    type=payload.suggestion_type,
+                    id=f"{payload.suggestion_type}-{payload.name}",
+                    proposals=[call]
+                )
+            )
+            
+        with focal.FocalContext() as focal_context:
+            
+            if payload.suggestion_type == "character":
+                character = self.scene.get_character(payload.name)
+                
+                if not character:
+                    log.error("Character not found", name=payload.name)
+                    return
+                
+                self.websocket_handler.queue_put(
+                    {
+                        "type": "world_state_manager",
+                        "action": "generate_suggestions",
+                        "instructions": payload.instructions,
+                        "suggestion_type": payload.suggestion_type,
+                        "name": payload.name,
+                    }
+                )
+                
+                if not payload.auto_apply:
+                    focal_context.hooks_before_call.append(send_suggestion)
+                    focal_context.hooks_after_call.append(send_suggestion)
+                    
+                @set_loading("Analyzing character development", cancellable=True, set_success=True, set_error=True)
+                async def task_wrapper():
+                    await world_state.determine_character_development(
+                        character, 
+                        generation_options=payload.generation_options,
+                        instructions=payload.instructions,
+                    )
+                
+                task = asyncio.create_task(task_wrapper())
+                
+                task.add_done_callback(lambda _: asyncio.create_task(self.handle_request_suggestions({})))
+                task.add_done_callback(lambda _: asyncio.create_task(self.signal_operation_done()))

@@ -301,6 +301,10 @@ class OpenAIClient(ClientBase):
 
         human_message = {"role": "user", "content": prompt.strip()}
         system_message = {"role": "system", "content": self.get_system_message(kind)}
+        
+        # o1 and o3 models don't support system_message so null it out
+        if "o1" in self.model_name or "o3" in self.model_name:
+            system_message = None
 
         self.log.debug(
             "generate",

@@ -35,8 +35,10 @@ SUPPORTED_MODELS = [
     "gpt-4o-mini-realtime-preview",
     "gpt-4o",
     "gpt-4o-mini",
+    "o1",
     "o1-preview",
     "o1-mini",
+    "o3-mini",
 ]
 
 # any model starting with gpt-4- is assumed to support 'json_object'
@@ -49,8 +51,10 @@ JSON_OBJECT_RESPONSE_MODELS = [
     "gpt-4o",
     "gpt-4o-mini",
     "gpt-3.5-turbo-0125",
+    "o1",
     "o1-preview",
     "o1-mini",
+    "o3-mini",
 ]
 
 
@@ -224,7 +228,7 @@ class OpenAIClient(ClientBase):
         elif model == "gpt-4-1106-preview":
             self.max_token_length = min(max_token_length or 128000, 128000)
         else:
-            self.max_token_length = max_token_length or 2048
+            self.max_token_length = max_token_length or 8192
 
         if not self.api_key_status:
             if self.api_key_status is False:

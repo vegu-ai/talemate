@@ -80,7 +80,7 @@ export default {
                         {
                             title: "Character Progress",
                             description: "The world state agent can now automatically track character progress and provide proposals of updates to the character description and attributes.",
-                            default_state: "enabled",
+                            default_state: "disabled",
                             link: ["agent", "world_state", "character_progression"]
                         }
                     ]

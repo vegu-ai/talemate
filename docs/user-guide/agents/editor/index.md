@@ -1,8 +1,6 @@
 # Overview
 
-The editor improves generated text by making sure quotes and actions are correctly formatted.
+The editor agent is resposible for post-processing the generated content. It can be used to add additional detail to dialogue and fix exposition markers.
 
-Can also add additional details and attempt to fix continuity issues.
-
-!!! warning "Experimental"
+!!! example "Experimental"
     This agent is currently experimental and may not work as expected.

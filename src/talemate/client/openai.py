@@ -302,9 +302,11 @@ class OpenAIClient(ClientBase):
         human_message = {"role": "user", "content": prompt.strip()}
         system_message = {"role": "system", "content": self.get_system_message(kind)}
         
-        # o1 and o3 models don't support system_message so null it out
+        # o1 and o3 models don't support system_message
         if "o1" in self.model_name or "o3" in self.model_name:
-            system_message = None
+            messages=[human_message]
+        else:
+            messages=[system_message, human_message]
 
         self.log.debug(
             "generate",
@@ -316,7 +318,7 @@ class OpenAIClient(ClientBase):
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,
-                messages=[system_message, human_message],
+                messages=messages,
                 **parameters,
             )
 

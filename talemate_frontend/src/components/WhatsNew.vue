@@ -67,7 +67,7 @@ export default {
                     items: [
                         {
                             title: "Scene analysis",
-                            description: "The summarizer agent now includes scene analysis capabilities, providing analytical summaries that other agents can use to enhance their output.",
+                            description: "Added scene analysis capabilities, providing analytical summaries that other agents can use to enhance their output.",
                             default_state: "disabled",
                             link: ["agent", "summarizer", "analyze_scene"]
                         },

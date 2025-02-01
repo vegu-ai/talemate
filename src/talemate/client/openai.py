@@ -51,10 +51,6 @@ JSON_OBJECT_RESPONSE_MODELS = [
     "gpt-4o",
     "gpt-4o-mini",
     "gpt-3.5-turbo-0125",
-    "o1",
-    "o1-preview",
-    "o1-mini",
-    "o3-mini",
 ]
 
 
@@ -305,6 +301,26 @@ class OpenAIClient(ClientBase):
         # o1 and o3 models don't support system_message
         if "o1" in self.model_name or "o3" in self.model_name:
             messages=[human_message]
+            # paramters need to be munged
+            # `max_tokens` becomes `max_completion_tokens`
+            if "max_tokens" in parameters:
+                parameters["max_completion_tokens"] = parameters.pop("max_tokens")
+                
+            # temperature forced to 1
+            if "temperature" in parameters:
+                log.warning(f"{self.model_name} do not support temperature, forcing to 1")
+                parameters["temperature"] = 1
+                
+            unsupported_params = [
+                "presence_penalty",
+                "top_p",
+            ]
+            
+            for param in unsupported_params:
+                if param in parameters:
+                    log.warning(f"{self.model_name} does not support {param}, removing")
+                    parameters.pop(param)
+                    
         else:
             messages=[system_message, human_message]
 

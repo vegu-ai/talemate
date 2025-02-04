@@ -61,6 +61,10 @@ export default {
         }
     },
     methods: {
+        setSelection(tab) {
+            this.tab = tab;
+            console.log('setSelection (presets)', tab);
+        },
         inference_config() {
             if(this.$refs.inference) {
                 return this.$refs.inference.config.inference;

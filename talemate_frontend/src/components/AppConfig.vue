@@ -455,13 +455,31 @@ export default {
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'requestSceneAssets', 'requestAppConfig'],
 
     methods: {
-        show(tab, page) {
+        show(tab, page, item) {
             this.requestAppConfig();
             this.dialog = true;
             if(tab) {
                 this.tab = tab;
                 if(page) {
-                    this[tab + 'PageSelected'] = page;
+                    if(this[tab + 'PageSelected'] !== undefined) {
+                        this[tab + 'PageSelected'] = page;
+                    } else {
+                        this.$nextTick(() => {
+                            console.log("SETTING SELECTION", {tab, page, item});
+
+                            if(this.$refs[tab] && this.$refs[tab].setSelection) {
+                                this.$refs[tab].setSelection(page);
+                            
+                                this.$nextTick(() => {
+                                    if(item && this.$refs[tab].$refs[page] && this.$refs[tab].$refs[page].setSelection) {
+                                        this.$refs[tab].$refs[page].setSelection(item);
+                                    }
+                                });
+                            }
+
+                            
+                        })
+                    }
                 }
             }
         },

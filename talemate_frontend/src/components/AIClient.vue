@@ -35,7 +35,7 @@
             <v-list-item-title class="text-caption">
               <span class="text-grey">{{ client.type }} </span>
               <v-chip label size="x-small" color="grey" variant="tonal" class="ml-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
-              <v-chip v-if="client.preset_group" label size="x-small" color="grey" variant="tonal" class="ml-1" prepend-icon="mdi-tune">{{ client.preset_group }}</v-chip>
+              <v-chip label size="x-small" color="grey" variant="tonal" class="ml-1" prepend-icon="mdi-tune" @click.stop="openAppConfig('presets', 'inference', client.preset_group)">{{ client.preset_group || "Default" }}</v-chip>
 
             </v-list-item-title>
             <div density="compact">
@@ -161,6 +161,7 @@ export default {
     'registerMessageHandler',
     'isConnected',
     'getAgents',
+    'openAppConfig',
   ],
   provide() {
     return {

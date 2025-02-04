@@ -984,8 +984,8 @@ export default {
           this.$refs.worldStateManagerMenu.setCharacter(character)
       });
     },
-    openAppConfig(tab, page) {
-      this.$refs.appConfig.show(tab, page);
+    openAppConfig(tab, page, item=null) {
+      this.$refs.appConfig.show(tab, page, item);
     },
     uxErrorHandler(error) {
       this.errorNotification = true;

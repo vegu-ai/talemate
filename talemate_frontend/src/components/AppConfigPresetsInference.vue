@@ -16,7 +16,7 @@
                 <v-col cols="4">
                     <v-select v-model="group" :items="groupItems" label="Group" variant="underlined">
                         <template v-slot:append-inner>
-                            <v-icon color="delete" v-if="group !== '__default'" @click="deleteGroup()">mdi-close-circle-outline</v-icon>
+                            <v-icon color="delete" v-if="group !== ''" @click="deleteGroup()">mdi-close-circle-outline</v-icon>
                         </template>
                     </v-select>
                 </v-col>
@@ -186,7 +186,7 @@ export default {
     },
     computed: {
         groupItems() {
-            let items = [{title: "Default", value: "__default"}];
+            let items = [{title: "Default", value: ""}];
 
             console.log("this.config.inference_groups", this.config.inference_groups);
 
@@ -199,7 +199,7 @@ export default {
             return items;
         },
         selectedPreset() {
-            if(this.group && this.group !== "__default") {
+            if(this.group && this.group !== "") {
                 return this.config.inference_groups[this.group].presets[this.selected[0]];
             }
             return this.config.inference[this.selected[0]];
@@ -229,12 +229,19 @@ export default {
                 inference: {},
             },
             extra_tab: 'xtc',
-            group: '__default',
+            group: '',
             newGroupName: '',
         }
     },
     methods: {
-
+        setSelection(group){
+            console.log("Setting group", group);
+            // ensure group is valid
+            if(!this.config.inference_groups[group]) {
+                return;
+            }
+            this.group = group;
+        },
         deepCopy(obj) {
             return JSON.parse(JSON.stringify(obj));
         },
@@ -246,11 +253,11 @@ export default {
                 }
             }
             delete this.config.inference_groups[this.group];
-            this.group = '__default';0
+            this.group = '';0
         },
 
         reset() {
-            if(this.group !== "__default") {
+            if(this.group !== "") {
                 this.config.inference_groups[this.group].presets[this.selected[0]] = {...this.immutableConfig.presets.inference_defaults[this.selected[0]]}
             } else {
                 this.config.inference[this.selected[0]] = {...this.immutableConfig.presets.inference_defaults[this.selected[0]]}
@@ -265,7 +272,7 @@ export default {
                 return;
             }
 
-            const toCopy = (this.group !== "__default") ? this.config.inference_groups[this.group].presets : this.config.inference;
+            const toCopy = (this.group !== "") ? this.config.inference_groups[this.group].presets : this.config.inference;
 
             this.config.inference_groups[this.newGroupName] = {
                 name: this.newGroupName,

@@ -290,7 +290,6 @@ export default {
       if (this.clientMeta().manual_model && !this.clientMeta().manual_model_choices) {
         this.client.model = this.client.model_name;
       }
-      console.log("SAVE", this.client.preset_group);
       this.$emit('save', this.client); // Emit save event with client object
       this.close();
     },

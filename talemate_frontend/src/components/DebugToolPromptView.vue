@@ -17,8 +17,8 @@
                 <v-chip color="primary" @click.stop="toggleDetails" variant="text" prepend-icon="mdi-list-box">{{ toggleDetailsLabel() }} ({{ prompt.agent_stack.length }})</v-chip>
             </v-card-title>
             <v-card-text>
-                <v-row>
-                    <v-col :cols="details ? 2 : 0" v-if="details">
+                <v-row no-gutters>
+                    <v-col :cols="details ? 2 : 0" v-if="details" style="max-height:660px; overflow-y:auto;">
                         <v-list density="compact">
                             <v-list-subheader><v-icon>mdi-transit-connection-variant</v-icon> Agent Stack</v-list-subheader>
                             <v-list-item v-for="(agent, index) in prompt.agent_stack" :key="index">

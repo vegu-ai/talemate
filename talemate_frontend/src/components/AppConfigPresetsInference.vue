@@ -2,11 +2,10 @@
 
     <v-alert density="compact" type="warning" variant="text">
         <p>
-            This interface is a work in progress and right now serves as a very basic way to edit inference parameter presets.
+            This interface is a work in progress and provides basic parameter preset editing.
         </p>
         <p class="text-caption text-grey">
-            Not all clients support all parameters, and generally it is assumed that the client implementation
-            handles the parameters in a sane way, especially if values are passed for all of them. <span class="text-primary">All presets are used</span> and will be selected depending on the action the agent is performing. If you don't know what these mean, it is recommended to leave them as they are.
+            Client support varies by parameter. <span class="text-primary">All presets are active</span> based on agent actions. Default values recommended unless you understand the parameters.
         </p>
     </v-alert>
 

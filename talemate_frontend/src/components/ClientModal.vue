@@ -148,6 +148,7 @@ export default {
     dialog: Boolean,
     formTitle: String,
     immutableConfig: Object,
+    availablePresets: Array,
   },
   components: {
     AppConfigPresetsSystemPrompts,
@@ -199,24 +200,6 @@ export default {
     availableTabs() {
       return Object.values(this.tabs).filter(tab => !tab.condition || tab.condition());
     },
-    availablePresets() {
-      const inferenceGroups = this.immutableConfig.presets.inference_groups;
-      if(!inferenceGroups || !Object.keys(inferenceGroups).length) {
-        return [];
-      }
-      let items = [{ title: 'Default', value: '' }]
-      for (const [key, value] of Object.entries(inferenceGroups)) {
-        items.push({
-          title: value.name,
-          value: key,
-        });
-      }
-
-      // sort by name
-      items.sort((a, b) => a.title.localeCompare(b.title));
-
-      return items;
-    }
   },
   watch: {
     'state.dialog': {

@@ -615,6 +615,17 @@ def save_config(config, file_path: str = "./config.yaml"):
     if not config["system_prompts"]:
         config.pop("system_prompts")
 
+    # set any client preset_group to "" if it references an
+    # entry that no longer exists in inference_groups
+    for client in config["clients"].values():
+        
+        if not client.get("preset_group"):
+            continue
+        
+        if client["preset_group"] not in config["presets"].get("inference_groups", {}):
+            log.warning(f"Client {client['name']} references non-existent preset group {client['preset_group']}, setting to default")
+            client["preset_group"] = ""
+
     with open(file_path, "w") as file:
         yaml.dump(config, file)
 

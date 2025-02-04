@@ -35,7 +35,24 @@
             <v-list-item-title class="text-caption">
               <span class="text-grey">{{ client.type }} </span>
               <v-chip label size="x-small" color="grey" variant="tonal" class="ml-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
-              <v-chip label size="x-small" color="grey" variant="tonal" class="ml-1" prepend-icon="mdi-tune" @click.stop="openAppConfig('presets', 'inference', client.preset_group)">{{ client.preset_group || "Default" }}</v-chip>
+
+              <v-menu density="compact">
+                <template v-slot:activator="{ props }">
+                  <v-chip  v-bind="props" label size="x-small" color="grey" variant="tonal" class="ml-1" prepend-icon="mdi-tune">{{ client.preset_group || "Default" }}</v-chip>
+                </template>
+
+                <v-list density="compact">
+                  <v-list-item prepend-icon="mdi-pencil" @click="openAppConfig('presets', 'inference', client.preset_group)">
+                    <v-list-item-title>Edit {{ client.preset_group || "Default" }} Parameters</v-list-item-title>
+                  </v-list-item>
+                  <v-list-item prepend-icon="mdi-tune" v-for="preset in availablePresets" :key="preset.value" @click="client.preset_group = preset.value; saveClientDelayed(client)">
+                    <v-list-item-title>{{ preset.title }}</v-list-item-title>
+                    <v-list-item-subtitle>Assign this preset</v-list-item-subtitle>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+
+
 
             </v-list-item-title>
             <div density="compact">
@@ -105,6 +122,7 @@
       :dialog="state.dialog" 
       :formTitle="state.formTitle" 
       :immutable-config="immutableConfig"
+      :available-presets="availablePresets"
       @save="saveClient" 
       @error="propagateError" 
       @update:dialog="updateDialog">
@@ -149,6 +167,24 @@ export default {
     }
   },
   computed: {
+    availablePresets() {
+      const inferenceGroups = this.immutableConfig.presets.inference_groups;
+      if(!inferenceGroups || !Object.keys(inferenceGroups).length) {
+        return [];
+      }
+      let items = [{ title: 'Default', value: '' }]
+      for (const [key, value] of Object.entries(inferenceGroups)) {
+        items.push({
+          title: value.name,
+          value: key,
+        });
+      }
+
+      // sort by name
+      items.sort((a, b) => a.title.localeCompare(b.title));
+
+      return items;
+    },
     visibleClients: function() {
       return this.state.clients.filter(client => !this.hideDisabled || client.status !== 'disabled');
     },

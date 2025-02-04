@@ -67,6 +67,12 @@ export default {
             }
             return null;
         },
+        inference_groups_config() {
+            if(this.$refs.inference) {
+                return this.$refs.inference.config.inference_groups;
+            }
+            return null;
+        },
         embeddings_config() {
             if(this.$refs.embeddings) {
                 return this.$refs.embeddings.config.embeddings;

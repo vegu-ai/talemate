@@ -498,11 +498,16 @@ export default {
                 // update app_config.presets from $refs.presets.config
 
                 let inferenceConfig = this.$refs.presets.inference_config();
+                let inferenceGroupsConfig = this.$refs.presets.inference_groups_config();
                 let embeddingsConfig = this.$refs.presets.embeddings_config();
                 let systemPromptsConfig = this.$refs.presets.system_prompts_config();
 
                 if(inferenceConfig) {
                     this.app_config.presets.inference = inferenceConfig;
+                }
+
+                if(inferenceGroupsConfig) {
+                    this.app_config.presets.inference_groups = inferenceGroupsConfig;
                 }
 
                 if(embeddingsConfig) {
@@ -520,6 +525,8 @@ export default {
                 // update app_config.appearance from $refs.appearance.config
                 this.app_config.appearance = this.$refs.appearance.get_config();
             }
+
+            console.log("SAVING", this.app_config);
 
             this.sendRequest({
                 action: 'save',

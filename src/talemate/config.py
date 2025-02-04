@@ -43,6 +43,7 @@ class Client(BaseModel):
     enabled: bool = True
     
     system_prompts: SystemPrompts = SystemPrompts()
+    preset_group: str = ""
 
     class Config:
         extra = "ignore"
@@ -316,13 +317,19 @@ class InferencePresets(BaseModel):
         presence_penalty=0.0,
     )
 
+class InferencePresetGroup(BaseModel):
+    name: str
+    presets: InferencePresets
 
 class Presets(BaseModel):
     inference_defaults: InferencePresets = InferencePresets()
     inference: InferencePresets = InferencePresets()
     
+    inference_groups: dict[str, InferencePresetGroup] = pydantic.Field(default_factory=dict)
+    
     embeddings_defaults: dict[str, EmbeddingFunctionPreset] = pydantic.Field(default_factory=generate_chromadb_presets)
     embeddings: dict[str, EmbeddingFunctionPreset] = pydantic.Field(default_factory=generate_chromadb_presets)
+
 
 
 def gnerate_intro_scenes():
@@ -593,10 +600,16 @@ def save_config(config, file_path: str = "./config.yaml"):
     for preset_name, preset in list(config["presets"]["inference"].items()):
         if not preset.get("changed"):
             config["presets"]["inference"].pop(preset_name)
+    
+    # in inference groups also only keep if changed
+    for group_name, group in list(config["presets"]["inference_groups"].items()):
+        for preset_name, preset in list(group["presets"].items()):
+            if not preset.get("changed"):
+                group["presets"].pop(preset_name)
 
     # if presets is empty, remove it
     if not config["presets"]["inference"]:
-        config.pop("presets")
+        config["presets"].pop("inference")
         
     # if system_prompts is empty, remove it
     if not config["system_prompts"]:

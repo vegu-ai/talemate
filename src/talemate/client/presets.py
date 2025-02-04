@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from talemate.client.context import set_client_context_attribute
-from talemate.config import InferencePresets, load_config
+from talemate.config import InferencePresets, InferencePresetGroup, load_config
 from talemate.emit.signals import handlers
 
 if TYPE_CHECKING:
@@ -26,9 +26,11 @@ log = structlog.get_logger("talemate.client.presets")
 
 config = load_config(as_model=True)
 
+
 # Load the config
 CONFIG = {
     "inference": config.presets.inference,
+    "inference_groups": config.presets.inference_groups,
 }
 
 
@@ -37,16 +39,29 @@ def sync_config(event):
     CONFIG["inference"] = InferencePresets(
         **event.data.get("presets", {}).get("inference", {})
     )
+    CONFIG["inference_groups"] = {
+        group: InferencePresetGroup(**data)
+        for group, data in event.data.get("presets", {}).get("inference_groups", {}).items()
+    }
 
 
 handlers["config_saved"].connect(sync_config)
 
 
-def get_inference_parameters(preset_name: str) -> dict:
+def get_inference_parameters(preset_name: str, group:str|None = None) -> dict:
     """
     Returns the inference parameters for the given preset name.
     """
+    
     presets = CONFIG["inference"].model_dump()
+    
+    if group:
+        try:
+            group_presets = CONFIG["inference_groups"].get(group).model_dump()
+            presets.update(group_presets["presets"])
+        except AttributeError:
+            log.warning(f"Invalid preset group referenced: {group}. Falling back to defaults.")
+    
     if preset_name in presets:
         return presets[preset_name]
 
@@ -129,10 +144,10 @@ def preset_for_kind(kind: str, client: "ClientBase") -> dict:
             presets=CONFIG["inference"],
         )
         preset_name = "scene_direction"
-
+        
     set_client_context_attribute("inference_preset", preset_name)
 
-    return get_inference_parameters(preset_name)
+    return get_inference_parameters(preset_name, client.preset_group)
 
 
 TOKEN_MAPPING = {

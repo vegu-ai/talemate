@@ -66,6 +66,9 @@
                     <v-col cols="4">
                       <v-text-field v-model="client.max_token_length" v-if="requiresAPIUrl(client)" type="number"
                         label="Context Length" :rules="[rules.required]"></v-text-field>
+
+                      <v-select label="Inference Presets" :items="availablePresets" v-model="client.preset_group">
+                      </v-select>
                     </v-col>
                     <v-col cols="8"
                       v-if="!typeEditable() && client.data && client.data.prompt_template_example !== null && client.model_name && clientMeta().requires_prompt_template && !client.data.api_handles_prompt_template">
@@ -195,6 +198,24 @@ export default {
   computed: {
     availableTabs() {
       return Object.values(this.tabs).filter(tab => !tab.condition || tab.condition());
+    },
+    availablePresets() {
+      const inferenceGroups = this.immutableConfig.presets.inference_groups;
+      if(!inferenceGroups || !Object.keys(inferenceGroups).length) {
+        return [];
+      }
+      let items = [{ title: 'Default', value: '' }]
+      for (const [key, value] of Object.entries(inferenceGroups)) {
+        items.push({
+          title: value.name,
+          value: key,
+        });
+      }
+
+      // sort by name
+      items.sort((a, b) => a.title.localeCompare(b.title));
+
+      return items;
     }
   },
   watch: {
@@ -229,6 +250,7 @@ export default {
         this.client.api_url = defaults.api_url || '';
         this.client.max_token_length = defaults.max_token_length || 8192;
         this.client.double_coercion = defaults.double_coercion || null;
+        this.client.preset_group = defaults.preset_group || '';
         // loop and build name from prefix, checking against current clients
         let name = this.clientTypes[this.client.type].name_prefix;
         let i = 2;
@@ -268,7 +290,7 @@ export default {
       if (this.clientMeta().manual_model && !this.clientMeta().manual_model_choices) {
         this.client.model = this.client.model_name;
       }
-
+      console.log("SAVE", this.client.preset_group);
       this.$emit('save', this.client); // Emit save event with client object
       this.close();
     },

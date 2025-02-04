@@ -32,10 +32,12 @@
             <v-list-item-subtitle class="text-caption">
               {{ client.model_name }}
             </v-list-item-subtitle>
-            <v-list-item-subtitle class="text-caption">
-              {{ client.type }} 
-              <v-chip label size="x-small" variant="outlined" class="ml-1">ctx {{ client.max_token_length }}</v-chip>
-            </v-list-item-subtitle>
+            <v-list-item-title class="text-caption">
+              <span class="text-grey">{{ client.type }} </span>
+              <v-chip label size="x-small" color="grey" variant="tonal" class="ml-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
+              <v-chip v-if="client.preset_group" label size="x-small" color="grey" variant="tonal" class="ml-1" prepend-icon="mdi-tune">{{ client.preset_group }}</v-chip>
+
+            </v-list-item-title>
             <div density="compact">
               <v-slider
                 hide-details
@@ -233,7 +235,6 @@ export default {
       } else {
         this.state.clients[index] = client;
       }
-      console.log("Saving client", client)
       this.state.dialog = false; // Close the dialog after saving the client
       this.$emit('clients-updated', this.state.clients);
     },
@@ -306,6 +307,7 @@ export default {
           client.data = data.data;
           client.enabled = data.data.enabled;
           client.system_prompts = data.data.system_prompts;
+          client.preset_group = data.data.preset_group;
           for (let key in client.data.meta.extra_fields) {
             if (client.data[key] === null || client.data[key] === undefined) {
               client.data[key] = client.data.meta.defaults[key];
@@ -329,6 +331,7 @@ export default {
             data: data.data,
             enabled: data.data.enabled,
             system_prompts: data.data.system_prompts,
+            preset_group: data.data.preset_group,
           });
 
           // apply extra field defaults

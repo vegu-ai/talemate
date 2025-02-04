@@ -53,6 +53,7 @@ class PromptData(pydantic.BaseModel):
     agent_stack: list[str] = pydantic.Field(default_factory=list)
     generation_parameters: dict = pydantic.Field(default_factory=dict)
     inference_preset: str = None
+    preset_group: str = None
 
 
 class ErrorAction(pydantic.BaseModel):
@@ -112,7 +113,8 @@ class ClientBase:
     
     status_request_timeout:int = 2
     
-    system_prompts = SystemPrompts()
+    system_prompts:SystemPrompts = SystemPrompts()
+    preset_group: str = ""
 
     class Meta(pydantic.BaseModel):
         experimental: Union[None, str] = None
@@ -133,6 +135,7 @@ class ClientBase:
         self.auto_determine_prompt_template_attempt = None
         self.log = structlog.get_logger(f"client.{self.client_type}")
         self.double_coercion = kwargs.get("double_coercion", None)
+        self.preset_group = kwargs.get("preset_group", "")
         self.enabled = kwargs.get("enabled", True)
         if "max_token_length" in kwargs:
             self.max_token_length = (
@@ -229,6 +232,9 @@ class ClientBase:
 
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
+
+        if "preset_group" in kwargs:
+            self.preset_group = kwargs["preset_group"]
 
     def host_is_remote(self, url: str) -> bool:
         """
@@ -347,6 +353,7 @@ class ClientBase:
             "double_coercion": self.double_coercion,
             "enabled": self.enabled,
             "system_prompts": self.system_prompts.model_dump(),
+            "preset_group": self.preset_group or "",
         }
 
         for field_name in getattr(self.Meta(), "extra_fields", {}).keys():
@@ -662,6 +669,7 @@ class ClientBase:
                     time=time_end - time_start,
                     generation_parameters=prompt_param,
                     inference_preset=client_context_attribute("inference_preset"),
+                    preset_group=self.preset_group,
                 ).model_dump(),
             )
 

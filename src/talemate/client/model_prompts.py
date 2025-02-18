@@ -254,6 +254,14 @@ class TemplateIdentifier:
 
 
 @register_template_identifier
+class Mistralv7TekkenIdentifier(TemplateIdentifier):
+    template_str = "MistralV7Tekken"
+
+    def __call__(self, content: str):
+        return "[SYSTEM_PROMPT]" in content and "[INST]" in content and "[/INST]" in content
+
+
+@register_template_identifier
 class MistralIdentifier(TemplateIdentifier):
     template_str = "Mistral"
 

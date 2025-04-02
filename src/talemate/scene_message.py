@@ -375,9 +375,8 @@ class ReinforcementMessage(SceneMessage):
         return self.source_arguments.get("question", "question")
 
     def __str__(self):
-        question = self.meta.get("question", "")
         return (
-            f"# Internal note for {self.character_name} - {question}\n{self.message}"
+            f"# Internal note for {self.character_name} - {self.question}\n{self.message}"
         )
 
     def as_format(self, format: str, **kwargs) -> str:

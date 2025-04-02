@@ -511,8 +511,18 @@ class WorldState(BaseModel):
 
         # find all instances of the reinforcement in the scene history
         # and remove them
-        source = f"{self.reinforce[idx].question}:{self.reinforce[idx].character if self.reinforce[idx].character else ''}"
-        self.agent.scene.pop_history(typ="reinforcement", source=source, all=True)
+        
+        reinforcement = self.reinforce[idx]
+        
+        self.agent.scene.pop_history(
+            typ="reinforcement",
+            character_name=reinforcement.character,
+            question=reinforcement.question,
+            all=True,
+        )
+        
+        #source = f"{self.reinforce[idx].question}:{self.reinforce[idx].character if self.reinforce[idx].character else ''}"
+        #self.agent.scene.pop_history(typ="reinforcement", source=source, all=True)
 
         self.reinforce.pop(idx)
 

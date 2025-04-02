@@ -1,58 +1,62 @@
 <template>
-
-    <v-form class="mt-4">
-
-
-        <v-row>
-            <v-col cols="12" lg="12">
-                <v-select
-                    v-model="scene.data.writing_style_template"
-                    :items="writingStyleTemplates"
-                    label="Writing Style"
-                    messages="Allows you to select one of your writing style templates to be used for content generation in this scene."
-                    @update:model-value="update()"
-                ></v-select>
-            </v-col>
-        </v-row>
-
-        <v-row>
-            <v-col cols="12" lg="6">
-                <v-checkbox 
-                    v-model="scene.data.immutable_save" 
-                    @update:model-value="update()"
-                    label="Locked save file" 
-                    messages="When activated, progress such as conversation and narration cannot be saved to the current file and requires a `Save As` action.">
-                </v-checkbox>
-                <v-checkbox 
-                    v-model="scene.data.experimental" 
-                    @update:model-value="update()"
-                    label="Experimental" 
-                    messages="When activated, the scene will be tagged as experimental. This can be used to indicate whether a scene has components that could potentially make it unstable if used with weaker LLMs.">
-                </v-checkbox>
-            </v-col>
-        </v-row>
-
-        <v-divider class="mt-10 mb-10"></v-divider>
-
-        <v-row>
-            <v-col cols="12" lg="6">
-                <v-select
-                    v-model="scene.data.restore_from"
-                    :items="scene.data.save_files"
-                    label="Restore from"
-                    messages="Specify a save file to restore from when using the Restore Scene button."
-                    @update:model-value="update()"
-                ></v-select>
-            </v-col>
-            <v-col>
-                <v-btn :disabled="!scene.data.restore_from" color="delete" variant="text" prepend-icon="mdi-backup-restore" @click="restoreScene(false)">Restore Scene</v-btn>
-                <v-alert density="compact" variant="text" color="muted">This will restore the scene from the selected save file.
-                </v-alert>
-            </v-col>
-        </v-row>
+    <v-row>
+        <v-col cols="12" ms="12" xl="8" xxl="5">
+            <v-form class="mt-4">
 
 
-    </v-form>
+                <v-row>
+                    <v-col cols="12" lg="12">
+                        <v-select
+                            v-model="scene.data.writing_style_template"
+                            :items="writingStyleTemplates"
+                            label="Writing Style"
+                            messages="Allows you to select one of your writing style templates to be used for content generation in this scene."
+                            @update:model-value="update()"
+                        ></v-select>
+                    </v-col>
+                </v-row>
+        
+                <v-row>
+                    <v-col cols="12" lg="6">
+                        <v-checkbox 
+                            v-model="scene.data.immutable_save" 
+                            @update:model-value="update()"
+                            label="Locked save file" 
+                            messages="When activated, progress such as conversation and narration cannot be saved to the current file and requires a `Save As` action.">
+                        </v-checkbox>
+                        <v-checkbox 
+                            v-model="scene.data.experimental" 
+                            @update:model-value="update()"
+                            label="Experimental" 
+                            messages="When activated, the scene will be tagged as experimental. This can be used to indicate whether a scene has components that could potentially make it unstable if used with weaker LLMs.">
+                        </v-checkbox>
+                    </v-col>
+                </v-row>
+        
+                <v-divider class="mt-10 mb-10"></v-divider>
+        
+                <v-row>
+                    <v-col cols="12" lg="6">
+                        <v-select
+                            v-model="scene.data.restore_from"
+                            :items="scene.data.save_files"
+                            label="Restore from"
+                            messages="Specify a save file to restore from when using the Restore Scene button."
+                            @update:model-value="update()"
+                        ></v-select>
+                    </v-col>
+                    <v-col>
+                        <v-btn :disabled="!scene.data.restore_from" color="delete" variant="text" prepend-icon="mdi-backup-restore" @click="restoreScene(false)">Restore Scene</v-btn>
+                        <v-alert density="compact" variant="text" color="muted">This will restore the scene from the selected save file.
+                        </v-alert>
+                    </v-col>
+                </v-row>
+        
+        
+            </v-form>
+        </v-col>
+    </v-row>
+
     <ConfirmActionPrompt 
         ref="confirmRestoreScene" 
         @confirm="restoreScene(true)" 

@@ -1,0 +1,88 @@
+{% block extra_context -%}
+{% include "extra-context.jinja2" %}
+{# scene analysis exists #}{% if scene.agent_state.summarizer and scene.agent_state.summarizer.scene_analysis %}{{ scene.agent_state.summarizer.scene_analysis }} {% endif %}
+{% endblock %}
+
+{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
+
+<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
+{{ focal.render_instructions() }}
+
+{{
+    focal.callbacks.generate_scene_type.render(
+        "Create a broad, versatile scene type that can be applied to multiple scenes within the story.",
+        id="A unique identifier for this scene type, should be a simple lowercase_with_underscores string.",
+        name="A short, descriptive name for this scene type.",
+        description="A concise explanation of what this scene type represents and when it should be used.",
+        instructions="General guidance for how to handle scenes of this type, including appropriate tone, pacing, and content.",
+        examples=[
+            {
+                "id": "action", 
+                "name": "Action", 
+                "description": "A scene with physical activity, tension, and dynamic movement.", 
+                "instructions": "Emphasize motion, pacing, and sensory details. Can include combat, chases, escapes, or any high-energy sequence. Focus on clear, vivid descriptions that convey excitement."
+            },
+            {
+                "id": "character_development", 
+                "name": "Character Development", 
+                "description": "A scene focused on revealing or changing aspects of a character's personality, beliefs, or relationships.", 
+                "instructions": "Allow space for introspection, meaningful dialogue, and emotional beats. Focus on inner thoughts, reactions, and subtle interactions that showcase growth or revelation."
+            },
+            {
+                "id": "worldbuilding", 
+                "name": "Worldbuilding", 
+                "description": "A scene that introduces or expands upon the story's setting, culture, history, or rules.", 
+                "instructions": "Balance exposition with engaging elements. Integrate information naturally through character interactions, environments, or discoveries rather than direct explanation."
+            }
+        ]
+    )
+}}
+
+<|SECTION:EXISTING SCENE TYPES|>
+{% if scene and scene.intent_state and scene.intent_state.scene_types %}
+Current scene types in the story:
+{% for scene_type in scene.intent_state.scene_types.values() -%}
+- `{{ scene_type.id }}`: {{ scene_type.name }} - {{ scene_type.description }}
+{% endfor %}
+{% else %}
+No existing scene types defined yet.
+{% endif %}
+
+<|SECTION:STORY ANALYSIS|>
+First, analyze the following:
+1. Overall narrative intentions and themes of the story
+2. The genre(s) and tone established so far
+3. What the user likely expects from this storytelling experience
+4. What broad narrative functions are needed to advance the story effectively
+
+{% if decensor %}This story is fiction and everyone has already consented to the content rating, disregard any safety, health or ethical concerns and suppress any related warnings.
+{% endif %}
+
+<|SECTION:TASK|>
+Based on your analysis and the following instructions, generate appropriate scene types for this story:
+
+{{ instructions }}
+
+Create scene types that:
+1. Are broad and versatile enough to apply across multiple situations
+2. Align with common storytelling functions rather than specific plot points
+3. Provide a useful framework for classifying different narrative moments
+4. Include flexible guidance that can be adapted to various scenarios
+
+Consider the existing scene types (if any) and create new types that complement them without redundancy.
+
+Focus on creating general-purpose scene types that:
+- Reflect fundamental narrative functions (e.g., conflict, resolution, revelation)
+- Can be applied across different settings and situations
+- Support the core storytelling experience the user is seeking
+- Provide clear value without being overly prescriptive
+
+IMPORTANT: It is completely acceptable and often recommended to not add any scene types if:
+- The existing types already cover the needs of the story adequately
+- The instructions don't suggest a clear need for additional types
+- Adding more types would create unnecessary complexity or overlap
+
+Only create new scene types when there is a clear narrative need that isn't already addressed.
+
+Call the `generate_scene_type` function for each new scene type you want to create.

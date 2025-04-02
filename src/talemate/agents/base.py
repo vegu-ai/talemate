@@ -550,6 +550,15 @@ class Agent(ABC):
         return False
 
 
+    @set_processing
+    async def delegate(self, fn: Callable, *args, **kwargs):
+        """
+        Wraps a function as an agent action, allowing it to be called
+        by the agent.
+        """
+        return await fn(*args, **kwargs)
+        
+
 @dataclasses.dataclass
 class AgentEmission:
     agent: Agent

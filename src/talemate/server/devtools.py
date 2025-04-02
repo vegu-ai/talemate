@@ -1,5 +1,11 @@
 import pydantic
 import structlog
+from talemate.game.state import GameState
+from talemate.world_state import WorldState
+from talemate.scene.state_editor import SceneStateEditor
+from talemate.scene.schema import SceneState
+from talemate.server.websocket_plugin import Plugin
+from talemate.emit import emit
 
 log = structlog.get_logger("talemate.server.devtools")
 
@@ -10,6 +16,9 @@ class TestPromptPayload(pydantic.BaseModel):
     client_name: str
     kind: str
 
+class SetSceneStatePayload(pydantic.BaseModel):
+    state: SceneState
+    
 
 def ensure_number(v):
     """
@@ -26,21 +35,8 @@ def ensure_number(v):
     return v
 
 
-class DevToolsPlugin:
+class DevToolsPlugin(Plugin):
     router = "devtools"
-
-    def __init__(self, websocket_handler):
-        self.websocket_handler = websocket_handler
-
-    async def handle(self, data: dict):
-        log.info("Config action", action=data.get("action"))
-
-        fn = getattr(self, f"handle_{data.get('action')}", None)
-
-        if fn is None:
-            return
-
-        await fn(data)
 
     async def handle_test_prompt(self, data):
         payload = TestPromptPayload(**data)
@@ -74,3 +70,39 @@ class DevToolsPlugin:
                 },
             }
         )
+        
+    async def handle_get_scene_state(self, data):
+        scene = self.scene
+        editor = SceneStateEditor(scene)
+        state = editor.dump()
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "devtools",
+                "action": "scene_state",
+                "data": state
+            }
+        )
+        
+    async def handle_update_scene_state(self, data):
+        scene = self.scene
+        editor = SceneStateEditor(scene)
+        
+        try:
+            payload = SetSceneStatePayload(**data)
+            editor.load(payload.model_dump().get("state"))
+        except Exception as exc:
+            await self.signal_operation_failed(str(exc))
+            return
+        
+        emit("status", message="Scene state updated", status="success")
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "devtools",
+                "action": "scene_state_updated",
+                "data": editor.dump()
+            }
+        )
+        
+        await self.signal_operation_done()

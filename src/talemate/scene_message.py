@@ -1,6 +1,9 @@
 import enum
 import re
+import structlog
 from dataclasses import dataclass, field
+
+log = structlog.get_logger("talemate.scene_message")
 
 __all__ = [
     "SceneMessage",
@@ -130,6 +133,10 @@ class SceneMessage:
     def source_arguments(self) -> dict:
         return (self.meta or {}).get("arguments", {})
 
+    @property
+    def meta_hash(self) -> int:
+        return hash(str(self.meta))
+
     def hide(self):
         self.flags |= Flags.HIDDEN
 
@@ -208,39 +215,61 @@ class CharacterMessage(SceneMessage):
 
 @dataclass
 class NarratorMessage(SceneMessage):
-    source: str = "progress_story"
+    source: str = "ai"
     typ = "narrator"
 
+
+    def source_to_meta(self) -> dict:
+        source = self.source
+        action_name, *args = source.split(":")
+        parameters = {}
+
+        if action_name == "paraphrase":
+            parameters["narration"] = args[0]
+        elif action_name == "narrate_character_entry":
+            parameters["character"] = args[0]
+        elif action_name == "narrate_character_exit":
+            parameters["character"] = args[0]
+        elif action_name == "narrate_character":
+            parameters["character"] = args[0]
+        elif action_name == "narrate_query":
+            parameters["query"] = args[0]
+        elif action_name == "narrate_time_passage":
+            parameters["duration"] = args[0]
+            parameters["time_passed"] = args[1]
+            parameters["narrative"] = args[2]
+        elif action_name == "progress_story":
+            parameters["narrative_direction"] = args[0]
+        elif action_name == "narrate_after_dialogue":
+            parameters["character"] = args[0]
+
+        return {
+            "agent": "narrator",
+            "function": action_name,
+            "arguments": parameters
+        }
+
+    def migrate_source_to_meta(self):
+        if self.source and not self.meta:
+            try:
+                self.meta = self.source_to_meta
+            except Exception as e:
+                log.warning("migrate_narrator_source_to_meta", error=e, msg=self.id)
+
+        return self
 
 @dataclass
 class DirectorMessage(SceneMessage):
     action: str = "actor_instruction"
+    source: str = "ai"
     typ = "director"
 
     @property
-    def transformed_message(self):
-        return self.message.replace("Director instructs ", "")
+    def character_name(self) -> str:
+        return self.meta.get("character") if self.meta else None
 
     @property
-    def character_name(self):
-        if self.action == "actor_instruction":
-            return self.transformed_message.split(":", 1)[0]
-        return ""
-
-    @property
-    def dialogue(self):
-        if self.action == "actor_instruction":
-            return self.transformed_message.split(":", 1)[1]
-        return self.message
-
-    @property
-    def instructions(self):
-        if self.action == "actor_instruction":
-            return (
-                self.dialogue.replace('"', "")
-                .replace("To progress the scene, i want you to ", "")
-                .strip()
-            )
+    def instructions(self) -> str:
         return self.message
 
     @property
@@ -269,6 +298,29 @@ class DirectorMessage(SceneMessage):
     @property
     def as_story_progression(self):
         return f"{self.character_name}'s next action: {self.instructions}"
+    
+    @property
+    def as_director_action(self) -> str:
+        if not self.character_name:
+            return f"{self.message}\n{self.action}"
+
+    #Become aggressive towards Elmer as you no longer recognize the man.
+    def migrate_message_to_meta(self):
+        if self.message.startswith("Director instructs"):
+            parts = self.message.split(":", 1)
+            character_name = parts[0].replace("Director instructs ", "").strip()
+            instructions = parts[1].strip()
+            
+            self.set_source(
+                "director", 
+                "actor_instruction", 
+                character=character_name,
+            )
+            self.message = instructions
+            self.source = "player"
+        
+        return self
+            
 
     def __dict__(self) -> dict:
         rv = super().__dict__()
@@ -312,13 +364,18 @@ class TimePassageMessage(SceneMessage):
 @dataclass
 class ReinforcementMessage(SceneMessage):
     typ = "reinforcement"
+    source: str = "ai"
 
     @property
     def character_name(self):
-        return self.source.split(":")[1]
+        return self.source_arguments.get("character", "character")
+
+    @property
+    def question(self):
+        return self.source_arguments.get("question", "question")
 
     def __str__(self):
-        question, _ = self.source.split(":", 1)
+        question = self.meta.get("question", "")
         return (
             f"# Internal note for {self.character_name} - {question}\n{self.message}"
         )
@@ -329,6 +386,20 @@ class ReinforcementMessage(SceneMessage):
             return f"\n({message})\n"
         return f"\n{self.message}\n"
 
+    def migrate_source_to_meta(self):
+        if self.source and not self.meta:
+            try:
+                self.source_to_meta()
+            except Exception as e:
+                log.warning("migrate_reinforcement_source_to_meta", error=e, msg=self.id)
+
+        return self
+
+    def source_to_meta(self):
+        source = self.source
+        args = source.split(":")
+        parameters = {"character": args[1], "question": args[0]}
+        self.set_source("world_state", "update_reinforcement", **parameters)
 
 @dataclass
 class ContextInvestigationMessage(SceneMessage):
@@ -381,7 +452,6 @@ class ContextInvestigationMessage(SceneMessage):
             message = str(self)[2:]
             return f"\n({message})\n".replace("*", "")
         return f"\n{self.message}\n".replace("*", "")
-
 
 
 MESSAGES = {

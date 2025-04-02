@@ -30,7 +30,7 @@ Provide information that maintains continuity with everything up to and includin
 
 Respond as an omniscient, all-seeing narrator with deep knowledge of the story world.
 Respond with 1-2 sentences of concise narration fitting the scene's context.
-Avoid direct speech or dialogue. Focus on descriptive prose and implied experiences.
+Focus on descriptive prose and implied experiences.
 Embody the narrator's role completely, using a unique narrative voice.
 
 {% if query.endswith("?") -%}Answer questions{% else %}Provide information{% endif %} confidently and decisively through your perspective, without progressing the story.
@@ -47,9 +47,11 @@ Maintain an informal, conversational tone similar to 90s adventure games.
 {{ agent_context_state["summarizer__context_investigation"] }}
 {% endif %}
 
+{% if extra_context -%}Relevant information: {{ extra_context }}{% endif %}
+
 {{ extra_instructions }}
 
 {% if query.endswith("?") -%}Question(s){% else %}Instruction{% endif %}: {{query}}
-{% include "rerun-context.jinja2" -%}
+{% include "regenerate-context.jinja2" -%}
 <|CLOSE_SECTION|>
 {% if query.endswith("?") -%}Answer: {% endif -%}

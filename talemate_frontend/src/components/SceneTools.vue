@@ -1,6 +1,6 @@
 <template>
 
-    <v-sheet color="transparent" v-if="isEnvironment('scene')" class="mb-2">
+    <v-sheet color="transparent" class="mb-2">
         <v-spacer></v-spacer>
         <!-- quick settings as v-chips -->
         <v-chip size="x-small" v-for="(option, index) in quickSettings" :key="index" @click="toggleQuickSetting(option.value)"
@@ -41,14 +41,14 @@
     <div class="hotbuttons-section">
 
 
-        <!-- Section 0: Loading indicator and rerun tool -->
+        <!-- Section 0: Loading indicator and regenerate tool -->
 
         <v-card class="hotbuttons-section-1">
             <v-card-actions>
-                <v-progress-circular class="ml-1 mr-3" size="24" v-if="appBusy" indeterminate="disable-shrink"
+                <v-progress-circular class="ml-3 mr-3" size="24" v-if="appBusy" indeterminate="disable-shrink"
                     color="primary"></v-progress-circular>                
-                <v-icon class="ml-1 mr-3" v-else-if="isWaitingForInput()">mdi-keyboard</v-icon>
-                <v-icon class="ml-1 mr-3" v-else>mdi-circle-outline</v-icon>
+                <v-icon class="ml-3 mr-3" v-else-if="isWaitingForInput()">mdi-keyboard</v-icon>
+                <v-icon class="ml-3 mr-3" v-else>mdi-circle-outline</v-icon>
 
                 <v-tooltip v-if="appBusy" location="top"
                     text="Interrupt the current generation(s)"
@@ -65,25 +65,25 @@
                 <v-divider vertical></v-divider>
 
 
-                <v-tooltip v-if="isEnvironment('scene')" :disabled="appBusy" location="top"
+                <v-tooltip :disabled="appBusy" location="top"
                     :text="'Redo most recent AI message.\n[Ctrl: Provide instructions, +Alt: Rewrite]'"
                     class="pre-wrap"
                     max-width="300px">
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey" v-bind="props" :disabled="appBusy"
-                            @click="rerun" color="primary" icon>
+                            @click="regenerate" color="primary" icon>
                             <v-icon>mdi-refresh</v-icon>
                         </v-btn>
                     </template>
                 </v-tooltip>
 
-                <v-tooltip v-if="isEnvironment('scene')" :disabled="appBusy" location="top"
+                <v-tooltip :disabled="appBusy" location="top"
                     :text="'Redo most recent AI message (Nuke Option - use this to attempt to break out of repetition) \n[Ctrl: Provide instructions, +Alt: Rewrite]'"
                     class="pre-wrap"
                     max-width="300px">
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey" v-bind="props" :disabled="appBusy"
-                            @click="rerunNuke" color="primary" icon>
+                            @click="regenerateNuke" color="primary" icon>
                             <v-icon>mdi-nuke</v-icon>
                         </v-btn>
                     </template>
@@ -93,12 +93,12 @@
                 <v-tooltip v-if="commandActive" location="top"
                     text="Abort / end action.">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mr-3" v-bind="props" :disabled="!isWaitingForInput()"
+                        <v-btn class="hotkey mr-1" v-bind="props" :disabled="!isWaitingForInput()"
                             @click="sendHotButtonMessage('!abort')" color="primary" icon>
                             <v-icon>mdi-cancel</v-icon>
                             
                         </v-btn>
-                        <span class="mr-3 ml-3 text-caption text-muted">{{ commandName }}</span>
+                        <span class="mr-1 ml-3 text-caption text-muted">{{ commandName }}</span>
                     </template>
                 </v-tooltip>
             </v-card-actions>
@@ -106,36 +106,12 @@
 
 
         <!-- Section 1: Game Interaction -->
-        <v-card class="hotbuttons-section-1" v-if="isEnvironment('scene')">
+        <v-card class="hotbuttons-section-1">
             <v-card-actions>
 
                 <!-- actor actions -->
 
-                <v-menu>
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy || npc_characters.length === 0" color="primary" icon>
-                            <v-icon>mdi-account-voice</v-icon>
-                        </v-btn>
-                    </template>
-                    <v-list>
-                        <v-list-subheader>Actor Actions</v-list-subheader>
-                        <v-list-item density="compact" v-for="npc_name in npc_characters" :key="npc_name"
-                            @click="sendHotButtonMessage('!ai_dialogue_directed:' + npc_name)" prepend-icon="mdi-bullhorn">
-                            <v-list-item-title>Talk with Direction ({{ npc_name }})</v-list-item-title>
-                            <v-list-item-subtitle>Generate dialogue ({{ npc_name }}) with prompt guide</v-list-item-subtitle>
-                        </v-list-item>
-                        <v-list-item density="compact" v-for="npc_name in npc_characters" :key="npc_name"
-                            @click="sendHotButtonMessage('!ai_dialogue_selective:' + npc_name)" prepend-icon="mdi-comment-account-outline">
-                            <v-list-item-title>Talk ({{ npc_name }})</v-list-item-title>
-                            <v-list-item-subtitle>Generate dialogue ({{ npc_name }})</v-list-item-subtitle>
-                        </v-list-item>
-                        <v-list-item density="compact" v-for="(option, index) in actorActions" :key="index"
-                            @click="sendHotButtonMessage('!' + option.value)" :prepend-icon="option.icon">
-                            <v-list-item-title>{{ option.title }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
+                <SceneToolsActor :disabled="appBusy" :npc-characters="npc_characters" />
 
                 <!-- narrator actions -->
 
@@ -149,7 +125,7 @@
 
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy" color="primary" icon>
+                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon>
                             <v-icon>mdi-clock</v-icon>
                         </v-btn>
                     </template>
@@ -172,9 +148,9 @@
 
                 <!-- world tools -->
 
-                <v-menu max-width="500px" v-if="isEnvironment('scene')">
+                <v-menu max-width="500px">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy" color="primary" icon>
+                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon>
                             <v-icon>mdi-earth</v-icon>
                         </v-btn>
                     </template>
@@ -249,9 +225,9 @@
 
                 <!-- creative / game mode toggle -->
 
-                <v-menu v-if="isEnvironment('scene')">
+                <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy" color="primary" icon>
+                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon>
                             <v-icon>mdi-puzzle-edit</v-icon>
                             <v-icon v-if="potentialNewCharactersExist()" class="btn-notification" color="warning">mdi-human-greeting</v-icon>
                         </v-btn>
@@ -290,7 +266,7 @@
                         </v-list-item>
 
                         <!-- static tools -->
-                        <v-list-item v-for="(option, index) in creativeGameMenu" :key="index"
+                        <v-list-item v-for="(option, index) in creativeGameMenuFiltered" :key="index"
                             @click="sendHotButtonMessage('!' + option.value)"
                             :prepend-icon="option.icon">
                             <v-list-item-title>{{ option.title }}</v-list-item-title>
@@ -298,22 +274,14 @@
                         </v-list-item>
                     </v-list>
                 </v-menu>
-                <v-tooltip v-else-if="isEnvironment('creative')" :disabled="appBusy" location="top" text="Switch to game mode">
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy"
-                            @click="sendHotButtonMessage('!setenv_scene')" color="primary" icon>
-                            <v-icon>mdi-gamepad-square</v-icon>
-                        </v-btn>
-                    </template>
-                </v-tooltip>
 
                 <!-- visualizer actions -->
              
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-progress-circular class="ml-1 mr-3" size="24" v-if="agentStatus.visual && agentStatus.visual.busy" indeterminate="disable-shrink"
+                        <v-progress-circular class="ml-1 mr-1" size="24" v-if="agentStatus.visual && agentStatus.visual.busy" indeterminate="disable-shrink"
                         color="secondary"></v-progress-circular>   
-                        <v-btn v-else class="hotkey mx-3" v-bind="props" :disabled="appBusy || !visualAgentReady" color="primary" icon>
+                        <v-btn v-else class="hotkey mx-1" v-bind="props" :disabled="appBusy || !visualAgentReady" color="primary" icon>
                             <v-icon>mdi-image-frame</v-icon>
                         </v-btn>
                     </template>
@@ -337,7 +305,7 @@
 
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy" color="primary" icon>
+                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon>
                             <v-icon>mdi-content-save</v-icon>
                         </v-btn>
                     </template>
@@ -362,6 +330,7 @@
 <script>
 import SceneToolsDirector from './SceneToolsDirector.vue';
 import SceneToolsNarrator from './SceneToolsNarrator.vue';
+import SceneToolsActor from './SceneToolsActor.vue';
 
 export default {
 
@@ -369,6 +338,7 @@ export default {
     components: {
         SceneToolsDirector,
         SceneToolsNarrator,
+        SceneToolsActor,
     },
     props: {
         appBusy: Boolean,
@@ -401,6 +371,15 @@ export default {
             }
             return templates;
         },
+        creativeGameMenuFiltered() {
+            return this.creativeGameMenu.filter(option => {
+                if (option.condition) {
+                    return option.condition();
+                } else {
+                    return true;
+                }
+            });
+        }
     },
     data() {
         return {
@@ -425,13 +404,27 @@ export default {
                 {"value": "save", "title": "Save", "icon": "mdi-content-save", "description": "Save the current scene"},
             ],
 
-            actorActions: [
-                {"value": "ai_dialogue", "title": "Talk", "icon": "mdi-comment-text-outline", "description": "Generate dialogue"},
-            ],
-
             creativeGameMenu: [
-                {"value": "pc:prompt", "title": "Introduce new character (Directed)", "icon": "mdi-account-plus", "description": "Generate a new active character, based on prompt."},
-                {"value": "setenv_creative", "title": "Creative Mode", "icon": "mdi-puzzle-edit", "description": "Switch to creative mode (very early experimental version)"},
+                {
+                    "value": "pc:prompt", 
+                    "title": "Introduce new character (Directed)", 
+                    "icon": "mdi-account-plus", 
+                    "description": "Generate a new active character, based on prompt."
+                },
+                {
+                    "value": "setenv_creative", 
+                    "title": "Creative Mode", 
+                    "icon": "mdi-puzzle-edit",
+                    "description": "Switch to creative mode (very early experimental version)",
+                    "condition": () => { return this.isEnvironment('scene') }
+                },
+                {
+                    "value": "setenv_scene", 
+                    "title": "Exit Creative Mode", 
+                    "icon": "mdi-gamepad-square",
+                    "description": "Switch to game mode",
+                    "condition": () => { return this.isEnvironment('creative') }
+                }
             ],
 
             advanceTimeOptions: [
@@ -645,11 +638,11 @@ export default {
             this.getWebsocket().send(JSON.stringify({ type: 'interact', text: '!ws' }));
         },
 
-        rerun(event) {
-            // if ctrl is pressed use directed rerun
+        regenerate(event) {
+            // if ctrl is pressed use directed regenerate
             let withDirection = event.ctrlKey;
             let method = event.altKey || event.metaKey ? "edit" : "replace";
-            let command = "!rerun";
+            let command = "!regenerate";
 
             if(withDirection)
                 command += "_directed";
@@ -661,11 +654,11 @@ export default {
             this.sendHotButtonMessage(command)
         },
 
-        rerunNuke(event) {
-            // if ctrl is pressed use directed rerun
+        regenerateNuke(event) {
+            // if ctrl is pressed use directed regenerate
             let withDirection = event.ctrlKey;
             let method = event.altKey || event.metaKey ? "edit" : "replace";
-            let command = "!rerun";
+            let command = "!regenerate";
 
             if(withDirection)
                 command += "_directed";
@@ -744,7 +737,7 @@ export default {
 .hotbuttons-section-3 {
     display: flex;
     align-items: center;
-    margin-right: 20px;
+    margin-right: 5px;
 }
 
 .pre-wrap {

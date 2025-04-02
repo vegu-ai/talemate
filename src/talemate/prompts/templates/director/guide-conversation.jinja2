@@ -17,13 +17,14 @@ Content Classification: {{ scene.context }}
 <|SECTION:ANALYSIS OF SCENE|>
 {{ analysis }}
 <|CLOSE_SECTION|>
+{% include "scene-intent.jinja2" %}
 {% if character.dialogue_instructions -%}
 <|SECTION:GENERAL CHARACTER GUIDE FOR {{ character.name|upper }}|>
 {{ character.dialogue_instructions }}
 <|CLOSE_SECTION|>
 {% endif %}
 <|SECTION:TASK|>
-{% set character_direction=scene.last_message_of_type("director", source=character.name, max_iterations=3) or conversation_instruction  -%}
+{% set character_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=1) or conversation_instruction  -%}
 {% if agent_context_state["conversation__instruction"] -%}
 {% set character_direction=agent_context_state["conversation__instruction"] -%}
 {% endif -%}
@@ -37,12 +38,16 @@ Following this moment:
 ```
 {% endif %}
 
-{% if rerun_context and rerun_context.direction %}
-{% with original_instructions=character_direction %}{% include "guide-conversation-rerun-context.jinja2" %}{% endwith %}
+{% if regeneration_context and regeneration_context.direction %}
+{% with original_instructions=character_direction %}{% include "guide-conversation-regenerate-context.jinja2" %}{% endwith %}
 {% elif character_direction %}
+### Direction
 The writer was given the following direction: "{{ character_direction }}". Analyze the direction and explain how it affects {{ character.name }}'s next action/dialogue.
+
+You MUST include this direction in your guidance, you can adjust it based on your understanding of the character, but the general instruction must NOT be lost.
 {% endif %}
 
+### Guidance
 Provide only directional guidance (e.g., "have {{ character.name }} reveal their concern about X" or "{{ character.name }} should express doubt about Y"). DO NOT write specific dialogue or suggest exact phrasing. Be specific about what information needs to be conveyed while letting the writer craft the actual lines.
 
 {% if character.dialogue_instructions -%}
@@ -52,8 +57,12 @@ Explain {{ character.name }}'s way of speaking and mannerisms to guide the write
 {% if response_length > 300 -%}
 - Establish who {{ character.name }} is speaking to and their relationship
 - Share relevant background about {{ character.name }}'s experiences with this person/situation
-- Summarize the scene analysis and its relevance to {{ character.name }}'s next moment
+- Summarize the scene analysis and its relevance to {{ character.name }}'s next moment.
+  - Include relevant facts. (actors are forgetful)
 - Explain how {{ character.name }} should speak based on their personality and the scene's context
+
+{#IMPORTANT: Ensure that the dialogue does not become repetitive by analysing what makes it repetitive and how to avoid it as the actors have a tendency to repeat phrases. You can let them know if they have repeated a phrase or idea too many times. Provide examples of what NOT to say again.#}
+
 {% endif %}
 
 Focus solely on WHAT needs to be conveyed. Trust the writer to capture {{ character.name }}'s personality and style based on your character description. How do we make {{ character.name }} a believable, natural sounding character in this next moment?

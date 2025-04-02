@@ -1,0 +1,1484 @@
+{
+  "title": "Process Input",
+  "id": "ec7c470b-cf3b-4e06-9e0d-a8b78b3eaeae",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "input/ProcessInput",
+  "nodes": {
+    "9759400b-f29c-4c61-96ec-fe314153a0c9": {
+      "title": "Editor Settings",
+      "id": "9759400b-f29c-4c61-96ec-fe314153a0c9",
+      "properties": {},
+      "x": 1893,
+      "y": 1649,
+      "width": 270,
+      "height": 146,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/editor/Settings",
+      "base_type": "core/Node"
+    },
+    "b963ca05-e4c6-4204-8a93-8cb7f2dd5e0e": {
+      "title": "IN - Text",
+      "id": "b963ca05-e4c6-4204-8a93-8cb7f2dd5e0e",
+      "properties": {},
+      "x": 1894,
+      "y": 1698,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "add06dc2-45a9-4bb7-abf1-79d3efd22512": {
+      "title": "IN - Character",
+      "id": "add06dc2-45a9-4bb7-abf1-79d3efd22512",
+      "properties": {},
+      "x": 331,
+      "y": 1393,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "64a77537-c6d1-482a-b1ab-63fd83402b07": {
+      "title": "Switch",
+      "id": "64a77537-c6d1-482a-b1ab-63fd83402b07",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 537,
+      "y": 1276,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "d3336eb4-9be3-4703-9c62-a28e481141ed": {
+      "title": "RSwitch Advanced",
+      "id": "d3336eb4-9be3-4703-9c62-a28e481141ed",
+      "properties": {},
+      "x": 784,
+      "y": 1278,
+      "width": 198,
+      "height": 68,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "96d14679-1480-4c56-bc02-20270a7a362b": {
+      "title": "Get Character",
+      "id": "96d14679-1480-4c56-bc02-20270a7a362b",
+      "properties": {},
+      "x": 1019,
+      "y": 1280,
+      "width": 203,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetCharacter",
+      "base_type": "core/Node"
+    },
+    "f7c5fd3b-c48e-44eb-988f-39347e59d362": {
+      "title": "Starts With @",
+      "id": "f7c5fd3b-c48e-44eb-988f-39347e59d362",
+      "properties": {
+        "substring": "",
+        "mode": "startswith",
+        "case_sensitive": false
+      },
+      "x": 3955,
+      "y": 1739,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/StringCheck",
+      "base_type": "core/Node"
+    },
+    "95d7979e-d3b4-44e0-aabf-f0bd3833fdef": {
+      "title": "Starts with @",
+      "id": "95d7979e-d3b4-44e0-aabf-f0bd3833fdef",
+      "properties": {},
+      "x": 4643,
+      "y": 1513,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "71056266-e064-45df-b786-d2376cb69c55": {
+      "title": "Coallesce",
+      "id": "71056266-e064-45df-b786-d2376cb69c55",
+      "properties": {},
+      "x": 1249,
+      "y": 1314,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "0ac39836-844e-46f7-a5c9-6f4a49a8e87d": {
+      "title": "Unpack Character",
+      "id": "0ac39836-844e-46f7-a5c9-6f4a49a8e87d",
+      "properties": {},
+      "x": 1418,
+      "y": 1373,
+      "width": 212,
+      "height": 146,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "scene/UnpackCharacter",
+      "base_type": "core/Node"
+    },
+    "a22cdb57-2ee0-4e01-8acc-8d39701c4bf2": {
+      "title": "Actor Action Message",
+      "id": "a22cdb57-2ee0-4e01-8acc-8d39701c4bf2",
+      "properties": {},
+      "x": 6053,
+      "y": 1205,
+      "width": 191,
+      "height": 32,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "f834d0a1-7c03-46ea-8f6c-e32ee75bfef5": {
+      "title": "IN - Act As Character",
+      "id": "f834d0a1-7c03-46ea-8f6c-e32ee75bfef5",
+      "properties": {},
+      "x": 329,
+      "y": 1276,
+      "width": 176,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "787c9c66-3aee-492e-802b-ea7ef111ac23": {
+      "title": "Target Character",
+      "id": "787c9c66-3aee-492e-802b-ea7ef111ac23",
+      "properties": {},
+      "x": 1613,
+      "y": 1294,
+      "width": 164,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "42540cad-2d94-4170-b694-bcbeaeeb9f78": {
+      "title": "Character Name",
+      "id": "42540cad-2d94-4170-b694-bcbeaeeb9f78",
+      "properties": {},
+      "x": 1633,
+      "y": 1371,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "44df0b22-d49d-489c-98bd-cd13639af688": {
+      "title": "String Check",
+      "id": "44df0b22-d49d-489c-98bd-cd13639af688",
+      "properties": {
+        "substring": "",
+        "mode": "exact",
+        "case_sensitive": true
+      },
+      "x": 577,
+      "y": 1989,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/StringCheck",
+      "base_type": "core/Node"
+    },
+    "e1e007d0-e05c-45e3-8954-8ceddd6e21f3": {
+      "title": "Input",
+      "id": "e1e007d0-e05c-45e3-8954-8ceddd6e21f3",
+      "properties": {},
+      "x": 3463,
+      "y": 2348,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "0266412a-403b-4464-9c4f-e460e19c483b": {
+      "title": "Act As Narrator",
+      "id": "0266412a-403b-4464-9c4f-e460e19c483b",
+      "properties": {},
+      "x": 3458,
+      "y": 2278,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "167d1152-11bb-4d05-984b-e66d289cf4f8": {
+      "title": "RSwitch Advanced",
+      "id": "167d1152-11bb-4d05-984b-e66d289cf4f8",
+      "properties": {},
+      "x": 3665,
+      "y": 2278,
+      "width": 246,
+      "height": 77,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "91c93bec-bc9f-4e5f-ba79-0a90beb0099b": {
+      "title": "Narrator Message",
+      "id": "91c93bec-bc9f-4e5f-ba79-0a90beb0099b",
+      "properties": {
+        "source": "player"
+      },
+      "x": 3965,
+      "y": 2272,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/message/NarratorMessage",
+      "base_type": "core/Node"
+    },
+    "1ae941f2-7d3a-4e5e-9242-acd023050899": {
+      "title": "Push History",
+      "id": "1ae941f2-7d3a-4e5e-9242-acd023050899",
+      "properties": {
+        "emit_message": true
+      },
+      "x": 4234,
+      "y": 2272,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "92303f61-c20c-4b50-a840-b61d42bae45e": {
+      "title": "Narrator Action",
+      "id": "92303f61-c20c-4b50-a840-b61d42bae45e",
+      "properties": {},
+      "x": 4513,
+      "y": 2276,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "13b317fe-97a9-401a-b8fb-6366a4dcf122": {
+      "title": "Switch",
+      "id": "13b317fe-97a9-401a-b8fb-6366a4dcf122",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 4706,
+      "y": 2269,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "1cd7f676-17c1-42e3-9ab7-e01b290e29c7": {
+      "title": "Act As",
+      "id": "1cd7f676-17c1-42e3-9ab7-e01b290e29c7",
+      "properties": {},
+      "x": 4826,
+      "y": 2218,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "b46bfcc8-ebb1-4a2e-b514-a1ab30025ccb": {
+      "title": "OR Router",
+      "id": "b46bfcc8-ebb1-4a2e-b514-a1ab30025ccb",
+      "properties": {},
+      "x": 6804,
+      "y": 1881,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ORRouter",
+      "base_type": "core/Node"
+    },
+    "e67c9ce3-9638-41b1-904d-395a61a20bf4": {
+      "title": "Coallesce",
+      "id": "e67c9ce3-9638-41b1-904d-395a61a20bf4",
+      "properties": {},
+      "x": 6805,
+      "y": 1703,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "130e4e4c-b9f7-41e0-b6f2-b8ddf9517dc0": {
+      "title": "AND Router",
+      "id": "130e4e4c-b9f7-41e0-b6f2-b8ddf9517dc0",
+      "properties": {},
+      "x": 7116,
+      "y": 1700,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
+    },
+    "cc88652d-dcbe-47f8-8637-73ab7a4434bc": {
+      "title": "Acted As Character",
+      "id": "cc88652d-dcbe-47f8-8637-73ab7a4434bc",
+      "properties": {},
+      "x": 7275,
+      "y": 1945,
+      "width": 161,
+      "height": 48,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/ActedAsCharacter",
+      "base_type": "core/Node"
+    },
+    "310d2c03-8382-4e55-b527-cae83439d663": {
+      "title": "Unpack Interaction State",
+      "id": "310d2c03-8382-4e55-b527-cae83439d663",
+      "properties": {},
+      "x": -437,
+      "y": 1179,
+      "width": 279,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/UnpackInteractionState",
+      "base_type": "core/Node"
+    },
+    "c6af9362-07e7-46af-a123-f5fdbf955afb": {
+      "title": "Does not start with @",
+      "id": "c6af9362-07e7-46af-a123-f5fdbf955afb",
+      "properties": {},
+      "x": 4646,
+      "y": 1177,
+      "width": 188,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "b35b0c82-d2a5-4521-b316-a21f9c08238d": {
+      "title": "Input",
+      "id": "b35b0c82-d2a5-4521-b316-a21f9c08238d",
+      "properties": {},
+      "x": 4646,
+      "y": 1248,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "4c52233d-5826-46dd-a018-e00af2a5bd9a": {
+      "title": "RSwitch Advanced",
+      "id": "4c52233d-5826-46dd-a018-e00af2a5bd9a",
+      "properties": {},
+      "x": 4855,
+      "y": 1244,
+      "width": 162,
+      "height": 69,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "ec491775-1aa9-4592-a9d4-05a1373a44ae": {
+      "title": "Character Message",
+      "id": "ec491775-1aa9-4592-a9d4-05a1373a44ae",
+      "properties": {
+        "source": "player"
+      },
+      "x": 5045,
+      "y": 1190,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/message/CharacterMessage",
+      "base_type": "core/Node"
+    },
+    "9f843618-10c2-4a4c-addb-1eb4609e44d6": {
+      "title": "Push History",
+      "id": "9f843618-10c2-4a4c-addb-1eb4609e44d6",
+      "properties": {
+        "emit_message": true
+      },
+      "x": 5279,
+      "y": 1198,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "455f5ee2-7f40-4c56-afe3-b257da111795": {
+      "title": "Strip @",
+      "id": "455f5ee2-7f40-4c56-afe3-b257da111795",
+      "properties": {
+        "start": 1,
+        "end": null
+      },
+      "x": 4651,
+      "y": 1641,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Substring",
+      "base_type": "core/Node"
+    },
+    "9e5c990f-1f94-4753-9e47-19c37f979410": {
+      "title": "MakeString",
+      "id": "9e5c990f-1f94-4753-9e47-19c37f979410",
+      "properties": {
+        "value": "$narrator"
+      },
+      "x": 344,
+      "y": 2169,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "7f405668-5fc0-4591-9a40-80611223708f": {
+      "title": "Act As",
+      "id": "7f405668-5fc0-4591-9a40-80611223708f",
+      "properties": {},
+      "x": 1632,
+      "y": 2131,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "e08fc080-655d-406f-ade7-35cc5461ccec": {
+      "title": "MakeString",
+      "id": "e08fc080-655d-406f-ade7-35cc5461ccec",
+      "properties": {
+        "value": "@"
+      },
+      "x": 3799,
+      "y": 1807,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "20d5dc1f-fb72-4259-8f6f-777b2a2bcada": {
+      "title": "Trim",
+      "id": "20d5dc1f-fb72-4259-8f6f-777b2a2bcada",
+      "properties": {
+        "mode": "both",
+        "chars": "\""
+      },
+      "x": 3815,
+      "y": 1752,
+      "width": 210,
+      "height": 102,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Trim",
+      "base_type": "core/Node"
+    },
+    "eab22a21-bdba-46cf-aaa6-170e76a953b2": {
+      "title": "Act As",
+      "id": "eab22a21-bdba-46cf-aaa6-170e76a953b2",
+      "properties": {},
+      "x": 122,
+      "y": 1313,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "e76a6a55-cfde-41ce-9c84-23a744df34b2": {
+      "title": "Act As",
+      "id": "e76a6a55-cfde-41ce-9c84-23a744df34b2",
+      "properties": {},
+      "x": -62,
+      "y": 1627,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "4f9a8a53-6645-46a5-9937-47011c488774": {
+      "title": "Act As Narrator",
+      "id": "4f9a8a53-6645-46a5-9937-47011c488774",
+      "properties": {},
+      "x": 1633,
+      "y": 1980,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "224dd305-c3ff-4d8b-a98d-b50561b7718b": {
+      "title": "Act As Narrator",
+      "id": "224dd305-c3ff-4d8b-a98d-b50561b7718b",
+      "properties": {},
+      "x": 1893,
+      "y": 1792,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "98ae01a5-4f4d-4549-8bfe-c021435d65f0": {
+      "title": "Actor",
+      "id": "98ae01a5-4f4d-4549-8bfe-c021435d65f0",
+      "properties": {},
+      "x": 1636,
+      "y": 1450,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "5289af67-4116-4c4d-b78e-35512aaf456d": {
+      "title": "Starts With @",
+      "id": "5289af67-4116-4c4d-b78e-35512aaf456d",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 4264,
+      "y": 1736,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "74004680-8576-448d-8c5d-a22c1b9d12ff": {
+      "title": "Trimmed @ Instruction",
+      "id": "74004680-8576-448d-8c5d-a22c1b9d12ff",
+      "properties": {},
+      "x": 4266,
+      "y": 1898,
+      "width": 199,
+      "height": 34,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "b962bf29-69b1-4a98-81b3-cbfea714a6ec": {
+      "title": "IN - Text",
+      "id": "b962bf29-69b1-4a98-81b3-cbfea714a6ec",
+      "properties": {},
+      "x": 292,
+      "y": 1706,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "69c33c10-d505-4a1f-9261-bac33aedee53": {
+      "title": "Act As",
+      "id": "69c33c10-d505-4a1f-9261-bac33aedee53",
+      "properties": {},
+      "x": 1624,
+      "y": 1209,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "36e8ac0e-57d9-47ce-bfef-071b0def2667": {
+      "title": "Actor",
+      "id": "36e8ac0e-57d9-47ce-bfef-071b0def2667",
+      "properties": {},
+      "x": 5585,
+      "y": 1349,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "07a525da-82a1-4394-8591-78f724f3c888": {
+      "title": "Push History",
+      "id": "07a525da-82a1-4394-8591-78f724f3c888",
+      "properties": {
+        "emit_message": true
+      },
+      "x": 5266,
+      "y": 1513,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "1b3d48f0-a640-4f45-bd3a-a4f82656a33d": {
+      "title": "Character Action",
+      "id": "1b3d48f0-a640-4f45-bd3a-a4f82656a33d",
+      "properties": {},
+      "x": 5549,
+      "y": 1523,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "da496b38-d7cf-4909-95ed-3e23cc38daa9": {
+      "title": "Character",
+      "id": "da496b38-d7cf-4909-95ed-3e23cc38daa9",
+      "properties": {},
+      "x": 4644,
+      "y": 1575,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "72c4f7f6-02f3-421c-81d9-ad1f4b0e64a9": {
+      "title": "Generate Conversation",
+      "id": "72c4f7f6-02f3-421c-81d9-ad1f4b0e64a9",
+      "properties": {
+        "trigger_conversation_generated": true
+      },
+      "x": 4895,
+      "y": 1513,
+      "width": 275,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/conversation/Generate",
+      "base_type": "core/Node"
+    },
+    "74b3cc5b-f2fc-48f8-a0e9-bfcea89bd43e": {
+      "title": "Character Action",
+      "id": "74b3cc5b-f2fc-48f8-a0e9-bfcea89bd43e",
+      "properties": {},
+      "x": 5541,
+      "y": 1209,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "edd9caf5-4f53-4ae8-817b-23cc855de9dd": {
+      "title": "Character",
+      "id": "edd9caf5-4f53-4ae8-817b-23cc855de9dd",
+      "properties": {},
+      "x": 4661,
+      "y": 1351,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "971e760a-7231-407e-b480-52e02fdfeb58": {
+      "title": "Act As",
+      "id": "971e760a-7231-407e-b480-52e02fdfeb58",
+      "properties": {},
+      "x": 132,
+      "y": 2019,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "aac0bed4-a7ad-489c-a2e8-82df33cca51d": {
+      "title": "Acting as narrator?",
+      "id": "aac0bed4-a7ad-489c-a2e8-82df33cca51d",
+      "properties": {},
+      "x": 3402,
+      "y": 1653,
+      "width": 180,
+      "height": 84,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "fc5d880b-ff9e-4d21-be75-1198f257e1ee": {
+      "title": "Act As",
+      "id": "fc5d880b-ff9e-4d21-be75-1198f257e1ee",
+      "properties": {},
+      "x": 3461,
+      "y": 2214,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "bcc80bd4-d8eb-4b34-afd8-6a6e32f2d67d": {
+      "title": "Clean Up User Input",
+      "id": "bcc80bd4-d8eb-4b34-afd8-6a6e32f2d67d",
+      "properties": {
+        "force": false
+      },
+      "x": 2289,
+      "y": 1734,
+      "width": 262,
+      "height": 48,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/editor/CleanUpUserInput",
+      "base_type": "core/Node"
+    },
+    "39774e3b-da9c-4292-a505-834cc5e12a41": {
+      "title": "Cleaned Input",
+      "id": "39774e3b-da9c-4292-a505-834cc5e12a41",
+      "properties": {},
+      "x": 2579,
+      "y": 1747,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "3c9a0be2-8a2c-4984-853b-10950cdaca19": {
+      "title": "Coallesce",
+      "id": "3c9a0be2-8a2c-4984-853b-10950cdaca19",
+      "properties": {},
+      "x": 2781,
+      "y": 1644,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "15bf25a6-e6ff-40ff-93da-af19171a6803": {
+      "title": "Act As Narrator",
+      "id": "15bf25a6-e6ff-40ff-93da-af19171a6803",
+      "properties": {},
+      "x": 2998,
+      "y": 1793,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "1b09fe12-8ef5-40c3-93ae-413225732d26": {
+      "title": "Input",
+      "id": "1b09fe12-8ef5-40c3-93ae-413225732d26",
+      "properties": {},
+      "x": 2999,
+      "y": 1644,
+      "width": 140,
+      "height": 28,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "de6cd124-a27a-41fc-ac59-df65328d635f": {
+      "title": "Unpack Character",
+      "id": "de6cd124-a27a-41fc-ac59-df65328d635f",
+      "properties": {},
+      "x": 4898,
+      "y": 1659,
+      "width": 212,
+      "height": 146,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "scene/UnpackCharacter",
+      "base_type": "core/Node"
+    },
+    "b67cd72f-4a41-41e5-9678-78527cc95110": {
+      "title": "Actor",
+      "id": "b67cd72f-4a41-41e5-9678-78527cc95110",
+      "properties": {},
+      "x": 5554,
+      "y": 1648,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "bf62a6e6-0d0c-464c-b984-97a10c35fcc6": {
+      "title": "Message",
+      "id": "bf62a6e6-0d0c-464c-b984-97a10c35fcc6",
+      "properties": {},
+      "x": 5870,
+      "y": 1209,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "4cd15891-3785-442e-a1d9-bb48b5d86312": {
+      "title": "Actor",
+      "id": "4cd15891-3785-442e-a1d9-bb48b5d86312",
+      "properties": {},
+      "x": 5873,
+      "y": 1357,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "7a23dadb-5962-49a8-8859-3a9fb7473585": {
+      "title": "Unpack Character",
+      "id": "7a23dadb-5962-49a8-8859-3a9fb7473585",
+      "properties": {},
+      "x": 5304,
+      "y": 1350,
+      "width": 212,
+      "height": 146,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "scene/UnpackCharacter",
+      "base_type": "core/Node"
+    },
+    "4938f08b-b797-4279-9441-8dedef17b374": {
+      "title": "Character Name",
+      "id": "4938f08b-b797-4279-9441-8dedef17b374",
+      "properties": {},
+      "x": 5552,
+      "y": 1602,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "7e594c03-a9cb-4b02-ac96-f80a5ce332e1": {
+      "title": "Character Name",
+      "id": "7e594c03-a9cb-4b02-ac96-f80a5ce332e1",
+      "properties": {},
+      "x": 5553,
+      "y": 1296,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Route",
+      "base_type": "core/Node"
+    },
+    "c75a10ff-dc4c-4b0d-93ab-1f017a84fcc1": {
+      "title": "Game Loop Actor Iteration",
+      "id": "c75a10ff-dc4c-4b0d-93ab-1f017a84fcc1",
+      "properties": {},
+      "x": 6306,
+      "y": 1312,
+      "width": 210,
+      "height": 53,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/event/trigger/GameLoopActorIter",
+      "base_type": "core/EventTrigger"
+    },
+    "2ab3851e-17d9-49af-b16b-34bcc676a239": {
+      "title": "Switch",
+      "id": "2ab3851e-17d9-49af-b16b-34bcc676a239",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 6549,
+      "y": 1341,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "e2dc53b2-4ebf-48ae-8bc9-46759c25bdb9": {
+      "title": "Character Name",
+      "id": "e2dc53b2-4ebf-48ae-8bc9-46759c25bdb9",
+      "properties": {},
+      "x": 5865,
+      "y": 1578,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "cf71a360-3ac7-41ff-a861-e32a3ac49f20": {
+      "title": "Fix user input enabled?",
+      "id": "cf71a360-3ac7-41ff-a861-e32a3ac49f20",
+      "properties": {},
+      "x": 2070,
+      "y": 1643,
+      "width": 193,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "cb271341-912a-4748-bd1e-ee85221d1704": {
+      "title": "OUT text",
+      "id": "cb271341-912a-4748-bd1e-ee85221d1704",
+      "properties": {
+        "output_type": "str",
+        "output_name": "text",
+        "num": 0
+      },
+      "x": 330,
+      "y": 730,
+      "width": 237,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "12698e7e-ee6b-4d15-a239-a7f023d9cdc7": {
+      "title": "OUT interaction_state",
+      "id": "12698e7e-ee6b-4d15-a239-a7f023d9cdc7",
+      "properties": {
+        "output_type": "interaction_state",
+        "output_name": "interaction_state",
+        "num": 1
+      },
+      "x": 330,
+      "y": 920,
+      "width": 248,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "0d367913-4281-4135-b755-aac5a5078279": {
+      "title": "IN text",
+      "id": "0d367913-4281-4135-b755-aac5a5078279",
+      "properties": {
+        "input_type": "str",
+        "input_name": "text",
+        "input_optional": false,
+        "input_group": null,
+        "num": 0
+      },
+      "x": -750,
+      "y": 870,
+      "width": 266,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "fc428d8a-7af8-462e-b694-9e78ad4ad87e": {
+      "title": "IN interaction_state",
+      "id": "fc428d8a-7af8-462e-b694-9e78ad4ad87e",
+      "properties": {
+        "input_type": "interaction_state",
+        "input_name": "interaction_state",
+        "input_optional": false,
+        "input_group": null,
+        "num": 1
+      },
+      "x": -750,
+      "y": 1080,
+      "width": 271,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "54525442-512f-40d0-82ee-390d11770d21": {
+      "title": "IN character",
+      "id": "54525442-512f-40d0-82ee-390d11770d21",
+      "properties": {
+        "input_type": "character",
+        "input_name": "character",
+        "input_optional": true,
+        "input_group": "",
+        "num": 2
+      },
+      "x": -750,
+      "y": 1290,
+      "width": 263,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "9759400b-f29c-4c61-96ec-fe314153a0c9.agent_enabled": [
+      "cf71a360-3ac7-41ff-a861-e32a3ac49f20.check"
+    ],
+    "b963ca05-e4c6-4204-8a93-8cb7f2dd5e0e.value": [
+      "cf71a360-3ac7-41ff-a861-e32a3ac49f20.yes",
+      "cf71a360-3ac7-41ff-a861-e32a3ac49f20.no"
+    ],
+    "add06dc2-45a9-4bb7-abf1-79d3efd22512.value": [
+      "71056266-e064-45df-b786-d2376cb69c55.b"
+    ],
+    "64a77537-c6d1-482a-b1ab-63fd83402b07.yes": [
+      "d3336eb4-9be3-4703-9c62-a28e481141ed.no"
+    ],
+    "d3336eb4-9be3-4703-9c62-a28e481141ed.no": [
+      "96d14679-1480-4c56-bc02-20270a7a362b.character_name"
+    ],
+    "96d14679-1480-4c56-bc02-20270a7a362b.character": [
+      "71056266-e064-45df-b786-d2376cb69c55.a"
+    ],
+    "f7c5fd3b-c48e-44eb-988f-39347e59d362.result": [
+      "5289af67-4116-4c4d-b78e-35512aaf456d.value"
+    ],
+    "95d7979e-d3b4-44e0-aabf-f0bd3833fdef.value": [
+      "72c4f7f6-02f3-421c-81d9-ad1f4b0e64a9.state"
+    ],
+    "71056266-e064-45df-b786-d2376cb69c55.value": [
+      "0ac39836-844e-46f7-a5c9-6f4a49a8e87d.character",
+      "787c9c66-3aee-492e-802b-ea7ef111ac23.value"
+    ],
+    "0ac39836-844e-46f7-a5c9-6f4a49a8e87d.name": [
+      "42540cad-2d94-4170-b694-bcbeaeeb9f78.value"
+    ],
+    "0ac39836-844e-46f7-a5c9-6f4a49a8e87d.color": [
+      "98ae01a5-4f4d-4549-8bfe-c021435d65f0.value"
+    ],
+    "a22cdb57-2ee0-4e01-8acc-8d39701c4bf2.value": [
+      "c75a10ff-dc4c-4b0d-93ab-1f017a84fcc1.trigger"
+    ],
+    "f834d0a1-7c03-46ea-8f6c-e32ee75bfef5.value": [
+      "64a77537-c6d1-482a-b1ab-63fd83402b07.value",
+      "69c33c10-d505-4a1f-9261-bac33aedee53.value"
+    ],
+    "787c9c66-3aee-492e-802b-ea7ef111ac23.value": [
+      "da496b38-d7cf-4909-95ed-3e23cc38daa9.value",
+      "edd9caf5-4f53-4ae8-817b-23cc855de9dd.value"
+    ],
+    "44df0b22-d49d-489c-98bd-cd13639af688.result": [
+      "d3336eb4-9be3-4703-9c62-a28e481141ed.check",
+      "4f9a8a53-6645-46a5-9937-47011c488774.value"
+    ],
+    "e1e007d0-e05c-45e3-8954-8ceddd6e21f3.value": [
+      "167d1152-11bb-4d05-984b-e66d289cf4f8.yes"
+    ],
+    "0266412a-403b-4464-9c4f-e460e19c483b.value": [
+      "167d1152-11bb-4d05-984b-e66d289cf4f8.check"
+    ],
+    "167d1152-11bb-4d05-984b-e66d289cf4f8.yes": [
+      "91c93bec-bc9f-4e5f-ba79-0a90beb0099b.message"
+    ],
+    "91c93bec-bc9f-4e5f-ba79-0a90beb0099b.message": [
+      "1ae941f2-7d3a-4e5e-9242-acd023050899.message"
+    ],
+    "1ae941f2-7d3a-4e5e-9242-acd023050899.message": [
+      "92303f61-c20c-4b50-a840-b61d42bae45e.value"
+    ],
+    "92303f61-c20c-4b50-a840-b61d42bae45e.value": [
+      "13b317fe-97a9-401a-b8fb-6366a4dcf122.value"
+    ],
+    "13b317fe-97a9-401a-b8fb-6366a4dcf122.yes": [
+      "b46bfcc8-ebb1-4a2e-b514-a1ab30025ccb.b"
+    ],
+    "1cd7f676-17c1-42e3-9ab7-e01b290e29c7.value": [
+      "e67c9ce3-9638-41b1-904d-395a61a20bf4.b"
+    ],
+    "b46bfcc8-ebb1-4a2e-b514-a1ab30025ccb.yes": [
+      "130e4e4c-b9f7-41e0-b6f2-b8ddf9517dc0.b"
+    ],
+    "e67c9ce3-9638-41b1-904d-395a61a20bf4.value": [
+      "130e4e4c-b9f7-41e0-b6f2-b8ddf9517dc0.a",
+      "cc88652d-dcbe-47f8-8637-73ab7a4434bc.character_name"
+    ],
+    "130e4e4c-b9f7-41e0-b6f2-b8ddf9517dc0.yes": [
+      "cc88652d-dcbe-47f8-8637-73ab7a4434bc.state"
+    ],
+    "310d2c03-8382-4e55-b527-cae83439d663.act_as": [
+      "e76a6a55-cfde-41ce-9c84-23a744df34b2.value"
+    ],
+    "c6af9362-07e7-46af-a123-f5fdbf955afb.value": [
+      "4c52233d-5826-46dd-a018-e00af2a5bd9a.check"
+    ],
+    "b35b0c82-d2a5-4521-b316-a21f9c08238d.value": [
+      "4c52233d-5826-46dd-a018-e00af2a5bd9a.yes"
+    ],
+    "4c52233d-5826-46dd-a018-e00af2a5bd9a.yes": [
+      "ec491775-1aa9-4592-a9d4-05a1373a44ae.message"
+    ],
+    "ec491775-1aa9-4592-a9d4-05a1373a44ae.message": [
+      "9f843618-10c2-4a4c-addb-1eb4609e44d6.message"
+    ],
+    "9f843618-10c2-4a4c-addb-1eb4609e44d6.message": [
+      "74b3cc5b-f2fc-48f8-a0e9-bfcea89bd43e.value"
+    ],
+    "455f5ee2-7f40-4c56-afe3-b257da111795.result": [
+      "72c4f7f6-02f3-421c-81d9-ad1f4b0e64a9.instruction"
+    ],
+    "9e5c990f-1f94-4753-9e47-19c37f979410.value": [
+      "44df0b22-d49d-489c-98bd-cd13639af688.substring",
+      "7f405668-5fc0-4591-9a40-80611223708f.value"
+    ],
+    "7f405668-5fc0-4591-9a40-80611223708f.value": [
+      "fc5d880b-ff9e-4d21-be75-1198f257e1ee.value"
+    ],
+    "e08fc080-655d-406f-ade7-35cc5461ccec.value": [
+      "f7c5fd3b-c48e-44eb-988f-39347e59d362.substring"
+    ],
+    "20d5dc1f-fb72-4259-8f6f-777b2a2bcada.result": [
+      "f7c5fd3b-c48e-44eb-988f-39347e59d362.string",
+      "74004680-8576-448d-8c5d-a22c1b9d12ff.value"
+    ],
+    "eab22a21-bdba-46cf-aaa6-170e76a953b2.value": [
+      "f834d0a1-7c03-46ea-8f6c-e32ee75bfef5.value"
+    ],
+    "e76a6a55-cfde-41ce-9c84-23a744df34b2.value": [
+      "eab22a21-bdba-46cf-aaa6-170e76a953b2.value",
+      "971e760a-7231-407e-b480-52e02fdfeb58.value"
+    ],
+    "4f9a8a53-6645-46a5-9937-47011c488774.value": [
+      "0266412a-403b-4464-9c4f-e460e19c483b.value",
+      "224dd305-c3ff-4d8b-a98d-b50561b7718b.value"
+    ],
+    "224dd305-c3ff-4d8b-a98d-b50561b7718b.value": [
+      "bcc80bd4-d8eb-4b34-afd8-6a6e32f2d67d.as_narration",
+      "15bf25a6-e6ff-40ff-93da-af19171a6803.value"
+    ],
+    "5289af67-4116-4c4d-b78e-35512aaf456d.yes": [
+      "95d7979e-d3b4-44e0-aabf-f0bd3833fdef.value"
+    ],
+    "5289af67-4116-4c4d-b78e-35512aaf456d.no": [
+      "c6af9362-07e7-46af-a123-f5fdbf955afb.value"
+    ],
+    "74004680-8576-448d-8c5d-a22c1b9d12ff.value": [
+      "455f5ee2-7f40-4c56-afe3-b257da111795.string"
+    ],
+    "b962bf29-69b1-4a98-81b3-cbfea714a6ec.value": [
+      "b963ca05-e4c6-4204-8a93-8cb7f2dd5e0e.value"
+    ],
+    "36e8ac0e-57d9-47ce-bfef-071b0def2667.value": [
+      "4cd15891-3785-442e-a1d9-bb48b5d86312.a"
+    ],
+    "07a525da-82a1-4394-8591-78f724f3c888.message": [
+      "1b3d48f0-a640-4f45-bd3a-a4f82656a33d.value"
+    ],
+    "1b3d48f0-a640-4f45-bd3a-a4f82656a33d.value": [
+      "bf62a6e6-0d0c-464c-b984-97a10c35fcc6.b"
+    ],
+    "da496b38-d7cf-4909-95ed-3e23cc38daa9.value": [
+      "72c4f7f6-02f3-421c-81d9-ad1f4b0e64a9.character",
+      "de6cd124-a27a-41fc-ac59-df65328d635f.character"
+    ],
+    "72c4f7f6-02f3-421c-81d9-ad1f4b0e64a9.message": [
+      "07a525da-82a1-4394-8591-78f724f3c888.message"
+    ],
+    "74b3cc5b-f2fc-48f8-a0e9-bfcea89bd43e.value": [
+      "bf62a6e6-0d0c-464c-b984-97a10c35fcc6.a"
+    ],
+    "edd9caf5-4f53-4ae8-817b-23cc855de9dd.value": [
+      "ec491775-1aa9-4592-a9d4-05a1373a44ae.character",
+      "7a23dadb-5962-49a8-8859-3a9fb7473585.character"
+    ],
+    "971e760a-7231-407e-b480-52e02fdfeb58.value": [
+      "44df0b22-d49d-489c-98bd-cd13639af688.string"
+    ],
+    "aac0bed4-a7ad-489c-a2e8-82df33cca51d.no": [
+      "b35b0c82-d2a5-4521-b316-a21f9c08238d.value",
+      "20d5dc1f-fb72-4259-8f6f-777b2a2bcada.string"
+    ],
+    "fc5d880b-ff9e-4d21-be75-1198f257e1ee.value": [
+      "1cd7f676-17c1-42e3-9ab7-e01b290e29c7.value"
+    ],
+    "bcc80bd4-d8eb-4b34-afd8-6a6e32f2d67d.cleaned_user_input": [
+      "39774e3b-da9c-4292-a505-834cc5e12a41.value"
+    ],
+    "39774e3b-da9c-4292-a505-834cc5e12a41.value": [
+      "3c9a0be2-8a2c-4984-853b-10950cdaca19.a"
+    ],
+    "3c9a0be2-8a2c-4984-853b-10950cdaca19.value": [
+      "1b09fe12-8ef5-40c3-93ae-413225732d26.value"
+    ],
+    "15bf25a6-e6ff-40ff-93da-af19171a6803.value": [
+      "aac0bed4-a7ad-489c-a2e8-82df33cca51d.check"
+    ],
+    "1b09fe12-8ef5-40c3-93ae-413225732d26.value": [
+      "e1e007d0-e05c-45e3-8954-8ceddd6e21f3.value",
+      "aac0bed4-a7ad-489c-a2e8-82df33cca51d.no"
+    ],
+    "de6cd124-a27a-41fc-ac59-df65328d635f.name": [
+      "4938f08b-b797-4279-9441-8dedef17b374.value"
+    ],
+    "de6cd124-a27a-41fc-ac59-df65328d635f.actor": [
+      "b67cd72f-4a41-41e5-9678-78527cc95110.value"
+    ],
+    "b67cd72f-4a41-41e5-9678-78527cc95110.value": [
+      "4cd15891-3785-442e-a1d9-bb48b5d86312.b"
+    ],
+    "bf62a6e6-0d0c-464c-b984-97a10c35fcc6.value": [
+      "a22cdb57-2ee0-4e01-8acc-8d39701c4bf2.value"
+    ],
+    "4cd15891-3785-442e-a1d9-bb48b5d86312.value": [
+      "c75a10ff-dc4c-4b0d-93ab-1f017a84fcc1.actor"
+    ],
+    "7a23dadb-5962-49a8-8859-3a9fb7473585.name": [
+      "7e594c03-a9cb-4b02-ac96-f80a5ce332e1.value"
+    ],
+    "7a23dadb-5962-49a8-8859-3a9fb7473585.actor": [
+      "36e8ac0e-57d9-47ce-bfef-071b0def2667.value"
+    ],
+    "4938f08b-b797-4279-9441-8dedef17b374.value": [
+      "e2dc53b2-4ebf-48ae-8bc9-46759c25bdb9.b"
+    ],
+    "7e594c03-a9cb-4b02-ac96-f80a5ce332e1.value": [
+      "e2dc53b2-4ebf-48ae-8bc9-46759c25bdb9.a"
+    ],
+    "c75a10ff-dc4c-4b0d-93ab-1f017a84fcc1.event": [
+      "2ab3851e-17d9-49af-b16b-34bcc676a239.value"
+    ],
+    "2ab3851e-17d9-49af-b16b-34bcc676a239.yes": [
+      "b46bfcc8-ebb1-4a2e-b514-a1ab30025ccb.a"
+    ],
+    "e2dc53b2-4ebf-48ae-8bc9-46759c25bdb9.value": [
+      "e67c9ce3-9638-41b1-904d-395a61a20bf4.a"
+    ],
+    "cf71a360-3ac7-41ff-a861-e32a3ac49f20.yes": [
+      "bcc80bd4-d8eb-4b34-afd8-6a6e32f2d67d.user_input"
+    ],
+    "cf71a360-3ac7-41ff-a861-e32a3ac49f20.no": [
+      "3c9a0be2-8a2c-4984-853b-10950cdaca19.b"
+    ],
+    "0d367913-4281-4135-b755-aac5a5078279.value": [
+      "cb271341-912a-4748-bd1e-ee85221d1704.value",
+      "b962bf29-69b1-4a98-81b3-cbfea714a6ec.value"
+    ],
+    "fc428d8a-7af8-462e-b694-9e78ad4ad87e.value": [
+      "12698e7e-ee6b-4d15-a239-a7f023d9cdc7.value",
+      "310d2c03-8382-4e55-b527-cae83439d663.interaction_state"
+    ],
+    "54525442-512f-40d0-82ee-390d11770d21.value": [
+      "add06dc2-45a9-4bb7-abf1-79d3efd22512.value"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Inputs",
+      "x": -775,
+      "y": 799,
+      "width": 318,
+      "height": 661,
+      "color": "#88A",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Generate from @ instruction",
+      "x": 4626,
+      "y": 1436,
+      "width": 1091,
+      "height": 230,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Clean up input",
+      "x": 1869,
+      "y": 1561,
+      "width": 1296,
+      "height": 279,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Determine Target Character",
+      "x": 299,
+      "y": 1152,
+      "width": 1488,
+      "height": 346,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Act As Narrator?",
+      "x": 312,
+      "y": 1910,
+      "width": 1487,
+      "height": 272,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Is '@' Instruction ?",
+      "x": 3782,
+      "y": 1670,
+      "width": 720,
+      "height": 288,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Trigger Actor Iter",
+      "x": 5830,
+      "y": 1125,
+      "width": 840,
+      "height": 344,
+      "color": "#8AA",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Pass through as message",
+      "x": 4624,
+      "y": 1107,
+      "width": 1090,
+      "height": 262,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Raise Act As Loop Break",
+      "x": 6763,
+      "y": 1595,
+      "width": 711,
+      "height": 519,
+      "color": "#A88",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Act as narrator",
+      "x": 3447,
+      "y": 2117,
+      "width": 1498,
+      "height": 280,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Outputs",
+      "x": 303,
+      "y": 652,
+      "width": 295,
+      "height": 395,
+      "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [
+    {
+      "text": "Acting as a specific character, defined through the interaction state?",
+      "x": 328,
+      "y": 1195,
+      "width": 477,
+      "inherited": false
+    },
+    {
+      "text": "Base character - usually the main player character.",
+      "x": 336,
+      "y": 1447,
+      "width": 365,
+      "inherited": false
+    },
+    {
+      "text": "When acting as another character raise an ActedAsCharacter Exception that causes the scene loop to break and restart in place.",
+      "x": 6861,
+      "y": 2038,
+      "width": 492,
+      "inherited": false
+    }
+  ],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "style": null
+}

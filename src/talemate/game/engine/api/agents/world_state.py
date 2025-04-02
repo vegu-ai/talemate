@@ -148,7 +148,7 @@ def create(scene: "Scene") -> "ScopedAPI":
 
             run_async(
                 world_state.manager(
-                    acton_name="deactivate_character",
+                    action_name="deactivate_character",
                     character_name=validated.character_name,
                 )
             )

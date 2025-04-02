@@ -1,0 +1,1087 @@
+// litegraphUtils.js
+import { LGraph, LiteGraph, LGraphCanvas, LGraphNode } from 'litegraph.js';
+import { CommentNode } from './commentNode.js';
+import { trackRecentNodes } from './recentNodes.js';
+
+const UNRESOLVED = "<class 'talemate.game.engine.nodes.core.UNRESOLVED'>";
+
+// Define style presets array
+const stylePresets = [
+    {
+        name: "Agent Generation",
+        node_color: "#392c34",
+        title_color: "#572e44",
+        icon: "F1719"  // robot-happy
+    },
+    {
+        name: "Function Definition",
+        node_color: "#392f2c",
+        title_color: "#573a2e",
+        icon: "F0295"  // function
+    },
+    {
+        name: "Read",
+        node_color: "#32422d",
+        title_color: "#44552f",
+        icon: "F0552"  // download
+    },
+    {
+        name: "Write",
+        node_color: "#223040",
+        title_color: "#2e4657",
+        icon: "F01DA"  // upload
+    },
+    {
+        name: "Delete",
+        node_color: "#5f2323",
+        title_color: "#7f2e2e",
+        icon: "F0683"  // delete-circle
+    },
+    {
+        name: "Error Handling",
+        node_color: "#5f2323",
+        title_color: "#7f2e2e",
+        icon: "F0159"  // alert
+    }
+    // Add more presets here as needed
+];
+
+// Function to apply a preset to a node
+function applyStylePreset(node, preset) {
+    node.properties.node_color = preset.node_color;
+    node.properties.title_color = preset.title_color;
+    node.properties.icon = preset.icon;
+    
+    // Update widgets with new values
+    if (node.widgets) {
+        node.widgets.forEach(widget => {
+            if (widget.name === "node_color") widget.value = preset.node_color;
+            if (widget.name === "title_color") widget.value = preset.title_color;
+            if (widget.name === "icon") widget.value = preset.icon;
+        });
+    }
+    
+    // Update actual node appearance
+    if (node.type === "util/ModuleStyle") {
+        node.color = preset.title_color;
+        node.bgcolor = preset.node_color;
+        node.titleIcon = preset.icon;
+    }
+    
+    // Force a redraw of the node's canvas
+    if (node.graph && node.graph.list_of_graphcanvas && node.graph.list_of_graphcanvas.length > 0) {
+        node.graph.list_of_graphcanvas[0].setDirty(true, true);
+    }
+}
+
+LiteGraph.alt_drag_do_clone_nodes = true;
+
+// Helper to convert socket types
+function convertSocketType(type) {
+    if (type === 'any') {
+        return '*';
+    }
+    if (Array.isArray(type)) {
+        return type.map(convertSocketType);
+    }
+    return type;
+}
+
+// Helper to determine widget type from field type
+function getWidgetType(field) {
+    if (field.choices) {
+        return 'combo';
+    }
+    
+    switch(field.type) {
+        case 'bool':
+        case '<class \'bool\'>':
+            return 'toggle';
+        case 'int':
+        case '<class \'int\'>':
+            return 'number';
+        case 'float':
+        case '<class \'float\'>':
+            return 'number';
+        case 'str':
+        case 'blob':
+        case '<class \'str\'>':
+            return 'text';
+        case 'dict':
+        case 'list':
+        default:
+            return 'text';
+    }
+}
+
+// Function to center the graph canvas on all nodes
+export function centerGraphOnNodes(graph) {
+    // Make sure the graph has at least one canvas
+    if (!graph.list_of_graphcanvas || graph.list_of_graphcanvas.length === 0) {
+        console.warn("No canvas found for graph");
+        return;
+    }
+    
+    const canvas = graph.list_of_graphcanvas[0];
+    
+    // If there are no nodes, just reset to default position
+    if (!graph._nodes || graph._nodes.length === 0) {
+        canvas.ds.offset = [0, 0];
+        canvas.setDirty(true, true);
+        return;
+    }
+    
+    // Calculate the bounding box of all nodes
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    
+    for (const node of graph._nodes) {
+        const x = node.pos[0];
+        const y = node.pos[1];
+        const width = node.size[0];
+        const height = node.size[1];
+        
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + width);
+        maxY = Math.max(maxY, y + height);
+    }
+    
+    // Calculate the center of the bounding box
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    
+    // Get the canvas dimensions
+    const canvasWidth = canvas.canvas.width;
+    const canvasHeight = canvas.canvas.height;
+    
+    // Set the offset to center the bounding box
+    canvas.ds.offset = [
+        canvasWidth / 2 - centerX * canvas.ds.scale,
+        canvasHeight / 2 - centerY * canvas.ds.scale
+    ];
+    
+    // Mark the canvas as dirty to trigger a redraw
+    canvas.setDirty(true, true);
+}
+
+export function centerGraphOnNode(graph, nodeId) {
+    const canvas = graph.list_of_graphcanvas[0];
+    
+    // For LiteGraph, we need to check both _nodes_by_id and _nodes
+    let node = graph._nodes_by_id[nodeId];
+    
+    // If not found by ID, try to find by talemateId
+    if (!node && graph._nodes) {
+        node = graph._nodes.find(n => n.talemateId === nodeId);
+    }
+    
+    if (node) {
+        // Get the center of the node by adding half its width and height
+        const nodeCenterX = node.pos[0] + (node.size[0] / 2);
+        const nodeCenterY = node.pos[1] + (node.size[1] / 2);
+        
+        // Set the offset to center the node
+        canvas.ds.offset = [
+            canvas.canvas.width / 2 - nodeCenterX * canvas.ds.scale,
+            canvas.canvas.height / 2 - nodeCenterY * canvas.ds.scale
+        ];
+        
+        canvas.setDirty(true, true);
+        return true; // Successfully centered
+    }
+    
+    console.warn("Node not found with ID:", nodeId);
+    return false; // Node not found
+}
+
+LGraphCanvas.prototype.getExtraMenuOptions = function(node, options) {
+    options.push({
+        content:"Comment",
+        callback: (value, event, mouseEvent, contextMenu) => {
+            var first_event = contextMenu.getFirstEvent();
+            const node = LiteGraph.createNode("core/Comment");
+            node.pos = this.convertEventToCanvasOffset(first_event);
+            this.graph.add(node);
+        }
+    });
+};
+
+LGraphCanvas.prototype.createJsonWidgetDraw = function(node, widget_width, y, H, widget) {
+    const ctx = this.ctx;
+    const margin = 15;
+    const outline_color = LiteGraph.WIDGET_OUTLINE_COLOR;
+    const background_color = LiteGraph.WIDGET_BGCOLOR;
+    const text_color = LiteGraph.WIDGET_TEXT_COLOR;
+    const secondary_text_color = LiteGraph.WIDGET_SECONDARY_TEXT_COLOR;
+    const show_text = this.ds.scale > 0.5;
+    
+    // Determine if the value is an array or object and create simplified display
+    const value = widget.value || {};
+    const isArray = Array.isArray(value);
+    const displayValue = isArray ? '[...]' : '{...}';
+    
+    // Calculate height - now it's just a single line
+    const jsonHeight = H; // Simplified height for single line
+    
+    ctx.textAlign = "left";
+    ctx.strokeStyle = outline_color;
+    ctx.fillStyle = background_color;
+    ctx.beginPath();
+    
+    if (show_text) {
+        ctx.roundRect(margin, y, widget_width - margin * 2, jsonHeight, [H * 0.25]);
+    } else {
+        ctx.rect(margin, y, widget_width - margin * 2, jsonHeight);
+    }
+    
+    ctx.fill();
+    if (show_text && !widget.disabled) {
+        ctx.stroke();
+    }
+    
+    if (show_text) {
+        // Draw label
+        ctx.fillStyle = secondary_text_color;
+        const label = widget.label || widget.name;
+        if (label != null) {
+            ctx.fillText(label, margin * 2, y + H * 0.7);
+        }
+        
+        // Draw simplified JSON content
+        ctx.fillStyle = text_color;
+        ctx.fillText(displayValue, margin * 2 + ctx.measureText(label + ": ").width, y + H * 0.7);
+    }
+    
+    return jsonHeight; // Return the calculated height
+}
+
+// Helper to create a node class from node definition
+function createNodeClass(nodeDefinition) {
+    function NodeClass() {
+        // Add inputs
+        nodeDefinition.inputs.forEach((input) => {
+            this.addInput(input.name, convertSocketType(input.socket_type));
+        });
+        
+        // Add outputs
+        nodeDefinition.outputs.forEach((output) => {
+            this.addOutput(output.name, convertSocketType(output.socket_type));
+        });
+        
+        // Set up properties and their widgets
+        if (nodeDefinition.fields) {
+            this.properties = {};
+            Object.entries(nodeDefinition.fields).forEach(([key, field]) => {
+                // Set default value if available
+                this.properties[key] = field.default !== undefined ? field.default : null;
+
+                // if default is UNRESOLVED, set to null
+                if (this.properties[key] === UNRESOLVED) {
+                    this.properties[key] = null;
+                }
+
+                let widget = null;
+                let value = this.properties[key];
+                let setter = (v) => { 
+                    this.properties[key] = v; 
+                    // Automatically update node appearance for ModuleStyle node
+                    if (this.type === "util/ModuleStyle") {
+                        if (key === "title_color") {
+                            this.color = v;
+                        } else if (key === "node_color") {
+                            this.bgcolor = v;
+                        } else if (key === "icon") {
+                            this.titleIcon = v;
+                        }
+                        // Force redraw after property update
+                        if (this.graph && this.graph.list_of_graphcanvas && this.graph.list_of_graphcanvas.length > 0) {
+                            this.graph.list_of_graphcanvas[0].setDirty(true, true);
+                        }
+                    }
+                };
+                
+                if (field.type === 'dict' || field.type === 'list') {
+                    widget = this.addWidget("json", key, value, setter);
+                    // Attach custom draw function
+                    widget.draw = (ctx, node, widget_width, y, H) => {
+                        return node.graph.list_of_graphcanvas[0].createJsonWidgetDraw(node, widget_width, y, H, widget);
+                    };
+
+                    widget.mouse = (ev, coords, node) => {
+                        if (ev.type == LiteGraph.pointerevents_method + "down") {
+                            const canvas = node.graph.list_of_graphcanvas[0];
+                            canvas.prompt(
+                                "Value", 
+                                JSON.stringify(widget.value || {}, null, 2),
+                                (v) => {
+                                    widget.value = JSON.parse(v);
+                                    node.setProperty(widget.name, widget.value);
+                                },
+                                ev, 
+                                true,
+                                (v) => { JSON.parse(v); return v; }
+                            );
+                        }
+                    }
+
+                    // Add custom compute size function
+                    widget.computeSize = function(width) {
+                        const H = LiteGraph.NODE_WIDGET_HEIGHT;
+                        return [
+                            width, 
+                            H
+                        ];
+                    };
+
+                } else {
+                    // Get appropriate widget type
+                    const widgetType = getWidgetType(field);
+
+                    // Add widget based on type
+                    if (widgetType === 'combo' && field.choices) {
+                        widget = this.addWidget(
+                            widgetType,
+                            key,
+                            value,
+                            setter,
+                            { values: field.choices }
+                        );
+                    } else {
+                        widget = this.addWidget(
+                            widgetType,
+                            key,
+                            value,
+                            setter,
+                        );
+                    }
+                }
+
+                widget.readonly = field.readonly || false;
+                widget.disabled = widget.readonly;
+
+                // note: litegraph for some reason applies a hardcoded 0.1 delta to the step value
+                // so we need to multiply the step value by 10 to get the correct step value
+                if(field.type === 'int') {
+                    widget.options.precision = 0;
+                    widget.options.step = field.step ? field.step * 10 : 10;
+                } else if(field.type === 'float') {
+                    widget.options.precision = field.precision || 3;
+                    widget.options.step = field.step ? field.step * 10 : 10;
+                } else if(field.type === 'text' || field.type === 'blob') {
+                    widget.options.multiline = true;
+                }
+
+
+            });
+        } else {
+            this.properties = {};
+        }
+
+        if(nodeDefinition.style) {
+            this.color = nodeDefinition.style.title_color;
+            this.bgcolor = nodeDefinition.style.node_color;
+            // Store the icon if provided
+            if(nodeDefinition.style.icon) {
+                this.titleIcon = nodeDefinition.style.icon;
+            }
+            // Store auto_title template if provided
+            if(nodeDefinition.style.auto_title) {
+                this.autoTitleTemplate = nodeDefinition.style.auto_title;
+            }
+        } else {
+            this.titleIcon = "F09DE"; // circle
+        }
+    
+
+        // Store original definition
+        this._definition = nodeDefinition;
+        
+        // Special initialization for ModuleStyle node
+        if (this.type === "util/ModuleStyle") {
+            // Set initial colors from properties if they exist
+            if (this.properties.title_color) {
+                this.color = this.properties.title_color;
+            }
+            if (this.properties.node_color) {
+                this.bgcolor = this.properties.node_color;
+            }
+            if (this.properties.icon) {
+                this.titleIcon = this.properties.icon;
+            }
+        }
+    }
+
+    // overwrite contextmenu for node
+    NodeClass.prototype.getMenuOptions = function() {
+        // Special context menu for ModuleStyle node
+        if (this.type === "util/ModuleStyle") {
+            // Create submenu items for each preset
+            const presetOptions = [];
+            
+            // Add preset options
+            stylePresets.forEach(preset => {
+                presetOptions.push({
+                    content: preset.name,
+                    callback: () => {
+                        applyStylePreset(this, preset);
+                    }
+                });
+            });
+            
+            return [
+                {
+                    content: "Title",
+                    callback: LGraphCanvas.onShowPropertyEditor
+                },
+                { content: "Pin", callback: LGraphCanvas.onMenuNodePin },
+                { 
+                    content: "Style Presets",
+                    submenu: {
+                        options: presetOptions
+                    }
+                }
+            ];
+        } else {
+            // Default menu for other nodes
+            return [
+                {
+                    content: "Title",
+                    callback: LGraphCanvas.onShowPropertyEditor
+                },
+                { content: "Pin", callback: LGraphCanvas.onMenuNodePin },
+            ];
+        }
+    };
+
+    // Set node title
+    NodeClass.title = nodeDefinition.title;
+    
+    // When a connection is made to a socket where a widget is present, disable the widget
+    NodeClass.prototype.onConnectionsChange = function(direction, targetSlot, state, linkInfo, socket) {
+        if(direction === LiteGraph.INPUT) {
+            if(this.widgets) {
+                const widget = this.widgets.find(w => w.name === socket.name);
+                if(widget) {
+                    widget.disabled = linkInfo && (widget.readonly || state);
+                }
+            }
+        }
+    };
+
+    // Define property getters/setters
+    if (nodeDefinition.fields) {
+        Object.entries(nodeDefinition.fields).forEach(([key]) => {
+            Object.defineProperty(NodeClass.prototype, key, {
+                get: function() { return this.properties[key]; },
+                set: function(v) { 
+                    this.properties[key] = v; 
+                    // Also update node appearance for ModuleStyle
+                    if (this.type === "util/ModuleStyle") {
+                        if (key === "title_color") {
+                            this.color = v;
+                        } else if (key === "node_color") {
+                            this.bgcolor = v;
+                        } else if (key === "icon") {
+                            this.titleIcon = v;
+                        }
+                        // Force redraw
+                        if (this.graph && this.graph.list_of_graphcanvas && this.graph.list_of_graphcanvas.length > 0) {
+                            this.graph.list_of_graphcanvas[0].setDirty(true, true);
+                        }
+                    }
+                },
+                enumerable: true
+            });
+        });
+    }
+
+    // Add custom drawing to display registry type underneath the node
+    NodeClass.prototype.onDrawForeground = function(ctx) {
+        // Call the parent method if it exists
+        if (LGraphNode.prototype.onDrawForeground) {
+            LGraphNode.prototype.onDrawForeground.call(this, ctx);
+        }
+        
+        // Draw the registry type underneath the node
+        if (this.type && !this.flags.collapsed) {
+            ctx.save();
+            
+            // Calculate text dimensions and position
+            const text = this.type;
+            ctx.font = "8px Arial";
+            const textMetrics = ctx.measureText(text);
+            const textWidth = textMetrics.width;
+            
+            // Background dimensions
+            const padding = 4;
+            const bgWidth = textWidth + (padding * 2);
+            const bgHeight = 14;
+            const radius = 3; // Rounded corner radius
+            
+            // Position calculations
+            const bgX = this.size[0] - bgWidth - 7; // 5px from right edge
+            const bgY = this.size[1]; // Positioned at the bottom of the node
+            
+            // Draw rounded rectangle background
+            ctx.fillStyle = "rgb(27, 27, 27, 1)";
+            ctx.beginPath();
+            
+            // Top-left corner (sharp)
+            ctx.moveTo(bgX, bgY);
+            // Top-right corner (sharp)
+            ctx.lineTo(bgX + bgWidth, bgY);
+            // Bottom-right corner (rounded)
+            ctx.arcTo(bgX + bgWidth, bgY + bgHeight, bgX + bgWidth - radius, bgY + bgHeight, radius);
+            // Bottom-left corner (rounded)
+            ctx.arcTo(bgX, bgY + bgHeight, bgX, bgY + bgHeight - radius, radius);
+            // Back to top-left
+            ctx.lineTo(bgX, bgY);
+            
+            ctx.fill();
+            
+            // Draw text
+            ctx.textAlign = "left";
+            ctx.fillStyle = "#ddd"; // Light text color for contrast with black background
+            ctx.fillText(text, bgX + padding, bgY + 10); // Position text inside background
+            
+            ctx.restore();
+        }
+    };
+    // Define a single consistent method for drawing the title box with icon support
+    NodeClass.prototype.onDrawTitleBox = function(ctx) {
+        // Then draw the icon if it exists
+        if(this.titleIcon) {
+            ctx.font = "normal normal normal 22px 'Material Design Icons'";
+            ctx.fillStyle = this.title_text_color || LiteGraph.NODE_TITLE_COLOR;
+            try {
+                const iconCode = String.fromCodePoint(parseInt('0x' + this.titleIcon, 16));
+                ctx.fillText(iconCode, 5, -7);
+            } catch(error) {
+                console.error("Error drawing icon for node", this.title, error);
+            }
+        }
+    };
+
+    // handle ctrl+mousedown to set automagic title if style.auto_title is set
+    // auto_title will be a javascript format string that will be evaluated
+    // e.g., "Custom Title ${node.properties.my_property}"
+    if(nodeDefinition.style && nodeDefinition.style.auto_title) {
+        NodeClass.prototype.onMouseDown = function(e, pos, graphcanvas) {
+            // Check if Ctrl key is pressed
+            if(e.shiftKey) {
+                try {
+                    // Evaluate the template using our simple template engine
+                    const newTitle = evaluateSimpleTemplate(this.autoTitleTemplate, this);
+                    
+                    // Update the node title
+                    this.title = newTitle;
+                    
+                    // Prevent further handling of this event
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    // Force a canvas redraw
+                    if(graphcanvas) {
+                        graphcanvas.setDirty(true, true);
+                    }
+                    
+                    return false;
+                } catch(error) {
+                    console.error("Error generating auto title:", error);
+                    console.error("Template:", this.autoTitleTemplate);
+                }
+            }
+        }
+    }
+
+    NodeClass.prototype.clone = function() {
+        // Create a new node of the same type
+        var newNode = LiteGraph.createNode(this.type);
+        if (!newNode) {
+            return null;
+        }
+        
+        // Clone position and size
+        newNode.pos = [this.pos[0] + 10, this.pos[1] + 10]; // Offset slightly
+        newNode.size = [this.size[0], this.size[1]];
+        
+        // Clone title
+        newNode.title = this.title;
+        
+        // Clone properties
+        for (var propName in this.properties) {
+            var value = this.properties[propName];
+            
+            // Deep clone values to avoid reference issues
+            if (typeof value === 'object' && value !== null) {
+                newNode.properties[propName] = JSON.parse(JSON.stringify(value));
+            } else {
+                newNode.properties[propName] = value;
+            }
+        }
+        
+        // Clone widget values
+        if (this.widgets && newNode.widgets) {
+            for (var i = 0; i < this.widgets.length && i < newNode.widgets.length; i++) {
+                var srcWidget = this.widgets[i];
+                var dstWidget = newNode.widgets[i];
+                
+                // Clone the widget value
+                if (srcWidget.name && this.properties[srcWidget.name] !== undefined) {
+                    dstWidget.value = this.properties[srcWidget.name];
+                }
+            }
+        }
+        
+        return newNode;
+    };
+
+    return NodeClass;
+}
+
+// Add this function to your litegraphUtils.js
+function evaluateSimpleTemplate(template, node) {
+    // Replace {propertyName} with node.properties[propertyName]
+    return template.replace(/{([^{}]+)}/g, (match, propertyName) => {
+        // Get the property value
+        const value = node.properties[propertyName];
+        
+        // Return the value or empty string if undefined/null
+        return (value !== undefined && value !== null) ? value : '';
+    });
+}
+
+// Register all node types from the JSON
+export function registerNodesFromJSON(nodeDefinitions) {
+    // Register each node type
+    LiteGraph.clearRegisteredTypes();
+    for(const [nodeType, definition] of Object.entries(nodeDefinitions)) {
+        const NodeClass = createNodeClass(definition);
+        LiteGraph.registerNodeType(nodeType, NodeClass);
+    }
+    LiteGraph.registerNodeType("core/Comment", CommentNode);
+}
+
+export function lockNode(node, setInherited = false) {
+    node.onMouseDown = function() {
+        return true;
+    };
+
+    node.block_delete = true;
+    node.removable = false;
+    node.clonable = false;
+    node.locked = true;
+    node.resizable = false;
+    if(setInherited) {
+        node.inherited = true;
+    }
+}
+
+// Create graph from JSON definition
+export function createGraphFromJSON(graphData) {
+    const graph = new LGraph();
+    const nodeMap = new Map();
+    
+    // Create nodes
+    graphData.nodes.forEach(nodeData => {
+        const node = LiteGraph.createNode(nodeData.registry);
+
+        if(node) {
+            node.pos = [nodeData.x, nodeData.y];
+            node.size = [nodeData.width, nodeData.height];
+            node.parentId = nodeData.parent;
+            node.title = nodeData.title;
+            node.talemateId = nodeData.id;
+            node.flags.collapsed = nodeData.collapsed;
+            
+            // Apply properties
+            if(nodeData.properties) {
+
+                // properties that come in as "null" need to be converted to null
+                Object.keys(nodeData.properties).forEach(key => {
+                    if (nodeData.properties[key] === "null") {
+                        nodeData.properties[key] = "";
+                    }
+                });
+
+                Object.assign(node.properties, nodeData.properties);
+                // Update widgets with property values
+                if (node.widgets) {
+                    node.widgets.forEach(widget => {
+                        if (nodeData.properties[widget.name] !== undefined) {
+                            widget.value = nodeData.properties[widget.name];
+                        }
+                    });
+                }
+
+                // Special handling for ModuleStyle nodes - apply colors directly to node appearance
+                if (node.type === "util/ModuleStyle") {
+                    if (nodeData.properties.title_color) {
+                        node.color = nodeData.properties.title_color;
+                    }
+                    if (nodeData.properties.node_color) {
+                        node.bgcolor = nodeData.properties.node_color;
+                    }
+                    if (nodeData.properties.icon) {
+                        node.titleIcon = nodeData.properties.icon;
+                        
+                        // Ensure the node will redraw with the icon
+                        if (node.graph && node.graph.list_of_graphcanvas && node.graph.list_of_graphcanvas.length > 0) {
+                            node.graph.list_of_graphcanvas[0].setDirty(true, true);
+                        }
+                    }
+                }
+            }
+            
+            // Handle inherited nodes
+            if (nodeData.inherited === true) {
+                lockNode(node, true);
+            }
+            
+            graph.add(node);
+            nodeMap.set(nodeData.id, node);
+        }
+    });
+
+    /* DUPE, WHY IS THIS HERE?
+    if (graphData.comments && Array.isArray(graphData.comments)) {
+        graphData.comments.forEach(comment => {
+          const node = LiteGraph.createNode("core/comment");
+          if (node) {
+            node.pos = [comment.x, comment.y];
+            node.size[0] = comment.width || 200;
+            node.properties.text = comment.text || "Comment";
+            graph.add(node, false); // Don't compute execution order for comments
+          }
+        });
+      }
+    */
+    
+    // Create connections using socket names
+    graphData.connections.forEach(conn => {
+        const [fromNodeId, fromSocketName] = conn.from.split('.');
+        const [toNodeId, toSocketName] = conn.to.split('.');
+        
+        const fromNode = nodeMap.get(fromNodeId);
+        const toNode = nodeMap.get(toNodeId);
+        
+        if(fromNode && toNode) {
+            const fromSocketIndex = fromNode.outputs.findIndex(
+                output => output.name === fromSocketName
+            );
+            
+            const toSocketIndex = toNode.inputs.findIndex(
+                input => input.name === toSocketName
+            );
+            
+            if(fromSocketIndex !== -1 && toSocketIndex !== -1) {
+                fromNode.connect(fromSocketIndex, toNode, toSocketIndex);
+
+                // toSocket node should disable widget with similar key
+                // if it exists (E.g. connected input should disable the widget)
+                if(toNode.widgets) {
+                    const widget = toNode.widgets.find(w => w.name === toSocketName);
+                    if(widget) {
+                        widget.disabled = true;
+                    }
+                }
+            }
+
+        }
+    });
+
+    // loop through nodes once more to block disconnecting and 
+    // connecting of inherited nodes
+    for(const node of graph._nodes) {
+        if(node.inherited) {
+            node.onConnectInput = function() {
+                return false;
+            };
+            node.onConnectOutput = function() {
+                return false;
+            };
+            node.disconnectInput = function() {
+                return false;
+            };
+            node.disconnectOutput = function() {
+                return false;
+            };
+        }
+    }
+
+    // create groups
+    for(const group of graphData.groups) {
+        const node = new LiteGraph.LGraphGroup();
+        node.pos = [group.x, group.y];
+        node.size = [group.width, group.height];
+        node.title = group.title;
+        node.font_size = group.font_size;
+        node.color = group.color;
+        node.inherited = group.inherited || false;
+
+        if(node.inherited) {
+            node.title = node.title + " (Inherited, Locked)";
+            node.move = function() {
+                return false;
+            };
+        }
+
+        graph.add(node);
+    }
+
+    // create comments
+    for(const comment of graphData.comments) {
+        const node = LiteGraph.createNode("core/Comment");
+        node.pos = [comment.x, comment.y];
+        node.size = [comment.width, 100];
+        node.properties.text = comment.text;
+        node.inherited = comment.inherited || false;
+        if(node.inherited) {
+            lockNode(node, true);
+        }
+        graph.add(node);
+    }
+
+
+    graph.talemateRegistry = graphData.registry;
+    graph.talemateProperties = graphData.properties;
+    graph.talemateFields = graphData.fields;
+    graph.talemateTitle = graphData.title;
+    graph.talemateExtends = graphData.extends;
+    graph.setFingerprint = function() {
+        this.fingerprint = fingerprintGraph(this);
+        //console.log("Fingerprint set", this.fingerprint);
+    }.bind(graph);
+    graph.hasChanges = function() {
+        if(!this.fingerprint) {
+            this.setFingerprint();
+            return false;
+        }
+        return !compareFingerprints(this.fingerprint, fingerprintGraph(this));
+    }.bind(graph);
+    
+    return graph;
+}
+
+// Fingerprint a graph to determine if it has changed
+// The fingerprint will consist of a list of node ids, position, size and connection identifiers
+export function fingerprintGraph(graph) {
+    let nodes = graph._nodes.map(node => {
+        return `${node.talemateId}.${node.pos[0]}.${node.pos[1]}.${node.size[0]}.${node.size[1]}`;
+    });
+    let connections = Object.values(graph.links).map(link => {
+
+        let copy = {...link};
+        // remove _pos and _data
+        delete copy._pos;
+        delete copy._data;
+
+        const json = JSON.stringify(copy);
+        return json;
+    });
+
+    // sort both arrays
+    nodes.sort();
+    connections.sort();
+
+    // remove nodes staqrting with "undefined."
+    nodes = nodes.filter(node => !node.startsWith("undefined."));
+    return {
+        nodes,
+        connections
+    };
+
+}
+
+// Check if two fingerprints are equal
+export function compareFingerprints(fingerprint1, fingerprint2) {
+
+    //console.log(fingerprint1, fingerprint2);
+
+    if(fingerprint1.nodes.length !== fingerprint2.nodes.length) {
+        //console.log("FINGERPRINT CHECK: Node length mismatch");
+        return false;
+    }
+
+    if(fingerprint1.connections.length !== fingerprint2.connections.length) {
+        //console.log("FINGERPRINT CHECK: Connection length mismatch");
+        return false;
+    }
+
+    for(let i = 0; i < fingerprint1.nodes.length; i++) {
+        if(fingerprint1.nodes[i] !== fingerprint2.nodes[i]) {
+            //console.log("FINGERPRINT CHECK: Node mismatch", fingerprint1.nodes[i], fingerprint2.nodes[i]);
+            return false;
+        }
+    }
+
+    for(let i = 0; i < fingerprint1.connections.length; i++) {
+        if(fingerprint1.connections[i] !== fingerprint2.connections[i]) {
+            //console.log("FINGERPRINT CHECK: Connection mismatch", fingerprint1.connections[i], fingerprint2.connections[i]);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+// Initialize a complete graph from JSON data
+export function initializeGraphFromJSON(jsonData, centerToNode) {
+    registerNodesFromJSON(jsonData.node_definitions.nodes);
+    const graph = createGraphFromJSON(jsonData.graph);
+
+    // Track recent nodes
+    trackRecentNodes(graph, 10);
+
+    // Center the graph view - use setTimeout to ensure canvas is ready
+    if(!centerToNode) {
+        setTimeout(() => {
+            centerGraphOnNodes(graph);
+        }, 100);
+    } else {
+        setTimeout(() => {
+            centerGraphOnNode(graph, centerToNode);
+        }, 100);
+    }
+
+    return graph;
+}
+
+
+// Convert LiteGraph graph back to JSON format
+export function convertGraphToJSON(graph) {
+    const nodes = [];
+    const connections = [];
+    const comments = [];
+
+    // set talemateId for each node
+    for (const node of graph._nodes) {
+        // if node.id is already a uuid, use it
+        // node.id can also be a number, which is not a valid uuid for the backend
+        // so we need to generate a new one
+        if(node.talemateId) {
+            continue;
+        } else if(new String(node.id).length === 36) {
+            node.talemateId = node.id;
+        } else {
+            node.talemateId = crypto.randomUUID();
+        }
+    }
+
+    // Process all nodes in the graph
+    for (const node of graph._nodes) {
+        // Skip inherited nodes when converting back to JSON
+        if (node.inherited === true) {
+            continue;
+        }
+        
+        if (node.type === "core/Comment") {
+            comments.push({
+                text: node.properties.text,
+                x: Math.round(node.pos[0]),
+                y: Math.round(node.pos[1]),
+                width: Math.round(node.size[0])
+            });
+            continue; // Skip adding comment nodes to the regular nodes list
+        }
+
+        // Create basic node structure
+        const nodeData = {
+            id: node.talemateId,
+            registry: node.type,
+            properties: { ...node.properties },
+            x: Math.round(node.pos[0]),
+            y: Math.round(node.pos[1]),
+            width: Math.round(node.size[0]),
+            height: Math.round(node.size[1]),
+            parent: null,
+            title: node.title,
+            collapsed: node.flags.collapsed,
+        };
+        
+        // Clean up properties
+        // Remove undefined/null values and handle special cases
+        Object.keys(nodeData.properties).forEach(key => {
+            if (nodeData.properties[key] === undefined) {
+                delete nodeData.properties[key];
+            }
+        });
+        
+        // If properties is empty, keep it as an empty object
+        if (Object.keys(nodeData.properties).length === 0) {
+            nodeData.properties = {};
+        }
+        
+        nodes.push(nodeData);
+        
+        // Process connections for this node
+        if (node.outputs) {
+            node.outputs.forEach((output) => {
+                if (output.links) {
+                    output.links.forEach(linkId => {
+                        const link = graph.links[linkId];
+                        if (link) {
+                            const targetNode = graph._nodes_by_id[link.target_id];
+                            if (targetNode && !targetNode.inherited) {
+                                const connection = {
+                                    from: `${node.talemateId}.${output.name}`,
+                                    to: `${targetNode.talemateId}.${targetNode.inputs[link.target_slot].name}`
+                                };
+                                connections.push(connection);
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    const groups = []
+
+    // process all groups in the graph
+    for(const group of graph._groups) {
+
+        if(group.inherited) {
+            continue;
+        }
+
+        groups.push({
+            title: group.title,
+            color: group.color,
+            x: parseInt(group.pos[0]),
+            y: parseInt(group.pos[1]),
+            width: parseInt(group.size[0]),
+            height: parseInt(group.size[1]),
+            font_size: group.font_size,
+        })
+    }
+    
+    // Sort nodes and connections for consistency
+    //nodes.sort((a, b) => a.id.localeCompare(b.id));
+    //connections.sort((a, b) => {
+    //    const fromCompare = a.from.localeCompare(b.from);
+    //    if (fromCompare !== 0) return fromCompare;
+    //    return a.to.localeCompare(b.to);
+    //});
+    
+    return {
+        nodes,
+        connections,
+        comments,
+        groups,
+        properties: graph.talemateProperties,
+        registry: graph.talemateRegistry,
+        extends: graph.talemateExtends,
+    };
+}
+
+// Helper function to convert entire graph structure
+export function convertFullGraphToJSON(graph) {
+    return {
+        graph: convertGraphToJSON(graph)
+    };
+}

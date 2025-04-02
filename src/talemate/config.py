@@ -1,7 +1,7 @@
 import copy
 import datetime
 import os
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union, Literal
 
 import pydantic
 import structlog
@@ -40,6 +40,7 @@ class Client(BaseModel):
     api_key: Union[str, None] = None
     max_token_length: int = 8192
     double_coercion: Union[str, None] = None
+    data_format: Literal["json", "yaml"] | None = None
     enabled: bool = True
     
     system_prompts: SystemPrompts = SystemPrompts()
@@ -339,14 +340,14 @@ def gnerate_intro_scenes():
 
     scenes = [
         RecentScene(
-            name="Simulation Suite",
+            name="Simulation Suite V2",
             path=os.path.join(
-                scenes_dir(), "simulation-suite", "simulation-suite.json"
+                scenes_dir(), "simulation-suite-v2", "the-simulation-suite.json"
             ),
-            filename="simulation-suite.json",
+            filename="the-simulation-suite.json",
             date=datetime.datetime.now().isoformat(),
             cover_image=Asset(
-                id="4b157dccac2ba71adb078a9d591f9900d6d62f3e86168a5e0e5e1e9faf6dc103",
+                id="7c6ae3e9cb58a9226513d5ce1e335b524c6c59e54793c94f707bdb8b25053c4f",
                 file_type="png",
                 media_type="image/png",
             ),
@@ -531,10 +532,6 @@ class Config(BaseModel):
 
     def save(self, file_path: str = "./config.yaml"):
         save_config(self, file_path)
-
-
-class SceneConfig(BaseModel):
-    automated_actions: dict[str, bool]
 
 
 class SceneAssetUpload(BaseModel):

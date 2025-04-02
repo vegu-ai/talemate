@@ -83,7 +83,7 @@ They may be instructions on how the character should act or simply add some cont
 {% endif -%}
 {% endif -%}
 
-{% with direct=direct_instruction, character=talking_character %}{% include "rerun-context.jinja2" %}{% endwith %}
+{% with direct=direct_instruction, character=talking_character %}{% include "regenerate-context.jinja2" %}{% endwith %}
 
 {% if director_guidance %}# {{ talking_character.name }}'s next action: {{ director_guidance|condensed }}{% endif %}
 {% if direct_instruction -%}# {{ talking_character.name }}'s next action: {{ direct_instruction|condensed }}. You must not add additional actions.{% endif -%}

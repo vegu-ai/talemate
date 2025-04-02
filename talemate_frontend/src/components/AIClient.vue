@@ -33,27 +33,29 @@
               {{ client.model_name }}
             </v-list-item-subtitle>
             <v-list-item-title class="text-caption">
-              <span class="text-grey">{{ client.type }} </span>
-              <v-chip label size="x-small" color="grey" variant="tonal" class="ml-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
+              <div class="d-flex flex-wrap align-center">
+                <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-server-outline">{{ client.type }}</v-chip>
+                <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
+                
+                <v-menu density="compact">
+                  <template v-slot:activator="{ props }">
+                    <v-chip v-bind="props" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-tune">{{ client.preset_group || "Default" }}</v-chip>
+                  </template>
 
-              <v-menu density="compact">
-                <template v-slot:activator="{ props }">
-                  <v-chip  v-bind="props" label size="x-small" color="grey" variant="tonal" class="ml-1" prepend-icon="mdi-tune">{{ client.preset_group || "Default" }}</v-chip>
-                </template>
+                  <v-list density="compact">
+                    <v-list-item prepend-icon="mdi-pencil" @click="openAppConfig('presets', 'inference', client.preset_group)">
+                      <v-list-item-title>Edit {{ client.preset_group || "Default" }} Parameters</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-tune" v-for="preset in availablePresets" :key="preset.value" @click="client.preset_group = preset.value; saveClientDelayed(client)">
+                      <v-list-item-title>{{ preset.title }}</v-list-item-title>
+                      <v-list-item-subtitle>Assign this preset</v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
 
-                <v-list density="compact">
-                  <v-list-item prepend-icon="mdi-pencil" @click="openAppConfig('presets', 'inference', client.preset_group)">
-                    <v-list-item-title>Edit {{ client.preset_group || "Default" }} Parameters</v-list-item-title>
-                  </v-list-item>
-                  <v-list-item prepend-icon="mdi-tune" v-for="preset in availablePresets" :key="preset.value" @click="client.preset_group = preset.value; saveClientDelayed(client)">
-                    <v-list-item-title>{{ preset.title }}</v-list-item-title>
-                    <v-list-item-subtitle>Assign this preset</v-list-item-subtitle>
-                  </v-list-item>
-                </v-list>
-              </v-menu>
-
-
-
+                <!-- data format -->
+                <v-chip v-if="client.data_format" label size="x-small" color="grey" variant="tonal" class="mb-1" prepend-icon="mdi-code-json">{{ client.data_format.toUpperCase() }}</v-chip>
+              </div>
             </v-list-item-title>
             <div density="compact">
               <v-slider
@@ -158,6 +160,7 @@ export default {
           model_name: '',
           max_token_length: 8192,
           double_coercion: null,
+          data_format: null,
           data: {
             has_prompt_template: false,
           }
@@ -168,6 +171,9 @@ export default {
   },
   computed: {
     availablePresets() {
+      if(!this.immutableConfig || !this.immutableConfig.presets) {
+        return [];
+      }
       const inferenceGroups = this.immutableConfig.presets.inference_groups;
       if(!inferenceGroups || !Object.keys(inferenceGroups).length) {
         return [];
@@ -341,6 +347,7 @@ export default {
           client.api_url = data.api_url;
           client.api_key = data.api_key;
           client.double_coercion = data.data.double_coercion;
+          client.data_format = data.data.data_format;
           client.data = data.data;
           client.enabled = data.data.enabled;
           client.system_prompts = data.data.system_prompts;
@@ -365,6 +372,7 @@ export default {
             api_url: data.api_url,
             api_key: data.api_key,
             double_coercion: data.data.double_coercion,
+            data_format: data.data.data_format,
             data: data.data,
             enabled: data.data.enabled,
             system_prompts: data.data.system_prompts,

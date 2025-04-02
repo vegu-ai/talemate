@@ -1,6 +1,6 @@
 {
   "name": "talemate_frontend",
-  "version": "0.29.0",
+  "version": "0.30.0",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -8,12 +8,17 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "@codemirror/fold": "github:codemirror/fold",
+    "@codemirror/lang-json": "github:codemirror/lang-json",
     "@codemirror/lang-markdown": "^6.2.5",
+    "@codemirror/state": "github:codemirror/state",
     "@codemirror/theme-one-dark": "^6.1.2",
+    "@codemirror/view": "github:codemirror/view",
     "@mdi/font": "7.4.47",
     "codemirror": "^6.0.1",
     "core-js": "^3.37.1",
     "dot-prop": "^9.0.0",
+    "litegraph.js": "^0.7.18",
     "roboto-fontface": "*",
     "uuid": "^10.0.0",
     "vue": "^3.4.29",

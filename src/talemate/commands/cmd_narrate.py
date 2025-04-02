@@ -4,7 +4,6 @@ from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
 from talemate.emit import wait_for_input
 from talemate.scene_message import NarratorMessage
-from talemate.util import colored_text, wrap_text
 
 __all__ = [
     "CmdNarrate",
@@ -33,7 +32,7 @@ class CmdNarrate(TalemateCommand):
             return True
 
         narration = await narrator.agent.narrate_scene()
-        message = NarratorMessage(narration, source="narrate_scene")
+        message = NarratorMessage(narration, meta=narrator.action_to_meta("narrate_scene",{}))
 
         self.narrator_message(message)
         self.scene.push_history(message)
@@ -68,7 +67,7 @@ class CmdNarrateQ(TalemateCommand):
 
         narration = await narrator.agent.narrate_query(query, at_the_end=at_the_end)
         message = NarratorMessage(
-            narration, source=f"narrate_query:{query.replace(':', '-')}"
+            narration, meta=narrator.action_to_meta("narrate_query",{"query":query, "at_the_end":at_the_end})
         )
 
         self.narrator_message(message)
@@ -94,7 +93,7 @@ class CmdNarrateProgress(TalemateCommand):
 
         narration = await narrator.agent.progress_story()
 
-        message = NarratorMessage(narration, source="progress_story")
+        message = NarratorMessage(narration, meta=narrator.action_to_meta("progress_story",{}))
 
         self.narrator_message(message)
         self.scene.push_history(message)
@@ -117,7 +116,7 @@ class CmdNarrateProgressDirected(TalemateCommand):
 
         narration = await narrator.agent.progress_story(narrative_direction=direction)
 
-        message = NarratorMessage(narration, source=f"progress_story:{direction}")
+        message = NarratorMessage(narration, meta=narrator.action_to_meta("progress_story",{"narrative_direction":direction}))
 
         self.narrator_message(message)
         self.scene.push_history(message)
@@ -153,7 +152,7 @@ class CmdNarrateC(TalemateCommand):
             return True
 
         narration = await narrator.agent.narrate_character(character)
-        message = NarratorMessage(narration, source=f"narrate_character:{name}")
+        message = NarratorMessage(narration, meta=narrator.action_to_meta("narrate_character",{"character":character}))
 
         self.narrator_message(message)
         self.scene.push_history(message)
@@ -191,7 +190,7 @@ class CmdNarrateDialogue(TalemateCommand):
 
         narration = await narrator.agent.narrate_after_dialogue(character)
         message = NarratorMessage(
-            narration, source=f"narrate_dialogue:{character.name}"
+            narration, meta=narrator.action_to_meta("narrate_after_dialogue",{"character":character})
         )
 
         self.narrator_message(message)

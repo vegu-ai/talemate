@@ -5,6 +5,7 @@ Number of items: {{ count }}.
 
 Return valid json in this format: 
 
+{% if data_format_type() == "json" %}
 {
     "items": [
         "first",
@@ -12,6 +13,13 @@ Return valid json in this format:
         "third"
     ]
 }
-
+{% else %}
+```yaml
+items:
+  - first
+  - second
+  - third
+```
+{% endif %}
 <|CLOSE_SECTION|>
-{{ set_json_response({"items": ["first"]}) }}
+{{ set_data_response({"items": ["first"]}) }}

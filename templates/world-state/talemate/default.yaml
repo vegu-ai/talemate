@@ -35,6 +35,16 @@ templates:
     - a quirky trait
     template_type: spices
     uid: 4e4aea77-c414-47c8-ab65-2955e0bbbd17
+  571e0e4a-b985-45ff-b6a3-d3c044eab891:
+    description: Freeform dialogue between one or more characters with occasional
+      narration.
+    favorite: false
+    group: talemate_default_467c7fe3
+    instructions: null
+    name: Roleplay
+    priority: 1
+    template_type: scene_type
+    uid: 571e0e4a-b985-45ff-b6a3-d3c044eab891
   goals:
     auto_create: false
     description: Long term and short term goals

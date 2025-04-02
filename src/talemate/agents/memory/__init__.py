@@ -797,7 +797,11 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         log.debug("crhomadb agent get", text=text, where=where)
 
-        _results = self.db.query(query_texts=[text], where=where, n_results=limit)
+        try:
+            _results = self.db.query(query_texts=[text], where=where, n_results=limit)
+        except Exception as e:
+            log.error("chromadb agent", error="failed to query", details=e)
+            return []
 
         #import json
         #print(json.dumps(_results["ids"], indent=2))

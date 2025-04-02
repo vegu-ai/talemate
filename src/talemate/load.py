@@ -17,12 +17,15 @@ from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
     NarratorMessage,
+    ReinforcementMessage,
     SceneMessage,
     reset_message_id,
 )
 from talemate.status import LoadingStatus, set_loading
 from talemate.util import extract_metadata
 from talemate.world_state import WorldState
+from talemate.game.engine.nodes.registry import import_scene_node_definitions
+from talemate.scene.intent import SceneIntent
 
 __all__ = [
     "load_scene",
@@ -208,6 +211,7 @@ async def load_scene_from_data(
     loading_status = LoadingStatus(1)
     reset_message_id()
 
+
     memory = scene.get_helper("memory").agent
 
     scene.description = scene_data.get("description", "")
@@ -221,8 +225,10 @@ async def load_scene_from_data(
     scene.restore_from = scene_data.get("restore_from", "")
     scene.title = scene_data.get("title", "")
     scene.writing_style_template = scene_data.get("writing_style_template", "")
-
-    # reset = True
+    scene.nodes_filename = scene_data.get("nodes_filename", "")
+    scene.creative_nodes_filename = scene_data.get("creative_nodes_filename", "")
+    
+    import_scene_node_definitions(scene)
 
     if not reset:
         scene.memory_id = scene_data.get("memory_id", scene.memory_id)
@@ -234,6 +240,7 @@ async def load_scene_from_data(
         scene.world_state = WorldState(**scene_data.get("world_state", {}))
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.agent_state = scene_data.get("agent_state", {})
+        scene.intent_state = SceneIntent(**scene_data.get("intent_state", {}))
         scene.context = scene_data.get("context", "")
         scene.filename = os.path.basename(
             name or scene.name.lower().replace(" ", "_") + ".json"
@@ -506,6 +513,7 @@ def _load_history(history):
     return _history
 
 
+
 def _prepare_history(entry):
     typ = entry.pop("typ", "scene_message")
     entry.pop("id", None)
@@ -515,7 +523,14 @@ def _prepare_history(entry):
 
     cls = MESSAGES.get(typ, SceneMessage)
 
-    return cls(**entry)
+    msg = cls(**entry)
+    
+    if isinstance(msg, (NarratorMessage, ReinforcementMessage)):
+        msg = msg.migrate_source_to_meta()
+    elif isinstance(msg, DirectorMessage):
+        msg = msg.migrate_message_to_meta()
+    
+    return msg
 
 
 def _prepare_legacy_history(entry):

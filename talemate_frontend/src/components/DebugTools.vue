@@ -4,9 +4,14 @@
         <v-checkbox density="compact" v-model="log_socket_messages" label="Log Websocket Messages" color="primary"></v-checkbox>
         <v-text-field v-if="log_socket_messages === true" density="compact" v-model="filter_socket_messages" label="Filter Websocket Messages" color="primary"></v-text-field>
     </v-list-item>
-    <v-list-item>
-        <v-btn @click="openGameState" prepend-icon="mdi-card-search-outline" color="primary" variant="tonal">Game State</v-btn>
+
+    <v-divider></v-divider>
+
+    <v-list-item class="text-center">
+        <v-btn @click="openSceneState" prepend-icon="mdi-code-block-braces" color="primary" variant="tonal">Edit Scene State</v-btn>
     </v-list-item>
+    <v-divider></v-divider>
+
 
     <v-tabs v-model="tab" color="primary">
         <v-tab v-for="tab in tabs" :key="tab.value" :value="tab.value">
@@ -24,12 +29,12 @@
             <DebugToolMemoryRequestLog ref="memoryRequestLog"/>
         </v-window-item>
     </v-window>
-    <DebugToolGameState ref="gameState"/>
+    <DebugToolSceneState ref="gameState"/>
 </template>
 <script>
 
 import DebugToolPromptLog from './DebugToolPromptLog.vue';
-import DebugToolGameState from './DebugToolGameState.vue';
+import DebugToolSceneState from './DebugToolSceneState.vue';
 import DebugToolMemoryRequestLog from './DebugToolMemoryRequestLog.vue';
 
 export default {
@@ -37,7 +42,7 @@ export default {
     components: {
         DebugToolPromptLog,
         DebugToolMemoryRequestLog,
-        DebugToolGameState,
+        DebugToolSceneState,
     },
     data() {
         return {
@@ -59,7 +64,7 @@ export default {
     ],
 
     methods: {
-        openGameState() {
+        openSceneState() {
             this.$refs.gameState.open();
         },
         handleMessage(data) {

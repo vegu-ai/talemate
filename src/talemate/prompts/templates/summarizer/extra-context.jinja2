@@ -1,0 +1,15 @@
+{% block rendered_context_static %}
+{# GENERAL REINFORCEMENTS #}
+{% set general_reinforcements = scene.world_state.filter_reinforcements(insert=['all-context']) %}
+{%- for reinforce in general_reinforcements %}
+{{ reinforce.as_context_line|condensed }}
+
+{% endfor %}
+{# END GENERAL REINFORCEMENTS #}
+{# ACTIVE PINS #}
+{%- for pin in scene.active_pins %}
+{{ pin.time_aware_text|condensed }}
+
+{% endfor %}
+{# END ACTIVE PINS #}
+{% endblock %}

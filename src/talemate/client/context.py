@@ -42,6 +42,7 @@ class ContextModel(BaseModel):
     conversation: ConversationContext = Field(default_factory=ConversationContext)
     length: int = 96
     inference_preset: str = None
+    data_format: str | None = None
 
 
 # Define the context variable as an empty dictionary

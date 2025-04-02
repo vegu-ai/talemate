@@ -3,6 +3,7 @@ import structlog
 
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
+from talemate.context import interaction
 from talemate.status import set_loading
 
 __all__ = [
@@ -54,6 +55,14 @@ class DirectorWebsocketHandler(Plugin):
             log.error("handle_select_choice: could not find character", payload=payload)
             return
         
-        actor = character.actor
+        # hijack the interaction state
+        try:
+            interaction_state = interaction.get()
+        except LookupError:
+            # no interaction state
+            log.warning("handle_select_choice: no interaction state", payload=payload)
+            return
         
-        await actor.generate_from_choice(payload.choice, immediate=(not character.is_player))
+        interaction_state.from_choice = payload.choice
+        interaction_state.act_as = character.name if not character.is_player else None
+        interaction_state.input = f"@{payload.choice}"

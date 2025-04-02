@@ -7,7 +7,7 @@ import logging
 import random
 import time
 import asyncio
-from typing import Callable, Union
+from typing import Callable, Union, Literal
 
 import pydantic
 import structlog
@@ -67,6 +67,7 @@ class Defaults(pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
     max_token_length: int = 8192
     double_coercion: str = None
+    data_format: Literal["yaml", "json"] | None = None
 
 
 class ExtraField(pydantic.BaseModel):
@@ -109,6 +110,7 @@ class ClientBase:
     auto_determine_prompt_template: bool = False
     finalizers: list[str] = []
     double_coercion: Union[str, None] = None
+    data_format: Literal["yaml", "json"] | None = None
     client_type = "base"
     
     status_request_timeout:int = 2
@@ -135,6 +137,7 @@ class ClientBase:
         self.auto_determine_prompt_template_attempt = None
         self.log = structlog.get_logger(f"client.{self.client_type}")
         self.double_coercion = kwargs.get("double_coercion", None)
+        self.data_format = kwargs.get("data_format", None)
         self.preset_group = kwargs.get("preset_group", "")
         self.enabled = kwargs.get("enabled", True)
         if "max_token_length" in kwargs:
@@ -232,6 +235,9 @@ class ClientBase:
 
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
+            
+        if "data_format" in kwargs:
+            self.data_format = kwargs["data_format"]
 
         if "preset_group" in kwargs:
             self.preset_group = kwargs["preset_group"]
@@ -351,6 +357,7 @@ class ClientBase:
             "meta": self.Meta().model_dump(),
             "error_action": None,
             "double_coercion": self.double_coercion,
+            "data_format": self.data_format,
             "enabled": self.enabled,
             "system_prompts": self.system_prompts.model_dump(),
             "preset_group": self.preset_group or "",

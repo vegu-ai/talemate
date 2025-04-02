@@ -97,10 +97,15 @@ def run_server(args):
 
     import talemate.agents.custom
     import talemate.client.custom
+    import talemate.agents
     from talemate.agents.registry import get_agent_types
     from talemate.world_state.templates import Collection
     from talemate.prompts.overrides import get_template_overrides
     import talemate.client.system_prompts as system_prompts
+    
+    # import node libraries
+    import talemate.game.engine.nodes.load_definitions
+
 
     config = talemate.config.cleanup()
 

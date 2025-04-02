@@ -14,6 +14,7 @@ __all__ = [
     "set_max_tokens",
     "set_preset",
     "preset_for_kind",
+    "make_kind",
     "max_tokens_for_kind",
     "PRESET_TALEMATE_CONVERSATION",
     "PRESET_TALEMATE_CREATOR",
@@ -102,11 +103,11 @@ PRESET_SUBSTRING_MAPPINGS = {
     "investigate": "analytical",
     "direction": "scene_direction",
     "summarize": "summarization",
+    "edit": "creative_instruction",
 }
 
 PRESET_MAPPING = {
     "conversation": "conversation",
-    "conversation_select_talking_actor": "analytical",
     "summarize": "summarization",
     "analyze": "analytical",
     "analyze_long": "analytical",
@@ -152,7 +153,6 @@ def preset_for_kind(kind: str, client: "ClientBase") -> dict:
 
 TOKEN_MAPPING = {
     "conversation": 75,
-    "conversation_select_talking_actor": 30,
     "summarize": 512,
     "analyze": 500,
     "analyze_long": 2048,
@@ -205,3 +205,21 @@ def max_tokens_for_kind(kind: str, total_budget: int) -> int:
         return int(kind_split)
     
     return 150  # Default value if none of the kinds match
+
+
+
+def make_kind(action_type: str, length: int, expect_json:bool=False) -> str:
+    """
+    Creates a kind string based on the preset_arch_type and length.
+    """
+
+    if action_type == "analyze" and not expect_json:
+        kind = f"investigate"
+    else:
+        kind = action_type
+                
+    kind = f"{kind}_{length}"
+    
+    return kind    
+    
+   

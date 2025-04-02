@@ -69,6 +69,8 @@
 
                       <v-select label="Inference Presets" :items="availablePresets" v-model="client.preset_group">
                       </v-select>
+
+                      <v-select label="Structured Data Format" :items="dataManageFormatChoices" v-model="client.data_format" messages="Which formatting to use for data structure communication such as function calling or general data management."></v-select>
                     </v-col>
                     <v-col cols="8"
                       v-if="!typeEditable() && client.data && client.data.prompt_template_example !== null && client.model_name && clientMeta().requires_prompt_template && !client.data.api_handles_prompt_template">
@@ -174,6 +176,11 @@ export default {
         v => !!v || 'Context length is required',
       ],
       tab: 'general',
+      dataManageFormatChoices: [
+        { title: 'Talemate decides', value: null},
+        { title: 'JSON', value: 'json' },
+        { title: 'YAML', value: 'yaml' },
+      ],
       tabs: {
         general: {
           title: 'General',
@@ -233,6 +240,7 @@ export default {
         this.client.api_url = defaults.api_url || '';
         this.client.max_token_length = defaults.max_token_length || 8192;
         this.client.double_coercion = defaults.double_coercion || null;
+        this.client.data_format = defaults.data_format || null;
         this.client.preset_group = defaults.preset_group || '';
         // loop and build name from prefix, checking against current clients
         let name = this.clientTypes[this.client.type].name_prefix;

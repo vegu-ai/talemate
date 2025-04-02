@@ -1,14 +1,24 @@
-from typing import Callable, Any
+from typing import Callable, Any, Literal
 import pydantic
 import uuid
 import json
+import yaml
 
 from talemate.prompts.base import Prompt
 
 __all__ = ["Argument", "Call", "Callback", "State"]
 
+YAML_OPTIONS = {
+    "default_flow_style": False,
+    "allow_unicode": True,
+    "indent": 2,
+    "sort_keys": False,
+    "width": 100,
+}
+
 class State(pydantic.BaseModel):
     calls:list["Call"] = pydantic.Field(default_factory=list)
+    schema_format: Literal["json", "yaml"] = "json"
 
 class Argument(pydantic.BaseModel):
     name: str
@@ -17,7 +27,7 @@ class Argument(pydantic.BaseModel):
 class Call(pydantic.BaseModel):
     name: str = pydantic.Field(validation_alias=pydantic.AliasChoices('name', 'function'))
     arguments: dict[str, Any] = pydantic.Field(default_factory=dict)
-    result: str | int | float | bool | None = None
+    result: str | int | float | bool | dict | list | None = None
     uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     called: bool = False
 
@@ -55,17 +65,47 @@ class Callback(pydantic.BaseModel):
         
         return prompt.render()
     
-    def json_usage(self, argument_usage) -> str:
-        return json.dumps({
+    ## schema
+    
+    def _usage(self, argument_usage) -> dict:
+        return {
             "function": self.name,
             "arguments": {
                 argument.name: f"{argument.type} - {argument_usage.get(argument.name, '')}"
                 for argument in self.arguments
             }
-        }, indent=2)
+        } 
+        
+    def _example(self, example:dict) -> dict:
+        return {
+            "function": self.name,
+            "arguments": {k:v for k,v in example.items() if not k.startswith("_")},
+        }
+        
+    def usage(self, argument_usage) -> str:
+        fmt:str = self.state.schema_format
+        text = getattr(self, f"{fmt}_usage")(argument_usage)
+        text = text.rstrip()
+        return f"```{fmt}\n{text}\n```"
+    
+    def example(self, example:dict) -> str:
+        fmt:str = self.state.schema_format
+        text = getattr(self, f"{fmt}_example")(example)
+        text = text.rstrip()
+        return f"```{fmt}\n{text}\n```"
+    
+    ## JSON
+    
+    def json_usage(self, argument_usage) -> str:
+        return json.dumps(self._usage(argument_usage), indent=2)
     
     def json_example(self, example:dict) -> str:
-        return json.dumps({
-            "function": self.name,
-            "arguments": example
-        }, indent=2)
+        return json.dumps(self._example(example), indent=2)
+    
+    ## YAML
+    
+    def yaml_usage(self, argument_usage) -> str:
+        return yaml.dump(self._usage(argument_usage), **YAML_OPTIONS)
+    
+    def yaml_example(self, example:dict) -> str:
+        return yaml.dump(self._example(example), **YAML_OPTIONS)

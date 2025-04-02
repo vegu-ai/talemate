@@ -1,0 +1,1032 @@
+{
+  "title": "Select Actor For Turn",
+  "id": "564ed794-bbef-4e93-9f8a-2619c8cb1138",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "scene/SelectActorForTurn",
+  "nodes": {
+    "2a692579-cd8f-4d1a-bb02-af198fbe61e1": {
+      "title": "Make List",
+      "id": "2a692579-cd8f-4d1a-bb02-af198fbe61e1",
+      "properties": {
+        "item_type": "any"
+      },
+      "x": 28,
+      "y": 84,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeList",
+      "base_type": "core/Node"
+    },
+    "3db890cf-f7ed-4630-b727-9158addae95a": {
+      "title": "Stage 0",
+      "id": "3db890cf-f7ed-4630-b727-9158addae95a",
+      "properties": {
+        "stage": 0
+      },
+      "x": 551,
+      "y": 109,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "ad3c8d29-fb52-4ef8-b766-582c5d0f04cf": {
+      "title": "SET local.excluded_characters",
+      "id": "ad3c8d29-fb52-4ef8-b766-582c5d0f04cf",
+      "properties": {
+        "name": "excluded_characters",
+        "scope": "local"
+      },
+      "x": 265,
+      "y": 87,
+      "width": 262,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "0c9631ac-e21c-4904-8aeb-02fd2313cff8": {
+      "title": "Last Message of Type",
+      "id": "0c9631ac-e21c-4904-8aeb-02fd2313cff8",
+      "properties": {
+        "message_type": "character",
+        "max_iterations": 3,
+        "stop_on_time_passage": true,
+        "filters": {}
+      },
+      "x": 41,
+      "y": 498,
+      "width": 266,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/LastMessageOfType",
+      "base_type": "core/Node"
+    },
+    "45c5d432-f99a-4885-af64-8fa3df97aed5": {
+      "title": "GET local.excluded_characters",
+      "id": "45c5d432-f99a-4885-af64-8fa3df97aed5",
+      "properties": {
+        "name": "excluded_characters",
+        "scope": "local"
+      },
+      "x": 39,
+      "y": 331,
+      "width": 268,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "600fd855-fdf3-4f8d-8429-696840e14c92": {
+      "title": "GET local.excluded_characters",
+      "id": "600fd855-fdf3-4f8d-8429-696840e14c92",
+      "properties": {
+        "name": "excluded_characters",
+        "scope": "local"
+      },
+      "x": 41,
+      "y": 789,
+      "width": 268,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "7ff25780-ab01-4d79-94e5-6a93e2e26127": {
+      "title": "UNSET shared.acted_as_character",
+      "id": "7ff25780-ab01-4d79-94e5-6a93e2e26127",
+      "properties": {
+        "name": "acted_as_character",
+        "scope": "shared"
+      },
+      "x": 49,
+      "y": 981,
+      "width": 260,
+      "height": 124,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/UnsetState",
+      "base_type": "core/Node"
+    },
+    "d90648b8-0c36-4752-bcc7-6d243c9c0037": {
+      "title": "Get Scene State",
+      "id": "d90648b8-0c36-4752-bcc7-6d243c9c0037",
+      "properties": {},
+      "x": 45,
+      "y": 1247,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetSceneState",
+      "base_type": "core/Node"
+    },
+    "2784ffa2-3b65-4bbf-8800-a217ac0ec8e1": {
+      "title": "auto_progress",
+      "id": "2784ffa2-3b65-4bbf-8800-a217ac0ec8e1",
+      "properties": {},
+      "x": 225,
+      "y": 1347,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "d5151375-dc27-4a95-bf5c-a49b07675b55": {
+      "title": "NOT",
+      "id": "d5151375-dc27-4a95-bf5c-a49b07675b55",
+      "properties": {},
+      "x": 405,
+      "y": 1347,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Invert",
+      "base_type": "core/Node"
+    },
+    "db2d9f24-c17c-4518-8dcf-9aef8836d030": {
+      "title": "OR Router",
+      "id": "db2d9f24-c17c-4518-8dcf-9aef8836d030",
+      "properties": {},
+      "x": 535,
+      "y": 1317,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ORRouter",
+      "base_type": "core/Node"
+    },
+    "49c4ed95-e5bb-48a4-a800-f07866141664": {
+      "title": "Stage 3",
+      "id": "49c4ed95-e5bb-48a4-a800-f07866141664",
+      "properties": {
+        "stage": 3
+      },
+      "x": 993,
+      "y": 1345,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "36eb2632-372a-4eb5-bd0c-67a44309fa86": {
+      "title": "skip_to_player",
+      "id": "36eb2632-372a-4eb5-bd0c-67a44309fa86",
+      "properties": {},
+      "x": 295,
+      "y": 1419,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "9efc5633-2fe6-44ab-945e-992c4ec81dc6": {
+      "title": "GET shared.skip_to_player",
+      "id": "9efc5633-2fe6-44ab-945e-992c4ec81dc6",
+      "properties": {
+        "name": "skip_to_player",
+        "scope": "shared"
+      },
+      "x": 45,
+      "y": 1419,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "029da949-4922-440f-837b-b65d3cd4eb7b": {
+      "title": "SET local.always_yield_to_user",
+      "id": "029da949-4922-440f-837b-b65d3cd4eb7b",
+      "properties": {
+        "name": "always_yield_to_user",
+        "scope": "local"
+      },
+      "x": 705,
+      "y": 1317,
+      "width": 255,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "25d103db-739d-4985-be50-613fc307d5b4": {
+      "title": "GET local.always_yield_to_user",
+      "id": "25d103db-739d-4985-be50-613fc307d5b4",
+      "properties": {
+        "name": "always_yield_to_user",
+        "scope": "local"
+      },
+      "x": 37,
+      "y": 1656,
+      "width": 262,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "66424cea-d547-4450-9a52-e1b170738f1b": {
+      "title": "Switch",
+      "id": "66424cea-d547-4450-9a52-e1b170738f1b",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 345,
+      "y": 1702,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "f1f3d2e6-4684-452d-893d-b4cb48904f5a": {
+      "title": "Get Player Character",
+      "id": "f1f3d2e6-4684-452d-893d-b4cb48904f5a",
+      "properties": {},
+      "x": 635,
+      "y": 1772,
+      "width": 212,
+      "height": 34,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetPlayerCharacter",
+      "base_type": "core/Node"
+    },
+    "7655dd96-dca1-4896-a888-62dcb5e8820e": {
+      "title": "RSwitch",
+      "id": "7655dd96-dca1-4896-a888-62dcb5e8820e",
+      "properties": {},
+      "x": 885,
+      "y": 1702,
+      "width": 140,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
+    },
+    "91c2b10d-74f5-4a4d-946c-7931b00d73a0": {
+      "title": "NOT",
+      "id": "91c2b10d-74f5-4a4d-946c-7931b00d73a0",
+      "properties": {},
+      "x": 1470,
+      "y": 2770,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Invert",
+      "base_type": "core/Node"
+    },
+    "4a9247f1-e78b-4c81-b0ec-d71e35f9b585": {
+      "title": "GET local.character",
+      "id": "4a9247f1-e78b-4c81-b0ec-d71e35f9b585",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 60,
+      "y": 2630,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "7f177917-32ec-451b-b530-66d0900ce7f9": {
+      "title": "character",
+      "id": "7f177917-32ec-451b-b530-66d0900ce7f9",
+      "properties": {},
+      "x": 310,
+      "y": 2750,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "1c8bed5b-b140-4edc-900a-f938c2639ff1": {
+      "title": "Switch",
+      "id": "1c8bed5b-b140-4edc-900a-f938c2639ff1",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 530,
+      "y": 2590,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "4cdae8b0-015f-42f1-b0f8-86b4c091ebea": {
+      "title": "RSwitch Advanced",
+      "id": "4cdae8b0-015f-42f1-b0f8-86b4c091ebea",
+      "properties": {},
+      "x": 840,
+      "y": 2650,
+      "width": 161,
+      "height": 68,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "644d39ea-440e-47ae-92b0-15ffcc702bfe": {
+      "title": "Unpack Character",
+      "id": "644d39ea-440e-47ae-92b0-15ffcc702bfe",
+      "properties": {},
+      "x": 1180,
+      "y": 2710,
+      "width": 212,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/UnpackCharacter",
+      "base_type": "core/Node"
+    },
+    "a962b3d1-3ce1-4e49-896f-91b474273444": {
+      "title": "Coallesce",
+      "id": "a962b3d1-3ce1-4e49-896f-91b474273444",
+      "properties": {},
+      "x": 1440,
+      "y": 2610,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "e81b24ca-ebe7-47f9-b89c-0a7ed70c36cc": {
+      "title": "TRUE",
+      "id": "e81b24ca-ebe7-47f9-b89c-0a7ed70c36cc",
+      "properties": {
+        "value": true
+      },
+      "x": 530,
+      "y": 2790,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "e73ec439-8132-464c-90d6-14831b49d8a8": {
+      "title": "Sort",
+      "id": "e73ec439-8132-464c-90d6-14831b49d8a8",
+      "properties": {
+        "reverse": true,
+        "sort_keys": [
+          "is_player"
+        ]
+      },
+      "x": 690,
+      "y": 1990,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Sort",
+      "base_type": "core/Node"
+    },
+    "3dcdc45f-a1e8-49f7-9cb3-8914d5b8d2ff": {
+      "title": "Get Scene State",
+      "id": "3dcdc45f-a1e8-49f7-9cb3-8914d5b8d2ff",
+      "properties": {},
+      "x": 480,
+      "y": 2010,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetSceneState",
+      "base_type": "core/Node"
+    },
+    "46d600ee-aa88-4855-879c-d9002bf04384": {
+      "title": "Switch",
+      "id": "46d600ee-aa88-4855-879c-d9002bf04384",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 350,
+      "y": 535,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "f4ebabcd-8c72-4aaf-b74a-6e0a99d6abab": {
+      "title": "SET local.character",
+      "id": "f4ebabcd-8c72-4aaf-b74a-6e0a99d6abab",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 1360,
+      "y": 1710,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "1d7466c0-b9cc-48a3-973b-8aa5b8a876d0": {
+      "title": "Select Item",
+      "id": "1d7466c0-b9cc-48a3-973b-8aa5b8a876d0",
+      "properties": {
+        "index": 0,
+        "cycle_index": 0,
+        "selection_function": "cycle"
+      },
+      "x": 1055,
+      "y": 2042,
+      "width": 239,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/SelectItem",
+      "base_type": "core/Node"
+    },
+    "a0a89451-06df-4e3b-8b9b-a86a8c3e21f9": {
+      "title": "SET local.character",
+      "id": "a0a89451-06df-4e3b-8b9b-a86a8c3e21f9",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 1810,
+      "y": 1900,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "44e83102-3be3-4ae9-8f0c-1a12ae3e21ea": {
+      "title": "RSwitch Advanced",
+      "id": "44e83102-3be3-4ae9-8f0c-1a12ae3e21ea",
+      "properties": {},
+      "x": 1580,
+      "y": 1990,
+      "width": 182,
+      "height": 68,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "c8c9451c-0846-4199-bc1d-8a60a72b0fd9": {
+      "title": "Get Player Character",
+      "id": "c8c9451c-0846-4199-bc1d-8a60a72b0fd9",
+      "properties": {},
+      "x": 1330,
+      "y": 2130,
+      "width": 219,
+      "height": 29,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetPlayerCharacter",
+      "base_type": "core/Node"
+    },
+    "039be56c-d8bc-4093-bd34-47f784fe51d8": {
+      "title": "Stage 4",
+      "id": "039be56c-d8bc-4093-bd34-47f784fe51d8",
+      "properties": {
+        "stage": 4
+      },
+      "x": 2060,
+      "y": 1810,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "184bf5f2-e5f7-4a20-9af3-8c0165fe6840": {
+      "title": "GET local.excluded_characters",
+      "id": "184bf5f2-e5f7-4a20-9af3-8c0165fe6840",
+      "properties": {
+        "name": "excluded_characters",
+        "scope": "local"
+      },
+      "x": 50,
+      "y": 2080,
+      "width": 262,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "c3bfcef1-70dd-4148-878e-48ab283f8ba2": {
+      "title": "excluded_characters",
+      "id": "c3bfcef1-70dd-4148-878e-48ab283f8ba2",
+      "properties": {},
+      "x": 720,
+      "y": 2190,
+      "width": 207,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "aaf9da43-bdba-42a3-94dd-73a8698ef906": {
+      "title": "GET obj.character_name",
+      "id": "aaf9da43-bdba-42a3-94dd-73a8698ef906",
+      "properties": {
+        "attribute": "character_name"
+      },
+      "x": 501,
+      "y": 508,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "9d92d85d-d65f-4f9c-9cef-2b7e523629bc": {
+      "title": "List Append",
+      "id": "9d92d85d-d65f-4f9c-9cef-2b7e523629bc",
+      "properties": {},
+      "x": 960,
+      "y": 355,
+      "width": 140,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListAppend",
+      "base_type": "core/Node"
+    },
+    "79f74982-0949-4a42-ac63-137af9597e4c": {
+      "title": "Stage 1",
+      "id": "79f74982-0949-4a42-ac63-137af9597e4c",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1150,
+      "y": 385,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "4c48ea46-872d-472e-807f-2c4fa61564fb": {
+      "title": "Last character",
+      "id": "4c48ea46-872d-472e-807f-2c4fa61564fb",
+      "properties": {},
+      "x": 790,
+      "y": 635,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "bd9799a5-408d-4ffa-b875-e03f20113ed2": {
+      "title": "Get Character",
+      "id": "bd9799a5-408d-4ffa-b875-e03f20113ed2",
+      "properties": {},
+      "x": 780,
+      "y": 445,
+      "width": 203,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "scene/GetCharacter",
+      "base_type": "core/Node"
+    },
+    "a182c866-07a9-40e9-9cac-f26c8a218c94": {
+      "title": "List Append",
+      "id": "a182c866-07a9-40e9-9cac-f26c8a218c94",
+      "properties": {},
+      "x": 810,
+      "y": 815,
+      "width": 140,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListAppend",
+      "base_type": "core/Node"
+    },
+    "32d4da1a-e1f3-429d-b01f-8e997adbcac5": {
+      "title": "Stage 2",
+      "id": "32d4da1a-e1f3-429d-b01f-8e997adbcac5",
+      "properties": {
+        "stage": 2
+      },
+      "x": 1030,
+      "y": 845,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "1b6c285f-deea-4b32-b093-770d591caf78": {
+      "title": "acted_as_character",
+      "id": "1b6c285f-deea-4b32-b093-770d591caf78",
+      "properties": {},
+      "x": 650,
+      "y": 1090,
+      "width": 190,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "37e29585-6140-4a2d-a406-fa920dc513ac": {
+      "title": "Switch",
+      "id": "37e29585-6140-4a2d-a406-fa920dc513ac",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 360,
+      "y": 1025,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "9913cbcd-3174-4d32-9314-46b045875d73": {
+      "title": "IN state",
+      "id": "9913cbcd-3174-4d32-9314-46b045875d73",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": true,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 1360,
+      "y": 2290,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "93f1569e-7129-4263-a5fa-588b640a1e7b": {
+      "title": "OUT state",
+      "id": "93f1569e-7129-4263-a5fa-588b640a1e7b",
+      "properties": {
+        "output_type": "any",
+        "output_name": "state",
+        "num": 0
+      },
+      "x": 1610,
+      "y": 2290,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "1cf1fd4e-ee62-4236-94b5-bb6d4809fc10": {
+      "title": "OUT character",
+      "id": "1cf1fd4e-ee62-4236-94b5-bb6d4809fc10",
+      "properties": {
+        "output_type": "character",
+        "output_name": "character",
+        "num": 1
+      },
+      "x": 1610,
+      "y": 2460,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "a22b412b-d500-4b23-81ad-b9c114f41577": {
+      "title": "OUT player",
+      "id": "a22b412b-d500-4b23-81ad-b9c114f41577",
+      "properties": {
+        "output_type": "bool",
+        "output_name": "player",
+        "num": 2
+      },
+      "x": 1610,
+      "y": 2610,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "71cbd983-82cf-4826-aada-05e9f408f4c3": {
+      "title": "OUT ai",
+      "id": "71cbd983-82cf-4826-aada-05e9f408f4c3",
+      "properties": {
+        "output_type": "bool",
+        "output_name": "ai",
+        "num": 3
+      },
+      "x": 1610,
+      "y": 2760,
+      "width": 211,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "2a692579-cd8f-4d1a-bb02-af198fbe61e1.list": [
+      "ad3c8d29-fb52-4ef8-b766-582c5d0f04cf.value"
+    ],
+    "ad3c8d29-fb52-4ef8-b766-582c5d0f04cf.name": [
+      "3db890cf-f7ed-4630-b727-9158addae95a.state"
+    ],
+    "0c9631ac-e21c-4904-8aeb-02fd2313cff8.message": [
+      "46d600ee-aa88-4855-879c-d9002bf04384.value"
+    ],
+    "45c5d432-f99a-4885-af64-8fa3df97aed5.value": [
+      "9d92d85d-d65f-4f9c-9cef-2b7e523629bc.list"
+    ],
+    "600fd855-fdf3-4f8d-8429-696840e14c92.value": [
+      "a182c866-07a9-40e9-9cac-f26c8a218c94.list"
+    ],
+    "7ff25780-ab01-4d79-94e5-6a93e2e26127.value": [
+      "37e29585-6140-4a2d-a406-fa920dc513ac.value"
+    ],
+    "d90648b8-0c36-4752-bcc7-6d243c9c0037.auto_progress": [
+      "2784ffa2-3b65-4bbf-8800-a217ac0ec8e1.value"
+    ],
+    "2784ffa2-3b65-4bbf-8800-a217ac0ec8e1.value": [
+      "d5151375-dc27-4a95-bf5c-a49b07675b55.value"
+    ],
+    "d5151375-dc27-4a95-bf5c-a49b07675b55.value": [
+      "db2d9f24-c17c-4518-8dcf-9aef8836d030.a"
+    ],
+    "db2d9f24-c17c-4518-8dcf-9aef8836d030.yes": [
+      "029da949-4922-440f-837b-b65d3cd4eb7b.value"
+    ],
+    "36eb2632-372a-4eb5-bd0c-67a44309fa86.value": [
+      "db2d9f24-c17c-4518-8dcf-9aef8836d030.b"
+    ],
+    "9efc5633-2fe6-44ab-945e-992c4ec81dc6.value": [
+      "36eb2632-372a-4eb5-bd0c-67a44309fa86.value"
+    ],
+    "029da949-4922-440f-837b-b65d3cd4eb7b.name": [
+      "49c4ed95-e5bb-48a4-a800-f07866141664.state"
+    ],
+    "25d103db-739d-4985-be50-613fc307d5b4.value": [
+      "66424cea-d547-4450-9a52-e1b170738f1b.value"
+    ],
+    "66424cea-d547-4450-9a52-e1b170738f1b.yes": [
+      "7655dd96-dca1-4896-a888-62dcb5e8820e.check"
+    ],
+    "66424cea-d547-4450-9a52-e1b170738f1b.no": [
+      "e73ec439-8132-464c-90d6-14831b49d8a8.state"
+    ],
+    "f1f3d2e6-4684-452d-893d-b4cb48904f5a.character": [
+      "7655dd96-dca1-4896-a888-62dcb5e8820e.yes"
+    ],
+    "7655dd96-dca1-4896-a888-62dcb5e8820e.value": [
+      "f4ebabcd-8c72-4aaf-b74a-6e0a99d6abab.value"
+    ],
+    "91c2b10d-74f5-4a4d-946c-7931b00d73a0.value": [
+      "71cbd983-82cf-4826-aada-05e9f408f4c3.value"
+    ],
+    "4a9247f1-e78b-4c81-b0ec-d71e35f9b585.value": [
+      "7f177917-32ec-451b-b530-66d0900ce7f9.value"
+    ],
+    "7f177917-32ec-451b-b530-66d0900ce7f9.value": [
+      "1c8bed5b-b140-4edc-900a-f938c2639ff1.value",
+      "4cdae8b0-015f-42f1-b0f8-86b4c091ebea.yes"
+    ],
+    "1c8bed5b-b140-4edc-900a-f938c2639ff1.yes": [
+      "4cdae8b0-015f-42f1-b0f8-86b4c091ebea.check"
+    ],
+    "4cdae8b0-015f-42f1-b0f8-86b4c091ebea.yes": [
+      "644d39ea-440e-47ae-92b0-15ffcc702bfe.character",
+      "1cf1fd4e-ee62-4236-94b5-bb6d4809fc10.value"
+    ],
+    "4cdae8b0-015f-42f1-b0f8-86b4c091ebea.no": [
+      "a962b3d1-3ce1-4e49-896f-91b474273444.a"
+    ],
+    "644d39ea-440e-47ae-92b0-15ffcc702bfe.is_player": [
+      "91c2b10d-74f5-4a4d-946c-7931b00d73a0.value",
+      "a962b3d1-3ce1-4e49-896f-91b474273444.b"
+    ],
+    "a962b3d1-3ce1-4e49-896f-91b474273444.value": [
+      "a22b412b-d500-4b23-81ad-b9c114f41577.value"
+    ],
+    "e81b24ca-ebe7-47f9-b89c-0a7ed70c36cc.value": [
+      "4cdae8b0-015f-42f1-b0f8-86b4c091ebea.no"
+    ],
+    "e73ec439-8132-464c-90d6-14831b49d8a8.sorted_items": [
+      "1d7466c0-b9cc-48a3-973b-8aa5b8a876d0.items"
+    ],
+    "3dcdc45f-a1e8-49f7-9cb3-8914d5b8d2ff.characters": [
+      "e73ec439-8132-464c-90d6-14831b49d8a8.items"
+    ],
+    "46d600ee-aa88-4855-879c-d9002bf04384.yes": [
+      "aaf9da43-bdba-42a3-94dd-73a8698ef906.object"
+    ],
+    "f4ebabcd-8c72-4aaf-b74a-6e0a99d6abab.name": [
+      "039be56c-d8bc-4093-bd34-47f784fe51d8.state"
+    ],
+    "1d7466c0-b9cc-48a3-973b-8aa5b8a876d0.selected_item": [
+      "44e83102-3be3-4ae9-8f0c-1a12ae3e21ea.check",
+      "44e83102-3be3-4ae9-8f0c-1a12ae3e21ea.yes"
+    ],
+    "a0a89451-06df-4e3b-8b9b-a86a8c3e21f9.name": [
+      "039be56c-d8bc-4093-bd34-47f784fe51d8.state_b"
+    ],
+    "44e83102-3be3-4ae9-8f0c-1a12ae3e21ea.yes": [
+      "a0a89451-06df-4e3b-8b9b-a86a8c3e21f9.value"
+    ],
+    "c8c9451c-0846-4199-bc1d-8a60a72b0fd9.character": [
+      "44e83102-3be3-4ae9-8f0c-1a12ae3e21ea.no"
+    ],
+    "184bf5f2-e5f7-4a20-9af3-8c0165fe6840.value": [
+      "c3bfcef1-70dd-4148-878e-48ab283f8ba2.value"
+    ],
+    "c3bfcef1-70dd-4148-878e-48ab283f8ba2.value": [
+      "1d7466c0-b9cc-48a3-973b-8aa5b8a876d0.except"
+    ],
+    "aaf9da43-bdba-42a3-94dd-73a8698ef906.value": [
+      "4c48ea46-872d-472e-807f-2c4fa61564fb.value",
+      "bd9799a5-408d-4ffa-b875-e03f20113ed2.character_name"
+    ],
+    "9d92d85d-d65f-4f9c-9cef-2b7e523629bc.list": [
+      "79f74982-0949-4a42-ac63-137af9597e4c.state"
+    ],
+    "bd9799a5-408d-4ffa-b875-e03f20113ed2.character": [
+      "9d92d85d-d65f-4f9c-9cef-2b7e523629bc.item"
+    ],
+    "a182c866-07a9-40e9-9cac-f26c8a218c94.list": [
+      "32d4da1a-e1f3-429d-b01f-8e997adbcac5.state"
+    ],
+    "37e29585-6140-4a2d-a406-fa920dc513ac.yes": [
+      "a182c866-07a9-40e9-9cac-f26c8a218c94.item",
+      "1b6c285f-deea-4b32-b093-770d591caf78.value"
+    ],
+    "9913cbcd-3174-4d32-9314-46b045875d73.value": [
+      "93f1569e-7129-4263-a5fa-588b640a1e7b.value"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Outputs",
+      "x": 12,
+      "y": 2229,
+      "width": 1861,
+      "height": 652,
+      "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Select Actor Round Robin",
+      "x": 10,
+      "y": 1562,
+      "width": 2310,
+      "height": 658,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Initialize excluded characters",
+      "x": 11,
+      "y": 8,
+      "width": 1277,
+      "height": 1133,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Determine always_yield_to_user",
+      "x": 10,
+      "y": 1146,
+      "width": 1113,
+      "height": 414,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [
+    {
+      "text": "Create the empty list that will store any character names that should be excluded as candidates based on round robin rules.",
+      "x": 696,
+      "y": 60,
+      "width": 200,
+      "inherited": false
+    },
+    {
+      "text": "If auto progress is turned OFF always yield back to the user.",
+      "x": 225,
+      "y": 1228,
+      "width": 200,
+      "inherited": false
+    },
+    {
+      "text": "Something has flagged skip_to_player, which indicates we need to yield to the user.",
+      "x": 285,
+      "y": 1469,
+      "width": 292,
+      "inherited": false
+    },
+    {
+      "text": "Only proceed to round robin selection if always_yield_to_user isnt true.",
+      "x": 351,
+      "y": 1807,
+      "width": 200,
+      "inherited": false
+    },
+    {
+      "text": "Sort by is_player so user character always is first if nothing else is yet determined.",
+      "x": 690,
+      "y": 1860,
+      "width": 205,
+      "inherited": false
+    },
+    {
+      "text": "Select characters form available characters in a cyclic fashion while excluding based on availability.",
+      "x": 1050,
+      "y": 1880,
+      "width": 200,
+      "inherited": false
+    },
+    {
+      "text": "Default to player character if no character could be selected for whatever reason.",
+      "x": 1580,
+      "y": 2090,
+      "width": 200,
+      "inherited": false
+    },
+    {
+      "text": "Get the most recent character that has done an action and add the name to the exclusion list.",
+      "x": 780,
+      "y": 475,
+      "width": 200,
+      "inherited": false
+    },
+    {
+      "text": "If the user has acted as a specific character, that character should also be excluded from the candidate list.",
+      "x": 370,
+      "y": 860,
+      "width": 200,
+      "inherited": false
+    }
+  ],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "style": null
+}

@@ -2,7 +2,6 @@ import asyncio
 
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import Manager, register
-from talemate.util import colored_text, wrap_text
 
 
 @register

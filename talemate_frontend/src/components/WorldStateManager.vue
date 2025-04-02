@@ -603,7 +603,7 @@ export default {
             else if (message.action == 'templates') {
                 this.templates = message.data;
                 this.$nextTick(() => {
-                    if(this.loadWritingStyleTemplate) {
+                    if(this.loadWritingStyleTemplate && this.scene.data && this.scene.data.writing_style_template) {
                         this.$refs.generationOptions.loadWritingStyle(this.scene.data.writing_style_template);
                         this.loadWritingStyleTemplate = false;
                     }

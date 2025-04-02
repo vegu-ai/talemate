@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="confirming" max-width="290">
+    <v-dialog v-model="confirming" :max-width="maxWidth" :contained="contained">
         <v-card>
             <v-card-title class="headline">
                 <v-icon class="mr-2" size="small">{{ icon }}</v-icon>
@@ -43,6 +43,14 @@ export default {
             type: String,
             default: 'delete'
         },
+        contained: {
+            type: Boolean,
+            default: false,
+        },
+        maxWidth: {
+            type: Number,
+            default: 290
+        }
     },
     emits: ['confirm', 'cancel'],
     data(){

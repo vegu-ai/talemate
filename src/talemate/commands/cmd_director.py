@@ -2,7 +2,6 @@ from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
 from talemate.emit import emit, wait_for_input
 from talemate.scene_message import DirectorMessage
-from talemate.util import colored_text, wrap_text
 
 __all__ = [
     "CmdDirectorDirect",

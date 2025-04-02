@@ -460,6 +460,49 @@
 
                 </div>
 
+                <div v-else-if="template.template_type === 'scene_type'">
+                    <v-row>
+                        <v-col cols="12" sm="8" xl="4">
+                            <v-text-field 
+                                v-model="template.name" 
+                                label="Scene type name" 
+                                :rules="[v => !!v || 'Name is required']"
+                                :color="dirty ? 'dirty' : ''"
+                                @update:model-value="queueSaveTemplate()"
+                                hint="This will be displayed in the scene type dropdown"
+                                required>
+                            </v-text-field>
+                            
+                            <v-textarea 
+                                v-model="template.description"
+                                label="Description"
+                                :color="dirty ? 'dirty' : ''"
+                                @update:model-value="queueSaveTemplate()"
+                                auto-grow rows="3" 
+                                hint="Describe what this scene type is used for"
+                                required>
+                            </v-textarea>
+                            
+                            <v-textarea 
+                                v-model="template.instructions"
+                                label="Instructions"
+                                :color="dirty ? 'dirty' : ''"
+                                @update:model-value="queueSaveTemplate()"
+                                auto-grow rows="5" 
+                                hint="Instructions for how to play this scene type (optional)">
+                            </v-textarea>
+                        </v-col>
+                        <v-col cols="12" sm="4" xl="8">
+                            <v-checkbox 
+                                v-model="template.favorite" 
+                                label="Favorite" 
+                                @update:model-value="queueSaveTemplate()"
+                                messages="Favorited scene types will appear on the top of the list.">
+                            </v-checkbox>
+                        </v-col>
+                    </v-row>
+                </div>
+
             </v-form>
 
         </v-card-text>
@@ -556,7 +599,8 @@ export default {
                 { "title": 'Character attribute', "value": 'character_attribute' },
                 { "title": 'Character detail', "value": 'character_detail' },
                 { "title": "Spice collection", "value": 'spices'},
-                { "title": "Writing style", "value": 'writing_style'}
+                { "title": "Writing style", "value": 'writing_style'},
+                { "title": "Scene type", "value": 'scene_type'}
             ],
             attributePriorities: [
                 { "title": 'Low', "value": 1 },
@@ -571,7 +615,8 @@ export default {
                 character_attribute: "Character attribute templates are used to define attributes that a character can have. They can be used to define character traits, skills, or other properties. The AI will use this template to generate content that matches the attribute, based on the current progression of the scene or their backstory.",
                 character_detail: "Character detail templates are used to define details about a character. They generally are longer form questions or statements that can be used to flesh out a character's backstory or personality. The AI will use this template to generate content that matches the detail, based on the current progression of the scene or their backstory.",
                 spices: "Spice collections are used to define a set of instructions that can be applied during the generation of character attributes or details. They can be used to add a bit of randomness or unexpectedness. A template must explicitly support spice to be able to use a spice collection.",
-                writing_style: "Writing style templates are used to define a writing style that can be applied to the generated content. They can be used to add a specific flavor or tone. A template must explicitly support writing styles to be able to use a writing style template."
+                writing_style: "Writing style templates are used to define a writing style that can be applied to the generated content. They can be used to add a specific flavor or tone. A template must explicitly support writing styles to be able to use a writing style template.",
+                scene_type: "Scene type templates are used to define different types of scenes that can be played in your game. Each scene type has different rules and constraints that guide the generation and flow of the scene."
             }
         };
     },
@@ -618,6 +663,8 @@ export default {
                 return 'mdi-chili-mild';
             } else if (template.template_type == 'writing_style') {
                 return 'mdi-script-text';
+            } else if (template.template_type == 'scene_type') {
+                return 'mdi-movie-open';
             }
             return 'mdi-cube-scan';
         },
@@ -632,6 +679,8 @@ export default {
                 return 'highlight4';
             } else if (template.template_type == 'writing_style') {
                 return 'highlight5';
+            } else if (template.template_type == 'scene_type') {
+                return 'highlight6';
             }
             return 'grey';
         },

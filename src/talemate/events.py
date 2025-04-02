@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+import pydantic
+
+import talemate.emit.async_signals as async_signals
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Actor, Scene, SceneMessage
+    from talemate.tale_mate import Actor, Scene, SceneMessage, Character
 
 __all__ = [
     "Event",
@@ -61,6 +64,10 @@ class GameLoopActorIterEvent(GameLoopBase):
     actor: Actor
     game_loop: GameLoopEvent
 
+@dataclass
+class GameLoopCharacterIterEvent(GameLoopBase):
+    character: Character
+    game_loop: GameLoopEvent
 
 @dataclass
 class GameLoopNewMessageEvent(GameLoopBase):
@@ -70,3 +77,18 @@ class GameLoopNewMessageEvent(GameLoopBase):
 @dataclass
 class PlayerTurnStartEvent(Event):
     pass
+
+@dataclass
+class RegenerateGeneration(Event):
+    message: "SceneMessage"
+    character: "Character" = None
+
+
+async_signals.register(
+    "regenerate.msg.character",
+    "regenerate.msg.narrator",
+    "regenerate.msg.reinforcement",
+    "regenerate.msg.context_investigation",
+    "game_loop_player_character_iter",
+    "game_loop_ai_character_iter",
+)

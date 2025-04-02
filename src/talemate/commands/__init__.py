@@ -2,7 +2,6 @@ from .base import TalemateCommand
 from .cmd_autocomplete import *
 from .cmd_characters import *
 from .cmd_debug_tools import *
-from .cmd_dialogue import *
 from .cmd_director import *
 from .cmd_exit import CmdExit
 from .cmd_help import CmdHelp
@@ -16,7 +15,7 @@ from .cmd_narrate import *
 from .cmd_rebuild_archive import CmdRebuildArchive
 from .cmd_remove_character import CmdRemoveCharacter
 from .cmd_rename import CmdRename
-from .cmd_rerun import *
+from .cmd_regenerate import *
 from .cmd_reset import CmdReset
 from .cmd_rm import CmdRm
 from .cmd_run_helios_test import CmdHeliosTest

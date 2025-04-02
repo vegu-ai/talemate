@@ -129,7 +129,7 @@ class OpenAICompatibleClient(ClientBase):
                 )
                 human_message = {"role": "user", "content": prompt.strip()}
                 response = await self.client.chat.completions.create(
-                    model=self.model_name, messages=[human_message], **parameters
+                    model=self.model_name, messages=[human_message], stream=False, **parameters
                 )
                 response = response.choices[0].message.content
                 return self.process_response_for_indirect_coercion(prompt, response)
@@ -143,7 +143,7 @@ class OpenAICompatibleClient(ClientBase):
                 )
                 parameters["prompt"] = prompt
                 response = await self.client.completions.create(
-                    model=self.model_name, **parameters
+                    model=self.model_name, stream=False, **parameters
                 )
                 return response.choices[0].text
         except PermissionDeniedError as e:

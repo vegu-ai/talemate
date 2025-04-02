@@ -1,7 +1,7 @@
 <template>
     <v-menu>
         <template v-slot:activator="{ props }">
-            <v-btn class="hotkey mx-3" v-bind="props" :disabled="disabled" color="primary" icon>
+            <v-btn class="hotkey mx-1" v-bind="props" :disabled="disabled" color="primary" icon>
                 <v-icon>mdi-script-text</v-icon>
             </v-btn>
         </template>

@@ -34,6 +34,13 @@ export default createVuetify({
           enabled: colors.green.lighten2,
           disabled: colors.red.lighten2,
 
+          // node editor
+          nodeeditorbg: colors.grey.darken2,
+          locked_node: colors.blueGrey.lighten1,
+          locked_node_selected: colors.blueGrey.darken1,
+          scene_node: colors.deepPurple.lighten2,
+          scene_node_selected: colors.deepPurple.lighten1,
+
           // messages
           narrator: colors.deepPurple.lighten3,
           character: colors.shades.white,

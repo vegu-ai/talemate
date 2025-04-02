@@ -1,0 +1,141 @@
+<|SECTION:SCENE|>
+{% set scene_history = scene.context_history(budget=max_tokens-512, show_hidden=True) %}
+{% for scene_context in scene_history -%}
+{{ scene_context }}
+
+{% endfor %}
+<|CLOSE_SECTION|>
+{% if scene.npc_character_names %}<|SECTION:SIMULATED CHARACTERS|>
+{% for character in scene.npc_character_names %}
+- {{ character }}
+{% endfor %}
+<|CLOSE_SECTION|>{% endif %}
+<|SECTION:TASK|>
+You have access to the following functions you must call to fulfill the user's requests.
+
+{{ focal.render_instructions() }}
+
+{{
+    focal.callbacks.set_simulated_environment.render(
+        "Create or change the simulated environment. This means the location, time, specific conditions, or any other aspect of the simulation that is not directly related to the characters.",
+        instructions="Instructions on how to change the simulated environment. These will be given to the simulation computer to setup the new environment. REQUIRED.",
+        reset="If true, the environment should be reset and all simulated characters are removed. If false, the environment should be changed but the characters should remain. REQUIRED.",
+        examples=[
+            {"instructions": "Change the location to a lush forest, with a river running through it.", "reset":true},
+            {"instructions": "The simulation suite flickers and changes to a bustling city street.", "reset":true},
+            {"instructions": "Change the time of day to night.", "reset":false},
+        ]
+    )
+}}
+
+{{
+    focal.callbacks.set_user_persona.render(
+        "Create or change the user persona. This is the character that the user is playing in the simulation.",
+        character_name="The name of the character. This should be a unique name that is not already in use in the simulation. REQUIRED.",
+        instructions="Instructions on how to change the user persona. These will be given to the simulation computer to setup the new user persona. You should include enough detail to make the character unique. REQUIRED.",
+        examples=[
+            {"character_name": "Alice", "instructions": "The user should transform to a young girl named Alice who is lost in the forest. She is wearing a red coat and has a small backpack."},
+            {"character_name": "Leonard", "instructions": "Change the user persona to be an old blacksmith named Leonard. His physical appearance is that of a tall, muscular and bearded man. He is wearing a leather apron and has a hammer in his hand."},
+            {"character_name": "Hank", "instructions": "The user should transform into a middle aged astronaut named Hank. He is wearing a space suit and has a helmet under his arm."}
+        ]
+    )
+}}
+
+{{
+    focal.callbacks.add_simulated_character.render(
+        "Add a new simulated character to the simulation. This character will be controlled by the simulation computer and will interact with the user persona. IMPORTANT: Only add the specific character(s) explicitly requested by the user. Do not populate the scene with additional background characters unless specifically asked to do so. Always err on the side of minimalism - one well-developed character is better than multiple thin ones.",
+        character_name="The name of the character. This should be a unique name that is not already in use in the simulation. Don't make this a generic name like 'woman', 'robot' or 'cat' or 'old man'. Make it specific and unique. REQUIRED.",
+        instructions="Instructions on how to create the new simulated character. These will be given to the simulation computer to setup the new character. You should include enough detail to make the character unique but focus solely on this specific character. REQUIRED.",
+        examples=[
+            {"character_name": "Rusty", "instructions": "Rusty is an old junkyard robot with a dented exterior and one eye that constantly flickers. Despite his weathered appearance, he's surprisingly optimistic and speaks with colorful metaphors from the 1950s. He collects discarded human artifacts, believing each tells an important story about humanity. Whenever startled, he emits a short burst of jazz music from his partially functional speaker."},
+            
+            {"character_name": "Elara Nightshade", "instructions": "Former ballerina turned professional poker player who never reveals her full face, always keeping half hidden behind an ornate hand fan. She communicates primarily through cryptic questions and has an uncanny ability to finish others' sentences. Elara moves with deliberate grace and keeps a mysterious leather-bound book where she sketches people she meets. The constant soft clicking sound of antique silver thimbles on her fingers serves as her personal soundtrack."},
+            
+            {"character_name": "Professor Thaddeus Whiskers", "instructions": "Not actually a professor—or even human—but rather a Maine Coon cat who inherited his owner's vast fortune and Victorian mansion. The estate staff humor his 'identity' by rolling in a chalkboard wherever he goes and interpreting his meows as profound lectures on philosophy. He wears a custom bow tie that changes color based on his mood and has developed an elaborate system of paw gestures that his dedicated butler has learned to translate for guests."}
+        ]
+    )
+}}
+
+{% if scene.npc_character_names %}
+{{
+    focal.callbacks.change_simulated_character.render(
+        "Changes a currently active simulated character. IMPORTANT: If the change is significant enough that the character's name changes, REMOVE the old character and ADD a new character instead.",
+        character_name="The name of an existing character, currently active in the simulation. It needs to be exact and one of: "+join(scene.npc_character_names, ', ')+". REQUIRED.",
+        instructions="Instructions for drastically modifying the simulated character. These direct the simulation computer to alter fundamental aspects of the character such as age, physical appearance, personality, voice, abilities, or other core traits. These changes do not need narrative justification within the simulation and will be applied instantly. REQUIRED.",
+        examples=[
+            {
+                "character_name": "Elara Nightshade",
+                "instructions": "Transform Elara into an elderly version of herself. Age her by approximately 40 years with white hair, wrinkled skin, and slightly hunched posture. Her voice should become more raspy but maintain her cryptic speaking pattern. Replace her ornate hand fan with an antique walking cane that she occasionally taps for emphasis."
+            },
+            {
+                "character_name": "Rusty",
+                "instructions": "Upgrade Rusty to a sleek, modern robot with a polished chrome exterior and holographic displays. Replace his flickering eye with an advanced multi-lens optical array. His voice should shift from old-timey to a smooth, digital tone with subtle electronic undertones. Maintain his optimistic personality but remove the 1950s vernacular."
+            },
+            {
+                "character_name": "Professor Thaddeus Whiskers",
+                "instructions": "Transform Professor Whiskers from a Maine Coon cat into a human professor in his 60s with wild gray hair and cat-like mannerisms. He should wear a tweed jacket with a bow tie that still changes colors based on mood. Have him speak actual words instead of meows, but maintain his philosophical nature and occasional feline behaviors like fixing his gaze on random moving objects."
+            }
+        ]
+    )
+}}
+
+{{
+    focal.callbacks.remove_simulated_character.render(
+        "Remove a simulated character from the simulation.",
+        character_name="The name of an existing character, currently active in the simulation. It needs to be exact and one of: "+join(scene.npc_character_names, ', ')+". REQUIRED.",
+        instructions="Instructions on how the character is removed from the simulation. This will be given to the simulation computer to have the character exit the scene in a believable way. If the reason for removal is a sudden request to change the simulation it's ok simply have the character disappear from it. REQUIRED.",
+        examples=[
+            {
+                "character_name": "Captain Orion",
+                "instructions": "Have Captain Orion receive a transmission, announce that he must return to his fleet, and teleport him away with a blue light effect."
+            },
+            {
+                "character_name": "King Thormund",
+                "instructions": "Have the character of King Thormund flicker out of existence with digital glitch effects. No in-simulation explanation needed as this is due to a complete simulation change."
+            },
+            {
+                "character_name": "Detective Blackwood",
+                "instructions": "Make Detective Blackwood's phone ring, have him announce he's needed at another crime scene, and exit the location toward a waiting police car after giving the user his contact card."
+            }
+        ]
+    )
+}}
+{% endif %}
+
+{{
+    focal.callbacks.end_simulation.render(
+        "End the simulation. You must ONLY calls this if the user has EXPLICITLY requested to end the simulation. This will close the simulation and return the user to the main menu. If the user has not requested to end the simulation, DO NOT call this function.",
+        examples=[{}]
+    )
+}}
+
+{{
+    focal.callbacks.respond_to_user.render(
+        "Respond to the user's question or remark that was addressed to the simulation computer. This function is used to provide information, answer questions, or engage in dialogue with the user. It should be used to provide context, clarify details, or offer additional information that enhances the user's experience. This must be the ACTUAL response. ONLY use this if the user has addressed to directly with a question or remark.",
+        response="The response to the user's question or remark. This should be informative, engaging, and relevant to the user's input. REQUIRED.",
+        examples=[
+            {"response": "Alpha centauri is about 4.37 light-years away from Earth, making it the closest star system to our solar system."},
+            {"response": "I don't know what you mean by 'quantum entanglement'. Could you provide more context or clarify your question?"},
+            {"response": "I think the currently active simulation is a great setting for exploring the themes of isolation and survival."}
+        ]
+    )
+}}
+
+{{
+    focal.callbacks.set_simulation_goal.render(
+        "Briefly describe the overall goal of the simulation. What is the user looking to experience? What needs to happen for the simulation to be considered complete? This function is used to provide context and direction for the simulation. It should be clear, specific and detailed, and focused on the user's objectives.",
+        goal="The overall goal of the simulation. This should be a clear and concise statement that outlines the user's objective. REQUIRED.",
+        examples=[
+            {"goal": "The user is exploring a mysterious alien planet to uncover the secrets of an ancient civilization."},
+            {"goal": "The user is navigating a post-apocalyptic city to find a hidden bunker with vital supplies."},
+            {"goal": "The user is solving a series of puzzles to escape a haunted mansion before time runs out."}
+        ]
+    )
+}}
+
+Analyze the user's request and determine which functions you need to call to fulfill it.
+
+Then plan out which functions to call and in what order. ALWAYS repeat back your understanding of each functions restrictions and rules. Then call them in the correct order to complete the task.
+
+The user has issued the following instructions to the simulation computer: "{{ vars.scene_loop.user_message.raw }}"
+<|CLOSE_SECTION|>

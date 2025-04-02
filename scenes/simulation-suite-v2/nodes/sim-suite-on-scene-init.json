@@ -1,0 +1,565 @@
+{
+  "title": "Sim Suite On Scene Init",
+  "id": "1339e24f-b2d7-45e6-975c-e580e91b6dd6",
+  "properties": {
+    "event_name": null
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "sim-suite/event/simSuiteOnSceneInit",
+  "nodes": {
+    "7474ccaa-763d-4475-989a-5834faf53355": {
+      "title": "Narrator Message",
+      "id": "7474ccaa-763d-4475-989a-5834faf53355",
+      "properties": {
+        "source": "ai"
+      },
+      "x": 227,
+      "y": 815,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/message/NarratorMessage",
+      "base_type": "core/Node"
+    },
+    "e686bcd6-d2c7-47cf-9643-22a2a28de871": {
+      "title": "Push History",
+      "id": "e686bcd6-d2c7-47cf-9643-22a2a28de871",
+      "properties": {
+        "emit_message": true
+      },
+      "x": 462,
+      "y": 818,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "b6af2ce2-8f9f-441e-807c-00b561d1b147": {
+      "title": "CTX_PIN_UNAWARE",
+      "id": "b6af2ce2-8f9f-441e-807c-00b561d1b147",
+      "properties": {
+        "value": "Characters in the simulation ARE NOT AWARE OF THE COMPUTER OR THE SIMULATION."
+      },
+      "x": 50,
+      "y": 1030,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "fe09b244-3548-4a2e-8097-9a8fbc5be7fe": {
+      "title": "Stage 0",
+      "id": "fe09b244-3548-4a2e-8097-9a8fbc5be7fe",
+      "properties": {
+        "stage": 0
+      },
+      "x": 730,
+      "y": 318,
+      "width": 216,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "4cd14a51-b58f-4370-b560-4e319def3e5a": {
+      "title": "Stage 2",
+      "id": "4cd14a51-b58f-4370-b560-4e319def3e5a",
+      "properties": {
+        "stage": 2
+      },
+      "x": 710,
+      "y": 860,
+      "width": 211,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "6dea4c4f-86ce-49ad-815c-0842d1eae290": {
+      "title": "TRUE",
+      "id": "6dea4c4f-86ce-49ad-815c-0842d1eae290",
+      "properties": {
+        "value": true
+      },
+      "x": 540,
+      "y": 1170,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "ab1707f3-811d-43eb-a41d-0e72b270a09f": {
+      "title": "Set State",
+      "id": "ab1707f3-811d-43eb-a41d-0e72b270a09f",
+      "properties": {
+        "name": "update_world_state",
+        "scope": "shared"
+      },
+      "x": 680,
+      "y": 1140,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "6b4ed0e4-bf18-4be1-b8f7-c7ad3069a767": {
+      "title": "Emit Status",
+      "id": "6b4ed0e4-bf18-4be1-b8f7-c7ad3069a767",
+      "properties": {
+        "message": "Simulation suite ready",
+        "status": "success",
+        "as_scene_message": true
+      },
+      "x": 60,
+      "y": 1400,
+      "width": 254,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitStatus",
+      "base_type": "core/Node"
+    },
+    "9a6c332a-d18e-40d8-82ad-af587407b669": {
+      "title": "Event",
+      "id": "9a6c332a-d18e-40d8-82ad-af587407b669",
+      "properties": {},
+      "x": -170,
+      "y": 140,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/Event",
+      "base_type": "core/Graph"
+    },
+    "66911c87-2810-4845-bca0-aed9e65fff75": {
+      "title": "Stop",
+      "id": "66911c87-2810-4845-bca0-aed9e65fff75",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 430,
+      "y": -40,
+      "width": 291,
+      "height": 94,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/Stop",
+      "base_type": "core/Node"
+    },
+    "6c22b515-b093-4f4b-af6a-f65f41310b11": {
+      "title": "Stage 1",
+      "id": "6c22b515-b093-4f4b-af6a-f65f41310b11",
+      "properties": {
+        "stage": 1
+      },
+      "x": 790,
+      "y": 640,
+      "width": 244,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "4ef673ae-5322-4abc-803e-a77106371fc1": {
+      "title": "Push History",
+      "id": "4ef673ae-5322-4abc-803e-a77106371fc1",
+      "properties": {
+        "emit_message": true
+      },
+      "x": 550,
+      "y": 620,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "dce77ff4-7569-4926-8b62-1d2acf8dbb76": {
+      "title": "Generate Progress Narration",
+      "id": "dce77ff4-7569-4926-8b62-1d2acf8dbb76",
+      "properties": {},
+      "x": 280,
+      "y": 620,
+      "width": 245,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/narrator/GenerateProgress",
+      "base_type": "core/Node"
+    },
+    "84fc7556-9a21-4059-a96d-bc0ee4fbace9": {
+      "title": "TRUE",
+      "id": "84fc7556-9a21-4059-a96d-bc0ee4fbace9",
+      "properties": {
+        "value": true
+      },
+      "x": 140,
+      "y": 630,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "47984361-e62b-472d-8174-e42f1cbe1dcc": {
+      "title": "Stage 4",
+      "id": "47984361-e62b-472d-8174-e42f1cbe1dcc",
+      "properties": {
+        "stage": 4
+      },
+      "x": 410,
+      "y": 1420,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "10808c07-07c9-4deb-b660-4a5b5d65d90e": {
+      "title": "Stage -1",
+      "id": "10808c07-07c9-4deb-b660-4a5b5d65d90e",
+      "properties": {
+        "stage": -1
+      },
+      "x": 740,
+      "y": -10,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "ad3fc9c9-8ae7-4975-b380-9401ed26182e": {
+      "title": "GET simulation_started",
+      "id": "ad3fc9c9-8ae7-4975-b380-9401ed26182e",
+      "properties": {
+        "name": "simulation_started",
+        "scope": "game"
+      },
+      "x": 50,
+      "y": -40,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "bbde7bb3-1d8a-4638-b1bc-d11c2b9f80e5": {
+      "title": "Switch",
+      "id": "bbde7bb3-1d8a-4638-b1bc-d11c2b9f80e5",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 310,
+      "y": -10,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "b8fa9b94-50ac-4f66-944d-b4696811eb90": {
+      "title": "Started",
+      "id": "b8fa9b94-50ac-4f66-944d-b4696811eb90",
+      "properties": {},
+      "x": 310,
+      "y": 80,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "988f834e-9c18-49c0-9dec-13bf22ef5878": {
+      "title": "SET simulation_started",
+      "id": "988f834e-9c18-49c0-9dec-13bf22ef5878",
+      "properties": {
+        "name": "simulation_started",
+        "scope": "game"
+      },
+      "x": 330,
+      "y": 380,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "ca90c76f-5a5f-4f3a-bf0c-f4333b14c5ea": {
+      "title": "TRUE",
+      "id": "ca90c76f-5a5f-4f3a-bf0c-f4333b14c5ea",
+      "properties": {
+        "value": true
+      },
+      "x": 200,
+      "y": 430,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "b4376970-b652-47fe-bad6-02c25da7b8b6": {
+      "title": "Save World Entry",
+      "id": "b4376970-b652-47fe-bad6-02c25da7b8b6",
+      "properties": {
+        "entry_id": "sim.quarantined",
+        "text": null,
+        "meta": {},
+        "create_pin": true,
+        "id": "sim.quarantined"
+      },
+      "x": 300,
+      "y": 1030,
+      "width": 210,
+      "height": 204,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/worldstate/SaveWorldEntry",
+      "base_type": "core/Node"
+    },
+    "56e1c1f5-8419-4ac2-bbb3-b3097b3500ac": {
+      "title": "Stage 3",
+      "id": "56e1c1f5-8419-4ac2-bbb3-b3097b3500ac",
+      "properties": {
+        "stage": 3
+      },
+      "x": 960,
+      "y": 1060,
+      "width": 220,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "d40c5c35-d66f-4faf-8a6b-975a37e9d629": {
+      "title": "Status - Powering Up",
+      "id": "d40c5c35-d66f-4faf-8a6b-975a37e9d629",
+      "properties": {
+        "message": "Simulation suite powering up.",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 50,
+      "y": 190,
+      "width": 273,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitStatus",
+      "base_type": "core/Node"
+    },
+    "5caffb85-f35b-40f7-9dd2-5b00dbe3fa9a": {
+      "title": "Then",
+      "id": "5caffb85-f35b-40f7-9dd2-5b00dbe3fa9a",
+      "properties": {},
+      "x": 590,
+      "y": 320,
+      "width": 140,
+      "height": 86,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "0cb85dbb-cd28-4e84-99ce-22a1ea0d403a": {
+      "title": "PROMPT_STARTUP",
+      "id": "0cb85dbb-cd28-4e84-99ce-22a1ea0d403a",
+      "properties": {
+        "value": "Narrate the computer asking the user to state the nature of their desired simulation in a synthetic and soft sounding voice."
+      },
+      "x": 60,
+      "y": 680,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "ad9cd5d1-ec8b-4793-bda6-4737db9ae66d": {
+      "title": "MSG_HELP",
+      "id": "ad9cd5d1-ec8b-4793-bda6-4737db9ae66d",
+      "properties": {
+        "value": "When there is no simulation active all your actions will be a conversation with the simulation suite's main computer.\n\nYou may chat with the computer or you may instruct it to start a simulation. For example \"I want to experience being on a derelict spaceship.\"\n\n\n\nOnce a simulation is active you can issue additional instructions or queries by addressing the computer directly by starting your sentence with \"Computer\" - For example \"Computer, change the environment to a mountain top.\""
+      },
+      "x": 50,
+      "y": 810,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "7474ccaa-763d-4475-989a-5834faf53355.message": [
+      "e686bcd6-d2c7-47cf-9643-22a2a28de871.message"
+    ],
+    "e686bcd6-d2c7-47cf-9643-22a2a28de871.message": [
+      "4cd14a51-b58f-4370-b560-4e319def3e5a.state"
+    ],
+    "b6af2ce2-8f9f-441e-807c-00b561d1b147.value": [
+      "b4376970-b652-47fe-bad6-02c25da7b8b6.text"
+    ],
+    "6dea4c4f-86ce-49ad-815c-0842d1eae290.value": [
+      "ab1707f3-811d-43eb-a41d-0e72b270a09f.value"
+    ],
+    "ab1707f3-811d-43eb-a41d-0e72b270a09f.name": [
+      "56e1c1f5-8419-4ac2-bbb3-b3097b3500ac.state_b"
+    ],
+    "6b4ed0e4-bf18-4be1-b8f7-c7ad3069a767.emitted": [
+      "47984361-e62b-472d-8174-e42f1cbe1dcc.state"
+    ],
+    "66911c87-2810-4845-bca0-aed9e65fff75.state": [
+      "10808c07-07c9-4deb-b660-4a5b5d65d90e.state"
+    ],
+    "4ef673ae-5322-4abc-803e-a77106371fc1.message": [
+      "6c22b515-b093-4f4b-af6a-f65f41310b11.state"
+    ],
+    "dce77ff4-7569-4926-8b62-1d2acf8dbb76.message": [
+      "4ef673ae-5322-4abc-803e-a77106371fc1.message"
+    ],
+    "84fc7556-9a21-4059-a96d-bc0ee4fbace9.value": [
+      "dce77ff4-7569-4926-8b62-1d2acf8dbb76.state"
+    ],
+    "ad3fc9c9-8ae7-4975-b380-9401ed26182e.value": [
+      "bbde7bb3-1d8a-4638-b1bc-d11c2b9f80e5.value",
+      "b8fa9b94-50ac-4f66-944d-b4696811eb90.value"
+    ],
+    "bbde7bb3-1d8a-4638-b1bc-d11c2b9f80e5.yes": [
+      "66911c87-2810-4845-bca0-aed9e65fff75.state"
+    ],
+    "988f834e-9c18-49c0-9dec-13bf22ef5878.value": [
+      "5caffb85-f35b-40f7-9dd2-5b00dbe3fa9a.b"
+    ],
+    "ca90c76f-5a5f-4f3a-bf0c-f4333b14c5ea.value": [
+      "988f834e-9c18-49c0-9dec-13bf22ef5878.value"
+    ],
+    "b4376970-b652-47fe-bad6-02c25da7b8b6.entry_id": [
+      "56e1c1f5-8419-4ac2-bbb3-b3097b3500ac.state"
+    ],
+    "d40c5c35-d66f-4faf-8a6b-975a37e9d629.emitted": [
+      "5caffb85-f35b-40f7-9dd2-5b00dbe3fa9a.a"
+    ],
+    "5caffb85-f35b-40f7-9dd2-5b00dbe3fa9a.value": [
+      "fe09b244-3548-4a2e-8097-9a8fbc5be7fe.state"
+    ],
+    "0cb85dbb-cd28-4e84-99ce-22a1ea0d403a.value": [
+      "dce77ff4-7569-4926-8b62-1d2acf8dbb76.narrative_direction"
+    ],
+    "ad9cd5d1-ec8b-4793-bda6-4737db9ae66d.value": [
+      "7474ccaa-763d-4475-989a-5834faf53355.message"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Stage 0",
+      "x": 24,
+      "y": 108,
+      "width": 833,
+      "height": 415,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Stage 1",
+      "x": 24,
+      "y": 534,
+      "width": 896,
+      "height": 189,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Stage 2",
+      "x": 23,
+      "y": 735,
+      "width": 834,
+      "height": 207,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Stage 3",
+      "x": 23,
+      "y": 949,
+      "width": 1089,
+      "height": 359,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Stage 4",
+      "x": 24,
+      "y": 1317,
+      "width": 526,
+      "height": 277,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Stage -1",
+      "x": 19,
+      "y": -201,
+      "width": 838,
+      "height": 301,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [
+    {
+      "text": "The rest of the stages should only execute on new instances of the simulation suite.\n\nWe determine this by checking the `instr.simulation_started` game state variable.",
+      "x": 40,
+      "y": -160,
+      "width": 606,
+      "inherited": false
+    }
+  ],
+  "extends": null,
+  "base_type": "core/Event",
+  "inputs": [],
+  "outputs": [],
+  "style": {
+    "title_color": "#57532e",
+    "node_color": "#39382c",
+    "icon": "F0BF8",
+    "auto_title": null
+  }
+}

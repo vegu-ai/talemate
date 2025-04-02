@@ -9,6 +9,7 @@ from talemate.emit import emit, wait_for_input
 from talemate.instance import get_agent
 from talemate.scene_message import NarratorMessage
 from talemate.status import LoadingStatus, set_loading
+from talemate.util import random_color
 
 log = structlog.get_logger("talemate.cmd.world_state")
 
@@ -36,12 +37,7 @@ class CmdWorldState(TalemateCommand):
     aliases = ["ws"]
 
     async def run(self):
-        inline = self.args[0] == "inline" if self.args else False
         reset = self.args[0] == "reset" if self.args else False
-
-        if inline:
-            await self.scene.world_state.request_update_inline()
-            return True
 
         if reset:
             self.scene.world_state.reset()
@@ -119,20 +115,7 @@ class CmdPersistCharacter(TalemateCommand):
             log.debug("persist_character", name=name, never_narrate=never_narrate)
 
         character = Character(name=name)
-        character.color = random.choice(
-            [
-                "#F08080",
-                "#FFD700",
-                "#90EE90",
-                "#ADD8E6",
-                "#DDA0DD",
-                "#FFB6C1",
-                "#FAFAD2",
-                "#D3D3D3",
-                "#B0E0E6",
-                "#FFDEAD",
-            ]
-        )
+        character.color = random_color()
 
         loading_status("Generating character attributes...")
 
@@ -166,7 +149,8 @@ class CmdPersistCharacter(TalemateCommand):
                 character, narrative_direction=extra_instructions
             )
             message = NarratorMessage(
-                entry_narration, source=f"narrate_character_entry:{character.name}"
+                entry_narration, 
+                meta=narrator.action_to_meta("narrate_character_entry", {"character": character})
             )
             self.narrator_message(message)
             self.scene.push_history(message)

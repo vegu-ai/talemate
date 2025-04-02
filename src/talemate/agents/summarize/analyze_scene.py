@@ -362,5 +362,6 @@ class SceneAnalyzationMixin:
         )
         
         self.set_context_states(scene_analysis=response)
+        self.set_scene_states(scene_analysis=response)
         
         return response

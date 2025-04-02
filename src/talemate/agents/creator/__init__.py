@@ -15,6 +15,7 @@ from .character import CharacterCreatorMixin
 from .legacy import LegacyCharacterCreatorMixin, LegacyScenarioCreatorMixin
 from .scenario import ScenarioCreatorMixin
 
+import talemate.agents.creator.nodes
 
 @register()
 class CreatorAgent(

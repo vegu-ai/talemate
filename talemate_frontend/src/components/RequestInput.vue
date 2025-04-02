@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="open" :max-width="size">
+    <v-dialog v-model="open" :max-width="size" :contained="contained">
         <v-card>
             <v-card-title>
                 <v-icon v-if="icon" size="small" class="mr-2" color="primary">{{ icon }}</v-icon>
@@ -59,6 +59,10 @@ export default {
         title: String,
         instructions: String,
         icon: String,
+        contained: {
+            type: Boolean,
+            default: false,
+        },
         size: {
             type: Number,
             default: 500,

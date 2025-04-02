@@ -1,0 +1,288 @@
+{
+  "title": "Fn Sim Suite Set Goal",
+  "id": "29ca3e95-4d99-4a14-992b-42a301551719",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "sim-suite/fnSimSuiteSetGoal",
+  "nodes": {
+    "0353d9b0-baf5-48de-a1fa-b834b0fbca91": {
+      "title": "Get Scene State",
+      "id": "0353d9b0-baf5-48de-a1fa-b834b0fbca91",
+      "properties": {},
+      "x": 487,
+      "y": 438,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetSceneState",
+      "base_type": "core/Node"
+    },
+    "0909033a-7f90-4c71-87cc-9f5a13bdecb4": {
+      "title": "goal",
+      "id": "0909033a-7f90-4c71-87cc-9f5a13bdecb4",
+      "properties": {
+        "name": "goal",
+        "typ": "str"
+      },
+      "x": 16,
+      "y": 79,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "f70eba46-c83e-4544-8cc1-9d8f93fb053d": {
+      "title": "Stage 0",
+      "id": "f70eba46-c83e-4544-8cc1-9d8f93fb053d",
+      "properties": {
+        "stage": 0
+      },
+      "x": 820,
+      "y": 90,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "9c7cf290-2987-4f38-a496-f94b4db74980": {
+      "title": "SET local.arg_goal",
+      "id": "9c7cf290-2987-4f38-a496-f94b4db74980",
+      "properties": {
+        "name": "arg_goal",
+        "scope": "local"
+      },
+      "x": 270,
+      "y": 230,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "24ac670b-4648-4915-9dbb-b6bf35ee6d80": {
+      "title": "Determine Content Context",
+      "id": "24ac670b-4648-4915-9dbb-b6bf35ee6d80",
+      "properties": {
+        "description": null
+      },
+      "x": 365,
+      "y": 606,
+      "width": 228,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/DetermineContentContext",
+      "base_type": "core/Node"
+    },
+    "bd7205c1-16a0-40dd-a132-5c5e4fd45cd1": {
+      "title": "Set",
+      "id": "bd7205c1-16a0-40dd-a132-5c5e4fd45cd1",
+      "properties": {
+        "attribute": "context"
+      },
+      "x": 685,
+      "y": 556,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Set",
+      "base_type": "core/Node"
+    },
+    "c66bdaeb-4166-4835-9415-943af547c926": {
+      "title": "GET local.arg_goal",
+      "id": "c66bdaeb-4166-4835-9415-943af547c926",
+      "properties": {
+        "name": "arg_goal",
+        "scope": "local"
+      },
+      "x": 20,
+      "y": 460,
+      "width": 256,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "4e9edb53-0324-4419-a0bb-0598a6fc5cac": {
+      "title": "Save World Entry",
+      "id": "4e9edb53-0324-4419-a0bb-0598a6fc5cac",
+      "properties": {
+        "entry_id": "sim.goal",
+        "text": null,
+        "meta": {},
+        "create_pin": true
+      },
+      "x": 510,
+      "y": 90,
+      "width": 210,
+      "height": 204,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/worldstate/SaveWorldEntry",
+      "base_type": "core/Node"
+    },
+    "d787f273-d3a1-48dc-913a-71112baec535": {
+      "title": "GET local.arg_goal",
+      "id": "d787f273-d3a1-48dc-913a-71112baec535",
+      "properties": {
+        "name": "arg_goal",
+        "scope": "local"
+      },
+      "x": 30,
+      "y": 800,
+      "width": 256,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "8f11a1a2-f94a-4d99-a944-dd1575502436": {
+      "title": "Stage 2",
+      "id": "8f11a1a2-f94a-4d99-a944-dd1575502436",
+      "properties": {
+        "stage": 2
+      },
+      "x": 600,
+      "y": 830,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "619c7e98-e958-4d13-a68a-210752522011": {
+      "title": "Generate Scene Types",
+      "id": "619c7e98-e958-4d13-a68a-210752522011",
+      "properties": {
+        "instructions": "",
+        "max_scene_types": 3
+      },
+      "x": 340,
+      "y": 800,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/auto-direct/GenerateSceneTypes",
+      "base_type": "core/Node"
+    },
+    "e4cd1391-daed-4951-a6c6-438d993c07a9": {
+      "title": "Stage 1",
+      "id": "e4cd1391-daed-4951-a6c6-438d993c07a9",
+      "properties": {
+        "stage": 1
+      },
+      "x": 980,
+      "y": 590,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "0353d9b0-baf5-48de-a1fa-b834b0fbca91.scene": [
+      "bd7205c1-16a0-40dd-a132-5c5e4fd45cd1.object"
+    ],
+    "0909033a-7f90-4c71-87cc-9f5a13bdecb4.value": [
+      "9c7cf290-2987-4f38-a496-f94b4db74980.value",
+      "4e9edb53-0324-4419-a0bb-0598a6fc5cac.text"
+    ],
+    "24ac670b-4648-4915-9dbb-b6bf35ee6d80.content_context": [
+      "bd7205c1-16a0-40dd-a132-5c5e4fd45cd1.value"
+    ],
+    "bd7205c1-16a0-40dd-a132-5c5e4fd45cd1.object": [
+      "e4cd1391-daed-4951-a6c6-438d993c07a9.state"
+    ],
+    "c66bdaeb-4166-4835-9415-943af547c926.value": [
+      "24ac670b-4648-4915-9dbb-b6bf35ee6d80.state",
+      "24ac670b-4648-4915-9dbb-b6bf35ee6d80.description"
+    ],
+    "4e9edb53-0324-4419-a0bb-0598a6fc5cac.entry_id": [
+      "f70eba46-c83e-4544-8cc1-9d8f93fb053d.state"
+    ],
+    "d787f273-d3a1-48dc-913a-71112baec535.value": [
+      "619c7e98-e958-4d13-a68a-210752522011.state",
+      "619c7e98-e958-4d13-a68a-210752522011.instructions"
+    ],
+    "619c7e98-e958-4d13-a68a-210752522011.state": [
+      "8f11a1a2-f94a-4d99-a944-dd1575502436.state"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Stage 0",
+      "x": 1,
+      "y": 1,
+      "width": 977,
+      "height": 379,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Stage 1",
+      "x": 2,
+      "y": 385,
+      "width": 1112,
+      "height": 336,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Generate Scene Types",
+      "x": 2,
+      "y": 725,
+      "width": 744,
+      "height": 219,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [
+    {
+      "text": "Regenerate an appropriate content context classification for the scene.",
+      "x": 674,
+      "y": 411,
+      "width": 200,
+      "inherited": false
+    }
+  ],
+  "extends": null,
+  "base_type": "core/functions/Function",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "d29e5bb5-7aaf-4dd3-a59e-8a4b75dfc958",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    }
+  ],
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null
+  }
+}

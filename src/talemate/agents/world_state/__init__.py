@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 import dataclasses
 import json
 import time
@@ -25,10 +24,9 @@ from talemate.agents.registry import register
 
 
 from .character_progression import CharacterProgressionMixin
+import talemate.agents.world_state.nodes
+from talemate.tale_mate import Character
 
-if TYPE_CHECKING:
-    from talemate.tale_mate import Character
-    
 log = structlog.get_logger("talemate.agents.world_state")
 
 talemate.emit.async_signals.register("agent.world_state.time")
@@ -245,57 +243,6 @@ class WorldStateAgent(
         return world_state
 
     @set_processing
-    async def request_world_state_inline(self):
-        """
-        EXPERIMENTAL, Overall the one shot request seems about as coherent as the inline request, but the inline request is is about twice as slow and would need to run on every dialogue line.
-        """
-
-        t1 = time.time()
-
-        # first, we need to get the marked items (objects etc.)
-
-        _, marked_items_response = await Prompt.request(
-            "world_state.request-world-state-inline-items",
-            self.client,
-            "analyze_long",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-            },
-        )
-
-        self.scene.log.debug(
-            "request_world_state_inline",
-            marked_items=marked_items_response,
-            time=time.time() - t1,
-        )
-
-        return marked_items_response
-
-    @set_processing
-    async def analyze_time_passage(
-        self,
-        text: str,
-    ):
-        response = await Prompt.request(
-            "world_state.analyze-time-passage",
-            self.client,
-            "analyze_freeform_short",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "text": text,
-            },
-        )
-
-        duration = response.split("\n")[0].split(" ")[0].strip()
-
-        if not duration.startswith("P"):
-            duration = "P" + duration
-
-        return duration
-
-    @set_processing
     async def analyze_text_and_extract_context(
         self,
         text: str,
@@ -491,7 +438,7 @@ class WorldStateAgent(
 
         return data
 
-    def _parse_character_sheet(self, response):
+    def _parse_character_sheet(self, response) -> dict[str, str]:
         data = {}
         for line in response.split("\n"):
             if not line.strip():
@@ -509,7 +456,7 @@ class WorldStateAgent(
         name: str,
         text: str = None,
         alteration_instructions: str = None,
-    ):
+    ) -> dict[str, str]:
         """
         Attempts to extract a character sheet from the given text.
         """
@@ -536,27 +483,6 @@ class WorldStateAgent(
         return self._parse_character_sheet(response)
 
     @set_processing
-    async def match_character_names(self, names: list[str]):
-        """
-        Attempts to match character names.
-        """
-
-        _, response = await Prompt.request(
-            "world_state.match-character-names",
-            self.client,
-            "analyze_long",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "names": names,
-            },
-        )
-
-        log.debug("match_character_names", names=names, response=response)
-
-        return response
-
-    @set_processing
     async def update_reinforcements(self, force: bool = False, reset: bool = False):
         """
         Queries due worldstate re-inforcements
@@ -572,23 +498,29 @@ class WorldStateAgent(
 
     @set_processing
     async def update_reinforcement(
-        self, question: str, character: str = None, reset: bool = False
-    ):
+        self, question: str, character: str | Character = None, reset: bool = False
+    ) -> str:
         """
         Queries a single re-inforcement
         """
+        
+        if isinstance(character, Character):
+            character = character.name
+        
         message = None
         idx, reinforcement = await self.scene.world_state.find_reinforcement(
             question, character
         )
 
         if not reinforcement:
+            log.warning(f"Reinforcement not found", question=question, character=character)
             return
 
-        source = f"{reinforcement.question}:{reinforcement.character if reinforcement.character else ''}"
-
+        message = ReinforcementMessage(message="")
+        message.set_source("world_state", "update_reinforcement", question=question, character=character)
+        
         if reset and reinforcement.insert == "sequential":
-            self.scene.pop_history(typ="reinforcement", source=source, all=True)
+            self.scene.pop_history(typ="reinforcement", meta_hash=message.meta_hash, all=True)
 
         if reinforcement.insert == "sequential":
             kind = "analyze_freeform_medium_short"
@@ -623,17 +555,17 @@ class WorldStateAgent(
 
         reinforcement.answer = answer
         reinforcement.due = reinforcement.interval
-
+        
         # remove any recent previous reinforcement message with same question
         # to avoid overloading the near history with reinforcement messages
         if not reset:
             self.scene.pop_history(
-                typ="reinforcement", source=source, max_iterations=10
+                typ="reinforcement", meta_hash=message.meta_hash, max_iterations=10
             )
 
         if reinforcement.insert == "sequential":
             # insert the reinforcement message at the current position
-            message = ReinforcementMessage(message=answer, source=source)
+            message.message = answer
             log.debug("update_reinforcement", message=message, reset=reset)
             self.scene.push_history(message)
 

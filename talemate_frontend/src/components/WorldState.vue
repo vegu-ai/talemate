@@ -380,6 +380,7 @@ export default {
                 this.items = data.data.items;
                 this.location = data.data.location;
                 this.requesting = (data.status==="requested")
+                console.log("WorldState.vue: world_state", data.data);
                 this.reinforce = data.data.reinforce;
 
                 // check if there is any entry in reinforce that doesnt have

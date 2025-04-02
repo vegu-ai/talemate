@@ -206,7 +206,7 @@ export default {
       }
     },
     actionAlwaysVisible(actionName, action) {
-      if (actionName.charAt(0) === '_' || action.container) {
+      if (actionName.charAt(0) === '_' || action.container || !action.can_be_disabled) {
         return true;
       } else {
         return false;

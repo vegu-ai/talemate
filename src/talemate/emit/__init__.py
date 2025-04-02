@@ -10,4 +10,3 @@ from .base import (
     wait_for_input,
     wait_for_input_yesno,
 )
-from .console import Console

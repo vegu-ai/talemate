@@ -5,15 +5,13 @@ import random
 import re
 import traceback
 import uuid
-from typing import Dict, Generator, List, Union
+from typing import Dict, Generator, List
 
 import isodate
-import pydantic
 import structlog
 from blinker import signal
 
 import talemate.agents as agents
-import talemate.automated_action as automated_action
 import talemate.client as client
 import talemate.commands as commands
 import talemate.data_objects as data_objects
@@ -23,11 +21,10 @@ import talemate.save as save
 import talemate.util as util
 import talemate.world_state.templates as world_state_templates
 from talemate.agents.context import active_agent
-from talemate.client.context import ClientContext, ConversationContext
-from talemate.config import Config, SceneConfig, load_config
-from talemate.context import interaction, rerun_context
-from talemate.emit import Emission, Emitter, emit, wait_for_input
-from talemate.emit.signals import ConfigSaved, ImageGenerated, handlers
+from talemate.config import load_config
+from talemate.context import interaction
+from talemate.emit import Emitter, emit, wait_for_input
+from talemate.emit.signals import handlers
 from talemate.exceptions import (
     ExitScene,
     LLMAccuracyError,
@@ -43,18 +40,20 @@ from talemate.scene_assets import SceneAssets
 from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
-    NarratorMessage,
     ReinforcementMessage,
     SceneMessage,
     TimePassageMessage,
     ContextInvestigationMessage,
     MESSAGES as MESSAGE_TYPES,
 )
-from talemate.util import colored_text, count_tokens, extract_metadata, wrap_text
+from talemate.util import count_tokens
 from talemate.util.prompt import condensed
 from talemate.world_state import WorldState
 from talemate.world_state.manager import WorldStateManager
-
+from talemate.game.engine.nodes.core import GraphState
+from talemate.game.engine.nodes.layout import load_graph
+from talemate.scene.intent import SceneIntent
+        
 __all__ = [
     "Character",
     "Actor",
@@ -72,15 +71,6 @@ async_signals.register("game_loop")
 async_signals.register("game_loop_actor_iter")
 async_signals.register("game_loop_new_message")
 async_signals.register("player_turn_start")
-
-
-class ActedAsCharacter(Exception):
-    """
-    Raised when the user acts as another character
-    than the main player character
-    """
-
-    pass
 
 
 class Character:
@@ -166,24 +156,14 @@ class Character:
 
         return random.choice(self.example_dialogue)
 
+    def __repr__(self):
+        return f"Character: {self.name}"
+
     def set_color(self, color: str = None):
         # if no color provided, chose a random color
 
         if color is None:
-            color = random.choice(
-                [
-                    "#F08080",
-                    "#FFD700",
-                    "#90EE90",
-                    "#ADD8E6",
-                    "#DDA0DD",
-                    "#FFB6C1",
-                    "#FAFAD2",
-                    "#D3D3D3",
-                    "#B0E0E6",
-                    "#FFDEAD",
-                ]
-            )
+            color = util.random_color()
         self.color = color
 
     def set_cover_image(self, asset_id: str, initial_only: bool = False):
@@ -271,7 +251,8 @@ class Character:
             if isinstance(v, str):
                 self.base_attributes[k] = v.replace(f"{orig_name}", self.name)
         for i, v in list(self.details.items()):
-            self.details[i] = v.replace(f"{orig_name}", self.name)
+            if isinstance(v, str):
+                self.details[i] = v.replace(f"{orig_name}", self.name)
         self.memory_dirty = True
 
     def introduce_main_character(self, character):
@@ -563,7 +544,6 @@ class Actor:
         self.character = character
         self.agent = agent
         self.scene = None
-        self.script = []
 
         if agent:
             agent.character = character
@@ -575,199 +555,9 @@ class Actor:
     def history(self):
         return self.scene.history
 
-    async def talk(self, instruction: str = None):
-        """
-        Set the message to be sent to the AI
-        """
-
-        if self.script:
-            return CharacterMessage(self.script.pop(0))
-
-        self.agent.character = self.character
-
-        conversation_context = ConversationContext(
-            talking_character=self.character.name,
-            other_characters=[
-                actor.character.name for actor in self.scene.actors if actor != self
-            ],
-        )
-
-        with ClientContext(conversation=conversation_context):
-            messages = await self.agent.converse(self, instruction=instruction)
-
-        return messages
-
-    async def generate_from_choice(self, choice:str, process:bool=True, character:Character=None, immediate:bool=False) -> CharacterMessage:
-        character = self.character if not character else character
-        
-        if not character:
-            raise TalemateError("Character not found during generate_from_choice")
-        
-        actor = character.actor
-        conversation = self.scene.get_helper("conversation").agent
-        director = self.scene.get_helper("director").agent
-        narrator = self.scene.get_helper("narrator").agent
-        editor = self.scene.get_helper("editor").agent
-        
-        # sensory checks
-        sensory_checks = ["look", "listen", "smell", "taste", "touch", "feel"]
-        
-        sensory_action = {
-            "look": "see",
-            "inspect": "see",
-            "examine": "see",
-            "observe": "see",
-            "watch": "see",
-            "view": "see",
-            "see": "see",
-            "listen": "hear",
-            "smell": "smell",
-            "taste": "taste",
-            "touch": "feel",
-            "feel": "feel",
-        }
-        
-        if choice.lower().startswith(tuple(sensory_checks)):
-            
-            # extract the sensory type
-            sensory_type = choice.split(" ", 1)[0].lower()
-            
-            sensory_suffix = sensory_action.get(sensory_type, "experience")
-            
-            log.debug("generate_from_choice", choice=choice, sensory_checks=True)
-            # sensory checks should trigger a narrator query instead of conversation
-            await narrator.action_to_narration(
-                "narrate_query",
-                emit_message=True,
-                query=f"{character.name} wants to \"{choice}\" - what does {character.name} {sensory_suffix} (your answer must be descriptive and detailed)?",
-            )
-            return
-        
-        messages = await conversation.converse(actor, only_generate=True, instruction=choice)
-        
-        message = messages[0]
-        message = await editor.cleanup_character_message(message.strip(), character)
-        character_message = CharacterMessage(
-            message, source="player" if isinstance(actor, Player) else "ai", from_choice=choice
-        )
-        
-        if not process:
-            return character_message
-        
-        interaction_state = interaction.get()
-        
-        if immediate or director.generate_choices_never_auto_progress:
-            self.scene.push_history(character_message)
-            if not character.is_player:
-                self.scene.process_npc_dialogue(character.actor, [character_message])
-            else:
-                emit("character", character_message, character=character)
-        else:
-            interaction_state.from_choice = choice
-            interaction_state.input = character_message.without_name
-            if not character.is_player:
-                interaction_state.act_as = character.name
-            
-        return character_message
-
-
-
 class Player(Actor):
     muted = 0
     ai_controlled = 0
-
-    async def talk(self, message: Union[str, None] = None):
-        """
-        Set the message to be sent to the AI
-        """
-
-        if self.muted > 0:
-            self.muted -= 1
-            return
-
-        if self.ai_controlled > 0:
-            self.ai_controlled -= 1
-
-            if not self.agent:
-                self.agent = self.scene.get_helper("conversation").agent
-
-            return await super().talk()
-
-        act_as = None
-
-        if not message:
-            # Display scene history length before the player character name
-            history_length = self.scene.history_length()
-            name = colored_text(self.character.name + ": ", self.character.color)
-            input = await wait_for_input(
-                f"[{history_length}] {name}",
-                character=self.character,
-                data={"reason": "talk"},
-                return_struct=True,
-            )
-            message = input["message"]
-            act_as = input["interaction"].act_as
-
-        if not message:
-            return
-
-        if message.startswith("@"):
-            character_message = await self.generate_from_choice(
-                message[1:], process=False, character=None if not act_as else self.scene.get_character(act_as)
-            )
-            
-            if not character_message:
-                return
-            
-            self.message = character_message.without_name
-            self.scene.push_history(character_message)
-            
-            if act_as:
-                character = self.scene.get_character(act_as)
-                
-                self.scene.process_npc_dialogue(character.actor, [character_message])
-                raise ActedAsCharacter()
-            else:
-                emit("character", character_message, character=self.character)
-            message = self.message
-
-        elif not commands.Manager.is_command(message):
-            editor = self.scene.get_helper("editor").agent
-
-            message = await editor.cleanup_user_input(message)
-
-            if act_as == "$narrator":
-                # acting as the narrator
-                message = NarratorMessage(message, source="player")
-                self.scene.push_history(message)
-                self.scene.narrator_message(message)
-                raise ActedAsCharacter()
-            elif act_as:
-                # acting as another character
-                character = self.scene.get_character(act_as)
-                if not character:
-                    raise TalemateError(f"Character {act_as} not found")
-                character_message = CharacterMessage(f"{character.name}: {message}")
-                self.scene.push_history(character_message)
-                self.scene.process_npc_dialogue(character.actor, [character_message])
-                raise ActedAsCharacter()
-            else:
-                # acting as the main player character
-                self.message = message
-                
-                extra = {}
-                
-                if input.get("from_choice"):
-                    extra["from_choice"] = input["from_choice"]
-                
-                self.scene.push_history(
-                    CharacterMessage(
-                        f"{self.character.name}: {message}", source="player", **extra
-                    )
-                )
-                emit("character", self.history[-1], character=self.character)
-
-        return message
 
 class Scene(Emitter):
     """
@@ -798,9 +588,6 @@ class Scene(Emitter):
         self.intro = ""
         self.outline = ""
         self.main_character = None
-        self.static_tokens = 0
-        self.max_tokens = 2048
-        self.next_actor = None
         self.title = ""
         self.writing_style_template = None
 
@@ -809,6 +596,8 @@ class Scene(Emitter):
 
         self.name = ""
         self.filename = ""
+        self._nodes_filename = ""
+        self._creative_nodes_filename = ""
         self.memory_id = str(uuid.uuid4())[:10]
         self.saved_memory_session_id = None
         self.memory_session_id = str(uuid.uuid4())[:10]
@@ -829,14 +618,14 @@ class Scene(Emitter):
         self.world_state = WorldState()
         self.game_state = GameState()
         self.agent_state = {}
+        self.intent_state = SceneIntent()
         self.ts = "PT0S"
         self.active = False
         self.Actor = Actor
         self.Player = Player
         self.Character = Character
-
-        # TODO: deprecate
-        self.automated_actions = {}
+        
+        self.narrator_character_object = Character(name="__narrator__")
 
         self.active_pins = []
         # Add an attribute to store the most recent AI Actor
@@ -874,6 +663,12 @@ class Scene(Emitter):
             yield actor.character
 
     @property
+    def npcs(self):
+        for actor in self.actors:
+            if not actor.character.is_player:
+                yield actor.character
+
+    @property
     def character_names(self):
         return [character.name for character in self.characters]
 
@@ -888,14 +683,6 @@ class Scene(Emitter):
     @property
     def log(self):
         return log
-
-    @property
-    def scene_config(self):
-        return SceneConfig(
-            automated_actions={
-                action.uid: action.enabled for action in self.automated_actions.values()
-            }
-        ).model_dump()
 
     @property
     def project_name(self) -> str:
@@ -925,7 +712,7 @@ class Scene(Emitter):
         return len(self.history)
 
     @property
-    def prev_actor(self):
+    def prev_actor(self) -> str:
         # will find the first CharacterMessage in history going from the end
         # and return the character name attached to it to determine the actor
         # that most recently spoke
@@ -956,7 +743,11 @@ class Scene(Emitter):
     @property
     def template_dir(self):
         return os.path.join(self.save_dir, "templates")
-
+    
+    @property
+    def nodes_dir(self):
+        return os.path.join(self.save_dir, "nodes")
+        
     @property
     def auto_save(self):
         return self.config.get("game", {}).get("general", {}).get("auto_save", True)
@@ -984,7 +775,34 @@ class Scene(Emitter):
             return self._world_state_templates.find_template(group_uid, template_uid)
         except ValueError:
             return None
+    
+    @property
+    def max_backscroll(self):
+        return self.config.get("game", {}).get("general", {}).get("max_backscroll", 512)    
+
+    @property
+    def nodes_filename(self):
+        return self._nodes_filename or "scene-loop.json"
+
+    @nodes_filename.setter
+    def nodes_filename(self, value: str):
+        self._nodes_filename = value or ""
         
+    @property
+    def nodes_filepath(self) -> str:
+        return os.path.join(self.nodes_dir, self.nodes_filename)
+
+    @property
+    def creative_nodes_filename(self):
+        return self._creative_nodes_filename or "creative-loop.json"
+    
+    @creative_nodes_filename.setter
+    def creative_nodes_filename(self, value: str):
+        self._creative_nodes_filename = value or ""
+    
+    @property
+    def creative_nodes_filepath(self) -> str:
+        return os.path.join(self.nodes_dir, self.creative_nodes_filename)
 
     def set_description(self, description: str):
         self.description = description
@@ -1019,22 +837,6 @@ class Scene(Emitter):
     def on_config_saved(self, event):
         self.config = event.data
         self.emit_status()
-
-    def apply_scene_config(self, scene_config: dict):
-        scene_config = SceneConfig(**scene_config)
-
-        for action, enabled in scene_config.automated_actions.items():
-            self.toggle_automated_action(action, enabled)
-
-    async def call_automated_actions(self):
-        for action in self.automated_actions.values():
-            await action()
-
-    def toggle_automated_action(self, action_uid: str, enabled: bool):
-        for action in self.automated_actions.values():
-            if action.uid == action_uid:
-                action.enabled = enabled
-                return
 
     def recent_history(self, max_tokens: int = 2048):
         scene = self
@@ -1108,6 +910,7 @@ class Scene(Emitter):
         all: bool = False,
         max_iterations: int = None,
         reverse: bool = False,
+        meta_hash: int = None,
     ):
         """
         Removes the last message from the history that matches the given typ and source
@@ -1122,8 +925,10 @@ class Scene(Emitter):
         to_remove = []
 
         for idx in iter_range:
+            
             if self.history[idx].typ == typ and (
-                self.history[idx].source == source or source is None
+                (self.history[idx].source == source or source is None) and
+                (self.history[idx].meta_hash == meta_hash or meta_hash is None)
             ):
                 to_remove.append(self.history[idx])
                 if not all:
@@ -1135,18 +940,28 @@ class Scene(Emitter):
         for message in to_remove:
             self.history.remove(message)
 
-    def find_message(self, typ: str, source: str, max_iterations: int = 100):
+    def find_message(self, typ: str, max_iterations: int = 100, **filters):
         """
         Finds the last message in the history that matches the given typ and source
         """
         iterations = 0
         for idx in range(len(self.history) - 1, -1, -1):
-            if self.history[idx].typ == typ and self.history[idx].source == source:
-                return self.history[idx]
-
+            message: SceneMessage = self.history[idx]
+            
             iterations += 1
             if iterations >= max_iterations:
                 return None
+            
+            if message.typ != typ:
+                continue
+            
+            for filter_name, filter_value in filters.items():
+                if getattr(message, filter_name, None) != filter_value:
+                    continue
+            
+            return self.history[idx]
+
+
 
     def message_index(self, message_id: int) -> int:
         """
@@ -1174,7 +989,14 @@ class Scene(Emitter):
                 if self.history[idx].source == "player":
                     return self.history[idx]
                 
-    def last_message_of_type(self, typ: str | list[str], source: str = None, max_iterations: int = None) -> SceneMessage | None:
+    def last_message_of_type(
+        self, 
+        typ: str | list[str], 
+        source: str = None,
+        max_iterations: int = None, 
+        stop_on_time_passage: bool = False,
+        **filters
+    ) -> SceneMessage | None:
         """
         Returns the last message of the given type and source
         
@@ -1182,6 +1004,10 @@ class Scene(Emitter):
         - typ: str | list[str] - the type of message to find
         - source: str - the source of the message
         - max_iterations: int - the maximum number of iterations to search for the message
+        - stop_on_time_passage: bool - if True, the search will stop when a TimePassageMessage is found
+        
+        Keyword Arguments:
+        Any additional keyword arguments will be used to filter the messages against their attributes
         """
         
         if not isinstance(typ, list):
@@ -1193,12 +1019,26 @@ class Scene(Emitter):
             if max_iterations is not None and num_iterations >= max_iterations:
                 return None
             
+            message = self.history[idx]
+            
+            if isinstance(message, TimePassageMessage) and stop_on_time_passage:
+                return None
+            
             num_iterations += 1
             
-            if self.history[idx].typ in typ and (
-                self.history[idx].source == source or not source
-            ):
-                return self.history[idx]
+            if message.typ not in typ or (source and message.source != source):
+                continue
+            
+            valid = True
+            
+            for filter_name, filter_value in filters.items():
+                message_value = getattr(message, filter_name, None)
+                if message_value != filter_value:
+                    valid = False
+                    break
+                
+            if valid:
+                return message
 
     def collect_messages(
         self, 
@@ -1396,7 +1236,10 @@ class Scene(Emitter):
 
         if not character_name:
             return
-
+        
+        if character_name == "__narrator__":
+            return self.narrator_character_object
+        
         if character_name in self.inactive_characters:
             return self.inactive_characters[character_name]
 
@@ -1460,15 +1303,6 @@ class Scene(Emitter):
         for actor in self.actors:
             yield actor.character
 
-    def process_npc_dialogue(self, actor: Actor, message: str):
-        self.saved = False
-
-        # Store the most recent AI Actor
-        self.most_recent_ai_actor = actor
-
-        for item in message:
-            emit("character", item, character=actor.character)
-
     def set_description(self, description: str):
         """
         Sets the description of the scene
@@ -1529,37 +1363,6 @@ class Scene(Emitter):
 
         return count
 
-    def count_character_messages(self, character: Character) -> int:
-        return self.count_messages(message_type="character", source=character.name)
-
-    async def summarized_dialogue_history(
-        self,
-        budget: int = 1024,
-        min_dialogue: int = 50,
-        keep_director: bool = False,
-        add_archieved_history: bool = False,
-    ):
-        # Will first run context_history and then use the summarizer agent
-        # to summarize the history and return the summary
-
-        history = self.context_history(
-            budget=budget,
-            min_dialogue=min_dialogue,
-            keep_director=keep_director,
-            sections=False,
-            add_archieved_history=add_archieved_history,
-        )
-
-        summarizer = self.get_helper("summarizer")
-
-        if not summarizer:
-            return ""
-
-        summary = await summarizer.agent.summarize("\n".join(history))
-
-        return summary
-
-
     def context_history(
         self, budget: int = 8192, **kwargs
     ):
@@ -1571,11 +1374,12 @@ class Scene(Emitter):
         
         keep_director = kwargs.get("keep_director", False)
         keep_context_investigation = kwargs.get("keep_context_investigation", True)
+        show_hidden = kwargs.get("show_hidden", False)
 
         conversation_format = self.conversation_format
         actor_direction_mode = self.get_helper("director").agent.actor_direction_mode
         layered_history_enabled = self.get_helper("summarizer").agent.layered_history_enabled
-        include_reinfocements = kwargs.get("include_reinfocements", True)
+        include_reinforcements = kwargs.get("include_reinforcements", True)
         assured_dialogue_num = kwargs.get("assured_dialogue_num", 5)
         
         chapter_labels = kwargs.get("chapter_labels", False)
@@ -1716,10 +1520,10 @@ class Scene(Emitter):
             if i < summarized_to and dialogue_messages_collected >= assured_dialogue_num:
                 break
 
-            if message.hidden:
+            if message.hidden and not show_hidden:
                 continue
             
-            if isinstance(message, ReinforcementMessage) and not include_reinfocements:
+            if isinstance(message, ReinforcementMessage) and not include_reinforcements:
                 continue
 
             elif isinstance(message, DirectorMessage):
@@ -1731,7 +1535,7 @@ class Scene(Emitter):
                     # TODO: we may want to include these in the future
                     continue
 
-                elif isinstance(keep_director, str) and message.source != keep_director:
+                elif isinstance(keep_director, str) and message.character_name != keep_director:
                     continue
             
             elif isinstance(message, ContextInvestigationMessage) and not keep_context_investigation:
@@ -1750,7 +1554,7 @@ class Scene(Emitter):
                 dialogue_messages_collected += 1
                     
             
-        if count_tokens(parts_context + parts_dialogue) < 1024:
+        if count_tokens(parts_context) < 128:
             intro = self.get_intro()
             if intro:
                 parts_context.insert(0, intro)
@@ -1761,214 +1565,6 @@ class Scene(Emitter):
             active_agent_ctx.state["chapter_numbers"] = chapter_numbers
 
         return list(map(str, parts_context)) + list(map(str, parts_dialogue))
-
-    async def rerun(self):
-        """
-        Rerun the most recent AI response, remove their previous message from the history,
-        and call talk() for the most recent AI Character.
-        """
-        # Remove AI's last response and player's last message from the history
-        idx = -1
-        try:
-            message = self.history[idx]
-        except IndexError:
-            return
-
-        # while message type is ReinforcementMessage, keep going back in history
-        # until we find a message that is not a ReinforcementMessage
-        #
-        # we need to pop the ReinforcementMessage from the history because
-        # previous messages may have contributed to the answer that the AI gave
-        # for the reinforcement message
-
-        popped_reinforcement_messages = []
-
-        while isinstance(message, (ReinforcementMessage,)):
-            popped_reinforcement_messages.append(self.history.pop())
-            message = self.history[idx]
-
-        log.debug(f"Rerunning message: {message} [{message.id}]")
-
-        if message.source == "player" and not message.from_choice:
-            log.warning("Cannot rerun player's message", message=message)
-            return
-
-        current_rerun_context = rerun_context.get()
-        if current_rerun_context:
-            current_rerun_context.message = message.message
-
-        if isinstance(message, CharacterMessage):
-            self.history.pop()
-            await self._rerun_character_message(message)
-        elif isinstance(message, NarratorMessage) and message.source != "player":
-            self.history.pop()
-            await self._rerun_narrator_message(message)
-        elif isinstance(message, DirectorMessage):
-            self.history.pop()
-            await self._rerun_director_message(message)
-        elif isinstance(message, ContextInvestigationMessage):
-            self.history.pop()
-            await self._rerun_context_investigation_message(message)
-        else:
-            return
-
-        for message in popped_reinforcement_messages:
-            await self._rerun_reinforcement_message(message)
-
-    async def _rerun_narrator_message(self, message):
-        emit("remove_message", "", id=message.id)
-        source, arg = (
-            message.source.split(":", 1)
-            if message.source and ":" in message.source
-            else (message.source, None)
-        )
-
-        log.debug(f"Rerunning narrator message: {source} - {arg} [{message.id}]")
-
-        narrator = self.get_helper("narrator")
-        if source.startswith("progress_story"):
-            new_message = await narrator.agent.progress_story(arg)
-        elif source == "narrate_scene":
-            new_message = await narrator.agent.narrate_scene()
-        elif source == "narrate_character" and arg:
-            character = self.get_character(arg)
-            new_message = await narrator.agent.narrate_character(character)
-        elif source == "narrate_query":
-            new_message = await narrator.agent.narrate_query(arg)
-        elif source == "narrate_dialogue":
-            character = self.get_character(arg)
-            new_message = await narrator.agent.narrate_after_dialogue(character)
-        elif source == "narrate_character_entry":
-            character = self.get_character(arg)
-            new_message = await narrator.agent.narrate_character_entry(character)
-        elif source == "narrate_character_exit":
-            character = self.get_character(arg)
-            new_message = await narrator.agent.narrate_character_exit(character)
-        elif source == "__director__":
-            director = self.get_helper("director").agent
-            await director.direct_scene(None, None)
-            return
-        elif source == "paraphrase":
-            new_message = await narrator.agent.paraphrase(arg)
-        else:
-            fn = getattr(narrator.agent, source, None)
-            if not fn:
-                return
-            args = arg.split(";") if arg else []
-            new_message = await fn(narrator.agent, *args)
-
-        save_source = f"{source}:{arg}" if arg else source
-
-        new_message = NarratorMessage(new_message, source=save_source)
-        self.push_history(new_message)
-        emit("narrator", new_message)
-
-        return new_message
-
-    async def _rerun_director_message(self, message):
-        emit("remove_message", "", id=message.id)
-
-        source = message.source
-
-        if not source:
-            character = list(self.get_npc_characters())[0]
-        else:
-            character = self.get_character(source)
-
-        if not character:
-            log.error("Could not find character for director message")
-            return
-
-        log.debug(f"Rerunning director message: {character.name} {message.id}")
-
-        director = self.get_helper("director")
-
-        response = await director.agent.direct_scene(character)
-        if not response:
-            log.info("Director returned no response")
-            return
-
-        if response is True:
-            log.info("Director returned True")
-            return
-
-        new_message = DirectorMessage(response, source=source)
-        self.push_history(new_message)
-        emit("director", new_message, character=character)
-
-    async def _rerun_character_message(self, message):
-        character_name = message.split(":")[0]
-
-        character = self.get_character(character_name)
-
-        if character.is_player:
-            
-            if message.from_choice:
-                log.info(f"Rerunning player's generated message: {message} [{message.id}]")
-                emit("remove_message", "", id=message.id)
-                await character.actor.generate_from_choice(message.from_choice)
-                return
-                    
-            emit("system", "Cannot rerun player's message")
-            return
-
-        emit("remove_message", "", id=message.id)
-
-        # Call talk() for the most recent AI Actor
-        actor = character.actor
-        
-        new_messages = await actor.talk(instruction=message.from_choice)
-
-        # Print the new messages
-        for item in new_messages:
-            emit("character", item, character=character)
-
-        await asyncio.sleep(0)
-
-        return new_messages
-
-    async def _rerun_reinforcement_message(self, message):
-        log.info(f"Rerunning reinforcement message: {message} [{message.id}]")
-        world_state_agent = self.get_helper("world_state").agent
-
-        question, character_name = message.source.split(":")
-
-        await world_state_agent.update_reinforcement(question, character_name)
-
-    async def _rerun_context_investigation_message(self, message):
-        emit("remove_message", "", id=message.id)
-        
-        agent_name:str = message.source_agent
-        function_name:str = message.source_function
-        arguments:dict = message.source_arguments.copy()
-        
-        log.info(f"Rerunning context investigation message: {message} [{message.id}]", agent=agent_name, function=function_name, arguments=arguments)
-        
-        if not agent_name or not function_name:
-            log.error(f"Could not find agent or function for context investigation message", source=message.source)
-            return
-        
-        agent = self.get_helper(agent_name)
-        
-        if not agent:
-            log.error(f"Could not find agent {agent_name} for context investigation message", source=message.source)
-            return
-        
-        fn = getattr(agent.agent, function_name, None)
-        
-        if not fn:
-            log.error(f"Could not find function {function_name} for agent {agent_name} for context investigation message", source=message.source)
-            return
-        
-        # if character is in the arguments, find the character object
-        if arguments.get("character"):
-            arguments["character"] = self.get_character(arguments["character"])
-        
-        message.message = await fn(**arguments)
-        
-        self.push_history(message)
-        emit("context_investigation", message)
-        
 
     def delete_message(self, message_id: int):
         """
@@ -2004,12 +1600,13 @@ class Scene(Emitter):
                 "path": self.full_path,
                 "filename": self.filename,
                 "prject_name": self.project_name,
+                "nodes_filename": self.nodes_filename,
+                "creative_nodes_filename": self.creative_nodes_filename,
                 "save_files": self.save_files,
                 "restore_from": self.restore_from,
                 "restored": restored,
                 "title": self.title or self.name,
                 "environment": self.environment,
-                "scene_config": self.scene_config,
                 "player_character_name": (
                     player_character.name if player_character else None
                 ),
@@ -2218,13 +1815,51 @@ class Scene(Emitter):
 
         _active_pins = await self.world_state_manager.get_pins(active=True)
         self.active_pins = list(_active_pins.pins.values())
+        
+    async def ensure_memory_db(self):
+        memory = self.get_helper("memory").agent
+        if not memory.db:
+            await memory.set_db()
+
+    async def emit_history(self):
+        emit("clear_screen", "")        
+        # this is mostly to support character cards
+        # we introduce the main character to all such characters, replacing
+        # the {{ user }} placeholder
+        for npc in self.npcs:
+            if npc.introduce_main_character:
+                npc.introduce_main_character(self.main_character.character)
+        
+        # emit intro
+        intro:str = self.get_intro()
+        self.narrator_message(intro)
+        
+        
+        # cycle npcs again and if they have a greeting_text
+        # emit it
+        for npc in self.npcs:
+            
+            if not npc.greeting_text:
+                continue
+            
+            similar_to_intro, _, _ = util.similarity_score(npc.greeting_text, [intro])
+            
+            if similar_to_intro:
+                continue
+            emit("character", f"{npc.name}: {npc.greeting_text}", character=npc)
+        
+        # emit history
+        for message in self.history[-self.max_backscroll:]:
+            if isinstance(message, CharacterMessage):
+                character = self.get_character(message.character_name)
+            else:
+                character = None
+            emit(message.typ, message, character=character)
 
     async def start(self):
         """
         Start the scene
         """
-        automated_action.initialize_for_scene(self)
-
         await self.ensure_memory_db()
         await self.load_active_pins()
 
@@ -2234,9 +1869,15 @@ class Scene(Emitter):
 
         while True:
             try:
+                log.warning(f"Starting scene loop: {self.environment}")
+                
+                self.world_state.emit()
+                
                 if self.environment == "creative":
+                    self.creative_node_graph, _ = load_graph(self.creative_nodes_filename, [self.save_dir])
                     await self._run_creative_loop(init=first_loop)
                 else:
+                    self.node_graph, _ = load_graph(self.nodes_filename, [self.save_dir])
                     await self._run_game_loop(init=first_loop)
             except ExitScene:
                 break
@@ -2249,229 +1890,28 @@ class Scene(Emitter):
 
             await asyncio.sleep(0.01)
 
-    async def ensure_memory_db(self):
-        memory = self.get_helper("memory").agent
-        if not memory.db:
-            await memory.set_db()
-
-    async def emit_history(self):
-        emit("clear_screen", "")
-
-        self.game_state.init(self)
-
+    async def _game_startup(self):
+        self.commands = command = commands.Manager(self)
+        
         await self.signals["scene_init"].send(
             events.SceneStateEvent(scene=self, event_type="scene_init")
         )
-        self.narrator_message(self.get_intro())
-
-        for actor in self.actors:
-            if (
-                not isinstance(actor, Player)
-                and actor.character.introduce_main_character
-            ):
-                actor.character.introduce_main_character(self.main_character.character)
-
-            if (
-                actor.character.greeting_text
-                and actor.character.greeting_text != self.get_intro()
-            ):
-                item = f"{actor.character.name}: {actor.character.greeting_text}"
-                emit("character", item, character=actor.character)
-
-        max_backscroll = (
-            self.config.get("game", {}).get("general", {}).get("max_backscroll", 512)
-        )
         
-        # history is not empty, so we are continuing a scene
-        # need to emit current messages
-        for item in self.history[-max_backscroll:]:
-            char_name = item.split(":")[0]
-            try:
-                actor = self.get_character(char_name).actor
-            except AttributeError:
-                # If the character is not an actor, then it is the narrator
-                emit(item.typ, item)
-                continue
-            emit("character", item, character=actor.character)
-            if not actor.character.is_player:
-                self.most_recent_ai_actor = actor
-
-    async def _run_game_loop(self, init: bool = True):
-
-        await self.ensure_memory_db()
-
+        
+    async def _run_game_loop(self, init: bool = True, node_graph = None):        
         if init:
-            emit("clear_screen", "")
-
-            self.game_state.init(self)
-
-            await self.signals["scene_init"].send(
-                events.SceneStateEvent(scene=self, event_type="scene_init")
-            )
-            self.narrator_message(self.get_intro())
-
-            for actor in self.actors:
-                if (
-                    not isinstance(actor, Player)
-                    and actor.character.introduce_main_character
-                ):
-                    actor.character.introduce_main_character(
-                        self.main_character.character
-                    )
-
-                if (
-                    actor.character.greeting_text
-                    and self.get_intro(actor.character.greeting_text) != self.get_intro()
-                ):
-                    item = f"{actor.character.name}: {actor.character.greeting_text}"
-                    emit("character", item, character=actor.character)
-
-        continue_scene = True
-        self.commands = command = commands.Manager(self)
-
-        max_backscroll = (
-            self.config.get("game", {}).get("general", {}).get("max_backscroll", 512)
-        )
-
-        if init and self.history:
-            # history is not empty, so we are continuing a scene
-            # need to emit current messages
-            for item in self.history[-max_backscroll:]:
-                char_name = item.split(":")[0]
-                try:
-                    actor = self.get_character(char_name).actor
-                except AttributeError:
-                    # If the character is not an actor, then it is the narrator
-                    emit(item.typ, item)
-                    continue
-                emit("character", item, character=actor.character)
-                if not actor.character.is_player:
-                    self.most_recent_ai_actor = actor
-            self.world_state.emit()
-        elif init:
-            await self.world_state.request_update(initial_only=True)
-
-        # sort self.actors by actor.character.is_player, making is_player the first element
-        self.actors.sort(key=lambda x: x.character.is_player, reverse=True)
-
-        self.active_actor = None
-        self.next_actor = None
-        signal_game_loop = True
-
-        await self.signals["game_loop_start"].send(
-            events.GameLoopStartEvent(scene=self, event_type="game_loop_start")
-        )
-
-        await self.world_state_manager.apply_all_auto_create_templates()
-
-        # if loop sets this to True, we skip to the player
-        skip_to_player = False
-
-        while continue_scene and self.active:
-            log.debug(
-                "game loop", auto_save=self.auto_save, auto_progress=self.auto_progress
-            )
+            await self._game_startup()
+            await self.emit_history()
+        
+        self.nodegraph_state = state = GraphState()
+        state.data["continue_scene"] = True
+        
+        while state.data["continue_scene"] and self.active:
             try:
-                await self.ensure_memory_db()
-                await self.load_active_pins()
-                game_loop = events.GameLoopEvent(
-                    scene=self, event_type="game_loop", had_passive_narration=False
-                )
-                if signal_game_loop:
-                    await self.signals["game_loop"].send(game_loop)
-
-                turn_start = signal_game_loop
-                signal_game_loop = True
-
-                for actor in self.actors:
-
-                    if skip_to_player and not isinstance(actor, Player):
-                        continue
-
-                    skip_to_player = False
-
-                    if not actor.character:
-                        self.log.warning("Actor has no character", actor=actor)
-                        continue
-
-                    if actor.character.memory_dirty:
-                        await actor.character.commit_to_memory(
-                            self.get_helper("memory").agent
-                        )
-
-                    if not self.auto_progress and not actor.character.is_player:
-                        # auto progress is disabled, so NPCs don't get automatic turns
-                        continue
-
-                    if (
-                        self.next_actor
-                        and actor.character.name != self.next_actor
-                        and self.auto_progress
-                    ):
-                        self.log.debug(
-                            f"Skipping actor",
-                            actor=actor.character.name,
-                            next_actor=self.next_actor,
-                        )
-                        continue
-
-                    self.active_actor = actor
-
-                    if not actor.character.is_player:
-                        await self.call_automated_actions()
-                    elif turn_start:
-                        await self.signals["player_turn_start"].send(
-                            events.PlayerTurnStartEvent(
-                                scene=self,
-                                event_type="player_turn_start",
-                            )
-                        )
-
-                    try:
-                        message = await actor.talk()
-                    except ActedAsCharacter:
-                        signal_game_loop = False
-                        break
-
-                    if not message:
-                        continue
-
-                    if isinstance(actor, Player) and type(message) != list:
-                        # Don't append message to the history if it's "rerun"
-                        if await command.execute(message):
-                            signal_game_loop = False
-                            break
-                        await self.call_automated_actions()
-
-                        await self.signals["game_loop_actor_iter"].send(
-                            events.GameLoopActorIterEvent(
-                                scene=self,
-                                event_type="game_loop_actor_iter",
-                                actor=actor,
-                                game_loop=game_loop,
-                            )
-                        )
-                        continue
-
-                    self.process_npc_dialogue(actor, message)
-
-                    await self.signals["game_loop_actor_iter"].send(
-                        events.GameLoopActorIterEvent(
-                            scene=self,
-                            event_type="game_loop_actor_iter",
-                            actor=actor,
-                            game_loop=game_loop,
-                        )
-                    )
-
-                if self.auto_save:
-                    await self.save(auto=True)
-
-                self.emit_status()
+                await self.node_graph.execute(state)
             except GenerationCancelled:
-                signal_game_loop = False
-                skip_to_player = True
-                self.next_actor = None
+                state.shared["signal_game_loop"] = False
+                state.shared["skip_to_player"] = True
                 self.cancel_requested = False
                 self.log.warning("Generation cancelled, skipping to player")
             except TalemateInterrupt:
@@ -2492,8 +1932,8 @@ class Scene(Emitter):
                     status="error",
                     message=f"{e.client.name} is disabled and cannot be used.",
                 )
-                signal_game_loop = False
-                skip_to_player = True
+                state.shared["signal_game_loop"] = False
+                state.shared["skip_to_player"] = True
             except Exception as e:
                 self.log.error(
                     "game_loop",
@@ -2503,25 +1943,16 @@ class Scene(Emitter):
                 )
                 emit("system", status="error", message=f"Unhandled Error: {e}")
 
+
     async def _run_creative_loop(self, init: bool = True):
-        emit("status", message="Switched to scene editor", status="info")
-
         await self.emit_history()
-
-        continue_scene = True
-        self.commands = command = commands.Manager(self)
-
-        while continue_scene:
+        
+        self.nodegraph_state = state = GraphState()
+        state.data["continue_scene"] = True
+        
+        while state.data["continue_scene"] and self.active:
             try:
-                message = await wait_for_input("Enter command: ")
-
-                if not message:
-                    continue
-
-                await command.execute(message)
-
-                self.saved = False
-                self.emit_status()
+                await self.creative_node_graph.execute(state)
             except GenerationCancelled:
                 self.cancel_requested = False
                 continue
@@ -2544,6 +1975,8 @@ class Scene(Emitter):
                     traceback=traceback.format_exc(),
                 )
                 emit("system", status="error", message=f"Unhandled Error: {e}")
+
+        return
 
     def set_new_memory_session_id(self):
         self.saved_memory_session_id = self.memory_session_id
@@ -2766,6 +2199,7 @@ class Scene(Emitter):
             "world_state": scene.world_state.model_dump(),
             "game_state": scene.game_state.model_dump(),
             "agent_state": scene.agent_state,
+            "intent_state": scene.intent_state.model_dump(),
             "assets": scene.assets.dict(),
             "memory_id": scene.memory_id,
             "memory_session_id": scene.memory_session_id,
@@ -2776,6 +2210,8 @@ class Scene(Emitter):
             "experimental": scene.experimental,
             "writing_style_template": scene.writing_style_template,
             "restore_from": scene.restore_from,
+            "nodes_filename": scene._nodes_filename,
+            "creative_nodes_filename": scene._creative_nodes_filename,
         }
 
     @property

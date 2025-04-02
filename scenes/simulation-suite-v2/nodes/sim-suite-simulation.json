@@ -1,0 +1,78 @@
+{
+  "title": "Sim Suite Simulation",
+  "id": "cfc5125a-486a-484e-8a74-ac1a7f8a2606",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "sim-suite/simSuiteSimulation",
+  "nodes": {
+    "676bf8aa-ce4d-475f-b5a0-8569b69cd84c": {
+      "title": "Input Socket",
+      "id": "676bf8aa-ce4d-475f-b5a0-8569b69cd84c",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": null,
+        "num": 0
+      },
+      "x": 10,
+      "y": 40,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "b7da573b-ccc7-4222-b7bf-4d308fab8080": {
+      "title": "Sim Suite Process Commands",
+      "id": "b7da573b-ccc7-4222-b7bf-4d308fab8080",
+      "properties": {},
+      "x": 240,
+      "y": 40,
+      "width": 256,
+      "height": 50,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "sim-suite/simSuiteProcessCommands",
+      "base_type": "core/Graph"
+    },
+    "ccaf4fb7-f5e9-4362-b30f-29155ee0f8a4": {
+      "title": "Output Socket",
+      "id": "ccaf4fb7-f5e9-4362-b30f-29155ee0f8a4",
+      "properties": {
+        "output_type": "any",
+        "output_name": "state",
+        "num": 0
+      },
+      "x": 520,
+      "y": 40,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "676bf8aa-ce4d-475f-b5a0-8569b69cd84c.value": [
+      "b7da573b-ccc7-4222-b7bf-4d308fab8080.state"
+    ],
+    "b7da573b-ccc7-4222-b7bf-4d308fab8080.state": [
+      "ccaf4fb7-f5e9-4362-b30f-29155ee0f8a4.value"
+    ]
+  },
+  "groups": [],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "style": null
+}

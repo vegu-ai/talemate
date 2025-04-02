@@ -9,6 +9,7 @@ import asyncio
 import dataclasses
 import fnmatch
 import json
+import yaml
 import os
 import random
 import re
@@ -23,7 +24,7 @@ import structlog
 import talemate.instance as instance
 import talemate.thematic_generators as thematic_generators
 from talemate.config import load_config
-from talemate.context import rerun_context, active_scene
+from talemate.context import regeneration_context, active_scene
 from talemate.emit import emit
 from talemate.exceptions import LLMAccuracyError, RenderPromptError
 from talemate.util import (
@@ -107,7 +108,7 @@ def validate_line(line):
 def clean_response(response):
     # remove invalid lines
     cleaned = "\n".join(
-        [line.strip() for line in response.split("\n") if validate_line(line)]
+        [line.rstrip() for line in response.split("\n") if validate_line(line)]
     )
 
     # find lines containing [end of .*] and remove the match within  the line
@@ -228,6 +229,9 @@ class Prompt:
 
     # prompt text
     prompt: str = None
+    
+    # template text 
+    template: str | None = None
 
     # prompt variables
     vars: dict = dataclasses.field(default_factory=dict)
@@ -240,7 +244,9 @@ class Prompt:
     eval_response: bool = False
     eval_context: dict = dataclasses.field(default_factory=dict)
 
-    json_response: bool = False
+    # Replace json_response with data_response and data_format_type
+    data_response: bool = False
+    data_format_type: str = "json"
 
     client: Any = None
 
@@ -269,6 +275,16 @@ class Prompt:
         )
 
         return prompt
+
+    @classmethod
+    def from_text(cls, text:str, vars: dict = None):
+        return cls(
+            uid="",
+            agent_type="",
+            name="",
+            template=text,
+            vars=vars or {},
+        )
 
     @classmethod
     async def request(
@@ -310,6 +326,7 @@ class Prompt:
                 dir_path, "..", "..", "..", "templates", "prompts", self.agent_type
             ),
             os.path.join(dir_path, "templates", self.agent_type),
+            os.path.join(dir_path, "templates", "common"),
         ]
 
         template_dirs = _prepended_template_dirs + _fixed_template_dirs
@@ -351,7 +368,7 @@ class Prompt:
         ctx = {
             "bot_token": "<|BOT|>",
             "thematic_generator": thematic_generators.ThematicGenerator(),
-            "rerun_context": rerun_context.get(),
+            "regeneration_context": regeneration_context.get(),
             "active_agent": active_agent.get(),
             "agent_context_state": active_agent.get().state if active_agent.get() else {},
         }
@@ -363,6 +380,7 @@ class Prompt:
         env.globals["set_prepared_response_random"] = self.set_prepared_response_random
         env.globals["set_eval_response"] = self.set_eval_response
         env.globals["set_json_response"] = self.set_json_response
+        env.globals["set_data_response"] = self.set_data_response
         env.globals["set_question_eval"] = self.set_question_eval
         env.globals["disable_dedupe"] = self.disable_dedupe
         env.globals["random"] = self.random
@@ -387,6 +405,7 @@ class Prompt:
         env.globals["make_list"] = lambda: JoinableList()
         env.globals["make_dict"] = lambda: {}
         env.globals["join"] = lambda x, y: y.join(x)
+        env.globals["data_format_type"] = lambda: getattr(self.client, "data_format", None) or self.data_format_type
         env.globals["count_tokens"] = lambda x: count_tokens(
             dedupe_string(x, debug=False)
         )
@@ -404,12 +423,17 @@ class Prompt:
         env.filters["condensed"] = condensed
         env.filters["no_chapters"] = no_chapters
         ctx.update(self.vars)
+    
 
         if "decensor" not in ctx:
             ctx["decensor"] = False
 
         # Load the template corresponding to the prompt name
-        template = env.get_template("{}.jinja2".format(self.name))
+        if not self.template:
+            # no template text specified, load from file
+            template = env.get_template("{}.jinja2".format(self.name))
+        else:
+            template = env.from_string(self.template)
 
         sectioning_handler = SECTIONING_HANDLERS.get(self.sectioning_hander)
 
@@ -691,28 +715,78 @@ class Prompt:
             instruction='schema: {"answers": [ {"question": "question?", "answer": "yes", "reasoning": "your reasoning"}, ...]}',
         )
 
-    def set_json_response(
+    def set_data_response(
         self, initial_object: dict, instruction: str = "", cutoff: int = 3
     ):
         """
-        Prepares for a json response
-
+        Prepares for a data response in the client's preferred format (YAML or JSON)
+        
         Args:
-            response (str): The prepared response.
+            initial_object (dict): The data structure to serialize
+            instruction (str): Optional instruction/schema comment
+            cutoff (int): Number of lines to trim from the end
         """
+        # Always use client data format if available
+        data_format_type = getattr(self.client, "data_format", None) or self.data_format_type
+            
+        self.data_format_type = data_format_type
+        self.data_response = True
+        
+        if data_format_type == "yaml":
+            if yaml is None:
+                raise ImportError("PyYAML is required for YAML support. Please install it with 'pip install pyyaml'.")
+                
+            # Serialize to YAML
+            prepared_response = yaml.safe_dump(initial_object, sort_keys=False).split("\n")
+            
+            # For list structures, ensure we stop after the key with a colon
+            if isinstance(initial_object, dict) and any(isinstance(v, list) for v in initial_object.values()):
+                # Find the first key that has a list value and stop there
+                for i, line in enumerate(prepared_response):
+                    if line.strip().endswith(':'):  # Found a key that might have a list
+                        # Look ahead to see if next line has a dash (indicating it's a list)
+                        if i+1 < len(prepared_response) and prepared_response[i+1].strip().startswith('- '):
+                            # Keep only up to the key with colon, drop the list items
+                            prepared_response = prepared_response[:i+1]
+                            break
+            # For nested dictionary structures, keep only the top-level keys
+            elif isinstance(initial_object, dict) and any(isinstance(v, dict) for v in initial_object.values()):
+                # Find keys that have dictionary values
+                for i, line in enumerate(prepared_response):
+                    if line.strip().endswith(':'):  # Found a key that might have a nested dict
+                        # Look ahead to see if next line is indented (indicating nested structure)
+                        if i+1 < len(prepared_response) and prepared_response[i+1].startswith('  '):
+                            # Keep only up to the key with colon, drop the nested content
+                            prepared_response = prepared_response[:i+1]
+                            break
+            elif cutoff > 0:
+                # For other structures, just remove last lines
+                prepared_response = prepared_response[:-cutoff]
+            
+            if instruction:
+                prepared_response.insert(0, f"# {instruction}")
+            
+            cleaned = "\n".join(prepared_response)
+            # Wrap in markdown code block for YAML, but do not close the code block
+            # Add an extra newline to ensure the model's response starts on a new line
+            return self.set_prepared_response(f"```yaml\n{cleaned}")
+        else:
+            # Use existing JSON logic
+            prepared_response = json.dumps(initial_object, indent=2).split("\n")
+            prepared_response = ["".join(prepared_response[:-cutoff])]
+            if instruction:
+                prepared_response.insert(0, f"// {instruction}")
+            cleaned = "\n".join(prepared_response)
+            # remove all duplicate whitespace
+            cleaned = re.sub(r"\s+", " ", cleaned)
+            return self.set_prepared_response(cleaned)
 
-        prepared_response = json.dumps(initial_object, indent=2).split("\n")
-        self.json_response = True
-
-        prepared_response = ["".join(prepared_response[:-cutoff])]
-        if instruction:
-            prepared_response.insert(0, f"// {instruction}")
-
-        cleaned = "\n".join(prepared_response)
-
-        # remove all duplicate whitespace
-        cleaned = re.sub(r"\s+", " ", cleaned)
-        return self.set_prepared_response(cleaned)
+    def set_json_response(self, initial_object: dict, instruction: str = "", cutoff: int = 3):
+        """
+        Prepares for a json response
+        """
+        self.data_format_type = "json"
+        return self.set_data_response(initial_object, instruction=instruction, cutoff=cutoff)
 
     def set_question_eval(
         self, question: str, trigger: str, counter: str, weight: float = 1.0
@@ -731,6 +805,43 @@ class Prompt:
     def random(self, min: int, max: int):
         return random.randint(min, max)
 
+    async def parse_yaml_response(self, response):
+        """
+        Parse a YAML response from the LLM.
+        """
+        if yaml is None:
+            raise ImportError("PyYAML is required for YAML support. Please install it with 'pip install pyyaml'.")
+        
+        # Extract YAML from markdown code blocks
+        if "```yaml" in response and "```" in response.split("```yaml", 1)[1]:
+            yaml_block = response.split("```yaml", 1)[1].split("```", 1)[0]
+        elif "```" in response:
+            # Try any code block as fallback
+            yaml_block = response.split("```", 1)[1].split("```", 1)[0]
+        else:
+            yaml_block = response
+        
+        try:
+            return yaml.safe_load(yaml_block)
+        except Exception as e:
+            log.error("parse_yaml_response", response=response, error=e)
+            raise LLMAccuracyError(
+                f"{self.name} - Error parsing YAML response: {e}",
+                model_name=self.client.model_name if self.client else "unknown",
+            )
+    
+    async def parse_data_response(self, response):
+        """
+        Parse response based on configured data format
+        """
+        # If json_response is True for backward compatibility, default to JSON
+        if self.data_format_type == "json":
+            return await self.parse_json_response(response)
+        elif self.data_format_type == "yaml":
+            return await self.parse_yaml_response(response)
+        else:
+            raise ValueError(f"Unsupported data format: {self.data_format_type}")
+            
     async def parse_json_response(self, response, ai_fix: bool = True):
         # strip comments
         try:
@@ -871,25 +982,32 @@ class Prompt:
 
         response = await client.send_prompt(str(self), kind=kind)
 
-        if not self.json_response:
-            # not awaiting a json response so we dont care about the formatting
+        # Handle prepared response prepending based on response format
+        if not self.data_response:
+            # not awaiting a structured response
             if not response.lower().startswith(self.prepared_response.lower()):
                 pad = " " if self.pad_prepended_response else ""
                 response = self.prepared_response.rstrip() + pad + response.strip()
-
         else:
-            # awaiting json response, if the response does not start with a {
-            # it means its likely a coerced response and we need to prepend the prepared response
-            if not response.lower().startswith("{"):
+            format_type = getattr(self.client, "data_format", None) or self.data_format_type
+            
+            json_start = response.lstrip().startswith("{")
+            yaml_block = response.lstrip().startswith("```yaml")
+            
+            # If response doesn't start with expected format markers, prepend the prepared response
+            if (format_type == "json" and not json_start) or (format_type == "yaml" and not yaml_block):
                 pad = " " if self.pad_prepended_response else ""
-                response = self.prepared_response.rstrip() + pad + response.strip()
-
+                if format_type == "yaml":
+                    response = self.prepared_response + response.rstrip()
+                else:
+                    response = self.prepared_response.rstrip() + pad + response.strip()
+                
         if self.eval_response:
             return await self.evaluate(response)
 
-        if self.json_response:
-            log.debug("json_response", response=response)
-            return response, await self.parse_json_response(response)
+        if self.data_response:
+            log.debug("data_response", format_type=self.data_format_type, response=response)
+            return response, await self.parse_data_response(response)
 
         response = clean_response(response)
 

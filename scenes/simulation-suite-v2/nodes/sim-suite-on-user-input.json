@@ -1,0 +1,810 @@
+{
+  "title": "Sim Suite On User Input",
+  "id": "70af8553-dcbc-49c7-8261-cd8f728a601a",
+  "properties": {
+    "event_name": null
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "sim-suite/event/simSuiteOnUserInput",
+  "nodes": {
+    "f6276302-d59b-46fa-9e6f-e62ef1e4010b": {
+      "title": "Last Message of Type",
+      "id": "f6276302-d59b-46fa-9e6f-e62ef1e4010b",
+      "properties": {
+        "message_type": "character",
+        "max_iterations": 100,
+        "stop_on_time_passage": false,
+        "filters": {
+          "source": "player"
+        }
+      },
+      "x": 42,
+      "y": 103,
+      "width": 315,
+      "height": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/LastMessageOfType",
+      "base_type": "core/Node"
+    },
+    "f506a675-0956-4b91-81ac-27506629293e": {
+      "title": "Switch",
+      "id": "f506a675-0956-4b91-81ac-27506629293e",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 672,
+      "y": 123,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "948f87a9-27f4-4421-833f-fcb1199e1f59": {
+      "title": "SET scene loop.user_message",
+      "id": "948f87a9-27f4-4421-833f-fcb1199e1f59",
+      "properties": {
+        "name": "user_message",
+        "scope": "scene loop"
+      },
+      "x": 1012,
+      "y": 63,
+      "width": 252,
+      "height": 130,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "daa5a837-ee80-4e33-958e-149e8a8352bd": {
+      "title": "Stage 0",
+      "id": "daa5a837-ee80-4e33-958e-149e8a8352bd",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1412,
+      "y": 123,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "8e03f28a-80a2-4ca4-87e0-a49118e18f2a": {
+      "title": "GET scene loop.user_message",
+      "id": "8e03f28a-80a2-4ca4-87e0-a49118e18f2a",
+      "properties": {
+        "name": "user_message",
+        "scope": "scene loop"
+      },
+      "x": 33,
+      "y": 1219,
+      "width": 258,
+      "height": 128,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "c7839f69-89e4-43f8-a796-64646852f0af": {
+      "title": "GET obj.raw",
+      "id": "c7839f69-89e4-43f8-a796-64646852f0af",
+      "properties": {
+        "attribute": "raw"
+      },
+      "x": 383,
+      "y": 1239,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "c7361d6b-1deb-4fb7-a6d2-caf0f0586099": {
+      "title": "String Check",
+      "id": "c7361d6b-1deb-4fb7-a6d2-caf0f0586099",
+      "properties": {
+        "substring": "computer",
+        "mode": "startswith",
+        "case_sensitive": false
+      },
+      "x": 663,
+      "y": 1239,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/StringCheck",
+      "base_type": "core/Node"
+    },
+    "f0801873-5fab-4008-8545-fce20128f721": {
+      "title": "GET game.environment_changed",
+      "id": "f0801873-5fab-4008-8545-fce20128f721",
+      "properties": {
+        "name": "environment_changed",
+        "scope": "game"
+      },
+      "x": 43,
+      "y": 1933,
+      "width": 266,
+      "height": 124,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "df264040-db66-465b-941f-41df6d7bae00": {
+      "title": "As Bool",
+      "id": "df264040-db66-465b-941f-41df6d7bae00",
+      "properties": {
+        "default": false
+      },
+      "x": 373,
+      "y": 1953,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "95e5a9f7-1a50-47e8-a792-34f78117b5d5": {
+      "title": "Compare",
+      "id": "95e5a9f7-1a50-47e8-a792-34f78117b5d5",
+      "properties": {
+        "operation": "equals",
+        "tolerance": 0.0001,
+        "a": 0,
+        "b": "1"
+      },
+      "x": 383,
+      "y": 1603,
+      "width": 210,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Compare",
+      "base_type": "core/Node"
+    },
+    "d3b95cd2-d2c8-432e-9014-5469bc6d08f8": {
+      "title": "Length",
+      "id": "d3b95cd2-d2c8-432e-9014-5469bc6d08f8",
+      "properties": {},
+      "x": 213,
+      "y": 1603,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Length",
+      "base_type": "core/Node"
+    },
+    "79890305-68e0-4869-88f3-e23e5929eedd": {
+      "title": "Get Scene State",
+      "id": "79890305-68e0-4869-88f3-e23e5929eedd",
+      "properties": {},
+      "x": 43,
+      "y": 1603,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetSceneState",
+      "base_type": "core/Node"
+    },
+    "aeac5048-b3c0-4ab6-8b28-fc534c552dad": {
+      "title": "Invert",
+      "id": "aeac5048-b3c0-4ab6-8b28-fc534c552dad",
+      "properties": {},
+      "x": 614,
+      "y": 1949,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Invert",
+      "base_type": "core/Node"
+    },
+    "da74b020-feb1-4044-a3a5-a8059b999fe9": {
+      "title": "AND Router",
+      "id": "da74b020-feb1-4044-a3a5-a8059b999fe9",
+      "properties": {},
+      "x": 814,
+      "y": 1739,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
+    },
+    "4f4ff9e4-5fbd-4f5c-bc36-a47949bbf168": {
+      "title": "Before simstart",
+      "id": "4f4ff9e4-5fbd-4f5c-bc36-a47949bbf168",
+      "properties": {},
+      "x": 1024,
+      "y": 1539,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "2ed07dd2-5fa5-4546-9bf3-c4a2cb9c87f5": {
+      "title": "Stop",
+      "id": "2ed07dd2-5fa5-4546-9bf3-c4a2cb9c87f5",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 1012,
+      "y": 263,
+      "width": 261,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/Stop",
+      "base_type": "core/Node"
+    },
+    "129f4c39-7bcb-4dd6-90b4-fc78bbc2712c": {
+      "title": "GET obj.id",
+      "id": "129f4c39-7bcb-4dd6-90b4-fc78bbc2712c",
+      "properties": {
+        "attribute": "id"
+      },
+      "x": 351,
+      "y": 515,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "57bd1b09-d774-4e7d-9a36-5fbd1a7d537c": {
+      "title": "SET scene loop.user_message_id",
+      "id": "57bd1b09-d774-4e7d-9a36-5fbd1a7d537c",
+      "properties": {
+        "name": "user_message_id",
+        "scope": "scene loop"
+      },
+      "x": 600,
+      "y": 500,
+      "width": 261,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "f03946cf-ce25-442b-b140-971608b956f1": {
+      "title": "Stage 1",
+      "id": "f03946cf-ce25-442b-b140-971608b956f1",
+      "properties": {
+        "stage": 1
+      },
+      "x": 2232,
+      "y": 787,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "b9b72a5a-5548-40d5-b2a0-34eef6d3671d": {
+      "title": "Switch",
+      "id": "b9b72a5a-5548-40d5-b2a0-34eef6d3671d",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 1902,
+      "y": 777,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "cf15388b-20f1-49e5-9892-d4803fc7fa2f": {
+      "title": "GET game.last_processed_call",
+      "id": "cf15388b-20f1-49e5-9892-d4803fc7fa2f",
+      "properties": {
+        "name": "last_processed_call",
+        "scope": "game"
+      },
+      "x": 580,
+      "y": 740,
+      "width": 235,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "b7d2179a-b8e5-41f6-b480-7d52dc166af5": {
+      "title": "-1",
+      "id": "b7d2179a-b8e5-41f6-b480-7d52dc166af5",
+      "properties": {
+        "value": -1,
+        "number_type": "int"
+      },
+      "x": 470,
+      "y": 790,
+      "width": 210,
+      "height": 82,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/number/Make",
+      "base_type": "core/Node"
+    },
+    "b2f85abb-6b1a-401c-94ef-a1272a40ef2c": {
+      "title": "GET obj.hidden",
+      "id": "b2f85abb-6b1a-401c-94ef-a1272a40ef2c",
+      "properties": {
+        "attribute": "hidden"
+      },
+      "x": 352,
+      "y": 981,
+      "width": 221,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "f26741ba-7b0d-421c-a4de-050e9d8771ec": {
+      "title": "Compare",
+      "id": "f26741ba-7b0d-421c-a4de-050e9d8771ec",
+      "properties": {
+        "operation": "greater_than",
+        "tolerance": 0.0001,
+        "a": null,
+        "b": null
+      },
+      "x": 1160,
+      "y": 640,
+      "width": 210,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Compare",
+      "base_type": "core/Node"
+    },
+    "b310920b-3fa3-413a-ba81-c73f6f9cc89d": {
+      "title": "Stop",
+      "id": "b310920b-3fa3-413a-ba81-c73f6f9cc89d",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 2250,
+      "y": 870,
+      "width": 261,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/Stop",
+      "base_type": "core/Node"
+    },
+    "b5ff9fc5-9834-4110-adcf-91dd00821246": {
+      "title": "AND Router",
+      "id": "b5ff9fc5-9834-4110-adcf-91dd00821246",
+      "properties": {},
+      "x": 1690,
+      "y": 780,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
+    },
+    "43fcab23-83a2-480a-ab2b-6b3393941376": {
+      "title": "NOT",
+      "id": "43fcab23-83a2-480a-ab2b-6b3393941376",
+      "properties": {},
+      "x": 610,
+      "y": 1010,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Invert",
+      "base_type": "core/Node"
+    },
+    "e9c38be5-c8e7-4588-bce2-7bfba9515f54": {
+      "title": "GET scene loop.user_message",
+      "id": "e9c38be5-c8e7-4588-bce2-7bfba9515f54",
+      "properties": {
+        "name": "user_message",
+        "scope": "scene loop"
+      },
+      "x": 30,
+      "y": 740,
+      "width": 258,
+      "height": 128,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "6c8ab0db-4f12-4dd0-901b-7da5bab61517": {
+      "title": "SET game.player_message_is_instruction",
+      "id": "6c8ab0db-4f12-4dd0-901b-7da5bab61517",
+      "properties": {
+        "name": "player_message_is_instruction",
+        "scope": "game"
+      },
+      "x": 1640,
+      "y": 1410,
+      "width": 319,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "ee784a61-55e1-4f6c-aaf1-f90c59cf6c0c": {
+      "title": "Stop",
+      "id": "ee784a61-55e1-4f6c-aaf1-f90c59cf6c0c",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 1520,
+      "y": 1620,
+      "width": 254,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/Stop",
+      "base_type": "core/Node"
+    },
+    "2e02e139-6878-44ed-85a2-5c33896fdccb": {
+      "title": "OR Router",
+      "id": "2e02e139-6878-44ed-85a2-5c33896fdccb",
+      "properties": {},
+      "x": 1244,
+      "y": 1459,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ORRouter",
+      "base_type": "core/Node"
+    },
+    "2f4b91cf-f425-4b36-bf7c-dbc7cc435f8d": {
+      "title": "is instruction",
+      "id": "2f4b91cf-f425-4b36-bf7c-dbc7cc435f8d",
+      "properties": {},
+      "x": 1470,
+      "y": 1460,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "594b633f-ca76-49cb-9ded-fc7f0941be4f": {
+      "title": "last_processed_call",
+      "id": "594b633f-ca76-49cb-9ded-fc7f0941be4f",
+      "properties": {},
+      "x": 890,
+      "y": 770,
+      "width": 185,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "73f93b2f-0600-4289-b361-87a5160e0a01": {
+      "title": "message id",
+      "id": "73f93b2f-0600-4289-b361-87a5160e0a01",
+      "properties": {},
+      "x": 920,
+      "y": 590,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "83e65c8c-c6dc-400e-bea2-d28cd2bbd22d": {
+      "title": "new message",
+      "id": "83e65c8c-c6dc-400e-bea2-d28cd2bbd22d",
+      "properties": {},
+      "x": 1450,
+      "y": 740,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "d860a68f-2113-4015-b201-46cc6910f0fa": {
+      "title": "visible",
+      "id": "d860a68f-2113-4015-b201-46cc6910f0fa",
+      "properties": {},
+      "x": 1470,
+      "y": 870,
+      "width": 185,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "f278be97-ef9d-4a11-bc75-e56f6ab300d7": {
+      "title": "Last User Action",
+      "id": "f278be97-ef9d-4a11-bc75-e56f6ab300d7",
+      "properties": {},
+      "x": 440,
+      "y": 140,
+      "width": 178,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "e78dee11-4e5a-425e-9e32-7dc38a8cabed": {
+      "title": "Starts with computer",
+      "id": "e78dee11-4e5a-425e-9e32-7dc38a8cabed",
+      "properties": {},
+      "x": 1020,
+      "y": 1450,
+      "width": 172,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "f7b2693d-4bbb-4e7e-b89e-c73f3de8b5bc": {
+      "title": "SET shared.skip_to_player",
+      "id": "f7b2693d-4bbb-4e7e-b89e-c73f3de8b5bc",
+      "properties": {
+        "name": "skip_to_player",
+        "scope": "shared"
+      },
+      "x": 1983,
+      "y": 1408,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "0763cdc6-e4e9-4541-8ae0-6657fa4c49e9": {
+      "title": "Sim Suite Main",
+      "id": "0763cdc6-e4e9-4541-8ae0-6657fa4c49e9",
+      "properties": {},
+      "x": 2220,
+      "y": 1430,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "sim-suite/simSuiteMain",
+      "base_type": "core/Graph"
+    },
+    "efb6f28c-9357-4dfa-9843-ac09668aaa4a": {
+      "title": "Stage 2",
+      "id": "efb6f28c-9357-4dfa-9843-ac09668aaa4a",
+      "properties": {
+        "stage": 2
+      },
+      "x": 2400,
+      "y": 1460,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "f6276302-d59b-46fa-9e6f-e62ef1e4010b.message": [
+      "f278be97-ef9d-4a11-bc75-e56f6ab300d7.value"
+    ],
+    "f506a675-0956-4b91-81ac-27506629293e.yes": [
+      "948f87a9-27f4-4421-833f-fcb1199e1f59.value"
+    ],
+    "f506a675-0956-4b91-81ac-27506629293e.no": [
+      "2ed07dd2-5fa5-4546-9bf3-c4a2cb9c87f5.state"
+    ],
+    "948f87a9-27f4-4421-833f-fcb1199e1f59.value": [
+      "daa5a837-ee80-4e33-958e-149e8a8352bd.state"
+    ],
+    "8e03f28a-80a2-4ca4-87e0-a49118e18f2a.value": [
+      "c7839f69-89e4-43f8-a796-64646852f0af.object"
+    ],
+    "c7839f69-89e4-43f8-a796-64646852f0af.value": [
+      "c7361d6b-1deb-4fb7-a6d2-caf0f0586099.string"
+    ],
+    "c7361d6b-1deb-4fb7-a6d2-caf0f0586099.result": [
+      "e78dee11-4e5a-425e-9e32-7dc38a8cabed.value"
+    ],
+    "f0801873-5fab-4008-8545-fce20128f721.value": [
+      "df264040-db66-465b-941f-41df6d7bae00.value"
+    ],
+    "df264040-db66-465b-941f-41df6d7bae00.value": [
+      "aeac5048-b3c0-4ab6-8b28-fc534c552dad.value"
+    ],
+    "95e5a9f7-1a50-47e8-a792-34f78117b5d5.result": [
+      "da74b020-feb1-4044-a3a5-a8059b999fe9.a"
+    ],
+    "d3b95cd2-d2c8-432e-9014-5469bc6d08f8.length": [
+      "95e5a9f7-1a50-47e8-a792-34f78117b5d5.a"
+    ],
+    "79890305-68e0-4869-88f3-e23e5929eedd.characters": [
+      "d3b95cd2-d2c8-432e-9014-5469bc6d08f8.object"
+    ],
+    "aeac5048-b3c0-4ab6-8b28-fc534c552dad.value": [
+      "da74b020-feb1-4044-a3a5-a8059b999fe9.b"
+    ],
+    "da74b020-feb1-4044-a3a5-a8059b999fe9.yes": [
+      "4f4ff9e4-5fbd-4f5c-bc36-a47949bbf168.value"
+    ],
+    "4f4ff9e4-5fbd-4f5c-bc36-a47949bbf168.value": [
+      "2e02e139-6878-44ed-85a2-5c33896fdccb.b"
+    ],
+    "129f4c39-7bcb-4dd6-90b4-fc78bbc2712c.value": [
+      "57bd1b09-d774-4e7d-9a36-5fbd1a7d537c.value"
+    ],
+    "57bd1b09-d774-4e7d-9a36-5fbd1a7d537c.value": [
+      "73f93b2f-0600-4289-b361-87a5160e0a01.value"
+    ],
+    "b9b72a5a-5548-40d5-b2a0-34eef6d3671d.yes": [
+      "f03946cf-ce25-442b-b140-971608b956f1.state"
+    ],
+    "b9b72a5a-5548-40d5-b2a0-34eef6d3671d.no": [
+      "b310920b-3fa3-413a-ba81-c73f6f9cc89d.state"
+    ],
+    "cf15388b-20f1-49e5-9892-d4803fc7fa2f.value": [
+      "594b633f-ca76-49cb-9ded-fc7f0941be4f.value"
+    ],
+    "b7d2179a-b8e5-41f6-b480-7d52dc166af5.value": [
+      "cf15388b-20f1-49e5-9892-d4803fc7fa2f.default"
+    ],
+    "b2f85abb-6b1a-401c-94ef-a1272a40ef2c.value": [
+      "43fcab23-83a2-480a-ab2b-6b3393941376.value"
+    ],
+    "f26741ba-7b0d-421c-a4de-050e9d8771ec.result": [
+      "83e65c8c-c6dc-400e-bea2-d28cd2bbd22d.value"
+    ],
+    "b5ff9fc5-9834-4110-adcf-91dd00821246.yes": [
+      "b9b72a5a-5548-40d5-b2a0-34eef6d3671d.value"
+    ],
+    "43fcab23-83a2-480a-ab2b-6b3393941376.value": [
+      "d860a68f-2113-4015-b201-46cc6910f0fa.value"
+    ],
+    "e9c38be5-c8e7-4588-bce2-7bfba9515f54.value": [
+      "129f4c39-7bcb-4dd6-90b4-fc78bbc2712c.object",
+      "b2f85abb-6b1a-401c-94ef-a1272a40ef2c.object"
+    ],
+    "6c8ab0db-4f12-4dd0-901b-7da5bab61517.value": [
+      "f7b2693d-4bbb-4e7e-b89e-c73f3de8b5bc.value"
+    ],
+    "2e02e139-6878-44ed-85a2-5c33896fdccb.yes": [
+      "2f4b91cf-f425-4b36-bf7c-dbc7cc435f8d.value"
+    ],
+    "2e02e139-6878-44ed-85a2-5c33896fdccb.no": [
+      "ee784a61-55e1-4f6c-aaf1-f90c59cf6c0c.state"
+    ],
+    "2f4b91cf-f425-4b36-bf7c-dbc7cc435f8d.value": [
+      "6c8ab0db-4f12-4dd0-901b-7da5bab61517.value"
+    ],
+    "594b633f-ca76-49cb-9ded-fc7f0941be4f.value": [
+      "f26741ba-7b0d-421c-a4de-050e9d8771ec.b"
+    ],
+    "73f93b2f-0600-4289-b361-87a5160e0a01.value": [
+      "f26741ba-7b0d-421c-a4de-050e9d8771ec.a"
+    ],
+    "83e65c8c-c6dc-400e-bea2-d28cd2bbd22d.value": [
+      "b5ff9fc5-9834-4110-adcf-91dd00821246.a"
+    ],
+    "d860a68f-2113-4015-b201-46cc6910f0fa.value": [
+      "b5ff9fc5-9834-4110-adcf-91dd00821246.b"
+    ],
+    "f278be97-ef9d-4a11-bc75-e56f6ab300d7.value": [
+      "f506a675-0956-4b91-81ac-27506629293e.value"
+    ],
+    "e78dee11-4e5a-425e-9e32-7dc38a8cabed.value": [
+      "2e02e139-6878-44ed-85a2-5c33896fdccb.a"
+    ],
+    "f7b2693d-4bbb-4e7e-b89e-c73f3de8b5bc.value": [
+      "0763cdc6-e4e9-4541-8ae0-6657fa4c49e9.state"
+    ],
+    "0763cdc6-e4e9-4541-8ae0-6657fa4c49e9.state": [
+      "efb6f28c-9357-4dfa-9843-ac09668aaa4a.state"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Stage 0 - Determine Last User Action",
+      "x": 2,
+      "y": 1,
+      "width": 1567,
+      "height": 391,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Stage 1 - Determine simulation instruction",
+      "x": 3,
+      "y": 1125,
+      "width": 2520,
+      "height": 960,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Stage 1 - Ignore already processed OR hidden messages",
+      "x": 3,
+      "y": 395,
+      "width": 2601,
+      "height": 726,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [
+    {
+      "text": "Obtain the last user action, by searching for character messages where source is \"player\"",
+      "x": 410,
+      "y": 210,
+      "width": 200,
+      "inherited": false
+    },
+    {
+      "text": "No user action was found, abort.",
+      "x": 1320,
+      "y": 280,
+      "width": 200,
+      "inherited": false
+    },
+    {
+      "text": "If there is only the user's character AND the environment has not been altered by the simulation yet, then any spoken word will be a command to the simulation suite.",
+      "x": 73,
+      "y": 1783,
+      "width": 459,
+      "inherited": false
+    },
+    {
+      "text": "A user message starting with \"computer\" will be treated as an instruction to the simulation suite.",
+      "x": 374,
+      "y": 1399,
+      "width": 523,
+      "inherited": false
+    }
+  ],
+  "extends": null,
+  "base_type": "core/Event",
+  "inputs": [],
+  "outputs": [],
+  "style": {
+    "title_color": "#57532e",
+    "node_color": "#39382c",
+    "icon": "F0BF8",
+    "auto_title": null
+  }
+}

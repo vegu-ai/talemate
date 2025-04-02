@@ -35,8 +35,11 @@ class ActiveAgentContext(pydantic.BaseModel):
         return self.previous.first if self.previous else self
 
     @property
-    def action(self):
-        return self.fn.__name__
+    def action(self):    
+        name = self.fn.__name__
+        if name == "delegate":
+            return self.fn_args[0].__name__
+        return name
     
     @property
     def fingerprint(self) -> int:

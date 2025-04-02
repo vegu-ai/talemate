@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 import talemate.instance as instance
 from talemate.emit import emit
 from talemate.prompts import Prompt
+from talemate.exceptions import GenerationCancelled
 import talemate.game.focal.schema as focal_schema 
 
 ANY_CHARACTER = "__any_character__"
@@ -130,6 +131,14 @@ class WorldState(BaseModel):
 
     def add_character_name_mappings(self, *names):
         self.character_name_mappings.extend([name.lower() for name in names])
+        
+    def normalize_name(self, name: str):
+        """Normalizes item or character name away from variables style names
+
+        Args:
+            name (str): item or character name
+        """
+        return name.lower().replace("_", " ").strip().title()
 
     def filter_reinforcements(
         self, character: str = ANY_CHARACTER, insert: list[str] = None
@@ -202,6 +211,9 @@ class WorldState(BaseModel):
 
         try:
             world_state = await self.agent.request_world_state()
+        except GenerationCancelled:
+            self.emit()
+            return
         except Exception as e:
             self.emit()
             log.error(
@@ -215,9 +227,13 @@ class WorldState(BaseModel):
         character_names = scene.character_names
         self.characters = {}
         self.items = {}
+        
+        # if characters is not set or empty, make sure its at least a dict
+        if not world_state.get("characters"):
+            world_state["characters"] = {}
 
         for character_name, character in world_state.get("characters", {}).items():
-
+            character_name = self.normalize_name(character_name)
             # if character name is an alias, we need to convert it to the main name
             # if it exists in the mappings
 
@@ -275,7 +291,12 @@ class WorldState(BaseModel):
 
             log.debug("world_state", character=character)
 
+        # if items is not set or empty, make sure its at least a dict
+        if not world_state.get("items"):
+            world_state["items"] = {}
+
         for item_name, item in world_state.get("items", {}).items():
+            item_name = self.normalize_name(item_name)
             if not item:
                 continue
             try:
@@ -347,20 +368,6 @@ class WorldState(BaseModel):
 
         await memory.add_many(states)
 
-    async def request_update_inline(self):
-        """
-        Requests an inline update of the world state from the WorldState agent and immediately emits the state.
-
-        Arguments:
-        - None
-        """
-
-        self.emit(status="requested")
-
-        world_state = await self.agent.request_world_state_inline()
-
-        self.emit()
-
     async def add_reinforcement(
         self,
         question: str,
@@ -401,7 +408,8 @@ class WorldState(BaseModel):
             if old_insert_method == "sequential":
                 message = self.agent.scene.find_message(
                     typ="reinforcement",
-                    source=f"{question}:{character if character else ''}",
+                    character_name=character,
+                    question=question,
                 )
 
                 if old_insert_method != insert and message:

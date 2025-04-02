@@ -1,0 +1,15 @@
+{# overarching story intention #}{% if scene.intent_state.intent %}
+<|SECTION:INTENTION OF THIS STORY|>
+The overarching intention of this story. Use it to guide your decisions in the scene.
+
+{{ scene.intent_state.intent }}
+{% endif %}
+{# intention of the current phase #}{% if scene.intent_state.phase %}
+<|SECTION:INTENTION OF THE CURRENT SCENE|>
+{% set scene_type = scene.intent_state.current_scene_type -%}
+{{ scene_type.description }}
+
+{% if scene.intent_state.phase.intent %}
+{{ scene.intent_state.phase.intent }}
+{% endif %}
+{% endif %}

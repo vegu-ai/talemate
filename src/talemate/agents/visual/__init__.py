@@ -28,6 +28,8 @@ from .schema import RESOLUTION_MAP, RenderSettings
 from .style import MAJOR_STYLES, STYLE_MAP, Style, combine_styles
 from .websocket_handler import VisualWebsocketHandler
 
+import talemate.agents.visual.nodes
+
 __all__ = [
     "VisualAgent",
 ]

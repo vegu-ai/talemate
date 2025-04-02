@@ -1,0 +1,14 @@
+{# overarching story intention #}{% if scene.intent_state.intent %}
+Overarching Story Intention:{{ scene.intent_state.intent }}
+{% endif %}
+{# intention of the current phase #}{% if scene.intent_state.phase %}
+The current scene classification
+
+```
+{% set scene_type = scene.intent_state.current_scene_type -%}
+type: `{{ scene_type.id }}` - {{ scene_type.description }}
+{% if scene.intent_state.phase.intent %}
+intention: {{ scene.intent_state.phase.intent }}
+{% endif -%}
+```
+{% endif %}

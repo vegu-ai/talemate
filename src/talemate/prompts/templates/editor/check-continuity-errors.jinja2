@@ -6,7 +6,7 @@
 {% block rendered_context -%}
 {% endblock -%}
 <|SECTION:STORY DEVELOPMENT|>
-{% set scene_history=scene.context_history(budget=max_tokens-512-count_tokens(self.rendered_context()), message_id=message_id, include_reinfocements=False) -%}
+{% set scene_history=scene.context_history(budget=max_tokens-512-count_tokens(self.rendered_context()), message_id=message_id, include_reinforcements=False) -%}
 {{ agent_action("summarizer", "summarize", text=join(scene_history, '\n\n'), method="facts") }}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>

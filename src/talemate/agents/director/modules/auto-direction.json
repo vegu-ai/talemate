@@ -10,25 +10,12 @@
   "inherited": false,
   "registry": "agents/director/auto-direct/AutoDirection",
   "nodes": {
-    "08d4cee4-a663-4c6e-b071-edec0c5a820a": {
-      "title": "Director Settings",
-      "id": "08d4cee4-a663-4c6e-b071-edec0c5a820a",
-      "properties": {},
-      "x": -24,
-      "y": -195,
-      "width": 329,
-      "height": 486,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/Settings",
-      "base_type": "core/Node"
-    },
     "85b6b7a1-cb66-49e9-ad8b-ffa65d5ecedc": {
       "title": "Get Scene State",
       "id": "85b6b7a1-cb66-49e9-ad8b-ffa65d5ecedc",
       "properties": {},
-      "x": 156,
-      "y": 370,
+      "x": 206,
+      "y": 663,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -43,8 +30,8 @@
         "source": "ai",
         "action": "actor_instruction"
       },
-      "x": 2257,
-      "y": 1329,
+      "x": 2308,
+      "y": 1619,
       "width": 210,
       "height": 162,
       "collapsed": false,
@@ -56,8 +43,8 @@
       "title": "Enabled",
       "id": "0a5ef948-6d5e-4261-a23f-5cd4b5239f6c",
       "properties": {},
-      "x": 388,
-      "y": 67,
+      "x": 438,
+      "y": 360,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -71,8 +58,8 @@
       "properties": {
         "stage": 0
       },
-      "x": 1758,
-      "y": 19,
+      "x": 1808,
+      "y": 312,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -87,8 +74,8 @@
         "name": "is_player",
         "scope": "local"
       },
-      "x": 1577,
-      "y": 929,
+      "x": 1628,
+      "y": 1219,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -100,8 +87,8 @@
       "title": "Process AI instruction",
       "id": "a5d320f1-0b4c-4ad8-b222-8eab23c2a949",
       "properties": {},
-      "x": 1837,
-      "y": 1119,
+      "x": 1888,
+      "y": 1409,
       "width": 181,
       "height": 70,
       "collapsed": false,
@@ -113,8 +100,8 @@
       "title": "Direct Actor",
       "id": "4482dd3f-8c17-41dc-9f8c-29989d0ca103",
       "properties": {},
-      "x": 2077,
-      "y": 1199,
+      "x": 2128,
+      "y": 1489,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -128,8 +115,8 @@
       "properties": {
         "pass_through": null
       },
-      "x": 1877,
-      "y": 1249,
+      "x": 1928,
+      "y": 1539,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -143,8 +130,8 @@
       "properties": {
         "stage": 1
       },
-      "x": 2767,
-      "y": 1359,
+      "x": 2818,
+      "y": 1649,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -159,8 +146,8 @@
         "name": "enabled",
         "scope": "local"
       },
-      "x": 563,
-      "y": -42,
+      "x": 613,
+      "y": 251,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -174,8 +161,8 @@
       "properties": {
         "exception": "StopGraphExecution"
       },
-      "x": 563,
-      "y": 168,
+      "x": 613,
+      "y": 461,
       "width": 287,
       "height": 78,
       "collapsed": false,
@@ -190,8 +177,8 @@
         "name": "character_direction",
         "scope": "local"
       },
-      "x": -20,
-      "y": 1048,
+      "x": 31,
+      "y": 1338,
       "width": 289,
       "height": 129,
       "collapsed": false,
@@ -206,8 +193,8 @@
         "name": "narrator_direction",
         "scope": "local"
       },
-      "x": -31,
-      "y": 1650,
+      "x": 20,
+      "y": 1928,
       "width": 289,
       "height": 129,
       "collapsed": false,
@@ -219,8 +206,8 @@
       "title": "Generate Scene Narration",
       "id": "13410c3a-9671-45b7-ac4c-45b6b873d269",
       "properties": {},
-      "x": 1239,
-      "y": 1700,
+      "x": 1290,
+      "y": 1978,
       "width": 245,
       "height": 46,
       "collapsed": false,
@@ -238,8 +225,8 @@
         "case_c": "",
         "case_d": ""
       },
-      "x": 909,
-      "y": 1600,
+      "x": 960,
+      "y": 1878,
       "width": 210,
       "height": 214,
       "collapsed": false,
@@ -251,8 +238,8 @@
       "title": "Instructions",
       "id": "e254fd7d-bda9-4db3-a27f-b8efe9a0a956",
       "properties": {},
-      "x": 939,
-      "y": 1890,
+      "x": 990,
+      "y": 2168,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -264,8 +251,8 @@
       "title": "Generate Progress Narration",
       "id": "ca8552b1-7172-4fcf-8039-777d9ae4dad8",
       "properties": {},
-      "x": 1239,
-      "y": 1830,
+      "x": 1290,
+      "y": 2108,
       "width": 245,
       "height": 46,
       "collapsed": false,
@@ -277,8 +264,8 @@
       "title": "Coallesce",
       "id": "b6d2f1d1-9082-4c3b-ac53-b8bd04a35cad",
       "properties": {},
-      "x": 1559,
-      "y": 1750,
+      "x": 1610,
+      "y": 2028,
       "width": 140,
       "height": 86,
       "collapsed": false,
@@ -292,8 +279,8 @@
       "properties": {
         "emit_message": true
       },
-      "x": 1750,
-      "y": 1750,
+      "x": 1801,
+      "y": 2028,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -307,8 +294,8 @@
       "properties": {
         "stage": 1
       },
-      "x": 2010,
-      "y": 1780,
+      "x": 2061,
+      "y": 2058,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -320,8 +307,8 @@
       "title": "Invert",
       "id": "57b18913-7429-4e23-8c41-ec026479f252",
       "properties": {},
-      "x": 440,
-      "y": 3248,
+      "x": 489,
+      "y": 3522,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -336,8 +323,8 @@
         "name": "is_player",
         "scope": "local"
       },
-      "x": 130,
-      "y": 3118,
+      "x": 179,
+      "y": 3392,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -352,8 +339,8 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 130,
-      "y": 2928,
+      "x": 179,
+      "y": 3202,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -367,8 +354,8 @@
       "properties": {
         "pass_through": true
       },
-      "x": 450,
-      "y": 2788,
+      "x": 499,
+      "y": 3062,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -383,8 +370,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 130,
-      "y": 2758,
+      "x": 179,
+      "y": 3032,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -398,8 +385,8 @@
       "properties": {
         "value": false
       },
-      "x": -20,
-      "y": 3168,
+      "x": 29,
+      "y": 3442,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -413,8 +400,8 @@
       "properties": {
         "pass_through": true
       },
-      "x": 451,
-      "y": 2959,
+      "x": 500,
+      "y": 3233,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -429,8 +416,8 @@
         "value": 0,
         "number_type": "int"
       },
-      "x": -42,
-      "y": 3683,
+      "x": 17,
+      "y": 3927,
       "width": 210,
       "height": 82,
       "collapsed": true,
@@ -446,8 +433,8 @@
         "a": 0,
         "b": "1"
       },
-      "x": 922,
-      "y": 3843,
+      "x": 981,
+      "y": 4087,
       "width": 210,
       "height": 126,
       "collapsed": false,
@@ -464,8 +451,8 @@
         "a": 0,
         "b": "3"
       },
-      "x": 368,
-      "y": 3553,
+      "x": 427,
+      "y": 3797,
       "width": 210,
       "height": 150,
       "collapsed": false,
@@ -477,8 +464,8 @@
       "title": "Return",
       "id": "5bc279eb-ce2f-48d1-9591-1f92e450124d",
       "properties": {},
-      "x": 1801,
-      "y": 3844,
+      "x": 1860,
+      "y": 4088,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -493,8 +480,8 @@
         "name": "exc",
         "typ": "str"
       },
-      "x": -22,
-      "y": 3895,
+      "x": 37,
+      "y": 4139,
       "width": 210,
       "height": 82,
       "collapsed": false,
@@ -510,8 +497,8 @@
         "action_name": "auto_direct",
         "enabled": false
       },
-      "x": 881,
-      "y": 3531,
+      "x": 940,
+      "y": 3775,
       "width": 226,
       "height": 170,
       "collapsed": false,
@@ -523,8 +510,8 @@
       "title": "RSwitch",
       "id": "8b6ea20b-426c-46a1-8c79-2a4d93ce1575",
       "properties": {},
-      "x": 1275,
-      "y": 3536,
+      "x": 1334,
+      "y": 3780,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -538,8 +525,8 @@
       "properties": {
         "value": "Director agent's auto direction has failed to many times so it has been disabled."
       },
-      "x": 1125,
-      "y": 3606,
+      "x": 1184,
+      "y": 3850,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -551,8 +538,8 @@
       "title": "RSwitch Advanced",
       "id": "a05a45c9-64c2-4bde-8bd4-b6fd9b6d3fa2",
       "properties": {},
-      "x": 662,
-      "y": 3723,
+      "x": 721,
+      "y": 3967,
       "width": 184,
       "height": 69,
       "collapsed": false,
@@ -567,8 +554,8 @@
         "value": 0,
         "number_type": "int"
       },
-      "x": 1285,
-      "y": 3786,
+      "x": 1344,
+      "y": 4030,
       "width": 210,
       "height": 82,
       "collapsed": true,
@@ -580,8 +567,8 @@
       "title": "RSwitch",
       "id": "7ffce2c8-017a-4f28-8501-2fe08831eb97",
       "properties": {},
-      "x": 1395,
-      "y": 3726,
+      "x": 1454,
+      "y": 3970,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -596,8 +583,8 @@
         "name": "auto_direct_failures",
         "scope": "shared"
       },
-      "x": 1575,
-      "y": 3756,
+      "x": 1634,
+      "y": 4000,
       "width": 266,
       "height": 122,
       "collapsed": true,
@@ -612,8 +599,8 @@
         "name": "auto_direct_failures",
         "scope": "shared"
       },
-      "x": 71,
-      "y": 3673,
+      "x": 130,
+      "y": 3917,
       "width": 260,
       "height": 122,
       "collapsed": false,
@@ -625,8 +612,8 @@
       "title": "auto_direct_failures",
       "id": "2413e4d7-e5d0-4c52-b319-247d0f2234e5",
       "properties": {},
-      "x": 403,
-      "y": 3874,
+      "x": 462,
+      "y": 4118,
       "width": 203,
       "height": 37,
       "collapsed": false,
@@ -641,8 +628,8 @@
         "name": "auto_direct_failures",
         "scope": "shared"
       },
-      "x": 1191,
-      "y": 3843,
+      "x": 1250,
+      "y": 4087,
       "width": 266,
       "height": 122,
       "collapsed": false,
@@ -656,8 +643,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 1529,
-      "y": 3858,
+      "x": 1588,
+      "y": 4102,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -673,8 +660,8 @@
         "status": "warning",
         "as_scene_message": true
       },
-      "x": 1449,
-      "y": 3538,
+      "x": 1508,
+      "y": 3782,
       "width": 210,
       "height": 146,
       "collapsed": false,
@@ -688,8 +675,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 1689,
-      "y": 3608,
+      "x": 1748,
+      "y": 3852,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -701,8 +688,8 @@
       "title": "Return",
       "id": "8822fa9a-68a0-4770-9733-2e7e6b794c15",
       "properties": {},
-      "x": 1819,
-      "y": 3608,
+      "x": 1878,
+      "y": 3852,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -717,8 +704,8 @@
         "value": "3",
         "number_type": "int"
       },
-      "x": 88,
-      "y": 3518,
+      "x": 147,
+      "y": 3762,
       "width": 210,
       "height": 82,
       "collapsed": false,
@@ -732,8 +719,8 @@
       "properties": {
         "value": false
       },
-      "x": 30,
-      "y": 640,
+      "x": 80,
+      "y": 933,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -748,8 +735,8 @@
         "name": "skip_to_player",
         "scope": "shared"
       },
-      "x": 180,
-      "y": 590,
+      "x": 230,
+      "y": 883,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -763,8 +750,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 420,
-      "y": 640,
+      "x": 470,
+      "y": 933,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -776,8 +763,8 @@
       "title": "Auto Direct Candidates",
       "id": "ec245f73-157f-45c0-9758-7bf61ec3f20c",
       "properties": {},
-      "x": 803,
-      "y": -12,
+      "x": 853,
+      "y": 281,
       "width": 185,
       "height": 31,
       "collapsed": false,
@@ -791,8 +778,8 @@
       "properties": {
         "pass_through": true
       },
-      "x": 310,
-      "y": 1100,
+      "x": 361,
+      "y": 1390,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -806,8 +793,8 @@
       "properties": {
         "attribute": "action"
       },
-      "x": 580,
-      "y": 1610,
+      "x": 631,
+      "y": 1888,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -821,8 +808,8 @@
       "properties": {
         "pass_through": true
       },
-      "x": 299,
-      "y": 1700,
+      "x": 350,
+      "y": 1978,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -836,8 +823,8 @@
       "properties": {
         "attribute": "instructions"
       },
-      "x": 580,
-      "y": 1830,
+      "x": 631,
+      "y": 2108,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -849,8 +836,8 @@
       "title": "Coallesce",
       "id": "51e00e20-d867-4c0d-82cd-d875fde36e72",
       "properties": {},
-      "x": 1995,
-      "y": 3686,
+      "x": 2054,
+      "y": 3930,
       "width": 140,
       "height": 86,
       "collapsed": false,
@@ -864,8 +851,8 @@
       "properties": {
         "name": "error_handler"
       },
-      "x": 2168,
-      "y": 3698,
+      "x": 2227,
+      "y": 3942,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -879,8 +866,8 @@
       "properties": {
         "name": "error_handler"
       },
-      "x": 2248,
-      "y": 3748,
+      "x": 2307,
+      "y": 3992,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -892,8 +879,8 @@
       "title": "Error Handler",
       "id": "6196fbba-e735-4ec7-a15a-ebb1b479de5f",
       "properties": {},
-      "x": 2418,
-      "y": 3718,
+      "x": 2477,
+      "y": 3962,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -905,8 +892,8 @@
       "title": "Get Character",
       "id": "966e75b2-3546-4e20-b1de-c158d75a0cbb",
       "properties": {},
-      "x": 710,
-      "y": 980,
+      "x": 761,
+      "y": 1270,
       "width": 203,
       "height": 26,
       "collapsed": false,
@@ -920,8 +907,8 @@
       "properties": {
         "attribute": "instructions"
       },
-      "x": 460,
-      "y": 1180,
+      "x": 511,
+      "y": 1470,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -936,8 +923,8 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 950,
-      "y": 1170,
+      "x": 1001,
+      "y": 1460,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -951,8 +938,8 @@
       "properties": {
         "emit_message": true
       },
-      "x": 2510,
-      "y": 1330,
+      "x": 2561,
+      "y": 1620,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -964,8 +951,8 @@
       "title": "Unpack Character",
       "id": "3125811e-a13f-4248-b19f-6b94d52381a0",
       "properties": {},
-      "x": 1300,
-      "y": 900,
+      "x": 1351,
+      "y": 1190,
       "width": 212,
       "height": 146,
       "collapsed": false,
@@ -980,8 +967,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 940,
-      "y": 960,
+      "x": 991,
+      "y": 1250,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -993,8 +980,8 @@
       "title": "Character",
       "id": "98f74a85-2636-4a1b-b62e-658bb93c0588",
       "properties": {},
-      "x": 1460,
-      "y": 1380,
+      "x": 1511,
+      "y": 1670,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -1008,8 +995,8 @@
       "properties": {
         "attribute": "character_name"
       },
-      "x": 470,
-      "y": 980,
+      "x": 521,
+      "y": 1270,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -1024,8 +1011,8 @@
         "name": "character_direction",
         "scope": "local"
       },
-      "x": 1430,
-      "y": -90,
+      "x": 1480,
+      "y": 203,
       "width": 255,
       "height": 122,
       "collapsed": false,
@@ -1040,8 +1027,8 @@
         "name": "narrator_direction",
         "scope": "local"
       },
-      "x": 1430,
-      "y": 100,
+      "x": 1480,
+      "y": 393,
       "width": 255,
       "height": 122,
       "collapsed": false,
@@ -1056,8 +1043,8 @@
         "name": "enabled",
         "scope": "local"
       },
-      "x": 121,
-      "y": 2283,
+      "x": 170,
+      "y": 2557,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1072,8 +1059,8 @@
         "name": "character_direction",
         "scope": "local"
       },
-      "x": 121,
-      "y": 2473,
+      "x": 170,
+      "y": 2747,
       "width": 244,
       "height": 127,
       "collapsed": false,
@@ -1085,8 +1072,8 @@
       "title": "AND Router",
       "id": "909d9485-a030-4a6d-8bc6-8beef6e09ba1",
       "properties": {},
-      "x": 431,
-      "y": 2313,
+      "x": 480,
+      "y": 2587,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -1104,8 +1091,8 @@
         "input_group": "",
         "num": 0
       },
-      "x": 363,
-      "y": 2047,
+      "x": 412,
+      "y": 2321,
       "width": 210,
       "height": 130,
       "collapsed": false,
@@ -1122,8 +1109,8 @@
         "auto_title": null,
         "icon": "F00E6"
       },
-      "x": 950,
-      "y": 410,
+      "x": 1000,
+      "y": 703,
       "width": 210,
       "height": 130,
       "collapsed": false,
@@ -1135,8 +1122,8 @@
       "title": "Generate Auto Direction",
       "id": "e182fcb5-53cc-48a6-b869-9fda9a0e6bc1",
       "properties": {},
-      "x": 1030,
-      "y": -10,
+      "x": 1080,
+      "y": 283,
       "width": 245,
       "height": 86,
       "collapsed": false,
@@ -1152,8 +1139,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 620,
-      "y": 2050,
+      "x": 669,
+      "y": 2324,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -1169,8 +1156,8 @@
         "output_name": "enabled",
         "num": 1
       },
-      "x": 620,
-      "y": 2380,
+      "x": 669,
+      "y": 2654,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -1186,8 +1173,8 @@
         "output_name": "character",
         "num": 2
       },
-      "x": 621,
-      "y": 2753,
+      "x": 670,
+      "y": 3027,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -1203,8 +1190,8 @@
         "output_name": "instructions",
         "num": 3
       },
-      "x": 618,
-      "y": 2908,
+      "x": 667,
+      "y": 3182,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -1220,8 +1207,8 @@
         "output_name": "player",
         "num": 4
       },
-      "x": 620,
-      "y": 3070,
+      "x": 669,
+      "y": 3344,
       "width": 211,
       "height": 106,
       "collapsed": false,
@@ -1237,23 +1224,30 @@
         "output_name": "ai",
         "num": 5
       },
-      "x": 620,
-      "y": 3250,
+      "x": 669,
+      "y": 3524,
       "width": 210,
       "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Output",
       "base_type": "core/Node"
+    },
+    "08d4cee4-a663-4c6e-b071-edec0c5a820a": {
+      "title": "Director Settings",
+      "id": "08d4cee4-a663-4c6e-b071-edec0c5a820a",
+      "properties": {},
+      "x": 26,
+      "y": 98,
+      "width": 329,
+      "height": 510,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/Settings",
+      "base_type": "core/Node"
     }
   },
   "edges": {
-    "08d4cee4-a663-4c6e-b071-edec0c5a820a.agent_enabled": [
-      "0a5ef948-6d5e-4261-a23f-5cd4b5239f6c.a"
-    ],
-    "08d4cee4-a663-4c6e-b071-edec0c5a820a.auto_direct_enabled": [
-      "0a5ef948-6d5e-4261-a23f-5cd4b5239f6c.b"
-    ],
     "85b6b7a1-cb66-49e9-ad8b-ffa65d5ecedc.auto_progress": [
       "0a5ef948-6d5e-4261-a23f-5cd4b5239f6c.c"
     ],
@@ -1313,8 +1307,8 @@
       "fd4cde1a-3724-4ca5-861b-0fe16dceb995.value"
     ],
     "c30505db-4455-43ce-b993-121995cfaea9.value": [
-      "ce48eb83-8228-4d5c-876f-779e69a60b08.value",
-      "57b18913-7429-4e23-8c41-ec026479f252.value"
+      "57b18913-7429-4e23-8c41-ec026479f252.value",
+      "ce48eb83-8228-4d5c-876f-779e69a60b08.value"
     ],
     "45b1a7f4-2b48-411b-8c9a-a8003852ded5.value": [
       "2fa68cd5-2f7b-4271-b9ba-f335ea066030.value"
@@ -1472,13 +1466,19 @@
     ],
     "e182fcb5-53cc-48a6-b869-9fda9a0e6bc1.narrator_direction": [
       "cce09d34-14be-4ebb-99da-d9148c59eced.value"
+    ],
+    "08d4cee4-a663-4c6e-b071-edec0c5a820a.agent_enabled": [
+      "0a5ef948-6d5e-4261-a23f-5cd4b5239f6c.a"
+    ],
+    "08d4cee4-a663-4c6e-b071-edec0c5a820a.auto_direct_enabled": [
+      "0a5ef948-6d5e-4261-a23f-5cd4b5239f6c.b"
     ]
   },
   "groups": [
     {
       "title": "Character Direction",
-      "x": -51,
-      "y": 822,
+      "x": 0,
+      "y": 1112,
       "width": 2961,
       "height": 710,
       "color": "#3f789e",
@@ -1487,8 +1487,8 @@
     },
     {
       "title": "Outputs",
-      "x": -47,
-      "y": 1975,
+      "x": 2,
+      "y": 2249,
       "width": 971,
       "height": 1408,
       "color": "#8A8",
@@ -1497,8 +1497,8 @@
     },
     {
       "title": "Stage 0",
-      "x": -50,
-      "y": -293,
+      "x": 0,
+      "y": 1,
       "width": 1975,
       "height": 1107,
       "color": "#3f789e",
@@ -1507,8 +1507,8 @@
     },
     {
       "title": "Narrator Direction",
-      "x": -51,
-      "y": 1548,
+      "x": 1,
+      "y": 1827,
       "width": 2234,
       "height": 418,
       "color": "#3f789e",
@@ -1517,8 +1517,8 @@
     },
     {
       "title": "Error Handler",
-      "x": -57,
-      "y": 3416,
+      "x": 3,
+      "y": 3661,
       "width": 2639,
       "height": 592,
       "color": "#A88",
@@ -1529,8 +1529,8 @@
   "comments": [
     {
       "text": "Since auto direction runs on every turn repeated failures would loop endlessly\n\nSo we need to disable it if it keeps failing.",
-      "x": 348,
-      "y": 3428,
+      "x": 407,
+      "y": 3672,
       "width": 534,
       "inherited": false
     }

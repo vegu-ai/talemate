@@ -744,8 +744,16 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         if not objects:
             return
+        
+        # track seen documents by id
+        seen_ids = set()
 
         for obj in objects:
+            if obj["id"] in seen_ids:
+                log.warning("chromadb agent", status="duplicate id discarded", id=obj["id"])
+                continue
+            seen_ids.add(obj["id"])
+            
             documents.append(obj["text"])
             meta = obj.get("meta", {})
             source = meta.get("source", "talemate")
@@ -758,6 +766,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             metadatas.append(meta)
             uid = obj.get("id", f"{character}-{self.memory_tracker[character]}")
             ids.append(uid)
+        
         self.db.upsert(documents=documents, metadatas=metadatas, ids=ids)
 
     def _delete(self, meta: dict):

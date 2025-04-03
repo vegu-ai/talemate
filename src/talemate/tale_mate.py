@@ -324,13 +324,17 @@ class Character:
                         },
                     }
                 )
-
+                
+        seen_attributes = set()
+                
         for attr, value in self.base_attributes.items():
             if attr.startswith("_"):
                 continue
 
             if attr.lower() in ["name", "scenario_context", "_prompt", "_template"]:
                 continue
+
+            seen_attributes.add(attr)
 
             items.append(
                 {
@@ -345,6 +349,11 @@ class Character:
             )
 
         for key, detail in self.details.items():
+            
+            # if colliding with attribute name, prefix with detail_
+            if key in seen_attributes:
+                key = f"detail_{key}"
+            
             items.append(
                 {
                     "text": f"{self.name} - {key}: {detail}",

@@ -13,6 +13,7 @@ from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.prompts import Prompt
 from talemate.util.response import extract_list
+from talemate.scene_message import CharacterMessage
 from talemate.world_state.templates import (
     AnnotatedTemplate,
     GenerationOptions,
@@ -245,8 +246,7 @@ class AssistantMixin:
     ) -> str:
         """
         Wrapper for contextual_generate that generates a character attribute.
-        """
-        
+        """        
         if not generation_options:
             generation_options = GenerationOptions()
         
@@ -290,38 +290,65 @@ class AssistantMixin:
         input: str,
         character: "Character",
         emit_signal: bool = True,
+        response_length: int = 72,
     ) -> str:
         """
         Autocomplete dialogue.
         """
+        
+        editor = get_agent("editor")
+        
+        # continueing recent character message
+        non_anchor, anchor = util.split_anchor_text(input, 10)
+        
+        self.scene.log.debug(
+            "autocomplete_anchor", 
+            anchor=anchor,
+            non_anchor=non_anchor,
+            input=input
+        )
+
+        continuing_message = False
+        
+        message = self.scene.history[-1]
+        if isinstance(message, CharacterMessage) and message.character_name == character.name:
+            continuing_message = input.strip() == message.without_name.strip()
+
+        if input.strip().endswith('"'):
+            prefix = ' *'
+        elif input.strip().endswith('*'):
+            prefix = ' "'
+        else:
+            prefix = ''
 
         response = await Prompt.request(
             f"creator.autocomplete-dialogue",
             self.client,
-            "create_short",
+            f"create_{response_length}",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "input": input.strip(),
                 "character": character,
                 "can_coerce": self.client.can_be_coerced,
+                "response_length": response_length,
+                "continuing_message": continuing_message,
+                "anchor": anchor,
+                "non_anchor": non_anchor,
+                "prefix": prefix,
             },
             pad_prepended_response=False,
             dedupe_enabled=False,
         )
 
-        response = util.clean_dialogue(response, character.name)[
-            len(character.name + ":") :
-        ].strip()
+        response = response.replace("...", "").lstrip("").rstrip().replace("END-OF-LINE", "")
 
-        # remove ellipsis
-
-        response = response.replace("...", "").strip()
-
-        # if sentence starts and ends with quotes, remove them
+        if not response:
+            if emit_signal:
+                emit("autocomplete_suggestion", "")
+            return ""
         
-        if response.startswith('"') and response.endswith('"') and not "*" in response:
-            response = response[1:-1]
+        response = util.strip_partial_sentences(response).replace("*", "")
 
         if response.startswith(input):
             response = response[len(input) :]

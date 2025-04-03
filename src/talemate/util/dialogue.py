@@ -13,6 +13,7 @@ __all__ = [
     "ensure_dialog_format",
     "ensure_dialog_line_format",
     "clean_uneven_markers",
+    "split_anchor_text",
 ]
 
 log = structlog.get_logger("talemate.util.dialogue")
@@ -386,3 +387,33 @@ def clean_uneven_markers(chunk: str, marker: str):
             chunk += marker
 
     return chunk
+
+
+def split_anchor_text(text: str, anchor_length: int = 10) -> tuple[str, str]:
+    """
+    Splits input text into two parts: non-anchor and anchor.
+    The anchor is the last `anchor_length` words of the text.
+    
+    Args:
+        text (str): The input text to be split
+        anchor_length (int): Number of words to use as anchor
+        
+    Returns:
+        tuple[str, str]: A tuple containing (non_anchor, anchor)
+    """
+    if not text:
+        return "", ""
+        
+    # Split the input into words
+    words = text.split()
+    
+    # Get the anchor (last anchor_length words)
+    if len(words) > anchor_length:
+        anchor = ' '.join(words[-anchor_length:])
+        non_anchor = ' '.join(words[:-anchor_length])
+    else:
+        # If input is shorter than anchor_length, use the entire input as anchor
+        anchor = text
+        non_anchor = ""
+        
+    return non_anchor, anchor

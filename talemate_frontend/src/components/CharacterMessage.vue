@@ -35,6 +35,10 @@
         <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(styleHandlerFromPart(part))">
           <span>{{ part.text }}</span>
         </span>
+        <!-- continue conversation -->
+        <v-btn v-if="!editing && hovered && !continuing" :disabled="uxLocked" size="x-small" class="ml-2" color="primary" variant="text" prepend-icon="mdi-fast-forward" @click="continueConversation">Continue</v-btn>
+        <v-progress-circular v-else-if="continuing" class="ml-3 mr-3" size="14" indeterminate="disable-shrink"
+        color="primary"></v-progress-circular>       
       </div>
     </div>
     <v-sheet v-if="hovered" rounded="sm" color="transparent">
@@ -79,6 +83,7 @@ export default {
     return {
       editing: false,
       autocompleting: false,
+      continuing: false,
       editing_text: "",
       hovered: false,
     }
@@ -104,6 +109,44 @@ export default {
       } else {
         this.submitEdit();
       }
+    },
+
+    continueConversation() {
+      this.continuing = true;
+      this.autocompleteRequest(
+        {
+          partial: this.text,
+          context: "dialogue:npc",
+          character: this.character,
+        },
+        (completion) => {
+          this.continuing = false;
+
+          // ignore empty completions
+          if (completion.trim() === "") {
+            return;
+          }
+
+          // if text ends with a quote and completion starts with a quote, remove the quotes
+          // and insert a period at the end of the current text
+          if (this.text.endsWith('"') && completion.startsWith('"')) {
+            completion = completion.slice(1);
+            let text = this.text.slice(0, -1);
+
+            // if text does not end with a period, add one
+            if (!text.endsWith('.')) {
+              text += '.';
+            }
+
+            this.editing_text = text + " " + completion;
+          } else {
+            this.editing_text = this.text + " " + completion;
+          }
+
+          this.submitEdit();
+        },
+        this.$refs.textarea
+      )
     },
 
     autocompleteEdit() {

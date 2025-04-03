@@ -6,30 +6,32 @@
 <|CLOSE_SECTION|>
 {% endblock -%}
 <|SECTION:SCENE|>
+{% if continuing_message -%}
+{% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context()), min_dialogue=20, sections=False)[:-1] -%}
+{{ scene_context }}
+{% endfor %}
+{% else %}
 {% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context()), min_dialogue=20, sections=False) -%}
 {{ scene_context }}
 {% endfor %}
+{% endif %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
-{% if not can_coerce -%}
-Continue {{ character.name }}'s unfinished line in this screenplay.
-{%- else -%}
-Write {{ character.name }}'s next line in this screenplay.
-{%- endif %}
 
-Your response MUST only be the new parts of {{ character.name }}'s dialogue, not the entire line.
-Your response MUST be short. (10 - 15 words)
-Your response MUST NOT include the provided text, only the new parts.
+{% if continuing_message -%}
+Write the continuation of the {{ character.name }}'s next line in the scene.
+{% else %}
+Write the next line of the {{ character.name }}'s dialogue in the scene.
+{% endif %}
 
-All actions and prose must be contained within * markers.
-All spoken word must be contained within " markers.
+Spoken word must be contained within " markers.
 
-{% if not can_coerce -%}
-Continue this text: {{ character.name }}: {{ input }}
-Continuation: 
+YOU MUST NEVER START A NEW DIALOGUE BLOCK.
+
 <|CLOSE_SECTION|>
-{%- else -%}
-<|CLOSE_SECTION|>
-{{ bot_token }}{{ character.name.upper() }}
-{{ input }}
-{%- endif -%}
+<|SECTION:DIALOGUE|>
+{% if can_coerce -%}
+{{ non_anchor }}{{ bot_token }}{{ anchor }}{{ prefix }}
+{% else %}
+{{ non_anchor }}{{ bot_token }} ...
+{% endif%}

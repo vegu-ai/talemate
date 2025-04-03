@@ -14,10 +14,10 @@
     focal.callbacks.act.render(
         "Instruct the actor portraying the character to take the next action. IMPORTANT: Only the following characters are eligible to take action: "+candidate_names+".",
         name="Character Name",
-        instructions="The acting instructions for the actor portraying the character. Provide 2-3 sentences of specific direction including emotional state, body language, and meaningful actions. This argument is optional, if you want the actor to continue their course of action from the previous message, you can omit it. You MUST NOT write direct speech.",
+        instructions="The acting instructions for the actor portraying the character. Provide a brief, concise direction (1-2 short sentences) including key emotional state and actions. This argument is optional, if you want the actor to continue their course of action from the previous message, you can omit it. You MUST NOT write direct speech.",
         examples=[
-            {"name": "John", "instructions": "Open the door cautiously and descend the basement stairs with visible trepidation, your hand trailing along the damp wall for support. As you reach the bottom, wrinkle your nose at the strange musty smell and let your eyes dart around the shadowy corners before calling out hesitantly."},
-            {"name": "Jane", "instructions": "Pick up the phone with trembling fingers and deliberately dial each number, taking a deep breath to compose yourself before the final digit. While waiting for an answer, pace nervously across the room, repeatedly tucking your hair behind your ear as your free hand fidgets with the hem of your shirt."},
+            {"name": "John", "instructions": "Open the door cautiously and descend the basement stairs with visible trepidation. Call out hesitantly into the darkness."},
+            {"name": "Jane", "instructions": "Pick up the phone with trembling fingers and dial. Pace nervously while waiting for an answer."},
             {"name": "Alice", "_comment": "Alice is already doing a great job, so we'll let her continue her current action."},
         ]
     )
@@ -27,11 +27,11 @@
 {{
     focal.callbacks.narrate_scene.render(
         "Instruct the narrator to narrate the current moment in this scene. Use this when you want to provide a description of the scene or the characters' actions without direct dialogue or actually moving the story forward.",
-        instructions="The narrative instructions for the narrator. Keep it brief (1 sentence).",
+        instructions="The narrative instructions for the narrator. Keep it brief but descriptive (1 concise sentence).",
         examples=[
-            {"instructions": "Describe the moment as Jim presses down on Joseph's arm, seemingly gaining the upper hand in the arm wrestling match."},
-            {"instructions": "Narrate the scene as the camera pans out to reveal the entire room, showing the reactions of the other characters."},
-            {"instructions": "Describe the aroma of the freshly baked bread wafting through the room."},
+            {"instructions": "Jim presses down on Joseph's arm, gaining the upper hand in the match."},
+            {"instructions": "The camera pans to reveal the room and the other characters' reactions."},
+            {"instructions": "Fresh bread aroma fills the air, drawing everyone's attention."},
         ]
     )
 }}
@@ -40,11 +40,11 @@
 {{
     focal.callbacks.progress_story.render(
         "Instruct the narrator to progress the story. Use this when you want to move the sequence of events forward.",
-        instructions="The narrative instructions for the narrator to progress the story. Keep it brief (1 sentence).",
+        instructions="The narrative instructions for the narrator to progress the story. Keep it brief but descriptive (1 concise sentence).",
         examples=[
-            {"instructions": "Suddenly, the doorbell rings, interrupting the conversation."},
-            {"instructions": "They begin driving towards the city, the sun setting in the distance as they talk about their plans."},
-            {"instructions": "The lights flicker, and the room is plunged into darkness."},
+            {"instructions": "The doorbell suddenly rings, interrupting their conversation."},
+            {"instructions": "They drive towards the city as the sun sets in the distance."},
+            {"instructions": "Lights flicker and the room is plunged into darkness."},
         ]
     )
 }}
@@ -72,22 +72,25 @@ Based on the ongoing scene and the available candidates, select the next charact
 
 Candidates eligible to take action:
 {% for character in candidates -%}
-{% set previous_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=50, stop_on_time_passage=True)  -%}
-- {{ character.name }}{% if previous_direction and False %} (Last directed: {{ previous_direction.instructions }}){% endif %}
+- {{ character.name }}
 {% endfor %}
 
-You  MUST NOT write direct dialogue. You can tell them what to do and say, but not how to say it. For example: "John tells Mary about the secret he discovered" is acceptable, but "John says 'I found a secret'" is not.
+You MUST NOT write direct dialogue. You can tell them what to do and say, but not how to say it. For example: "John tells Mary about the secret he discovered" is acceptable, but "John says 'I found a secret'" is not.
+
+IMPORTANT: Keep all directions extremely concise - 1-2 short sentences maximum. Focus only on the most essential actions and emotions.
 
 IMPORTANT: You MUST repeat back which characters are available to take action, as per the list of candidates above and that you understand that you MUST NOT call act on any character's that aren't explicitly mentioned in the list of candidates.
 {# /ACT #}{% endif %}
 
 {# NARRATE #}{% if focal.callbacks.narrate_scene %}
 ### When instructing the narrator
-Give clear and concise instructions to the narrator that result in novel elements being added to the scene.
+Give brief but descriptive instructions to the narrator (1 concise sentence). Focus on the essential new elements to add to the scene.
 {# /NARRATE #}{% endif %}
 
 ### Direct the Scene
 You MUST be confident and specific with your instructions. You are in charge of the scene, you know what should happen next.
 
 Call the appropriate function to direct the scene. YOU MUST ONLY CALL ONE (1) FUNCTION. Repeat back your understand of this limitation.
+
+IMPORTANT: ALL directions must be concise. For characters, use 1-2 short sentences. For narration, use 1 concise sentence. Avoid unnecessary detail or flowery language.
 <|CLOSE_SECTION|>

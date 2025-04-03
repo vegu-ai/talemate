@@ -1,21 +1,25 @@
 import pytest
 import talemate.game.engine.nodes.scene
-from talemate.game.engine.nodes.core import Graph, Entry, Node
+import talemate.game.engine.nodes.data
+from talemate.game.engine.nodes.core import Graph, Entry, Node, Socket, GraphContext, GraphState
 from talemate.game.engine.nodes.registry import get_node
 
 @pytest.mark.asyncio
 async def test_select_function():
-    select_item:Node = get_node("core/SelectItem")()
-    json_output:Node = get_node("data/JSON")()
+    # Create a simple test for SelectItem node
+    select_item = get_node("data/SelectItem")()
     
-    json_output.set_property("json", '["item1", "item2", "item3"]')
+    # Create test items
+    test_items = ["item1", "item2", "item3"]
     
-    graph = Graph()
-    graph.add_node(select_item)
-    graph.add_node(json_output)
-    
-    graph.connect(json_output.outputs[0], select_item.inputs[0])
-    
-    await graph.execute()
-    
-    assert select_item.outputs[0].value in ["item1", "item2", "item3"]
+    # Create a GraphState manually
+    with GraphContext() as state:
+        # Set the items input directly in the state
+        state.set_node_socket_value(select_item, "items", test_items)
+        
+        # Run the node manually
+        await select_item.run(state)
+        
+        # Verify the output is one of the items
+        output_value = select_item.outputs[0].value
+        assert output_value in test_items, f"Expected one of {test_items}, got {output_value}"

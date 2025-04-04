@@ -156,6 +156,7 @@ class ConversationAgent(
             ),
             "auto_break_repetition": AgentAction(
                 enabled=True,
+                can_be_disabled=True,
                 label="Auto Break Repetition",
                 description="Will attempt to automatically break AI repetition.",
             ),

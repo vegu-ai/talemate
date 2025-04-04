@@ -70,6 +70,7 @@ class WorldStateAgent(
         self.actions = {
             "update_world_state": AgentAction(
                 enabled=True,
+                can_be_disabled=True,
                 label="Update world state",
                 description="Will attempt to update the world state based on the current scene. Runs automatically every N turns.",
                 config={
@@ -86,12 +87,14 @@ class WorldStateAgent(
             ),
             "update_reinforcements": AgentAction(
                 enabled=True,
+                can_be_disabled=True,
                 label="Update state reinforcements",
                 description="Will attempt to update any due state reinforcements.",
                 config={},
             ),
             "check_pin_conditions": AgentAction(
                 enabled=True,
+                can_be_disabled=True,
                 label="Update conditional context pins",
                 description="Will evaluate context pins conditions and toggle those pins accordingly. Runs automatically every N turns.",
                 config={

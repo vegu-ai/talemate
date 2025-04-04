@@ -65,7 +65,7 @@
 import { parseText } from '@/utils/textParser';
 
 export default {
-  props: ['text', 'message_id', 'uxLocked'],
+  props: ['text', 'message_id', 'uxLocked', 'isLastMessage'],
   inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'openWorldStateManager'],
   computed: {
     parts() {

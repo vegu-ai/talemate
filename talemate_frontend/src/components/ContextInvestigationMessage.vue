@@ -54,6 +54,7 @@ export default {
   props: {
     message: Object,
     uxLocked: Boolean,
+    isLastMessage: Boolean,
   },
   inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'getMessageColor'],
   methods: {

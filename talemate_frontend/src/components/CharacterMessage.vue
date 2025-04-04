@@ -36,7 +36,7 @@
           <span>{{ part.text }}</span>
         </span>
         <!-- continue conversation -->
-        <v-btn v-if="!editing && hovered && !continuing" :disabled="uxLocked" size="x-small" class="ml-2" color="primary" variant="text" prepend-icon="mdi-fast-forward" @click="continueConversation">Continue</v-btn>
+        <v-btn v-if="!editing && hovered && !continuing && isLastMessage" :disabled="uxLocked" size="x-small" class="ml-2" color="primary" variant="text" prepend-icon="mdi-fast-forward" @click="continueConversation">Continue</v-btn>
         <v-progress-circular v-else-if="continuing" class="ml-3 mr-3" size="14" indeterminate="disable-shrink"
         color="primary"></v-progress-circular>       
       </div>
@@ -72,7 +72,7 @@
 import { parseText } from '@/utils/textParser';
 
 export default {
-  props: ['character', 'text', 'color', 'message_id', 'uxLocked'],
+  props: ['character', 'text', 'color', 'message_id', 'uxLocked', 'isLastMessage'],
   inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle'],
   computed: {
     parts() {

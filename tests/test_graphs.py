@@ -80,6 +80,6 @@ async def test_graph_core(mock_scene, mock_director_agent):
     
 @pytest.mark.asyncio
 async def test_graph_data(mock_scene, mock_director_agent):
-    fn = make_graph_test("test-harness-data", True)
+    fn = make_graph_test("test-harness-data", False)
     
     await fn(mock_scene, mock_director_agent)

@@ -38,6 +38,7 @@ class EditorAgent(Agent):
         self.actions = {
             "fix_exposition": AgentAction(
                 enabled=True,
+                can_be_disabled=True,
                 label="Fix exposition",
                 description="Attempt to fix exposition and emotes, making sure they are displayed in italics. Runs automatically after each AI dialogue.",
                 config={
@@ -67,13 +68,9 @@ class EditorAgent(Agent):
             ),
             "add_detail": AgentAction(
                 enabled=False,
+                can_be_disabled=True,
                 label="Add detail",
                 description="Attempt to add extra detail and exposition to the dialogue. Runs automatically after each AI dialogue.",
-            ),
-            "check_continuity_errors": AgentAction(
-                enabled=False,
-                label="Check continuity errors",
-                description="Attempt to fix continuity errors in the dialogue. Runs automatically after each AI dialogue. (super experimental)",
             ),
         }
 
@@ -154,8 +151,6 @@ class EditorAgent(Agent):
             edit = await self.add_detail(text, emission.character)
 
             edit = await self.cleanup_character_message(edit, emission.character)
-
-            edit = await self.check_continuity_errors(edit, emission.character)
 
             edited.append(edit)
 
@@ -273,108 +268,3 @@ class EditorAgent(Agent):
         response = util.strip_partial_sentences(response)
 
         return response
-
-    @set_processing
-    async def check_continuity_errors(
-        self,
-        content: str,
-        character: Character,
-        force: bool = False,
-        fix: bool = True,
-        message_id: int = None,
-    ) -> str:
-        """
-        Edits a text to ensure that it is consistent with the scene
-        so far
-        """
-
-        if not self.actions["check_continuity_errors"].enabled and not force:
-            return content
-
-        MAX_CONTENT_LENGTH = 255
-        count = util.count_tokens(content)
-
-        if count > MAX_CONTENT_LENGTH:
-            return content
-
-        log.debug(
-            "check_continuity_errors START",
-            content=content,
-            character=character,
-            force=force,
-            fix=fix,
-            message_id=message_id,
-        )
-
-        response = await Prompt.request(
-            "editor.check-continuity-errors",
-            self.client,
-            "basic_analytical_medium2",
-            vars={
-                "content": content,
-                "character": character,
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "message_id": message_id,
-            },
-        )
-
-        # loop through response line by line, checking for lines beginning
-        # with "ERROR {number}:
-
-        errors = []
-
-        for line in response.split("\n"):
-            if "ERROR" not in line:
-                continue
-
-            errors.append(line)
-
-        if not errors:
-            log.debug("check_continuity_errors NO ERRORS")
-            return content
-
-        log.debug("check_continuity_errors ERRORS", fix=fix, errors=errors)
-
-        if not fix:
-            return content
-
-        state = {}
-
-        response = await Prompt.request(
-            "editor.fix-continuity-errors",
-            self.client,
-            "editor_creative_medium2",
-            vars={
-                "content": content,
-                "character": character,
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "errors": errors,
-                "set_state": lambda k, v: state.update({k: v}),
-            },
-        )
-
-        content_fix_identifer = state.get("content_fix_identifier")
-
-        try:
-            content = response.strip().strip("```").split("```")[0].strip()
-            content = content.replace(content_fix_identifer, "").strip()
-            content = content.strip(":")
-
-            # if content doesnt start with {character_name}: then add it
-            if not content.startswith(f"{character.name}:"):
-                content = f"{character.name}: {content}"
-
-        except Exception as e:
-            log.error(
-                "check_continuity_errors FAILED",
-                content_fix_identifer=content_fix_identifer,
-                response=response,
-                e=e,
-            )
-            return content
-
-        log.debug("check_continuity_errors FIXED", content=content)
-
-        return content

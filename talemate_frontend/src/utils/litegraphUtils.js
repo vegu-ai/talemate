@@ -636,6 +636,17 @@ function createNodeClass(nodeDefinition) {
             }
         }
         
+        // Clone flags (including collapsed status)
+        if (this.flags) {
+            if (!newNode.flags) {
+                newNode.flags = {};
+            }
+            // Clone all flags, including collapsed state
+            for (var flagName in this.flags) {
+                newNode.flags[flagName] = this.flags[flagName];
+            }
+        }
+        
         return newNode;
     };
 
@@ -1085,3 +1096,189 @@ export function convertFullGraphToJSON(graph) {
         graph: convertGraphToJSON(graph)
     };
 }
+
+// Override the processKey method to use our custom cloning for copy/paste
+LGraphCanvas.prototype.processKey = function(e) {
+    if (!this.graph) {
+        return;
+    }
+
+    var block_default = false;
+    var key_code = e.keyCode;
+
+    // Ctrl+C to copy
+    if (e.type == "keydown" && (e.ctrlKey || e.metaKey) && key_code == 67) {
+        if (this.selected_nodes) {
+            // Store the selected nodes for copy
+            var selected_list = [];
+            var connection_list = [];
+            
+            // Create a map of selected nodes by ID for quick lookup
+            var selected_map = {};
+            
+            // First pass: collect selected nodes
+            for (var id in this.selected_nodes) {
+                var selected_node = this.selected_nodes[id];
+                selected_list.push(selected_node);
+                // Use talemateId if available, otherwise use id
+                selected_map[selected_node.id] = selected_node;
+                if (selected_node.talemateId) {
+                    selected_map[selected_node.talemateId] = selected_node;
+                }
+            }
+            
+            // Second pass: collect connections between selected nodes
+            for (var i1 = 0; i1 < selected_list.length; i1++) {
+                var source_node = selected_list[i1];
+                
+                // Check outputs of this node
+                if (source_node.outputs) {
+                    for (var output_idx = 0; output_idx < source_node.outputs.length; output_idx++) {
+                        var output = source_node.outputs[output_idx];
+                        if (!output.links || output.links.length === 0) continue;
+                        
+                        // For each link from this output
+                        for (var link_idx = 0; link_idx < output.links.length; link_idx++) {
+                            var link_id = output.links[link_idx];
+                            var link_info = this.graph.links[link_id];
+                            if (!link_info) continue;
+                            
+                            // Get target node
+                            var link_target_node = this.graph.getNodeById(link_info.target_id);
+                            if (!link_target_node) continue;
+                            
+                            // Check if target node is selected
+                            if (selected_map[link_target_node.id] || 
+                                (link_target_node.talemateId && selected_map[link_target_node.talemateId])) {
+                                // Store this connection
+                                connection_list.push({
+                                    origin_id: source_node.id,
+                                    origin_talemateId: source_node.talemateId,
+                                    origin_slot: output_idx,
+                                    target_id: link_target_node.id,
+                                    target_talemateId: link_target_node.talemateId,
+                                    target_slot: link_info.target_slot
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Store the copy data
+            LiteGraph._clipboard_data = {
+                nodes: selected_list,
+                connections: connection_list
+            };
+        }
+        block_default = true;
+    } 
+    // Ctrl+V to paste
+    else if (e.type == "keydown" && (e.ctrlKey || e.metaKey) && key_code == 86) {
+        if (LiteGraph._clipboard_data && LiteGraph._clipboard_data.nodes && LiteGraph._clipboard_data.nodes.length) {
+            this.graph.beforeChange();
+            
+            var clipboard_data = LiteGraph._clipboard_data;
+            var pasted_nodes = [];
+            var old_to_new_ids = {}; // Map from original id to new node id
+            
+            // Compute center of copied nodes
+            var center_x = 0;
+            var center_y = 0;
+            for (var i2 = 0; i2 < clipboard_data.nodes.length; ++i2) {
+                var clipboard_node = clipboard_data.nodes[i2];
+                center_x += clipboard_node.pos[0];
+                center_y += clipboard_node.pos[1];
+            }
+            center_x /= clipboard_data.nodes.length;
+            center_y /= clipboard_data.nodes.length;
+            
+            // Get destination position (mouse or center of canvas)
+            var mouse_pos = this.last_mouse_position || [
+                this.canvas.width * 0.5,
+                this.canvas.height * 0.5
+            ];
+            var offset_pos = this.convertCanvasToOffset(mouse_pos);
+            
+            // Calculate offset
+            var offset_x = offset_pos[0] - center_x;
+            var offset_y = offset_pos[1] - center_y;
+            
+            // First pass: create all nodes
+            for (var i3 = 0; i3 < clipboard_data.nodes.length; ++i3) {
+                var original_node = clipboard_data.nodes[i3];
+                // Remove unused variable
+                // var node_type = original_node.type;
+                
+                // Clone the node
+                var new_node = original_node.clone();
+                
+                // Set new position
+                new_node.pos[0] = original_node.pos[0] + offset_x;
+                new_node.pos[1] = original_node.pos[1] + offset_y;
+                
+                // Add to graph
+                this.graph.add(new_node);
+                
+                // Store mapping between old and new IDs
+                old_to_new_ids[original_node.id] = new_node.id;
+                if (original_node.talemateId) {
+                    old_to_new_ids[original_node.talemateId] = new_node.talemateId || new_node.id;
+                }
+                
+                pasted_nodes.push(new_node);
+            }
+            
+            // Second pass: create connections
+            for (var i4 = 0; i4 < clipboard_data.connections.length; ++i4) {
+                var connection = clipboard_data.connections[i4];
+                
+                // Get new origin and target nodes
+                var origin_id = connection.origin_talemateId || connection.origin_id;
+                var target_id = connection.target_talemateId || connection.target_id;
+                
+                var new_origin_id = old_to_new_ids[origin_id];
+                var new_target_id = old_to_new_ids[target_id];
+                
+                if (!new_origin_id || !new_target_id) continue;
+                
+                var new_origin_node = this.graph.getNodeById(new_origin_id);
+                var new_target_node = this.graph.getNodeById(new_target_id);
+                
+                if (new_origin_node && new_target_node) {
+                    new_origin_node.connect(connection.origin_slot, new_target_node, connection.target_slot);
+                }
+            }
+            
+            // Select the pasted nodes
+            this.selectNodes(pasted_nodes);
+            
+            this.graph.afterChange();
+        }
+        block_default = true;
+    }
+    // DELETE key - delete selected nodes
+    else if (e.type == "keydown" && (key_code == 46 || key_code == 8)) {
+        if (this.selected_nodes) {
+            this.graph.beforeChange();
+            
+            for (var delete_id in this.selected_nodes) {
+                var node_to_delete = this.selected_nodes[delete_id];
+                if (node_to_delete.removable !== false) {
+                    this.graph.remove(node_to_delete);
+                }
+            }
+            
+            this.selected_nodes = {};
+            this.setDirty(true, true);
+            this.graph.afterChange();
+        }
+        block_default = true;
+    }
+
+    if (block_default) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }
+};

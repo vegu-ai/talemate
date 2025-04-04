@@ -71,6 +71,7 @@ class GuideSceneMixin:
             enabled=False,
             container=True,
             can_be_disabled=True,
+            quick_toggle=True,
             experimental=True,
             label="Guide Scene",
             icon="mdi-lightbulb",

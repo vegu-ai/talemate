@@ -55,6 +55,7 @@ class SceneAnalyzationMixin:
             container=True,
             can_be_disabled=True,
             experimental=True,
+            quick_toggle=True,
             label="Scene Analysis",
             icon="mdi-lightbulb",
             description="Analyzes the scene, providing extra understanding and context to the other agents.",

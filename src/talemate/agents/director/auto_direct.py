@@ -39,6 +39,7 @@ class AutoDirectMixin:
             container=True,
             can_be_disabled=True,
             experimental=True,
+            quick_toggle=True,
             label="Auto Direction",
             icon="mdi-bullhorn",
             description="Automatic direction based on scene intention and the natural flow of the current scene.",

@@ -71,6 +71,7 @@ class GenerateChoicesMixin:
             enabled=True,
             container=True,
             can_be_disabled=True,
+            quick_toggle=True,
             experimental=True,
             label="Dynamic Actions",
             icon="mdi-tournament",

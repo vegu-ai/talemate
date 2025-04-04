@@ -72,6 +72,7 @@ class AgentAction(pydantic.BaseModel):
     container: bool = False
     icon: Union[str, None] = None
     can_be_disabled: bool = False
+    quick_toggle: bool = False
     experimental: bool = False
 
 

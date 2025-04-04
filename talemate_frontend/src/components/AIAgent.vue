@@ -20,46 +20,52 @@
                         </template>
                     </v-tooltip>
                 </v-list-item-title>
-                <div v-if="typeof(agent.client) === 'string'">
-                    <v-chip prepend-icon="mdi-network-outline" class="mr-1" size="x-small" color="grey" variant="tonal" label>{{ agent.client }}</v-chip>
-                    <!--
-                    <v-icon color="grey" size="x-small" v-bind="props">mdi-network-outline</v-icon>
-                    <span class="ml-1 text-caption text-bold text-grey-lighten-1">{{ agent.client }}</span>
-                    -->
+                
+                <div class="d-flex flex-wrap align-center chip-container">
+                    <!-- Client chip for string type -->
+                    <v-chip v-if="typeof(agent.client) === 'string'" 
+                        prepend-icon="mdi-network-outline" 
+                        size="x-small" 
+                        color="grey" 
+                        variant="tonal" 
+                        label>
+                        {{ agent.client }}
+                    </v-chip>
 
-                </div>
-                <div v-else-if="typeof(agent.client) === 'object'">
-                    <v-tooltip v-for="(detail, key) in agent.client" :key="key" :text="detail.description" >
-                        <template v-slot:activator="{ props }">
-                            <v-chip 
-                            class="mr-1" 
-                            size="x-small" 
-                            v-bind="props"
-                            :prepend-icon="detail.icon"
-                            label
-                            :color="detail.color || 'grey'"
-                            variant="tonal"
-                            >
-                               {{ detail.value }}
-                           </v-chip>
-                        </template>
-                    </v-tooltip>
-
-                    <!--
-                    <div v-for="(detail, key) in agent.client" :key="key">
-                        <v-tooltip :text="detail.description" v-if="detail.icon != null">
+                    <!-- Client chips for object type -->
+                    <template v-else-if="typeof(agent.client) === 'object'">
+                        <v-tooltip v-for="(detail, key) in agent.client" :key="key" :text="detail.description" >
                             <template v-slot:activator="{ props }">
-                                <v-icon color="grey" size="x-small" v-bind="props">{{ detail.icon }}</v-icon>
+                                <v-chip 
+                                size="x-small" 
+                                v-bind="props"
+                                :prepend-icon="detail.icon"
+                                label
+                                :color="detail.color || 'grey'"
+                                variant="tonal"
+                                >
+                                {{ detail.value }}
+                                </v-chip>
                             </template>
                         </v-tooltip>
-                        <span class="ml-1 text-caption text-bold text-grey-lighten-1">{{ detail.value }}</span>
-                    </div>
-                    -->
+                    </template>
+
+                    <!-- Quick toggle action chips -->
+                    <v-chip 
+                        v-for="(action, action_name) in getQuickToggleActions(agent)" 
+                        :key="action_name"
+                        size="x-small" 
+                        label
+                        :color="action.enabled ? 'success' : 'grey'"
+                        variant="tonal"
+                        :prepend-icon="action.icon"
+                        @click.stop="toggleAction(agent, action_name, action)"
+                    >
+                        {{ action.label }}
+                        <v-icon class="ml-1" size="small" v-if="action.enabled">mdi-check-circle-outline</v-icon>
+                        <v-icon class="ml-1" size="small" v-else>mdi-circle-outline</v-icon>
+                    </v-chip>
                 </div>
-                <!--
-                <v-chip class="mr-1" v-if="agent.status === 'disabled'" size="x-small">Disabled</v-chip>
-                <v-chip v-if="agent.data.experimental" color="warning" size="x-small">experimental</v-chip>
-                -->
             </v-list-item>
         </v-list>
         <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" @save="saveAgent" @update:dialog="updateDialog" ref="modal"></AgentModal>
@@ -131,6 +137,35 @@ export default {
             }
 
             return false;
+        },
+        toggleAction(agent, action_name, action) {
+            // Toggle the action's enabled state
+            action.enabled = !action.enabled;
+            
+            // Update the agent's actions
+            agent.actions[action_name].enabled = action.enabled;
+            
+            // Save the agent to persist the changes
+            this.saveAgent(agent);
+            
+            // Send update to server
+            this.getWebsocket().send(JSON.stringify({
+                type: 'agent_action',
+                agent_name: agent.name,
+                action_name: action_name,
+                enabled: action.enabled
+            }));
+        },
+        getQuickToggleActions(agent) {
+            const result = {};
+            if (agent.actions) {
+                for (const action_name in agent.actions) {
+                    if (agent.actions[action_name] && agent.actions[action_name].quick_toggle) {
+                        result[action_name] = agent.actions[action_name];
+                    }
+                }
+            }
+            return result;
         },
         getActive() {
             return this.state.agents.find(a => a.status === 'busy');
@@ -225,3 +260,17 @@ export default {
     },
 }
 </script>
+
+<style scoped>
+.chip-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    max-width: 100%;
+    margin-top: 4px;
+}
+
+.chip-container {
+    gap: 4px;
+}
+</style>

@@ -36,6 +36,7 @@ class ContextInvestigationMixin:
             container=True,
             can_be_disabled=True,
             experimental=True,
+            quick_toggle=True,
             label="Context Investigation",
             icon="mdi-layers-search",
             description="Investigates the layered history to augment the context with additional information.",

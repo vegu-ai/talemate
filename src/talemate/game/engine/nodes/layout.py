@@ -315,7 +315,7 @@ def load_graph_from_file(file_path: str, graph_cls = None, search_paths: list[st
         return graph_cls(**data).reinitialize(), PathInfo(
             full_path=str(file_path),
             relative_path=os.path.relpath(file_path, TALEMATE_ROOT),
-            search_paths=[str(path) for path in search_paths]
+            search_paths=[str(path) for path in search_paths] if search_paths else []
         )
 
 

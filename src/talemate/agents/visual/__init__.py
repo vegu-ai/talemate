@@ -93,16 +93,19 @@ class VisualBase(Agent):
             ),
             "automatic_setup": AgentAction(
                 enabled=True,
+                can_be_disabled=True,
                 label="Automatic Setup",
                 description="Automatically setup the visual agent if the selected client has an implementation of the selected backend. (Like the KoboldCpp Automatic1111 api)",
             ),
             "automatic_generation": AgentAction(
                 enabled=False,
+                can_be_disabled=True,
                 label="Automatic Generation",
                 description="Allow automatic generation of visual content",
             ),
             "process_in_background": AgentAction(
                 enabled=True,
+                can_be_disabled=True,
                 label="Process in Background",
                 description="Process renders in the background",
             ),

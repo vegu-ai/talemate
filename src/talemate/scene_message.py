@@ -195,7 +195,11 @@ class CharacterMessage(SceneMessage):
         {dialogue}
         """
 
-        message = self.message.split(":", 1)[1].strip()
+        try:
+            message = self.message.split(":", 1)[1].strip()
+        except IndexError:
+            log.warning("character_message_as_movie_script failed to parse correct format", msg=self.message)
+            message = self.message
 
         return f"\n{self.character_name.upper()}\n{message}\nEND-OF-LINE\n"
 

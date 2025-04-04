@@ -30,8 +30,8 @@ YOU MUST NEVER START A NEW DIALOGUE BLOCK.
 
 <|CLOSE_SECTION|>
 <|SECTION:DIALOGUE|>
-{% if can_coerce -%}
+{% if can_coerce %}
 {{ non_anchor }}{{ bot_token }}{{ anchor }}{{ prefix }}
 {% else %}
-{{ non_anchor }}{{ bot_token }} ...
+{{ non_anchor }}{{ anchor }}{{ prefix }} (... continue the dialogue)
 {% endif%}

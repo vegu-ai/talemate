@@ -289,8 +289,10 @@ export default {
         },
         lookAtCharacter(name) {
             this.getWebsocket().send(JSON.stringify({
-                type: 'interact',
-                text: `!narrate_c:${name}`,
+                type: 'narrator',
+                action: 'look_at_character',
+                character: name,
+                narrative_direction: "",
             }));
         },
         persistCharacter(name) {
@@ -301,8 +303,9 @@ export default {
         },
         lookAtItem(name) {
             this.getWebsocket().send(JSON.stringify({
-                type: 'interact',
-                text: `!narrate_q:describe the apperance of ${name}.:true`,
+                type: 'narrator',
+                action: 'query',
+                query: `describe the appearance of ${name}.`,
             }));
         },
         refresh() {

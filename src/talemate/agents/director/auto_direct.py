@@ -74,13 +74,13 @@ class AutoDirectMixin:
                 "instruct_actors": AgentActionConfig(
                     type="bool",
                     label="Instruct Actors",
-                    description="Whether to instruct actors on how to perform their action.",
+                    description="Whether to instruct actors on what to do next.",
                     value=False,
                 ),
                 "instruct_narrator": AgentActionConfig(
                     type="bool",
                     label="Instruct Narrator",
-                    description="Whether to instruct the narrator on what type of narration to write.",
+                    description="Whether to instruct the narrator on what to do next.",
                     value=False,
                 ),
                 "instruct_frequency": AgentActionConfig(

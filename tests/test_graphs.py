@@ -46,22 +46,40 @@ def mock_director_agent(mock_client, mock_scene):
     director.scene = mock_scene
     return director
 
-@pytest.mark.asyncio
-async def test_graph_core(mock_scene, mock_director_agent):
-    
-    async def assert_state(state: GraphState):
-        if UPDATE_RESULTS or not os.path.exists(os.path.join(RESULTS_DIR, "test-harness-core.json")):
-            with open(os.path.join(RESULTS_DIR, "test-harness-core.json"), "w") as f:
+def make_assert_fn(name:str, write_results:bool=False):
+    async def assert_fn(state: GraphState):
+        if write_results or not os.path.exists(os.path.join(RESULTS_DIR, f"{name}.json")):
+            with open(os.path.join(RESULTS_DIR, f"{name}.json"), "w") as f:
                 json.dump(state.shared, f, indent=4)
-                
         else:
-            with open(os.path.join(RESULTS_DIR, "test-harness-core.json"), "r") as f:
+            with open(os.path.join(RESULTS_DIR, f"{name}.json"), "r") as f:
                 expected = json.load(f)
                 
             assert state.shared == expected
+    
+    return assert_fn
+
+def make_graph_test(name:str, write_results:bool=False):
+    async def test_graph(mock_scene, mock_director_agent):
+        assert_fn = make_assert_fn(name, write_results)
         
-    with ActiveScene(mock_scene):
-        graph = load_test_graph("test-harness-core")
-        assert graph is not None
-        graph.callbacks.append(assert_state)
-        await graph.execute()
+        with ActiveScene(mock_scene):
+            graph = load_test_graph(name)
+            assert graph is not None
+            graph.callbacks.append(assert_fn)
+            await graph.execute()
+
+    return test_graph
+
+
+@pytest.mark.asyncio
+async def test_graph_core(mock_scene, mock_director_agent):
+    fn = make_graph_test("test-harness-core", False)
+    
+    await fn(mock_scene, mock_director_agent)
+    
+@pytest.mark.asyncio
+async def test_graph_data(mock_scene, mock_director_agent):
+    fn = make_graph_test("test-harness-data", True)
+    
+    await fn(mock_scene, mock_director_agent)

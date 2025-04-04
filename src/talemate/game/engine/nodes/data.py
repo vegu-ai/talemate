@@ -79,7 +79,7 @@ class Sort(Node):
         
         new_items = [i for i in items]
         reverse = self.get_property("reverse")
-        if sort_keys != UNRESOLVED:
+        if self.is_set(sort_keys) and len(sort_keys) > 0:
             new_items.sort(key=lambda x: tuple([getattr(x,k,None) for k in sort_keys]), reverse=reverse)
         else:
             new_items.sort(reverse=reverse)
@@ -114,9 +114,6 @@ class JSON(Node):
         
         # convert json string to python object
         # support list as root object
-        
-        print("json_string", json_string)
-        
         data = json.loads(json_string)
         self.set_output_values({
             "data": data
@@ -451,6 +448,12 @@ class Get(Node):
         
         if isinstance(obj, dict):
             value = obj.get(attribute)
+        elif isinstance(obj, list):
+            try:
+                index = int(attribute)
+            except (ValueError, IndexError):
+                raise InputValueError(self, "attribute", "Attribute must be an integer if object is a list")
+            value = obj[index]
         else:
             value = getattr(obj, attribute, None)
         
@@ -523,6 +526,12 @@ class Set(Node):
         
         if isinstance(obj, dict):
             obj[attribute] = value
+        elif isinstance(obj, list):
+            try:
+                index = int(attribute)
+            except (ValueError, IndexError):
+                raise InputValueError(self, "attribute", "Attribute must be an integer if object is a list")
+            obj[index] = value
         else:
             setattr(obj, attribute, value)
         
@@ -601,7 +610,7 @@ class ListAppend(Node):
         super().__init__(title=title, **kwargs)
         
     def setup(self):
-        self.add_input("list", socket_type="list")
+        self.add_input("list", socket_type="list", optional=True)
         self.add_input("item", socket_type="any")
         
         self.add_output("list", socket_type="list")

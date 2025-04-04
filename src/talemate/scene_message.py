@@ -252,7 +252,7 @@ class NarratorMessage(SceneMessage):
     def migrate_source_to_meta(self):
         if self.source and not self.meta:
             try:
-                self.meta = self.source_to_meta
+                self.meta = self.source_to_meta()
             except Exception as e:
                 log.warning("migrate_narrator_source_to_meta", error=e, msg=self.id)
 

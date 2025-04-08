@@ -17,21 +17,17 @@
 {% endif %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
+You are assisting a script editor in writing the next line of dialogue or action for {{ character.name.upper() }} in the current scene.
 
-{% if continuing_message -%}
-Write the continuation of the {{ character.name }}'s next line in the scene.
-{% else %}
-Write the next line of the {{ character.name }}'s dialogue in the scene.
-{% endif %}
+The editor is writing this line right now and has tasked you to provide a suggestion for the continuation of the DRAFT.
 
-Spoken word must be contained within " markers.
+Rules:
 
-YOU MUST NEVER START A NEW DIALOGUE BLOCK.
-
-<|CLOSE_SECTION|>
-<|SECTION:DIALOGUE|>
+1. Never transition to other characters.
+2. Spoken word must be contained within " markers.
+{% if not can_coerce %}3. Only return the continuation of the DRAFT.{% endif %}
 {% if can_coerce %}
-{{ non_anchor }}{{ bot_token }}{{ anchor }}{{ prefix }}
+DRAFT: {{ non_anchor }}{{ bot_token }}{{ anchor }}{{ prefix }}
 {% else %}
-{{ non_anchor }}{{ anchor }}{{ prefix }} (... continue the dialogue)
+DRAFT: {{ non_anchor }}{{ anchor }}{{ prefix }} (... continue the dialogue)
 {% endif%}

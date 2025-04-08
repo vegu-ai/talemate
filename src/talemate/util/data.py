@@ -6,7 +6,9 @@ import structlog
 __all__ = [
     "fix_faulty_json",
     "extract_json",
+    "extract_json_v2",
     'JSONEncoder',
+    'DataParsingError',
 ]
 
 log = structlog.get_logger("talemate.util.dedupe")
@@ -22,6 +24,14 @@ class JSONEncoder(json.JSONEncoder):
             return str(obj)
         
 
+class DataParsingError(Exception):
+    """
+    Custom error class for data parsing errors (JSON, YAML, etc).
+    """
+    def __init__(self, message, data=None):
+        self.message = message
+        self.data = data
+        super().__init__(self.message)
 
 def fix_faulty_json(data: str) -> str:
     # Fix missing commas
@@ -104,3 +114,54 @@ def extract_json(s):
 
     json_object = json.loads(json_string)
     return json_string, json_object
+
+def extract_json_v2(text):
+    """
+    Extracts JSON structures from code blocks in a text string.
+    
+    Parameters:
+        text (str): The input text containing code blocks with JSON.
+        
+    Returns:
+        list: A list of unique parsed JSON objects.
+        
+    Raises:
+        DataParsingError: If invalid JSON is encountered in code blocks.
+    """
+    unique_jsons = []
+    seen = set()
+    
+    # Split by code block markers
+    parts = text.split("```")
+    
+    # Process every code block (odd indices after split)
+    for i in range(1, len(parts), 2):
+        if i >= len(parts):
+            break
+            
+        block = parts[i].strip()
+        
+        # Skip empty blocks
+        if not block:
+            continue
+            
+        # Remove language identifier if present
+        if block.startswith("json"):
+            block = block[4:].strip()
+        
+        # Fix and parse JSON
+        fixed_block = fix_faulty_json(block)
+        try:
+            json_obj = json.loads(fixed_block)
+            
+            # Convert to string for deduplication check
+            json_str = json.dumps(json_obj, sort_keys=True)
+            
+            # Only add if we haven't seen this object before
+            if json_str not in seen:
+                seen.add(json_str)
+                unique_jsons.append(json_obj)
+        except json.JSONDecodeError as e:
+            raise DataParsingError(f"Invalid JSON in code block: {str(e)}", block)
+            
+    return unique_jsons

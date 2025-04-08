@@ -36,6 +36,7 @@ class CharacterProgressionMixin:
             enabled=False,
             container=True,
             can_be_disabled=True,
+            quick_toggle=True,
             experimental=True,
             label="Character Progression",
             icon="mdi-account-switch",

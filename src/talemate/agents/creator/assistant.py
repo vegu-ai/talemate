@@ -419,6 +419,16 @@ class AssistantMixin:
         if not response_length:
             response_length = self.autocomplete_narrative_suggestion_length
 
+        # Split the input text into non-anchor and anchor parts
+        non_anchor, anchor = util.split_anchor_text(input, 10)
+        
+        self.scene.log.debug(
+            "autocomplete_narrative_anchor", 
+            anchor=anchor,
+            non_anchor=non_anchor,
+            input=input
+        )
+
         response = await Prompt.request(
             f"creator.autocomplete-narrative",
             self.client,
@@ -429,6 +439,8 @@ class AssistantMixin:
                 "input": input.strip(),
                 "can_coerce": self.client.can_be_coerced,
                 "response_length": response_length,
+                "anchor": anchor,
+                "non_anchor": non_anchor,
             },
             pad_prepended_response=False,
             dedupe_enabled=False,

@@ -64,3 +64,22 @@ def test_clean_dialogue(input, expected, main_name):
 ])
 def test_remove_trailing_markers(input, expected):
     assert remove_trailing_markers(input) == expected
+
+
+@pytest.mark.parametrize("input, anchor_length, expected_non_anchor, expected_anchor", [
+    ("", 10, "", ""),
+    ("Hello", 10, "", "Hello"),
+    ("This is a short example", 10, "This is", "a short example"),
+    ("One two three four", 4, "One two", "three four"),
+    ("This is a longer example with more than ten words to test the anchor functionality", 10, 
+     "This is a longer example", "with more than ten words to test the anchor functionality"),
+    ("One two three four five six seven eight nine ten", 10, 
+     "One two three four five", "six seven eight nine ten"),
+    ("Two words", 10, "Two", "words"),
+    ("One Two Three", 3, "One", "Two Three"),
+])
+def test_split_anchor_text(input, anchor_length, expected_non_anchor, expected_anchor):
+    from talemate.util.dialogue import split_anchor_text
+    non_anchor, anchor = split_anchor_text(input, anchor_length)
+    assert non_anchor == expected_non_anchor
+    assert anchor == expected_anchor

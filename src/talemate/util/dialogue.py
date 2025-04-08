@@ -407,13 +407,18 @@ def split_anchor_text(text: str, anchor_length: int = 10) -> tuple[str, str]:
     # Split the input into words
     words = text.split()
     
+    # If it's just one word, put it in the anchor
+    if len(words) == 1:
+        return "", text
+    
     # Get the anchor (last anchor_length words)
     if len(words) > anchor_length:
         anchor = ' '.join(words[-anchor_length:])
         non_anchor = ' '.join(words[:-anchor_length])
     else:
-        # If input is shorter than anchor_length, use the entire input as anchor
-        anchor = text
-        non_anchor = ""
+        # For text with words <= anchor_length (but more than 1 word), split evenly
+        mid_point = len(words) // 2
+        non_anchor = ' '.join(words[:mid_point])
+        anchor = ' '.join(words[mid_point:])
         
     return non_anchor, anchor

@@ -1,10 +1,12 @@
 import os
 import pytest
 import json
+import yaml
 from talemate.util.data import (
     fix_faulty_json,
     extract_json,
     extract_json_v2,
+    extract_yaml_v2,
     JSONEncoder,
     DataParsingError
 )
@@ -171,6 +173,83 @@ def test_extract_json_v2_multiple():
         assert expected in result
     
     # Verify that each object appears exactly once (no duplicates)
+    id_counts = {}
+    for obj in result:
+        id_counts[obj["id"]] = id_counts.get(obj["id"], 0) + 1
+    
+    # Each ID should appear exactly once
+    for id_val, count in id_counts.items():
+        assert count == 1, f"Object with ID {id_val} appears {count} times (should be 1)"
+
+def test_extract_yaml_v2_valid():
+    """Test extract_yaml_v2 with valid YAML in code blocks."""
+    # Load test data
+    with open(get_test_data_path('valid_yaml.txt'), 'r') as f:
+        text = f.read()
+    
+    # Extract YAML
+    result = extract_yaml_v2(text)
+    
+    # Check if we got two unique YAML objects (third is a duplicate)
+    assert len(result) == 2
+    
+    # Check if the objects are correct
+    expected_first = {
+        "name": "Test Object",
+        "properties": {
+            "id": 1,
+            "active": True
+        },
+        "tags": ["test", "yaml", "parsing"]
+    }
+    
+    expected_second = {
+        "simple_name": "Simple Object",
+        "value": 42
+    }
+    
+    assert expected_first in result
+    assert expected_second in result
+
+def test_extract_yaml_v2_invalid():
+    """Test extract_yaml_v2 raises DataParsingError for invalid YAML."""
+    # Load test data
+    with open(get_test_data_path('invalid_yaml.txt'), 'r') as f:
+        text = f.read()
+    
+    # Try to extract YAML, should raise DataParsingError
+    with pytest.raises(DataParsingError):
+        extract_yaml_v2(text)
+
+def test_extract_yaml_v2_multiple():
+    """Test extract_yaml_v2 with multiple YAML objects including duplicates."""
+    # Load test data
+    with open(get_test_data_path('multiple_yaml.txt'), 'r') as f:
+        text = f.read()
+    
+    # Extract YAML
+    result = extract_yaml_v2(text)
+    
+    # Check if we got the correct number of unique objects (3 unique out of 5 total)
+    assert len(result) == 3
+    
+    # Get the objects by ID for easier assertions
+    objects_by_id = {obj["id"]: obj for obj in result}
+    
+    # Check for object 1
+    assert objects_by_id[1]["name"] == "First Object"
+    assert objects_by_id[1]["tags"] == ["one", "first", "primary"]
+    
+    # Check for object 2
+    assert objects_by_id[2]["name"] == "Second Object"
+    assert objects_by_id[2]["tags"] == ["two", "second"]
+    
+    # Check for object 3 - note that the date is parsed as a date object by YAML
+    assert objects_by_id[3]["name"] == "Third Object"
+    assert objects_by_id[3]["active"] is True
+    assert "created" in objects_by_id[3]["metadata"]
+    
+    # Verify that each object ID appears exactly once (no duplicates)
     id_counts = {}
     for obj in result:
         id_counts[obj["id"]] = id_counts.get(obj["id"], 0) + 1

@@ -1,0 +1,16 @@
+Here is some text with invalid YAML.
+
+```yaml
+name: Invalid Object
+  indentation: incorrect
+    level: wrong
+```
+
+Another invalid YAML with improper list syntax:
+
+```
+items:
+  - first item
+  second item without dash
+  - third item
+``` 

@@ -1,0 +1,32 @@
+Here is some text with embedded YAML.
+
+```yaml
+name: Test Object
+properties:
+  id: 1
+  active: true
+tags:
+  - test
+  - yaml
+  - parsing
+```
+
+And here's another YAML object:
+
+```
+simple_name: Simple Object
+value: 42
+```
+
+This is a duplicate of the first object:
+
+```yaml
+name: Test Object
+properties:
+  id: 1
+  active: true
+tags:
+  - test
+  - yaml
+  - parsing
+``` 

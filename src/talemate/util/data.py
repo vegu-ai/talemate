@@ -2,11 +2,14 @@ import json
 import re
 import json
 import structlog
+import yaml
+from datetime import date, datetime
 
 __all__ = [
     "fix_faulty_json",
     "extract_json",
     "extract_json_v2",
+    "extract_yaml_v2",
     'JSONEncoder',
     'DataParsingError',
 ]
@@ -19,6 +22,8 @@ class JSONEncoder(json.JSONEncoder):
     """
     def default(self, obj):
         try:
+            if isinstance(obj, (date, datetime)):
+                return obj.isoformat()
             return super().default(obj)
         except TypeError:
             return str(obj)
@@ -165,3 +170,58 @@ def extract_json_v2(text):
             raise DataParsingError(f"Invalid JSON in code block: {str(e)}", block)
             
     return unique_jsons
+
+def extract_yaml_v2(text):
+    """
+    Extracts YAML structures from code blocks in a text string.
+    
+    Parameters:
+        text (str): The input text containing code blocks with YAML.
+        
+    Returns:
+        list: A list of unique parsed YAML objects.
+        
+    Raises:
+        DataParsingError: If invalid YAML is encountered in code blocks.
+    """
+    unique_yamls = []
+    seen = set()
+    
+    # Split by code block markers
+    parts = text.split("```")
+    
+    # Process every code block (odd indices after split)
+    for i in range(1, len(parts), 2):
+        if i >= len(parts):
+            break
+            
+        block = parts[i].strip()
+        
+        # Skip empty blocks
+        if not block:
+            continue
+            
+        # Remove language identifier if present
+        if block.startswith("yaml") or block.startswith("yml"):
+            block = block[block.find("\n"):].strip()
+        
+        # Parse YAML
+        try:
+            yaml_obj = yaml.safe_load(block)
+            
+            # Skip if None (empty YAML)
+            if yaml_obj is None:
+                continue
+                
+            # Convert to JSON string for deduplication check
+            # This works because YAML is a superset of JSON
+            json_str = json.dumps(yaml_obj, sort_keys=True, cls=JSONEncoder)
+            
+            # Only add if we haven't seen this object before
+            if json_str not in seen:
+                seen.add(json_str)
+                unique_yamls.append(yaml_obj)
+        except yaml.YAMLError as e:
+            raise DataParsingError(f"Invalid YAML in code block: {str(e)}", block)
+            
+    return unique_yamls

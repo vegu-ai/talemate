@@ -7,6 +7,7 @@ from datetime import date, datetime
 
 __all__ = [
     "fix_faulty_json",
+    'extract_data',
     "extract_json",
     "extract_json_v2",
     "extract_yaml_v2",
@@ -225,3 +226,15 @@ def extract_yaml_v2(text):
             raise DataParsingError(f"Invalid YAML in code block: {str(e)}", block)
             
     return unique_yamls
+
+
+def extract_data(text, schema_format: str = "json"):
+    """
+    Extracts data from text based on the schema format.
+    """
+    if schema_format == "json":
+        return extract_json_v2(text)
+    elif schema_format == "yaml":
+        return extract_yaml_v2(text)
+    else:
+        raise ValueError(f"Unsupported schema format: {schema_format}")

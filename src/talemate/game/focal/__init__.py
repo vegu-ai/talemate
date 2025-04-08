@@ -13,6 +13,9 @@ from contextvars import ContextVar
 
 from talemate.client.base import ClientBase
 from talemate.prompts.base import Prompt
+from talemate.util.data import (
+    extract_data,
+)
 
 from .schema import Argument, Call, Callback, State
 
@@ -179,6 +182,13 @@ class Focal:
             self.state.calls.append(call)
     
     async def _extract(self, response:str) -> list[Call]:
+        
+        # first try to extract data from the response using tooling
+        try:
+            data = extract_data(response, self.state.schema_format)
+            return [Call(**call) for call in data]
+        except Exception as e:
+            log.warning("focal.extract.data FAILED - attempting to use AI to extract calls", error=str(e))
         
         # if there is no JSON structure in the response, there are no calls to extract
         # so we return an empty list

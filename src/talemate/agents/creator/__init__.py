@@ -40,6 +40,7 @@ class CreatorAgent(
         self.actions = {}
         
         MemoryRAGMixin.add_actions(self)
+        AssistantMixin.add_actions(self)
 
     @set_processing
     async def generate_title(self, text: str):

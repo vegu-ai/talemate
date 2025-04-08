@@ -20,6 +20,7 @@ from talemate.world_state.templates import (
     Spices,
     WritingStyle,
 )
+from talemate.agents.base import AgentAction, AgentActionConfig
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -127,6 +128,49 @@ class AssistantMixin:
     """
     Creator mixin that allows quick contextual generation of content.
     """
+    
+    @classmethod
+    def add_actions(cls, creator):
+        creator.actions["autocomplete"] = AgentAction(
+            enabled=True,
+            container=True,
+            can_be_disabled=False,
+            label="Autocomplete",
+            icon="mdi-auto-fix",
+            description="Controls settings for autocomplete suggestions.",
+            config={
+                "dialogue_suggestion_length": AgentActionConfig(
+                    type="number",
+                    label="Dialogue Suggestion Length",
+                    description="Length of the generated suggestion when using autocomplete for dialogue.",
+                    value=64,
+                    min=32,
+                    max=256,
+                    step=16,
+                ),
+                "narrative_suggestion_length": AgentActionConfig(
+                    type="number",
+                    label="Narrative Suggestion Length",
+                    description="Length of the generated suggestion when using autocomplete for narrative.",
+                    value=96,
+                    min=32,
+                    max=256,
+                    step=16,
+                ),
+            }
+        )
+        
+    # property helpers
+    
+    @property
+    def autocomplete_dialogue_suggestion_length(self):
+        return self.actions["autocomplete"].config["dialogue_suggestion_length"].value
+    
+    @property
+    def autocomplete_narrative_suggestion_length(self):
+        return self.actions["autocomplete"].config["narrative_suggestion_length"].value
+
+    # actions
 
     async def contextual_generate_from_args(
         self,
@@ -290,13 +334,13 @@ class AssistantMixin:
         input: str,
         character: "Character",
         emit_signal: bool = True,
-        response_length: int = 72,
+        response_length: int | None = None,
     ) -> str:
         """
         Autocomplete dialogue.
         """
-        
-        editor = get_agent("editor")
+        if not response_length:
+            response_length = self.autocomplete_dialogue_suggestion_length
         
         # continueing recent character message
         non_anchor, anchor = util.split_anchor_text(input, 10)
@@ -367,20 +411,24 @@ class AssistantMixin:
         self,
         input: str,
         emit_signal: bool = True,
+        response_length: int | None = None,
     ) -> str:
         """
         Autocomplete narrative.
         """
+        if not response_length:
+            response_length = self.autocomplete_narrative_suggestion_length
 
         response = await Prompt.request(
             f"creator.autocomplete-narrative",
             self.client,
-            "create_short",
+            f"create_{response_length}",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "input": input.strip(),
                 "can_coerce": self.client.can_be_coerced,
+                "response_length": response_length,
             },
             pad_prepended_response=False,
             dedupe_enabled=False,

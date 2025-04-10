@@ -8,9 +8,10 @@
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
-Describe {{ character.name }}'s appearance at the end of the dialogue and summarize into a narrative description. Focus on the character's physical appearance, gestures, and expressions. Pay attention to the character's clothing, posture and actions taken in the moment.
+Describe {{ character.name }}'s appearance following the final moment and summarize into a narrative description. Focus on the character's physical appearance, gestures, and expressions. Pay attention to the character's clothing, posture and actions taken in the moment.
+
 {% if last_message %}
-``` end of dialogue
+``` the final moment in the scene
 {{ last_message }}
 ```
 {% endif %}

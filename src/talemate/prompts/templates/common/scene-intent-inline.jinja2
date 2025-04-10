@@ -1,1 +1,8 @@
-{% if scene.intent_state.intent or scene.intent_state.phase %}Consider the expectations of the story and the intention of the current scene. What is the reader expecting to happen next?{% endif %}
+{% if scene.intent_state.intent or scene.intent_state.phase -%}
+Briefly state your understanding of the story and the current scene intention THEN 
+{%- if task_instructions %} consider the expectations of the story and the intention of the current scene. {{ task_instructions }}
+{% else %} consider the expectations of the story and the intention of the current scene. What is the reader expecting in the context of your current task?
+{% endif -%}
+{% elif task_instructions -%}
+{{ task_instructions }}
+{% endif -%}

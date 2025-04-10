@@ -71,8 +71,16 @@ async def regenerate_message(message: SceneMessage, scene:"Scene") -> list[Scene
         if not fn:
             log.error(f"regenerate_message: Could not find agent function", message=message)
             return
+
+        arguments = message.meta.get("arguments", {}).copy()
         
-        new_message = await fn(**message.meta.get("arguments", {}))
+        # if `character` is set and a string, convert it to a Character
+        if arguments.get("character") and isinstance(arguments.get("character"), str):
+            arguments["character"] = scene.get_character(arguments.get("character"))
+        
+        log.debug(f"regenerate_message: Calling agent function", function=function_name, arguments=arguments)
+        
+        new_message = await fn(**arguments)
         
         if not new_message:
             log.error(f"regenerate_message: No new message generated", message=message)
@@ -81,7 +89,10 @@ async def regenerate_message(message: SceneMessage, scene:"Scene") -> list[Scene
         if isinstance(new_message, str):
             new_message = message.__class__(new_message)
             new_message.meta = message.meta.copy()
-            
+        
+        if isinstance(message, ContextInvestigationMessage):
+            new_message.sub_type = message.sub_type
+        
         if not isinstance(new_message, (ReinforcementMessage)):
             scene.push_history(new_message)
             emit(new_message.typ, message=new_message)

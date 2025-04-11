@@ -14,6 +14,7 @@ import talemate.emit.async_signals
 from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.agents.context import active_agent
+from talemate.agents.base import RagBuildSubInstructionEmission
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -148,6 +149,9 @@ class SceneAnalyzationMixin:
         talemate.emit.async_signals.get("agent.narrator.inject_instructions").connect(
             self.on_inject_instructions
         )
+        talemate.emit.async_signals.get("agent.summarization.rag_build_sub_instruction").connect(
+            self.on_rag_build_sub_instruction
+        )
         
     async def on_inject_instructions(
         self, 
@@ -205,6 +209,15 @@ class SceneAnalyzationMixin:
                 "<|CLOSE_SECTION|>"
             ]
         ))
+    
+    async def on_rag_build_sub_instruction(self, emission:"RagBuildSubInstructionEmission"):
+        """
+        Injects the sub instruction into the analysis.
+        """
+        sub_instruction = await self.analyze_scene_rag_build_sub_instruction()
+        
+        if sub_instruction:
+            emission.sub_instruction = sub_instruction
     
     # helpers
     
@@ -294,7 +307,44 @@ class SceneAnalyzationMixin:
         
         return "progress"
         
-    
+    async def analyze_scene_rag_build_sub_instruction(self):
+        """
+        Analyzes the active agent context to figure out the appropriate sub type
+        for rag build sub instruction.
+        """
+        
+        active_agent_context = active_agent.get()
+        
+        if not active_agent_context:
+            return ""
+        
+        state = active_agent_context.state
+        
+        if state.get("narrator__query_narration"):
+            query = state["narrator__query"]
+            if query.endswith("?"):
+                return "Answer the following question: " + query
+            else:
+                return query
+        
+        if state.get("narrator__sensory_narration"):
+            return "Collect information that aids in describing the following sensory experience: " + state["narrator__sensory"]
+        
+        if state.get("narrator__visual_narration"):
+            return "Collect information that aids in describing the following visual experience: " + state["narrator__visual"]
+        
+        if state.get("narrator__fn_narrate_character_entry"):
+            return "Collect information that aids in describing the following character entry: " + state["narrator__fn_narrate_character_entry"]
+        
+        if state.get("narrator__fn_narrate_character_exit"):
+            return "Collect information that aids in describing the following character exit: " + state["narrator__fn_narrate_character_exit"]
+        
+        if state.get("narrator__fn_narrate_progress"):
+            return "Collect information that aids in progressing the story: " + state["narrator__fn_narrate_progress"]
+        
+        return ""
+        
+
     # actions
 
     @set_processing

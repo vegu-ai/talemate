@@ -568,3 +568,7 @@ class AgentEmission:
 class AgentTemplateEmission(AgentEmission):
     template_vars: dict = dataclasses.field(default_factory=dict)
     response: str = None
+    
+@dataclasses.dataclass
+class RagBuildSubInstructionEmission(AgentEmission):
+    sub_instruction: str | None = None

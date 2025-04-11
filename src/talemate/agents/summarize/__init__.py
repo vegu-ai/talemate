@@ -24,7 +24,7 @@ from talemate.exceptions import GenerationCancelled
 import talemate.game.focal as focal
 import talemate.emit.async_signals
 
-from talemate.agents.base import Agent, AgentAction, AgentActionConfig, set_processing, AgentEmission
+from talemate.agents.base import Agent, AgentAction, AgentActionConfig, set_processing, AgentEmission, RagBuildSubInstructionEmission
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
 
@@ -37,6 +37,7 @@ log = structlog.get_logger("talemate.agents.summarize")
 talemate.emit.async_signals.register(
     "agent.summarization.before_build_archive",
     "agent.summarization.after_build_archive",
+    "agent.summarization.rag_build_sub_instruction",
 )
 
 @dataclasses.dataclass
@@ -150,6 +151,21 @@ class SummarizeAgent(
         result = result.strip()
 
         return result
+
+    # RAG HELPERS
+    
+    async def rag_build_sub_instruction(self):
+        # Fire event to get the sub instruction from mixins
+        emission = RagBuildSubInstructionEmission(
+            agent=self,
+        )
+        await talemate.emit.async_signals.get(
+            "agent.summarization.rag_build_sub_instruction"
+        ).send(emission)
+        
+        return emission.sub_instruction
+
+    # SUMMARIZE
 
     @set_processing
     async def build_archive(

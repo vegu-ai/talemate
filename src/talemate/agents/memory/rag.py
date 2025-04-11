@@ -143,7 +143,7 @@ class MemoryRAGMixin:
             
     async def rag_build(
         self, 
-        character: "Character" = None, 
+        character: "Character | None" = None, 
         prompt: str = "",
         sub_instruction: str = "",
     ) -> list[str]:
@@ -166,8 +166,11 @@ class MemoryRAGMixin:
         if not sub_instruction:
             if character:
                 sub_instruction = f"continue the scene as {character.name}"
-            else:
-                sub_instruction = "continue the scene"
+            elif hasattr(self, "rag_build_sub_instruction"):
+                sub_instruction = await self.rag_build_sub_instruction()
+        
+        if not sub_instruction:
+            sub_instruction = "continue the scene"
             
         if retrieval_method != "direct":
             world_state = instance.get_agent("world_state")

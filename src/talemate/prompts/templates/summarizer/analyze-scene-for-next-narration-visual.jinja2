@@ -5,11 +5,24 @@ Your task is to analyze the current moment in the scene to guide the story edito
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors emphasize visual details that fulfill the direction.
 {% endif %}
 
+{% if last_message -%}
+Following this moment:
+```
+{{ last_message }}
+```
+{% endif %}
+
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the immediate visual state of the scene:
 - What actions or movements can be seen?
 - What is the state of the environment?
 - What specific details about character appearances are noteworthy?
 - What objects or items are visually prominent?
+
+{% if scene.intent_state.active %}
+{% with task_instructions="Given the overall story and current scene intention, what visual details would the reader expect to have vividly described in the next narrative segment? Remember, you are not supposed to progress the story, but enhance the description of the current moment." -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) {% include "scene-intent-inline.jinja2" %}
+{% endwith %}
+{% endif %}
 
 {% if context_investigation -%}
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.

@@ -15,7 +15,9 @@
     {% include "analyze-scene-for-next-narration-visual-character.jinja2" %}
 {% endwith %}
 {# Visual narration #}{% elif agent_context_state["narrator__visual_narration"] %}
-{% include "analyze-scene-for-next-narration-visual.jinja2" %}
+{% with last_message=last_message -%}
+    {% include "analyze-scene-for-next-narration-visual.jinja2" %}
+{% endwith %}
 {# Progressive narration - Character Entry #}{% elif agent_context_state["narrator__fn_narrate_character_entry"] %}
 {% with character=character -%}
     {% include "analyze-scene-for-next-narration-progress-character-entry.jinja2" %}

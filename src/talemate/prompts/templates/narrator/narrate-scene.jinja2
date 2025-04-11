@@ -3,17 +3,17 @@
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
-Following the final moment, generate new narration that describes the current actions and movements taking place.
+Following the current moment, generate new narration that describes the current actions and movements taking place.
 
 {% if last_message %}
-``` the final moment in the scene
+``` the current moment in the scene
 {{ last_message }}
 ```
 {% endif -%}
 
 Focus on describing the environment and what characters are physically doing, their gestures, expressions, and movements. You must not include any character's internal thoughts, feelings, or dialogue. 
 
-Your narration should elaborate on the immediate actions happening in response to the last line, without moving the scene forward in time.
+Your narration should elaborate on the immediate actions happening during the current moment, without moving the scene forward in time.
 
 Be precise and specific about the actions being performed, but stay true to the setting and context of the story so far.
 

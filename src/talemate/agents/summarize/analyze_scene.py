@@ -104,7 +104,8 @@ class SceneAnalyzationMixin:
                     type="bool",
                     label="Cache analysis",
                     description="Cache the analysis results for the scene. This means analysis will not be regenerated when regenerating the actor or narrator's output.",
-                    value=True
+                    value=True,
+                    quick_toggle=True,
                 ),
             }
         )

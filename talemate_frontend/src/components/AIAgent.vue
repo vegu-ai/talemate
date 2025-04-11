@@ -50,21 +50,41 @@
                         </v-tooltip>
                     </template>
 
-                    <!-- Quick toggle action chips -->
-                    <v-chip 
-                        v-for="(action, action_name) in getQuickToggleActions(agent)" 
-                        :key="action_name"
-                        size="x-small" 
-                        label
-                        :color="action.enabled ? 'success' : 'grey'"
-                        variant="tonal"
-                        :prepend-icon="action.icon"
-                        @click.stop="toggleAction(agent, action_name, action)"
-                    >
-                        {{ action.label }}
-                        <v-icon class="ml-1" size="small" v-if="action.enabled">mdi-check-circle-outline</v-icon>
-                        <v-icon class="ml-1" size="small" v-else>mdi-circle-outline</v-icon>
-                    </v-chip>
+                    <!-- Quick toggle action chips with their sub-config chips -->
+                    <template v-for="(action, action_name) in agent.actions" :key="action_name">
+                        <!-- Action chip (if it has quick_toggle) -->
+                        <template v-if="action.quick_toggle">
+                            <v-chip 
+                                size="x-small" 
+                                label
+                                :color="action.enabled ? 'success' : 'grey'"
+                                variant="tonal"
+                                :prepend-icon="action.icon"
+                                @click.stop="toggleAction(agent, action_name, action)"
+                            >
+                                {{ action.label }}
+                                <v-icon class="ml-1" size="small" v-if="action.enabled">mdi-check-circle-outline</v-icon>
+                                <v-icon class="ml-1" size="small" v-else>mdi-circle-outline</v-icon>
+                            </v-chip>
+                            
+                            <!-- Related sub-config chips (if action is enabled) -->
+                            <template v-if="action.enabled && action.config">
+                                <v-chip 
+                                    v-for="(config, config_name) in getQuickToggleSubConfigs(action)" 
+                                    :key="`${action_name}-${config_name}`"
+                                    size="x-small" 
+                                    label
+                                    :color="config.value ? 'highlight3' : 'grey'"
+                                    variant="tonal"
+                                    @click.stop="toggleSubConfig(agent, action_name, config_name, config)"
+                                >
+                                    {{ config.label }}
+                                    <v-icon class="ml-1" size="x-small" v-if="config.value">mdi-check-circle-outline</v-icon>
+                                    <v-icon class="ml-1" size="x-small" v-else>mdi-circle-outline</v-icon>
+                                </v-chip>
+                            </template>
+                        </template>
+                    </template>
                 </div>
             </v-list-item>
         </v-list>
@@ -156,12 +176,43 @@ export default {
                 enabled: action.enabled
             }));
         },
+        toggleSubConfig(agent, action_name, config_name, config) {
+            // Toggle the config value (assuming it's a boolean)
+            config.value = !config.value;
+            
+            // Update the agent's config
+            agent.actions[action_name].config[config_name].value = config.value;
+            
+            // Save the agent to persist the changes
+            this.saveAgent(agent);
+            
+            // Send update to server using the same type as action toggles
+            this.getWebsocket().send(JSON.stringify({
+                type: 'agent_action',
+                agent_name: agent.name,
+                action_name: action_name,
+                config: {
+                    [config_name]: config.value
+                }
+            }));
+        },
         getQuickToggleActions(agent) {
             const result = {};
             if (agent.actions) {
                 for (const action_name in agent.actions) {
                     if (agent.actions[action_name] && agent.actions[action_name].quick_toggle) {
                         result[action_name] = agent.actions[action_name];
+                    }
+                }
+            }
+            return result;
+        },
+        getQuickToggleSubConfigs(action) {
+            const result = {};
+            if (action.config) {
+                for (const config_name in action.config) {
+                    if (action.config[config_name] && action.config[config_name].quick_toggle) {
+                        result[config_name] = action.config[config_name];
                     }
                 }
             }

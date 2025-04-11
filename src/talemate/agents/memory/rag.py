@@ -69,10 +69,10 @@ class MemoryRAGMixin:
                 ),
                 "cache": AgentActionConfig(
                     type="bool",
-                    label="Cache",
+                    label="Cache RAG results",
                     description="Cache the long term memory for faster retrieval.",
                     note="This is a cross-agent cache, assuming they use the same options.",
-                    value=True
+                    value=True,
                 )
             },
         )

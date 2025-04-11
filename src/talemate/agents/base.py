@@ -52,6 +52,7 @@ class AgentActionConfig(pydantic.BaseModel):
     choices: Union[list[dict[str, str]], None] = None
     note: Union[str, None] = None
     expensive: bool = False
+    quick_toggle: bool = False
 
     class Config:
         arbitrary_types_allowed = True

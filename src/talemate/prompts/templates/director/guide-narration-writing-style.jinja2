@@ -1,0 +1,12 @@
+{% if scene.intent_state.active %}
+{% with task_instructions="Guide the narrator on wording their info dump in an engaging tone that matches the story's expectations. Consider how a video game narrator would convey this information to the player. Remember this is THE NARRATOR, not a character. Be specific about the tone." -%}
+{% include "scene-intent-inline.jinja2" %}
+{% endwith %}
+{% if not agent_context_state["narrator__writing_style"] %}
+{# Examples of narration styles for reference #}
+Examples of narration styles:
+- Humorous: "You examine the rubber chicken with a pulley in the middle. Surprisingly, this appears to be the most normal item in your inventory."
+- Serious: "The ancient castle looms before you, its weathered stones bearing silent witness to centuries of royal intrigue and forgotten secrets."
+- Provocative: "The woman glances your way with a look that could melt polyester. Too bad your leisure suit is 100% synthetic."
+{% endif %}
+{% endif %}

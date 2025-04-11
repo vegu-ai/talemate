@@ -6,9 +6,9 @@
     {% set narrative_direction = narrative_query -%}
 {% endif -%}
 {% if query_is_question -%}
-Help the narrator answer the following question, using the full scene context and the scene analysis.
+Help the narrator answer the following question, within the context of this fictional world, using the full scene context and the scene analysis.
 {% else %}
-Help the narrator complete the following task, using the full scene context and the scene analysis.
+Help the narrator complete the following task, within the context of this fictional world, using the full scene context and the scene analysis.
 {% endif %}
 
 {% with narrative_direction=narrative_direction %}{% include "guide-narrative-direction.jinja2" %}{% endwith %}
@@ -28,6 +28,7 @@ Inform the narrator on how to answer the question, providing guidance on what ke
 Provide guidance on how to complete the task, offering specific details or elements that should be included in the response. Be specific about what information needs to be conveyed while letting the writer craft the response.
 {% endif %}
 
+{% include "guide-narration-writing-style.jinja2" %}
 
 {% if response_length > 300 -%}
 Briefly expand on your understanding of the scene analysis and what the expectations for the answer are.

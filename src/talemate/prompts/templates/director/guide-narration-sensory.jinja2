@@ -1,22 +1,40 @@
 Guide the story writer to write a narrative description of the sensory details of the current moment.
 
-We are looking to expand on smells, sounds, textures, tastes and visuals that may enrich the scene.
+We are looking to expand on smells, sounds, textures, tastes and visuals that may enrich the scene. While focusing primarily on the environment, a balanced approach that includes character sensory details is encouraged.
+
+Encourage including:
+- Environmental elements and objects that:
+  - Provide contextual understanding of the setting (time period, culture, status, function of the space)
+  - Make the environment feel lived-in and authentic (personal belongings, signs of use or wear)
+  - Create atmosphere through meaningful details (items that suggest mood, history, or foreshadowing)
+  - Add interesting elements that might later be relevant to the plot
+- Character sensory experiences that:
+  - Connect characters to their surroundings through their senses
+  - Show how characters physically interact with the environment
+  - Reveal character traits through their sensory perceptions
+- Character-to-character sensory interactions such as:
+  - Physical sensations between characters (touch, proximity, body heat)
+  - Sensory awareness of other characters (scent, sound of breathing/movement)
+  - Non-verbal sensory communication (body language, expressions)
 
 {% if last_event -%}
-Following this moment:
-```
+``` current moment
 {{ last_event }}
 ```
 {% endif %}
 
 {% include "guide-narrative-direction.jinja2" %}
 
-Help them achieve this by providing guidance on how to expand on the sensory details of the scene. (e.g., "The flowers that [character] just walked by, tell us what they smell like." or "Describe the sound of the wind rustling through the trees." or "What does [character] feel as they stick their hand into the box of coffee beans?")
+Help them achieve this by providing guidance on balancing environmental and character sensory details in the scene. (e.g., "Describe how the room smells and how this affects the character." or "Detail the textures of the surroundings and what they feel like to touch." or "What sounds fill the space, and how do they influence the atmosphere?")
+
+Suggest specific sensory interactions between characters (e.g., "How does one character's touch feel to another?" or "Describe the mingling of their scents as they draw closer." or "What subtle physical reactions does one character notice in the other?")
+
+Suggest specific items to include that might enhance understanding of the setting or make it more interesting (e.g., "Mention the worn books on the shelf and what they reveal about the owner." or "Describe the antique items that hint at the room's history." or "Detail the tools scattered around that explain the space's purpose.")
 
 {% if response_length > 300 -%}
-Briefly let the writer know what key elements should be included in the description, based on the scene analysis. What is the likely goal of this sensory narration? What are we looking to accomplish..
+Briefly let the writer know what key elements should be included in the description, based on the scene analysis. What is the likely goal of this sensory narration? What are we looking to accomplish with these environmental and character details?
 {% endif %}
 
 Consider the suggestion put forth in the scene analysis.
 
-Finally let them know they have some creative freedom to invent new details that fit the scene.
+Finally let them know they have some creative freedom to invent new sensory details that fit the scene, maintaining a good balance between environment and character information.

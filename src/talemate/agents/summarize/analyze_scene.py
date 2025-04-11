@@ -327,20 +327,22 @@ class SceneAnalyzationMixin:
             else:
                 return query
         
-        if state.get("narrator__sensory_narration"):
-            return "Collect information that aids in describing the following sensory experience: " + state["narrator__sensory"]
+        narrative_direction = state.get("narrator__narrative_direction")
         
-        if state.get("narrator__visual_narration"):
-            return "Collect information that aids in describing the following visual experience: " + state["narrator__visual"]
+        if state.get("narrator__sensory_narration") and narrative_direction:
+            return "Collect information that aids in describing the following sensory experience: " + narrative_direction
         
-        if state.get("narrator__fn_narrate_character_entry"):
-            return "Collect information that aids in describing the following character entry: " + state["narrator__fn_narrate_character_entry"]
+        if state.get("narrator__visual_narration") and narrative_direction:
+            return "Collect information that aids in describing the following visual experience: " + narrative_direction
         
-        if state.get("narrator__fn_narrate_character_exit"):
-            return "Collect information that aids in describing the following character exit: " + state["narrator__fn_narrate_character_exit"]
+        if state.get("narrator__fn_narrate_character_entry") and narrative_direction:
+            return "Collect information that aids in describing the following character entry: " + narrative_direction
+        
+        if state.get("narrator__fn_narrate_character_exit") and narrative_direction:
+            return "Collect information that aids in describing the following character exit: " + narrative_direction
         
         if state.get("narrator__fn_narrate_progress"):
-            return "Collect information that aids in progressing the story: " + state["narrator__fn_narrate_progress"]
+            return "Collect information that aids in progressing the story: " + narrative_direction
         
         return ""
         

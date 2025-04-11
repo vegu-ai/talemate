@@ -63,12 +63,9 @@ Content Classification: {{ scene.context }}
 {% endwith %}
 {# shared #}{% endif %}
 
-{% if agent_context_state["narrator__writing_style"] %}
-There exists an overall style guide for the narrative, use it to inform your instructions and expand on how to incorporate the writing style into the narration: "{{ agent_context_state["narrator__writing_style"].instructions }}"
+{% include "guide-narration-writing-style.jinja2" %}
 
-{% if response_length > 500 %}Explain your understanding of the style guide, what does it mean and what are the expectations from the reader.{% endif %}
-{% endif %}
-
+### Rules for your instructions
 {% if response_length < 200 %}{% set num_sentences="1-2" -%}
 {% elif response_length < 300 %}{% set num_sentences="2-3" -%}
 {% elif response_length < 500 %}{% set num_sentences="3-4" -%}

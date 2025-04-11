@@ -14,10 +14,10 @@ Content Classification: {{ scene.context }}
 {% endfor %}
 {% endblock -%}
 <|CLOSE_SECTION|>
+{% include "scene-intent.jinja2" %}
 <|SECTION:ANALYSIS OF SCENE|>
 {{ analysis }}
 <|CLOSE_SECTION|>
-{% include "scene-intent.jinja2" %}
 {% if character.dialogue_instructions -%}
 <|SECTION:GENERAL CHARACTER GUIDE FOR {{ character.name|upper }}|>
 {{ character.dialogue_instructions }}

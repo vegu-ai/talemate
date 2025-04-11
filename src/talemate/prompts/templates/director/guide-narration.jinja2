@@ -31,10 +31,10 @@ Content Classification: {{ scene.context }}
 {% endfor %}
 {% endblock -%}
 <|CLOSE_SECTION|>
+{% include "scene-intent.jinja2" %}
 <|SECTION:ANALYSIS OF SCENE|>
 {{ analysis }}
 <|CLOSE_SECTION|>
-{% include "scene-intent.jinja2" %}
 <|SECTION:TASK|>
 {% set last_event = scene.last_message_of_type(["character", "narrator"]) %}
 {# visual character #}{% if agent_context_state.narrator__visual_narration and agent_context_state.narrator__character -%}

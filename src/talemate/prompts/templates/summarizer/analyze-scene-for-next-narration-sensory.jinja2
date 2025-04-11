@@ -12,13 +12,20 @@ Your task is to analyze the current moment in the scene to guide the story edito
 {% endif %}
 
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the immediate state of the scene:
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the immediate state of the scene for information that is NOT already mentioned in the scene, for example:
 - What physical actions or movements are in progress?
 - What can be heard in this moment (sounds, voices, ambient noise)?
 - What textures or physical sensations are present (temperature, air movement, surface feel)?
 - What scents or smells are in the air?
 - What specific colors, shapes, or visual details are visible?
 - What tastes are relevant (if any characters are eating/drinking)?
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Suggest ONE new sensory detail that hasn't been explicitly mentioned before. Choose the most relevant from these categories:
+- A subtle background element that characters might notice
+- An environmental detail that creates atmosphere or tension
+- A hidden sensory cue that reveals character insights
+- An unexpected contrast or sensory juxtaposition
+- A sensory detail that subtly foreshadows upcoming events
 
 {% if context_investigation -%}
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.

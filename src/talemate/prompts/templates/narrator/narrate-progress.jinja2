@@ -3,16 +3,16 @@
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
-Drive the story forward through vivid action and purposeful events, letting atmospheric details emerge naturally through movement and consequence. Paint the scene in bold strokes as characters act and react, their choices rippling outward to shape what happens next. Weave sensory impressions and emotional undertones into the action without letting them slow the narrative's momentum. Each scene should push toward the next through decisions made, promises broken, or circumstances changed - while maintaining a distinct voice that brings the world and characters to life. When transitioning between moments, use crisp imagery and telling details that serve both atmosphere and forward motion.
+Move the story forward with a specific, purposeful event or action. Focus on what happens next rather than elaborating on the current state. Use vivid details only to support the progression of the narrative. Write from the narrator's perspective only - not from any character's viewpoint.
 
 {% if last_message %}
-``` the final line in the scene
+``` the current moment in the scene
 {{ last_message }}
 ```
-Your narration should build upon this final line, progressing from there.
+Your narration should build upon this current moment, progressing from there.
 {% endif -%}
 
 {% include "narrative-direction.jinja2" %}
 
-Write 2 to 4 sentences. {{ extra_instructions }}
+{{ extra_instructions }}
 <|CLOSE_SECTION|>

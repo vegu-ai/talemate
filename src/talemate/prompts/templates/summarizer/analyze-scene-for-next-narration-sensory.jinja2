@@ -5,6 +5,13 @@ Your task is to analyze the current moment in the scene to guide the story edito
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors to write the next narrative segment that fulfills the direction.
 {% endif %}
 
+{% if scene.intent_state.active %}
+{% with task_instructions="How does the overall story AND current scene intention inform the meaning of this moment and what could it mean for the sensory details of the next narrative segment?" -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) {% include "scene-intent-inline.jinja2" %}
+{% endwith %}
+{% endif %}
+
+
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the immediate state of the scene:
 - What physical actions or movements are in progress?
 - What can be heard in this moment (sounds, voices, ambient noise)?

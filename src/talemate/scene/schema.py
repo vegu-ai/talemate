@@ -50,6 +50,10 @@ class SceneIntent(pydantic.BaseModel):
     def current_scene_type(self) -> SceneType:
         return self.scene_types[self.phase.scene_type]
     
+    @property
+    def active(self) -> bool:
+        return (self.intent or self.phase)
+    
     def get_scene_type(self, scene_type_id: str) -> SceneType:
         return self.scene_types[scene_type_id]
     

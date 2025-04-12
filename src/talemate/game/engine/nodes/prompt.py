@@ -143,6 +143,54 @@ class RenderPrompt(Node):
         })
     
 
+@register("prompt/TemplateVariables")
+class TemplateVariables(Node):
+    """
+    Helper node that returns a pre defined set of common
+    template variables
+    
+    Variables:
+    
+    - scene: The current scene
+    - max_tokens: The maximum number of tokens in the response
+    
+    Inputs:
+    
+    - agent: The relevant agent
+    - merge_with: A dictionary of variables to merge with the pre defined variables (optional)
+    
+    Outputs:
+    
+    - variables: A dictionary of variables
+    - agent: The relevant agent
+    """
+    
+    def __init__(self, title="Template Variables", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("agent", socket_type="agent")
+        self.add_input("merge_with", socket_type="dict", optional=True)
+        self.add_output("variables", socket_type="dict")
+        self.add_output("agent", socket_type="agent")
+        
+    async def run(self, graph_state: GraphState):
+        agent:Agent = self.require_input("agent")
+        merge_with:dict = self.normalized_input_value("merge_with") or {}
+        if not hasattr(agent, "client"):
+            raise InputValueError(self, "agent", "Agent does not have a client")
+        
+        variables = {
+            "scene": active_scene.get(),
+            "max_tokens": agent.client.max_token_length,
+        }
+        
+        variables.update(merge_with)
+        
+        self.set_output_values({
+            "variables": variables,
+            "agent": agent
+        })
 
 @register("prompt/GenerateResponse")
 class GenerateResponse(Node):
@@ -157,6 +205,7 @@ class GenerateResponse(Node):
     Properties
     
     - json_output: Output the response as JSON
+    - attempts: The number of attempts to attempt (on empty response)
     
     Outputs:
     
@@ -182,6 +231,13 @@ class GenerateResponse(Node):
             type="bool",
             default=False,
             description="Output the response as JSON"
+        )
+        
+        attempts = PropertyField(
+            name="attempts",
+            type="int",
+            description="The number of attempts (retry on empty response)",
+            default=1,
         )
         
         response_length = PropertyField(
@@ -221,6 +277,7 @@ class GenerateResponse(Node):
         self.set_property("json_output", False)
         self.set_property("response_length", 256)
         self.set_property("action_type", "scene_direction")
+        self.set_property("attempts", 1)
         
         self.add_output("response", socket_type="str")
         self.add_output("json_obj", socket_type="dict")
@@ -235,6 +292,7 @@ class GenerateResponse(Node):
         action_type = self.get_property("action_type")
         response_length = self.get_property("response_length")
         json_output = self.get_property("json_output")
+        attempts = self.get_property("attempts") or 1
         
         kind = make_kind(
             action_type=action_type,
@@ -253,7 +311,10 @@ class GenerateResponse(Node):
         send_prompt.__name__= self.title.replace(" ", "_").lower()
         
         with PrependTemplateDirectories(scene.template_dir):
-            response = await agent.delegate(send_prompt)
+            for _ in range(attempts):
+                response = await agent.delegate(send_prompt)
+                if response:
+                    break
         
         if isinstance(response, tuple):
             response, json_obj = response

@@ -1,5 +1,5 @@
 <|SECTION:SCENE TYPES|>
-{% for scene_type in scene.intent_state.scene_types %}
+{% for scene_type in scene.intent_state.scene_types.values() %}
 ### {{ scene_type.name }}
 #### Description
 {{ scene_type.description }}

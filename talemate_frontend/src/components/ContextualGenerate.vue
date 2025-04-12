@@ -27,6 +27,10 @@
                     Spice collection: {{ generationOptions.spices.name }}
                 </v-alert>
 
+                <v-alert v-if="effectiveLength" density="compact" icon="mdi-text-box-outline" variant="text" color="grey">
+                    Length: {{ effectiveLength }} tokens
+                </v-alert>
+
                 <v-alert dense icon="mdi-pencil" variant="text" color="grey" v-if="original && withOriginal">
                    <div class="original-overflow">
                      <span class="text-grey-lighten-2">[Rewriting]</span> {{ original }}
@@ -96,7 +100,7 @@ export default {
         length: {
             type: Number,
             required: false,
-            default: 255
+            default: 256
         },
         rewriteEnabled: {
             type: Boolean,

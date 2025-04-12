@@ -24,6 +24,7 @@ from talemate.context import active_scene, InteractionState
 import talemate.scene_message as scene_message
 import talemate.emit.async_signals as async_signals
 from talemate.scene.schema import SceneIntent, ScenePhase, SceneType
+from talemate.scene.intent import set_scene_phase
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Character
@@ -195,7 +196,7 @@ class SetScenePhase(Node):
         scene_type = self.get_input_value("scene_type")
         intent = self.get_input_value("intent")
         
-        phase = scene.intent_state.set_phase(scene, scene_type, intent)
+        set_scene_phase(scene, scene_type, intent)
         
         self.set_output_values({
             "state": scene.intent_state,

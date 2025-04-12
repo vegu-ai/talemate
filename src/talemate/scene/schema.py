@@ -57,18 +57,6 @@ class SceneIntent(pydantic.BaseModel):
     def get_scene_type(self, scene_type_id: str) -> SceneType:
         return self.scene_types[scene_type_id]
     
-    def set_phase(self, scene:"Scene", scene_type_id: str, intent: str = None) -> ScenePhase:
-        
-        if scene_type_id not in self.scene_types:
-            raise ValueError(f"Invalid scene type: {scene_type_id}")
-        
-        self.phase = ScenePhase(
-            scene_type=scene_type_id, 
-            intent=intent,
-            start=scene.history[-1].id if scene.history else 0
-        )
-        return self.phase
-    
 class SceneState(pydantic.BaseModel):
     world_state: "WorldState | None" = None
     game_state: "GameState | None" = None

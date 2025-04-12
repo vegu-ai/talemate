@@ -21,8 +21,27 @@ from typing import TYPE_CHECKING
 from .schema import (
     ScenePhase,
     SceneIntent,
-    SceneType,
 )
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
+    
+__all__ = [
+    "set_scene_phase",
+]
+
+async def set_scene_phase(scene:"Scene", scene_type_id:str, intent:str):
+    """
+    Set the scene phase.
+    """
+    
+    scene_intent:SceneIntent = scene.intent_state
+    
+    if scene_type_id not in scene_intent.scene_types:
+        raise ValueError(f"Invalid scene type: {scene_type_id}")
+    
+    scene_intent.phase = ScenePhase(
+        scene_type=scene_type_id, 
+        intent=intent,
+        start=scene.history[-1].id if scene.history else 0
+    )

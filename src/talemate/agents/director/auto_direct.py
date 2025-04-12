@@ -14,6 +14,7 @@ from talemate.prompts import Prompt
 import talemate.emit.async_signals as async_signals
 from talemate.scene_message import CharacterMessage, TimePassageMessage, DirectorMessage, NarratorMessage
 from talemate.scene.schema import ScenePhase, SceneType, SceneIntent
+from talemate.scene.intent import set_scene_phase
 
 import talemate.agents.director.auto_direct_nodes
 
@@ -301,7 +302,7 @@ class AutoDirectMixin:
     async def auto_direct_set_scene_intent(self) -> ScenePhase | None:
         
         async def set_scene_intention(type:str, intention:str) -> ScenePhase:
-            self.scene.intent_state.set_phase(self.scene, type, intention)
+            await set_scene_phase(self.scene, type, intention)
             return self.scene.intent_state.phase
         
         async def do_nothing(*args, **kwargs) -> None:

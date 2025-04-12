@@ -19,7 +19,7 @@ The information you write will be given to the other story editors to write {{ c
 
 {% endif %}
 {% if last_message -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly the meaning of the current moment in the scene. What was the meaning of their dialogue and actions? 
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly explain the meaning of the current moment in the scene. What was the meaning of their dialogue and actions? 
 
 ``` current moment in the scene
 {{ last_message }}
@@ -43,5 +43,5 @@ Note that the 'Potentially relevant information' sectitryon has been filled in f
 
 {% if length <= 256 %}Your analysis should be 1 - 2 paragraphs long.{% elif length <= 512 %}Your analysis should be 2 - 3 paragraphs long.{% endif %}
 
-Use natural and easy to read language and plain-text formatting in your response. 
+Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
 <|CLOSE_SECTION|>

@@ -4,7 +4,7 @@ The overarching intention of this story. Use it to guide your decisions in the s
 
 {{ scene.intent_state.intent }}
 {% endif %}
-{# intention of the current phase #}{% if scene.intent_state.phase %}
+{# intention of the current phase #}{% if scene.intent_state.phase and not exclude_phase_intent %}
 <|SECTION:INTENTION OF THE CURRENT SCENE|>
 {% set scene_type = scene.intent_state.current_scene_type -%}
 {{ scene_type.description }}

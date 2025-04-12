@@ -34,6 +34,18 @@
                    </div>
                 </v-alert>
 
+                <v-select 
+                    v-if="withInstructions && specifyLength"
+                    v-model="selectedLength"
+                    :items="lengthOptions"
+                    item-title="label"
+                    item-value="value"
+                    label="Generation Length"
+                    density="compact"
+                    class="mt-2"
+                    :disabled="busy"
+                ></v-select>
+
                 <v-textarea class="mt-1" ref="instructions" v-model="instructions" rows="2" label="Instructions"
                     hint="Additional instructions for the AI on how to generate the requested content" v-if="withInstructions"  :disabled="busy" :placeholder="instructionsPlaceholder"></v-textarea>
             </v-card-text>
@@ -48,7 +60,7 @@
         <v-spacer></v-spacer>
         <v-tooltip class="pre-wrap" :text="tooltipText" >
             <template v-slot:activator="{ props }">
-                <v-btn v-bind="props" color="primary" @click.stop="open" variant="text" prepend-icon="mdi-auto-fix">Generate</v-btn>
+                <v-btn v-bind="props" color="primary" @click.stop="open" variant="text" prepend-icon="mdi-auto-fix" :disabled="disabled">Generate</v-btn>
             </template>
         </v-tooltip>
     </v-sheet>
@@ -121,6 +133,16 @@ export default {
             required: false,
             default: true
         },
+        disabled: {
+            type: Boolean,
+            required: false,
+            default: false
+        },
+        specifyLength: {
+            type: Boolean,
+            required: false,
+            default: false  
+        }
     },
     data() {
         return {
@@ -129,6 +151,20 @@ export default {
             withInstructions: false,
             withOriginal: false,
             busy: false,
+            selectedLength: null,
+            lengthOptions: [
+                { label: "8 - Tiny", value: 8 },
+                { label: "16 - Very Short", value: 16 },
+                { label: "32 - Short", value: 32 },
+                { label: "64 - Brief", value: 64 },
+                { label: "92 - Concise", value: 92 },
+                { label: "128 - Moderate", value: 128 },
+                { label: "192 - Standard", value: 192 },
+                { label: "256 - Detailed", value: 256 },
+                { label: "512 - Comprehensive", value: 512 },
+                { label: "768 - Extensive", value: 768 },
+                { label: "1024 - Complete", value: 1024 }
+            ]
         }
     },
     emits: ["generate"],
@@ -155,8 +191,30 @@ export default {
             else
                 return "Generate "+this.contextTypeLabel+"\n[+ctrl to provide instructions]";
         },
+        
+        effectiveLength() {
+            return (this.specifyLength && this.selectedLength !== null) ? this.selectedLength : this.length;
+        }
+    },
+    watch: {
+        length: {
+            immediate: true,
+            handler(value) {
+                // Find the closest matching length option only if specifyLength is true
+                if (this.specifyLength && this.selectedLength === null) {
+                    this.setInitialLength(value);
+                }
+            }
+        }
     },
     methods: {
+        setInitialLength(value) {
+            // Find the closest matching predefined length
+            const closestOption = this.lengthOptions.reduce((prev, curr) => {
+                return (Math.abs(curr.value - value) < Math.abs(prev.value - value)) ? curr : prev;
+            });
+            this.selectedLength = closestOption.value;
+        },
 
         open(event) {
             this.dialog = true;
@@ -168,8 +226,12 @@ export default {
             // if alt key is pressed, open with original
             this.withOriginal = event.altKey && this.rewriteEnabled;
             
+            // Set initial length to the prop value or closest match only if specifyLength is true
+            if (this.specifyLength) {
+                this.setInitialLength(this.length);
+            }
+            
             if (!this.withInstructions) {
-
                 this.generate();
             } else {
                 this.$nextTick(() => {
@@ -182,7 +244,6 @@ export default {
             this.busy = true;
 
             let instructions = "";
-
 
             if(this.withInstructions)
                 instructions =  this.instructions;
@@ -197,7 +258,7 @@ export default {
                 uid: this.uid,
                 context: this.context,
                 character: this.character,
-                length: this.length,
+                length: this.effectiveLength,
                 instructions: instructions,
                 original: this.withOriginal ? this.original : null,
                 generation_options: this.generationOptions,

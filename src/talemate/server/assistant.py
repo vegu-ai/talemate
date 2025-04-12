@@ -116,5 +116,3 @@ class AssistantPlugin:
         creator = get_agent("creator")
         
         await creator.fork_scene(payload.message_id, payload.save_name)
-        
-        

@@ -1,5 +1,9 @@
 {% if context_aware %}{% block rendered_context %}
 {% include "extra-context.jinja2" %}
+{% if context_typ == 'scene phase intent' or context_typ == 'scene type description' or context_typ == 'scene type instructions' -%}
+{% with exclude_phase_intent=True %}{% include "scene-intent.jinja2" %}{% endwith %}
+{% include "scene-types.jinja2" %}
+{% endif %}
 {% if context_typ == 'character attribute' or context_typ == 'character detail' or context_typ == 'scene intro' -%}
   {% for other_character in scene.get_characters() -%}
     {% if other_character.name != character_name %}
@@ -71,6 +75,36 @@ YOUR RESPONSE MUST ONLY CONTAIN THE ANSWER.
 
 YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE DETAIL TEXT.
 {% endif -%}
+{#- SCENE INTENT -#}
+{% elif context_typ == "scene intent" %}
+{{ action_task }} overall story intention. This should clearly state the purpose and direction of the story / experience, along with any broad special rules or constraints. It should layout expectations for the experience.
+
+The story will be told from {{ scene.get_player_character().name or "the reader's" }} perspective.
+
+YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE STORY INTENTION TEXT.
+{#- SCENE PHASE INTENT -#}
+{% elif context_typ == "scene phase intent" %}
+{{ action_task }} scene intent for the currently active "{{ context_name }}" phase. This should describe the specific goal or objective for this phase of the scene.
+
+YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE PHASE INTENTION TEXT.
+{#- SCENE TYPE DESCRIPTION -#}
+{% elif context_typ == "scene type description" %}
+{{ action_task }} description for a "{{ context_name }}" scene type. The description should explain what this type of scene is about and its general characteristics.
+
+This must be generalized and broad and match the tone and style of the overall story intention and existing scene descriptions can be used as a reference on what is expected.
+
+YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE SCENE TYPE DESCRIPTION.
+{#- SCENE TYPE INSTRUCTIONS -#}
+{% elif context_typ == "scene type instructions" %}
+{{ action_task }} set of instructions for a writing a "{{ context_name }}" scene as part of a fictual novel. These instructions should guide how the story writer should write this kind of scene. 
+
+What is the purpose of a scene like this?
+What are the reader's expectations for this scene, and how does the writer meet those expectations?
+What is the tone and style of this scene?
+
+YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE SCENE TYPE INSTRUCTIONS.
+
+{% if generation_context.length < 256 %}Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.{% endif %}
 {#- CHARACTER EXAMPLE DIALOGUE -#}
 {% elif context_typ == "character dialogue" %}
 Generate a new line of example dialogue for {{ character_name }}.
@@ -145,6 +179,7 @@ Continue this text: {{ generation_context.partial }}
 {{ character_name }}'s {{ context_name }}:
 {%- elif context_typ == 'character dialogue' -%}
 {{ character_name }}:
+{%- elif context_typ == 'scene type description' or context_typ == 'scene type instructions' -%}
 {%- else -%}
 {{ context_name }}:
 {%- endif -%}

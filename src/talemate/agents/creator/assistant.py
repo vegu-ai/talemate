@@ -226,12 +226,7 @@ class AssistantMixin:
         context_typ, context_name = generation_context.computed_context
         editor = get_agent("editor")
 
-        if generation_context.length < 100:
-            kind = "create_short"
-        elif generation_context.length < 500:
-            kind = "create_concise"
-        else:
-            kind = "create"
+        kind = f"create_{generation_context.length}"
 
         log.debug(
             f"Contextual generate: {context_typ} - {context_name}",

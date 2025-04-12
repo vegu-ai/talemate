@@ -1,47 +1,3 @@
-<!--
-
-Implements:
-
-1. Managing of scene types (add, remove, update)
-2. Managing of the current story intent (set, unset)
-3. Managing of the current scene intent (set, unset)
-
-Python schema:
-
-```py
-class SceneType(pydantic.BaseModel):
-    id: str
-    name: str
-    description: str
-    instructions: str | None = None
-
-class ScenePhase(pydantic.BaseModel):
-    scene_type: str
-    intent: str | None = None
-    
-class SceneIntent(pydantic.BaseModel):
-    scene_types: dict[str, SceneType] | None = pydantic.Field(default_factory=make_default_types)
-    intent: str | None = None
-    phase: ScenePhase | None = pydantic.Field(default_factory=make_default_phase)
-    start: int = 0
-    
-    @property
-    def current_scene_type(self) -> SceneType:
-        return self.scene_types[self.phase.scene_type]
-    
-    def get_scene_type(self, scene_type_id: str) -> SceneType:
-        return self.scene_types[scene_type_id]
-    
-    def set_phase(self, scene:"Scene", scene_type_id: str, intent: str = None) -> ScenePhase:
-        self.phase = ScenePhase(
-            scene_type=scene_type_id, 
-            intent=intent,
-            start=scene.history[-1].id if scene.history else 0
-        )
-        return self.phase
-```
-
--->
 <template>
     <v-row>
         <v-col cols="12" sm="12" md="12" lg="12" xl="8" xxl="6">
@@ -54,6 +10,17 @@ class SceneIntent(pydantic.BaseModel):
                 <v-alert color="muted" variant="text" class="text-caption">
                     The overall intention of the story. Lays out expectations for the experience, the general direction and any special rules or constraints.
                 </v-alert>
+                
+                <ContextualGenerate 
+                    ref="intentGenerate"
+                    uid="wsm.scene_intent"
+                    context="scene intent:overall" 
+                    :original="sceneIntent.intent"
+                    :templates="templates"
+                    :generationOptions="generationOptions"
+                    @generate="content => setAndUpdateIntent(content)"
+                />
+                
                 <v-textarea
                     v-model="sceneIntent.intent"
                     label="Overall Intention"
@@ -63,7 +30,7 @@ class SceneIntent(pydantic.BaseModel):
                     @update:model-value="setFieldDirty('intent')"
                     @blur="updateSceneIntent()"
                 ></v-textarea>
-
+                
                 <!-- current scene phase -->
                 <div v-if="hasSceneTypes">
                     <v-card-title>
@@ -106,16 +73,29 @@ class SceneIntent(pydantic.BaseModel):
                             <!-- Instructions Column (Right) -->
                             <v-col cols="12" md="6" class="pa-4">
                                 <v-card-subtitle>Instructions</v-card-subtitle>
-                                <v-card-text>{{ sceneIntent.scene_types[sceneIntent.phase.scene_type].instructions }}</v-card-text>
+                                <v-card-text class="instructions-text">{{ sceneIntent.scene_types[sceneIntent.phase.scene_type].instructions }}</v-card-text>
                             </v-col>
                         </v-row>
                     </v-card>
     
+                    <ContextualGenerate 
+                        v-if="sceneIntent.phase && sceneIntent.phase.scene_type"
+                        ref="phaseIntentGenerate"
+                        uid="wsm.scene_phase_intent"
+                        :context="'scene phase intent:' + sceneIntent.phase.scene_type" 
+                        :original="sceneIntent.phase.intent"
+                        :templates="templates"
+                        :length="256"
+                        :generationOptions="generationOptions"
+                        @generate="content => setAndUpdatePhaseIntent(content)"
+                    />
+                    
                     <v-textarea v-if="sceneIntent.phase"
                         v-model="sceneIntent.phase.intent"
                         label="Current Scene Intention"
                         rows="4"
                         auto-grow
+                        :length="256"
                         :color="dirty['phase_intent'] ? 'dirty' : ''"
                         @update:model-value="setFieldDirty('phase_intent')"
                         @blur="updateSceneIntent()"
@@ -157,29 +137,31 @@ class SceneIntent(pydantic.BaseModel):
             <v-table>
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Description</th>
-                        <th>Instructions</th>
-                        <th class="actions-column text-right" :style="`min-width: ${deleteColumnWidth}px; width: ${deleteColumnWidth}px`"></th>
+                        <th class="name-column">Name</th>
+                        <th class="description-column">Description</th>
+                        <th class="actions-column" style="text-align: right; width: 120px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="(sceneType, key) in this.sceneIntent.scene_types" :key="key">
-                        <td>{{ sceneType.name }}</td>
-                        <td>{{ sceneType.description }}</td>
-                        <td>{{ sceneType.instructions }}</td>
-                        <td class="actions-column" :style="`min-width: ${deleteColumnWidth}px; width: ${deleteColumnWidth}px; display: flex; flex-direction: row; justify-content: flex-end; gap: 8px;`">
-                            <v-btn color="primary" @click="editSceneType(key)" variant="text" icon>
-                                <v-icon>mdi-pencil</v-icon>
-                            </v-btn>
-                            <confirm-action-inline
-                                action-label="Delete"
-                                confirm-label="Delete"
-                                icon="mdi-close-circle-outline"
-                                color="delete"
-                                density="compact"
-                                @confirm="removeSceneType(key)"
-                            />
+                        <td class="name-column">{{ sceneType.name }}</td>
+                        <td class="description-column align-start">
+                            <div class="full-cell-content bg-mutedbg">{{ sceneType.description }}</div>
+                        </td>
+                        <td class="actions-column text-right">
+                            <div class="action-buttons">
+                                <v-btn color="primary" @click="editSceneType(key)" variant="text" icon>
+                                    <v-icon>mdi-pencil</v-icon>
+                                </v-btn>
+                                <confirm-action-inline
+                                    action-label="Delete"
+                                    confirm-label="Delete"
+                                    icon="mdi-close-circle-outline"
+                                    color="delete"
+                                    density="compact"
+                                    @confirm="removeSceneType(key)"
+                                />
+                            </div>
                         </td>
                     </tr>
                 </tbody>
@@ -196,12 +178,44 @@ class SceneIntent(pydantic.BaseModel):
                         v-model="sceneType.name"
                         label="Name"
                     ></v-text-field>
+                    
+                    <ContextualGenerate 
+                        ref="sceneTypeDescriptionGenerate"
+                        uid="wsm.scene_type_description"
+                        :context="'scene type description:' + (sceneType.name || 'New Scene Type')" 
+                        :original="sceneType.description"
+                        :templates="templates"
+                        :length="128"
+                        :generationOptions="generationOptions"
+                        :specifyLength="true"
+                        @generate="content => sceneType.description = content"
+                        :disabled="!sceneType.name"
+                    />
+                    
                     <v-textarea
                         v-model="sceneType.description"
                         label="Description"
+                        auto-grow
+                        max-rows="30"
                     ></v-textarea>
+                    
+                    <ContextualGenerate 
+                        ref="sceneTypeInstructionsGenerate"
+                        uid="wsm.scene_type_instructions"
+                        :context="'scene type instructions:' + (sceneType.name || 'New Scene Type')" 
+                        :original="sceneType.instructions"
+                        :templates="templates"
+                        :length="192"
+                        :generationOptions="generationOptions"
+                        :specifyLength="true"
+                        @generate="content => sceneType.instructions = content"
+                        :disabled="!sceneType.name"
+                    />
+                    
                     <v-textarea
                         v-model="sceneType.instructions"
+                        auto-grow
+                        max-rows="30"
                         label="Instructions"
                     ></v-textarea>
                 </v-form>
@@ -215,8 +229,59 @@ class SceneIntent(pydantic.BaseModel):
     </v-dialog>
 </template>
 
+<style scoped>
+.name-column {
+    width: 20%;
+    min-width: 120px;
+}
+
+.description-column {
+    width: 65%;
+}
+
+.instructions-text {
+    white-space: pre-line;
+}
+
+.actions-column {
+    width: 120px;
+    min-width: 120px;
+    vertical-align: top;
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+.full-cell-content {
+    white-space: pre-line;
+    padding: 8px 4px;
+    max-height: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    overflow-wrap: break-word;
+}
+
+.v-table {
+    table-layout: fixed;
+}
+
+/* Keep the tooltip content styling for potential future use */
+.tooltip-content {
+    white-space: pre-line;
+    max-width: 400px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+}
+</style>
+
 <script>
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import ContextualGenerate from './ContextualGenerate.vue';
 
 const BLANK_SCENE_TYPE = {
     name: '',
@@ -227,12 +292,18 @@ const BLANK_SCENE_TYPE = {
 export default {
     name: 'WorldStateManagerSceneDirection',
     components: {
-        ConfirmActionInline
+        ConfirmActionInline,
+        ContextualGenerate
     },
     props: {
         immutableScene: Object,
         isVisible: Boolean,
         templates: Object,
+        generationOptions: {
+            type: Object,
+            required: false,
+            default: () => ({})
+        },
     },
     inject:[
         'getWebsocket',
@@ -314,6 +385,18 @@ export default {
 
         clearDirty() {
             this.dirty = {};
+        },
+
+        setAndUpdateIntent(content) {
+            this.sceneIntent.intent = content;
+            this.setFieldDirty('intent');
+            this.updateSceneIntent();
+        },
+        
+        setAndUpdatePhaseIntent(content) {
+            this.sceneIntent.phase.intent = content;
+            this.setFieldDirty('phase_intent');
+            this.updateSceneIntent();
         },
 
         createSceneType() {

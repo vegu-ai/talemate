@@ -265,6 +265,12 @@ class AutoDirectMixin:
             if character.name not in candidates:
                 candidates[character.name] = 0
         
+        # explicitly add narrator if enabled and not already in candidates
+        if instruct_narrator and scene.narrator_character_object:
+            narrator = scene.narrator_character_object
+            if narrator.name not in candidates:
+                candidates[narrator.name] = 0
+        
         log.debug(f"auto_direct_candidates: {candidates}", most_recent_character=most_recent_character, repeat_count=repeat_count, last_player_turn=last_player_turn, consecutive_auto_turns=consecutive_auto_turns)
         
         if not most_recent_character:

@@ -85,6 +85,38 @@
                     :target="$refs.canvas ? $refs.canvas : null"
                 />
 
+                <ConfirmActionPrompt 
+                    ref="confirmLoad" 
+                    action-label="Load module"
+                    :description="`Are you sure you want to load module: ${editingNodePath}? Any unsaved changes will be lost.`"
+                    confirm-text="Load"
+                    cancel-text="Cancel"
+                    icon="mdi-folder-open"
+                    color="secondary"
+                    :contained="true"
+                    nax-width="400"
+                    @confirm="(params) => loadModuleFromPath(params.path)"
+                />
+
+                <v-dialog v-model="propertyEditor" :max-width="800" :contained="true" :target="$refs.container">
+                    <v-card>
+                        <v-card-title>{{ propertyEditorTitle || 'Edit Node Property' }}</v-card-title>
+                        <v-alert v-if="propertyEditorValidationErrorMessage" type="error" variant="text"  density="compact">{{ propertyEditorValidationErrorMessage }}</v-alert>
+                        <v-card-text v-if="propertyEditorType === 'text'" @keydown.enter="() => { submitPropertyEditor(); }">
+                            <v-text-field ref="propertyEditorTextInput" v-model="propertyEditorValue" label="Value" outlined></v-text-field>
+                        </v-card-text>
+                        <v-card-text v-else-if="propertyEditorType === 'json'">
+                            <Codemirror
+                                v-model="propertyEditorValue"
+                                ref="propertyEditorCodeInput"
+                                :extensions="extensions"
+                                :style="propertyEditorStyle"
+                                @keydown.enter="(ev) => { submitPropertyEditor(ev); }"
+                            ></Codemirror>
+                            <span class="text-caption text-muted">(Ctrl+Enter to submit changes)</span>
+                        </v-card-text>
+                    </v-card>
+                </v-dialog>
             </div>
 
             <v-sheet v-if="editingLockedModule" class="transparent-background">
@@ -115,38 +147,6 @@
                 :selectedNodeRegistry="graph ? graph.talemateRegistry : null"
                 @load-node="(path) => requestSceneNodesWithConfirm({path})"
             />
-            <ConfirmActionPrompt 
-                ref="confirmLoad" 
-                action-label="Load module"
-                :description="`Are you sure you want to load module: ${editingNodePath}? Any unsaved changes will be lost.`"
-                confirm-text="Load"
-                cancel-text="Cancel"
-                icon="mdi-folder-open"
-                color="secondary"
-                :target="$refs.outer_container ? $refs.outer_container : null"
-                @confirm="(params) => loadModuleFromPath(params.path)"
-            />
-
-
-            <v-dialog v-model="propertyEditor" :target="$refs.outer_container ? $refs.outer_container : null">
-                <v-card>
-                    <v-card-title>{{ propertyEditorTitle || 'Edit Node Property' }}</v-card-title>
-                    <v-alert v-if="propertyEditorValidationErrorMessage" type="error" variant="text"  density="compact">{{ propertyEditorValidationErrorMessage }}</v-alert>
-                    <v-card-text v-if="propertyEditorType === 'text'" @keydown.enter="() => { submitPropertyEditor(); }">
-                        <v-text-field ref="propertyEditorTextInput" v-model="propertyEditorValue" label="Value" outlined></v-text-field>
-                    </v-card-text>
-                    <v-card-text v-else-if="propertyEditorType === 'json'">
-                        <Codemirror
-                            v-model="propertyEditorValue"
-                            ref="propertyEditorCodeInput"
-                            :extensions="extensions"
-                            :style="propertyEditorStyle"
-                            @keydown.enter="(ev) => { submitPropertyEditor(ev); }"
-                        ></Codemirror>
-                        <span class="text-caption text-muted">(Ctrl+Enter to submit changes)</span>
-                    </v-card-text>
-                </v-card>
-            </v-dialog>
 
         </div>
 

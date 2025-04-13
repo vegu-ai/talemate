@@ -17,7 +17,7 @@ from talemate.util.data import (
     extract_data,
 )
 
-from .schema import Argument, Call, Callback, State
+from .schema import Argument, Call, Callback, State, ExampleCallbackArguments
 
 __all__ = [
     "Argument",

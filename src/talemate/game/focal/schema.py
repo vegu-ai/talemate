@@ -6,7 +6,14 @@ import yaml
 
 from talemate.prompts.base import Prompt
 
-__all__ = ["Argument", "Call", "Callback", "State"]
+__all__ = [
+    "Argument", 
+    "Call", 
+    "Callback", 
+    "State", 
+    "InvalidCallbackArguments",
+    "ExampleCallbackArguments"
+]
 
 YAML_OPTIONS = {
     "default_flow_style": False,
@@ -15,6 +22,12 @@ YAML_OPTIONS = {
     "sort_keys": False,
     "width": 100,
 }
+
+class InvalidCallbackArguments(ValueError):
+    pass
+
+class ExampleCallbackArguments(InvalidCallbackArguments):
+    pass
 
 class State(pydantic.BaseModel):
     calls:list["Call"] = pydantic.Field(default_factory=list)
@@ -30,13 +43,25 @@ class Call(pydantic.BaseModel):
     result: str | int | float | bool | dict | list | None = None
     uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     called: bool = False
-
+    
+    @pydantic.field_validator('arguments')
+    def check_for_schema_examples(cls, v: dict[str, Any]) -> dict[str, str]:
+        valid_types = ["str", "int", "float", "bool", "dict", "list"]
+        for key, value in v.items():
+            if isinstance(value, str):
+                for type_name in valid_types:
+                    if value.startswith(f"{type_name} - "):
+                        raise ExampleCallbackArguments(f"Argument '{key}' contains schema example: '{value}'. AI repeated the schema format.")
+        return v
+    
     @pydantic.field_validator('arguments')
     def join_string_lists(cls, v: dict[str, Any]) -> dict[str, str]:
         return {
             key: '\n'.join(str(item) for item in value) if isinstance(value, list) else str(value)
             for key, value in v.items()
         }
+        
+
 
 class Callback(pydantic.BaseModel):
     name: str

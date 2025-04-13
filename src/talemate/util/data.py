@@ -155,9 +155,9 @@ def extract_json_v2(text):
         if block.startswith("json"):
             block = block[4:].strip()
         
-        # Fix and parse JSON
-        fixed_block = fix_faulty_json(block)
+        # Try to parse the block as a single JSON object first
         try:
+            fixed_block = fix_faulty_json(block)
             json_obj = json.loads(fixed_block)
             
             # Convert to string for deduplication check
@@ -167,8 +167,34 @@ def extract_json_v2(text):
             if json_str not in seen:
                 seen.add(json_str)
                 unique_jsons.append(json_obj)
-        except json.JSONDecodeError as e:
-            raise DataParsingError(f"Invalid JSON in code block: {str(e)}", block)
+        except json.JSONDecodeError:
+            # If it fails, try to split and parse multiple JSON objects
+            try:
+                # Add commas between adjacent objects if needed
+                fixed_block = fix_faulty_json(block)
+                
+                # Check for multiple JSON objects by looking for patterns like }{ or }[
+                # Replace with },{ or },[
+                fixed_block = re.sub(r"}\s*{", "},{", fixed_block)
+                fixed_block = re.sub(r"]\s*{", "],[", fixed_block)
+                fixed_block = re.sub(r"}\s*\[", "},["   , fixed_block)
+                fixed_block = re.sub(r"]\s*\[", "],["   , fixed_block)
+                
+                # Wrap in array brackets if not already an array
+                if not (fixed_block.startswith('[') and fixed_block.endswith(']')):
+                    fixed_block = "[" + fixed_block + "]"
+                
+                # Parse as array
+                json_array = json.loads(fixed_block)
+                
+                # Process each object in the array
+                for json_obj in json_array:
+                    json_str = json.dumps(json_obj, sort_keys=True)
+                    if json_str not in seen:
+                        seen.add(json_str)
+                        unique_jsons.append(json_obj)
+            except json.JSONDecodeError as e:
+                raise DataParsingError(f"Invalid JSON in code block: {str(e)}", block)
             
     return unique_jsons
 
@@ -206,22 +232,34 @@ def extract_yaml_v2(text):
         if block.startswith("yaml") or block.startswith("yml"):
             block = block[block.find("\n"):].strip()
         
-        # Parse YAML
+        # Parse YAML (supporting multiple documents with ---)
         try:
-            yaml_obj = yaml.safe_load(block)
+            # Use safe_load_all to get all YAML documents in the block
+            yaml_docs = list(yaml.safe_load_all(block))
             
-            # Skip if None (empty YAML)
-            if yaml_obj is None:
-                continue
+            # If we only have one document and it's a dict, check if we should split it into multiple documents
+            if len(yaml_docs) == 1 and isinstance(yaml_docs[0], dict) and yaml_docs[0]:
+                # Check if the document has a nested structure where first level keys represent separate documents
+                root_doc = yaml_docs[0]
                 
-            # Convert to JSON string for deduplication check
-            # This works because YAML is a superset of JSON
-            json_str = json.dumps(yaml_obj, sort_keys=True, cls=JSONEncoder)
+                # If the first level keys all have dict values, treat them as separate documents
+                if all(isinstance(root_doc[key], dict) for key in root_doc):
+                    # Replace yaml_docs with separate documents
+                    yaml_docs = [root_doc[key] for key in root_doc]
             
-            # Only add if we haven't seen this object before
-            if json_str not in seen:
-                seen.add(json_str)
-                unique_yamls.append(yaml_obj)
+            # Process each YAML document
+            for yaml_obj in yaml_docs:
+                # Skip if None (empty YAML)
+                if yaml_obj is None:
+                    continue
+                    
+                # Convert to JSON string for deduplication check
+                json_str = json.dumps(yaml_obj, sort_keys=True, cls=JSONEncoder)
+                
+                # Only add if we haven't seen this object before
+                if json_str not in seen:
+                    seen.add(json_str)
+                    unique_yamls.append(yaml_obj)
         except yaml.YAMLError as e:
             raise DataParsingError(f"Invalid YAML in code block: {str(e)}", block)
             

@@ -256,4 +256,81 @@ def test_extract_yaml_v2_multiple():
     
     # Each ID should appear exactly once
     for id_val, count in id_counts.items():
-        assert count == 1, f"Object with ID {id_val} appears {count} times (should be 1)" 
+        assert count == 1, f"Object with ID {id_val} appears {count} times (should be 1)"
+
+def test_extract_yaml_v2_multiple_documents():
+    """Test extract_yaml_v2 with multiple YAML documents in a single code block."""
+    # Load test data from file
+    with open(get_test_data_path('multiple_yaml_documents.txt'), 'r') as f:
+        test_data = f.read()
+    
+    # Extract YAML
+    result = extract_yaml_v2(test_data)
+    
+    # Check if we got all three documents
+    assert len(result) == 3
+    
+    # Check if the objects are correct
+    objects_by_id = {obj["id"]: obj for obj in result}
+    
+    assert objects_by_id[1]["name"] == "First Document"
+    assert "first" in objects_by_id[1]["tags"]
+    
+    assert objects_by_id[2]["name"] == "Second Document"
+    assert "secondary" in objects_by_id[2]["tags"]
+    
+    assert objects_by_id[3]["name"] == "Third Document"
+    assert objects_by_id[3]["active"] is True
+
+def test_extract_yaml_v2_without_separators():
+    """Test extract_yaml_v2 with multiple YAML documents without --- separators."""
+    # Load test data from file
+    with open(get_test_data_path('multiple_yaml_without_separators.txt'), 'r') as f:
+        test_data = f.read()
+    
+    # Extract YAML
+    result = extract_yaml_v2(test_data)
+    
+    # Check if we got all three nested documents
+    assert len(result) == 3
+    
+    # Create a dictionary of documents by name for easy testing
+    docs_by_name = {doc["name"]: doc for doc in result}
+    
+    # Verify that all three documents are correctly parsed
+    assert "First Document" in docs_by_name
+    assert docs_by_name["First Document"]["id"] == 1
+    assert "first" in docs_by_name["First Document"]["tags"]
+    
+    assert "Second Document" in docs_by_name
+    assert docs_by_name["Second Document"]["id"] == 2
+    assert "secondary" in docs_by_name["Second Document"]["tags"]
+    
+    assert "Third Document" in docs_by_name
+    assert docs_by_name["Third Document"]["id"] == 3
+    assert docs_by_name["Third Document"]["active"] is True
+
+def test_extract_json_v2_multiple_objects():
+    """Test extract_json_v2 with multiple JSON objects in a single code block."""
+    # Load test data from file
+    with open(get_test_data_path('multiple_json_objects.txt'), 'r') as f:
+        test_data = f.read()
+    
+    # Extract JSON
+    result = extract_json_v2(test_data)
+    
+    # Check if we got all three objects
+    assert len(result) == 3
+    
+    # Check if the objects are correct
+    objects_by_id = {obj["id"]: obj for obj in result}
+    
+    assert objects_by_id[1]["name"] == "First Object"
+    assert objects_by_id[1]["type"] == "test"
+    
+    assert objects_by_id[2]["name"] == "Second Object"
+    assert objects_by_id[2]["values"] == [1, 2, 3]
+    
+    assert objects_by_id[3]["name"] == "Third Object"
+    assert objects_by_id[3]["active"] is True
+    assert objects_by_id[3]["metadata"]["created"] == "2023-05-15" 

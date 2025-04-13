@@ -1,6 +1,6 @@
 {
   "title": "Scene Loop",
-  "id": "4346ada2-5233-4ce0-89d1-d7264230fa42",
+  "id": "828412b8-3dc4-4cd4-a1ab-190392ce934a",
   "properties": {
     "trigger_game_loop": true
   },
@@ -61,5 +61,6 @@
   "sleep": 0.001,
   "base_type": "scene/SceneLoop",
   "inputs": [],
-  "outputs": []
+  "outputs": [],
+  "style": null
 }

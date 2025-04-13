@@ -82,6 +82,7 @@
                     :nodes="sceneNodes && sceneNodes.node_definitions ? sceneNodes.node_definitions.nodes : []"
                     :graph="graph"  
                     :canvas="canvas"
+                    :target="$refs.canvas ? $refs.canvas : null"
                 />
 
             </div>
@@ -122,13 +123,12 @@
                 cancel-text="Cancel"
                 icon="mdi-folder-open"
                 color="secondary"
-                :contained="true"
-                :max-width="400"
+                :target="$refs.outer_container ? $refs.outer_container : null"
                 @confirm="(params) => loadModuleFromPath(params.path)"
             />
 
 
-            <v-dialog v-model="propertyEditor" :contained="true" :max-width="800">
+            <v-dialog v-model="propertyEditor" :target="$refs.outer_container ? $refs.outer_container : null">
                 <v-card>
                     <v-card-title>{{ propertyEditorTitle || 'Edit Node Property' }}</v-card-title>
                     <v-alert v-if="propertyEditorValidationErrorMessage" type="error" variant="text"  density="compact">{{ propertyEditorValidationErrorMessage }}</v-alert>
@@ -229,7 +229,7 @@ export default {
             testErrorMessage: null,
             breakpoint: null,
             centerOnNode: null,
-            debugMenuSelected: null,
+            debugMenuSelected: [],
             componentSize: {
                 x: 0,
                 y: 0,

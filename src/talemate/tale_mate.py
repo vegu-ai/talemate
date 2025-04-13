@@ -813,6 +813,17 @@ class Scene(Emitter):
     def creative_nodes_filepath(self) -> str:
         return os.path.join(self.nodes_dir, self.creative_nodes_filename)
 
+    @property
+    def intent(self) -> dict:
+        phase = self.intent_state.phase
+        if not phase:
+            return {}
+        
+        return {
+            "name": self.intent_state.current_scene_type.name,
+            "intent": phase.intent,
+        }
+    
     def set_description(self, description: str):
         self.description = description
 
@@ -1664,6 +1675,7 @@ class Scene(Emitter):
                 "intro": self.intro,
                 "help": self.help,
                 "writing_style_template": self.writing_style_template,
+                "intent": self.intent,
             },
         )
 

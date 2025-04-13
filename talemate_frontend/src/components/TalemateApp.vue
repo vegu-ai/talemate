@@ -66,6 +66,7 @@
       <v-spacer></v-spacer>
 
       <VisualQueue ref="visualQueue" />
+      <v-app-bar-nav-icon v-if="sceneActive" @click="toggleNavigation('directorConsole')"><v-icon>mdi-bullhorn</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="!ready"
@@ -122,6 +123,14 @@
           <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
           <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents"></AIAgent>
           <!-- More sections can be added here -->
+        </v-list>
+      </v-navigation-drawer>
+
+      <!-- director console navigation drawer -->
+      <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" width="400" disable-resize-watcher>
+        <v-list>
+          <v-list-subheader class="text-uppercase"><v-icon>mdi-bullhorn</v-icon> Director Console</v-list-subheader>
+          <DirectorConsole :scene="scene" v-if="sceneActive" />
         </v-list>
       </v-navigation-drawer>
 
@@ -185,6 +194,7 @@
                       :playerCharacterName="getPlayerCharacterName()"
                       :passiveCharacters="passiveCharacters"
                       :inactiveCharacters="inactiveCharacters"
+                      :scene="scene"
                       :activeCharacters="activeCharacters" />
                     <CharacterSheet ref="characterSheet" />
                     <v-textarea
@@ -263,7 +273,7 @@ import WorldStateManager from './WorldStateManager.vue';
 import WorldStateManagerMenu from './WorldStateManagerMenu.vue';
 import IntroView from './IntroView.vue';
 import NodeEditor from './NodeEditor.vue';
-
+import DirectorConsole from './DirectorConsole.vue';
 // import debounce
 import { debounce } from 'lodash';
 
@@ -286,6 +296,7 @@ export default {
     WorldStateManager,
     WorldStateManagerMenu,
     NodeEditor,
+    DirectorConsole,
   },
   name: 'TalemateApp',
   data() {
@@ -337,6 +348,7 @@ export default {
       drawer: false,
       sceneDrawer: true,
       debugDrawer: false,
+      directorConsoleDrawer: false,
       websocket: null,
       inputDisabled: false,
       waitingForInput: false,
@@ -391,6 +403,12 @@ export default {
       }
     },
     sceneDrawer() {
+      // debounce onNodeEditorContainerResize
+      // to prevent resizing the node editor
+      // too often
+      debounce(this.onNodeEditorContainerResize, 250)();
+    },
+    directorConsoleDrawer() {
       // debounce onNodeEditorContainerResize
       // to prevent resizing the node editor
       // too often
@@ -969,6 +987,8 @@ export default {
         this.drawer = !this.drawer;
       else if (navigation == "debug")
         this.debugDrawer = !this.debugDrawer;
+      else if (navigation == "directorConsole")
+        this.directorConsoleDrawer = !this.directorConsoleDrawer;
     },
     returnToStartScreen() {
       this.tab = 'home';

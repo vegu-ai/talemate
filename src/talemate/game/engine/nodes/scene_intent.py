@@ -196,8 +196,9 @@ class SetScenePhase(Node):
         scene_type = self.get_input_value("scene_type")
         intent = self.get_input_value("intent")
         
-        set_scene_phase(scene, scene_type, intent)
+        phase = await set_scene_phase(scene, scene_type, intent)
         
+        scene.emit_status()
         self.set_output_values({
             "state": scene.intent_state,
             "phase": phase,

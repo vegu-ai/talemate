@@ -303,6 +303,7 @@ class AutoDirectMixin:
         
         async def set_scene_intention(type:str, intention:str) -> ScenePhase:
             await set_scene_phase(self.scene, type, intention)
+            self.scene.emit_status()
             return self.scene.intent_state.phase
         
         async def do_nothing(*args, **kwargs) -> None:

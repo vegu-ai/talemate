@@ -30,7 +30,7 @@ __all__ = [
     "set_scene_phase",
 ]
 
-async def set_scene_phase(scene:"Scene", scene_type_id:str, intent:str):
+async def set_scene_phase(scene:"Scene", scene_type_id:str, intent:str) -> ScenePhase:
     """
     Set the scene phase.
     """
@@ -45,3 +45,5 @@ async def set_scene_phase(scene:"Scene", scene_type_id:str, intent:str):
         intent=intent,
         start=scene.history[-1].id if scene.history else 0
     )
+    
+    return scene_intent.phase

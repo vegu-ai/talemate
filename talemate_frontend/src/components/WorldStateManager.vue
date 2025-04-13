@@ -429,6 +429,12 @@ export default {
                         this.$refs.suggestions.selectSuggestionViaMenu(sub1)
                     }
                 });
+            } else if (tab == 'scene') {
+                if(sub1) {
+                    this.$nextTick(() => {
+                        this.$refs.scene.navigate(sub1, sub2, sub3);
+                    });
+                }
             }
 
             this.$nextTick(() => {

@@ -331,7 +331,6 @@
 import SceneToolsDirector from './SceneToolsDirector.vue';
 import SceneToolsNarrator from './SceneToolsNarrator.vue';
 import SceneToolsActor from './SceneToolsActor.vue';
-
 export default {
 
     name: 'SceneTools',
@@ -349,6 +348,7 @@ export default {
         messageInput: String,
         worldStateTemplates: Object,
         agentStatus: Object,
+        scene: Object,
     },
     computed: {
         deactivatableCharacters() {
@@ -457,7 +457,6 @@ export default {
         'registerMessageHandler',
         'setInputDisabled',
         'isWaitingForInput',
-        'scene',
         'creativeEditor',
         'appConfig',
         'getTrackedCharacterState',
@@ -523,7 +522,10 @@ export default {
         },
 
         isEnvironment(typ) {
-            return this.scene().environment == typ;
+            if(!this.scene) {
+                return false;
+            }
+            return this.scene.environment == typ;
         },
 
         sendHotButtonMessage(message) {

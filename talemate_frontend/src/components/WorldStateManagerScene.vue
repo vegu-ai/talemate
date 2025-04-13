@@ -119,6 +119,9 @@ export default {
         }
     },
     methods:{
+        navigate(page) {
+            this.page = page;
+        },
         handleMessage(message) {
             return message;
         }

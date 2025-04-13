@@ -35,5 +35,7 @@ class SceneIntentMixin:
             }
         )
 
+        self.scene.emit_status()
+
         await self.signal_operation_done()
         

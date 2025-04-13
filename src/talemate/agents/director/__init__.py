@@ -183,16 +183,8 @@ class DirectorAgent(
     def inject_prompt_paramters(
         self, prompt_param: dict, kind: str, agent_function_name: str
     ):
-        log.debug(
-            "inject_prompt_paramters",
-            prompt_param=prompt_param,
-            kind=kind,
-            agent_function_name=agent_function_name,
-        )
-        character_names = [f"\n{c.name}:" for c in self.scene.get_characters()]
         if prompt_param.get("extra_stopping_strings") is None:
             prompt_param["extra_stopping_strings"] = []
-        prompt_param["extra_stopping_strings"] += character_names + ["#"]
 
     def allow_repetition_break(
         self, kind: str, agent_function_name: str, auto: bool = False

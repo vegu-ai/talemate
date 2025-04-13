@@ -165,22 +165,6 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "619c7e98-e958-4d13-a68a-210752522011": {
-      "title": "Generate Scene Types",
-      "id": "619c7e98-e958-4d13-a68a-210752522011",
-      "properties": {
-        "instructions": "",
-        "max_scene_types": 3
-      },
-      "x": 340,
-      "y": 800,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/auto-direct/GenerateSceneTypes",
-      "base_type": "core/Node"
-    },
     "e4cd1391-daed-4951-a6c6-438d993c07a9": {
       "title": "Stage 1",
       "id": "e4cd1391-daed-4951-a6c6-438d993c07a9",
@@ -194,6 +178,22 @@
       "collapsed": true,
       "inherited": false,
       "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "619c7e98-e958-4d13-a68a-210752522011": {
+      "title": "Generate Scene Types",
+      "id": "619c7e98-e958-4d13-a68a-210752522011",
+      "properties": {
+        "instructions": "",
+        "max_scene_types": 2
+      },
+      "x": 340,
+      "y": 800,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/auto-direct/GenerateSceneTypes",
       "base_type": "core/Node"
     }
   },
@@ -272,7 +272,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "d29e5bb5-7aaf-4dd3-a59e-8a4b75dfc958",
+      "id": "490c9ef2-8538-44ff-a09b-2484965fdcc2",
       "name": "fn",
       "optional": false,
       "group": null,

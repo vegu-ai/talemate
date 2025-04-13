@@ -17,17 +17,21 @@
 {% endif %}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
+{% set bullet_num=0 -%}
 You are assisting a script editor in writing the next line of dialogue or action for {{ character.name.upper() }} in the current scene.
 
 The editor is writing this line right now and has tasked you to provide a suggestion for the continuation of the DRAFT.
 
 Rules:
 
-1. Never transition to other characters.
-2. Spoken word must be contained within " markers.
-{% if not can_coerce %}3. Only return the continuation of the DRAFT.{% endif %}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. Never transition to other characters.
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. Spoken word must be contained within " markers.
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. This is from the perspective of "{{ character.name }}".
+{% if not can_coerce %}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. Only return the continuation of the DRAFT.
+{% endif %}
 {% if can_coerce %}
-DRAFT: {{ non_anchor }}{{ bot_token }}{{ anchor }}{{ prefix }}
+DRAFT: {{ character.name }}: {{ non_anchor }}{{ bot_token }}{{ anchor }}{{ prefix }}
 {% else %}
-DRAFT: {{ non_anchor }}{{ anchor }}{{ prefix }} (... continue the dialogue)
+DRAFT: {{ character.name }}: {{ non_anchor }}{{ anchor }}{{ prefix }} (... continue the dialogue)
 {% endif%}

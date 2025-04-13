@@ -17,6 +17,38 @@
                 </span>
 
                 <v-spacer></v-spacer>
+                
+                <v-menu :close-on-content-click="false">
+                    <!-- debug menu -->
+                    <template v-slot:activator="{ props }">
+                        <v-btn v-bind="props" icon>
+                            <v-icon color="primary">mdi-bug</v-icon>
+                        </v-btn>
+                    </template>
+
+                    <v-list density="compact" v-model:selected="debugMenuSelected" select-strategy="leaf" color="secondary">
+                        <v-list-subheader>Debug Logging</v-list-subheader>
+                        <v-list-item value="logStateSet">
+                            SET State
+                            <template v-slot:prepend="{ isSelected }">
+                                <v-list-item-action start>
+                                    <v-checkbox-btn :model-value="isSelected"></v-checkbox-btn>
+                                </v-list-item-action>
+                            </template>
+                        </v-list-item>
+                        <v-list-item value="logStateGet">
+                            GET State
+                            <template v-slot:prepend="{ isSelected }">
+                                <v-list-item-action start>
+                                    <v-checkbox-btn :model-value="isSelected"></v-checkbox-btn>
+                                </v-list-item-action>
+                            </template>
+                        </v-list-item>
+                    </v-list>
+                    
+                </v-menu>
+
+
                 <v-btn @click="requestSceneNodesWithConfirm" color="primary" icon>
                     <v-icon>mdi-refresh</v-icon>
                 </v-btn>
@@ -197,6 +229,7 @@ export default {
             testErrorMessage: null,
             breakpoint: null,
             centerOnNode: null,
+            debugMenuSelected: null,
             componentSize: {
                 x: 0,
                 y: 0,
@@ -221,6 +254,18 @@ export default {
 
                     this.$refs.log.addEntry(ltNode, value, nodeState);
                 },
+                "state/SetState": (ltNode, nodeState) => {
+                    if(this.logStateSet) {
+                        let value = nodeState.input_values.value;
+                        this.$refs.log.addEntry(ltNode, value, nodeState);
+                    }
+                },
+                "state/GetState": (ltNode, nodeState) => {
+                    if(this.logStateGet) {
+                        let value = nodeState.output_values.value;
+                        this.$refs.log.addEntry(ltNode, value, nodeState);
+                    }
+                }
             }
         }
     },
@@ -241,6 +286,12 @@ export default {
         },
         locked() {
             return this.editingLockedModule;
+        },
+        logStateSet() {
+            return this.debugMenuSelected.includes('logStateSet');
+        },
+        logStateGet() {
+            return this.debugMenuSelected.includes('logStateGet');
         }
     },
     
@@ -261,7 +312,7 @@ export default {
                 }
             },
             deep: true
-        }
+        },
     },
     
     methods: {
@@ -508,7 +559,7 @@ export default {
 
             ltNode.talemateState = nodeState;
 
-            if(nodeState) {
+            if(nodeState && nodeState.end_time) {
                 if(ltNode.onNodeStateChanged) {
                     ltNode.onNodeStateChanged(nodeState);
                 }

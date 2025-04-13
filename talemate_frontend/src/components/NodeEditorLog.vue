@@ -7,12 +7,12 @@
                     <v-btn color="secondary" variant="text" size="small" @click="expanded = !expanded" :prepend-icon="expanded ? 'mdi-menu-up' : 'mdi-menu-down'" text>Log</v-btn>
                 </v-col>
                 <v-col :cols="expanded ? 6 : 0" v-if="expanded" class="text-right">
-                    <v-btn color="delete" variant="text" size="small" @click="log = []" :prepend-icon="'mdi-close-circle-outline'">Clear</v-btn>
+                    <v-btn color="delete" variant="text" size="small" @click="clearLog" :prepend-icon="'mdi-close-circle-outline'">Clear</v-btn>
                 </v-col>
             </v-row>   
             
             <div v-if="expanded === true">
-                <v-list-item v-for="entry in log" :key="entry.nodeId" @click="inspectNode = entry; inspect = true;">
+                <v-list-item v-for="entry in log" :key="entry.entryId" @click="inspectNode = entry; inspect = true;">
                     <v-list-item-title :class="'text-' + entry.color">
                         {{ entry.title }} <span class="text-caption text-muted">{{ entry.nodeId.slice(0,4) }}</span></v-list-item-title>
                     <v-list-item-subtitle>{{ entry.value }}</v-list-item-subtitle>
@@ -45,7 +45,7 @@ export default {
   props: {
     maxEntries: {
       type: Number,
-      default: 25,
+      default: 200,
     }
   },
   data: function() {
@@ -54,6 +54,7 @@ export default {
       expanded: true,
       inspect: false,
       inspectNode: null,
+      entryIdCounter: 0,
     }
   },
   methods:{
@@ -62,29 +63,33 @@ export default {
     },
     addMockEntries(num = 50) {
         for (let i = 0; i < num; i++) {
-            this.log.unshift({title: "Node " + i, nodeId: "node" + i, value: Math.random(), timestamp: new Date(), nodeType: "mock"});
+            this.log.unshift({
+                entryId: this.entryIdCounter++,
+                title: "Node " + i, 
+                nodeId: "node" + i, 
+                value: Math.random(), 
+                timestamp: new Date(), 
+                nodeType: "mock"
+            });
         }
     },
+    clearLog() {
+        this.log = [];
+    },
     addEntry(node, value, state) {
-
-        while (this.log.length > this.maxEntries) {
-            this.log.pop();
-        }
 
         // does value end with "UNRESOLVED'>"
         if(value.endsWith("UNRESOLVED'>")) {
             return;
         }
 
-        // find existing (based on node id)
-        let existing = this.log.find(entry => entry.nodeId === node.talemateId);
-
-        // if existing value is same as new value, do nothing
-        if (existing && existing.value === value) {
+        // if last entry in log is identical to new value, do nothing
+        if (this.log.length > 0 && this.log[0].value === value && this.log[0].nodeId === node.talemateId) {
             return;
         }
 
         this.log.unshift({
+            entryId: this.entryIdCounter++,
             title: node.title,
             nodeId: node.talemateId, 
             value: value, 
@@ -95,6 +100,9 @@ export default {
             color: state.error ? 'error' : null,
         });
 
+        while (this.log.length > this.maxEntries) {
+            this.log.pop();
+        }
     }
   },
   //mounted() {

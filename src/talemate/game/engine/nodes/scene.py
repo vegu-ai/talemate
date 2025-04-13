@@ -24,6 +24,7 @@ from talemate.instance import get_agent
 from talemate.character import activate_character, deactivate_character
 import talemate.scene_message as scene_message
 import talemate.emit.async_signals as async_signals
+from talemate.util.colors import random_color
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Character
@@ -195,6 +196,10 @@ class MakeCharacter(Node):
         is_player = self.normalized_input_value("is_player")
         add_to_scene = self.normalized_input_value("add_to_scene")
         is_active = self.normalized_input_value("is_active")
+        
+        if not color:
+            color = random_color()
+        
         character = scene.Character(
             name=name,
             description=description,

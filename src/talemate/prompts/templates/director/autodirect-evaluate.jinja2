@@ -1,6 +1,5 @@
 {% block extra_context -%}
 {% include "extra-context.jinja2" %}
-{# scene analysis exists #}{% if scene.agent_state.summarizer and scene.agent_state.summarizer.scene_analysis %}{{ scene.agent_state.summarizer.scene_analysis }} {% endif %}
 {% endblock %}
 {% set bullet_num=0 -%}
 {% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
@@ -20,13 +19,14 @@ Evaluate the next moment in the scene following the current moment:
 Evaluate the next moment in the scene.
 {% endif %}
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly explain the meaning of the current moment in the scene. What was the meaning of their dialogue and actions? 
+{% set bullet_num=0 -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. Briefly explain the meaning of the current moment in the scene. What was the meaning of their dialogue and actions?
 
 {% with task_instructions="Explain your thought process about what should happen next." -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) {% include "scene-intent-inline.jinja2" %}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. {% include "scene-intent-inline.jinja2" %}
 {% endwith %}
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) What would most engage and satisfy the reader at this moment, considering both their expectations and desires based on the genre and established story context?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. What would most engage and satisfy the reader at this moment, considering both their expectations and desires based on the genre and established story context?
 
 {% if candidates %}
 ### Character Considerations
@@ -37,28 +37,43 @@ Candidates eligible to take action:
 - {{ character.name }}
 {% endfor %}
 
-Remember: Actions involve telling a character what to do, but NOT writing direct dialogue. For example: "John tells Mary about the secret he discovered" is acceptable, but "John says 'I found a secret'" is not.
+Remember: Actions involve telling a character what to do, but NOT writing direct dialogue. For example: "John tells Mary about the secret he discovered" is acceptable, but "John says 'I found a secret'" is not. This is IMPORTANT, repeat back your understanding of this rule.
+
+Your instructions MUST be brief and to the point and easily understood.
+
+{% if '"You"' in candidate_names %}The "You" character refers to the player playing this interactive story. Refer to them as "You".{% endif %}
 {% endif %}
 
 ### Scene Direction Decision
 After analyzing the scene, decide on ONE of the following actions to take:
 
 {% if candidates -%}
-{% set bullet_num=0 -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. Have a specific character act (Character action)
-{% endif -%}
-{% if narrator_available -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. Narrate the current scene moment (Scene narration)
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. Progress the story forward (Story progression)
-{% endif -%}
+- Have a specific character act (Character action) - Remember only these candidates are eligible for an action at this point: {{ candidate_names }}
+{% endif %}
+{% if narrator_available %}
+- Narrate the current scene moment (Scene narration)
+- Progress the story forward (Story progression)
+{% endif %}
 
 Make your decision based on what would create the most compelling and logical next moment in the scene.
 
 Your response must include your analysis and THEN clearly state:
-{% set bullet_num=0 -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. The type of direction you've chosen ({% if candidates %}character action, {% endif %}{% if narrator_available %}scene narration, or story progression{% endif %})
-{% if candidates %}{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. If a character action, which character should act{% endif %}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. A brief description of what should happen
+- The type of direction you've chosen ({% if candidates %}character action, {% endif %}{% if narrator_available %}scene narration, or story progression{% endif %})
+{% if candidates %}- If a character action, which character should act{% endif %}
+- A brief description of what should happen
 
+### Expected Response Format
 Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
+
+RULES
+{understanding of the task and special rules. who is eligible for an action, what restrictions exist, etc.}
+
+ANALYSIS
+{analysis with reasoning and honoring the rules}
+
+NEXT DIRECTION
+Type of action: {chosen action}
+Actor: {actor name}
+Instructions: {description of what should happen}
 <|CLOSE_SECTION|>
+{{ bot_token }}RULES

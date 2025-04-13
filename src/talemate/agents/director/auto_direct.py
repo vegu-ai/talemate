@@ -15,7 +15,8 @@ import talemate.emit.async_signals as async_signals
 from talemate.scene_message import CharacterMessage, TimePassageMessage, DirectorMessage, NarratorMessage
 from talemate.scene.schema import ScenePhase, SceneType, SceneIntent
 from talemate.scene.intent import set_scene_phase
-
+from talemate.world_state.manager import WorldStateManager
+from talemate.world_state.templates.scene import SceneType as TemplateSceneType
 import talemate.agents.director.auto_direct_nodes
 
 if TYPE_CHECKING:
@@ -352,6 +353,14 @@ class AutoDirectMixin:
         max_scene_types:int=1,
     ):
         
+        world_state_manager:WorldStateManager = self.scene.world_state_manager
+        
+        scene_type_templates = await world_state_manager.get_templates(types=["scene_type"])
+        
+        async def add_from_template(id:str) -> SceneType:
+            template:TemplateSceneType = scene_type_templates[id]
+            return template.apply_to_scene(self.scene)
+            
         async def generate_scene_type(
             id:str = None,
             name:str = None,
@@ -388,11 +397,20 @@ class AutoDirectMixin:
                     fn=generate_scene_type,
                     multiple=True,
                 ),
+                focal.Callback(
+                    name="add_from_template",
+                    arguments=[
+                        focal.Argument(name="id", type="str"),
+                    ],
+                    fn=add_from_template,
+                    multiple=True,
+                ),
             ],
             max_calls=max_scene_types,
             retries=1,
             scene=self.scene,
             instructions=instructions,
+            scene_type_templates=scene_type_templates.templates,
         )
         
         await focal_handler.request(

@@ -1,6 +1,27 @@
 import pytest
 from talemate.util import ensure_dialog_format, clean_dialogue, remove_trailing_markers
 
+MULTILINE_TEST_A_INPUT = """
+\"The first line.
+
+The second line.
+
+- list item
+- list item
+
+The third line.\"
+"""
+MULTILINE_TEST_A_EXPECTED = """
+\"The first line.
+
+The second line.
+
+- list item
+- list item
+
+The third line.\"
+"""
+
 @pytest.mark.parametrize("input, expected", [
     ('Hello how are you?', 'Hello how are you?'),
     ('"Hello how are you?"', '"Hello how are you?"'),
@@ -23,6 +44,7 @@ from talemate.util import ensure_dialog_format, clean_dialogue, remove_trailing_
     ('*Some narration with a "quoted" string in it.* Then some unquoted dialogue.\n\n*More narration.*', '*Some narration with a* "quoted" *string in it.* "Then some unquoted dialogue."\n\n*More narration.*'),
     ('*Some narration* Some dialogue but not in quotes. *', '*Some narration* "Some dialogue but not in quotes."'),
     ('*First line\nSecond line\nThird line*', '*First line\nSecond line\nThird line*'),
+    (MULTILINE_TEST_A_INPUT, MULTILINE_TEST_A_EXPECTED),
 ])
 def test_dialogue_cleanup(input, expected):
     assert ensure_dialog_format(input) == expected

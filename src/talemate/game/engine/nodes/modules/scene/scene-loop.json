@@ -1,6 +1,6 @@
 {
   "title": "Scene Loop",
-  "id": "9a3cfc92-9189-4794-95fd-5a371b861bea",
+  "id": "8de560f7-fe0c-4f17-b533-f84d18ca0ced",
   "properties": {
     "trigger_game_loop": true
   },
@@ -43,51 +43,6 @@
       "inherited": false,
       "registry": "state/SetState",
       "base_type": "core/Node"
-    },
-    "9f129405-e588-4cb1-84ac-1a1abfa8d55a": {
-      "title": "SET local.auto_direction",
-      "id": "9f129405-e588-4cb1-84ac-1a1abfa8d55a",
-      "properties": {
-        "name": "auto_direction",
-        "scope": "local"
-      },
-      "x": 821,
-      "y": 646,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "51299044-928a-4650-8b9a-9c8ecd2e1c07": {
-      "title": "GET local.auto_direction",
-      "id": "51299044-928a-4650-8b9a-9c8ecd2e1c07",
-      "properties": {
-        "name": "auto_direction",
-        "scope": "local"
-      },
-      "x": 57,
-      "y": 1456,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "7c7a6436-38f1-4bf3-9382-d480d64c14ea": {
-      "title": "Select Actor For Turn",
-      "id": "7c7a6436-38f1-4bf3-9382-d480d64c14ea",
-      "properties": {},
-      "x": 563,
-      "y": 1481,
-      "width": 176,
-      "height": 111,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/SelectActorForTurn",
-      "base_type": "core/Graph"
     },
     "0a155c98-458c-43e0-8dce-a0b3cadd6012": {
       "title": "User Input",
@@ -294,21 +249,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "80f0c52f-c4ff-4d35-87fa-00ca085ff71f": {
-      "title": "NOT",
-      "id": "80f0c52f-c4ff-4d35-87fa-00ca085ff71f",
-      "properties": {
-        "pass_through": false
-      },
-      "x": 355,
-      "y": 1507,
-      "width": 210,
-      "height": 78,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Switch",
       "base_type": "core/Node"
     },
     "635db25b-8577-4915-9006-7ed4490b6453": {
@@ -604,6 +544,19 @@
       "registry": "state/SetState",
       "base_type": "core/Node"
     },
+    "7c7a6436-38f1-4bf3-9382-d480d64c14ea": {
+      "title": "Select Actor For Turn",
+      "id": "7c7a6436-38f1-4bf3-9382-d480d64c14ea",
+      "properties": {},
+      "x": 563,
+      "y": 1481,
+      "width": 176,
+      "height": 111,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/SelectActorForTurn",
+      "base_type": "core/Graph"
+    },
     "b2d1c52c-574e-40e7-9c0e-77e61492a0e3": {
       "title": "Auto Direction",
       "id": "b2d1c52c-574e-40e7-9c0e-77e61492a0e3",
@@ -617,34 +570,66 @@
       "registry": "agents/director/auto-direct/AutoDirection",
       "base_type": "core/Graph"
     },
-    "ee189253-7103-46a9-a258-852cb0449bd2": {
-      "title": "TRUE",
-      "id": "ee189253-7103-46a9-a258-852cb0449bd2",
+    "51299044-928a-4650-8b9a-9c8ecd2e1c07": {
+      "title": "GET local.auto_direction",
+      "id": "51299044-928a-4650-8b9a-9c8ecd2e1c07",
       "properties": {
-        "value": true
+        "name": "auto_direction",
+        "scope": "local"
       },
-      "x": 393,
-      "y": 723,
+      "x": 57,
+      "y": 1456,
       "width": 210,
-      "height": 58,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "80f0c52f-c4ff-4d35-87fa-00ca085ff71f": {
+      "title": "NOT",
+      "id": "80f0c52f-c4ff-4d35-87fa-00ca085ff71f",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 370,
+      "y": 1510,
+      "width": 210,
+      "height": 78,
       "collapsed": true,
       "inherited": false,
-      "registry": "core/MakeBool",
+      "registry": "core/Switch",
       "base_type": "core/Node"
     },
     "b85b4fae-3d29-481e-9470-137d52f59a07": {
       "title": "NOT",
       "id": "b85b4fae-3d29-481e-9470-137d52f59a07",
       "properties": {
-        "pass_through": true
+        "pass_through": false
       },
-      "x": 333,
-      "y": 783,
+      "x": 350,
+      "y": 780,
       "width": 210,
       "height": 78,
       "collapsed": true,
       "inherited": false,
       "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "9f129405-e588-4cb1-84ac-1a1abfa8d55a": {
+      "title": "SET local.auto_direction",
+      "id": "9f129405-e588-4cb1-84ac-1a1abfa8d55a",
+      "properties": {
+        "name": "auto_direction",
+        "scope": "local"
+      },
+      "x": 821,
+      "y": 646,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
       "base_type": "core/Node"
     }
   },
@@ -654,21 +639,6 @@
     ],
     "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd.value": [
       "635db25b-8577-4915-9006-7ed4490b6453.state_c"
-    ],
-    "9f129405-e588-4cb1-84ac-1a1abfa8d55a.value": [
-      "635db25b-8577-4915-9006-7ed4490b6453.state_b"
-    ],
-    "51299044-928a-4650-8b9a-9c8ecd2e1c07.value": [
-      "80f0c52f-c4ff-4d35-87fa-00ca085ff71f.value"
-    ],
-    "7c7a6436-38f1-4bf3-9382-d480d64c14ea.player": [
-      "cb88f884-e83e-47ba-afa9-acd3518e133b.value"
-    ],
-    "7c7a6436-38f1-4bf3-9382-d480d64c14ea.character": [
-      "bc3f6839-08fb-45ed-906f-3cd85e2692f4.value"
-    ],
-    "7c7a6436-38f1-4bf3-9382-d480d64c14ea.ai": [
-      "c89675c2-9a27-4be5-a370-daabbfb00d15.value"
     ],
     "54983f3e-c788-4bdd-95a1-da9462ada3f3.generated": [
       "e2fb6f95-ee17-4a2f-acc0-62e245e4ee19.value"
@@ -717,9 +687,6 @@
     "45d9cbc5-21a6-40aa-bbe9-991e1bc8fc5c.value": [
       "635db25b-8577-4915-9006-7ed4490b6453.state"
     ],
-    "80f0c52f-c4ff-4d35-87fa-00ca085ff71f.no": [
-      "7c7a6436-38f1-4bf3-9382-d480d64c14ea.state"
-    ],
     "2cdab649-8000-44e7-8c92-611fc40aab4b.value": [
       "b85b4fae-3d29-481e-9470-137d52f59a07.value"
     ],
@@ -763,20 +730,38 @@
     "cb88f884-e83e-47ba-afa9-acd3518e133b.value": [
       "5b3b9556-081b-4337-9e04-7b63316e0d94.state"
     ],
-    "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.player": [
-      "45d9cbc5-21a6-40aa-bbe9-991e1bc8fc5c.value"
+    "7c7a6436-38f1-4bf3-9382-d480d64c14ea.character": [
+      "bc3f6839-08fb-45ed-906f-3cd85e2692f4.value"
     ],
-    "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.character": [
-      "19505974-de90-4f86-b0bd-3af3b64b64c9.value"
+    "7c7a6436-38f1-4bf3-9382-d480d64c14ea.player": [
+      "cb88f884-e83e-47ba-afa9-acd3518e133b.value"
     ],
-    "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.ai": [
-      "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd.value"
+    "7c7a6436-38f1-4bf3-9382-d480d64c14ea.ai": [
+      "c89675c2-9a27-4be5-a370-daabbfb00d15.value"
     ],
     "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.enabled": [
       "9f129405-e588-4cb1-84ac-1a1abfa8d55a.value"
     ],
+    "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.character": [
+      "19505974-de90-4f86-b0bd-3af3b64b64c9.value"
+    ],
+    "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.player": [
+      "45d9cbc5-21a6-40aa-bbe9-991e1bc8fc5c.value"
+    ],
+    "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.ai": [
+      "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd.value"
+    ],
+    "51299044-928a-4650-8b9a-9c8ecd2e1c07.value": [
+      "80f0c52f-c4ff-4d35-87fa-00ca085ff71f.value"
+    ],
+    "80f0c52f-c4ff-4d35-87fa-00ca085ff71f.no": [
+      "7c7a6436-38f1-4bf3-9382-d480d64c14ea.state"
+    ],
     "b85b4fae-3d29-481e-9470-137d52f59a07.no": [
       "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.state"
+    ],
+    "9f129405-e588-4cb1-84ac-1a1abfa8d55a.value": [
+      "635db25b-8577-4915-9006-7ed4490b6453.state_b"
     ]
   },
   "groups": [
@@ -837,13 +822,6 @@
       "inherited": false
     },
     {
-      "text": "Only proceed if `skip_to_player` is NOT set.",
-      "x": 303,
-      "y": 809,
-      "width": 192,
-      "inherited": false
-    },
-    {
       "text": "User Turn",
       "x": 783,
       "y": 2262,
@@ -870,11 +848,19 @@
       "y": 1381,
       "width": 200,
       "inherited": false
+    },
+    {
+      "text": "Only proceed if `skip_to_player` is NOT set.",
+      "x": 300,
+      "y": 800,
+      "width": 192,
+      "inherited": false
     }
   ],
   "extends": null,
   "sleep": 0.001,
   "base_type": "scene/SceneLoop",
   "inputs": [],
-  "outputs": []
+  "outputs": [],
+  "style": null
 }

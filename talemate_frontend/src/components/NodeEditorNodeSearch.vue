@@ -56,6 +56,11 @@ export default {
     watch: {
         nodes(newVal) {
             console.log("nodes", newVal);
+        },
+        dialog(newVal) {
+            if (newVal === true) {
+                this.focusSearchInput();
+            }
         }
     },
     data() {
@@ -130,17 +135,23 @@ export default {
                 this.isProcessingSelection = false;
             }, 300);
         },
+        focusSearchInput() {
+            // Use both nextTick and setTimeout to ensure DOM is fully updated
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    if (this.$refs.searchInput) {
+                        this.$refs.searchInput.focus();
+                    }
+                }, 50);
+            });
+        },
         open(event) {
             this.dialog = true;
             this.event = event;
             this.searchQuery = '';
             this.focusedIndex = -1;
             this.isProcessingSelection = false;
-            this.$nextTick(() => {
-                if (this.$refs.searchInput) {
-                    this.$refs.searchInput.focus();
-                }
-            });
+            this.focusSearchInput();
         }
     }
 }

@@ -142,27 +142,12 @@
         "scope": "local"
       },
       "x": 30,
-      "y": 800,
+      "y": 1365,
       "width": 256,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "8f11a1a2-f94a-4d99-a944-dd1575502436": {
-      "title": "Stage 2",
-      "id": "8f11a1a2-f94a-4d99-a944-dd1575502436",
-      "properties": {
-        "stage": 2
-      },
-      "x": 600,
-      "y": 830,
-      "width": 210,
-      "height": 118,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "e4cd1391-daed-4951-a6c6-438d993c07a9": {
@@ -188,12 +173,95 @@
         "max_scene_types": 2
       },
       "x": 340,
-      "y": 800,
+      "y": 1365,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/auto-direct/GenerateSceneTypes",
+      "base_type": "core/Node"
+    },
+    "8f11a1a2-f94a-4d99-a944-dd1575502436": {
+      "title": "Stage 3",
+      "id": "8f11a1a2-f94a-4d99-a944-dd1575502436",
+      "properties": {
+        "stage": 3
+      },
+      "x": 600,
+      "y": 1397,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "59ec9da3-7fab-41e7-9c63-daf625fd7fa0": {
+      "title": "GET local.arg_goal",
+      "id": "59ec9da3-7fab-41e7-9c63-daf625fd7fa0",
+      "properties": {
+        "name": "arg_goal",
+        "scope": "local"
+      },
+      "x": 30,
+      "y": 811,
+      "width": 256,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "bb43a68e-bdf6-4b02-9cc0-102742b14f5d": {
+      "title": "Contextual Generate",
+      "id": "bb43a68e-bdf6-4b02-9cc0-102742b14f5d",
+      "properties": {
+        "context_type": "scene intent",
+        "context_name": "overall",
+        "instructions": null,
+        "length": 256,
+        "character": null,
+        "uid": null,
+        "context_aware": true,
+        "history_aware": true
+      },
+      "x": 370,
+      "y": 820,
+      "width": 249,
+      "height": 406,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
+    },
+    "6ef94917-f9b1-4c18-af15-617430e50cfe": {
+      "title": "Set Scene Intent",
+      "id": "6ef94917-f9b1-4c18-af15-617430e50cfe",
+      "properties": {
+        "intent": ""
+      },
+      "x": 700,
+      "y": 820,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/intention/SetSceneIntent",
+      "base_type": "core/Node"
+    },
+    "f4cd34d9-0628-4145-a3da-ec1215cd356c": {
+      "title": "Stage 2",
+      "id": "f4cd34d9-0628-4145-a3da-ec1215cd356c",
+      "properties": {
+        "stage": 2
+      },
+      "x": 970,
+      "y": 850,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
       "base_type": "core/Node"
     }
   },
@@ -224,6 +292,19 @@
     ],
     "619c7e98-e958-4d13-a68a-210752522011.state": [
       "8f11a1a2-f94a-4d99-a944-dd1575502436.state"
+    ],
+    "59ec9da3-7fab-41e7-9c63-daf625fd7fa0.value": [
+      "bb43a68e-bdf6-4b02-9cc0-102742b14f5d.state",
+      "bb43a68e-bdf6-4b02-9cc0-102742b14f5d.instructions"
+    ],
+    "bb43a68e-bdf6-4b02-9cc0-102742b14f5d.state": [
+      "6ef94917-f9b1-4c18-af15-617430e50cfe.state"
+    ],
+    "bb43a68e-bdf6-4b02-9cc0-102742b14f5d.text": [
+      "6ef94917-f9b1-4c18-af15-617430e50cfe.intent"
+    ],
+    "6ef94917-f9b1-4c18-af15-617430e50cfe.state": [
+      "f4cd34d9-0628-4145-a3da-ec1215cd356c.state"
     ]
   },
   "groups": [
@@ -238,22 +319,32 @@
       "inherited": false
     },
     {
-      "title": "Stage 1",
+      "title": "Determine content context",
       "x": 2,
       "y": 385,
       "width": 1112,
       "height": 336,
-      "color": "#3f789e",
+      "color": "#8AA",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Generate Scene Types",
       "x": 2,
-      "y": 725,
+      "y": 1289,
       "width": 744,
       "height": 219,
-      "color": "#3f789e",
+      "color": "#8AA",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Set story intention",
+      "x": 1,
+      "y": 725,
+      "width": 1112,
+      "height": 559,
+      "color": "#8AA",
       "font_size": 24,
       "inherited": false
     }
@@ -272,7 +363,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "490c9ef2-8538-44ff-a09b-2484965fdcc2",
+      "id": "7eb835fb-0d9a-4e60-beb5-186c8885bac9",
       "name": "fn",
       "optional": false,
       "group": null,

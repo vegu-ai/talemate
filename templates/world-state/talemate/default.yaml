@@ -45,6 +45,15 @@ templates:
     priority: 1
     template_type: scene_type
     uid: 571e0e4a-b985-45ff-b6a3-d3c044eab891
+  8a1df27b-e1d7-4f5a-9a8e-40401a570977:
+    description: Combat between two characters
+    favorite: false
+    group: talemate_default_467c7fe3
+    instructions: Fast paced, brutal and realistic combat.
+    name: Fight Scene
+    priority: 1
+    template_type: scene_type
+    uid: 8a1df27b-e1d7-4f5a-9a8e-40401a570977
   goals:
     auto_create: false
     description: Long term and short term goals

@@ -323,7 +323,7 @@ class AutoDirectMixin:
                     name="set_scene_intention",
                     arguments=[
                         focal.Argument(name="type", type="str"),
-                        focal.Argument(name="intentention", type="str"),
+                        focal.Argument(name="intention", type="str"),
                     ],
                     fn=set_scene_intention,
                     multiple=False,

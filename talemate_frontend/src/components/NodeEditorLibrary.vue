@@ -47,13 +47,25 @@
         </v-card-text>
     </v-card>
 
-    <v-dialog v-model="newModuleDialog" :max-width="600" :contained="true">
+    <v-dialog v-model="newModuleDialog" :max-width="600" :contained="true" @keydown.esc="newModuleDialog = false">
         <v-card>
             <v-card-title>Create new module</v-card-title>
             <v-card-text>
-                <v-form v-model="newModuleValid">
-                    <v-text-field v-model="newModule.name" :rules="newModuleNameRules" label="Name" messages="Module title"></v-text-field>
-                    <v-text-field v-model="newModule.registry" :rules="newModuleRegistryRules" label="Registry" messages="Node registry path. (e.g., path/to/my/modules/$N) - $N will be substituted with a name generated from the title."></v-text-field>
+                <v-form v-model="newModuleValid" @submit.prevent="createModule">
+                    <v-text-field 
+                        v-model="newModule.name" 
+                        :rules="newModuleNameRules" 
+                        label="Name" 
+                        messages="Module title"
+                        @keydown.enter="createModule"
+                    ></v-text-field>
+                    <v-text-field 
+                        v-model="newModule.registry" 
+                        :rules="newModuleRegistryRules" 
+                        label="Registry" 
+                        messages="Node registry path. (e.g., path/to/my/modules/$N) - $N will be substituted with a name generated from the title."
+                        @keydown.enter="createModule"
+                    ></v-text-field>
                     <v-alert v-if="newModule.type === 'extend'" color="muted" class="text-caption" variant="text">
                         Extending from {{ newModule.registry }}
                     </v-alert>

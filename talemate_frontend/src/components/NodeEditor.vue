@@ -52,20 +52,35 @@
                 <v-btn @click="requestSceneNodesWithConfirm" color="primary" icon>
                     <v-icon>mdi-refresh</v-icon>
                 </v-btn>
-                <v-btn :disabled="busy" v-if="!testing" @click="startTest" icon color="primary">
-                    <v-icon>mdi-play</v-icon>
-                </v-btn>
+                <span v-if="!testing">
+                    <v-tooltip text="Start the scene loop">
+                        <template v-slot:activator="{ props }">
+                            <v-btn icon v-bind="props" :disabled="busy" @click="startTestSceneLoop" color="primary">
+                                <v-icon>mdi-movie-play</v-icon>
+                            </v-btn>
+                        </template>
+                    </v-tooltip>
+                    <v-tooltip text="Start this module">
+                        <template v-slot:activator="{ props }">
+                            <v-btn icon v-bind="props" :disabled="busy" @click="startTest" color="primary">
+                                <v-icon>mdi-play</v-icon>
+                            </v-btn>
+                        </template>
+                    </v-tooltip>
+                </span>
                 <span v-else-if="breakpoint !== null">
-                    <v-btn @click="gotoBreakpoint" color="delete" variant="text" prepend-icon="mdi-debug-step-over">Breakpoint
-                    </v-btn>
-                    <v-btn @click="releaseBreakpoint" color="delete" icon>
-                        <v-icon>mdi-play-pause</v-icon>
-                    </v-btn>
+                    <v-tooltip text="Go To Breakpoint">
+                        <template v-slot:activator="{ props }">
+                            <v-btn icon v-bind="props" @click="gotoBreakpoint" color="delete"><v-icon>mdi-debug-step-over</v-icon></v-btn>
+                        </template>
+                    </v-tooltip>
+                    <v-tooltip text="Release breakpoint">
+                        <template v-slot:activator="{ props }">
+                            <v-btn icon v-bind="props" @click="releaseBreakpoint" color="delete"><v-icon>mdi-play-pause</v-icon></v-btn>
+                        </template>
+                    </v-tooltip>
                 </span>
                 <span v-else>
-                    <v-btn :disabled="busy" @click="restartTest" color="primary">
-                        <v-icon>mdi-motion-play</v-icon>
-                    </v-btn>
                     <v-btn :disabled="busy" @click="stopTest" color="error">
                         <v-icon>mdi-stop</v-icon>
                     </v-btn>
@@ -493,6 +508,13 @@ export default {
                 type: 'node_editor',
                 action: 'test_run',
                 graph: this.testingGraph,
+            }));
+        },
+
+        startTestSceneLoop() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'node_editor',
+                action: 'test_run_scene_loop',
             }));
         },
 

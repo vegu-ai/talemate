@@ -348,7 +348,41 @@ class NodeEditorPlugin(Plugin):
         
         graph = import_flat_graph(payload.graph)
         
-        active_graph_state:GraphState = scene.nodegraph_state
+        await self._start_test_with_graph(graph)
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "test_started",
+                "data": payload.model_dump(),
+            }
+        )
+    
+    @requires_creative_environment
+    async def handle_test_run_scene_loop(self, data: dict):
+        """
+        Loads the scene's main loop and runs it.
+        """
+        scene = self.scene
+        
+        # Load the scene's main loop
+        graph, _ = load_graph(scene.nodes_filename, search_paths=[scene.nodes_dir])
+        
+        await self._start_test_with_graph(graph)
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "test_started",
+                "data": {},
+            }
+        )
+    
+    async def _start_test_with_graph(self, graph):
+        """
+        Common logic for starting a test with a loaded graph
+        """
+        active_graph_state:GraphState = self.scene.nodegraph_state
         
         async def on_error(state:GraphState, error:Exception):
             if isinstance(error, PASSTHROUGH_ERRORS):
@@ -377,21 +411,12 @@ class NodeEditorPlugin(Plugin):
             await self.handle_test_stop({})
             
         graph.callbacks.append(on_done)
-            
         graph.error_handlers.append(on_error)
         
         if isinstance(graph, SceneLoop):
             graph.properties["trigger_game_loop"] = True
         
         active_graph_state.shared["__test_module"] = graph
-        
-        self.websocket_handler.queue_put(
-            {
-                "type": self.router,
-                "action": "test_started",
-                "data": payload.model_dump(),
-            }
-        )
         
     @requires_creative_environment
     async def handle_test_restart(self, data: dict):
@@ -413,17 +438,6 @@ class NodeEditorPlugin(Plugin):
             }
         )
         
-    async def _stop_test(self):
-        active_graph_state:GraphState = self.scene.nodegraph_state
-        module = active_graph_state.shared.pop("__test_module", None)
-        
-        if not module:
-            return
-        
-        task = active_graph_state.shared.pop(f"__run_{module.id}", None)
-        if task:
-            task.cancel()
-        
     @requires_creative_environment
     async def handle_release_breakpoint(self, data: dict):
         active_graph_state:GraphState = self.scene.nodegraph_state
@@ -435,3 +449,14 @@ class NodeEditorPlugin(Plugin):
                 "data": {},
             }
         )
+
+    async def _stop_test(self):
+        active_graph_state:GraphState = self.scene.nodegraph_state
+        module = active_graph_state.shared.pop("__test_module", None)
+        
+        if not module:
+            return
+        
+        task = active_graph_state.shared.pop(f"__run_{module.id}", None)
+        if task:
+            task.cancel()

@@ -44,6 +44,14 @@
                                 </v-list-item-action>
                             </template>
                         </v-list-item>
+                        <v-list-item value="clearLogOnTest">
+                            Clear Log on Test
+                            <template v-slot:prepend="{ isSelected }">
+                                <v-list-item-action start>
+                                    <v-checkbox-btn :model-value="isSelected"></v-checkbox-btn>
+                                </v-list-item-action>
+                            </template>
+                        </v-list-item>
                     </v-list>
                     
                 </v-menu>
@@ -307,6 +315,9 @@ export default {
         },
         logStateGet() {
             return this.debugMenuSelected.includes('logStateGet');
+        },
+        clearLogOnTest() {
+            return this.debugMenuSelected.includes('clearLogOnTest');
         }
     },
     
@@ -504,6 +515,9 @@ export default {
         },
 
         startTest() {
+            if (this.clearLogOnTest) {
+                this.$refs.log.clearLog();
+            }
             this.testingPath = this.editingNodePath;
             this.testingGraph = convertGraphToJSON(this.graph);
             this.getWebsocket().send(JSON.stringify({
@@ -514,6 +528,9 @@ export default {
         },
 
         startTestSceneLoop() {
+            if (this.clearLogOnTest) {
+                this.$refs.log.clearLog();
+            }
             this.getWebsocket().send(JSON.stringify({
                 type: 'node_editor',
                 action: 'test_run_scene_loop',

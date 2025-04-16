@@ -3,7 +3,7 @@
         <v-card>
             <v-card-title>Search for Node</v-card-title>
             <v-card-text>
-                <v-text-field v-model="searchQuery" label="Search" outlined ref="searchInput" @keydown.down.prevent="focusListItem()"></v-text-field>
+                <v-text-field v-model="searchQuery" label="Search" outlined ref="searchInput" @keydown.down.prevent="focusListItem()" @keydown.enter.prevent="selectSingleItem()"></v-text-field>
                 <v-list
                     selectable
                     v-model:selected="selected"
@@ -74,6 +74,11 @@ export default {
         }
     },
     methods: {
+        selectSingleItem() {
+            if (this.filteredNodes.length > 0) {
+                this.selected = [this.filteredNodes[0].registry];
+            }
+        },
         focusListItem() {
             if (this.filteredNodes.length > 0) {
                 this.$nextTick(() => {

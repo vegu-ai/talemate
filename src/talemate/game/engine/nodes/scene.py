@@ -26,6 +26,7 @@ import talemate.scene_message as scene_message
 import talemate.emit.async_signals as async_signals
 from talemate.util.colors import random_color
 
+
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Character
 
@@ -1002,6 +1003,133 @@ class UnpackCharacter(Node):
             "color": character.color
         })
 
+@register("scene/ActivateCharacter")
+class ActivateCharacter(Node):
+    """
+    Activate a character
+    
+    Inputs:
+    
+    - character: The character to activate
+    
+    Outputs:
+    
+    - character: The activated character
+    """
+    
+    def __init__(self, title="Activate Character", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("character", socket_type="character")
+        self.add_output("character", socket_type="character")
+        
+    async def run(self, state: GraphState):
+        character:"Character" = self.get_input_value("character")
+        
+        await activate_character(active_scene.get(), character)
+        
+        self.set_output_values({
+            "character": character
+        })
+        
+@register("scene/DeactivateCharacter")
+class DeactivateCharacter(Node):
+    """
+    Deactivate a character
+    
+    Inputs:
+    
+    - character: The character to deactivate
+    
+    Outputs:
+    
+    - character: The deactivated character
+    """
+    
+    def __init__(self, title="Deactivate Character", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("character", socket_type="character")
+        self.add_output("character", socket_type="character")
+        
+    async def run(self, state: GraphState):
+        character:"Character" = self.get_input_value("character")
+        
+        await deactivate_character(active_scene.get(), character)
+        
+        self.set_output_values({
+            "character": character
+        })
+        
+@register("scene/RemoveAllCharacters")
+class RemoveAllCharacters(Node):
+    """
+    Remove all characters from the scene
+    
+    Inputs:
+    
+    - state: The graph state
+    
+    Outputs:    
+    
+    - state: The graph state
+    """
+    
+    def __init__(self, title="Remove All Characters", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("state")
+        self.add_output("state")
+        
+    async def run(self, state: GraphState):
+        scene:"Scene" = active_scene.get()
+        
+        characters = list(scene.characters)
+        
+        for character in characters:
+            await scene.remove_character(character)
+        
+        self.set_output_values({
+            "state": state
+        })
+        
+@register("scene/RemoveCharacter")
+class RemoveCharacter(Node):
+    """
+    Remove a character from the scene
+    
+    Inputs:
+    
+    - state: The graph state
+    - character: The character to remove
+    
+    Outputs:
+    
+    - state: The graph state
+    """
+    
+    def __init__(self, title="Remove Character", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("state")
+        self.add_input("character", socket_type="character")
+        self.add_output("state")
+        
+    async def run(self, state: GraphState):
+        scene:"Scene" = active_scene.get()
+        character:"Character" = self.get_input_value("character")
+        
+        await scene.remove_character(character)
+        
+        self.set_output_values({
+            "state": state
+        })
+    
+   
 # get the current scene loop state
 @register("scene/GetSceneLoopState")
 class GetSceneLoopState(Node):

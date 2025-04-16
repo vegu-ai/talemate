@@ -371,11 +371,23 @@ class CallForEach(Node):
     - fn: The function to call
     - items: The list of items to iterate over
     
+    Properties:
+    
+    - copy_items: Whether to copy the items list (default: False)
+    
     Outputs:
     
     - state: The state of the graph
     - results: The results of the function calls
     """
+    
+    class Fields:
+        copy_items = PropertyField(
+            type="bool",
+            name="copy_items",
+            description="Whether to copy the items list",
+            default=False,
+        )
     
     def __init__(self, title="Call For Each", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -384,6 +396,9 @@ class CallForEach(Node):
         self.add_input("state")
         self.add_input("fn", socket_type="function")
         self.add_input("items", socket_type="list")
+        
+        self.set_property("copy_items", False)
+        
         self.add_output("state")
         self.add_output("results", socket_type="list")
         
@@ -391,13 +406,18 @@ class CallForEach(Node):
         fn = self.get_input_value("fn")
         items = self.get_input_value("items")
         
+        copy_items = self.get_property("copy_items")
+        
         if not isinstance(fn, FunctionWrapper):
             raise ValueError("fn must be a FunctionWrapper instance")
         
         results = []
         
+        if copy_items:
+            items = items.copy()
+        
         for item in items:
-            result = await fn(item)
+            result = await fn(item=item)
             results.append(result)
         
         self.set_output_values(

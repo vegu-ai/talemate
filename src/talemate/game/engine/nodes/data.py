@@ -814,8 +814,8 @@ class SelectItem(Node):
         if except_items:
             items = [i for i in items if i not in except_items]
             
-            if state_data[cycle_key] >= len(items):
-                state_data[cycle_key] = 0
+        if state_data[cycle_key] >= len(items):
+            state_data[cycle_key] = 0
         
         if state.verbosity >= NodeVerbosity.VERBOSE:
             log.debug("Select item", items=items, except_items=except_items, selection_function=selection_function, cycle_index=state_data[cycle_key])

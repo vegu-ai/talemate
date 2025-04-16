@@ -4,13 +4,14 @@ import pytest
 import talemate.game.engine.nodes.load_definitions
 import talemate.agents.director
 from talemate.context import active_scene, ActiveScene
-from talemate.tale_mate import Scene
+from talemate.tale_mate import Scene, Helper
 import talemate.instance as instance
 from talemate.game.engine.nodes.core import (
     Node, Graph, GraphState, GraphContext, 
     Socket, UNRESOLVED
 )
 from talemate.game.engine.nodes.layout import load_graph_from_file
+from talemate.game.engine.nodes.registry import import_talemate_node_definitions
 from talemate.agents.director import DirectorAgent
 from talemate.client import ClientBase
 
@@ -18,6 +19,11 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEST_GRAPH_DIR = os.path.join(BASE_DIR, "data", "graphs")
 RESULTS_DIR = os.path.join(BASE_DIR, "data", "graphs", "results")
 UPDATE_RESULTS = False
+
+# This runs once for the entire test session
+@pytest.fixture(scope="session", autouse=True)
+def load_node_definitions():
+    import_talemate_node_definitions()
 
 def load_test_graph(name) -> Graph:
     path = os.path.join(TEST_GRAPH_DIR, f"{name}.json")
@@ -33,6 +39,7 @@ class MockClient(ClientBase):
 @pytest.fixture
 def mock_scene():
     scene = Scene()
+    
     return scene
 
 @pytest.fixture
@@ -41,10 +48,21 @@ def mock_client():
     return client
 
 @pytest.fixture
-def mock_director_agent(mock_client, mock_scene):
+def mock_agents(mock_scene):
     director = instance.get_agent("director", client=mock_client)
-    director.scene = mock_scene
-    return director
+    conversation = instance.get_agent("conversation", client=mock_client)
+    summarizer = instance.get_agent("summarizer", client=mock_client)
+    editor = instance.get_agent("editor", client=mock_client)
+    mock_scene.add_helper(Helper(director))
+    mock_scene.add_helper(Helper(conversation))
+    mock_scene.add_helper(Helper(summarizer))
+    mock_scene.add_helper(Helper(editor))
+    return {
+        "director": director,
+        "conversation": conversation,
+        "summarizer": summarizer,
+        "editor": editor
+    }
 
 def make_assert_fn(name:str, write_results:bool=False):
     async def assert_fn(state: GraphState):
@@ -60,7 +78,7 @@ def make_assert_fn(name:str, write_results:bool=False):
     return assert_fn
 
 def make_graph_test(name:str, write_results:bool=False):
-    async def test_graph(mock_scene, mock_director_agent):
+    async def test_graph(mock_scene):
         assert_fn = make_assert_fn(name, write_results)
         
         with ActiveScene(mock_scene):
@@ -73,13 +91,20 @@ def make_graph_test(name:str, write_results:bool=False):
 
 
 @pytest.mark.asyncio
-async def test_graph_core(mock_scene, mock_director_agent):
+async def test_graph_core(mock_scene, mock_agents):
     fn = make_graph_test("test-harness-core", False)
     
-    await fn(mock_scene, mock_director_agent)
+    await fn(mock_scene)
     
 @pytest.mark.asyncio
-async def test_graph_data(mock_scene, mock_director_agent):
+async def test_graph_data(mock_scene, mock_agents):
     fn = make_graph_test("test-harness-data", False)
     
-    await fn(mock_scene, mock_director_agent)
+    await fn(mock_scene)
+
+@pytest.mark.asyncio
+async def test_graph_scene(mock_scene, mock_agents):
+    fn = make_graph_test("test-harness-scene", False)
+    
+    await fn(mock_scene)
+

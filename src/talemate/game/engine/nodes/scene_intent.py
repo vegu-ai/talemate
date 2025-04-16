@@ -221,7 +221,6 @@ class UnpackScenePhase(Node):
     - scene_type_description
     - scene_type_name
     - scene_type_id
-    - start
     """
     
     def __init__(self, title="Unpack Scene Phase", **kwargs):
@@ -237,20 +236,21 @@ class UnpackScenePhase(Node):
         self.add_output("scene_type_description", socket_type="str")
         self.add_output("scene_type_name", socket_type="str")
         self.add_output("scene_type_id", socket_type="str")
-        self.add_output("start", socket_type="int")
         
     async def run(self, state: GraphState):
         
+        scene:"Scene" = active_scene.get()
         phase:ScenePhase = self.get_input_value("phase")
+        
+        scene_type:SceneType = scene.intent_state.scene_types[phase.scene_type]
         
         self.set_output_values({
             "intent": phase.intent,
             "scene_type": phase.scene_type,
-            "scene_type_instructions": phase.scene_type.instructions,
-            "scene_type_description": phase.scene_type.description,
-            "scene_type_name": phase.scene_type.name,
-            "scene_type_id": phase.scene_type.id,
-            "start": phase.start,
+            "scene_type_instructions": scene_type.instructions,
+            "scene_type_description": scene_type.description,
+            "scene_type_name": scene_type.name,
+            "scene_type_id": scene_type.id,
         })
     
 @register("scene/intention/MakeSceneType")
@@ -272,8 +272,8 @@ class MakeSceneType(Node):
     """
 
     class Fields:
-        id = PropertyField(
-            name="id",
+        scene_type_id = PropertyField(
+            name="scene_type_id",
             type="str",
             description="Scene type ID",
             default=UNRESOLVED,
@@ -309,12 +309,12 @@ class MakeSceneType(Node):
         
     def setup(self):
         
-        self.add_input("id", socket_type="str", optional=True)
+        self.add_input("scene_type_id", socket_type="str", optional=True)
         self.add_input("name", socket_type="str", optional=True)
         self.add_input("description", socket_type="text", optional=True)
         self.add_input("instructions", socket_type="text", optional=True)
         
-        self.set_property("id", UNRESOLVED)
+        self.set_property("scene_type_id", UNRESOLVED)
         self.set_property("name", "")
         self.set_property("description", "")
         self.set_property("instructions", "")
@@ -329,7 +329,7 @@ class MakeSceneType(Node):
         scene:"Scene" = active_scene.get()
         
         scene_type = SceneType(
-            id=self.require_input("id"),
+            id=self.require_input("scene_type_id"),
             name=self.require_input("name"),
             description=self.normalized_input_value("description"),
             instructions=self.normalized_input_value("instructions"),
@@ -341,3 +341,114 @@ class MakeSceneType(Node):
         self.set_output_values({
             "scene_type": scene_type,
         })
+        
+@register("scene/intention/GetSceneType")
+class GetSceneType(Node):
+    
+    """
+    Get a scene type object.
+    
+    Inputs:
+    
+    - id (str) - scene type ID
+    
+    Outputs:
+    
+    - scene_type (scene_intent/scene_type) - the scene type object
+    """
+    
+    def __init__(self, title="Get Scene Type", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("scene_type_id", socket_type="str")
+        self.add_output("scene_type", socket_type="scene_intent/scene_type")
+        
+    async def run(self, state: GraphState):
+        scene:"Scene" = active_scene.get()
+        scene_type_id = self.require_input("scene_type_id")
+        
+        try:
+            scene_type = scene.intent_state.scene_types[scene_type_id]
+            self.set_output_values({"scene_type": scene_type})
+        except KeyError:
+            raise InputValueError(self, "scene_type_id", f"Scene type not found: {scene_type_id}")
+        
+@register("scene/intention/UnpackSceneType")
+class UnpackSceneType(Node):
+    
+    """
+    Unpack a scene type object.
+    
+    Inputs:
+    
+    - scene_type (scene_intent/scene_type) - the scene type object
+    
+    Outputs:
+    
+    - id (str) - scene type ID
+    - name (str) - scene type name
+    - description (text) - scene type description
+    - instructions (text) - scene type instructions
+    """
+    
+    def __init__(self, title="Unpack Scene Type", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("scene_type", socket_type="scene_intent/scene_type")
+        
+        self.add_output("scene_type_id", socket_type="str")
+        self.add_output("name", socket_type="str")
+        self.add_output("description", socket_type="str")
+        self.add_output("instructions", socket_type="str")
+        
+    async def run(self, state: GraphState):
+        scene_type:SceneType = self.get_input_value("scene_type")
+        
+        self.set_output_values({
+            "scene_type_id": scene_type.id,
+            "name": scene_type.name,
+            "description": scene_type.description,
+            "instructions": scene_type.instructions,
+        })
+        
+@register("scene/intention/RemoveSceneType")
+class RemoveSceneType(Node):
+    
+    """
+    Remove a scene type object.
+    
+    Inputs:
+    
+    - state - graph state
+    - id (str) - scene type ID
+    
+    Outputs:
+    
+    - state - graph state
+    """
+    
+    def __init__(self, title="Remove Scene Type", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("state")
+        self.add_input("scene_type_id", socket_type="str")
+        
+        self.add_output("state")
+        
+    async def run(self, state: GraphState):
+        scene:"Scene" = active_scene.get()
+        
+        scene_type_id = self.require_input("scene_type_id")
+        
+        scene.intent_state.scene_types.pop(scene_type_id, None)
+        
+        self.set_output_values({
+            "state": scene.intent_state,
+        })
+        
+        
+        
+    

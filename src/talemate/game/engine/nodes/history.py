@@ -127,8 +127,12 @@ class PopHistory(Node):
     async def run(self, state: GraphState):
         scene:"Scene" = active_scene.get()
         emit_removal = self.get_property("emit_removal")
+        message = self.get_input_value("message")
         
-        message = scene.pop_history()
+        if not isinstance(message, scene_message.SceneMessage):
+            raise InputValueError(self, "message", "Input is not a SceneMessage instance")
+        
+        scene.pop_message(message)
         
         if emit_removal:
              emit("remove_message", "", id=message.id)

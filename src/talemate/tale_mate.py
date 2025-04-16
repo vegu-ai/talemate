@@ -923,6 +923,25 @@ class Scene(Emitter):
                 )
             )
 
+    def pop_message(self, message: SceneMessage | int) -> bool:
+        """
+        Removes the last message from the history that matches the given message
+        """
+        if isinstance(message, SceneMessage):
+            try:
+                self.history.remove(message)
+            except ValueError:
+                return False
+            return True
+        elif isinstance(message, int):
+            message = self.find_message(message)
+            if message:
+                self.history.remove(message)
+                return True
+            return False
+        else:
+            raise ValueError("Invalid message type")
+
     def pop_history(
         self,
         typ: str,

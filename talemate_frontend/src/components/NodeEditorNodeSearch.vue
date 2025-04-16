@@ -3,7 +3,7 @@
         <v-card>
             <v-card-title>Search for Node</v-card-title>
             <v-card-text>
-                <v-text-field v-model="searchQuery" label="Search" outlined ref="searchInput" @keydown.enter.prevent="handleEnterKey" @keydown.down.prevent="focusList"></v-text-field>
+                <v-text-field v-model="searchQuery" label="Search" outlined ref="searchInput" @keydown.enter.prevent="handleEnterKey" @keydown.down.prevent="focusListItem('first')" @keydown.up.prevent="focusListItem('last')"></v-text-field>
                 <v-list 
                     style="height: 400px; overflow-y: auto;" 
                     color="primary"
@@ -73,9 +73,10 @@ export default {
         }
     },
     methods: {
-        focusList() {
+        focusListItem(position) {
             if (this.filteredNodes.length > 0) {
-                this.focusedIndex = 0;
+                // Set index based on position parameter
+                this.focusedIndex = position === 'first' ? 0 : this.filteredNodes.length - 1;
                 this.$nextTick(() => {
                     if (this.$refs.nodeList) {
                         this.$refs.nodeList.focus();
@@ -86,10 +87,18 @@ export default {
         navigateList(direction) {
             if (this.filteredNodes.length === 0) return;
             
-            const newIndex = this.focusedIndex + direction;
-            if (newIndex >= 0 && newIndex < this.filteredNodes.length) {
-                this.focusedIndex = newIndex;
+            // Calculate the new index with wrap-around behavior
+            let newIndex = this.focusedIndex + direction;
+            
+            // Handle wrap-around for both directions
+            if (newIndex < 0) {
+                newIndex = this.filteredNodes.length - 1; // Wrap to last item
+            } else if (newIndex >= this.filteredNodes.length) {
+                newIndex = 0; // Wrap to first item
             }
+            
+            // Update the focused index
+            this.focusedIndex = newIndex;
         },
         selectFocusedNode() {
             if (this.focusedIndex >= 0 && this.focusedIndex < this.filteredNodes.length && !this.isProcessingSelection) {

@@ -347,7 +347,9 @@ export default {
             // focus on text field
             this.$nextTick(() => {
                 if(this.propertyEditorType === 'text') {
-                    this.$refs.propertyEditorTextInput.focus();
+                    setTimeout(() => {
+                        this.$refs.propertyEditorTextInput.focus();
+                    }, 100);
                 }
             });
         },

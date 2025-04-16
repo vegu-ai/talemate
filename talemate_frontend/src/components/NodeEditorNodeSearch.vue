@@ -3,20 +3,19 @@
         <v-card>
             <v-card-title>Search for Node</v-card-title>
             <v-card-text>
-                <v-text-field v-model="searchQuery" label="Search" outlined ref="searchInput" @keydown.enter.prevent="handleEnterKey" @keydown.down.prevent="focusListItem('first')" @keydown.up.prevent="focusListItem('last')"></v-text-field>
-                <v-list 
+                <v-text-field v-model="searchQuery" label="Search" outlined ref="searchInput" @keydown.down.prevent="focusListItem()"></v-text-field>
+                <v-list
+                    selectable
+                    v-model:selected="selected"
+                    select-strategy="single-leaf"
                     style="height: 400px; overflow-y: auto;" 
                     color="primary"
                     ref="nodeList"
-                    tabindex="-1"
-                    @keydown.down.prevent="navigateList(1)" 
-                    @keydown.up.prevent="navigateList(-1)"
-                    @keydown.enter.prevent="selectFocusedNode">
+                    tabindex="-1">
                     <v-list-item 
-                        v-for="(node, index) in filteredNodes" 
-                        :key="node.id" 
-                        @click="selectNode(node)"
-                        :class="{ 'v-list-item--active': focusedIndex === index }"
+                        v-for="node in filteredNodes" 
+                        :key="node.id"
+                        :value="node.registry"
                         tabindex="0"
                         ref="listItems">
                         <v-list-item-title>{{ node.title }}</v-list-item-title>
@@ -54,12 +53,14 @@ export default {
         }
     },
     watch: {
-        nodes(newVal) {
-            console.log("nodes", newVal);
-        },
         dialog(newVal) {
             if (newVal === true) {
                 this.focusSearchInput();
+            }
+        },
+        selected(newVal, oldVal) {
+            if (newVal.length > 0 && newVal[0] !== oldVal[0]) {
+                this.selectNode(newVal[0]);
             }
         }
     },
@@ -68,15 +69,13 @@ export default {
             dialog: false,
             searchQuery: '',
             event: null,
-            focusedIndex: -1,
+            selected: [],
             isProcessingSelection: false
         }
     },
     methods: {
-        focusListItem(position) {
+        focusListItem() {
             if (this.filteredNodes.length > 0) {
-                // Set index based on position parameter
-                this.focusedIndex = position === 'first' ? 0 : this.filteredNodes.length - 1;
                 this.$nextTick(() => {
                     if (this.$refs.nodeList) {
                         this.$refs.nodeList.focus();
@@ -84,38 +83,13 @@ export default {
                 });
             }
         },
-        navigateList(direction) {
-            if (this.filteredNodes.length === 0) return;
-            
-            // Calculate the new index with wrap-around behavior
-            let newIndex = this.focusedIndex + direction;
-            
-            // Handle wrap-around for both directions
-            if (newIndex < 0) {
-                newIndex = this.filteredNodes.length - 1; // Wrap to last item
-            } else if (newIndex >= this.filteredNodes.length) {
-                newIndex = 0; // Wrap to first item
-            }
-            
-            // Update the focused index
-            this.focusedIndex = newIndex;
-        },
-        selectFocusedNode() {
-            if (this.focusedIndex >= 0 && this.focusedIndex < this.filteredNodes.length && !this.isProcessingSelection) {
-                this.selectNode(this.filteredNodes[this.focusedIndex]);
-            }
-        },
-        handleEnterKey() {
-            // Only proceed if there are filtered nodes and we're not already processing a selection
-            if (this.filteredNodes.length > 0 && this.focusedIndex === -1 && !this.isProcessingSelection) {
-                this.selectNode(this.filteredNodes[0]);
-            }
-        },
         addNode(name) {
             // Use the canvas method to properly add the node
             if (this.canvas) {
                 this.graph.beforeChange();
                 var node = LiteGraph.createNode(name);
+
+                console.log("ADDING NODE", node);
                 
                 if (node) {
                     // Position the node at the event location
@@ -132,12 +106,12 @@ export default {
                 }
             }
         },
-        selectNode(node) {
+        selectNode(nodeRegistry) {
             if (this.isProcessingSelection) return;
             
             this.isProcessingSelection = true;
             this.dialog = false;
-            this.addNode(node.registry);
+            this.addNode(nodeRegistry);
             
             // Reset the flag after a brief delay
             setTimeout(() => {
@@ -158,7 +132,7 @@ export default {
             this.dialog = true;
             this.event = event;
             this.searchQuery = '';
-            this.focusedIndex = -1;
+            this.selected = [];
             this.isProcessingSelection = false;
             this.focusSearchInput();
         }

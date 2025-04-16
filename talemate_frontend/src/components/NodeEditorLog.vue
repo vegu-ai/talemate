@@ -55,6 +55,7 @@ export default {
       inspect: false,
       inspectNode: null,
       entryIdCounter: 0,
+      lastClearTime: null,
     }
   },
   methods:{
@@ -74,6 +75,10 @@ export default {
         }
     },
     clearLog() {
+        // Store the timestamp of the most recent entry before clearing
+        if (this.log.length > 0 && this.log[0].endTime) {
+            this.lastClearTime = this.log[0].endTime;
+        }
         this.log = [];
     },
     addEntry(node, value, state) {
@@ -85,6 +90,16 @@ export default {
 
         // if last entry in log is identical to new value, do nothing
         if (this.log.length > 0 && this.log[0].value === value && this.log[0].nodeId === node.talemateId) {
+            return;
+        }
+        
+        // Skip if entry's end_time is less than the most recent entry's end_time
+        if (this.log.length > 0 && this.log[0].endTime && state.end_time < this.log[0].endTime) {
+            return;
+        }
+        
+        // Skip if entry's end_time is less than when the log was last cleared
+        if (this.lastClearTime && state.end_time && state.end_time < this.lastClearTime) {
             return;
         }
 

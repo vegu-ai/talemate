@@ -1,6 +1,6 @@
 {
   "title": "Scene Loop",
-  "id": "28509db7-729d-47f3-b674-30c9b28ea515",
+  "id": "4b15390b-e007-4bfb-b360-fd316008cf23",
   "properties": {
     "trigger_game_loop": true
   },
@@ -87,22 +87,6 @@
       "registry": "core/Watch",
       "base_type": "core/Node"
     },
-    "c89675c2-9a27-4be5-a370-daabbfb00d15": {
-      "title": "SET local.yield_to_ai",
-      "id": "c89675c2-9a27-4be5-a370-daabbfb00d15",
-      "properties": {
-        "name": "yield_to_ai",
-        "scope": "local"
-      },
-      "x": 818,
-      "y": 1863,
-      "width": 216,
-      "height": 124,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
     "10bf33d8-41c6-406d-bbf4-944e850f3b61": {
       "title": "Process Input",
       "id": "10bf33d8-41c6-406d-bbf4-944e850f3b61",
@@ -115,54 +99,6 @@
       "inherited": false,
       "registry": "input/ProcessInput",
       "base_type": "core/Graph"
-    },
-    "f37beac2-2cfd-49d8-8e69-c9a260a02a2f": {
-      "title": "GET local.yield_to_ai",
-      "id": "f37beac2-2cfd-49d8-8e69-c9a260a02a2f",
-      "properties": {
-        "name": "yield_to_ai",
-        "scope": "local"
-      },
-      "x": 58,
-      "y": 2788,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "c947b1fc-83cb-46d7-b76c-df1842a7d407": {
-      "title": "GET local.character",
-      "id": "c947b1fc-83cb-46d7-b76c-df1842a7d407",
-      "properties": {
-        "name": "character",
-        "scope": "local"
-      },
-      "x": 58,
-      "y": 2978,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "f3171f31-ced7-4b34-8347-36aea942f189": {
-      "title": "GET local.yield_to_user",
-      "id": "f3171f31-ced7-4b34-8347-36aea942f189",
-      "properties": {
-        "name": "yield_to_user",
-        "scope": "local"
-      },
-      "x": 58,
-      "y": 3178,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
     },
     "4967ef4d-0ec9-4d9e-97ad-a10935034592": {
       "title": "yield_to_user",
@@ -348,38 +284,6 @@
       "registry": "core/Watch",
       "base_type": "core/Node"
     },
-    "bc3f6839-08fb-45ed-906f-3cd85e2692f4": {
-      "title": "SET local.character",
-      "id": "bc3f6839-08fb-45ed-906f-3cd85e2692f4",
-      "properties": {
-        "name": "character",
-        "scope": "local"
-      },
-      "x": 809,
-      "y": 1674,
-      "width": 218,
-      "height": 124,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "cb88f884-e83e-47ba-afa9-acd3518e133b": {
-      "title": "SET local.yield_to_user",
-      "id": "cb88f884-e83e-47ba-afa9-acd3518e133b",
-      "properties": {
-        "name": "yield_to_user",
-        "scope": "local"
-      },
-      "x": 814,
-      "y": 1480,
-      "width": 221,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
     "7c7a6436-38f1-4bf3-9382-d480d64c14ea": {
       "title": "Select Actor For Turn",
       "id": "7c7a6436-38f1-4bf3-9382-d480d64c14ea",
@@ -392,22 +296,6 @@
       "inherited": false,
       "registry": "scene/SelectActorForTurn",
       "base_type": "core/Graph"
-    },
-    "51299044-928a-4650-8b9a-9c8ecd2e1c07": {
-      "title": "GET local.auto_direction",
-      "id": "51299044-928a-4650-8b9a-9c8ecd2e1c07",
-      "properties": {
-        "name": "auto_direction",
-        "scope": "local"
-      },
-      "x": 57,
-      "y": 1629,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
     },
     "80f0c52f-c4ff-4d35-87fa-00ca085ff71f": {
       "title": "NOT",
@@ -595,54 +483,6 @@
       "registry": "core/Watch",
       "base_type": "core/Node"
     },
-    "006d3881-c0be-4dab-bdad-aec2ccc2eac7": {
-      "title": "SET local.character",
-      "id": "006d3881-c0be-4dab-bdad-aec2ccc2eac7",
-      "properties": {
-        "name": "character",
-        "scope": "local"
-      },
-      "x": 1150,
-      "y": 2486,
-      "width": 216,
-      "height": 124,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "4466e1fe-a089-4245-8365-11792dbf7fdb": {
-      "title": "SET local.yield_to_ai",
-      "id": "4466e1fe-a089-4245-8365-11792dbf7fdb",
-      "properties": {
-        "name": "yield_to_ai",
-        "scope": "local"
-      },
-      "x": 1150,
-      "y": 2286,
-      "width": 216,
-      "height": 124,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "29db6d6b-ce84-4e3d-a201-d5c9cfa01fa8": {
-      "title": "SET local.yield_to_user",
-      "id": "29db6d6b-ce84-4e3d-a201-d5c9cfa01fa8",
-      "properties": {
-        "name": "yield_to_user",
-        "scope": "local"
-      },
-      "x": 1150,
-      "y": 2106,
-      "width": 221,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
     "40a05cd8-d4cd-4442-9d8b-57e4980082f6": {
       "title": "RSwitch Advanced",
       "id": "40a05cd8-d4cd-4442-9d8b-57e4980082f6",
@@ -712,22 +552,6 @@
       "registry": "core/Switch",
       "base_type": "core/Node"
     },
-    "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd": {
-      "title": "SET local.yield_to_ai",
-      "id": "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd",
-      "properties": {
-        "name": "yield_to_ai",
-        "scope": "local"
-      },
-      "x": 830,
-      "y": 1189,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
     "635db25b-8577-4915-9006-7ed4490b6453": {
       "title": "Stage 1",
       "id": "635db25b-8577-4915-9006-7ed4490b6453",
@@ -741,38 +565,6 @@
       "collapsed": true,
       "inherited": false,
       "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "45d9cbc5-21a6-40aa-bbe9-991e1bc8fc5c": {
-      "title": "SET local.yield_to_user",
-      "id": "45d9cbc5-21a6-40aa-bbe9-991e1bc8fc5c",
-      "properties": {
-        "name": "yield_to_user",
-        "scope": "local"
-      },
-      "x": 830,
-      "y": 1010,
-      "width": 221,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "9f129405-e588-4cb1-84ac-1a1abfa8d55a": {
-      "title": "SET local.auto_direction",
-      "id": "9f129405-e588-4cb1-84ac-1a1abfa8d55a",
-      "properties": {
-        "name": "auto_direction",
-        "scope": "local"
-      },
-      "x": 820,
-      "y": 580,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
       "base_type": "core/Node"
     },
     "4115fcf4-e542-4a5c-8317-a140450db216": {
@@ -805,22 +597,6 @@
       "registry": "raise/Stop",
       "base_type": "core/Node"
     },
-    "19505974-de90-4f86-b0bd-3af3b64b64c9": {
-      "title": "SET local.character",
-      "id": "19505974-de90-4f86-b0bd-3af3b64b64c9",
-      "properties": {
-        "name": "character",
-        "scope": "local"
-      },
-      "x": 830,
-      "y": 830,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
     "b2d1c52c-574e-40e7-9c0e-77e61492a0e3": {
       "title": "Auto Direction",
       "id": "b2d1c52c-574e-40e7-9c0e-77e61492a0e3",
@@ -846,6 +622,230 @@
       "inherited": false,
       "registry": "core/Watch",
       "base_type": "core/Node"
+    },
+    "9f129405-e588-4cb1-84ac-1a1abfa8d55a": {
+      "title": "SET scene loop.auto_direction",
+      "id": "9f129405-e588-4cb1-84ac-1a1abfa8d55a",
+      "properties": {
+        "name": "auto_direction",
+        "scope": "scene loop"
+      },
+      "x": 820,
+      "y": 580,
+      "width": 244,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "19505974-de90-4f86-b0bd-3af3b64b64c9": {
+      "title": "SET scene loop.character",
+      "id": "19505974-de90-4f86-b0bd-3af3b64b64c9",
+      "properties": {
+        "name": "character",
+        "scope": "scene loop"
+      },
+      "x": 830,
+      "y": 830,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "45d9cbc5-21a6-40aa-bbe9-991e1bc8fc5c": {
+      "title": "SET scene loop.yield_to_user",
+      "id": "45d9cbc5-21a6-40aa-bbe9-991e1bc8fc5c",
+      "properties": {
+        "name": "yield_to_user",
+        "scope": "scene loop"
+      },
+      "x": 830,
+      "y": 1010,
+      "width": 221,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd": {
+      "title": "SET scene loop.yield_to_ai",
+      "id": "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd",
+      "properties": {
+        "name": "yield_to_ai",
+        "scope": "scene loop"
+      },
+      "x": 830,
+      "y": 1190,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "cb88f884-e83e-47ba-afa9-acd3518e133b": {
+      "title": "SET scene loop.yield_to_user",
+      "id": "cb88f884-e83e-47ba-afa9-acd3518e133b",
+      "properties": {
+        "name": "yield_to_user",
+        "scope": "scene loop"
+      },
+      "x": 810,
+      "y": 1480,
+      "width": 221,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "bc3f6839-08fb-45ed-906f-3cd85e2692f4": {
+      "title": "SET scene loop.character",
+      "id": "bc3f6839-08fb-45ed-906f-3cd85e2692f4",
+      "properties": {
+        "name": "character",
+        "scope": "scene loop"
+      },
+      "x": 810,
+      "y": 1670,
+      "width": 218,
+      "height": 124,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "c89675c2-9a27-4be5-a370-daabbfb00d15": {
+      "title": "SET scene loop.yield_to_ai",
+      "id": "c89675c2-9a27-4be5-a370-daabbfb00d15",
+      "properties": {
+        "name": "yield_to_ai",
+        "scope": "scene loop"
+      },
+      "x": 820,
+      "y": 1860,
+      "width": 216,
+      "height": 124,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "51299044-928a-4650-8b9a-9c8ecd2e1c07": {
+      "title": "GET scene loop.auto_direction",
+      "id": "51299044-928a-4650-8b9a-9c8ecd2e1c07",
+      "properties": {
+        "name": "auto_direction",
+        "scope": "scene loop"
+      },
+      "x": 30,
+      "y": 1630,
+      "width": 244,
+      "height": 125,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "29db6d6b-ce84-4e3d-a201-d5c9cfa01fa8": {
+      "title": "SET scene loop.yield_to_user",
+      "id": "29db6d6b-ce84-4e3d-a201-d5c9cfa01fa8",
+      "properties": {
+        "name": "yield_to_user",
+        "scope": "scene loop"
+      },
+      "x": 1150,
+      "y": 2110,
+      "width": 221,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "4466e1fe-a089-4245-8365-11792dbf7fdb": {
+      "title": "SET scene loop.yield_to_ai",
+      "id": "4466e1fe-a089-4245-8365-11792dbf7fdb",
+      "properties": {
+        "name": "yield_to_ai",
+        "scope": "scene loop"
+      },
+      "x": 1150,
+      "y": 2290,
+      "width": 216,
+      "height": 124,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "006d3881-c0be-4dab-bdad-aec2ccc2eac7": {
+      "title": "SET scene loop.character",
+      "id": "006d3881-c0be-4dab-bdad-aec2ccc2eac7",
+      "properties": {
+        "name": "character",
+        "scope": "scene loop"
+      },
+      "x": 1150,
+      "y": 2490,
+      "width": 216,
+      "height": 124,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "c947b1fc-83cb-46d7-b76c-df1842a7d407": {
+      "title": "GET scene loop.character",
+      "id": "c947b1fc-83cb-46d7-b76c-df1842a7d407",
+      "properties": {
+        "name": "character",
+        "scope": "scene loop"
+      },
+      "x": 60,
+      "y": 2980,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "f37beac2-2cfd-49d8-8e69-c9a260a02a2f": {
+      "title": "GET scene loop.yield_to_ai",
+      "id": "f37beac2-2cfd-49d8-8e69-c9a260a02a2f",
+      "properties": {
+        "name": "yield_to_ai",
+        "scope": "scene loop"
+      },
+      "x": 60,
+      "y": 2790,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "f3171f31-ced7-4b34-8347-36aea942f189": {
+      "title": "GET scene loop.yield_to_user",
+      "id": "f3171f31-ced7-4b34-8347-36aea942f189",
+      "properties": {
+        "name": "yield_to_user",
+        "scope": "scene loop"
+      },
+      "x": 60,
+      "y": 3179,
+      "width": 235,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -868,20 +868,8 @@
     "58468fdb-1d1e-44c9-97e8-889de2f333d0.message": [
       "c044e62a-a1c5-4dd5-a20f-6bc22f13df64.state"
     ],
-    "c89675c2-9a27-4be5-a370-daabbfb00d15.value": [
-      "5b3b9556-081b-4337-9e04-7b63316e0d94.state_c"
-    ],
     "10bf33d8-41c6-406d-bbf4-944e850f3b61.interaction_state": [
       "c044e62a-a1c5-4dd5-a20f-6bc22f13df64.state_d"
-    ],
-    "f37beac2-2cfd-49d8-8e69-c9a260a02a2f.value": [
-      "10e33c80-f684-46c0-a0a7-2a7305e375ba.value"
-    ],
-    "c947b1fc-83cb-46d7-b76c-df1842a7d407.value": [
-      "01907fa7-63c7-4064-bd80-eaad1bafc963.value"
-    ],
-    "f3171f31-ced7-4b34-8347-36aea942f189.value": [
-      "4967ef4d-0ec9-4d9e-97ad-a10935034592.value"
     ],
     "4967ef4d-0ec9-4d9e-97ad-a10935034592.value": [
       "149280f6-8834-496b-9583-1ed9ccb2a187.check"
@@ -912,12 +900,6 @@
       "1d645864-924c-4ec0-898a-61547529bb56.player_character",
       "cb4b7194-cb44-4bc2-b742-1739e053ea3c.state"
     ],
-    "bc3f6839-08fb-45ed-906f-3cd85e2692f4.value": [
-      "5b3b9556-081b-4337-9e04-7b63316e0d94.state_b"
-    ],
-    "cb88f884-e83e-47ba-afa9-acd3518e133b.value": [
-      "5b3b9556-081b-4337-9e04-7b63316e0d94.state"
-    ],
     "7c7a6436-38f1-4bf3-9382-d480d64c14ea.character": [
       "bc3f6839-08fb-45ed-906f-3cd85e2692f4.value"
     ],
@@ -926,9 +908,6 @@
     ],
     "7c7a6436-38f1-4bf3-9382-d480d64c14ea.ai": [
       "c89675c2-9a27-4be5-a370-daabbfb00d15.value"
-    ],
-    "51299044-928a-4650-8b9a-9c8ecd2e1c07.value": [
-      "80f0c52f-c4ff-4d35-87fa-00ca085ff71f.value"
     ],
     "80f0c52f-c4ff-4d35-87fa-00ca085ff71f.no": [
       "7c7a6436-38f1-4bf3-9382-d480d64c14ea.state"
@@ -962,15 +941,6 @@
     "f8fe5739-a585-45f7-83c2-e9a2b3d20d12.name": [
       "6514eef7-ee1d-4ae9-a33a-318564ce7fe5.state"
     ],
-    "006d3881-c0be-4dab-bdad-aec2ccc2eac7.value": [
-      "b4ed5835-bd7e-4aff-a832-a1eb2a23ef53.state_c"
-    ],
-    "4466e1fe-a089-4245-8365-11792dbf7fdb.value": [
-      "b4ed5835-bd7e-4aff-a832-a1eb2a23ef53.state_b"
-    ],
-    "29db6d6b-ce84-4e3d-a201-d5c9cfa01fa8.value": [
-      "b4ed5835-bd7e-4aff-a832-a1eb2a23ef53.state"
-    ],
     "40a05cd8-d4cd-4442-9d8b-57e4980082f6.yes": [
       "006d3881-c0be-4dab-bdad-aec2ccc2eac7.value"
     ],
@@ -985,20 +955,8 @@
       "40a05cd8-d4cd-4442-9d8b-57e4980082f6.check",
       "c4175461-957a-4db7-b201-f6932848ae09.value"
     ],
-    "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd.value": [
-      "635db25b-8577-4915-9006-7ed4490b6453.state_d"
-    ],
-    "45d9cbc5-21a6-40aa-bbe9-991e1bc8fc5c.value": [
-      "635db25b-8577-4915-9006-7ed4490b6453.state_c"
-    ],
-    "9f129405-e588-4cb1-84ac-1a1abfa8d55a.value": [
-      "635db25b-8577-4915-9006-7ed4490b6453.state"
-    ],
     "4115fcf4-e542-4a5c-8317-a140450db216.yes": [
       "51404eb7-7194-4a1a-b588-5bd90f00f587.state"
-    ],
-    "19505974-de90-4f86-b0bd-3af3b64b64c9.value": [
-      "635db25b-8577-4915-9006-7ed4490b6453.state_b"
     ],
     "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.enabled": [
       "9f129405-e588-4cb1-84ac-1a1abfa8d55a.value"
@@ -1015,6 +973,48 @@
     ],
     "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.ai": [
       "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd.value"
+    ],
+    "9f129405-e588-4cb1-84ac-1a1abfa8d55a.value": [
+      "635db25b-8577-4915-9006-7ed4490b6453.state"
+    ],
+    "19505974-de90-4f86-b0bd-3af3b64b64c9.value": [
+      "635db25b-8577-4915-9006-7ed4490b6453.state_b"
+    ],
+    "45d9cbc5-21a6-40aa-bbe9-991e1bc8fc5c.value": [
+      "635db25b-8577-4915-9006-7ed4490b6453.state_c"
+    ],
+    "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd.value": [
+      "635db25b-8577-4915-9006-7ed4490b6453.state_d"
+    ],
+    "cb88f884-e83e-47ba-afa9-acd3518e133b.value": [
+      "5b3b9556-081b-4337-9e04-7b63316e0d94.state"
+    ],
+    "bc3f6839-08fb-45ed-906f-3cd85e2692f4.value": [
+      "5b3b9556-081b-4337-9e04-7b63316e0d94.state_b"
+    ],
+    "c89675c2-9a27-4be5-a370-daabbfb00d15.value": [
+      "5b3b9556-081b-4337-9e04-7b63316e0d94.state_c"
+    ],
+    "51299044-928a-4650-8b9a-9c8ecd2e1c07.value": [
+      "80f0c52f-c4ff-4d35-87fa-00ca085ff71f.value"
+    ],
+    "29db6d6b-ce84-4e3d-a201-d5c9cfa01fa8.value": [
+      "b4ed5835-bd7e-4aff-a832-a1eb2a23ef53.state"
+    ],
+    "4466e1fe-a089-4245-8365-11792dbf7fdb.value": [
+      "b4ed5835-bd7e-4aff-a832-a1eb2a23ef53.state_b"
+    ],
+    "006d3881-c0be-4dab-bdad-aec2ccc2eac7.value": [
+      "b4ed5835-bd7e-4aff-a832-a1eb2a23ef53.state_c"
+    ],
+    "c947b1fc-83cb-46d7-b76c-df1842a7d407.value": [
+      "01907fa7-63c7-4064-bd80-eaad1bafc963.value"
+    ],
+    "f37beac2-2cfd-49d8-8e69-c9a260a02a2f.value": [
+      "10e33c80-f684-46c0-a0a7-2a7305e375ba.value"
+    ],
+    "f3171f31-ced7-4b34-8347-36aea942f189.value": [
+      "4967ef4d-0ec9-4d9e-97ad-a10935034592.value"
     ]
   },
   "groups": [

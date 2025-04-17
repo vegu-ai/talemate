@@ -179,6 +179,7 @@ def dynamic_node_import(node_data: dict, registry_name:str, registry_container:d
             super().__init__(*args, **node_data_copy)
     DynamicNode.__name__ = registry_name.split("/")[-1]
     DynamicNode.__dynamic_imported__ = True
+    DynamicNode._base_type = base_type
     
     return DynamicNode
 

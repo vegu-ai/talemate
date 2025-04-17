@@ -1,4 +1,5 @@
 import talemate.game.engine.nodes.core
+import talemate.game.engine.nodes.command
 import talemate.game.engine.nodes.logic
 import talemate.game.engine.nodes.state
 import talemate.game.engine.nodes.scene

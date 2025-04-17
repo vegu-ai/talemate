@@ -438,11 +438,10 @@ class ConversationAgent(
         response_message = util.parse_messages_from_str(total_result, [character.name])
 
         log.info("conversation agent", result=response_message)
-        
+        emission = ConversationAgentEmission(
+            agent=self, generation=response_message, actor=actor, character=character
+        )        
         if emit_signals:
-            emission = ConversationAgentEmission(
-                agent=self, generation=response_message, actor=actor, character=character
-            )
             await talemate.emit.async_signals.get("agent.conversation.generated").send(
                 emission
             )

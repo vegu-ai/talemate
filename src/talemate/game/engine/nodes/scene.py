@@ -14,8 +14,9 @@ from .core import (
     Trigger,
 )
 import dataclasses
-from .registry import register
+from .registry import register, get_nodes_by_base_type, get_node
 from .event import connect_listeners, disconnect_listeners
+from .command import Command
 import talemate.events as events
 from talemate.emit import wait_for_input, emit
 from talemate.exceptions import ActedAsCharacter, AbortWaitForInput, GenerationCancelled
@@ -886,8 +887,21 @@ class WaitForInput(Node):
             # input was empty, so continue the loop
             raise LoopContinue()
         
-        if allow_commands and await scene.commands.execute(text_message):
-            # command was executed, so break the loop to start the next iteration
+        if allow_commands and text_message.startswith("!"):
+            command_state = {}
+            node_cmd_executed = False
+            await scene.commands.execute(text_message, emit_on_unknown=False, state=command_state)
+            # no talemate command was executed, see if a matching node command exists
+            
+            talemate_cmd_executed = command_state.get("_commands_executed")
+            
+            if not talemate_cmd_executed:
+                log.warning("Attempting to execute node command", text_message=text_message)
+                node_cmd_executed = await self.execute_node_command(state, text_message)
+        
+            log.warning("Command status", node_cmd_executed=node_cmd_executed, talemate_cmd_executed=talemate_cmd_executed)
+            if not node_cmd_executed and not talemate_cmd_executed:
+                scene.commands.system_message(f"Unknown command: {text_message}")
             state.shared["signal_game_loop"] = False
             state.shared["skip_to_player"] = True
             raise LoopBreak()
@@ -900,6 +914,42 @@ class WaitForInput(Node):
             "interaction_state": interaction_state,
             "character": player_character,
         })
+
+    async def execute_node_command(self, state:GraphState, command_name:str) -> bool:
+        """
+        Get a command node from the scene
+        """
+        # command name needs to be split by : and then ;
+        command_name, arg_str = command_name.split(":", 1)
+        command_name = command_name.strip()
+        args = arg_str.split(";", 1)
+        
+        log.warning("Executing node command", command_name=command_name, args=args)
+        
+        # remove leading and trailing spaces from the command name
+        command_name = command_name.strip()
+        
+        # remove ! from the command name
+        command_name = command_name.lstrip("!")
+        
+        # get the command node from the scene
+        registry_name:str | None = state.data["_commands"].get(command_name)
+        
+        log.warning("Executing node command", command_name=command_name, registry_name=registry_name, args=args)
+        
+        if not registry_name:
+            return False
+        
+        # turn args into dict with arg_{N} keys
+        args_dict = {f"arg_{i}": arg for i, arg in enumerate(args)}
+        
+        command_node = get_node(registry_name)
+        if not command_node:
+            log.error("Command node not found", command_name=command_name, registry_name=registry_name)
+            return False
+        
+        await command_node().execute_command(state, **args_dict)
+        return True
 
 @register("scene/event/trigger/GameLoopActorIter")
 class TriggerGameLoopActorIter(Trigger):
@@ -1234,6 +1284,8 @@ class SceneLoop(Loop):
         if not state.data.get("_scene_loop_init"):
             await async_signals.get("scene_loop_init").send(self.scene_loop_event)
             state.data["_scene_loop_init"] = True
+            state.data["_commands"] = {}
+            await self.register_commands(scene, state)
         
         trigger_game_loop = self.get_property("trigger_game_loop")
         
@@ -1286,3 +1338,19 @@ class SceneLoop(Loop):
             raise LoopBreak()
         
         await async_signals.get("scene_loop_error").send(self.scene_loop_event)
+        
+    async def register_commands(self, scene:"Scene", state:GraphState):
+        """
+        Will check the scene._NODE_DEFINITIONS for any command/Command nodes
+        and register them as commands in the scene.
+        
+        This is used to register commands that are defined in the scene
+        nodes directory.
+        """
+        
+        for node_cls in get_nodes_by_base_type("command/Command"):
+            _node = node_cls()  
+            command_name = _node.get_property("name")
+            state.data["_commands"][command_name] = _node.registry
+            log.info(f"Registered command", command=f"!{command_name}", module=_node.registry)
+        

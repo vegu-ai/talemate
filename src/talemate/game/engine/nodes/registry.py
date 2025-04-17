@@ -25,6 +25,7 @@ __all__ = [
     'import_scene_node_definitions',
     'import_talemate_node_definitions',
     'normalize_registry_name',
+    'get_nodes_by_base_type',
 ]
 
 log = structlog.get_logger("talemate.game.engine.nodes.registry")
@@ -73,6 +74,32 @@ def get_node(name):
     if not cls:
         raise ValueError(f"Node type '{name}' not found")
     return cls
+
+def get_nodes_by_base_type(base_type:str) -> list["NodeBase"]:
+    """
+    Returns a list of all nodes that have the given base type.
+    
+    Will check both the scene and the talemate node definitions.
+    
+    Scene nodes take priority if both register the same node.
+    """
+    
+    scene:"Scene" = active_scene.get()
+    
+    SCENE_NODES = getattr(scene, "_NODE_DEFINITIONS", {})
+    
+    nodes = {}
+    
+    
+    for node_name, node_cls in NODES.items():
+        if node_cls._base_type == base_type:
+            nodes[node_name] = node_cls
+    
+    for node_name, node_cls in SCENE_NODES.items():
+        if node_cls._base_type == base_type:
+            nodes[node_name] = node_cls
+            
+    return list(nodes.values())
 
 class register:
     def __init__(self, name, as_base_type:bool=False, container:dict|None=None):

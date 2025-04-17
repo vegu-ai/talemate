@@ -379,6 +379,7 @@ function createNodeClass(nodeDefinition) {
         } else {
             this.properties = {};
         }
+        this.titleIcon = "F09DE"; // circle
 
         if(nodeDefinition.style) {
             this.color = nodeDefinition.style.title_color;
@@ -391,8 +392,6 @@ function createNodeClass(nodeDefinition) {
             if(nodeDefinition.style.auto_title) {
                 this.autoTitleTemplate = nodeDefinition.style.auto_title;
             }
-        } else {
-            this.titleIcon = "F09DE"; // circle
         }
     
 

@@ -1292,88 +1292,124 @@ LGraphCanvas.prototype.processMouseDown = function(e) {
         return;
     }
     this.adjustMouseEvent(e);
-    LGraphCanvas.active_canvas = this;
+    LGraphCanvas.active_canvas = this; // Assign to the static property
 
     var x = e.clientX;
     var y = e.clientY;
     this.ds.viewport = this.viewport;
     var is_inside = !this.viewport || ( this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]) );
 
-    // If the click is outside the viewport, still call the original handler
-    // as it might handle events outside the main graph area (like panels).
+    // If the click is outside the viewport, call the original handler
     if (!is_inside) {
         return original_processMouseDown.call(this, e);
     }
-    
-    // --- Custom Shift+Click on Group Title Logic ---
-    if (e.shiftKey && e.which == 1 && !this.read_only) {
-        const group = this.graph.getGroupOnPos(e.canvasX, e.canvasY);
 
-        if (group) {
-            // Calculate approximate title bar height (font size + padding)
-            const titleHeight = (group.font_size || LiteGraph.DEFAULT_GROUP_FONT_SIZE) + 4; // Add some padding
-            // Check if the click is within the title bar's vertical bounds
-            const isClickOnTitle = e.canvasY >= group.pos[1] && e.canvasY < group.pos[1] + titleHeight;
+    // --- Custom Click Logic ---
+    const group = this.graph.getGroupOnPos(e.canvasX, e.canvasY);
 
-            // If the click is on the title bar...
-            if (isClickOnTitle) {
-                // Calculate potential new group properties
-                const new_title = group.title;
-                const new_color = group.color;
-                const new_size = [group.size[0], 300];
-                const new_pos = [group.pos[0], group.pos[1] + group.size[1] + 3];
-                const new_group_bounds = [new_pos[0], new_pos[1], new_size[0], new_size[1]];
+    if (group && e.which == 1 && !this.read_only) {
+        // Use the fixed title height from LiteGraph constants
+        const titleHeight = LiteGraph.NODE_TITLE_HEIGHT; 
+        // Check if the click is within the title bar's vertical bounds (using fixed height)
+        const isClickOnTitle = e.canvasY >= group.pos[1] && e.canvasY < group.pos[1] + titleHeight;
 
-                // Check for overlaps with existing groups
-                let overlapDetected = false;
-                for (const existing_group of this.graph._groups) {
-                    if (LiteGraph.overlapBounding(new_group_bounds, existing_group._bounding)) {
-                        overlapDetected = true;
-                        console.warn("New group would overlap with existing group:", existing_group.title);
-                        break; // No need to check further
-                    }
-                }
+        if (isClickOnTitle) {
+            // --- Ctrl+Click: Fit Group to Nodes ---
+            if (e.ctrlKey || e.metaKey) {
+                 group.recomputeInsideNodes(); // Make sure group._nodes is up-to-date
 
-                // If no overlap detected, proceed with creation
-                if (!overlapDetected) {
+                 if (!group._nodes.length) {
+                     return original_processMouseDown.call(this, e); // Allow default title drag/select
+                 }
+
+                 this.graph.beforeChange();
+
+                 // Calculate bounding box of nodes within the group
+                 let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                 for (const node of group._nodes) {
+                     minX = Math.min(minX, node.pos[0]);
+                     minY = Math.min(minY, node.pos[1]);
+                     maxX = Math.max(maxX, node.pos[0] + node.size[0]);
+                     maxY = Math.max(maxY, node.pos[1] + node.size[1]);
+                 }
+
+                 // *** Increased padding ***
+                 const padding = 25;
+                 const targetX = group.pos[0] + padding;
+                 // *** Use LiteGraph.NODE_TITLE_HEIGHT for targetY ***
+                 const targetY = group.pos[1] + titleHeight + padding; 
+
+                 const offsetX = targetX - minX;
+                 const offsetY = targetY - minY;
+
+                 // Reposition nodes
+                 for (const node of group._nodes) {
+                     node.pos[0] += offsetX;
+                     node.pos[1] += offsetY;
+                 }
+
+                 // Calculate new group size based on the moved nodes and new padding
+                 const newNodesMaxX = maxX + offsetX;
+                 const newNodesMaxY = maxY + offsetY;
+                 const newGroupWidth = newNodesMaxX - group.pos[0] + padding;
+                 const newGroupHeight = newNodesMaxY - group.pos[1] + padding;
+
+                 // Apply new size (with minimums)
+                 group.size = [Math.max(140, newGroupWidth), Math.max(80, newGroupHeight)];
+
+                 this.graph.afterChange();
+                 this.setDirty(true, true);
+
+                 e.stopPropagation();
+                 e.preventDefault();
+                 return true; // Event handled
+            }
+            // --- Shift+Click: Duplicate Group ---
+            else if (e.shiftKey) {
+                 // (Duplication logic remains the same as before)
+                 const new_title = group.title;
+                 const new_color = group.color;
+                 const new_size = [group.size[0], 300];
+                 const new_pos = [group.pos[0], group.pos[1] + group.size[1] + 3]; 
+                 const new_group_bounds = [new_pos[0], new_pos[1], new_size[0], new_size[1]];
+
+                 let overlapDetected = false;
+                 for (const existing_group of this.graph._groups) {
+                     if (existing_group === group) continue;
+                     if (LiteGraph.overlapBounding(new_group_bounds, existing_group._bounding)) {
+                         overlapDetected = true;
+                         console.warn("New group would overlap with existing group:", existing_group.title);
+                         break;
+                     }
+                 }
+
+                 if (!overlapDetected) {
                     this.graph.beforeChange();
-
                     const new_group = new LiteGraph.LGraphGroup();
                     new_group.title = new_title;
                     new_group.color = new_color;
                     new_group.size = new_size;
                     new_group.pos = new_pos;
-
                     this.graph.add(new_group);
                     this.graph.afterChange();
-
                     this.setDirty(true, true);
-
-                    // Prevent default behavior (like selecting/dragging the original group via its title)
                     e.stopPropagation();
                     e.preventDefault();
                     this.node_dragged = null;
                     this.dragging_canvas = false;
                     this.selected_group = null;
                     this.last_mouse_dragging = false;
-
-                    return true; // Event handled, stop propagation
-                } else {
-                    // Overlap detected, potentially provide feedback or just do nothing
-                    // Falling through to original_processMouseDown might not be desired here,
-                    // as the click was on the title. We can simply return false or true
-                    // depending on whether we want to allow the original title click action.
-                    // Returning true prevents the original action (like selecting the group).
+                    return true; // Event handled
+                 } else {
                     e.stopPropagation();
                     e.preventDefault();
-                    return true; 
-                }
+                    return true; // Prevent default even if overlap
+                 }
             }
-            // If click was within the group but not on the title bar, let it fall through.
+             // --- End Shift+Click ---
         }
     }
-    // --- End Custom Logic ---
+    // --- End Group Logic ---
 
-    // If the specific Shift+Click condition wasn't met, proceed with the original logic.
     return original_processMouseDown.call(this, e);
 };

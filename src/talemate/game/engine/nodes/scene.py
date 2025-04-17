@@ -896,10 +896,8 @@ class WaitForInput(Node):
             talemate_cmd_executed = command_state.get("_commands_executed")
             
             if not talemate_cmd_executed:
-                log.warning("Attempting to execute node command", text_message=text_message)
                 node_cmd_executed = await self.execute_node_command(state, text_message)
         
-            log.warning("Command status", node_cmd_executed=node_cmd_executed, talemate_cmd_executed=talemate_cmd_executed)
             if not node_cmd_executed and not talemate_cmd_executed:
                 scene.commands.system_message(f"Unknown command: {text_message}")
             state.shared["signal_game_loop"] = False
@@ -924,8 +922,6 @@ class WaitForInput(Node):
         command_name = command_name.strip()
         args = arg_str.split(";", 1)
         
-        log.warning("Executing node command", command_name=command_name, args=args)
-        
         # remove leading and trailing spaces from the command name
         command_name = command_name.strip()
         
@@ -934,8 +930,6 @@ class WaitForInput(Node):
         
         # get the command node from the scene
         registry_name:str | None = state.data["_commands"].get(command_name)
-        
-        log.warning("Executing node command", command_name=command_name, registry_name=registry_name, args=args)
         
         if not registry_name:
             return False

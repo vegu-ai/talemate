@@ -67,8 +67,6 @@ class MockClient(ClientBase):
         
         response_stack = client_reponses.get()
         
-        print(f"response_stack: {response_stack}")
-        
         self.prompt_history.append({
             "prompt": prompt,
             "kind": kind

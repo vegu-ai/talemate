@@ -2,6 +2,7 @@
 import { LGraph, LiteGraph, LGraphCanvas, LGraphNode } from 'litegraph.js';
 import { CommentNode } from './commentNode.js';
 import { trackRecentNodes } from './recentNodes.js';
+import { handleFitGroupToNodes, handleDuplicateGroup } from './groupInteractions.js';
 
 const UNRESOLVED = "<class 'talemate.game.engine.nodes.core.UNRESOLVED'>";
 
@@ -1304,112 +1305,34 @@ LGraphCanvas.prototype.processMouseDown = function(e) {
         return original_processMouseDown.call(this, e);
     }
 
-    // --- Custom Click Logic ---
+    // --- Custom Group Click Logic ---
     const group = this.graph.getGroupOnPos(e.canvasX, e.canvasY);
 
     if (group && e.which == 1 && !this.read_only) {
-        // Use the fixed title height from LiteGraph constants
-        const titleHeight = LiteGraph.NODE_TITLE_HEIGHT; 
-        // Check if the click is within the title bar's vertical bounds (using fixed height)
+        const titleHeight = LiteGraph.NODE_TITLE_HEIGHT;
         const isClickOnTitle = e.canvasY >= group.pos[1] && e.canvasY < group.pos[1] + titleHeight;
 
         if (isClickOnTitle) {
+            let handled = false;
             // --- Ctrl+Click: Fit Group to Nodes ---
             if (e.ctrlKey || e.metaKey) {
-                 group.recomputeInsideNodes(); // Make sure group._nodes is up-to-date
-
-                 if (!group._nodes.length) {
-                     return original_processMouseDown.call(this, e); // Allow default title drag/select
-                 }
-
-                 this.graph.beforeChange();
-
-                 // Calculate bounding box of nodes within the group
-                 let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-                 for (const node of group._nodes) {
-                     minX = Math.min(minX, node.pos[0]);
-                     minY = Math.min(minY, node.pos[1]);
-                     maxX = Math.max(maxX, node.pos[0] + node.size[0]);
-                     maxY = Math.max(maxY, node.pos[1] + node.size[1]);
-                 }
-
-                 // *** Increased padding ***
-                 const padding = 25;
-                 const targetX = group.pos[0] + padding;
-                 // *** Use LiteGraph.NODE_TITLE_HEIGHT for targetY ***
-                 const targetY = group.pos[1] + titleHeight + padding; 
-
-                 const offsetX = targetX - minX;
-                 const offsetY = targetY - minY;
-
-                 // Reposition nodes
-                 for (const node of group._nodes) {
-                     node.pos[0] += offsetX;
-                     node.pos[1] += offsetY;
-                 }
-
-                 // Calculate new group size based on the moved nodes and new padding
-                 const newNodesMaxX = maxX + offsetX;
-                 const newNodesMaxY = maxY + offsetY;
-                 const newGroupWidth = newNodesMaxX - group.pos[0] + padding;
-                 const newGroupHeight = newNodesMaxY - group.pos[1] + padding;
-
-                 // Apply new size (with minimums)
-                 group.size = [Math.max(140, newGroupWidth), Math.max(80, newGroupHeight)];
-
-                 this.graph.afterChange();
-                 this.setDirty(true, true);
-
-                 e.stopPropagation();
-                 e.preventDefault();
-                 return true; // Event handled
+                handled = handleFitGroupToNodes(group, this);
             }
             // --- Shift+Click: Duplicate Group ---
             else if (e.shiftKey) {
-                 // (Duplication logic remains the same as before)
-                 const new_title = group.title;
-                 const new_color = group.color;
-                 const new_size = [group.size[0], 300];
-                 const new_pos = [group.pos[0], group.pos[1] + group.size[1] + 3]; 
-                 const new_group_bounds = [new_pos[0], new_pos[1], new_size[0], new_size[1]];
-
-                 let overlapDetected = false;
-                 for (const existing_group of this.graph._groups) {
-                     if (existing_group === group) continue;
-                     if (LiteGraph.overlapBounding(new_group_bounds, existing_group._bounding)) {
-                         overlapDetected = true;
-                         console.warn("New group would overlap with existing group:", existing_group.title);
-                         break;
-                     }
-                 }
-
-                 if (!overlapDetected) {
-                    this.graph.beforeChange();
-                    const new_group = new LiteGraph.LGraphGroup();
-                    new_group.title = new_title;
-                    new_group.color = new_color;
-                    new_group.size = new_size;
-                    new_group.pos = new_pos;
-                    this.graph.add(new_group);
-                    this.graph.afterChange();
-                    this.setDirty(true, true);
-                    e.stopPropagation();
-                    e.preventDefault();
-                    this.node_dragged = null;
-                    this.dragging_canvas = false;
-                    this.selected_group = null;
-                    this.last_mouse_dragging = false;
-                    return true; // Event handled
-                 } else {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    return true; // Prevent default even if overlap
-                 }
+                handled = handleDuplicateGroup(group, this);
             }
-             // --- End Shift+Click ---
+
+            if (handled) {
+                e.stopPropagation();
+                e.preventDefault();
+                return true; // Indicate event was handled by our custom logic
+            }
+            // If neither Ctrl nor Shift was pressed on the title, allow default behavior (e.g., selection/drag)
         }
     }
     // --- End Group Logic ---
 
+    // If no custom group logic handled the click, proceed with the original logic
     return original_processMouseDown.call(this, e);
 };

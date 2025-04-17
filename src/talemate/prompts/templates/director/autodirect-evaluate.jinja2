@@ -9,6 +9,7 @@
 
 <|SECTION:TASK|>
 
+{% set bullet_num=0 -%}
 {% if last_message -%}
 Evaluate the next moment in the scene following the current moment:
 ```
@@ -18,12 +19,11 @@ Evaluate the next moment in the scene following the current moment:
 {% else %}
 Evaluate the next moment in the scene.
 {% endif %}
-
-{% set bullet_num=0 -%}
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}. Briefly explain the meaning of the current moment in the scene. What was the meaning of their dialogue and actions?
 
+{% set bullet_num = bullet_num+1 %}
 {% with task_instructions="Explain your thought process about what should happen next." -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. {% include "scene-intent-inline.jinja2" %}
+{{ bullet_num }}. {% include "scene-intent-inline.jinja2" %}
 {% endwith %}
 
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}. What would most engage and satisfy the reader at this moment, considering both their expectations and desires based on the genre and established story context?
@@ -69,11 +69,11 @@ RULES
 {understanding of the task and special rules. who is eligible for an action, what restrictions exist, etc.}
 
 ANALYSIS
-{analysis with reasoning and honoring the rules}
+{analysis of the scene, what should happen next, and why and how do the rules apply}
 
 NEXT DIRECTION
 Type of action: {chosen action}
 Actor: {actor name}
-Instructions: {description of what should happen}
+Instructions: {dinstructions to the actor, "Do this..", "You should..", "In order to.."}
 <|CLOSE_SECTION|>
 {{ bot_token }}RULES

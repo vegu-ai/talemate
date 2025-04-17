@@ -1321,7 +1321,7 @@ LGraphCanvas.prototype.processMouseDown = function(e) {
                 const new_title = group.title;
                 const new_color = group.color;
                 const new_size = [group.size[0], 300];
-                const new_pos = [group.pos[0], group.pos[1] + group.size[1] + 10];
+                const new_pos = [group.pos[0], group.pos[1] + group.size[1] + 3];
                 const new_group_bounds = [new_pos[0], new_pos[1], new_size[0], new_size[1]];
 
                 // Check for overlaps with existing groups

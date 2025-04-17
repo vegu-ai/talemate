@@ -11,6 +11,7 @@ from talemate.game.engine.nodes.core import (
     ModuleError,
     PropertyField,
     StopGraphExecution,
+    InputValueError,
     NodeVerbosity,
     NodeStyle,
     Socket,
@@ -374,6 +375,7 @@ class CallForEach(Node):
     Properties:
     
     - copy_items: Whether to copy the items list (default: False)
+    - argument_name: The name of the argument to pass to the function (default: item)
     
     Outputs:
     
@@ -388,7 +390,13 @@ class CallForEach(Node):
             description="Whether to copy the items list",
             default=False,
         )
-    
+        
+        argument_name = PropertyField(
+            type="str",
+            name="argument_name",
+            description="The name of the argument to pass to the function",
+            default="item",
+        )
     def __init__(self, title="Call For Each", **kwargs):
         super().__init__(title=title, **kwargs)
         
@@ -398,18 +406,24 @@ class CallForEach(Node):
         self.add_input("items", socket_type="list")
         
         self.set_property("copy_items", False)
-        
+        self.set_property("argument_name", "item")
         self.add_output("state")
         self.add_output("results", socket_type="list")
         
     async def run(self, state:GraphState):
         fn = self.get_input_value("fn")
         items = self.get_input_value("items")
-        
+        argument_name = self.get_property("argument_name")
         copy_items = self.get_property("copy_items")
         
+        if not argument_name:
+            raise InputValueError(self, "argument_name", "Argument name is required")
+        
         if not isinstance(fn, FunctionWrapper):
-            raise ValueError("fn must be a FunctionWrapper instance")
+            raise InputValueError(self, "fn", "fn must be a FunctionWrapper instance")
+        
+        if not isinstance(items, list):
+            raise InputValueError(self, "items", "items must be a list")
         
         results = []
         
@@ -417,7 +431,7 @@ class CallForEach(Node):
             items = items.copy()
         
         for item in items:
-            result = await fn(item=item)
+            result = await fn(**{argument_name: item})
             results.append(result)
         
         self.set_output_values(

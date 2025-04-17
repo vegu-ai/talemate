@@ -257,6 +257,17 @@ class GetAgent(Node):
             choices=[],
             generate_choices=lambda: get_agent_types()
         )
+        
+    
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            node_color="#313150",
+            title_color="#403f71",
+            auto_title="{agent_name}",
+            icon="F0D3D", #transit-connection-variant
+        )
     
     def __init__(self, title="Get Agent", **kwargs):
         super().__init__(title=title, **kwargs)

@@ -1,6 +1,6 @@
 from typing import ClassVar
 import structlog
-
+import pydantic
 from talemate.game.engine.nodes.core import (
     Node,
     register,
@@ -10,6 +10,7 @@ from talemate.game.engine.nodes.core import (
     Socket,
     PropertyField,
     InputValueError,
+    NodeStyle,
 )
 
 __all__ = [
@@ -507,6 +508,13 @@ class MakeBool(Node):
             type="bool",
             default=True,
             description="The boolean value"
+        )
+    
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            auto_title="{value}",
         )
     
     def __init__(self, title="Make Bool", **kwargs):

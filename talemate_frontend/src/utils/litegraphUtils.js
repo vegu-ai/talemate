@@ -2,7 +2,7 @@
 import { LGraph, LiteGraph, LGraphCanvas, LGraphNode } from 'litegraph.js';
 import { CommentNode } from './commentNode.js';
 import { trackRecentNodes } from './recentNodes.js';
-import { handleFitGroupToNodes, handleDuplicateGroup } from './groupInteractions.js';
+import { handleFitGroupToNodes, handleDuplicateGroup, handleVerticalSnapGroup } from './groupInteractions.js';
 
 const UNRESOLVED = "<class 'talemate.game.engine.nodes.core.UNRESOLVED'>";
 
@@ -1321,6 +1321,10 @@ LGraphCanvas.prototype.processMouseDown = function(e) {
             // --- Shift+Click: Duplicate Group ---
             else if (e.shiftKey) {
                 handled = handleDuplicateGroup(group, this);
+            }
+            // --- Alt+Click: Vertical Snap Group ---
+            else if (e.altKey) { 
+                handled = handleVerticalSnapGroup(group, this);
             }
 
             if (handled) {

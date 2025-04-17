@@ -1,5 +1,8 @@
 import { LiteGraph } from 'litegraph.js';
 
+const GROUP_DISTANCE_TOLERANCE = 500;
+const GROUP_SPACING = 3;
+
 /**
  * Fits the group boundaries snugly around its contained nodes, adding padding.
  * Triggered by Ctrl+Clicking the group title.
@@ -52,11 +55,92 @@ export function handleFitGroupToNodes(group, canvas) {
 
     // Apply new size (with minimums)
     group.size = [Math.max(140, newGroupWidth), Math.max(80, newGroupHeight)];
-
     canvas.graph.afterChange();
     canvas.setDirty(true, true);
 
     return true; // Indicate the event was handled
+}
+
+/**
+ * Snaps the given group vertically to the closest group above it if within tolerance.
+ * Triggered by Alt+Clicking the group title.
+ * @param {LGraphGroup} group The group to snap.
+ * @param {LGraphCanvas} canvas The canvas instance.
+ */
+export function handleVerticalSnapGroup(group, canvas) {
+    canvas.graph.beforeChange();
+
+    const snapTolerance = GROUP_DISTANCE_TOLERANCE;
+    const snapSpacing = GROUP_SPACING; // Vertical space between snapped groups
+    let closestGroupAbove = null;
+    let minVerticalDistance = snapTolerance + 1; // Initialize higher than tolerance
+
+    const groupX1 = group.pos[0];
+    const groupY1 = group.pos[1];
+    const groupX2 = group.pos[0] + group.size[0];
+
+    for (const otherGroup of canvas.graph._groups) {
+        if (otherGroup === group) continue; // Skip self
+
+        const ogX1 = otherGroup.pos[0];
+        // eslint-disable-next-line no-unused-vars
+        // const ogY1 = otherGroup.pos[1]; // Removed as unused
+        const ogX2 = otherGroup.pos[0] + otherGroup.size[0];
+        const ogY2 = otherGroup.pos[1] + otherGroup.size[1]; // Bottom edge of other group
+
+        // 1. Check for horizontal overlap
+        const horizontalOverlap = Math.max(groupX1, ogX1) < Math.min(groupX2, ogX2);
+
+        // 2. Check if otherGroup is strictly above and within tolerance
+        const verticalDistance = groupY1 - ogY2; // Positive if group is below otherGroup
+        const isAboveAndClose = verticalDistance >= -snapSpacing && verticalDistance <= snapTolerance; // Allow small overlap/touching up to tolerance
+
+        if (horizontalOverlap && isAboveAndClose) {
+            // 3. Check if this is the closest group found so far
+            if (verticalDistance < minVerticalDistance) {
+                minVerticalDistance = verticalDistance;
+                closestGroupAbove = otherGroup;
+            }
+        }
+    }
+
+    // If a suitable group was found above, snap to it
+    let snapped = false;
+    if (closestGroupAbove) {
+        const targetGroupY = closestGroupAbove.pos[1] + closestGroupAbove.size[1] + snapSpacing;
+        const deltaY = targetGroupY - group.pos[1]; // How much the group needs to move vertically
+
+        // Calculate horizontal alignment
+        const targetGroupX = closestGroupAbove.pos[0];
+        const deltaX = targetGroupX - group.pos[0]; // How much the group needs to move horizontally
+
+        // Move the group
+        group.pos[0] = targetGroupX; // Align left border
+        group.pos[1] = targetGroupY;
+
+        // Ensure the group has its nodes loaded if necessary for movement
+        if (!group._nodes || group._nodes.length === 0) {
+            group.recomputeInsideNodes();
+        }
+
+        // Move the nodes inside the group by the same amount
+        if (group._nodes) {
+            for (const node of group._nodes) {
+                node.pos[0] += deltaX; // Move horizontally
+                node.pos[1] += deltaY; // Move vertically
+            }
+        }
+        snapped = true;
+    }
+
+    if (snapped) {
+        canvas.graph.afterChange();
+        canvas.setDirty(true, true);
+        return true; // Indicate the event was handled and a snap occurred
+    } else {
+        canvas.graph.afterChange(); // Ensure graph state is consistent even if no snap
+        return false; // Indicate no snap occurred
+    }
 }
 
 /**
@@ -71,7 +155,7 @@ export function handleDuplicateGroup(group, canvas) {
     const defaultHeight = 300;
     const new_size = [group.size[0], defaultHeight];
     // Position below the original group with some spacing
-    const spacing = 3; // Increased spacing
+    const spacing = GROUP_SPACING; // Increased spacing
     const new_pos = [group.pos[0], group.pos[1] + group.size[1] + spacing];
     const new_group_bounds = [new_pos[0], new_pos[1], new_size[0], new_size[1]];
 

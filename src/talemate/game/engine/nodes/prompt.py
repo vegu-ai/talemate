@@ -204,13 +204,13 @@ class GenerateResponse(Node):
     
     Properties
     
-    - json_output: Output the response as JSON
+    - data_output: Output the response as data structure
     - attempts: The number of attempts to attempt (on empty response)
     
     Outputs:
     
     - response: The response from the agent
-    - json_obj: The JSON object of the response
+    - data_obj: The data structure of the response
     - rendered_prompt: The rendered prompt
     - agent: The agent that generated the response
     
@@ -226,11 +226,11 @@ class GenerateResponse(Node):
         )
         
     class Fields:
-        json_output = PropertyField(
-            name="json_output",
+        data_output = PropertyField(
+            name="data_output",
             type="bool",
             default=False,
-            description="Output the response as JSON"
+            description="Output the response as a data structure"
         )
         
         attempts = PropertyField(
@@ -274,13 +274,13 @@ class GenerateResponse(Node):
         self.add_input("prompt", socket_type="prompt")
         self.add_input("action_type", socket_type="str", optional=True)
         
-        self.set_property("json_output", False)
+        self.set_property("data_output", False)
         self.set_property("response_length", 256)
         self.set_property("action_type", "scene_direction")
         self.set_property("attempts", 1)
         
         self.add_output("response", socket_type="str")
-        self.add_output("json_obj", socket_type="dict")
+        self.add_output("data_obj", socket_type="dict")
         self.add_output("rendered_prompt", socket_type="str")
         self.add_output("agent", socket_type="agent")
         
@@ -291,17 +291,17 @@ class GenerateResponse(Node):
         prompt:Prompt = self.require_input("prompt")
         action_type = self.get_property("action_type")
         response_length = self.get_property("response_length")
-        json_output = self.get_property("json_output")
+        data_output = self.get_property("data_output")
         attempts = self.get_property("attempts") or 1
         
         kind = make_kind(
             action_type=action_type,
             length=response_length,
-            expect_json=json_output
+            expect_json=data_output
         )
         
-        if json_output:
-            prompt.json_response = True
+        if data_output:
+            prompt.data_response = True
         
         if state.verbosity >= NodeVerbosity.NORMAL:
             log.info(f"Sending prompt to agent {agent.agent_type} with kind {kind}")
@@ -317,13 +317,13 @@ class GenerateResponse(Node):
                     break
         
         if isinstance(response, tuple):
-            response, json_obj = response
+            response, data_obj = response
         else:
-            json_obj = None
+            data_obj = None
         
         self.set_output_values({
             "response": response.strip(),
-            "json_obj": json_obj,
+            "data_obj": data_obj,
             "rendered_prompt": prompt.prompt,
             "agent": agent
         })

@@ -1281,3 +1281,99 @@ LGraphCanvas.prototype.processKey = function(e) {
         return false;
     }
 };
+
+// Store the original processMouseDown function
+const original_processMouseDown = LGraphCanvas.prototype.processMouseDown;
+
+// Override the processMouseDown function
+LGraphCanvas.prototype.processMouseDown = function(e) {
+    // Basic adjustments and checks from the original function
+    if (!this.graph) {
+        return;
+    }
+    this.adjustMouseEvent(e);
+    LGraphCanvas.active_canvas = this;
+
+    var x = e.clientX;
+    var y = e.clientY;
+    this.ds.viewport = this.viewport;
+    var is_inside = !this.viewport || ( this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]) );
+
+    // If the click is outside the viewport, still call the original handler
+    // as it might handle events outside the main graph area (like panels).
+    if (!is_inside) {
+        return original_processMouseDown.call(this, e);
+    }
+    
+    // --- Custom Shift+Click on Group Title Logic ---
+    if (e.shiftKey && e.which == 1 && !this.read_only) {
+        const group = this.graph.getGroupOnPos(e.canvasX, e.canvasY);
+
+        if (group) {
+            // Calculate approximate title bar height (font size + padding)
+            const titleHeight = (group.font_size || LiteGraph.DEFAULT_GROUP_FONT_SIZE) + 4; // Add some padding
+            // Check if the click is within the title bar's vertical bounds
+            const isClickOnTitle = e.canvasY >= group.pos[1] && e.canvasY < group.pos[1] + titleHeight;
+
+            // If the click is on the title bar...
+            if (isClickOnTitle) {
+                // Calculate potential new group properties
+                const new_title = group.title;
+                const new_color = group.color;
+                const new_size = [group.size[0], 300];
+                const new_pos = [group.pos[0], group.pos[1] + group.size[1] + 10];
+                const new_group_bounds = [new_pos[0], new_pos[1], new_size[0], new_size[1]];
+
+                // Check for overlaps with existing groups
+                let overlapDetected = false;
+                for (const existing_group of this.graph._groups) {
+                    if (LiteGraph.overlapBounding(new_group_bounds, existing_group._bounding)) {
+                        overlapDetected = true;
+                        console.warn("New group would overlap with existing group:", existing_group.title);
+                        break; // No need to check further
+                    }
+                }
+
+                // If no overlap detected, proceed with creation
+                if (!overlapDetected) {
+                    this.graph.beforeChange();
+
+                    const new_group = new LiteGraph.LGraphGroup();
+                    new_group.title = new_title;
+                    new_group.color = new_color;
+                    new_group.size = new_size;
+                    new_group.pos = new_pos;
+
+                    this.graph.add(new_group);
+                    this.graph.afterChange();
+
+                    this.setDirty(true, true);
+
+                    // Prevent default behavior (like selecting/dragging the original group via its title)
+                    e.stopPropagation();
+                    e.preventDefault();
+                    this.node_dragged = null;
+                    this.dragging_canvas = false;
+                    this.selected_group = null;
+                    this.last_mouse_dragging = false;
+
+                    return true; // Event handled, stop propagation
+                } else {
+                    // Overlap detected, potentially provide feedback or just do nothing
+                    // Falling through to original_processMouseDown might not be desired here,
+                    // as the click was on the title. We can simply return false or true
+                    // depending on whether we want to allow the original title click action.
+                    // Returning true prevents the original action (like selecting the group).
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return true; 
+                }
+            }
+            // If click was within the group but not on the title bar, let it fall through.
+        }
+    }
+    // --- End Custom Logic ---
+
+    // If the specific Shift+Click condition wasn't met, proceed with the original logic.
+    return original_processMouseDown.call(this, e);
+};

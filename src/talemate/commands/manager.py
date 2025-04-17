@@ -68,8 +68,7 @@ class Manager(Emitter):
                     await command.run()
                     if command.sets_scene_unsaved:
                         self.scene.saved = False
-                    if state:
-                        state["_commands_executed"] = True
+
                 except AbortCommand:
                     log.debug("Command aborted")
                 except Exception:
@@ -77,6 +76,8 @@ class Manager(Emitter):
                 finally:
                     command.command_end()
                     self.processing_command = False
+                    if state is not None:
+                        state["_commands_executed"] = True
                 return True
 
         if emit_on_unknown:

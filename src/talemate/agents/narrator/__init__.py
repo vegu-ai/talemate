@@ -711,7 +711,7 @@ class NarratorAgent(
         """
         args = parameters.copy()
         
-        if args.get("character") and isinstance(args["character"], Character):
+        if args.get("character") and isinstance(args["character"], self.scene.Character):
             args["character"] = args["character"].name
 
         return {

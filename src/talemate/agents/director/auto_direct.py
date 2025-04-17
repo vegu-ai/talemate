@@ -209,6 +209,7 @@ class AutoDirectMixin:
         consecutive_auto_turns = 0
         candidates = {}
         active_charcters = list(scene.characters)
+        active_character_names = [character.name for character in active_charcters]
         instruct_narrator = self.auto_direct_instruct_narrator
         
         # if there is only one character then they are the only candidate
@@ -235,6 +236,10 @@ class AutoDirectMixin:
                 break
             
             if not isinstance(message, (CharacterMessage, NarratorMessage)):
+                continue
+            
+            # if character message but character is not in the active characters list then skip
+            if isinstance(message, CharacterMessage) and message.character_name not in active_character_names:
                 continue
             
             if isinstance(message, NarratorMessage):

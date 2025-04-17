@@ -149,6 +149,11 @@ async def test_graph_scene(mock_scene):
     await fn(mock_scene)
 
 @pytest.mark.asyncio
+async def test_graph_functions(mock_scene):
+    fn = make_graph_test("test-harness-functions", False)
+    await fn(mock_scene)
+
+@pytest.mark.asyncio
 async def test_graph_prompt(mock_scene):
     fn = make_graph_test("test-harness-prompt", False)
     

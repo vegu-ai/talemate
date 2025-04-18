@@ -7,6 +7,7 @@ PlayerMessage = signal("player")
 DirectorMessage = signal("director")
 TimePassageMessage = signal("time")
 StatusMessage = signal("status")
+AgentMessage = signal("agent")
 ReinforcementMessage = signal("reinforcement")
 PlayerChoiceMessage = signal("player_choice")
 ContextInvestigationMessage = signal("context_investigation")
@@ -64,6 +65,7 @@ handlers = {
     "client_bootstraps": ClientBootstraps,
     "clear_screen": ClearScreen,
     "remove_message": RemoveMessage,
+    "agent_message": AgentMessage,
     "scene_status": SceneStatus,
     "command_status": CommandStatus,
     "world_state": WorldState,

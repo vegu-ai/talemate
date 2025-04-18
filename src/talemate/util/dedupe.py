@@ -2,7 +2,7 @@ from nltk.tokenize import sent_tokenize
 from thefuzz import fuzz
 import structlog
 import re # Add import for regex
-
+from typing import Callable
 __all__ = [
     "similarity_score",
     "dedupe_sentences",
@@ -120,6 +120,7 @@ def dedupe_sentences(
     similarity_threshold: int = 95,
     debug: bool = False,
     split_on_comma: bool = True,
+    on_dedupe: Callable[[str, str], None] = None,
 ) -> str:
     """
     Will split both texts into sentences and then compare each sentence in text_a
@@ -169,8 +170,11 @@ def dedupe_sentences(
         # Check for similarity with text_b sentences
         if not _is_sentence_similar(sentence, text_b_sentences, similarity_threshold):
             kept_sentences.append(sentence)
-        elif debug:
-            log.debug("DEDUPE SENTENCE (FOUND)", text_a_sentence=sentence)
+        else:
+            if debug:
+                log.debug("DEDUPE SENTENCE (FOUND)", text_a_sentence=sentence)
+            if on_dedupe:   
+                on_dedupe(sentence, text_b)
 
     # Join the sentences back
     result = " ".join(kept_sentences)
@@ -190,7 +194,8 @@ def dedupe_sentences(
                 text_b, 
                 similarity_threshold=similarity_threshold,
                 debug=debug,
-                split_on_comma=split_on_comma
+                split_on_comma=split_on_comma,
+                on_dedupe=on_dedupe
             )
             
             # Replace placeholder with properly enclosed deduped text
@@ -202,6 +207,7 @@ def dedupe_sentences(
     
     # Clean up the result
     result = re.sub(r' {2,}', ' ', result)  # Normalize whitespace
+    result = re.sub(r'\n{3,}', '\n\n', result, flags=re.MULTILINE)   # Normalize newlines
     result = result.replace('" "', ' ')     # Replace consecutive empty quotes
     result = result.replace('* *', ' ')     # Replace consecutive empty asterisks
     

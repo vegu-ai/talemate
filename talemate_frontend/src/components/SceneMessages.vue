@@ -233,7 +233,8 @@ export default {
             return ![ 
                 'request_input', 
                 'client_status', 
-                'agent_status', 
+                'agent_status',
+                'agent_message',
                 'status', 
                 'autocomplete_suggestion' 
             ].includes(type);
@@ -400,6 +401,7 @@ export default {
                          ts: data.ts
                     });
                 }
+                
             }
 
 

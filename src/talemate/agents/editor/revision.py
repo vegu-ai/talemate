@@ -6,6 +6,7 @@ from talemate.agents.base import (
     AgentActionConfig
 )
 import talemate.emit.async_signals
+from talemate.emit import emit
 from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.scene_message import CharacterMessage
@@ -165,17 +166,46 @@ class RevisionMixin:
         
         compare_against:list[str] = await self.revision_collect_repetition_range()
         
-        for old_text in compare_against:
-            text = dedupe_sentences(text, old_text, self.revision_repetition_threshold * 100, debug=True)
+        deduped = []
         
-        log.debug("deduped text", text=text)
+        def on_dedupe(text_a: str, text_b: str):
+            deduped.append({
+                "text_a": text_a,
+                "text_b": text_b
+            })
+        
+        for old_text in compare_against:
+            text = dedupe_sentences(text, old_text, self.revision_repetition_threshold * 100, on_dedupe=on_dedupe)
+        
+        length_diff_percentage = 0
+        
+        if deduped:
+            length_diff_percentage = round((len(original_text) - len(text)) / len(original_text) * 100, 2)
+            log.debug("revision_dedupe: deduped text", text=text, length_diff_percentage=length_diff_percentage)
         
         if not text:
-            log.warning("no text after dedupe", original_text=original_text)
+            log.warning("revision_dedupe: no text after dedupe, reverting to original text", original_text=original_text)
             return original_text
         
         if character_name_prefix:
             text = f"{character.name}: {text}"
+            
+        for dedupe in deduped:
+            message = dedupe['text_a']
+            emit("agent_message", 
+                message=message,
+                data={
+                    "agent": "editor",
+                    "header": "Removed repetition",
+                    "color": "delete",
+                }, 
+                meta={
+                    "action": "revision_dedupe",
+                    "threshold": self.revision_repetition_threshold,
+                    "range": self.revision_repetition_range,
+                },
+                websocket_passthrough=True
+            )
             
         return text
     

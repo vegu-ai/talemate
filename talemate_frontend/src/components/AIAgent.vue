@@ -19,6 +19,8 @@
                             <v-icon v-bind="props" color="warning" size="14" class="ml-1">mdi-flask-outline</v-icon>
                         </template>
                     </v-tooltip>
+                    <AgentMessages v-if="agentHasMessages[agent.name]" :messages="messages[agent.name] || []" :agent="agent.name" />
+
                 </v-list-item-title>
                 
                 <div class="d-flex flex-wrap align-center chip-container">
@@ -94,10 +96,12 @@
     
 <script>
 import AgentModal from './AgentModal.vue';
+import AgentMessages from './AgentMessages.vue';
 
 export default {
     components: {
-        AgentModal
+        AgentModal,
+        AgentMessages
     },
 
     data() {
@@ -114,7 +118,10 @@ export default {
                     data: {},
                 },
                 formTitle: ''
-            }
+            },
+            maxMessagesPerAgent: 25,
+            agentHasMessages: {},
+            messages: {},
         }
     },
     inject: [
@@ -303,6 +310,20 @@ export default {
                     console.log("agents: added new agent", this.state.agents[this.state.agents.length - 1], data)
                 }
                 return;
+            }
+
+            if (data.type === 'agent_message') {
+                console.log("agents: agent message", data)
+                const agent = data.data.agent;
+                if (!this.messages[agent]) {
+                    this.messages[agent] = [];
+                }
+                this.messages[agent].unshift(data);
+                while (this.messages[agent].length > this.maxMessagesPerAgent) {
+                    this.messages[agent].pop();
+                }
+                this.agentHasMessages[agent] = true;
+                console.log("agents: agent has messages", agent, this.agentHasMessages)
             }
         }
     },

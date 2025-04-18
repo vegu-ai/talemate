@@ -92,7 +92,7 @@ def _extract_special_texts(text: str) -> tuple[str, list, list, list]:
     
     return text_with_placeholders, special_texts, special_delimiters, special_positions
 
-def _is_sentence_similar(sentence_a: str, candidates: list[str], similarity_threshold: int) -> bool:
+def _is_sentence_similar(sentence_a: str, candidates: list[str], similarity_threshold: int, on_dedupe: Callable | None = None) -> bool:
     """
     Check if a sentence is similar to any sentence in the candidates list.
     
@@ -110,6 +110,8 @@ def _is_sentence_similar(sentence_a: str, candidates: list[str], similarity_thre
         core_b = _get_core_sentence(candidate)
         similarity = fuzz.ratio(core_a, core_b)
         if similarity >= similarity_threshold:
+            if on_dedupe:
+                on_dedupe(sentence_a, candidate, similarity)
             return True
     
     return False
@@ -120,7 +122,7 @@ def dedupe_sentences(
     similarity_threshold: int = 95,
     debug: bool = False,
     split_on_comma: bool = True,
-    on_dedupe: Callable[[str, str], None] = None,
+    on_dedupe: Callable | None = None,
 ) -> str:
     """
     Will split both texts into sentences and then compare each sentence in text_a
@@ -168,13 +170,11 @@ def dedupe_sentences(
             continue
             
         # Check for similarity with text_b sentences
-        if not _is_sentence_similar(sentence, text_b_sentences, similarity_threshold):
+        if not _is_sentence_similar(sentence, text_b_sentences, similarity_threshold, on_dedupe=on_dedupe):
             kept_sentences.append(sentence)
         else:
             if debug:
                 log.debug("DEDUPE SENTENCE (FOUND)", text_a_sentence=sentence)
-            if on_dedupe:   
-                on_dedupe(sentence, text_b)
 
     # Join the sentences back
     result = " ".join(kept_sentences)

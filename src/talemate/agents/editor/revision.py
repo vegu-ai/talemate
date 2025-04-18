@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 import structlog
+import uuid
 from talemate.agents.base import (
     set_processing,
     AgentAction,
@@ -168,10 +169,11 @@ class RevisionMixin:
         
         deduped = []
         
-        def on_dedupe(text_a: str, text_b: str):
+        def on_dedupe(text_a: str, text_b: str, similarity: float):
             deduped.append({
                 "text_a": text_a,
-                "text_b": text_b
+                "text_b": text_b,
+                "similarity": similarity
             })
         
         for old_text in compare_against:
@@ -195,12 +197,14 @@ class RevisionMixin:
             emit("agent_message", 
                 message=message,
                 data={
+                    "uuid": str(uuid.uuid4()),
                     "agent": "editor",
                     "header": "Removed repetition",
-                    "color": "delete",
+                    "color": "highlight4",
                 }, 
                 meta={
                     "action": "revision_dedupe",
+                    "similarity": dedupe['similarity'],
                     "threshold": self.revision_repetition_threshold,
                     "range": self.revision_repetition_range,
                 },

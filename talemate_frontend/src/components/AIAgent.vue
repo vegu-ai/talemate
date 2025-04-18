@@ -19,7 +19,7 @@
                             <v-icon v-bind="props" color="warning" size="14" class="ml-1">mdi-flask-outline</v-icon>
                         </template>
                     </v-tooltip>
-                    <AgentMessages v-if="agentHasMessages[agent.name]" :messages="messages[agent.name] || []" :agent="agent.name" />
+                    <AgentMessages v-if="agentHasMessages[agent.name]" :messages="messages[agent.name] || []" :agent="agent.name" :messageReceiveTime="agentHasMessages[agent.name]" />
 
                 </v-list-item-title>
                 
@@ -313,7 +313,6 @@ export default {
             }
 
             if (data.type === 'agent_message') {
-                console.log("agents: agent message", data)
                 const agent = data.data.agent;
                 if (!this.messages[agent]) {
                     this.messages[agent] = [];
@@ -322,8 +321,8 @@ export default {
                 while (this.messages[agent].length > this.maxMessagesPerAgent) {
                     this.messages[agent].pop();
                 }
-                this.agentHasMessages[agent] = true;
-                console.log("agents: agent has messages", agent, this.agentHasMessages)
+                // set to current time in milliseconds
+                this.agentHasMessages[agent] = Date.now();
             }
         }
     },

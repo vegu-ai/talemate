@@ -20,6 +20,7 @@ import talemate.util as util
 from talemate.agents.context import active_agent
 from talemate.client.context import client_context_attribute
 from talemate.client.model_prompts import model_prompt
+from talemate.client.ratelimit import CounterRateLimiter
 from talemate.context import active_scene
 from talemate.emit import emit
 from talemate.exceptions import SceneInactiveError, GenerationCancelled
@@ -122,6 +123,8 @@ class ClientBase:
     
     system_prompts:SystemPrompts = SystemPrompts()
     preset_group: str | None = ""
+
+    rate_limit_counter: CounterRateLimiter = None
 
     class Meta(pydantic.BaseModel):
         experimental: Union[None, str] = None
@@ -245,6 +248,13 @@ class ClientBase:
     def _reconfigure_common_parameters(self, **kwargs):
         if "rate_limit" in kwargs:
             self.rate_limit = kwargs["rate_limit"]
+            if self.rate_limit:
+                if not self.rate_limit_counter:
+                    self.rate_limit_counter = CounterRateLimiter(rate_per_minute=self.rate_limit)
+                else:
+                    self.rate_limit_counter.update_rate_limit(self.rate_limit)
+            else:
+                self.rate_limit_counter = None
             
         if "data_format" in kwargs:
             self.data_format = kwargs["data_format"]
@@ -610,6 +620,47 @@ class ClientBase:
         :param prompt: The text prompt to send.
         :return: The AI's response text.
         """
+        
+        try:
+            if self.rate_limit_counter:
+                aborted:bool = False
+                while not self.rate_limit_counter.increment():
+                    log.warn("Rate limit exceeded", client=self.name)
+                    emit(
+                        "rate_limited",
+                        message="Rate limit exceeded", 
+                        status="error", 
+                        websocket_passthrough=True,
+                        data={
+                            "client": self.name,
+                            "rate_limit": self.rate_limit,
+                            "reset_time": self.rate_limit_counter.reset_time(),
+                        }
+                    )
+                    
+                    scene = active_scene.get()
+                    if not scene or not scene.active or scene.cancel_requested:
+                        log.info("Rate limit exceeded, generation cancelled", client=self.name)
+                        aborted = True
+                        break
+                    
+                    await asyncio.sleep(1)
+                
+                emit(
+                    "rate_limit_reset",
+                    message="Rate limit reset",
+                    status="info",
+                    websocket_passthrough=True,
+                    data={"client": self.name}
+                )
+                
+                if aborted:
+                    raise GenerationCancelled("Generation cancelled")
+        except GenerationCancelled:
+            raise
+        except Exception as e:
+            log.exception("Error during rate limit check", e=e)
+        
 
         if not active_scene.get():
             log.error("SceneInactiveError", scene=active_scene.get())
@@ -710,6 +761,9 @@ class ClientBase:
             self.emit_status(processing=False)
             self._returned_prompt_tokens = None
             self._returned_response_tokens = None
+            
+            if self.rate_limit_counter:
+                self.rate_limit_counter.increment()
 
     async def auto_break_repetition(
         self,

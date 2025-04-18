@@ -18,6 +18,8 @@ RequestInput = signal("request_input")
 ReceiveInput = signal("receive_input")
 
 ClientStatus = signal("client_status")
+RateLimited = signal("rate_limited")
+RateLimitReset = signal("rate_limit_reset")
 RequestClientStatus = signal("request_client_status")
 AgentStatus = signal("agent_status")
 RequestAgentStatus = signal("request_agent_status")
@@ -59,6 +61,8 @@ handlers = {
     "request_input": RequestInput,
     "receive_input": ReceiveInput,
     "client_status": ClientStatus,
+    "rate_limited": RateLimited,
+    "rate_limit_reset": RateLimitReset,
     "request_client_status": RequestClientStatus,
     "agent_status": AgentStatus,
     "request_agent_status": RequestAgentStatus,

@@ -236,7 +236,9 @@ export default {
                 'agent_status',
                 'agent_message',
                 'status', 
-                'autocomplete_suggestion' 
+                'autocomplete_suggestion',
+                'rate_limited',
+                'rate_limit_reset',
             ].includes(type);
         },
 

@@ -253,6 +253,7 @@
     </v-snackbar>
   </v-app>
   <StatusNotification />
+  <RateLimitAlert ref="rateLimitAlert" />
 </template>
   
 <script>
@@ -268,6 +269,7 @@ import AppConfig from './AppConfig.vue';
 import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
+import RateLimitAlert from './RateLimitAlert.vue';
 import VisualQueue from './VisualQueue.vue';
 import WorldStateManager from './WorldStateManager.vue';
 import WorldStateManagerMenu from './WorldStateManagerMenu.vue';
@@ -297,6 +299,7 @@ export default {
     WorldStateManagerMenu,
     NodeEditor,
     DirectorConsole,
+    RateLimitAlert,
   },
   name: 'TalemateApp',
   data() {
@@ -619,6 +622,16 @@ export default {
 
       if(data.type === 'client_status') {
         this.setClientStatus(data);
+      }
+
+      if(data.type === 'rate_limited') {
+        this.$refs.rateLimitAlert.open(data.data.client, data.data.reset_time, data.data.rate_limit);
+        return;
+      }
+
+      if(data.type === 'rate_limit_reset') {
+        this.$refs.rateLimitAlert.close();
+        return;
       }
 
       if (data.type == "scene_status") {

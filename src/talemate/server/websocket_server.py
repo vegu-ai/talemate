@@ -246,7 +246,7 @@ class WebsocketHandler(Receiver):
 
         self.llm_clients = {}
 
-        log.info("Configuring clients", clients=clients)
+        # log.info("Configuring clients", clients=clients)
 
         for client in clients:
             client.pop("status", None)

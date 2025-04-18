@@ -22,6 +22,21 @@ from talemate.util.dedupe import dedupe_sentences, dedupe_string
     # Edge case: single sentences
     ("Single sentence A.", "Single sentence A.", 95, True, ""),
     ("Single sentence A.", "Single sentence B.", 95, True, "Single sentence A."),
+    # --- Quote handling tests --- 
+    # Expect removal based on core match, accepting token removal issues
+    ('Some text. "First quote sentence. Second quote sentence needs removing." More text.', 'Second quote sentence needs removing.', 95, True, 'Some text. "First quote sentence." More text.'),
+    ('"Remove this first. Keep this second." The text continues.', 'Remove this first.', 95, True, '"Keep this second." The text continues.'),
+    ('The text starts here. "Keep this first. Remove this second."', 'Remove this second.', 95, True, 'The text starts here. "Keep this first."'),
+    ('"Sentence one. Sentence two to remove. Sentence three."', 'Sentence two to remove.', 95, True, '"Sentence one. Sentence three."'),
+    # --- Asterisk handling tests --- 
+    ('Some text. *First asterisk sentence. Second asterisk sentence needs removing.* More text.', 'Second asterisk sentence needs removing.', 95, True, 'Some text. *First asterisk sentence.* More text.'),
+    ('*Remove this first. Keep this second.* The text continues.', 'Remove this first.', 95, True, '*Keep this second.* The text continues.'),
+    ('The text starts here. *Keep this first. Remove this second.*', 'Remove this second.', 95, True, 'The text starts here. *Keep this first.*'),
+    ('*Sentence one. Sentence two to remove. Sentence three.*', 'Sentence two to remove.', 95, True, '*Sentence one. Sentence three.*'),
+    # --- Mixed delimiter tests ---
+    ('Some text. *Asterisk text.* "Quote text." More text.', 'Quote text.', 95, True, 'Some text. *Asterisk text.* More text.'),
+    ('Some text. *Asterisk text.* "Quote text." More text.', 'Asterisk text.', 95, True, 'Some text. "Quote text." More text.'),
+    ('"Some text." *Asterisk text.* "Quote text." More text.', 'Asterisk text.', 95, True, '"Some text. Quote text." More text.'),
 ])
 def test_dedupe_sentences(text_a, text_b, similarity_threshold, split_on_comma, expected):
     assert dedupe_sentences(text_a, text_b, similarity_threshold=similarity_threshold, split_on_comma=split_on_comma) == expected

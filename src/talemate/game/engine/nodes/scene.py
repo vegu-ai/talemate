@@ -918,8 +918,12 @@ class WaitForInput(Node):
         Get a command node from the scene
         """
         # command name needs to be split by : and then ;
-        command_name, arg_str = command_name.split(":", 1)
-        command_name = command_name.strip()
+        try:
+            command_name, arg_str = command_name.split(":", 1)
+        except ValueError:
+            command_name = command_name.strip()
+            arg_str = ""
+        
         args = arg_str.split(";", 1)
         
         # remove leading and trailing spaces from the command name

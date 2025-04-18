@@ -1100,7 +1100,7 @@ class Scene(Emitter):
 
     def collect_messages(
         self, 
-        typ: str = None, 
+        typ: str | list[str] = None, 
         source: str = None,
         max_iterations: int = 100,
         max_messages: int | None = None,
@@ -1109,11 +1109,14 @@ class Scene(Emitter):
         Finds all messages in the history that match the given typ and source
         """
 
+        if not isinstance(typ, list):
+            typ = [typ]
+
         messages = []
         iterations = 0
         collected = 0
         for idx in range(len(self.history) - 1, -1, -1):
-            if (not typ or self.history[idx].typ == typ) and (
+            if (not typ or self.history[idx].typ in typ) and (
                 not source or self.history[idx].source == source
             ):
                 messages.append(self.history[idx])

@@ -13,6 +13,8 @@ from talemate.agents.registry import register
 
 import talemate.agents.editor.nodes
 
+from talemate.agents.editor.revision import RevisionMixin
+
 if TYPE_CHECKING:
     from talemate.agents.conversation import ConversationAgentEmission
     from talemate.agents.narrator import NarratorAgentEmission
@@ -22,7 +24,10 @@ log = structlog.get_logger("talemate.agents.editor")
 
 
 @register()
-class EditorAgent(Agent):
+class EditorAgent(
+    RevisionMixin,
+    Agent,
+):
     """
     Editor agent
 
@@ -73,6 +78,8 @@ class EditorAgent(Agent):
                 description="Attempt to add extra detail and exposition to the dialogue. Runs automatically after each AI dialogue.",
             ),
         }
+        
+        RevisionMixin.add_actions(self)
 
     @property
     def enabled(self):

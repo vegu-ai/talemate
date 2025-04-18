@@ -36,10 +36,10 @@
               <div class="d-flex flex-wrap align-center">
                 <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-server-outline">{{ client.type }}</v-chip>
                 <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
-                
+                <v-chip v-if="client.rate_limit" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-speedometer">{{ client.rate_limit }}/min</v-chip>
                 <v-menu density="compact">
                   <template v-slot:activator="{ props }">
-                    <v-chip v-bind="props" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-tune">{{ client.preset_group || "Default" }}</v-chip>
+                    <v-chip v-bind="props" label size="x-small" color="highlight1" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-tune">{{ client.preset_group || "Default" }}</v-chip>
                   </template>
 
                   <v-list density="compact">
@@ -160,6 +160,7 @@ export default {
           model_name: '',
           max_token_length: 8192,
           double_coercion: null,
+          rate_limit: null,
           data_format: null,
           data: {
             has_prompt_template: false,
@@ -347,6 +348,7 @@ export default {
           client.api_url = data.api_url;
           client.api_key = data.api_key;
           client.double_coercion = data.data.double_coercion;
+          client.rate_limit = data.data.rate_limit;
           client.data_format = data.data.data_format;
           client.data = data.data;
           client.enabled = data.data.enabled;
@@ -372,6 +374,7 @@ export default {
             api_url: data.api_url,
             api_key: data.api_key,
             double_coercion: data.data.double_coercion,
+            rate_limit: data.data.rate_limit,
             data_format: data.data.data_format,
             data: data.data,
             enabled: data.data.enabled,

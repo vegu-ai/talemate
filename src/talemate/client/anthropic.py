@@ -2,7 +2,7 @@ import pydantic
 import structlog
 from anthropic import AsyncAnthropic, PermissionDeniedError
 
-from talemate.client.base import ClientBase, ErrorAction
+from talemate.client.base import ClientBase, ErrorAction, CommonDefaults
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
@@ -21,10 +21,12 @@ SUPPORTED_MODELS = [
     "claude-3-5-sonnet-20240620",
     "claude-3-5-sonnet-20241022",
     "claude-3-5-sonnet-latest",
+    "claude-3-5-haiku-latest",
+    "claude-3-7-sonnet-latest",
 ]
 
 
-class Defaults(pydantic.BaseModel):
+class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "claude-3-5-sonnet-latest"
 
@@ -97,17 +99,19 @@ class AnthropicClient(ClientBase):
 
         self.current_status = status
 
+        data={
+            "error_action": error_action.model_dump() if error_action else None,
+            "meta": self.Meta().model_dump(),
+            "enabled": self.enabled,
+        }
+        data.update(self._common_status_data()) 
         emit(
             "client_status",
             message=self.client_type,
             id=self.name,
             details=model_name,
             status=status if self.enabled else "disabled",
-            data={
-                "error_action": error_action.model_dump() if error_action else None,
-                "meta": self.Meta().model_dump(),
-                "enabled": self.enabled,
-            },
+            data=data,
         )
 
     def set_client(self, max_token_length: int = None):
@@ -151,6 +155,8 @@ class AnthropicClient(ClientBase):
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
+            
+        self._reconfigure_common_parameters(**kwargs)
 
     def on_config_saved(self, event):
         config = event.data

@@ -40,11 +40,12 @@ class Client(BaseModel):
     api_key: Union[str, None] = None
     max_token_length: int = 8192
     double_coercion: Union[str, None] = None
+    rate_limit: Union[int, None] = None
     data_format: Literal["json", "yaml"] | None = None
     enabled: bool = True
     
     system_prompts: SystemPrompts = SystemPrompts()
-    preset_group: str = ""
+    preset_group: str | None = None
 
     class Config:
         extra = "ignore"

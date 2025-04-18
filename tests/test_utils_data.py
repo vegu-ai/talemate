@@ -8,7 +8,8 @@ from talemate.util.data import (
     extract_json_v2,
     extract_yaml_v2,
     JSONEncoder,
-    DataParsingError
+    DataParsingError,
+    fix_yaml_indentation
 )
 
 # Helper function to get test data paths
@@ -333,4 +334,4 @@ def test_extract_json_v2_multiple_objects():
     
     assert objects_by_id[3]["name"] == "Third Object"
     assert objects_by_id[3]["active"] is True
-    assert objects_by_id[3]["metadata"]["created"] == "2023-05-15" 
+    assert objects_by_id[3]["metadata"]["created"] == "2023-05-15"

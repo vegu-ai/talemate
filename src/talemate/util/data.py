@@ -265,7 +265,6 @@ def extract_yaml_v2(text):
             
     return unique_yamls
 
-
 def extract_data(text, schema_format: str = "json"):
     """
     Extracts data from text based on the schema format.

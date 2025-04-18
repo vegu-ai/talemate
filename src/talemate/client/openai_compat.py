@@ -22,6 +22,7 @@ class Defaults(pydantic.BaseModel):
     model: str = ""
     api_handles_prompt_template: bool = False
     double_coercion: str = None
+    rate_limit: int | None = None
 
 
 class ClientConfig(BaseClientConfig):
@@ -176,6 +177,9 @@ class OpenAICompatibleClient(ClientBase):
 
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
+            
+        if "rate_limit" in kwargs:
+            self.rate_limit = kwargs["rate_limit"]
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])

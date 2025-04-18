@@ -93,6 +93,12 @@
 
                     </v-col>
                   </v-row>
+                  <!-- RATE LIMIT -->
+                  <v-row>
+                    <v-col cols="12">
+                      <v-slider v-model="client.rate_limit" label="Rate Limit" :min="0" :max="100" :step="1" :persistent-hint="true" hint="Requests per minute. (0 = no limit)" thumb-label="always"></v-slider>
+                    </v-col>
+                  </v-row>
                 </v-window-item>
                 <!-- COERCION -->
                 <v-window-item value="coercion">
@@ -240,6 +246,7 @@ export default {
         this.client.api_url = defaults.api_url || '';
         this.client.max_token_length = defaults.max_token_length || 8192;
         this.client.double_coercion = defaults.double_coercion || null;
+        this.client.rate_limit = defaults.rate_limit || null;
         this.client.data_format = defaults.data_format || null;
         this.client.preset_group = defaults.preset_group || '';
         // loop and build name from prefix, checking against current clients

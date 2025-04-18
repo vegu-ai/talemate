@@ -63,11 +63,15 @@ class ErrorAction(pydantic.BaseModel):
     arguments: list = []
 
 
-class Defaults(pydantic.BaseModel):
+class CommonDefaults(pydantic.BaseModel):
+    rate_limit: int | None = None
+    data_format: Literal["yaml", "json"] | None = None
+    preset_group: str | None = None
+
+class Defaults(CommonDefaults, pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
     max_token_length: int = 8192
     double_coercion: str = None
-    data_format: Literal["yaml", "json"] | None = None
 
 
 class ExtraField(pydantic.BaseModel):
@@ -111,12 +115,13 @@ class ClientBase:
     finalizers: list[str] = []
     double_coercion: Union[str, None] = None
     data_format: Literal["yaml", "json"] | None = None
+    rate_limit: int | None = None
     client_type = "base"
     
     status_request_timeout:int = 2
     
     system_prompts:SystemPrompts = SystemPrompts()
-    preset_group: str = ""
+    preset_group: str | None = ""
 
     class Meta(pydantic.BaseModel):
         experimental: Union[None, str] = None
@@ -137,8 +142,7 @@ class ClientBase:
         self.auto_determine_prompt_template_attempt = None
         self.log = structlog.get_logger(f"client.{self.client_type}")
         self.double_coercion = kwargs.get("double_coercion", None)
-        self.data_format = kwargs.get("data_format", None)
-        self.preset_group = kwargs.get("preset_group", "")
+        self._reconfigure_common_parameters(**kwargs)
         self.enabled = kwargs.get("enabled", True)
         if "max_token_length" in kwargs:
             self.max_token_length = (
@@ -235,6 +239,12 @@ class ClientBase:
 
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
+            
+        self._reconfigure_common_parameters(**kwargs)
+
+    def _reconfigure_common_parameters(self, **kwargs):
+        if "rate_limit" in kwargs:
+            self.rate_limit = kwargs["rate_limit"]
             
         if "data_format" in kwargs:
             self.data_format = kwargs["data_format"]
@@ -357,11 +367,11 @@ class ClientBase:
             "meta": self.Meta().model_dump(),
             "error_action": None,
             "double_coercion": self.double_coercion,
-            "data_format": self.data_format,
             "enabled": self.enabled,
             "system_prompts": self.system_prompts.model_dump(),
-            "preset_group": self.preset_group or "",
         }
+
+        data.update(self._common_status_data())
 
         for field_name in getattr(self.Meta(), "extra_fields", {}).keys():
             data[field_name] = getattr(self, field_name, None)
@@ -377,6 +387,13 @@ class ClientBase:
 
         if status_change:
             instance.emit_agent_status_by_client(self)
+
+    def _common_status_data(self):
+        return {
+            "preset_group": self.preset_group or "",
+            "rate_limit": self.rate_limit,
+            "data_format": self.data_format,
+        }
 
     def populate_extra_fields(self, data: dict):
         """

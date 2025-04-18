@@ -287,6 +287,7 @@ class WorldState(BaseModel):
                     "world_state.request_update",
                     error=e,
                     traceback=traceback.format_exc(),
+                    character=character,
                 )
 
             log.debug("world_state", character=character)

@@ -998,7 +998,10 @@ class Prompt:
             if (format_type == "json" and not json_start) or (format_type == "yaml" and not yaml_block):
                 pad = " " if self.pad_prepended_response else ""
                 if format_type == "yaml":
-                    response = self.prepared_response + response.rstrip()
+                    if self.client.can_be_coerced:
+                        response = self.prepared_response + response.rstrip()
+                    else:
+                        response = self.prepared_response.rstrip() + "\n  " + response.rstrip()
                 else:
                     response = self.prepared_response.rstrip() + pad + response.strip()
                 

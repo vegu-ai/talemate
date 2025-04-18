@@ -2,7 +2,7 @@ import pydantic
 import structlog
 from cohere import AsyncClient
 
-from talemate.client.base import ClientBase, ErrorAction, ParameterReroute
+from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
@@ -22,10 +22,11 @@ SUPPORTED_MODELS = [
     "command-r-plus",
     "command-r-plus-08-2024",
     "command-r7b-12-2024",
+    "command-a-03-2025",
 ]
 
 
-class Defaults(pydantic.BaseModel):
+class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "command-r-plus"
 
@@ -102,17 +103,19 @@ class CohereClient(ClientBase):
 
         self.current_status = status
 
+        data={
+            "error_action": error_action.model_dump() if error_action else None,
+            "meta": self.Meta().model_dump(),
+            "enabled": self.enabled,
+        }
+        data.update(self._common_status_data()) 
         emit(
             "client_status",
             message=self.client_type,
             id=self.name,
             details=model_name,
             status=status if self.enabled else "disabled",
-            data={
-                "error_action": error_action.model_dump() if error_action else None,
-                "meta": self.Meta().model_dump(),
-                "enabled": self.enabled,
-            },
+            data=data,
         )
 
     def set_client(self, max_token_length: int = None):
@@ -156,6 +159,8 @@ class CohereClient(ClientBase):
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
+            
+        self._reconfigure_common_parameters(**kwargs)
 
     def on_config_saved(self, event):
         config = event.data

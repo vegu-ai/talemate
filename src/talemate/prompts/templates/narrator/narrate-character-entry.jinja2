@@ -1,12 +1,14 @@
-{% block extra_context -%}
+{% set extra_context_content -%}
 {% include "extra-context.jinja2" %}
 <|SECTION:{{ character.name|upper }}|>
 {{ character.sheet }}
 
 {{ character.description }}
 <|CLOSE_SECTION|>
-{% endblock %}
-{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% endset %}
+{{ extra_context_content }}
+{% set extra_context_tokens = count_tokens(extra_context_content) %}
+{% set budget=max_tokens-300-extra_context_tokens %}
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 Narrate the entrance of {{ character.name }} into the scene. {% if not narrative_direction %}Make a creative decision on how {{ character.name }} enters the scene. It must be in line with the content so far.{% endif %}

@@ -1,4 +1,4 @@
-{% block extra_context -%}
+{% set extra_context_content -%}
 {% if related_character -%}
 <|SECTION:{{ related_character.name|upper }}|>
 {{ related_character.sheet}}
@@ -6,8 +6,10 @@
 {% endif %}
 {% include "extra-context.jinja2" %}
 {% set related_character = scene.parse_character_from_line(query) -%}
-{% endblock %}
-{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% endset %}
+{{ extra_context_content }}
+{% set extra_context_tokens = count_tokens(extra_context_content) %}
+{% set budget=max_tokens-300-extra_context_tokens %}
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}

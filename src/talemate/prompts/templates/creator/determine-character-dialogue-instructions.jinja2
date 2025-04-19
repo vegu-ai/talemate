@@ -1,10 +1,12 @@
-{% block extra_context %}
+{% set extra_context_content %}
 <|SECTION:CHARACTER|>
 {{ character.sheet }}
 {{ character.description }}
 <|CLOSE_SECTION|>
-{% endblock %}
-{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% endset %}
+{{ extra_context_content }}
+{% set extra_context_tokens = count_tokens(extra_context_content) %}
+{% set budget=max_tokens-300-extra_context_tokens %}
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith -%}
 <|SECTION:TASK|>
 Your task is to determine fitting dialogue instructions for {{ character.name }}.

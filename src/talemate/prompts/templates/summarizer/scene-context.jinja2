@@ -1,4 +1,4 @@
-{% block rendered_context -%}
+{% set rendered_context -%}
 {% include "character-context.jinja2" -%}
 {% include "memory-context.jinja2" -%}
 {% include "extra-context.jinja2" -%}
@@ -7,7 +7,8 @@
 {{ context_investigation }}
 <|CLOSE_SECTION|>
 {% endif %}
-{% endblock %}
+{% endset %}
+{{ rendered_context }}
 <|SECTION:CLASSIFICATION|>
 Content Classification: {{ scene.context }}
 
@@ -17,7 +18,7 @@ Content Classification: {{ scene.context }}
 <|SECTION:SCENE|>
 {% block scene_history -%}
 {% set scene_context = scene.context_history(
-    budget=max_tokens-300-count_tokens(self.rendered_context()), 
+    budget=max_tokens-300-count_tokens(rendered_context), 
     min_dialogue=15, 
     sections=False, 
     keep_director=False, 

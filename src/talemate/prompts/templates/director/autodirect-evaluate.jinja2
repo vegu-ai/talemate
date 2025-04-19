@@ -1,8 +1,10 @@
-{% block extra_context -%}
+{% set extra_context_content -%}
 {% include "extra-context.jinja2" %}
-{% endblock %}
+{% endset %}
+{{ extra_context_content }}
+{% set extra_context_tokens = count_tokens(extra_context_content) %}
 {% set bullet_num=0 -%}
-{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% set budget=max_tokens-300-extra_context_tokens %}
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 {% include "scene-intent.jinja2" %}
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}

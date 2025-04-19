@@ -172,19 +172,20 @@
               <v-col :cols="creativeMode ? 6 : 12"  :xl="creativeMode ? 4 : 12" class="pl-2">
                 <div style="display: flex; flex-direction: column; height: 100%">
 
-                  <div v-if="sceneActive && scene.environment === 'creative' && !scene.data.intro">
-                    <v-alert color="muted" class="mb-2" variant="text">
-                      <v-alert-title>New Scene</v-alert-title>
-                      You're editing a new scene. Select the <v-btn @click="onOpenWorldStateManager('scene')" variant="text" size="small" color="primary" prepend-icon="mdi-earth-box">World Editor</v-btn> to add characters and scene details. You are currently operating in the creative environment. Once you have added at least one player character you may switch back and forth between creative and gameplay mode at any point using the <v-icon color="primary" size="small">mdi-gamepad-square</v-icon> button at the bottom.
-                      <p class="mt-4">
-                        You can still use the world editor while in gameplay mode as well.
-                      </p>
-                    </v-alert>
-                  </div>
-                  
-
                   <div class="scene-container">
+
+                    <div v-if="sceneActive && scene.environment === 'creative' && !scene.data.intro">
+                      <v-alert color="muted" class="mb-2" variant="text">
+                        <v-alert-title>New Scene</v-alert-title>
+                        You're editing a new scene. Select the <v-btn @click="onOpenWorldStateManager('scene')" variant="text" size="small" color="primary" prepend-icon="mdi-earth-box">World Editor</v-btn> to add characters and scene details. You are currently operating in the creative environment. Once you have added at least one player character you may switch back and forth between creative and gameplay mode at any point using the <v-icon color="primary" size="small">mdi-gamepad-square</v-icon> button at the bottom.
+                        <p class="mt-4">
+                          You can still use the world editor while in gameplay mode as well.
+                        </p>
+                      </v-alert>
+                    </div>
+
                     <SceneMessages ref="sceneMessages" :appearance-config="appConfig ? appConfig.appearance : {}" :ux-locked="uxLocked" />
+
                     <div ref="sceneToolsContainer">
                       <SceneTools 
                         @open-world-state-manager="onOpenWorldStateManager"
@@ -1245,6 +1246,8 @@ export default {
 .scene-container {
   flex-shrink: 0;
   max-width: 1600px;
+  min-width: 800px;
   margin: 0 auto;
+  width: 100%;
 }
 </style>

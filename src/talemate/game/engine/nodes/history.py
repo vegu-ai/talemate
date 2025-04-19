@@ -21,6 +21,7 @@ from talemate.exceptions import ActedAsCharacter, AbortWaitForInput
 from talemate.context import active_scene, InteractionState
 from talemate.scene_message import MESSAGES
 import talemate.scene_message as scene_message
+from talemate.history import character_activity
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Character
@@ -355,4 +356,51 @@ class ContextHistory(Node):
         self.set_output_values({
             "messages": messages,
             "compiled": "\n".join(messages)
+        })
+        
+        
+@register("scene/history/ActiveCharacterActivity")
+class ActiveCharacterActivity(Node):
+    """
+    Returns a list of all active characters sorted by which were last active
+    
+    The most recently active character is first in the list.
+    
+    Properties:
+    
+    - since_time_passage: Only include characters that have acted since the last time passage message
+    
+    Outputs:
+    
+    - characters: list of characters
+    - none_have_acted: whether no characters have acted
+    """
+    
+    class Fields:
+        since_time_passage = PropertyField(
+            name="since_time_passage",
+            description="Only include characters that have acted since the last time passage message",
+            type="bool",
+            default=False
+        )
+    
+    def __init__(self, title="Character Activity", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.set_property("since_time_passage", False)
+        self.add_output("none_have_acted", socket_type="bool")
+        self.add_output("characters", socket_type="list")
+        
+        
+    async def run(self, state: GraphState):
+        scene:"Scene" = active_scene.get()
+        
+        since_time_passage = self.normalized_input_value("since_time_passage")
+        
+        activity = await character_activity(scene, since_time_passage=since_time_passage)
+        
+        self.set_output_values({
+            "characters": activity.characters,
+            "none_have_acted": activity.none_have_acted
         })

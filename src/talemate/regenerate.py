@@ -36,7 +36,7 @@ async def regenerate_character_message(message: CharacterMessage, scene:"Scene")
     
     agent = get_agent("conversation")
     
-    if character.is_player and not message.from_choice:
+    if message.source == "player" and not message.from_choice:
         log.warning("regenerate_character_message: Static user message, no regeneration possible", message=message)
         return
     

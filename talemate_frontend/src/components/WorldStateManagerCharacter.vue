@@ -86,7 +86,7 @@
                             <v-divider></v-divider>
 
                             <!-- DEACTIVATE CHARACTER -->
-                            <div v-if="!character.is_player">
+                            <div>
                                 <v-list-item v-if="character.active">
                                     <v-tooltip max-width="300" :text="`Immediately deactivate ${character.name}. This will remove the character from the scene, but it will still be available in the character list, and can be recalled at any point.`">
                                         <template v-slot:activator="{ props }">

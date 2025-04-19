@@ -451,9 +451,12 @@ class Get(Node):
         elif isinstance(obj, list):
             try:
                 index = int(attribute)
-            except (ValueError, IndexError):
+            except (ValueError, TypeError):
                 raise InputValueError(self, "attribute", "Attribute must be an integer if object is a list")
-            value = obj[index]
+            try:
+                value = obj[index]
+            except IndexError:
+                value = UNRESOLVED
         else:
             value = getattr(obj, attribute, None)
         

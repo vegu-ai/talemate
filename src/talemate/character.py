@@ -25,10 +25,6 @@ async def deactivate_character(scene: "Scene", character: Union[str, "Character"
     if isinstance(character, str):
         character = scene.get_character(character)
 
-    if character.is_player:
-        # can't deactivate the player
-        return False
-
     if character.name in scene.inactive_characters:
         # already deactivated
         return False
@@ -50,10 +46,15 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
     if isinstance(character, str):
         character = scene.get_character(character)
 
+
     if character.name not in scene.inactive_characters:
         # already activated
         return False
 
-    actor = scene.Actor(character, get_agent("conversation"))
+    if not character.is_player:
+        actor = scene.Actor(character, get_agent("conversation"))
+    else:
+        actor = scene.Player(character, None)
+
     await scene.add_actor(actor)
     del scene.inactive_characters[character.name]

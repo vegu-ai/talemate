@@ -240,7 +240,13 @@ class ConversationAgent(
 
         main_character = scene.main_character.character
 
-        character_names = [c.name for c in scene.characters if not c.is_player]
+        character_names = [c.name for c in scene.characters]
+        
+        if main_character:
+            try:
+                character_names.remove(main_character.name)
+            except ValueError:
+                pass
 
         if len(character_names) > 1:
             formatted_names = (

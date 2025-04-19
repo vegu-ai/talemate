@@ -218,6 +218,8 @@ class AutoDirectMixin:
         
         BACKLOG_LIMIT = 50
         
+        player_character_active = scene.player_character_exists
+        
         # check the last BACKLOG_LIMIT entries in the scene history and collect into
         # a dictionary of character names and the number of turns since they last spoke.
         
@@ -284,7 +286,7 @@ class AutoDirectMixin:
             return list(scene.characters)
         
         # if player has not spoken in a while then they are favored
-        if consecutive_auto_turns >= self.auto_direct_max_auto_turns:
+        if player_character_active and consecutive_auto_turns >= self.auto_direct_max_auto_turns:
             log.debug("auto_direct_candidates: User controlled character has not spoken in a while.")
             return [scene.get_player_character()]
         

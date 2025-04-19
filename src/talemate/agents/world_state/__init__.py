@@ -305,13 +305,13 @@ class WorldStateAgent(
 
         context = await memory_agent.multi_query(queries, iterate=3)
 
-        log.debug(
-            "analyze_text_and_extract_context_via_queries",
-            goal=goal,
-            text=text,
-            queries=queries,
-            context=context,
-        )
+        #log.debug(
+        #    "analyze_text_and_extract_context_via_queries",
+        #    goal=goal,
+        #    text=text,
+        #    queries=queries,
+        #    context=context,
+        #)
 
         return context
 

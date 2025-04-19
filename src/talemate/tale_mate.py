@@ -596,7 +596,6 @@ class Scene(Emitter):
         self.description = ""
         self.intro = ""
         self.outline = ""
-        self.main_character = None
         self.title = ""
         self.writing_style_template = None
 
@@ -665,6 +664,21 @@ class Scene(Emitter):
         self.setup_emitter(scene=self)
 
         self.world_state.emit()
+
+    @property
+    def main_character(self) -> Actor | None:
+        try:
+            return self.get_player_character().actor
+        except AttributeError:
+            return None
+
+    @property
+    def player_character_exists(self) -> bool:
+        try:
+            character = self.get_player_character()
+            return character is not None and character.is_player
+        except AttributeError:
+            return False
 
     @property
     def characters(self):
@@ -1104,6 +1118,7 @@ class Scene(Emitter):
         source: str = None,
         max_iterations: int = 100,
         max_messages: int | None = None,
+        stop_on_time_passage: bool = False,
     ):
         """
         Finds all messages in the history that match the given typ and source
@@ -1116,14 +1131,16 @@ class Scene(Emitter):
         iterations = 0
         collected = 0
         for idx in range(len(self.history) - 1, -1, -1):
-            if (not typ or self.history[idx].typ in typ) and (
-                not source or self.history[idx].source == source
+            message = self.history[idx]
+            if (not typ or message.typ in typ) and (
+                not source or message.source == source
             ):
-                messages.append(self.history[idx])
+                messages.append(message)
                 collected += 1
                 if max_messages is not None and collected >= max_messages:
                     break
-                
+            if isinstance(message, TimePassageMessage) and stop_on_time_passage:
+                break
 
             iterations += 1
             if iterations >= max_iterations:
@@ -1217,7 +1234,6 @@ class Scene(Emitter):
         actor.scene = self
 
         if isinstance(actor, Player):
-            self.main_character = actor
             actor.character.is_player = True
 
         for actor in self.actors:
@@ -1316,6 +1332,10 @@ class Scene(Emitter):
         for actor in self.actors:
             if isinstance(actor, Player):
                 return actor.character
+            
+        # No active player found, return the first NPC
+        for actor in self.actors:
+            return actor.character
 
     def get_npc_characters(self):
         for actor in self.actors:

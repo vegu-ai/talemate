@@ -181,44 +181,54 @@
                       </p>
                     </v-alert>
                   </div>
-    
-                  <SceneMessages ref="sceneMessages" :appearance-config="appConfig ? appConfig.appearance : {}" :ux-locked="uxLocked" />
-                  <div style="flex-shrink: 0;" ref="sceneToolsContainer">
-          
-                    <SceneTools 
-                      @open-world-state-manager="onOpenWorldStateManager"
-                      :messageInput="messageInput"
-                      :agent-status="agentStatus"
-                      :app-busy="busy"
-                      :worldStateTemplates="worldStateTemplates"
-                      :playerCharacterName="getPlayerCharacterName()"
-                      :passiveCharacters="passiveCharacters"
-                      :inactiveCharacters="inactiveCharacters"
-                      :scene="scene"
-                      :activeCharacters="activeCharacters" />
-                    <CharacterSheet ref="characterSheet" />
-                    <v-textarea
-                      v-model="messageInput" 
-                      :label="messageInputHint()" 
-                      rows="1"
-                      auto-grow
-                      outlined 
-                      ref="messageInput" 
-                      @keydown.enter.prevent="sendMessage"
-                      @keydown.tab.prevent="cycleActAs"
-                      :hint="messageInputLongHint()"
-                      :disabled="busy"
-                      :loading="autocompleting"
-                      :prepend-inner-icon="messageInputIcon()"
-                      :color="messageInputColor()">
-                      <template v-slot:append>
-                        <v-btn @click="sendMessage" color="primary" icon>
-                          <v-icon v-if="messageInput">mdi-send</v-icon>
-                          <v-icon v-else>mdi-skip-next</v-icon>
-                        </v-btn>
-                      </template>
-                    </v-textarea>
+                  
+
+                  <div class="scene-container">
+                    <SceneMessages ref="sceneMessages" :appearance-config="appConfig ? appConfig.appearance : {}" :ux-locked="uxLocked" />
+                    <div ref="sceneToolsContainer">
+                      <SceneTools 
+                        @open-world-state-manager="onOpenWorldStateManager"
+                        :messageInput="messageInput"
+                        :agent-status="agentStatus"
+                        :app-busy="busy"
+                        :worldStateTemplates="worldStateTemplates"
+                        :playerCharacterName="getPlayerCharacterName()"
+                        :passiveCharacters="passiveCharacters"
+                        :inactiveCharacters="inactiveCharacters"
+                        :scene="scene"
+                        :activeCharacters="activeCharacters" />
+                      <CharacterSheet ref="characterSheet" />
+                      <v-textarea
+                        v-model="messageInput" 
+                        :label="messageInputHint()" 
+                        rows="1"
+                        auto-grow
+                        outlined 
+                        ref="messageInput" 
+                        @keydown.enter.prevent="sendMessage"
+                        @keydown.tab.prevent="cycleActAs"
+                        :hint="messageInputLongHint()"
+                        :disabled="busy"
+                        :loading="autocompleting"
+                        :prepend-inner-icon="messageInputIcon()"
+                        :color="messageInputColor()">
+                        <template v-slot:prepend v-if="sceneActive && scene.environment !== 'creative'">
+                          <!-- auto-complete button -->
+                          <v-btn @click="autocomplete" color="primary" icon variant="tonal">
+                            <v-icon>mdi-auto-fix</v-icon>
+                          </v-btn>
+                        </template>
+                        <template v-slot:append>
+                          <!-- send message button -->
+                          <v-btn @click="sendMessage" color="primary" icon variant="tonal">
+                            <v-icon v-if="messageInput">mdi-send</v-icon>
+                            <v-icon v-else>mdi-skip-next</v-icon>
+                          </v-btn>
+                        </template>
+                      </v-textarea>
+                    </div>
                   </div>
+
                 </div>
     
                 
@@ -841,43 +851,45 @@ export default {
       return this.waitingForInput && this.inputRequestInfo && this.inputRequestInfo.reason === "talk";
     },
 
+    autocomplete() {
+      if(!this.isWaitingForDialogInput()) {
+        return;
+      }
+
+      this.autocompleting = true
+      this.inputDisabled = true;
+
+      let context = "dialogue:player";
+
+      if(this.actAs) {
+        if(this.actAs === "$narrator") {
+          context = `narrative:`;
+        } else {
+          context = `dialogue:${this.actAs}`;
+        }
+      }
+
+      this.autocompleteRequest(
+        {
+          partial: this.messageInput,
+          context: context,
+          character: this.actAs,
+        }, 
+        (completion) => {
+          this.inputDisabled = false
+          this.autocompleting = false
+          this.messageInput += completion;
+        },
+        this.$refs.messageInput,
+        100,
+      );
+    },
+
     sendMessage(event) {
 
       // if ctrl+enter is pressed, request autocomplete
       if (event.ctrlKey && event.key === 'Enter') {
-
-        if(!this.isWaitingForDialogInput()) {
-          return;
-        }
-
-        this.autocompleting = true
-        this.inputDisabled = true;
-
-        let context = "dialogue:player";
-
-        if(this.actAs) {
-          if(this.actAs === "$narrator") {
-            context = `narrative:`;
-          } else {
-            context = `dialogue:${this.actAs}`;
-          }
-        }
-
-        this.autocompleteRequest(
-          {
-            partial: this.messageInput,
-            context: context,
-            character: this.actAs,
-          }, 
-          (completion) => {
-            this.inputDisabled = false
-            this.autocompleting = false
-            this.messageInput += completion;
-          },
-          this.$refs.messageInput,
-          100,
-        );
-        return;
+        return this.autocomplete();
       }
 
       // if shift+enter is pressed, add a newline
@@ -1230,4 +1242,9 @@ export default {
   background-color: transparent;
 }
 
+.scene-container {
+  flex-shrink: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+}
 </style>

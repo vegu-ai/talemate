@@ -14,8 +14,8 @@
       "title": "Unpack Character",
       "id": "b4143ba8-2cb3-49e4-8ebc-3e17fbb405a4",
       "properties": {},
-      "x": 571,
-      "y": 981,
+      "x": 553,
+      "y": 854,
       "width": 212,
       "height": 146,
       "collapsed": false,
@@ -29,8 +29,8 @@
       "properties": {
         "value": "NPC"
       },
-      "x": 41,
-      "y": 1151,
+      "x": 23,
+      "y": 1024,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -45,8 +45,8 @@
         "name": "test_001_001",
         "scope": "shared"
       },
-      "x": 1191,
-      "y": 1121,
+      "x": 1173,
+      "y": 994,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -62,8 +62,8 @@
         "mode": "exact",
         "case_sensitive": true
       },
-      "x": 911,
-      "y": 1121,
+      "x": 893,
+      "y": 994,
       "width": 210,
       "height": 126,
       "collapsed": false,
@@ -77,8 +77,8 @@
       "properties": {
         "value": "PC"
       },
-      "x": 319,
-      "y": 1638,
+      "x": 301,
+      "y": 1511,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -90,8 +90,8 @@
       "title": "Unpack Character",
       "id": "d99b57c5-2243-4243-866a-794182c17aec",
       "properties": {},
-      "x": 309,
-      "y": 1408,
+      "x": 291,
+      "y": 1281,
       "width": 212,
       "height": 146,
       "collapsed": false,
@@ -107,8 +107,8 @@
         "mode": "exact",
         "case_sensitive": true
       },
-      "x": 603,
-      "y": 1487,
+      "x": 585,
+      "y": 1360,
       "width": 210,
       "height": 126,
       "collapsed": false,
@@ -130,28 +130,13 @@
         "add_to_scene": true,
         "is_active": true
       },
-      "x": 379,
-      "y": 440,
+      "x": 343,
+      "y": 424,
       "width": 212,
       "height": 322,
       "collapsed": false,
       "inherited": false,
       "registry": "scene/MakeCharacter",
-      "base_type": "core/Node"
-    },
-    "d27878ef-2eac-4014-a016-2c463473972d": {
-      "title": "Stage 2",
-      "id": "d27878ef-2eac-4014-a016-2c463473972d",
-      "properties": {
-        "stage": 2
-      },
-      "x": 1503,
-      "y": 1174,
-      "width": 210,
-      "height": 118,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "648052e1-9b36-44dc-a13c-48aba13c4b43": {
@@ -160,8 +145,8 @@
       "properties": {
         "stage": 2
       },
-      "x": 1223,
-      "y": 1537,
+      "x": 1205,
+      "y": 1410,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -183,8 +168,8 @@
         "add_to_scene": true,
         "is_active": true
       },
-      "x": 59,
-      "y": 210,
+      "x": 23,
+      "y": 194,
       "width": 212,
       "height": 322,
       "collapsed": false,
@@ -198,8 +183,8 @@
       "properties": {
         "stage": 1
       },
-      "x": 669,
-      "y": 440,
+      "x": 633,
+      "y": 424,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -213,8 +198,8 @@
       "properties": {
         "stage": 0
       },
-      "x": 329,
-      "y": 210,
+      "x": 293,
+      "y": 194,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -226,8 +211,8 @@
       "title": "Get Player Character",
       "id": "e96c3ee6-a3a4-46ab-bf5c-914e1ca8da35",
       "properties": {},
-      "x": 59,
-      "y": 1418,
+      "x": 41,
+      "y": 1291,
       "width": 175,
       "height": 26,
       "collapsed": false,
@@ -239,8 +224,8 @@
       "title": "Is Player Character",
       "id": "5fdb5b5a-05ba-46fa-9b17-11b769180e27",
       "properties": {},
-      "x": 313,
-      "y": 1818,
+      "x": 295,
+      "y": 1691,
       "width": 161,
       "height": 66,
       "collapsed": false,
@@ -255,8 +240,8 @@
         "name": "test_001_003",
         "scope": "shared"
       },
-      "x": 543,
-      "y": 1798,
+      "x": 525,
+      "y": 1671,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -271,8 +256,8 @@
         "name": "test_001_002",
         "scope": "shared"
       },
-      "x": 903,
-      "y": 1485,
+      "x": 885,
+      "y": 1358,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -284,8 +269,8 @@
       "title": "Get Character",
       "id": "1905db98-12b6-47f9-812f-e62051f30dda",
       "properties": {},
-      "x": 311,
-      "y": 981,
+      "x": 293,
+      "y": 854,
       "width": 203,
       "height": 26,
       "collapsed": false,
@@ -297,8 +282,8 @@
       "title": "Is Player Character",
       "id": "aec75408-eba6-4c8a-911e-50874d82c08f",
       "properties": {},
-      "x": 613,
-      "y": 1255,
+      "x": 595,
+      "y": 1128,
       "width": 161,
       "height": 66,
       "collapsed": false,
@@ -313,8 +298,8 @@
         "name": "test_001_004",
         "scope": "shared"
       },
-      "x": 908,
-      "y": 1307,
+      "x": 890,
+      "y": 1180,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -328,8 +313,8 @@
       "properties": {
         "value": true
       },
-      "x": 41,
-      "y": 2130,
+      "x": 23,
+      "y": 1901,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -341,27 +326,14 @@
       "title": "Select Actor For Turn",
       "id": "bdc75724-f9d6-4040-99cf-19866afb6a1b",
       "properties": {},
-      "x": 331,
-      "y": 2140,
+      "x": 313,
+      "y": 1911,
       "width": 233,
       "height": 102,
       "collapsed": false,
       "inherited": false,
       "registry": "scene/SelectActorForTurn",
       "base_type": "core/Graph"
-    },
-    "e7f0f5d0-c03b-4bcf-896a-6285a0f4b539": {
-      "title": "Unpack Character",
-      "id": "e7f0f5d0-c03b-4bcf-896a-6285a0f4b539",
-      "properties": {},
-      "x": 641,
-      "y": 2160,
-      "width": 212,
-      "height": 146,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/UnpackCharacter",
-      "base_type": "core/Node"
     },
     "fe569e66-32a3-4cb2-96ae-00b674d4a7ba": {
       "title": "Make String",
@@ -369,60 +341,13 @@
       "properties": {
         "value": "PC"
       },
-      "x": 661,
-      "y": 2390,
+      "x": 643,
+      "y": 2161,
       "width": 210,
       "height": 58,
       "collapsed": false,
       "inherited": false,
       "registry": "data/string/Make",
-      "base_type": "core/Node"
-    },
-    "8601fb64-dc53-46f2-9dc9-d0c64c21b817": {
-      "title": "String Check",
-      "id": "8601fb64-dc53-46f2-9dc9-d0c64c21b817",
-      "properties": {
-        "substring": "",
-        "mode": "exact",
-        "case_sensitive": true
-      },
-      "x": 951,
-      "y": 2170,
-      "width": 210,
-      "height": 126,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/StringCheck",
-      "base_type": "core/Node"
-    },
-    "19aea4c8-3b96-4ae4-8b2c-66ada695b371": {
-      "title": "Select Actor For Turn",
-      "id": "19aea4c8-3b96-4ae4-8b2c-66ada695b371",
-      "properties": {},
-      "x": 338,
-      "y": 2589,
-      "width": 233,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/SelectActorForTurn",
-      "base_type": "core/Graph"
-    },
-    "3a9ce8a3-6956-45dc-a427-2d0670d7a290": {
-      "title": "String Check",
-      "id": "3a9ce8a3-6956-45dc-a427-2d0670d7a290",
-      "properties": {
-        "substring": "",
-        "mode": "exact",
-        "case_sensitive": true
-      },
-      "x": 958,
-      "y": 2619,
-      "width": 210,
-      "height": 126,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/StringCheck",
       "base_type": "core/Node"
     },
     "1c45d9a7-0251-46c2-945d-f797e7dbed04": {
@@ -431,27 +356,14 @@
       "properties": {
         "value": "NPC"
       },
-      "x": 668,
-      "y": 2839,
+      "x": 397,
+      "y": 2633,
       "width": 210,
       "height": 58,
       "collapsed": false,
       "inherited": false,
       "registry": "data/string/Make",
       "base_type": "core/Node"
-    },
-    "0f0a3e29-a8a5-41a3-97ba-aa53adefdd19": {
-      "title": "Select Actor For Turn",
-      "id": "0f0a3e29-a8a5-41a3-97ba-aa53adefdd19",
-      "properties": {},
-      "x": 319,
-      "y": 3039,
-      "width": 233,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/SelectActorForTurn",
-      "base_type": "core/Graph"
     },
     "0034cad4-b1e8-4fc6-ae4c-5dd6db44c8fe": {
       "title": "String Check",
@@ -461,8 +373,8 @@
         "mode": "exact",
         "case_sensitive": true
       },
-      "x": 939,
-      "y": 3069,
+      "x": 668,
+      "y": 2863,
       "width": 210,
       "height": 126,
       "collapsed": false,
@@ -476,8 +388,8 @@
       "properties": {
         "value": "PC"
       },
-      "x": 649,
-      "y": 3289,
+      "x": 378,
+      "y": 3083,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -492,8 +404,8 @@
         "name": "test_002_003",
         "scope": "shared"
       },
-      "x": 1191,
-      "y": 3080,
+      "x": 920,
+      "y": 2874,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -507,8 +419,8 @@
       "properties": {
         "stage": 3
       },
-      "x": 1481,
-      "y": 3140,
+      "x": 1210,
+      "y": 2934,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -516,44 +428,12 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "b1f36f09-a44b-41aa-b016-b023a053b856": {
-      "title": "SET shared.test_002_001",
-      "id": "b1f36f09-a44b-41aa-b016-b023a053b856",
-      "properties": {
-        "name": "test_002_001",
-        "scope": "shared"
-      },
-      "x": 1201,
-      "y": 2180,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "18c12e90-c7d5-4951-975d-7809f5ad95f2": {
-      "title": "SET shared.test_002_002",
-      "id": "18c12e90-c7d5-4951-975d-7809f5ad95f2",
-      "properties": {
-        "name": "test_002_002",
-        "scope": "shared"
-      },
-      "x": 1211,
-      "y": 2630,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
     "657c04cd-8f38-4937-8bfd-9c6c879fa6c0": {
       "title": "Unpack Character",
       "id": "657c04cd-8f38-4937-8bfd-9c6c879fa6c0",
       "properties": {},
-      "x": 629,
-      "y": 3059,
+      "x": 358,
+      "y": 2853,
       "width": 212,
       "height": 146,
       "collapsed": false,
@@ -565,8 +445,8 @@
       "title": "Get Scene State",
       "id": "b464cc20-7dac-44de-9b9b-bc23c1ce7e69",
       "properties": {},
-      "x": 93,
-      "y": 3500,
+      "x": 23,
+      "y": 3320,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -580,8 +460,8 @@
       "properties": {
         "value": true
       },
-      "x": 321,
-      "y": 3430,
+      "x": 251,
+      "y": 3250,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -595,8 +475,8 @@
       "properties": {
         "agent_name": "director"
       },
-      "x": 311,
-      "y": 3550,
+      "x": 241,
+      "y": 3370,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -610,8 +490,8 @@
       "properties": {
         "value": true
       },
-      "x": 520,
-      "y": 100,
+      "x": 484,
+      "y": 84,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -623,8 +503,8 @@
       "title": "Remove All Characters",
       "id": "8186dfef-01ae-4d94-81a4-881723a028d2",
       "properties": {},
-      "x": 790,
-      "y": 120,
+      "x": 754,
+      "y": 104,
       "width": 183,
       "height": 34,
       "collapsed": false,
@@ -638,8 +518,8 @@
       "properties": {
         "stage": -1
       },
-      "x": 1030,
-      "y": 120,
+      "x": 994,
+      "y": 104,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -653,8 +533,8 @@
       "properties": {
         "key": "assert"
       },
-      "x": 871,
-      "y": 3510,
+      "x": 801,
+      "y": 3330,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -669,8 +549,8 @@
         "name": "test_003_001",
         "scope": "shared"
       },
-      "x": 1121,
-      "y": 3490,
+      "x": 1051,
+      "y": 3310,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -684,8 +564,8 @@
       "properties": {
         "stage": 4
       },
-      "x": 1411,
-      "y": 3540,
+      "x": 1341,
+      "y": 3360,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -699,8 +579,8 @@
       "properties": {
         "value": "PC"
       },
-      "x": 41,
-      "y": 3907,
+      "x": 23,
+      "y": 3696,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -712,8 +592,8 @@
       "title": "Get Character",
       "id": "75e5b4ba-3f27-4d08-824b-77d204609213",
       "properties": {},
-      "x": 291,
-      "y": 3927,
+      "x": 273,
+      "y": 3716,
       "width": 203,
       "height": 26,
       "collapsed": false,
@@ -727,8 +607,8 @@
       "properties": {
         "source": "player"
       },
-      "x": 597,
-      "y": 3932,
+      "x": 579,
+      "y": 3721,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -743,8 +623,8 @@
         "name": "test_004_001",
         "scope": "shared"
       },
-      "x": 1257,
-      "y": 3922,
+      "x": 1239,
+      "y": 3711,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -758,8 +638,8 @@
       "properties": {
         "attribute": "raw"
       },
-      "x": 1087,
-      "y": 3971,
+      "x": 1069,
+      "y": 3760,
       "width": 210,
       "height": 98,
       "collapsed": true,
@@ -773,8 +653,8 @@
       "properties": {
         "stage": 5
       },
-      "x": 1517,
-      "y": 3971,
+      "x": 1499,
+      "y": 3760,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -788,8 +668,8 @@
       "properties": {
         "attribute": "raw"
       },
-      "x": 1090,
-      "y": 4241,
+      "x": 1072,
+      "y": 4030,
       "width": 210,
       "height": 98,
       "collapsed": true,
@@ -801,8 +681,8 @@
       "title": "Get Character",
       "id": "740dcfbb-2e69-4526-b970-a5d8e05408e6",
       "properties": {},
-      "x": 297,
-      "y": 4201,
+      "x": 279,
+      "y": 3990,
       "width": 203,
       "height": 26,
       "collapsed": false,
@@ -816,8 +696,8 @@
       "properties": {
         "value": "NPC"
       },
-      "x": 43,
-      "y": 4177,
+      "x": 25,
+      "y": 3966,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -831,8 +711,8 @@
       "properties": {
         "value": "NPC Line 1"
       },
-      "x": 299,
-      "y": 4303,
+      "x": 281,
+      "y": 4092,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -846,8 +726,8 @@
       "properties": {
         "emit_message": true
       },
-      "x": 840,
-      "y": 4203,
+      "x": 822,
+      "y": 3992,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -861,8 +741,8 @@
       "properties": {
         "emit_message": true
       },
-      "x": 837,
-      "y": 3932,
+      "x": 819,
+      "y": 3721,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -876,8 +756,8 @@
       "properties": {
         "source": "ai"
       },
-      "x": 600,
-      "y": 4203,
+      "x": 582,
+      "y": 3992,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -891,8 +771,8 @@
       "properties": {
         "value": "PC Line 1"
       },
-      "x": 297,
-      "y": 4032,
+      "x": 279,
+      "y": 3821,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -906,8 +786,8 @@
       "properties": {
         "stage": 6
       },
-      "x": 1516,
-      "y": 4241,
+      "x": 1498,
+      "y": 4030,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -922,8 +802,8 @@
         "name": "test_004_002",
         "scope": "shared"
       },
-      "x": 1256,
-      "y": 4201,
+      "x": 1238,
+      "y": 3990,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -943,8 +823,8 @@
         "min_dialogue_length": 5,
         "label_chapters": false
       },
-      "x": 68,
-      "y": 5177,
+      "x": 50,
+      "y": 4966,
       "width": 318,
       "height": 235,
       "collapsed": false,
@@ -956,8 +836,8 @@
       "title": "Length",
       "id": "9c43bf2c-b84c-4195-89e9-609ea7cb628d",
       "properties": {},
-      "x": 427,
-      "y": 5207,
+      "x": 409,
+      "y": 4996,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -971,8 +851,8 @@
       "properties": {
         "value": "Narrator line 1"
       },
-      "x": 45,
-      "y": 4511,
+      "x": 27,
+      "y": 4300,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -986,8 +866,8 @@
       "properties": {
         "source": "ai"
       },
-      "x": 315,
-      "y": 4521,
+      "x": 297,
+      "y": 4310,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -1001,8 +881,8 @@
       "properties": {
         "emit_message": true
       },
-      "x": 585,
-      "y": 4531,
+      "x": 567,
+      "y": 4320,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1016,8 +896,8 @@
       "properties": {
         "attribute": "raw"
       },
-      "x": 875,
-      "y": 4551,
+      "x": 857,
+      "y": 4340,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -1032,8 +912,8 @@
         "name": "test_004_003",
         "scope": "shared"
       },
-      "x": 1205,
-      "y": 4541,
+      "x": 1187,
+      "y": 4330,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1047,8 +927,8 @@
       "properties": {
         "stage": 7
       },
-      "x": 1485,
-      "y": 4591,
+      "x": 1467,
+      "y": 4380,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -1062,8 +942,8 @@
       "properties": {
         "value": "Do something"
       },
-      "x": 65,
-      "y": 4861,
+      "x": 47,
+      "y": 4650,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1077,8 +957,8 @@
       "properties": {
         "value": "NPC"
       },
-      "x": 65,
-      "y": 5001,
+      "x": 47,
+      "y": 4790,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1090,8 +970,8 @@
       "title": "Get Character",
       "id": "5e5d3788-837f-48d6-967f-538c34b74615",
       "properties": {},
-      "x": 345,
-      "y": 5011,
+      "x": 327,
+      "y": 4800,
       "width": 203,
       "height": 26,
       "collapsed": false,
@@ -1106,8 +986,8 @@
         "source": "ai",
         "action": "actor_instruction"
       },
-      "x": 595,
-      "y": 4861,
+      "x": 577,
+      "y": 4650,
       "width": 210,
       "height": 162,
       "collapsed": false,
@@ -1121,8 +1001,8 @@
       "properties": {
         "emit_message": true
       },
-      "x": 835,
-      "y": 4871,
+      "x": 817,
+      "y": 4660,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1136,8 +1016,8 @@
       "properties": {
         "attribute": "raw"
       },
-      "x": 1085,
-      "y": 4861,
+      "x": 1067,
+      "y": 4650,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -1152,8 +1032,8 @@
         "name": "test_004_004",
         "scope": "shared"
       },
-      "x": 1355,
-      "y": 4861,
+      "x": 1337,
+      "y": 4650,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1167,8 +1047,8 @@
       "properties": {
         "stage": 8
       },
-      "x": 1625,
-      "y": 4921,
+      "x": 1607,
+      "y": 4710,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -1183,8 +1063,8 @@
         "name": "test_004_002",
         "scope": "shared"
       },
-      "x": 635,
-      "y": 5201,
+      "x": 617,
+      "y": 4990,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1198,39 +1078,13 @@
       "properties": {
         "code": "characters = arguments[\"characters\"]\n\n\nl = [f\"{c}\" for c in characters] \n\nresult[\"assert\"] = l == [\"Character: PC\", \"Character: NPC\"]\n\nresult[\"list\"] = l"
       },
-      "x": 621,
-      "y": 3510,
+      "x": 551,
+      "y": 3330,
       "width": 210,
       "height": 98,
       "collapsed": false,
       "inherited": false,
       "registry": "core/functions/ScopedAPIFunction",
-      "base_type": "core/Node"
-    },
-    "a24aa1ac-61bd-4f4f-b415-eab65e088a31": {
-      "title": "Unpack Character",
-      "id": "a24aa1ac-61bd-4f4f-b415-eab65e088a31",
-      "properties": {},
-      "x": 651,
-      "y": 2610,
-      "width": 212,
-      "height": 146,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/UnpackCharacter",
-      "base_type": "core/Node"
-    },
-    "81f1f1c7-3d83-4e87-b297-a44ffbcca570": {
-      "title": "Watch",
-      "id": "81f1f1c7-3d83-4e87-b297-a44ffbcca570",
-      "properties": {},
-      "x": 970,
-      "y": 2520,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Watch",
       "base_type": "core/Node"
     },
     "1ca9af96-e1b4-4401-a1c2-5917d0e615ff": {
@@ -1243,8 +1097,8 @@
         "instructions": "Scene type instructions",
         "auto_append": true
       },
-      "x": 34,
-      "y": 6843,
+      "x": 23,
+      "y": 6566,
       "width": 354,
       "height": 216,
       "collapsed": false,
@@ -1258,8 +1112,8 @@
       "properties": {
         "stage": 13
       },
-      "x": 484,
-      "y": 6873,
+      "x": 473,
+      "y": 6596,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -1273,8 +1127,8 @@
       "properties": {
         "value": "test"
       },
-      "x": 34,
-      "y": 7153,
+      "x": 23,
+      "y": 6876,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1286,8 +1140,8 @@
       "title": "Get Scene Type",
       "id": "3c9a9ab1-82d1-456d-9a06-f9bdac62aab6",
       "properties": {},
-      "x": 284,
-      "y": 7153,
+      "x": 273,
+      "y": 6876,
       "width": 203,
       "height": 26,
       "collapsed": false,
@@ -1299,8 +1153,8 @@
       "title": "Unpack Scene Type",
       "id": "ad8cac4a-b302-40f3-8b0f-a7dffef03afb",
       "properties": {},
-      "x": 534,
-      "y": 7153,
+      "x": 523,
+      "y": 6876,
       "width": 203,
       "height": 86,
       "collapsed": false,
@@ -1315,8 +1169,8 @@
         "name": "test_005_001",
         "scope": "shared"
       },
-      "x": 914,
-      "y": 6823,
+      "x": 903,
+      "y": 6546,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1331,8 +1185,8 @@
         "name": "test_005_002",
         "scope": "shared"
       },
-      "x": 914,
-      "y": 7033,
+      "x": 903,
+      "y": 6756,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1347,8 +1201,8 @@
         "name": "test_005_003",
         "scope": "shared"
       },
-      "x": 914,
-      "y": 7243,
+      "x": 903,
+      "y": 6966,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1363,8 +1217,8 @@
         "name": "test_005_004",
         "scope": "shared"
       },
-      "x": 914,
-      "y": 7453,
+      "x": 903,
+      "y": 7176,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1378,8 +1232,8 @@
       "properties": {
         "stage": 14
       },
-      "x": 1354,
-      "y": 7203,
+      "x": 1343,
+      "y": 6926,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -1393,8 +1247,8 @@
       "properties": {
         "value": true
       },
-      "x": 63,
-      "y": 7575,
+      "x": 52,
+      "y": 7298,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1408,8 +1262,8 @@
       "properties": {
         "value": "Scene intent"
       },
-      "x": 53,
-      "y": 7795,
+      "x": 42,
+      "y": 7518,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1423,8 +1277,8 @@
       "properties": {
         "intent": ""
       },
-      "x": 394,
-      "y": 7718,
+      "x": 383,
+      "y": 7441,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -1438,8 +1292,8 @@
       "properties": {
         "stage": 15
       },
-      "x": 685,
-      "y": 7743,
+      "x": 674,
+      "y": 7466,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -1451,8 +1305,8 @@
       "title": "Get Scene Intent",
       "id": "6c8e8194-8aec-4c8b-9cab-b0b794f55273",
       "properties": {},
-      "x": 895,
-      "y": 7723,
+      "x": 884,
+      "y": 7446,
       "width": 140,
       "height": 86,
       "collapsed": false,
@@ -1466,8 +1320,8 @@
       "properties": {
         "value": "Scene intent"
       },
-      "x": 845,
-      "y": 7923,
+      "x": 834,
+      "y": 7646,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1483,8 +1337,8 @@
         "mode": "exact",
         "case_sensitive": true
       },
-      "x": 1125,
-      "y": 7843,
+      "x": 1114,
+      "y": 7566,
       "width": 210,
       "height": 126,
       "collapsed": false,
@@ -1499,8 +1353,8 @@
         "name": "test_005_005",
         "scope": "shared"
       },
-      "x": 1375,
-      "y": 7843,
+      "x": 1364,
+      "y": 7566,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1514,8 +1368,8 @@
       "properties": {
         "stage": 16
       },
-      "x": 1645,
-      "y": 7893,
+      "x": 1634,
+      "y": 7616,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -1529,8 +1383,8 @@
       "properties": {
         "value": true
       },
-      "x": 35,
-      "y": 8073,
+      "x": 24,
+      "y": 7796,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1544,8 +1398,8 @@
       "properties": {
         "value": "Phase intent"
       },
-      "x": 35,
-      "y": 8263,
+      "x": 24,
+      "y": 7986,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1560,8 +1414,8 @@
         "scene_type": "test",
         "intent": ""
       },
-      "x": 315,
-      "y": 8153,
+      "x": 304,
+      "y": 7876,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1575,8 +1429,8 @@
       "properties": {
         "stage": 17
       },
-      "x": 595,
-      "y": 8193,
+      "x": 584,
+      "y": 7916,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -1588,8 +1442,8 @@
       "title": "Get Scene Intent",
       "id": "6cf50b63-92f7-4bcf-9a93-b92350d97543",
       "properties": {},
-      "x": 64,
-      "y": 8443,
+      "x": 53,
+      "y": 8166,
       "width": 140,
       "height": 86,
       "collapsed": false,
@@ -1603,8 +1457,8 @@
       "properties": {
         "value": "Phase intent"
       },
-      "x": 604,
-      "y": 8363,
+      "x": 593,
+      "y": 8086,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1619,8 +1473,8 @@
         "name": "test_005_006",
         "scope": "shared"
       },
-      "x": 974,
-      "y": 8633,
+      "x": 963,
+      "y": 8356,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1635,8 +1489,8 @@
         "name": "test_005_008",
         "scope": "shared"
       },
-      "x": 974,
-      "y": 9013,
+      "x": 963,
+      "y": 8736,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1648,29 +1502,13 @@
       "title": "Unpack Scene Phase",
       "id": "c66d32ea-89e8-4d03-ae24-9480153d035d",
       "properties": {},
-      "x": 424,
-      "y": 8753,
+      "x": 413,
+      "y": 8476,
       "width": 245,
       "height": 146,
       "collapsed": false,
       "inherited": false,
       "registry": "scene/intention/UnpackScenePhase",
-      "base_type": "core/Node"
-    },
-    "2f182410-3f54-4f8c-b35a-c257ee6a8494": {
-      "title": "SET shared.test_005_010",
-      "id": "2f182410-3f54-4f8c-b35a-c257ee6a8494",
-      "properties": {
-        "name": "test_005_010",
-        "scope": "shared"
-      },
-      "x": 984,
-      "y": 9403,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
       "base_type": "core/Node"
     },
     "ba7f25f4-0e2e-4bb6-9aee-d5af8b5ea531": {
@@ -1680,8 +1518,8 @@
         "name": "test_005_009",
         "scope": "shared"
       },
-      "x": 974,
-      "y": 9203,
+      "x": 963,
+      "y": 8926,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1696,8 +1534,8 @@
         "name": "test_005_007",
         "scope": "shared"
       },
-      "x": 974,
-      "y": 8823,
+      "x": 963,
+      "y": 8546,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1711,8 +1549,8 @@
       "properties": {
         "stage": 18
       },
-      "x": 1384,
-      "y": 8883,
+      "x": 1373,
+      "y": 8606,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -1728,8 +1566,8 @@
         "mode": "exact",
         "case_sensitive": true
       },
-      "x": 964,
-      "y": 8423,
+      "x": 953,
+      "y": 8146,
       "width": 210,
       "height": 126,
       "collapsed": false,
@@ -1744,8 +1582,8 @@
         "name": "test_005_012",
         "scope": "shared"
       },
-      "x": 1244,
-      "y": 8413,
+      "x": 1233,
+      "y": 8136,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1759,8 +1597,8 @@
       "properties": {
         "key": "characters"
       },
-      "x": 310,
-      "y": 3670,
+      "x": 240,
+      "y": 3490,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -1774,8 +1612,8 @@
       "properties": {
         "key": "list"
       },
-      "x": 870,
-      "y": 3690,
+      "x": 800,
+      "y": 3510,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -1789,8 +1627,8 @@
       "properties": {
         "stage": 9
       },
-      "x": 910,
-      "y": 5251,
+      "x": 892,
+      "y": 5040,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -1804,8 +1642,8 @@
       "properties": {
         "emit_removal": true
       },
-      "x": -552,
-      "y": 5927,
+      "x": -551,
+      "y": 6007,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1817,8 +1655,8 @@
       "title": "Get Scene State",
       "id": "1ff0e398-8074-4ffb-bba8-390e8d4dd057",
       "properties": {},
-      "x": 51,
-      "y": 6162,
+      "x": 33,
+      "y": 5951,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -1832,8 +1670,8 @@
       "properties": {
         "name": "remove_message"
       },
-      "x": -280,
-      "y": 5930,
+      "x": -279,
+      "y": 6010,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -1847,8 +1685,8 @@
       "properties": {
         "name": "remove_message"
       },
-      "x": 511,
-      "y": 6221,
+      "x": 493,
+      "y": 6010,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -1862,8 +1700,8 @@
       "properties": {
         "attribute": "history"
       },
-      "x": 251,
-      "y": 6261,
+      "x": 233,
+      "y": 6050,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -1877,8 +1715,8 @@
       "properties": {
         "value": true
       },
-      "x": 511,
-      "y": 6100,
+      "x": 493,
+      "y": 5889,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1890,8 +1728,8 @@
       "title": "Get Scene State",
       "id": "cadac530-2231-4829-81f0-65452926b119",
       "properties": {},
-      "x": 71,
-      "y": 6460,
+      "x": 53,
+      "y": 6249,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -1906,8 +1744,8 @@
         "name": "item",
         "typ": "str"
       },
-      "x": -820,
-      "y": 5930,
+      "x": -819,
+      "y": 6010,
       "width": 210,
       "height": 82,
       "collapsed": false,
@@ -1921,8 +1759,8 @@
       "properties": {
         "attribute": "history"
       },
-      "x": 261,
-      "y": 6510,
+      "x": 243,
+      "y": 6299,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -1934,8 +1772,8 @@
       "title": "Length",
       "id": "2de69cd4-19ec-468d-95d5-d7a7a2c4e5ac",
       "properties": {},
-      "x": 561,
-      "y": 6520,
+      "x": 543,
+      "y": 6309,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -1950,8 +1788,8 @@
         "name": "test_004_005",
         "scope": "shared"
       },
-      "x": 791,
-      "y": 6480,
+      "x": 773,
+      "y": 6269,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1963,10 +1801,11 @@
       "title": "Call For Each",
       "id": "d2dea3f4-5f35-4ffd-8d14-c569de7917d6",
       "properties": {
-        "copy_items": true
+        "copy_items": true,
+        "argument_name": "item"
       },
-      "x": 770,
-      "y": 6230,
+      "x": 752,
+      "y": 6019,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -1980,8 +1819,8 @@
       "properties": {
         "stage": 11
       },
-      "x": 1020,
-      "y": 6260,
+      "x": 1002,
+      "y": 6049,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -1995,8 +1834,8 @@
       "properties": {
         "stage": 12
       },
-      "x": 1110,
-      "y": 6530,
+      "x": 1092,
+      "y": 6319,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -2013,8 +1852,8 @@
         "stop_on_time_passage": false,
         "filters": {}
       },
-      "x": 80,
-      "y": 5630,
+      "x": 62,
+      "y": 5419,
       "width": 276,
       "height": 150,
       "collapsed": false,
@@ -2028,8 +1867,8 @@
       "properties": {
         "attribute": "raw"
       },
-      "x": 450,
-      "y": 5670,
+      "x": 432,
+      "y": 5459,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -2043,8 +1882,8 @@
       "properties": {
         "stage": 10
       },
-      "x": 1110,
-      "y": 5690,
+      "x": 1092,
+      "y": 5479,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -2059,8 +1898,390 @@
         "name": "test_004_006",
         "scope": "shared"
       },
-      "x": 760,
-      "y": 5640,
+      "x": 742,
+      "y": 5429,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "19aea4c8-3b96-4ae4-8b2c-66ada695b371": {
+      "title": "Select Actor For Turn",
+      "id": "19aea4c8-3b96-4ae4-8b2c-66ada695b371",
+      "properties": {},
+      "x": 67,
+      "y": 2383,
+      "width": 233,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/SelectActorForTurn",
+      "base_type": "core/Graph"
+    },
+    "0f0a3e29-a8a5-41a3-97ba-aa53adefdd19": {
+      "title": "Select Actor For Turn",
+      "id": "0f0a3e29-a8a5-41a3-97ba-aa53adefdd19",
+      "properties": {},
+      "x": 48,
+      "y": 2833,
+      "width": 233,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/SelectActorForTurn",
+      "base_type": "core/Graph"
+    },
+    "1de3b54b-e4a7-4987-935d-0a5e00f06277": {
+      "title": "Return",
+      "id": "1de3b54b-e4a7-4987-935d-0a5e00f06277",
+      "properties": {},
+      "x": -460,
+      "y": 1946,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "3619e160-2d75-4740-8385-642a43150dcf": {
+      "title": "FN add_character_message",
+      "id": "3619e160-2d75-4740-8385-642a43150dcf",
+      "properties": {
+        "name": "add_character_message"
+      },
+      "x": 1673,
+      "y": 1916,
+      "width": 253,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "fde6013c-d91a-46b1-968f-5c59b64ea335": {
+      "title": "character_name",
+      "id": "fde6013c-d91a-46b1-968f-5c59b64ea335",
+      "properties": {
+        "name": "character_name",
+        "typ": "str"
+      },
+      "x": -1829,
+      "y": 1902,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "41f5086e-57db-45c6-8e6b-3188bb6050ab": {
+      "title": "Character Message",
+      "id": "41f5086e-57db-45c6-8e6b-3188bb6050ab",
+      "properties": {
+        "source": "player"
+      },
+      "x": -1179,
+      "y": 1932,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/message/CharacterMessage",
+      "base_type": "core/Node"
+    },
+    "6666b050-011b-4829-a5b3-31b90686785c": {
+      "title": "GET obj.raw",
+      "id": "6666b050-011b-4829-a5b3-31b90686785c",
+      "properties": {
+        "attribute": "raw"
+      },
+      "x": -619,
+      "y": 1962,
+      "width": 210,
+      "height": 98,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "e397ce06-e823-4671-b938-263a7f788c09": {
+      "title": "Push History",
+      "id": "e397ce06-e823-4671-b938-263a7f788c09",
+      "properties": {
+        "emit_message": false
+      },
+      "x": -919,
+      "y": 1932,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "09365d38-8bfe-4cf1-a8ea-a14254520e58": {
+      "title": "Make String",
+      "id": "09365d38-8bfe-4cf1-a8ea-a14254520e58",
+      "properties": {
+        "value": "Some message"
+      },
+      "x": -1499,
+      "y": 2012,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "b56da681-aa0e-401a-97e6-266c547b5e69": {
+      "title": "Get Character",
+      "id": "b56da681-aa0e-401a-97e6-266c547b5e69",
+      "properties": {},
+      "x": -1499,
+      "y": 1902,
+      "width": 203,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetCharacter",
+      "base_type": "core/Node"
+    },
+    "92383cd1-6a23-4ddd-862d-9eaa90922f17": {
+      "title": "DEF add_character_message",
+      "id": "92383cd1-6a23-4ddd-862d-9eaa90922f17",
+      "properties": {
+        "name": "add_character_message"
+      },
+      "x": -264,
+      "y": 1942,
+      "width": 233,
+      "height": 95,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "46410c07-7827-427a-bfe9-e7452cce4f0a": {
+      "title": "Call Function",
+      "id": "46410c07-7827-427a-bfe9-e7452cce4f0a",
+      "properties": {
+        "args": {}
+      },
+      "x": 1974,
+      "y": 2052,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/CallFunction",
+      "base_type": "core/Node"
+    },
+    "afa1a010-227b-48c3-9c07-a06cfd34ab3e": {
+      "title": "Dict Set",
+      "id": "afa1a010-227b-48c3-9c07-a06cfd34ab3e",
+      "properties": {
+        "key": "character_name"
+      },
+      "x": 1674,
+      "y": 2002,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "e7f0f5d0-c03b-4bcf-896a-6285a0f4b539": {
+      "title": "Unpack Character",
+      "id": "e7f0f5d0-c03b-4bcf-896a-6285a0f4b539",
+      "properties": {},
+      "x": 623,
+      "y": 1931,
+      "width": 212,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/UnpackCharacter",
+      "base_type": "core/Node"
+    },
+    "6b9280eb-883c-4a74-8177-f64da8408ae5": {
+      "title": "RSwitch Advanced",
+      "id": "6b9280eb-883c-4a74-8177-f64da8408ae5",
+      "properties": {},
+      "x": 1444,
+      "y": 2062,
+      "width": 188,
+      "height": 70,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "8601fb64-dc53-46f2-9dc9-d0c64c21b817": {
+      "title": "String Check",
+      "id": "8601fb64-dc53-46f2-9dc9-d0c64c21b817",
+      "properties": {
+        "substring": "",
+        "mode": "exact",
+        "case_sensitive": true
+      },
+      "x": 914,
+      "y": 1932,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/StringCheck",
+      "base_type": "core/Node"
+    },
+    "3a9ce8a3-6956-45dc-a427-2d0670d7a290": {
+      "title": "String Check",
+      "id": "3a9ce8a3-6956-45dc-a427-2d0670d7a290",
+      "properties": {
+        "substring": "",
+        "mode": "exact",
+        "case_sensitive": true
+      },
+      "x": 687,
+      "y": 2413,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/StringCheck",
+      "base_type": "core/Node"
+    },
+    "a24aa1ac-61bd-4f4f-b415-eab65e088a31": {
+      "title": "Unpack Character",
+      "id": "a24aa1ac-61bd-4f4f-b415-eab65e088a31",
+      "properties": {},
+      "x": 380,
+      "y": 2404,
+      "width": 212,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/UnpackCharacter",
+      "base_type": "core/Node"
+    },
+    "1dc6c857-37a0-4ab7-ac8c-718b179fade7": {
+      "title": "RSwitch Advanced",
+      "id": "1dc6c857-37a0-4ab7-ac8c-718b179fade7",
+      "properties": {},
+      "x": 1184,
+      "y": 2452,
+      "width": 188,
+      "height": 70,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "52d0a4f3-bd65-4825-b59f-906c5fd4a0d6": {
+      "title": "Dict Set",
+      "id": "52d0a4f3-bd65-4825-b59f-906c5fd4a0d6",
+      "properties": {
+        "key": "character_name"
+      },
+      "x": 1414,
+      "y": 2422,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "65c4d351-6165-44da-a517-763feecba915": {
+      "title": "FN add_character_message",
+      "id": "65c4d351-6165-44da-a517-763feecba915",
+      "properties": {
+        "name": "add_character_message"
+      },
+      "x": 1414,
+      "y": 2352,
+      "width": 253,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "17df9243-9e80-4374-bd55-78f028a613b3": {
+      "title": "Call Function",
+      "id": "17df9243-9e80-4374-bd55-78f028a613b3",
+      "properties": {
+        "args": {}
+      },
+      "x": 1714,
+      "y": 2422,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/CallFunction",
+      "base_type": "core/Node"
+    },
+    "b1f36f09-a44b-41aa-b016-b023a053b856": {
+      "title": "SET shared.test_002_001",
+      "id": "b1f36f09-a44b-41aa-b016-b023a053b856",
+      "properties": {
+        "name": "test_002_001",
+        "scope": "shared"
+      },
+      "x": 1194,
+      "y": 1891,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "18c12e90-c7d5-4951-975d-7809f5ad95f2": {
+      "title": "SET shared.test_002_002",
+      "id": "18c12e90-c7d5-4951-975d-7809f5ad95f2",
+      "properties": {
+        "name": "test_002_002",
+        "scope": "shared"
+      },
+      "x": 954,
+      "y": 2311,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "d27878ef-2eac-4014-a016-2c463473972d": {
+      "title": "Stage 2",
+      "id": "d27878ef-2eac-4014-a016-2c463473972d",
+      "properties": {
+        "stage": 2
+      },
+      "x": 1490,
+      "y": 1050,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "2f182410-3f54-4f8c-b35a-c257ee6a8494": {
+      "title": "SET shared.test_005_010",
+      "id": "2f182410-3f54-4f8c-b35a-c257ee6a8494",
+      "properties": {
+        "name": "test_005_010",
+        "scope": "shared"
+      },
+      "x": 970,
+      "y": 9160,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -2121,26 +2342,11 @@
     "bdc75724-f9d6-4040-99cf-19866afb6a1b.character": [
       "e7f0f5d0-c03b-4bcf-896a-6285a0f4b539.character"
     ],
-    "e7f0f5d0-c03b-4bcf-896a-6285a0f4b539.name": [
-      "8601fb64-dc53-46f2-9dc9-d0c64c21b817.string"
-    ],
     "fe569e66-32a3-4cb2-96ae-00b674d4a7ba.value": [
       "8601fb64-dc53-46f2-9dc9-d0c64c21b817.substring"
     ],
-    "8601fb64-dc53-46f2-9dc9-d0c64c21b817.result": [
-      "b1f36f09-a44b-41aa-b016-b023a053b856.value"
-    ],
-    "19aea4c8-3b96-4ae4-8b2c-66ada695b371.character": [
-      "a24aa1ac-61bd-4f4f-b415-eab65e088a31.character"
-    ],
-    "3a9ce8a3-6956-45dc-a427-2d0670d7a290.result": [
-      "18c12e90-c7d5-4951-975d-7809f5ad95f2.value"
-    ],
     "1c45d9a7-0251-46c2-945d-f797e7dbed04.value": [
       "3a9ce8a3-6956-45dc-a427-2d0670d7a290.substring"
-    ],
-    "0f0a3e29-a8a5-41a3-97ba-aa53adefdd19.character": [
-      "657c04cd-8f38-4937-8bfd-9c6c879fa6c0.character"
     ],
     "0034cad4-b1e8-4fc6-ae4c-5dd6db44c8fe.result": [
       "f153b844-c073-4dc9-bc0b-f2e259c827ac.value"
@@ -2150,12 +2356,6 @@
     ],
     "f153b844-c073-4dc9-bc0b-f2e259c827ac.value": [
       "c9bd7d04-6e72-4195-9039-904c1380315f.state"
-    ],
-    "b1f36f09-a44b-41aa-b016-b023a053b856.value": [
-      "19aea4c8-3b96-4ae4-8b2c-66ada695b371.state"
-    ],
-    "18c12e90-c7d5-4951-975d-7809f5ad95f2.value": [
-      "0f0a3e29-a8a5-41a3-97ba-aa53adefdd19.state"
     ],
     "657c04cd-8f38-4937-8bfd-9c6c879fa6c0.name": [
       "0034cad4-b1e8-4fc6-ae4c-5dd6db44c8fe.string"
@@ -2271,10 +2471,6 @@
     "83524c7a-f2e3-4529-814c-3e0308288cd7.result": [
       "01a4d9cb-ebe2-4622-9787-4fd27db3b4be.dict",
       "0ef6c51b-9b1b-4775-acb0-96464c0b485e.dict"
-    ],
-    "a24aa1ac-61bd-4f4f-b415-eab65e088a31.name": [
-      "3a9ce8a3-6956-45dc-a427-2d0670d7a290.string",
-      "81f1f1c7-3d83-4e87-b297-a44ffbcca570.value"
     ],
     "1ca9af96-e1b4-4401-a1c2-5917d0e615ff.scene_type": [
       "f69e3295-bffb-43f3-860e-5d753bc305c3.state"
@@ -2413,15 +2609,86 @@
     ],
     "4ebdae45-1ddb-4a01-97af-edff97b82f5b.value": [
       "a119a897-c482-464a-8dfa-9259838f06f1.state"
+    ],
+    "19aea4c8-3b96-4ae4-8b2c-66ada695b371.character": [
+      "a24aa1ac-61bd-4f4f-b415-eab65e088a31.character"
+    ],
+    "0f0a3e29-a8a5-41a3-97ba-aa53adefdd19.character": [
+      "657c04cd-8f38-4937-8bfd-9c6c879fa6c0.character"
+    ],
+    "1de3b54b-e4a7-4987-935d-0a5e00f06277.value": [
+      "92383cd1-6a23-4ddd-862d-9eaa90922f17.nodes"
+    ],
+    "3619e160-2d75-4740-8385-642a43150dcf.fn": [
+      "46410c07-7827-427a-bfe9-e7452cce4f0a.fn"
+    ],
+    "fde6013c-d91a-46b1-968f-5c59b64ea335.value": [
+      "b56da681-aa0e-401a-97e6-266c547b5e69.character_name"
+    ],
+    "41f5086e-57db-45c6-8e6b-3188bb6050ab.message": [
+      "e397ce06-e823-4671-b938-263a7f788c09.message"
+    ],
+    "6666b050-011b-4829-a5b3-31b90686785c.value": [
+      "1de3b54b-e4a7-4987-935d-0a5e00f06277.value"
+    ],
+    "e397ce06-e823-4671-b938-263a7f788c09.message": [
+      "6666b050-011b-4829-a5b3-31b90686785c.object"
+    ],
+    "09365d38-8bfe-4cf1-a8ea-a14254520e58.value": [
+      "41f5086e-57db-45c6-8e6b-3188bb6050ab.message"
+    ],
+    "b56da681-aa0e-401a-97e6-266c547b5e69.character": [
+      "41f5086e-57db-45c6-8e6b-3188bb6050ab.character"
+    ],
+    "46410c07-7827-427a-bfe9-e7452cce4f0a.result": [
+      "19aea4c8-3b96-4ae4-8b2c-66ada695b371.state"
+    ],
+    "afa1a010-227b-48c3-9c07-a06cfd34ab3e.dict": [
+      "46410c07-7827-427a-bfe9-e7452cce4f0a.args"
+    ],
+    "e7f0f5d0-c03b-4bcf-896a-6285a0f4b539.name": [
+      "8601fb64-dc53-46f2-9dc9-d0c64c21b817.string",
+      "6b9280eb-883c-4a74-8177-f64da8408ae5.yes"
+    ],
+    "6b9280eb-883c-4a74-8177-f64da8408ae5.yes": [
+      "afa1a010-227b-48c3-9c07-a06cfd34ab3e.value"
+    ],
+    "8601fb64-dc53-46f2-9dc9-d0c64c21b817.result": [
+      "b1f36f09-a44b-41aa-b016-b023a053b856.value"
+    ],
+    "3a9ce8a3-6956-45dc-a427-2d0670d7a290.result": [
+      "18c12e90-c7d5-4951-975d-7809f5ad95f2.value"
+    ],
+    "a24aa1ac-61bd-4f4f-b415-eab65e088a31.name": [
+      "3a9ce8a3-6956-45dc-a427-2d0670d7a290.string",
+      "1dc6c857-37a0-4ab7-ac8c-718b179fade7.yes"
+    ],
+    "1dc6c857-37a0-4ab7-ac8c-718b179fade7.yes": [
+      "52d0a4f3-bd65-4825-b59f-906c5fd4a0d6.value"
+    ],
+    "52d0a4f3-bd65-4825-b59f-906c5fd4a0d6.dict": [
+      "17df9243-9e80-4374-bd55-78f028a613b3.args"
+    ],
+    "65c4d351-6165-44da-a517-763feecba915.fn": [
+      "17df9243-9e80-4374-bd55-78f028a613b3.fn"
+    ],
+    "17df9243-9e80-4374-bd55-78f028a613b3.result": [
+      "0f0a3e29-a8a5-41a3-97ba-aa53adefdd19.state"
+    ],
+    "b1f36f09-a44b-41aa-b016-b023a053b856.value": [
+      "6b9280eb-883c-4a74-8177-f64da8408ae5.check"
+    ],
+    "18c12e90-c7d5-4951-975d-7809f5ad95f2.value": [
+      "1dc6c857-37a0-4ab7-ac8c-718b179fade7.check"
     ]
   },
   "groups": [
     {
       "title": "Test 001",
-      "x": -1,
-      "y": 852,
-      "width": 1676,
-      "height": 1147,
+      "x": -2,
+      "y": 774,
+      "width": 1722,
+      "height": 1044,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -2430,58 +2697,68 @@
       "title": "Prepare",
       "x": -2,
       "y": 4,
-      "width": 1321,
-      "height": 843,
+      "width": 1231,
+      "height": 767,
       "color": "#8AA",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Test 002",
-      "x": 0,
-      "y": 2005,
-      "width": 1674,
-      "height": 1373,
+      "x": -2,
+      "y": 1821,
+      "width": 2255,
+      "height": 1346,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Test 003",
-      "x": 2,
-      "y": 3384,
-      "width": 1672,
-      "height": 418,
+      "x": -2,
+      "y": 3170,
+      "width": 1578,
+      "height": 443,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Test 004",
-      "x": 0,
-      "y": 3809,
-      "width": 1814,
-      "height": 2923,
+      "x": -2,
+      "y": 3616,
+      "width": 1844,
+      "height": 2846,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Test 005",
-      "x": -12,
-      "y": 6740,
-      "width": 1822,
-      "height": 2864,
+      "x": -2,
+      "y": 6466,
+      "width": 1871,
+      "height": 2841,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Function - Remove Message",
-      "x": -888,
-      "y": 5786,
+      "x": -887,
+      "y": 5866,
       "width": 878,
       "height": 288,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function - Character Message",
+      "x": -1854,
+      "y": 1822,
+      "width": 1845,
+      "height": 273,
       "color": "#b06634",
       "font_size": 24,
       "inherited": false

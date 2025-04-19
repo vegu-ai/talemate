@@ -1109,7 +1109,7 @@ class Scene(Emitter):
         Finds all messages in the history that match the given typ and source
         """
 
-        if not isinstance(typ, list):
+        if typ and not isinstance(typ, list):
             typ = [typ]
 
         messages = []

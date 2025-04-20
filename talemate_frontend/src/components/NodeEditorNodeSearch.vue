@@ -47,9 +47,23 @@ export default {
           // filter by node.registry and node.title
           // nodes is an object literal with keys as the node type and values as the node definition
           // so we need to filter by the node definition title and registry
-          return Object.values(this.nodes).filter(node => {
+          const filtered = Object.values(this.nodes).filter(node => {
             return node.title.toLowerCase().includes(this.searchQuery.toLowerCase()) || node.registry.toLowerCase().includes(this.searchQuery.toLowerCase());
           });
+
+          // sort by startswith this.searchQuery
+          // and then alphabetically
+          filtered.sort((a, b) => {
+            if (a.title.toLowerCase().startsWith(this.searchQuery.toLowerCase())) {
+              return -1;
+            }
+            if (b.title.toLowerCase().startsWith(this.searchQuery.toLowerCase())) {
+              return 1;
+            }
+            return a.title.localeCompare(b.title);
+          });
+
+          return filtered;
         }
     },
     watch: {

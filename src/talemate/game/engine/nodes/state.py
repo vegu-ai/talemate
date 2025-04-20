@@ -162,7 +162,7 @@ class GetState(StateManipulation):
     def style(self) -> NodeStyle:
         return NodeStyle(
             title_color="#44552f",
-            icon="F0552", # upload
+            icon="F0552", # download
             auto_title="GET {scope}.{name}"
         )
     

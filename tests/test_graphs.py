@@ -89,10 +89,12 @@ def bootstrap_scene(mock_scene):
     conversation = instance.get_agent("conversation", client=client)
     summarizer = instance.get_agent("summarizer", client=client)
     editor = instance.get_agent("editor", client=client)
+    world_state = instance.get_agent("world_state", client=client)
     mock_scene.add_helper(Helper(director))
     mock_scene.add_helper(Helper(conversation))
     mock_scene.add_helper(Helper(summarizer))
     mock_scene.add_helper(Helper(editor))
+    mock_scene.add_helper(Helper(world_state))
     
     mock_scene.mock_client = client
     
@@ -101,6 +103,7 @@ def bootstrap_scene(mock_scene):
         "conversation": conversation,
         "summarizer": summarizer,
         "editor": editor,
+        "world_state": world_state,
     }
 
 def make_assert_fn(name:str, write_results:bool=False):
@@ -151,6 +154,11 @@ async def test_graph_scene(mock_scene):
 @pytest.mark.asyncio
 async def test_graph_functions(mock_scene):
     fn = make_graph_test("test-harness-functions", False)
+    await fn(mock_scene)
+
+@pytest.mark.asyncio
+async def test_graph_agents(mock_scene):
+    fn = make_graph_test("test-harness-agents", False)
     await fn(mock_scene)
 
 @pytest.mark.asyncio

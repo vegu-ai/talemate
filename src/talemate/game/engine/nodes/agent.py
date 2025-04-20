@@ -13,8 +13,10 @@ from talemate.game.engine.nodes.core import (
     UNRESOLVED,
 )
 from talemate.agents.registry import get_agent_types
+from talemate.agents.base import Agent
 from talemate.instance import get_agent
 
+from .state import SetState, GetState, UnsetState, HasState, CounterState, StateManipulation
 
 log = structlog.get_logger("talemate.game.engine.nodes.agent")
 
@@ -290,3 +292,136 @@ class GetAgent(Node):
         self.set_output_values({
             "agent": agent
         })
+        
+class AgentStateManipulation(StateManipulation):
+    class Fields:
+        agent = PropertyField(
+            name="agent",
+            description="The agent to manipulate the state on",
+            type="str",
+            default=UNRESOLVED,
+            choices=[],
+            generate_choices=lambda: get_agent_types()
+        )
+        scope = PropertyField(
+            name="scope",
+            description="Which scope to manipulate",
+            type="str",
+            default="scene",
+            choices=["scene", "context"]
+        )
+        name = PropertyField(
+            name="name",
+            description="The name of the variable to manipulate",
+            type="str",
+            default=UNRESOLVED
+        )
+        
+    def setup(self):
+        super().setup()
+        self.add_input("agent", socket_type="str,agent")
+        self.set_property("agent", UNRESOLVED)
+    
+    def get_state_container(self, state: GraphState):
+        scope = self.get_property("scope")
+        agent:Agent | str = self.get_input_value("agent")
+        
+        if isinstance(agent, str):
+            agent_name = agent
+            agent:Agent | None = get_agent(agent_name)
+            if not agent:
+                raise InputValueError(self, "agent", f"Could not find agent: {agent_name}")
+        
+        if scope == "scene":
+            try:
+                return agent.scene.agent_state[agent.agent_type]
+            except KeyError:
+                agent.scene.agent_state[agent.agent_type] = {}
+                return agent.scene.agent_state[agent.agent_type]
+        elif scope == "context":
+            return agent.dump_context_state()
+        else:
+            raise InputValueError(self, "scope", f"Unknown scope: {scope}")
+    
+    
+
+@register("agents/SetAgentState")
+class SetAgentState(AgentStateManipulation, SetState):
+    """
+    Set an agent state variable
+    """
+    
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            title_color="#2e4657",
+            icon="F06F4", # download-network
+            auto_title="SET {agent}.{scope}.{name}"
+        )
+
+    def __init__(self, title="Set Agent State", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+@register("agents/GetAgentState")
+class GetAgentState(AgentStateManipulation, GetState):
+    """
+    Get an agent state variable
+    """
+    
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            title_color="#44552f",
+            icon="F06F6", # upload-network
+            auto_title="GET {agent}.{scope}.{name}"
+        )
+    
+    def __init__(self, title="Get Agent State", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+@register("agents/UnsetAgentState")
+class UnsetAgentState(AgentStateManipulation, UnsetState):
+    """
+    Unset an agent state variable
+    """
+    
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            title_color="#7f2e2e",
+            icon="F0AED", # account-remove-outline
+            auto_title="UNSET {agent}.{scope}.{name}"
+        )
+    
+    def __init__(self, title="Unset Agent State", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+@register("agents/HasAgentState")
+class HasAgentState(AgentStateManipulation, HasState):
+    """
+    Check if an agent state variable exists
+    """
+    
+    def __init__(self, title="Has Agent State", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+@register("agents/CounterAgentState")
+class CounterAgentState(AgentStateManipulation, CounterState):
+    """
+    Increment or decrement an agent state variable
+    """
+    
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            title_color="#2e4657",
+            icon="F0199", # counter
+            auto_title="COUNT {agent}.{scope}.{name}"
+        )
+    
+    def __init__(self, title="Counter Agent State", **kwargs):
+        super().__init__(title=title, **kwargs)

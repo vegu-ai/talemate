@@ -19,7 +19,7 @@
                             <v-icon v-bind="props" color="warning" size="14" class="ml-1">mdi-flask-outline</v-icon>
                         </template>
                     </v-tooltip>
-                    <AgentMessages v-if="agentHasMessages[agent.name]" :messages="messages[agent.name] || []" :agent="agent.name" :messageReceiveTime="agentHasMessages[agent.name]" />
+                    <AgentMessages v-if="agentHasMessages[agent.name]" :messages="messages[agent.name] || []" :agent="agent.name" :messageReceiveTime="agentHasMessages[agent.name]" :agentLabel="agent.label" />
 
                 </v-list-item-title>
                 

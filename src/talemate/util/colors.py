@@ -2,74 +2,80 @@ import random
 
 __all__ = [
     "COLORS",
+    "COLOR_NAMES",
+    "COLOR_MAP",
     "random_color",
 ]
 
-COLORS = [
+# Primary mapping of Vue color names to hex codes
+COLOR_MAP = {
     # Base colors
-    "#F44336",  # red
-    "#E91E63",  # pink
-    "#9C27B0",  # purple
-    "#673AB7",  # deep-purple
-    "#3F51B5",  # indigo
-    "#2196F3",  # blue
-    "#03A9F4",  # light-blue
-    "#00BCD4",  # cyan
-    "#009688",  # teal
-    "#4CAF50",  # green
-    "#8BC34A",  # light-green
-    "#CDDC39",  # lime
-    "#FFEB3B",  # yellow
-    "#FFC107",  # amber
-    "#FF9800",  # orange
-    "#FF5722",  # deep-orange
-    "#795548",  # brown
-    "#607D8B",  # blue-grey
-    "#9E9E9E",  # grey
+    "red": "#F44336",
+    "pink": "#E91E63",
+    "purple": "#9C27B0",
+    "deep-purple": "#673AB7",
+    "indigo": "#3F51B5",
+    "blue": "#2196F3",
+    "light-blue": "#03A9F4",
+    "cyan": "#00BCD4",
+    "teal": "#009688",
+    "green": "#4CAF50",
+    "light-green": "#8BC34A",
+    "lime": "#CDDC39",
+    "yellow": "#FFEB3B",
+    "amber": "#FFC107",
+    "orange": "#FF9800",
+    "deep-orange": "#FF5722",
+    "brown": "#795548",
+    "blue-grey": "#607D8B",
+    "grey": "#9E9E9E",
     
     # Lighten-3 colors
-    "#EF9A9A",  # red-lighten-3
-    "#F48FB1",  # pink-lighten-3
-    "#CE93D8",  # purple-lighten-3
-    "#B39DDB",  # deep-purple-lighten-3
-    "#9FA8DA",  # indigo-lighten-3
-    "#90CAF9",  # blue-lighten-3
-    "#81D4FA",  # light-blue-lighten-3
-    "#80DEEA",  # cyan-lighten-3
-    "#80CBC4",  # teal-lighten-3
-    "#A5D6A7",  # green-lighten-3
-    "#C5E1A5",  # light-green-lighten-3
-    "#E6EE9C",  # lime-lighten-3
-    "#FFF59D",  # yellow-lighten-3
-    "#FFE082",  # amber-lighten-3
-    "#FFCC80",  # orange-lighten-3
-    "#FFAB91",  # deep-orange-lighten-3
-    "#BCAAA4",  # brown-lighten-3
-    "#B0BEC5",  # blue-grey-lighten-3
-    "#EEEEEE",  # grey-lighten-3
+    "red-lighten-3": "#EF9A9A",
+    "pink-lighten-3": "#F48FB1",
+    "purple-lighten-3": "#CE93D8",
+    "deep-purple-lighten-3": "#B39DDB",
+    "indigo-lighten-3": "#9FA8DA",
+    "blue-lighten-3": "#90CAF9",
+    "light-blue-lighten-3": "#81D4FA",
+    "cyan-lighten-3": "#80DEEA",
+    "teal-lighten-3": "#80CBC4",
+    "green-lighten-3": "#A5D6A7",
+    "light-green-lighten-3": "#C5E1A5",
+    "lime-lighten-3": "#E6EE9C",
+    "yellow-lighten-3": "#FFF59D",
+    "amber-lighten-3": "#FFE082",
+    "orange-lighten-3": "#FFCC80",
+    "deep-orange-lighten-3": "#FFAB91",
+    "brown-lighten-3": "#BCAAA4",
+    "blue-grey-lighten-3": "#B0BEC5",
+    "grey-lighten-3": "#EEEEEE",
     
     # Darken-3 colors
-    "#C62828",  # red-darken-3
-    "#AD1457",  # pink-darken-3
-    "#6A1B9A",  # purple-darken-3
-    "#4527A0",  # deep-purple-darken-3
-    "#283593",  # indigo-darken-3
-    "#1565C0",  # blue-darken-3
-    "#0277BD",  # light-blue-darken-3
-    "#00838F",  # cyan-darken-3
-    "#00695C",  # teal-darken-3
-    "#2E7D32",  # green-darken-3
-    "#558B2F",  # light-green-darken-3
-    "#9E9D24",  # lime-darken-3
-    "#F9A825",  # yellow-darken-3
-    "#FF8F00",  # amber-darken-3
-    "#EF6C00",  # orange-darken-3
-    "#D84315",  # deep-orange-darken-3
-    "#4E342E",  # brown-darken-3
-    "#37474F",  # blue-grey-darken-3
-    "#424242",  # grey-darken-3
-]
+    "red-darken-3": "#C62828",
+    "pink-darken-3": "#AD1457",
+    "purple-darken-3": "#6A1B9A",
+    "deep-purple-darken-3": "#4527A0",
+    "indigo-darken-3": "#283593",
+    "blue-darken-3": "#1565C0",
+    "light-blue-darken-3": "#0277BD",
+    "cyan-darken-3": "#00838F",
+    "teal-darken-3": "#00695C",
+    "green-darken-3": "#2E7D32",
+    "light-green-darken-3": "#558B2F",
+    "lime-darken-3": "#9E9D24",
+    "yellow-darken-3": "#F9A825",
+    "amber-darken-3": "#FF8F00",
+    "orange-darken-3": "#EF6C00",
+    "deep-orange-darken-3": "#D84315",
+    "brown-darken-3": "#4E342E",
+    "blue-grey-darken-3": "#37474F",
+    "grey-darken-3": "#424242",
+}
 
+# Derive lists from the map
+COLOR_NAMES = sorted(list(COLOR_MAP.keys()))
+COLORS = sorted(list(COLOR_MAP.values()))
 
 def random_color() -> str:
     return random.choice(COLORS)

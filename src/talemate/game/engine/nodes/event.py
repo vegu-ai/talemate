@@ -1,9 +1,13 @@
+import uuid
 import structlog
 import talemate.emit.async_signals as signals
 from .core import Listen, Node, Graph, GraphState, NodeVerbosity, PropertyField
 from .registry import register
+from talemate.agents.registry import get_agent_types
+from talemate.agents.base import Agent
 from talemate.emit import emit, Emission
 from talemate.emit.signals import handlers
+from talemate.util.colors import COLOR_NAMES, COLOR_MAP
 from talemate.context import active_scene
 from talemate.game.engine.api.schema import StatusEnum
 
@@ -180,6 +184,134 @@ class EmitStatus(Node):
             data["as_scene_message"] = True
         
         emit("status", message=message_text, status=status, scene=scene, data=data)
+        
+        self.set_output_values({
+            "emitted": True,
+        })
+        
+@register("event/EmitAgentMessage")
+class EmitAgentMessage(Node):
+    """
+    Emits an agent message
+    
+    EXAMPLE
+            emit("agent_message", 
+                message=message,
+                data={
+                    "uuid": str(uuid.uuid4()),
+                    "agent": "editor",
+                    "header": "Removed repetition",
+                    "color": "highlight4",
+                }, 
+                meta={
+                    "action": "revision_dedupe",
+                    "similarity": dedupe['similarity'],
+                    "threshold": self.revision_repetition_threshold,
+                    "range": self.revision_repetition_range,
+                },
+                websocket_passthrough=True
+            )
+    
+    
+    Inputs:
+    
+    - message: The message text to emit
+    - agent: The agent
+    - header: The header of the message
+    - color: The color of the message
+    - meta: The meta data of the message
+    
+    Outputs:
+    
+    - emitted: Whether the message was emitted (True) or not (False)
+
+    """
+    
+    
+    class Fields:
+        message = PropertyField(
+            name="message",
+            description="The message text to emit",
+            type="str",
+            default="",
+        )
+        
+        agent = PropertyField(
+            name="agent",
+            type="str",
+            default="",
+            description="The name of the agent to get the client for",
+            choices=[],
+            generate_choices=lambda: get_agent_types()
+        )
+        
+        header = PropertyField(
+            name="header",
+            description="The header of the message",
+            type="str",
+            default="",
+        )
+        
+        message_color = PropertyField(
+            name="message_color",
+            description="The color of the message",
+            type="str",
+            default="grey",
+            generate_choices=lambda: COLOR_NAMES,
+        )
+        
+        meta = PropertyField(
+            name="meta",
+            description="The meta data of the message",
+            type="dict",
+            default={},
+        )
+        
+    def __init__(self, title="Emit Agent Message", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("state")
+        
+        self.add_input("message", socket_type="str", optional=True)
+        self.add_input("agent", socket_type="agent,str", optional=True)
+        self.add_input("header", socket_type="str", optional=True)
+        self.add_input("message_color", socket_type="str", optional=True)
+        self.add_input("meta", socket_type="dict", optional=True)
+        
+        self.set_property("message", "")
+        self.set_property("agent", "")
+        self.set_property("header", "")
+        self.set_property("message_color", "grey")
+        self.set_property("meta", {})
+        
+        self.add_output("emitted", socket_type="bool")
+        
+    async def run(self, state: GraphState):
+        message = self.require_input("message")
+        agent = self.require_input("agent")
+        header = self.require_input("header")
+        message_color = self.require_input("message_color")
+        meta = self.require_input("meta")
+        
+        if isinstance(agent, Agent):
+            agent_name = agent.name
+        else:
+            agent_name = agent
+        
+        data = {
+            "uuid": str(uuid.uuid4()),
+            "agent": agent_name,
+            "header": header,
+            "color": message_color,
+        }
+        
+        emit("agent_message", 
+            message=message,
+            data=data,
+            meta=meta,
+            websocket_passthrough=True
+        )
         
         self.set_output_values({
             "emitted": True,

@@ -5,7 +5,8 @@
     <v-dialog v-model="dialog" :max-width="dialogMaxWidth">
         <v-card>
             <v-card-title>
-                {{ agent }} Messages
+                <v-icon size="small">mdi-message-text-outline</v-icon>
+                {{ agentLabel }} Messages
             </v-card-title>
             <v-card-text>
                 <v-list density="compact" slim max-height="600" class="overflow-y-auto">
@@ -37,6 +38,10 @@ export default {
             required: true
         },
         agent: {
+            type: String,
+            required: true
+        },
+        agentLabel: {
             type: String,
             required: true
         },

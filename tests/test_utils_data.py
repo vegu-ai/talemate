@@ -9,7 +9,8 @@ from talemate.util.data import (
     extract_yaml_v2,
     JSONEncoder,
     DataParsingError,
-    fix_yaml_indentation
+    fix_yaml_colon_in_strings,
+    fix_faulty_yaml
 )
 
 # Helper function to get test data paths
@@ -335,3 +336,50 @@ def test_extract_json_v2_multiple_objects():
     assert objects_by_id[3]["name"] == "Third Object"
     assert objects_by_id[3]["active"] is True
     assert objects_by_id[3]["metadata"]["created"] == "2023-05-15"
+
+def test_fix_yaml_colon_in_strings():
+    """Test fix_yaml_colon_in_strings with problematic YAML containing unquoted colons."""
+    # Load test data from file
+    with open(get_test_data_path('yaml_with_colons.txt'), 'r') as f:
+        problematic_yaml = f.read()
+    
+    # Extract YAML from the code block
+    problematic_yaml = problematic_yaml.split("```")[1]
+    if problematic_yaml.startswith("yaml"):
+        problematic_yaml = problematic_yaml[4:].strip()
+    
+    # Fix the YAML
+    fixed_yaml = fix_yaml_colon_in_strings(problematic_yaml)
+    
+    # Parse the fixed YAML to check it works
+    parsed = yaml.safe_load(fixed_yaml)
+    
+    # Check the structure and content is preserved
+    assert parsed["calls"][0]["name"] == "act"
+    assert parsed["calls"][0]["arguments"]["name"] == "Kaira"
+    assert "I can see you're scared, Elmer" in parsed["calls"][0]["arguments"]["instructions"]
+
+def test_fix_faulty_yaml():
+    """Test fix_faulty_yaml with various problematic YAML constructs."""
+    # Load test data from file
+    with open(get_test_data_path('yaml_list_with_colons.txt'), 'r') as f:
+        problematic_yaml = f.read()
+    
+    # Extract YAML from the code block
+    problematic_yaml = problematic_yaml.split("```")[1]
+    if problematic_yaml.startswith("yaml"):
+        problematic_yaml = problematic_yaml[4:].strip()
+    
+    # Fix the YAML
+    fixed_yaml = fix_faulty_yaml(problematic_yaml)
+    
+    # Parse the fixed YAML to check it works
+    parsed = yaml.safe_load(fixed_yaml)
+    
+    # Check the structure and content is preserved
+    assert len(parsed["instructions_list"]) == 2
+    # The content will be the full string with colons in it now
+    assert "Run to the door" in parsed["instructions_list"][0]
+    assert "Wait for me!" in parsed["instructions_list"][0]
+    assert "Look around" in parsed["instructions_list"][1]
+    assert "Is there another way out?" in parsed["instructions_list"][1]

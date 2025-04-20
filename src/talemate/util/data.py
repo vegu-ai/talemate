@@ -13,6 +13,8 @@ __all__ = [
     "extract_yaml_v2",
     'JSONEncoder',
     'DataParsingError',
+    "fix_yaml_colon_in_strings",
+    "fix_faulty_yaml",
 ]
 
 log = structlog.get_logger("talemate.util.dedupe")
@@ -234,36 +236,110 @@ def extract_yaml_v2(text):
         
         # Parse YAML (supporting multiple documents with ---)
         try:
-            # Use safe_load_all to get all YAML documents in the block
+            # First try to parse the YAML as-is
             yaml_docs = list(yaml.safe_load_all(block))
-            
-            # If we only have one document and it's a dict, check if we should split it into multiple documents
-            if len(yaml_docs) == 1 and isinstance(yaml_docs[0], dict) and yaml_docs[0]:
-                # Check if the document has a nested structure where first level keys represent separate documents
-                root_doc = yaml_docs[0]
-                
-                # If the first level keys all have dict values, treat them as separate documents
-                if all(isinstance(root_doc[key], dict) for key in root_doc):
-                    # Replace yaml_docs with separate documents
-                    yaml_docs = [root_doc[key] for key in root_doc]
-            
-            # Process each YAML document
-            for yaml_obj in yaml_docs:
-                # Skip if None (empty YAML)
-                if yaml_obj is None:
-                    continue
-                    
-                # Convert to JSON string for deduplication check
-                json_str = json.dumps(yaml_obj, sort_keys=True, cls=JSONEncoder)
-                
-                # Only add if we haven't seen this object before
-                if json_str not in seen:
-                    seen.add(json_str)
-                    unique_yamls.append(yaml_obj)
         except yaml.YAMLError as e:
-            raise DataParsingError(f"Invalid YAML in code block: {str(e)}", block)
+            # If parsing fails, try to fix the YAML and parse again
+            try:
+                # Apply fixes to YAML before parsing
+                fixed_block = fix_faulty_yaml(block)
+                
+                # Use safe_load_all to get all YAML documents in the block
+                yaml_docs = list(yaml.safe_load_all(fixed_block))
+            except yaml.YAMLError as e2:
+                # If it still fails, raise the original error
+                raise DataParsingError(f"Invalid YAML in code block: {str(e)}", block)
+        
+        # If we only have one document and it's a dict, check if we should split it into multiple documents
+        if len(yaml_docs) == 1 and isinstance(yaml_docs[0], dict) and yaml_docs[0]:
+            # Check if the document has a nested structure where first level keys represent separate documents
+            root_doc = yaml_docs[0]
+            
+            # If the first level keys all have dict values, treat them as separate documents
+            if all(isinstance(root_doc[key], dict) for key in root_doc):
+                # Replace yaml_docs with separate documents
+                yaml_docs = [root_doc[key] for key in root_doc]
+        
+        # Process each YAML document
+        for yaml_obj in yaml_docs:
+            # Skip if None (empty YAML)
+            if yaml_obj is None:
+                continue
+                
+            # Convert to JSON string for deduplication check
+            json_str = json.dumps(yaml_obj, sort_keys=True, cls=JSONEncoder)
+            
+            # Only add if we haven't seen this object before
+            if json_str not in seen:
+                seen.add(json_str)
+                unique_yamls.append(yaml_obj)
             
     return unique_yamls
+
+
+def fix_yaml_colon_in_strings(yaml_text):
+    """
+    Fixes YAML issues with unquoted strings containing colons.
+    
+    Parameters:
+        yaml_text (str): The input YAML text to fix
+        
+    Returns:
+        str: Fixed YAML text
+    """
+    # Split the YAML text into lines
+    lines = yaml_text.split('\n')
+    result_lines = []
+    
+    for line in lines:
+        # Look for lines with key-value pairs where value has a colon
+        if ':' in line and line.count(':') > 1:
+            # Check if this is a list item with a colon
+            list_item_match = re.match(r'^(\s*)-\s+(.+)$', line)
+            if list_item_match:
+                indent, content = list_item_match.groups()
+                if ':' in content and not (content.startswith('"') or content.startswith("'") or 
+                                         content.startswith('>') or content.startswith('|')):
+                    # Convert to block scalar notation for list item
+                    result_lines.append(f"{indent}- |-")
+                    # Add the content indented on the next line
+                    result_lines.append(f"{indent}  {content}")
+                    continue
+            
+            # Check if this looks like a key: value line with an unquoted value containing a colon
+            key_match = re.match(r'^(\s*)([^:]+):\s+(.+)$', line)
+            if key_match:
+                indent, key, value = key_match.groups()
+                # If value has a colon and isn't already properly quoted/formatted
+                if ':' in value and not (value.startswith('"') or value.startswith("'") or 
+                                         value.startswith('>') or value.startswith('|')):
+                    # Convert to block scalar notation
+                    result_lines.append(f"{indent}{key}: |-")
+                    # Add the value indented on the next line
+                    result_lines.append(f"{indent}  {value}")
+                    continue
+        
+        # If no processing needed, keep the original line
+        result_lines.append(line)
+    
+    return '\n'.join(result_lines)
+
+def fix_faulty_yaml(yaml_text):
+    """
+    Fixes common YAML syntax issues by applying a series of fixers.
+    
+    Parameters:
+        yaml_text (str): The input YAML text to fix
+        
+    Returns:
+        str: Fixed YAML text
+    """
+    # Apply specific fixers in sequence
+    fixed_text = fix_yaml_colon_in_strings(yaml_text)
+    
+    # Add more fixers here as needed
+    
+    return fixed_text
 
 def extract_data(text, schema_format: str = "json"):
     """

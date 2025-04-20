@@ -383,3 +383,44 @@ def test_fix_faulty_yaml():
     assert "Wait for me!" in parsed["instructions_list"][0]
     assert "Look around" in parsed["instructions_list"][1]
     assert "Is there another way out?" in parsed["instructions_list"][1]
+
+def test_extract_yaml_v2_with_colons():
+    """Test extract_yaml_v2 correctly processes YAML with problematic colons in strings."""
+    # Load test data containing YAML code blocks with problematic colons
+    with open(get_test_data_path('yaml_block_with_colons.txt'), 'r') as f:
+        text = f.read()
+    
+    # Extract YAML
+    result = extract_yaml_v2(text)
+    
+    # Check if we got the two YAML objects
+    assert len(result) == 2
+    
+    # Find the objects by their structure
+    calls_obj = None
+    instructions_obj = None
+    for obj in result:
+        if 'calls' in obj:
+            calls_obj = obj
+        elif 'instructions_list' in obj:
+            instructions_obj = obj
+    
+    # Verify both objects were found
+    assert calls_obj is not None, "Could not find the 'calls' object"
+    assert instructions_obj is not None, "Could not find the 'instructions_list' object"
+    
+    # Check the structure and content of the first object (calls)
+    assert calls_obj["calls"][0]["name"] == "act"
+    assert calls_obj["calls"][0]["arguments"]["name"] == "Kaira"
+    
+    # Check that the problematic part with the colon is preserved
+    instructions = calls_obj["calls"][0]["arguments"]["instructions"]
+    assert "Speak in a calm, soothing tone and say:" in instructions
+    assert "I can see you're scared, Elmer" in instructions
+    
+    # Check the second object (instructions_list)
+    assert len(instructions_obj["instructions_list"]) == 2
+    assert "Run to the door" in instructions_obj["instructions_list"][0]
+    assert "Wait for me!" in instructions_obj["instructions_list"][0]
+    assert "Look around" in instructions_obj["instructions_list"][1]
+    assert "Is there another way out?" in instructions_obj["instructions_list"][1]

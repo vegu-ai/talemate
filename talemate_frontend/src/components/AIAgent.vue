@@ -19,7 +19,7 @@
                             <v-icon v-bind="props" color="warning" size="14" class="ml-1">mdi-flask-outline</v-icon>
                         </template>
                     </v-tooltip>
-                    <AgentMessages v-if="agentHasMessages[agent.name]" :messages="messages[agent.name] || []" :agent="agent.name" :messageReceiveTime="agentHasMessages[agent.name]" :agentLabel="agent.label" />
+                    <AgentMessages v-if="agentHasMessages[agent.name]" :messages="messages[agent.name] || []" :agent="agent.name" :messageReceiveTime="agentHasMessages[agent.name]" />
 
                 </v-list-item-title>
                 
@@ -51,6 +51,16 @@
                             </template>
                         </v-tooltip>
                     </template>
+
+                    <div v-if="agentStateNotifications[agent.name]">
+                        <v-tooltip v-for="(state, key) in agentStateNotifications[agent.name]" :key="key" :text="state.value" >
+                            <template v-slot:activator="{ props }">
+                                <v-chip v-bind="props" size="x-small" label variant="tonal" :color="state.color || 'highlight5'" prepend-icon="mdi-bell-outline">
+                                    {{ state.key }}
+                                </v-chip>
+                            </template>
+                        </v-tooltip>
+                    </div>
 
                     <!-- Quick toggle action chips with their sub-config chips -->
                     <template v-for="(action, action_name) in agent.actions" :key="action_name">
@@ -122,6 +132,33 @@ export default {
             maxMessagesPerAgent: 25,
             agentHasMessages: {},
             messages: {},
+        }
+    },
+    props: {
+        agentState: {
+            type: Object,
+            default: () => ({})
+        }
+    },
+    computed: {
+        agentStateNotifications() {
+            // if key begins with 'notify__' and value is a string, return the key and value
+            // return the notify__(.+) part as the key, and the value as the value
+            // the key will also be title-ized (title and space instead of underscore)
+
+            // this is done per agent, so we need to iterate over the agents and return a dict
+            // with the agent name as the key and the notifications as the value (a list of dicts)
+            let notifications = {};
+            for(let agent in this.agentState) {
+                notifications[agent] = Object.keys(this.agentState[agent]).filter(key => key.startsWith('notify__') && typeof this.agentState[agent][key] === 'string').map(key => {
+                    return {
+                        key: key.replace('notify__', '').replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase()),
+                        value: this.agentState[agent][key]
+                    }
+                });
+            }
+            console.log("agentStateNotifications", notifications);
+            return notifications;
         }
     },
     inject: [

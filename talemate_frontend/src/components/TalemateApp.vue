@@ -121,7 +121,7 @@
           <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" :immutable-config="appConfig"></AIClient>
           <v-divider></v-divider>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
-          <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents"></AIAgent>
+          <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents" :agentState="agentState"></AIAgent>
           <!-- More sections can be added here -->
         </v-list>
       </v-navigation-drawer>
@@ -389,7 +389,10 @@ export default {
       autocompleteCallback: null,
       autocompleteFocusElement: null,
       worldStateTemplates: {},
+      // busy status of agents
       agentStatus: {},
+      // scene state of agents
+      agentState: {},
       clientStatus: {},
       // timestamps for last agent and client updates
       // received from the backend
@@ -660,6 +663,7 @@ export default {
         // data.data.characters is a list of all active characters in the scene
         // collect character.name into list of active characters
         this.activeCharacters = data.data.characters.map((character) => character.name);
+        this.agentState = data.data.agent_state;
         return;
       }
 

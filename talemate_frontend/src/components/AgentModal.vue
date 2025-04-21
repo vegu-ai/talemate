@@ -60,7 +60,7 @@
                       </div>
 
                       <div v-for="(action_config, config_key) in agent.data.actions[key].config" :key="config_key">
-                        <div v-if="action.enabled || actionAlwaysVisible(key, action)">
+                        <div v-if="(action.enabled || actionAlwaysVisible(key, action)) && testConfigConditional(action_config)">
                           <!-- render config widgets based on action_config.type (int, str, bool, float) -->
                           <v-text-field v-if="action_config.type === 'text' && action_config.choices === null" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" density="compact" @keyup="save(true)"></v-text-field>
 
@@ -222,6 +222,14 @@ export default {
 
       let value = getProperty(this.agent.actions, action.condition.attribute+".value");
       return value == action.condition.value;
+    },
+
+    testConfigConditional(config) {
+      if(config.condition == null)
+        return true;
+
+      let value = getProperty(this.agent.actions, config.condition.attribute+".value");
+      return value == config.condition.value;
     },
 
     close() {

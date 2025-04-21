@@ -38,6 +38,10 @@ __all__ = [
 
 log = structlog.get_logger("talemate.agents.base")
 
+class AgentActionConditional(pydantic.BaseModel):
+    attribute: str
+    value: Union[int, float, str, bool, None] = None
+
 
 class AgentActionConfig(pydantic.BaseModel):
     type: str
@@ -53,14 +57,10 @@ class AgentActionConfig(pydantic.BaseModel):
     note: Union[str, None] = None
     expensive: bool = False
     quick_toggle: bool = False
+    condition: Union[AgentActionConditional, None] = None
 
     class Config:
         arbitrary_types_allowed = True
-
-
-class AgentActionConditional(pydantic.BaseModel):
-    attribute: str
-    value: Union[int, float, str, bool, None] = None
 
 
 class AgentAction(pydantic.BaseModel):

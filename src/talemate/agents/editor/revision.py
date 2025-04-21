@@ -4,7 +4,8 @@ import uuid
 from talemate.agents.base import (
     set_processing,
     AgentAction,
-    AgentActionConfig
+    AgentActionConfig,
+    AgentActionConditional,
 )
 import talemate.emit.async_signals
 from talemate.emit import emit
@@ -17,6 +18,11 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
 
 log = structlog.get_logger()
+
+dedupe_condition = AgentActionConditional(
+    attribute="revision.config.revision_method",
+    value="dedupe",
+)
 
 class RevisionMixin:
     
@@ -41,28 +47,37 @@ class RevisionMixin:
                     description="The method to use to revise the text",
                     value="dedupe",
                     choices=[
-                        {"label": "Dedupe (Fast)", "value": "dedupe"},
-                        {"label": "Rewrite (AI assisted, Slower)", "value": "rewrite"},
+                        {"label": "Dedupe (Fast and dumb)", "value": "dedupe"},
+                        {"label": "Rewrite (AI assisted, slower and less dumb, propbably)", "value": "rewrite"},
                     ]
                 ),
                 "repetition_threshold": AgentActionConfig(
                     type="number",
-                    label="Repetition threshold",
-                    description="The similarity threshold for fixing repetition (%)",
+                    label="Similarity threshold",
+                    description="The similarity threshold for detecting repetition (percentage)",
                     value=0.9,
-                    min=0,
+                    min=0.5,
                     max=1,
-                    step=0.01
+                    step=0.01,
                 ),
                 "repetition_range": AgentActionConfig(
                     type="number",
                     label="Repetition range",
-                    description="The range of text to revise (number of messages to go back)",
+                    description="Number of message in the backlog to check against when analyzing repetition.",
                     value=15,
                     min=1,
                     max=100,
-                    step=1
+                    step=1,
                 ),
+                "repetition_min_length": AgentActionConfig(
+                    type="number",
+                    label="Repetition min length",
+                    description="The minimum length of a sentence to be considered for repetition checking.",
+                    value=20,
+                    min=1,
+                    max=100,
+                    step=1,
+                )
             }
         )
         
@@ -83,6 +98,10 @@ class RevisionMixin:
     @property
     def revision_repetition_range(self):
         return self.actions["revision"].config["repetition_range"].value
+    
+    @property
+    def revision_repetition_min_length(self):
+        return self.actions["revision"].config["repetition_min_length"].value
     
     # signal connect
     
@@ -177,7 +196,13 @@ class RevisionMixin:
             })
         
         for old_text in compare_against:
-            text = dedupe_sentences(text, old_text, self.revision_repetition_threshold * 100, on_dedupe=on_dedupe)
+            text = dedupe_sentences(
+                text, 
+                old_text, 
+                self.revision_repetition_threshold * 100, 
+                on_dedupe=on_dedupe,
+                min_length=self.revision_repetition_min_length
+            )
         
         length_diff_percentage = 0
         
@@ -187,13 +212,31 @@ class RevisionMixin:
         
         if not text:
             log.warning("revision_dedupe: no text after dedupe, reverting to original text", original_text=original_text)
+            emit("agent_message", 
+                message=f"No text remained after dedupe, reverting to original text - similarity threshold is likely too low.",
+                data={
+                    "uuid": str(uuid.uuid4()),
+                    "agent": "editor",
+                    "header": "Aborted dedupe",
+                    "color": "red",
+                }, 
+                meta={
+                    "action": "revision_dedupe",
+                    "threshold": self.revision_repetition_threshold,
+                    "range": self.revision_repetition_range,
+                },
+                websocket_passthrough=True
+            )
             return original_text
         
         if character_name_prefix:
             text = f"{character.name}: {text}"
             
         for dedupe in deduped:
-            message = dedupe['text_a']
+            text_a = dedupe['text_a']
+            text_b = dedupe['text_b']
+            
+            message = f"{text_a} -> {text_b}"
             emit("agent_message", 
                 message=message,
                 data={

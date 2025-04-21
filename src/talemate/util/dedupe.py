@@ -92,7 +92,7 @@ def _extract_special_texts(text: str) -> tuple[str, list, list, list]:
     
     return text_with_placeholders, special_texts, special_delimiters, special_positions
 
-def _is_sentence_similar(sentence_a: str, candidates: list[str], similarity_threshold: int, on_dedupe: Callable | None = None) -> bool:
+def _is_sentence_similar(sentence_a: str, candidates: list[str], similarity_threshold: int, on_dedupe: Callable | None = None, min_length: int | None = None) -> bool:
     """
     Check if a sentence is similar to any sentence in the candidates list.
     
@@ -100,18 +100,22 @@ def _is_sentence_similar(sentence_a: str, candidates: list[str], similarity_thre
         sentence_a (str): The sentence to check.
         candidates (list[str]): List of sentences to compare against.
         similarity_threshold (int): The similarity threshold to use.
-        
+        min_length (int): The minimum length of a sentence to be considered for deduplication. Shorter sentences are skipped. If None, all sentences are considered.
     Returns:
         bool: True if a similar sentence was found, False otherwise.
     """
     core_a = _get_core_sentence(sentence_a)
     
     for candidate in candidates:
+        
+        if min_length and len(candidate) < min_length:
+            continue
+        
         core_b = _get_core_sentence(candidate)
         similarity = fuzz.ratio(core_a, core_b)
         if similarity >= similarity_threshold:
             if on_dedupe:
-                on_dedupe(sentence_a, candidate, similarity)
+                on_dedupe(core_a, core_b, similarity)
             return True
     
     return False
@@ -123,6 +127,7 @@ def dedupe_sentences(
     debug: bool = False,
     split_on_comma: bool = True,
     on_dedupe: Callable | None = None,
+    min_length: int | None = None
 ) -> str:
     """
     Will split both texts into sentences and then compare each sentence in text_a
@@ -137,7 +142,7 @@ def dedupe_sentences(
         similarity_threshold (int): The similarity threshold to use when comparing sentences.
         debug (bool): Whether to log debug messages.
         split_on_comma (bool): Whether to split text_b sentences on commas as well.
-
+        min_length (int): The minimum length of a sentence to be considered for deduplication. Shorter sentences are skipped. If None, all sentences are considered.
     Returns:
         str: the cleaned text_a.
     """
@@ -164,13 +169,17 @@ def dedupe_sentences(
     # Filter out sentences from text_a that are similar to any in text_b
     kept_sentences = []
     for sentence in text_a_sentences:
+        
+        if min_length and len(sentence) < min_length:
+            continue
+        
         # Keep placeholder sentences for later processing
         if "__SPECIAL_TEXT_" in sentence:
             kept_sentences.append(sentence)
             continue
             
         # Check for similarity with text_b sentences
-        if not _is_sentence_similar(sentence, text_b_sentences, similarity_threshold, on_dedupe=on_dedupe):
+        if not _is_sentence_similar(sentence, text_b_sentences, similarity_threshold, on_dedupe=on_dedupe, min_length=min_length):
             kept_sentences.append(sentence)
         else:
             if debug:
@@ -195,7 +204,8 @@ def dedupe_sentences(
                 similarity_threshold=similarity_threshold,
                 debug=debug,
                 split_on_comma=split_on_comma,
-                on_dedupe=on_dedupe
+                on_dedupe=on_dedupe,
+                min_length=min_length
             )
             
             # Replace placeholder with properly enclosed deduped text

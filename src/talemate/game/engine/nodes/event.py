@@ -188,7 +188,36 @@ class EmitStatus(Node):
         self.set_output_values({
             "emitted": True,
         })
+
+@register("event/EmitSceneStatus")
+class EmitSceneStatus(Node):
+    """
+    Emits the scene status object to the UX
+    
+    Inputs:
+    
+    - state: The graph state
+    
+    Outputs:
+    
+    - state: The scene status object
+    """
+    
+    def __init__(self, title="Emit Scene Status", **kwargs):
+        super().__init__(title=title, **kwargs)
         
+    def setup(self):
+        self.add_input("state")
+        self.add_output("state")
+    
+    async def run(self, state: GraphState):
+        _state = self.get_input_value("state")
+        scene = active_scene.get()
+        scene.emit_status()
+        self.set_output_values({
+            "state": _state,
+        })
+ 
 @register("event/EmitAgentMessage")
 class EmitAgentMessage(Node):
     """

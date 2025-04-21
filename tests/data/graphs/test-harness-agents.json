@@ -11,14 +11,14 @@
   "registry": "test-harness/testHarnessAgents",
   "nodes": {
     "806275bb-4b39-4aa4-9ea0-a80a4944c551": {
-      "title": "SET shared.test_001_001",
+      "title": "SET local.test_001_001",
       "id": "806275bb-4b39-4aa4-9ea0-a80a4944c551",
       "properties": {
         "name": "test_001_001",
-        "scope": "shared"
+        "scope": "local"
       },
-      "x": 618,
-      "y": 88,
+      "x": 617,
+      "y": 80,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -32,8 +32,8 @@
       "properties": {
         "stage": 0
       },
-      "x": 898,
-      "y": 108,
+      "x": 897,
+      "y": 100,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -49,8 +49,8 @@
         "scope": "scene",
         "agent": "world_state"
       },
-      "x": 148,
-      "y": 88,
+      "x": 147,
+      "y": 80,
       "width": 269,
       "height": 146,
       "collapsed": false,
@@ -66,8 +66,8 @@
         "scope": "scene",
         "agent": "world_state"
       },
-      "x": 222,
-      "y": 359,
+      "x": 221,
+      "y": 351,
       "width": 269,
       "height": 146,
       "collapsed": false,
@@ -81,8 +81,8 @@
       "properties": {
         "value": "test"
       },
-      "x": 32,
-      "y": 411,
+      "x": 31,
+      "y": 403,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -98,8 +98,8 @@
         "scope": "scene",
         "agent": "world_state"
       },
-      "x": 552,
-      "y": 359,
+      "x": 551,
+      "y": 351,
       "width": 269,
       "height": 146,
       "collapsed": false,
@@ -108,14 +108,14 @@
       "base_type": "core/Node"
     },
     "3e327bd3-304c-4db5-bc73-1b1bdaefb614": {
-      "title": "SET shared.test_001_002",
+      "title": "SET local.test_001_002",
       "id": "3e327bd3-304c-4db5-bc73-1b1bdaefb614",
       "properties": {
         "name": "test_001_002",
-        "scope": "shared"
+        "scope": "local"
       },
-      "x": 872,
-      "y": 371,
+      "x": 871,
+      "y": 363,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -129,8 +129,8 @@
       "properties": {
         "stage": 1
       },
-      "x": 1132,
-      "y": 371,
+      "x": 1131,
+      "y": 363,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -144,8 +144,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 472,
-      "y": 141,
+      "x": 471,
+      "y": 133,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -154,14 +154,14 @@
       "base_type": "core/Node"
     },
     "bd3493aa-6029-49b8-a403-4f7c43fc7c7a": {
-      "title": "SET shared.test_001_003",
+      "title": "SET local.test_001_003",
       "id": "bd3493aa-6029-49b8-a403-4f7c43fc7c7a",
       "properties": {
         "name": "test_001_003",
-        "scope": "shared"
+        "scope": "local"
       },
-      "x": 593,
-      "y": 722,
+      "x": 592,
+      "y": 714,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -177,8 +177,8 @@
         "scope": "scene",
         "agent": "world_state"
       },
-      "x": 23,
-      "y": 592,
+      "x": 22,
+      "y": 584,
       "width": 269,
       "height": 146,
       "collapsed": false,
@@ -190,8 +190,8 @@
       "title": "RSwitch",
       "id": "44dad1ee-0667-4d41-ae55-dc276124d820",
       "properties": {},
-      "x": 893,
-      "y": 662,
+      "x": 892,
+      "y": 654,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -205,8 +205,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 363,
-      "y": 732,
+      "x": 362,
+      "y": 724,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -222,8 +222,8 @@
         "scope": "scene",
         "agent": "world_state"
       },
-      "x": 1113,
-      "y": 662,
+      "x": 1112,
+      "y": 654,
       "width": 210,
       "height": 146,
       "collapsed": false,
@@ -239,8 +239,8 @@
         "scope": "scene",
         "agent": "world_state"
       },
-      "x": 1373,
-      "y": 662,
+      "x": 1372,
+      "y": 654,
       "width": 269,
       "height": 146,
       "collapsed": false,
@@ -254,8 +254,8 @@
       "properties": {
         "stage": 2
       },
-      "x": 2213,
-      "y": 672,
+      "x": 2212,
+      "y": 664,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -264,14 +264,14 @@
       "base_type": "core/Node"
     },
     "f8a5e0eb-d673-4505-867e-d424efe7d9be": {
-      "title": "SET shared.test_001_004",
+      "title": "SET local.test_001_004",
       "id": "f8a5e0eb-d673-4505-867e-d424efe7d9be",
       "properties": {
         "name": "test_001_004",
-        "scope": "shared"
+        "scope": "local"
       },
-      "x": 1943,
-      "y": 682,
+      "x": 1942,
+      "y": 674,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -285,13 +285,43 @@
       "properties": {
         "pass_through": false
       },
-      "x": 1733,
-      "y": 702,
+      "x": 1732,
+      "y": 694,
       "width": 210,
       "height": 78,
       "collapsed": true,
       "inherited": false,
       "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "cc594a6e-423f-45fc-8cdd-48b9774f32ba": {
+      "title": "true",
+      "id": "cc594a6e-423f-45fc-8cdd-48b9774f32ba",
+      "properties": {
+        "value": true
+      },
+      "x": 59,
+      "y": 342,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "7351a3f3-ca8a-4a78-a142-72996ad1b890": {
+      "title": "true",
+      "id": "7351a3f3-ca8a-4a78-a142-72996ad1b890",
+      "properties": {
+        "value": true
+      },
+      "x": 938,
+      "y": 599,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
       "base_type": "core/Node"
     }
   },
@@ -343,13 +373,19 @@
     ],
     "d4a2871c-5d61-43ae-bd79-1ee5f9ea7532.no": [
       "f8a5e0eb-d673-4505-867e-d424efe7d9be.value"
+    ],
+    "cc594a6e-423f-45fc-8cdd-48b9774f32ba.value": [
+      "2a2c4dcc-6f4d-4c2d-96d0-f87041314542.state"
+    ],
+    "7351a3f3-ca8a-4a78-a142-72996ad1b890.value": [
+      "911b7c27-ed23-49e4-8561-39034db676a0.state"
     ]
   },
   "groups": [
     {
       "title": "Group",
-      "x": -2,
-      "y": 8,
+      "x": -3,
+      "y": 0,
       "width": 2450,
       "height": 861,
       "color": "#3f789e",

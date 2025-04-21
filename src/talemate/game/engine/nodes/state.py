@@ -351,3 +351,70 @@ class CounterState(StateManipulation):
             "name": name,
             "scope": scope
         })
+        
+        
+@register("state/ConditionalSetState")
+class ConditionalSetState(SetState):
+    """
+    Set a variable in the graph state
+    
+    Provides a required `state` input causing the node to only run when a state is provided
+    """
+    
+    def __init__(self, title="Set State (Conditional)", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("state")
+        self.add_output("state")
+        super().setup()
+        
+    async def run(self, state: GraphState):
+        await super().run(state)
+        self.set_output_values({
+            "state": self.get_input_value("state")
+        })
+        
+@register("state/ConditionalUnsetState")
+class ConditionalUnsetState(UnsetState):
+    """
+    Unset a variable in the graph state
+    
+    Provides a required `state` input causing the node to only run when a state is provided
+    """
+    
+    def __init__(self, title="Unset State (Conditional)", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("state")
+        self.add_output("state")
+        super().setup()
+        
+    async def run(self, state: GraphState):
+        await super().run(state)
+        self.set_output_values({
+            "state": self.get_input_value("state")
+        })
+        
+@register("state/ConditionalCounterState")
+class ConditionalCounterState(CounterState):
+    """
+    Counter node that increments a numeric value in the state and returns the new value.
+    
+    Provides a required `state` input causing the node to only run when a state is provided
+    """
+    
+    def __init__(self, title="Counter State (Conditional)", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("state")
+        self.add_output("state")
+        super().setup()
+        
+    async def run(self, state: GraphState):
+        await super().run(state)
+        self.set_output_values({
+            "state": self.get_input_value("state")
+        })

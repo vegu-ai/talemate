@@ -16,7 +16,7 @@ from talemate.agents.registry import get_agent_types
 from talemate.agents.base import Agent
 from talemate.instance import get_agent
 
-from .state import SetState, GetState, UnsetState, HasState, CounterState, StateManipulation
+from .state import ConditionalSetState, ConditionalUnsetState, ConditionalCounterState, StateManipulation, HasState, GetState
 
 log = structlog.get_logger("talemate.game.engine.nodes.agent")
 
@@ -346,9 +346,11 @@ class AgentStateManipulation(StateManipulation):
     
 
 @register("agents/SetAgentState")
-class SetAgentState(AgentStateManipulation, SetState):
+class SetAgentState(AgentStateManipulation, ConditionalSetState):
     """
     Set an agent state variable
+    
+    Provides a required `state` input causing the node to only run when a state is provided
     """
     
     @pydantic.computed_field(description="Node style")
@@ -362,7 +364,7 @@ class SetAgentState(AgentStateManipulation, SetState):
 
     def __init__(self, title="Set Agent State", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+    
 @register("agents/GetAgentState")
 class GetAgentState(AgentStateManipulation, GetState):
     """
@@ -382,9 +384,11 @@ class GetAgentState(AgentStateManipulation, GetState):
         super().__init__(title=title, **kwargs)
         
 @register("agents/UnsetAgentState")
-class UnsetAgentState(AgentStateManipulation, UnsetState):
+class UnsetAgentState(AgentStateManipulation, ConditionalUnsetState):
     """
     Unset an agent state variable
+    
+    Provides a required `state` input causing the node to only run when a state is provided
     """
     
     @pydantic.computed_field(description="Node style")
@@ -399,17 +403,18 @@ class UnsetAgentState(AgentStateManipulation, UnsetState):
     def __init__(self, title="Unset Agent State", **kwargs):
         super().__init__(title=title, **kwargs)
         
-@register("agents/HasAgentState")
 class HasAgentState(AgentStateManipulation, HasState):
     """
     Check if an agent state variable exists
+    
+    Provides a required `state` input causing the node to only run when a state is provided
     """
     
     def __init__(self, title="Has Agent State", **kwargs):
         super().__init__(title=title, **kwargs)
         
 @register("agents/CounterAgentState")
-class CounterAgentState(AgentStateManipulation, CounterState):
+class CounterAgentState(AgentStateManipulation, ConditionalCounterState):
     """
     Increment or decrement an agent state variable
     """

@@ -14,8 +14,8 @@
       "title": "Get Scene State",
       "id": "85b6b7a1-cb66-49e9-ad8b-ffa65d5ecedc",
       "properties": {},
-      "x": 206,
-      "y": 663,
+      "x": 203,
+      "y": 730,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -43,28 +43,13 @@
       "title": "Enabled",
       "id": "0a5ef948-6d5e-4261-a23f-5cd4b5239f6c",
       "properties": {},
-      "x": 438,
-      "y": 360,
+      "x": 898,
+      "y": 535,
       "width": 140,
       "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "core/ANDRouter",
-      "base_type": "core/Node"
-    },
-    "f17a78ce-51c1-40cd-a7d6-9d552885bf7b": {
-      "title": "Stage 0",
-      "id": "f17a78ce-51c1-40cd-a7d6-9d552885bf7b",
-      "properties": {
-        "stage": 0
-      },
-      "x": 1808,
-      "y": 312,
-      "width": 210,
-      "height": 118,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "e14191c6-c07c-4108-8187-4ab806ebfd86": {
@@ -139,30 +124,14 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "c532c69d-b87b-488c-a90f-268e2393209f": {
-      "title": "SET local.enabled",
-      "id": "c532c69d-b87b-488c-a90f-268e2393209f",
-      "properties": {
-        "name": "enabled",
-        "scope": "local"
-      },
-      "x": 613,
-      "y": 251,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
     "390d2249-7620-49a9-835e-e7df31ead81b": {
       "title": "Stop",
       "id": "390d2249-7620-49a9-835e-e7df31ead81b",
       "properties": {
         "exception": "StopGraphExecution"
       },
-      "x": 613,
-      "y": 461,
+      "x": 1073,
+      "y": 636,
       "width": 287,
       "height": 78,
       "collapsed": false,
@@ -628,8 +597,8 @@
       "properties": {
         "value": false
       },
-      "x": 80,
-      "y": 933,
+      "x": 77,
+      "y": 1000,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -644,8 +613,8 @@
         "name": "skip_to_player",
         "scope": "shared"
       },
-      "x": 230,
-      "y": 883,
+      "x": 227,
+      "y": 950,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -659,8 +628,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 470,
-      "y": 933,
+      "x": 467,
+      "y": 1000,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -672,8 +641,8 @@
       "title": "Auto Direct Candidates",
       "id": "ec245f73-157f-45c0-9758-7bf61ec3f20c",
       "properties": {},
-      "x": 853,
-      "y": 281,
+      "x": 1313,
+      "y": 456,
       "width": 185,
       "height": 31,
       "collapsed": false,
@@ -913,22 +882,6 @@
       "registry": "data/Get",
       "base_type": "core/Node"
     },
-    "ea884a4a-e0ef-41a2-8ffe-65348bc07218": {
-      "title": "SET local.character_direction",
-      "id": "ea884a4a-e0ef-41a2-8ffe-65348bc07218",
-      "properties": {
-        "name": "character_direction",
-        "scope": "local"
-      },
-      "x": 1480,
-      "y": 203,
-      "width": 255,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
     "cce09d34-14be-4ebb-99da-d9148c59eced": {
       "title": "SET local.character_direction",
       "id": "cce09d34-14be-4ebb-99da-d9148c59eced",
@@ -936,8 +889,8 @@
         "name": "narrator_direction",
         "scope": "local"
       },
-      "x": 1480,
-      "y": 393,
+      "x": 1940,
+      "y": 568,
       "width": 255,
       "height": 122,
       "collapsed": false,
@@ -945,49 +898,18 @@
       "registry": "state/SetState",
       "base_type": "core/Node"
     },
-    "cf4808e3-a63f-493f-9f25-7d7fc1f55e03": {
-      "title": "Module Style",
-      "id": "cf4808e3-a63f-493f-9f25-7d7fc1f55e03",
-      "properties": {
-        "node_color": "#392c34",
-        "title_color": "#572e44",
-        "auto_title": null,
-        "icon": "F00E6"
-      },
-      "x": 1000,
-      "y": 703,
-      "width": 210,
-      "height": 130,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "util/ModuleStyle",
-      "base_type": "core/Node"
-    },
     "e182fcb5-53cc-48a6-b869-9fda9a0e6bc1": {
       "title": "Generate Auto Direction",
       "id": "e182fcb5-53cc-48a6-b869-9fda9a0e6bc1",
       "properties": {},
-      "x": 1080,
-      "y": 283,
+      "x": 1540,
+      "y": 458,
       "width": 245,
       "height": 86,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/auto-direct/generateAutoDirection",
       "base_type": "core/Graph"
-    },
-    "08d4cee4-a663-4c6e-b071-edec0c5a820a": {
-      "title": "Director Settings",
-      "id": "08d4cee4-a663-4c6e-b071-edec0c5a820a",
-      "properties": {},
-      "x": 26,
-      "y": 98,
-      "width": 329,
-      "height": 510,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/Settings",
-      "base_type": "core/Node"
     },
     "01331d11-4b3a-4b6d-a043-fb84ae5d4b1b": {
       "title": "AND Router",
@@ -1319,6 +1241,344 @@
       "inherited": false,
       "registry": "core/AsBool",
       "base_type": "core/Node"
+    },
+    "c532c69d-b87b-488c-a90f-268e2393209f": {
+      "title": "SET local.enabled",
+      "id": "c532c69d-b87b-488c-a90f-268e2393209f",
+      "properties": {
+        "name": "enabled",
+        "scope": "local"
+      },
+      "x": 1068,
+      "y": 424,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "ea884a4a-e0ef-41a2-8ffe-65348bc07218": {
+      "title": "SET local.character_direction",
+      "id": "ea884a4a-e0ef-41a2-8ffe-65348bc07218",
+      "properties": {
+        "name": "character_direction",
+        "scope": "local"
+      },
+      "x": 1937,
+      "y": 379,
+      "width": 255,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "08d4cee4-a663-4c6e-b071-edec0c5a820a": {
+      "title": "Director Settings",
+      "id": "08d4cee4-a663-4c6e-b071-edec0c5a820a",
+      "properties": {},
+      "x": 23,
+      "y": 165,
+      "width": 329,
+      "height": 510,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/Settings",
+      "base_type": "core/Node"
+    },
+    "86100532-5155-4650-8fcc-daa1eb81be75": {
+      "title": "AND Router",
+      "id": "86100532-5155-4650-8fcc-daa1eb81be75",
+      "properties": {},
+      "x": 691,
+      "y": 336,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
+    },
+    "6e2d0eaa-de5a-4b73-8d8e-80d9531954c4": {
+      "title": "As Bool",
+      "id": "6e2d0eaa-de5a-4b73-8d8e-80d9531954c4",
+      "properties": {
+        "default": false
+      },
+      "x": 294,
+      "y": -366,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "fe697c0d-9c7d-4e8c-99d2-90bdf1eb954b": {
+      "title": "Unpack Scene Phase",
+      "id": "fe697c0d-9c7d-4e8c-99d2-90bdf1eb954b",
+      "properties": {},
+      "x": 264,
+      "y": -296,
+      "width": 245,
+      "height": 126,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "scene/intention/UnpackScenePhase",
+      "base_type": "core/Node"
+    },
+    "984022e2-b77e-4749-a400-a928254af9a6": {
+      "title": "Get Scene Intent",
+      "id": "984022e2-b77e-4749-a400-a928254af9a6",
+      "properties": {},
+      "x": 24,
+      "y": -376,
+      "width": 177,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/intention/GetSceneIntent",
+      "base_type": "core/Node"
+    },
+    "763ac97b-6902-4e0e-8807-0c8e8d59d9c6": {
+      "title": "As Bool",
+      "id": "763ac97b-6902-4e0e-8807-0c8e8d59d9c6",
+      "properties": {
+        "default": false
+      },
+      "x": 484,
+      "y": -296,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "2944e5dd-dd1a-451f-afde-086452c7dc99": {
+      "title": "SET local.available",
+      "id": "2944e5dd-dd1a-451f-afde-086452c7dc99",
+      "properties": {
+        "name": "available",
+        "scope": "local"
+      },
+      "x": 1612,
+      "y": -132,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/ConditionalSetState",
+      "base_type": "core/Node"
+    },
+    "3d9062a3-dce7-45c4-adfc-56c5fe0f03a1": {
+      "title": "true",
+      "id": "3d9062a3-dce7-45c4-adfc-56c5fe0f03a1",
+      "properties": {
+        "value": true
+      },
+      "x": 1512,
+      "y": -52,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "c8a599ab-2720-4ff6-a309-f60e9b7d2198": {
+      "title": "Stage -1",
+      "id": "c8a599ab-2720-4ff6-a309-f60e9b7d2198",
+      "properties": {
+        "stage": -1
+      },
+      "x": 1872,
+      "y": -122,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "f11919a6-7fcd-4c3d-98cf-05d738ecc701": {
+      "title": "AND Router",
+      "id": "f11919a6-7fcd-4c3d-98cf-05d738ecc701",
+      "properties": {},
+      "x": 852,
+      "y": -391,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
+    },
+    "9b712840-1b0d-4cc2-b6ec-f49ec8e4feb6": {
+      "title": "AND Router",
+      "id": "9b712840-1b0d-4cc2-b6ec-f49ec8e4feb6",
+      "properties": {},
+      "x": 622,
+      "y": -402,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
+    },
+    "ba24a59a-380f-41e7-93cd-ed801340087b": {
+      "title": "Auto Direct Enabled",
+      "id": "ba24a59a-380f-41e7-93cd-ed801340087b",
+      "properties": {},
+      "x": 632,
+      "y": -221,
+      "width": 329,
+      "height": 510,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/director/Settings",
+      "base_type": "core/Node"
+    },
+    "f17a78ce-51c1-40cd-a7d6-9d552885bf7b": {
+      "title": "Stage 0",
+      "id": "f17a78ce-51c1-40cd-a7d6-9d552885bf7b",
+      "properties": {
+        "stage": 0
+      },
+      "x": 2270,
+      "y": 490,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "cf4808e3-a63f-493f-9f25-7d7fc1f55e03": {
+      "title": "Module Style",
+      "id": "cf4808e3-a63f-493f-9f25-7d7fc1f55e03",
+      "properties": {
+        "node_color": "#392c34",
+        "title_color": "#572e44",
+        "auto_title": null,
+        "icon": "F00E6"
+      },
+      "x": 2260,
+      "y": 190,
+      "width": 210,
+      "height": 130,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "0ea5c0b0-6e60-49ce-8fa0-550b33338384": {
+      "title": "GET local.available",
+      "id": "0ea5c0b0-6e60-49ce-8fa0-550b33338384",
+      "properties": {
+        "name": "available",
+        "scope": "local"
+      },
+      "x": 460,
+      "y": 200,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "a799e5be-ed31-4c6a-8557-b3cf6474c41a": {
+      "title": "Emit Scene Status",
+      "id": "a799e5be-ed31-4c6a-8557-b3cf6474c41a",
+      "properties": {},
+      "x": 1620,
+      "y": -230,
+      "width": 193,
+      "height": 27,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitSceneStatus",
+      "base_type": "core/Node"
+    },
+    "c5cd9948-28ea-4398-b910-c44205939d47": {
+      "title": "SET notify__auto_direct_unavailable",
+      "id": "c5cd9948-28ea-4398-b910-c44205939d47",
+      "properties": {
+        "name": null,
+        "scope": "scene",
+        "agent": "director"
+      },
+      "x": 1192,
+      "y": -442,
+      "width": 317,
+      "height": 166,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/SetAgentState",
+      "base_type": "core/Node"
+    },
+    "3e5b78c0-8483-4bb5-bd59-0792037f3d0d": {
+      "title": "Make String",
+      "id": "3e5b78c0-8483-4bb5-bd59-0792037f3d0d",
+      "properties": {
+        "value": "notify__auto_direct_unavailable"
+      },
+      "x": 690,
+      "y": -30,
+      "width": 259,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "f8df23d2-3560-4e50-a3aa-9e2ba03635c0": {
+      "title": "Make String",
+      "id": "f8df23d2-3560-4e50-a3aa-9e2ba03635c0",
+      "properties": {
+        "value": "Auto direction is currently unavailable because this scene's intention is incomplete."
+      },
+      "x": 690,
+      "y": -150,
+      "width": 259,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "76160ad7-baf0-4072-ba5d-4640843ab586": {
+      "title": "Emit Scene Status",
+      "id": "76160ad7-baf0-4072-ba5d-4640843ab586",
+      "properties": {},
+      "x": 1620,
+      "y": -320,
+      "width": 193,
+      "height": 27,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitSceneStatus",
+      "base_type": "core/Node"
+    },
+    "f128f894-c111-4d17-9ab3-ad490ef7f731": {
+      "title": "UNSET  notify__auto_direct_unavailable",
+      "id": "f128f894-c111-4d17-9ab3-ad490ef7f731",
+      "properties": {
+        "name": null,
+        "scope": "scene",
+        "agent": "director"
+      },
+      "x": 1200,
+      "y": -170,
+      "width": 294,
+      "height": 166,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/UnsetAgentState",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1345,9 +1605,6 @@
     ],
     "2ee3e9a8-3d0a-458d-9a37-e9397541e77b.yes": [
       "4482dd3f-8c17-41dc-9f8c-29989d0ca103.b"
-    ],
-    "c532c69d-b87b-488c-a90f-268e2393209f.value": [
-      "ec245f73-157f-45c0-9758-7bf61ec3f20c.state"
     ],
     "8aa53024-3a1c-4a39-ad00-f687a6cb8c34.value": [
       "342adc28-189d-4e35-818f-9a18a93a4473.value"
@@ -1498,9 +1755,6 @@
     "4834fc01-efaa-4e3b-8030-a18fb85dc019.value": [
       "966e75b2-3546-4e20-b1de-c158d75a0cbb.character_name"
     ],
-    "ea884a4a-e0ef-41a2-8ffe-65348bc07218.value": [
-      "f17a78ce-51c1-40cd-a7d6-9d552885bf7b.state"
-    ],
     "cce09d34-14be-4ebb-99da-d9148c59eced.value": [
       "f17a78ce-51c1-40cd-a7d6-9d552885bf7b.state_b"
     ],
@@ -1509,12 +1763,6 @@
     ],
     "e182fcb5-53cc-48a6-b869-9fda9a0e6bc1.narrator_direction": [
       "cce09d34-14be-4ebb-99da-d9148c59eced.value"
-    ],
-    "08d4cee4-a663-4c6e-b071-edec0c5a820a.agent_enabled": [
-      "0a5ef948-6d5e-4261-a23f-5cd4b5239f6c.a"
-    ],
-    "08d4cee4-a663-4c6e-b071-edec0c5a820a.auto_direct_enabled": [
-      "0a5ef948-6d5e-4261-a23f-5cd4b5239f6c.b"
     ],
     "01331d11-4b3a-4b6d-a043-fb84ae5d4b1b.yes": [
       "15c7166b-4e1b-44f7-ac90-d9ed6c080965.a"
@@ -1526,8 +1774,8 @@
       "9d2a0bde-d5d9-4abe-b1ff-eb70f41fa0d9.value"
     ],
     "fc967fd1-f7b3-4056-8eee-dfe9db76b183.value": [
-      "909d9485-a030-4a6d-8bc6-8beef6e09ba1.a",
-      "01331d11-4b3a-4b6d-a043-fb84ae5d4b1b.b"
+      "01331d11-4b3a-4b6d-a043-fb84ae5d4b1b.b",
+      "909d9485-a030-4a6d-8bc6-8beef6e09ba1.a"
     ],
     "dd558765-1ed2-4448-83cb-4fe7ebb725bd.value": [
       "01331d11-4b3a-4b6d-a043-fb84ae5d4b1b.a",
@@ -1558,8 +1806,73 @@
       "fd4cde1a-3724-4ca5-861b-0fe16dceb995.value"
     ],
     "305c12cf-fa8d-403e-b3ce-d694cbde4125.value": [
-      "57b18913-7429-4e23-8c41-ec026479f252.value",
-      "ce48eb83-8228-4d5c-876f-779e69a60b08.value"
+      "ce48eb83-8228-4d5c-876f-779e69a60b08.value",
+      "57b18913-7429-4e23-8c41-ec026479f252.value"
+    ],
+    "c532c69d-b87b-488c-a90f-268e2393209f.value": [
+      "ec245f73-157f-45c0-9758-7bf61ec3f20c.state"
+    ],
+    "ea884a4a-e0ef-41a2-8ffe-65348bc07218.value": [
+      "f17a78ce-51c1-40cd-a7d6-9d552885bf7b.state"
+    ],
+    "08d4cee4-a663-4c6e-b071-edec0c5a820a.agent_enabled": [
+      "86100532-5155-4650-8fcc-daa1eb81be75.b"
+    ],
+    "08d4cee4-a663-4c6e-b071-edec0c5a820a.auto_direct_enabled": [
+      "0a5ef948-6d5e-4261-a23f-5cd4b5239f6c.b"
+    ],
+    "86100532-5155-4650-8fcc-daa1eb81be75.yes": [
+      "0a5ef948-6d5e-4261-a23f-5cd4b5239f6c.a"
+    ],
+    "6e2d0eaa-de5a-4b73-8d8e-80d9531954c4.value": [
+      "9b712840-1b0d-4cc2-b6ec-f49ec8e4feb6.a"
+    ],
+    "fe697c0d-9c7d-4e8c-99d2-90bdf1eb954b.intent": [
+      "763ac97b-6902-4e0e-8807-0c8e8d59d9c6.value"
+    ],
+    "984022e2-b77e-4749-a400-a928254af9a6.intent": [
+      "6e2d0eaa-de5a-4b73-8d8e-80d9531954c4.value"
+    ],
+    "984022e2-b77e-4749-a400-a928254af9a6.phase": [
+      "fe697c0d-9c7d-4e8c-99d2-90bdf1eb954b.phase"
+    ],
+    "763ac97b-6902-4e0e-8807-0c8e8d59d9c6.value": [
+      "9b712840-1b0d-4cc2-b6ec-f49ec8e4feb6.b"
+    ],
+    "2944e5dd-dd1a-451f-afde-086452c7dc99.value": [
+      "c8a599ab-2720-4ff6-a309-f60e9b7d2198.state"
+    ],
+    "3d9062a3-dce7-45c4-adfc-56c5fe0f03a1.value": [
+      "2944e5dd-dd1a-451f-afde-086452c7dc99.value"
+    ],
+    "f11919a6-7fcd-4c3d-98cf-05d738ecc701.yes": [
+      "c5cd9948-28ea-4398-b910-c44205939d47.state"
+    ],
+    "f11919a6-7fcd-4c3d-98cf-05d738ecc701.no": [
+      "f128f894-c111-4d17-9ab3-ad490ef7f731.state"
+    ],
+    "9b712840-1b0d-4cc2-b6ec-f49ec8e4feb6.no": [
+      "f11919a6-7fcd-4c3d-98cf-05d738ecc701.a"
+    ],
+    "ba24a59a-380f-41e7-93cd-ed801340087b.auto_direct_enabled": [
+      "f11919a6-7fcd-4c3d-98cf-05d738ecc701.b"
+    ],
+    "0ea5c0b0-6e60-49ce-8fa0-550b33338384.value": [
+      "86100532-5155-4650-8fcc-daa1eb81be75.a"
+    ],
+    "c5cd9948-28ea-4398-b910-c44205939d47.state": [
+      "76160ad7-baf0-4072-ba5d-4640843ab586.state"
+    ],
+    "3e5b78c0-8483-4bb5-bd59-0792037f3d0d.value": [
+      "c5cd9948-28ea-4398-b910-c44205939d47.name",
+      "f128f894-c111-4d17-9ab3-ad490ef7f731.name"
+    ],
+    "f8df23d2-3560-4e50-a3aa-9e2ba03635c0.value": [
+      "c5cd9948-28ea-4398-b910-c44205939d47.value"
+    ],
+    "f128f894-c111-4d17-9ab3-ad490ef7f731.state": [
+      "2944e5dd-dd1a-451f-afde-086452c7dc99.state",
+      "a799e5be-ed31-4c6a-8557-b3cf6474c41a.state"
     ]
   },
   "groups": [
@@ -1585,10 +1898,10 @@
     },
     {
       "title": "Stage 0",
-      "x": 0,
-      "y": 1,
-      "width": 1975,
-      "height": 1107,
+      "x": -2,
+      "y": 85,
+      "width": 2506,
+      "height": 1018,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1612,6 +1925,16 @@
       "color": "#A88",
       "font_size": 24,
       "inherited": false
+    },
+    {
+      "title": "Stage -1 - Check availability based on scene intent configuration",
+      "x": -1,
+      "y": -565,
+      "width": 2120,
+      "height": 645,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
     }
   ],
   "comments": [
@@ -1620,6 +1943,20 @@
       "x": 2086,
       "y": 4035,
       "width": 534,
+      "inherited": false
+    },
+    {
+      "text": "Auto direction without a scene intent tends to go off the rails quickly - so at this point we require there to be both a story and phase intention set for auto direct to be available for a scene.",
+      "x": 30,
+      "y": -520,
+      "width": 350,
+      "inherited": false
+    },
+    {
+      "text": "When auto direct is enabled but unavailable due to incomplete scene intention configuration notify the user by setting a notify__ state",
+      "x": 1600,
+      "y": -470,
+      "width": 257,
       "inherited": false
     }
   ],

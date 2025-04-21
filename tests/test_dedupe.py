@@ -41,6 +41,36 @@ from talemate.util.dedupe import dedupe_sentences, dedupe_string
 def test_dedupe_sentences(text_a, text_b, similarity_threshold, split_on_comma, expected):
     assert dedupe_sentences(text_a, text_b, similarity_threshold=similarity_threshold, split_on_comma=split_on_comma) == expected
 
+# Test cases for min_length parameter in dedupe_sentences
+@pytest.mark.parametrize("text_a, text_b, min_length, similarity_threshold, expected", [
+    # Basic min_length tests - Note: min_length applies to text_a sentences, not text_b
+    ("Short. This is a longer sentence.", "Short.", 10, 95, "This is a longer sentence."),  # "Short." sentence is skipped due to length
+    ("Short. This is a longer sentence.", "Short.", 4, 95, "This is a longer sentence."),  # Short sentence above min_length is deduped
+    ("First short. Second short. Longer sentence here.", "First short.", 12, 95, "Second short. Longer sentence here."),  # Only dedupe sentences above min_length
+    
+    # Edge cases
+    ("A B C. Longer text here.", "A B C.", 5, 95, "A B C. Longer text here."),  # min_length affects dedupe check behavior, short sentence skipped in text_a 
+    ("A B C. Longer text here.", "A B C.", 6, 95, "A B C. Longer text here."),  # Just below min_length
+    
+    # Multiple sentences with varying lengths
+    ("Short1. Short2. Long sentence one. Long sentence two.", "Short1. Long sentence one.", 10, 95, "Long sentence two."),  # Short sentences below min_length, longs are checked
+    ("Short1. Short2. Long sentence one. Long sentence two.", "Short1. Long sentence one.", 6, 95, "Short2. Long sentence two."),
+    
+    # Special delimiters with min_length (quotes)
+    ('"Short quote. Long quoted sentence." Text after.', "Short quote.", 10, 95, '"Long quoted sentence." Text after.'),  # Inner content is what's deduped
+    ('"Short quote. Long quoted sentence." Text after.', "Short quote.", 5, 95, '"Long quoted sentence." Text after.'),  # Short above min_length is deduped
+    
+    # Special delimiters with min_length (asterisks)
+    ('*Short text. Long sentence in asterisks.* Text after.', "Short text.", 10, 95, '*Long sentence in asterisks.* Text after.'),  # Inner content is what's deduped
+    ('*Short text. Long sentence in asterisks.* Text after.', "Short text.", 5, 95, '*Long sentence in asterisks.* Text after.'),
+    
+    # Combined test cases
+    ("Short1. Short2. Long1. Long2.", "Short1. Long1.", 6, 95, "Short2. Long2."),  # Both shorts and longs above min_length
+    ("Short1. Short2. Long1. Long2.", "Short1. Long1.", 7, 95, "Short2."),  # Shorts below min_length, longs above
+])
+def test_dedupe_sentences_min_length(text_a, text_b, min_length, similarity_threshold, expected):
+    assert dedupe_sentences(text_a, text_b, similarity_threshold=similarity_threshold, min_length=min_length) == expected
+
 # Test cases for dedupe_string
 @pytest.mark.parametrize("s, min_length, similarity_threshold, expected", [
     # Basic deduplication - Note: dedupe_string processes lines from bottom up

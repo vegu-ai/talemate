@@ -18,6 +18,7 @@ from talemate.scene.intent import set_scene_phase
 from talemate.world_state.manager import WorldStateManager
 from talemate.world_state.templates.scene import SceneType as TemplateSceneType
 import talemate.agents.director.auto_direct_nodes
+from talemate.world_state.templates.base import TypedCollection
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -362,10 +363,13 @@ class AutoDirectMixin:
         
         world_state_manager:WorldStateManager = self.scene.world_state_manager
         
-        scene_type_templates = await world_state_manager.get_templates(types=["scene_type"])
+        scene_type_templates:TypedCollection = await world_state_manager.get_templates(types=["scene_type"])
         
-        async def add_from_template(id:str) -> SceneType:
-            template:TemplateSceneType = scene_type_templates.templates[id]
+        async def add_from_template(name:str) -> SceneType:
+            template:TemplateSceneType | None = scene_type_templates.find_by_name(name)
+            if not template:
+                log.warning("auto_direct_generate_scene_types: Template not found.", name=name)
+                return None
             return template.apply_to_scene(self.scene)
             
         async def generate_scene_type(

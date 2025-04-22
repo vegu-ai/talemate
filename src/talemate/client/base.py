@@ -34,6 +34,8 @@ log = structlog.get_logger("client.base")
 
 STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 
+# disable smart quotes until text rendering is refactored
+REPLACE_SMART_QUOTES = True
 
 class ClientDisabledError(OSError):
     def __init__(self, client: "ClientBase"):
@@ -716,6 +718,9 @@ class ClientBase:
             response, finalized_prompt = await self.auto_break_repetition(
                 finalized_prompt, prompt_param, response, kind, retries
             )
+            
+            if REPLACE_SMART_QUOTES:
+                response = response.replace('“', '"').replace('”', '"')
 
             time_end = time.time()
 

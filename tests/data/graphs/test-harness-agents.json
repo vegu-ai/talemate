@@ -11,11 +11,11 @@
   "registry": "test-harness/testHarnessAgents",
   "nodes": {
     "806275bb-4b39-4aa4-9ea0-a80a4944c551": {
-      "title": "SET local.test_001_001",
+      "title": "SET shared.test_001_001",
       "id": "806275bb-4b39-4aa4-9ea0-a80a4944c551",
       "properties": {
         "name": "test_001_001",
-        "scope": "local"
+        "scope": "shared"
       },
       "x": 617,
       "y": 80,
@@ -108,11 +108,11 @@
       "base_type": "core/Node"
     },
     "3e327bd3-304c-4db5-bc73-1b1bdaefb614": {
-      "title": "SET local.test_001_002",
+      "title": "SET shared.test_001_002",
       "id": "3e327bd3-304c-4db5-bc73-1b1bdaefb614",
       "properties": {
         "name": "test_001_002",
-        "scope": "local"
+        "scope": "shared"
       },
       "x": 871,
       "y": 363,
@@ -154,11 +154,11 @@
       "base_type": "core/Node"
     },
     "bd3493aa-6029-49b8-a403-4f7c43fc7c7a": {
-      "title": "SET local.test_001_003",
+      "title": "SET shared.test_001_003",
       "id": "bd3493aa-6029-49b8-a403-4f7c43fc7c7a",
       "properties": {
         "name": "test_001_003",
-        "scope": "local"
+        "scope": "shared"
       },
       "x": 592,
       "y": 714,
@@ -264,11 +264,11 @@
       "base_type": "core/Node"
     },
     "f8a5e0eb-d673-4505-867e-d424efe7d9be": {
-      "title": "SET local.test_001_004",
+      "title": "SET shared.test_001_004",
       "id": "f8a5e0eb-d673-4505-867e-d424efe7d9be",
       "properties": {
         "name": "test_001_004",
-        "scope": "local"
+        "scope": "shared"
       },
       "x": 1942,
       "y": 674,

@@ -785,28 +785,6 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053": {
-      "title": "Contextual Generate",
-      "id": "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053",
-      "properties": {
-        "context_type": "character detail",
-        "context_name": "description",
-        "instructions": null,
-        "length": 192,
-        "character": "the character",
-        "uid": null,
-        "context_aware": true,
-        "history_aware": true
-      },
-      "x": 1019,
-      "y": 3241,
-      "width": 304,
-      "height": 406,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/creator/ContextualGenerate",
-      "base_type": "core/Node"
-    },
     "94c0ff89-d383-422a-a9be-56d7d3dfeb6e": {
       "title": "Generated description",
       "id": "94c0ff89-d383-422a-a9be-56d7d3dfeb6e",
@@ -1475,6 +1453,28 @@
       "inherited": false,
       "registry": "state/SetState",
       "base_type": "core/Node"
+    },
+    "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053": {
+      "title": "Contextual Generate",
+      "id": "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053",
+      "properties": {
+        "context_type": "character detail",
+        "context_name": "description",
+        "instructions": null,
+        "length": 372,
+        "character": "the character",
+        "uid": null,
+        "context_aware": true,
+        "history_aware": true
+      },
+      "x": 1019,
+      "y": 3241,
+      "width": 304,
+      "height": 406,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1616,9 +1616,6 @@
     "8b0dc913-54c9-4d80-a6f9-a0838a32bdd5.value": [
       "1146d1cf-5ef1-4868-9804-77e7fa27c64f.value"
     ],
-    "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053.text": [
-      "d41f0d98-14d5-49dd-8e57-7812fb9fee94.value"
-    ],
     "94c0ff89-d383-422a-a9be-56d7d3dfeb6e.value": [
       "1b180fa5-5d97-4d46-bdd3-eaf19084177d.state"
     ],
@@ -1726,6 +1723,9 @@
     ],
     "9f875159-9e90-41cc-84fe-d1b10061a885.value": [
       "f779b15c-6114-4afb-822e-d5dd696cbe4e.state_b"
+    ],
+    "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053.text": [
+      "d41f0d98-14d5-49dd-8e57-7812fb9fee94.value"
     ]
   },
   "groups": [

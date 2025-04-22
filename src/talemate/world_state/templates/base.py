@@ -383,3 +383,10 @@ class TypedCollection(pydantic.BaseModel):
     templates: dict[str, dict[str, AnnotatedTemplate]] = pydantic.Field(
         default_factory=dict
     )
+    
+    def find_by_name(self, name: str) -> AnnotatedTemplate | None:
+        for templates in self.templates.values():
+            for template in templates.values():
+                if template.name == name:
+                    return template
+        return None

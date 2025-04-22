@@ -365,7 +365,7 @@ class AutoDirectMixin:
         scene_type_templates = await world_state_manager.get_templates(types=["scene_type"])
         
         async def add_from_template(id:str) -> SceneType:
-            template:TemplateSceneType = scene_type_templates[id]
+            template:TemplateSceneType = scene_type_templates.templates[id]
             return template.apply_to_scene(self.scene)
             
         async def generate_scene_type(

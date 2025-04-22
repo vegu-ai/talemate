@@ -141,8 +141,8 @@
         "name": "arg_goal",
         "scope": "local"
       },
-      "x": 30,
-      "y": 1365,
+      "x": 28,
+      "y": 1363,
       "width": 256,
       "height": 122,
       "collapsed": false,
@@ -172,8 +172,8 @@
         "instructions": "",
         "max_scene_types": 2
       },
-      "x": 340,
-      "y": 1365,
+      "x": 338,
+      "y": 1363,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -187,8 +187,8 @@
       "properties": {
         "stage": 3
       },
-      "x": 600,
-      "y": 1397,
+      "x": 598,
+      "y": 1395,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -263,6 +263,49 @@
       "inherited": false,
       "registry": "core/Stage",
       "base_type": "core/Node"
+    },
+    "860ac202-ba2d-4a90-ba1d-a0fafd28a5aa": {
+      "title": "true",
+      "id": "860ac202-ba2d-4a90-ba1d-a0fafd28a5aa",
+      "properties": {
+        "value": true
+      },
+      "x": 25,
+      "y": 1599,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "9db37d1e-3cf8-49bd-bdc5-8663494e5657": {
+      "title": "Determine Scene Intent",
+      "id": "9db37d1e-3cf8-49bd-bdc5-8663494e5657",
+      "properties": {},
+      "x": 165,
+      "y": 1589,
+      "width": 226,
+      "height": 62,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/auto-direct/DetermineSceneIntent",
+      "base_type": "core/Node"
+    },
+    "6aec9c99-848b-4567-b50f-793ed1674dee": {
+      "title": "Stage 4",
+      "id": "6aec9c99-848b-4567-b50f-793ed1674dee",
+      "properties": {
+        "stage": 4
+      },
+      "x": 470,
+      "y": 1600,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -305,6 +348,12 @@
     ],
     "6ef94917-f9b1-4c18-af15-617430e50cfe.state": [
       "f4cd34d9-0628-4145-a3da-ec1215cd356c.state"
+    ],
+    "860ac202-ba2d-4a90-ba1d-a0fafd28a5aa.value": [
+      "9db37d1e-3cf8-49bd-bdc5-8663494e5657.state"
+    ],
+    "9db37d1e-3cf8-49bd-bdc5-8663494e5657.state": [
+      "6aec9c99-848b-4567-b50f-793ed1674dee.state"
     ]
   },
   "groups": [
@@ -330,8 +379,8 @@
     },
     {
       "title": "Generate Scene Types",
-      "x": 2,
-      "y": 1289,
+      "x": 0,
+      "y": 1287,
       "width": 744,
       "height": 219,
       "color": "#8AA",
@@ -344,6 +393,16 @@
       "y": 725,
       "width": 1112,
       "height": 559,
+      "color": "#8AA",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Evaluate Scene Intent",
+      "x": 0,
+      "y": 1509,
+      "width": 700,
+      "height": 233,
       "color": "#8AA",
       "font_size": 24,
       "inherited": false
@@ -363,7 +422,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "7eb835fb-0d9a-4e60-beb5-186c8885bac9",
+      "id": "97e46225-96cd-4393-891c-f6851d00dc22",
       "name": "fn",
       "optional": false,
       "group": null,

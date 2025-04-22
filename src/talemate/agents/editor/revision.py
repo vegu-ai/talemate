@@ -12,7 +12,7 @@ from talemate.emit import emit
 from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.scene_message import CharacterMessage
-from talemate.util.dedupe import dedupe_sentences
+from talemate.util.dedupe import dedupe_sentences, SimilarityMatch
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -188,11 +188,11 @@ class RevisionMixin:
         
         deduped = []
         
-        def on_dedupe(text_a: str, text_b: str, similarity: float):
+        def on_dedupe(match: SimilarityMatch):
             deduped.append({
-                "text_a": text_a,
-                "text_b": text_b,
-                "similarity": similarity
+                "text_a": match.original,
+                "text_b": match.matched,
+                "similarity": match.similarity
             })
         
         for old_text in compare_against:

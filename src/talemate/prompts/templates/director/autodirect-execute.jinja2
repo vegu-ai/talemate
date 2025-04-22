@@ -15,10 +15,10 @@
     focal.callbacks.act.render(
         "Instruct the actor portraying the character to take the next action. IMPORTANT: Only the following characters are eligible to take action: "+candidate_names+".",
         name="Character Name",
-        instructions="The acting instructions for the actor portraying the character. Provide a brief, concise direction (1-2 short sentences) including key emotional state and actions. This argument is optional, if you want the actor to continue their course of action from the previous message, you can omit it. You MUST NOT write direct speech.",
+        instructions="The acting instructions for the actor portraying the character. Provide a brief, concise direction (1-2 short sentences) including key emotional state and actions. This argument is optional, if you want the actor to continue their course of action from the previous message, you can omit it. You MUST NOT write direct speech. Formulate this as an actionable instruction such as \"Do this..\", \"You should..\", \"In order to..\", etc.",
         examples=[
-            {"name": "John", "instructions": "Open the door cautiously and descend the basement stairs with visible trepidation. Call out hesitantly into the darkness."},
-            {"name": "Jane", "instructions": "Pick up the phone with trembling fingers and dial. Pace nervously while waiting for an answer."},
+            {"name": "John", "instructions": "Open the door cautiously and call out hesitantly. You should show visible fear as you descend the basement stairs."},
+            {"name": "Jane", "instructions": "Pick up the phone with trembling hands and dial. I want you to pace nervously while waiting for someone to answer."},
             {"name": "Alice", "_comment": "Alice is already doing a great job, so we'll let her continue her current action."},
         ]
     )
@@ -56,11 +56,12 @@
 {{ analysis }}
 
 <|SECTION:FUNCTION SELECTION|>
+Briefly analyze the next direction and what function call makes sense to accomplish it.
 {% set bullet_num=0 -%}
 Based on the analysis, call the ONE appropriate function to direct the scene:
 
 {% if focal.callbacks.act and candidates %}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. If the decision is to have a character act, call act() with the character name and instructions.
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. If the decision is to have a character act, call act() with the character name and instructions. Remember to compress the direction into a SHORT and SIMPLE actionable instruction for the actor ("I want you to..", "You should..", "In order to..", etc.)
 {% endif %}
 
 {% if focal.callbacks.narrate_scene %}

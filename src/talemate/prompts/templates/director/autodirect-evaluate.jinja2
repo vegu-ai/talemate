@@ -61,8 +61,19 @@ Make your decision based on what would create the most compelling and logical ne
 
 Your response must include your analysis and THEN clearly state:
 - The type of direction you've chosen ({% if candidates %}character action, {% endif %}{% if narrator_available %}scene narration, or story progression{% endif %})
-{% if candidates %}- If a character action, which character should act{% endif %}
+{%- if candidates %}
+- If a character action, which character should act{% endif %}
 - A brief description of what should happen
+
+{% if narrator_available %}
+### Notes on Story Progression
+This kind of direction is given directly to the narrator. It is used to advance the story to the next moment.
+It does NOT involve direct instructions to any characters.
+
+### Notes on Scene Narration
+This kind of direction is given directly to the narrator. It is used to flesh out the scene in more detail.
+You can ask the narrator to describe the setting, the characters, the actions etc., within the context of the current moment and the intention of the scene.
+{% endif %}
 
 ### Expected Response Format
 Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
@@ -74,8 +85,7 @@ ANALYSIS
 {analysis of the scene, what should happen next, and why and how do the rules apply}
 
 NEXT DIRECTION
-Type of action: {chosen action}
-Actor: {actor name}
-Instructions: {dinstructions to the actor, "Do this..", "You should..", "In order to.."}
+({type of direction})
+{your instructions for the direction{% if candidates %}, if instructing an actor make sure to formulate them as actionable instructions such as "Do this..", "You should..", "In order to..", etc.{% endif %}}
 <|CLOSE_SECTION|>
 {{ bot_token }}RULES

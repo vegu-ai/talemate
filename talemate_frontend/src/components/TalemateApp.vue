@@ -897,9 +897,15 @@ export default {
         return this.autocomplete();
       }
 
-      // if shift+enter is pressed, add a newline
+      // if shift+enter is pressed, add a newline at the current cursor position
       if (event.shiftKey && event.key === 'Enter') {
-        this.messageInput += "\n";
+        const textarea = this.$refs.messageInput.$el.querySelector('textarea');
+        const cursorPos = textarea.selectionStart;
+        this.messageInput = this.messageInput.slice(0, cursorPos) + "\n" + this.messageInput.slice(cursorPos);
+        // Set cursor position after the inserted newline
+        this.$nextTick(() => {
+          textarea.selectionStart = textarea.selectionEnd = cursorPos + 1;
+        });
         return;
       }
 

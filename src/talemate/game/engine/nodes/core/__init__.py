@@ -1406,8 +1406,8 @@ class Graph(NodeBase):
                 input_socket = input_node.get_input_socket(input_socket_name)
                 
                 if not input_socket:
-                   log.warning("Input socket not found", input_socket_name=input_socket_name, input_node_id=input_node_id)
-                   continue
+                    log.warning("Input socket not found", input_socket_name=input_socket_name, input_node_id=input_node_id)
+                    continue
                 
                 if not input_socket.source:
                     self.connect(output_socket, input_socket)

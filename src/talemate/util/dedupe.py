@@ -1,6 +1,7 @@
 from nltk.tokenize import sent_tokenize
 from thefuzz import fuzz
 import structlog
+import pydantic
 import re # Add import for regex
 from typing import Callable
 __all__ = [
@@ -11,12 +12,21 @@ __all__ = [
 
 log = structlog.get_logger("talemate.util.dedupe")
 
-def _get_core_sentence(sentence: str) -> str:
-    """Helper to strip quotes and whitespace."""
-    core = sentence.strip().strip('"\'*')
-    # Removed regex for speaker prefix handling
-    return core
+SPECIAL_MARKERS = ['*', '"']
 
+class SimilarityMatch(pydantic.BaseModel):
+    original: str
+    matched: str
+    similarity: float
+    left_neighbor: str | None = None
+    right_neighbor: str | None = None
+    
+    def ln_startswith(self, marker: str) -> bool:
+        return self.left_neighbor and self.left_neighbor.startswith(marker)
+    
+    def rn_startswith(self, marker: str) -> bool:
+        return self.right_neighbor and self.right_neighbor.startswith(marker)
+    
 def similarity_score(
     line: str, lines: list[str], similarity_threshold: int = 95
 ) -> tuple[bool, int, str]:
@@ -45,87 +55,29 @@ def similarity_score(
 
     return False, highest_similarity, None
 
-def _extract_special_texts(text: str) -> tuple[str, list, list, list]:
-    """
-    Extract quoted and asterisk-enclosed text, replacing with placeholders.
-    
-    Arguments:
-        text (str): The text to process.
-        
-    Returns:
-        tuple: (text with placeholders, special texts, delimiters, positions)
-    """
-    special_texts = []
-    special_delimiters = []
-    special_positions = [] 
-    text_with_placeholders = text
-    
-    patterns = [
-        (r'"([^"]*)"', '"'),  # Double quotes
-        (r'\*([^*]*)\*', '*')  # Asterisks
-    ]
-    
-    # Locate all matches and record positions
-    for pattern, delimiter in patterns:
-        matches = list(re.finditer(pattern, text_with_placeholders))
-        for match in matches:
-            special_text = match.group(0)
-            special_texts.append(special_text)
-            special_delimiters.append(delimiter)
-            special_positions.append((match.start(), match.end()))
-    
-    # Sort by position for proper replacement
-    sorted_indices = sorted(range(len(special_positions)), key=lambda i: special_positions[i][0])
-    special_texts = [special_texts[i] for i in sorted_indices]
-    special_delimiters = [special_delimiters[i] for i in sorted_indices]
-    special_positions = [special_positions[i] for i in sorted_indices]
-    
-    # Replace with placeholders in reverse order to preserve positions
-    for i in range(len(special_texts) - 1, -1, -1):
-        placeholder = f"__SPECIAL_TEXT_{i}__"
-        start, end = special_positions[i]
-        text_with_placeholders = (
-            text_with_placeholders[:start] + 
-            placeholder + 
-            text_with_placeholders[end:]
-        )
-    
-    return text_with_placeholders, special_texts, special_delimiters, special_positions
 
-def _is_sentence_similar(sentence_a: str, candidates: list[str], similarity_threshold: int, on_dedupe: Callable | None = None, min_length: int | None = None) -> bool:
+def compile_text_to_sentences(text: str) -> list[tuple[str, str]]:
     """
-    Check if a sentence is similar to any sentence in the candidates list.
+    Compile text into sentences.
     
-    Arguments:
-        sentence_a (str): The sentence to check.
-        candidates (list[str]): List of sentences to compare against.
-        similarity_threshold (int): The similarity threshold to use.
-        min_length (int): The minimum length of a sentence to be considered for deduplication. Shorter sentences are skipped. If None, all sentences are considered.
-    Returns:
-        bool: True if a similar sentence was found, False otherwise.
+    Returns a list of tuples were the first element is the original sentence and the second element is the prepared sentence that will be used for similarity comparison.
     """
-    core_a = _get_core_sentence(sentence_a)
+
+    sentences = sent_tokenize(text)    
     
-    for candidate in candidates:
-        
-        if min_length and len(candidate) < min_length:
-            continue
-        
-        core_b = _get_core_sentence(candidate)
-        similarity = fuzz.ratio(core_a, core_b)
-        if similarity >= similarity_threshold:
-            if on_dedupe:
-                on_dedupe(core_a, core_b, similarity)
-            return True
+    results = []
     
-    return False
+    for sentence in sentences:
+        results.append((sentence, sentence.strip("".join(SPECIAL_MARKERS))))
+    
+    return results
+    
 
 def dedupe_sentences(
     text_a: str,
     text_b: str,
     similarity_threshold: int = 95,
     debug: bool = False,
-    split_on_comma: bool = True,
     on_dedupe: Callable | None = None,
     min_length: int | None = None
 ) -> str:
@@ -146,82 +98,102 @@ def dedupe_sentences(
     Returns:
         str: the cleaned text_a.
     """
-    # Handle empty inputs early
-    if not text_a or not text_b:
-        return text_a
-        
-    # Extract special delimited text and replace with placeholders
-    text_a_with_placeholders, special_texts, special_delimiters, _ = _extract_special_texts(text_a)
     
-    # Split texts into sentences
-    text_a_sentences = sent_tokenize(text_a_with_placeholders)
-    text_b_sentences = sent_tokenize(text_b)
-
-    # Process comma-separated phrases in text_b if needed
-    if split_on_comma:
-        # Add comma-separated phrases to candidates
-        comma_phrases = []
-        for sentence in text_b_sentences:
-            if "," in sentence:
-                comma_phrases.extend([s.strip() for s in sentence.split(",")])
-        text_b_sentences.extend(comma_phrases)
-
-    # Filter out sentences from text_a that are similar to any in text_b
-    kept_sentences = []
-    for sentence in text_a_sentences:
-        
-        if min_length and len(sentence) < min_length:
-            continue
-        
-        # Keep placeholder sentences for later processing
-        if "__SPECIAL_TEXT_" in sentence:
-            kept_sentences.append(sentence)
-            continue
-            
-        # Check for similarity with text_b sentences
-        if not _is_sentence_similar(sentence, text_b_sentences, similarity_threshold, on_dedupe=on_dedupe, min_length=min_length):
-            kept_sentences.append(sentence)
-        else:
-            if debug:
-                log.debug("DEDUPE SENTENCE (FOUND)", text_a_sentence=sentence)
-
-    # Join the sentences back
-    result = " ".join(kept_sentences)
+    sentences_a = compile_text_to_sentences(text_a)
+    sentences_b = compile_text_to_sentences(text_b)
     
-    # Process special texts (quoted or asterisk-enclosed)
-    for i, special_text in enumerate(special_texts):
-        placeholder = f"__SPECIAL_TEXT_{i}__"
-        if placeholder in result:
-            delimiter = special_delimiters[i]
+    # dedupe sentences
+    matches = []
+    left_neighbor = None
+    right_neighbor = None
+    for idx, (sentence_a, sentence_a_prepared) in enumerate(sentences_a):
+        left_neighbor = sentences_a[idx-1][0] if idx > 0 else None
+        right_neighbor = sentences_a[idx+1][0] if idx < len(sentences_a)-1 else None
+        if min_length and len(sentence_a) < min_length:
+            continue
+        for sentence_b, sentence_b_prepared in sentences_b:
+            if min_length and len(sentence_b) < min_length:
+                continue
+            similarity = fuzz.ratio(sentence_a_prepared, sentence_b_prepared)
+            print(f"SIMILARITY: {similarity} | {sentence_a_prepared} | {sentence_b_prepared}")
+            if similarity >= similarity_threshold:
+                matches.append(
+                    SimilarityMatch(
+                        original=sentence_a,
+                        matched=sentence_b, 
+                        similarity=similarity, 
+                        left_neighbor=left_neighbor,
+                        right_neighbor=right_neighbor
+                    )
+                )
+                break
+    
+    # replace duplicates with empty strings
+    # if the duplicate started or ended with a special marker, replace with
+    # the marker (replace with both the start and end marker if both are present)
+    for match in matches:
+        replace = ""
+        original = match.original
+        shift = False
+        
+        for special_marker in SPECIAL_MARKERS:
+            if original.count(special_marker) != 1:
+                continue
             
-            # Get inner content without delimiters
-            inner_text = special_text[1:-1]
+            replace = f"{special_marker}"
             
-            # Recursively dedupe the inner text
-            deduped_inner = dedupe_sentences(
-                inner_text, 
-                text_b, 
-                similarity_threshold=similarity_threshold,
-                debug=debug,
-                split_on_comma=split_on_comma,
-                on_dedupe=on_dedupe,
-                min_length=min_length
+            if original.startswith(special_marker):
+                if match.ln_startswith(special_marker):
+                    replace = f"{special_marker} "
+                elif match.rn_startswith(special_marker):
+                    replace = ""
+                    original = f"{original}{special_marker}"
+            elif original.endswith(special_marker):
+                if match.rn_startswith(special_marker):
+                    original = f"{original} "
+        
+        match_both = None
+        match_left = None
+        match_right = None
+        
+        if match.left_neighbor and match.right_neighbor:
+            pattern_both = re.escape(match.left_neighbor) + r'(\s+)' + re.escape(original) + r'(\s+)' + re.escape(match.right_neighbor)
+            match_both = re.search(pattern_both, text_a)
+        if match.left_neighbor:
+            pattern_left = re.escape(match.left_neighbor) + r'(\s+)' + re.escape(original)
+            match_left = re.search(pattern_left, text_a)
+        if match.right_neighbor:
+            pattern_right = re.escape(original) + r'(\s+)' + re.escape(match.right_neighbor)
+            match_right = re.search(pattern_right, text_a)
+
+        
+        if match.left_neighbor and match.right_neighbor and match_both:
+            whitespace = match_both.group(1)
+            original = f"{whitespace}{original}"
+        elif match.left_neighbor and match_left:
+            whitespace = match_left.group(1)
+            original = f"{whitespace}{original}"
+        elif match.right_neighbor and match_right:
+            whitespace = match_right.group(1)
+            original = f"{original}{whitespace}"
+        
+        text_a = text_a.replace(original, replace)
+        if on_dedupe:
+            on_dedupe(match)
+        if debug:
+            log.debug(
+                "DEDUPE",
+                similarity=match.similarity,
+                original=match.original,
+                matched=match.matched,
             )
-            
-            # Replace placeholder with properly enclosed deduped text
-            if deduped_inner:
-                result = result.replace(placeholder, f'{delimiter}{deduped_inner}{delimiter}')
-            else:
-                # If everything was removed, remove the placeholder entirely
-                result = result.replace(placeholder, "")
-    
-    # Clean up the result
-    result = re.sub(r' {2,}', ' ', result)  # Normalize whitespace
-    result = re.sub(r'\n{3,}', '\n\n', result, flags=re.MULTILINE)   # Normalize newlines
-    result = result.replace('" "', ' ')     # Replace consecutive empty quotes
-    result = result.replace('* *', ' ')     # Replace consecutive empty asterisks
-    
-    return result
+
+
+        for special_marker in SPECIAL_MARKERS:
+            text_a = text_a.replace(f'{special_marker} {special_marker}', " ")
+        
+
+    return text_a.strip()
 
 
 def dedupe_string(

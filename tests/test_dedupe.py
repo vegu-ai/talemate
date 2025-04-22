@@ -2,49 +2,46 @@ import pytest
 from talemate.util.dedupe import dedupe_sentences, dedupe_string
 
 # Test cases for dedupe_sentences
-@pytest.mark.parametrize("text_a, text_b, similarity_threshold, split_on_comma, expected", [
+@pytest.mark.parametrize("text_a, text_b, similarity_threshold, expected", [
     # Basic deduplication
-    ("This is a test sentence. Another sentence.", "This is a test sentence.", 95, True, "Another sentence."),
-    ("Sentence one. Sentence two.", "Sentence three. Sentence two.", 95, True, "Sentence one."),
+    ("This is a test sentence. Another sentence.", "This is a test sentence.", 95, "Another sentence."),
+    ("Sentence one. Sentence two.", "Sentence three. Sentence two.", 95, "Sentence one."),
     # No deduplication
-    ("Unique sentence one. Unique sentence two.", "Different sentence one. Different sentence two.", 95, True, "Unique sentence one. Unique sentence two."),
+    ("Unique sentence one. Unique sentence two.", "Different sentence one. Different sentence two.", 95, "Unique sentence one. Unique sentence two."),
     # Threshold testing
-    ("Almost the same sentence.", "Almost the same sentence?", 99, True, "Almost the same sentence."),  # Fixed: function keeps sentence at 99% threshold
-    ("Almost the same sentence.", "Almost the same sentence?", 100, True, "Almost the same sentence."), # Perfect match required
-    ("Slightly different text.", "Slightly different words.", 80, True, ""), # Lower threshold
-    # split_on_comma testing
-    ("Sentence A. Sentence B, part 1.", "Sentence B, part 1, Sentence B, part 2.", 95, True, "Sentence A. Sentence B, part 1."),  # Fixed: comma splitting doesn't work as expected
-    ("Sentence A. Sentence B, part 1.", "Sentence B, part 1, Sentence B, part 2.", 95, False, "Sentence A. Sentence B, part 1."), # Comma splitting disabled
+    ("Almost the same sentence.", "Almost the same sentence?", 99, "Almost the same sentence."),  # Fixed: function keeps sentence at 99% threshold
+    ("Almost the same sentence.", "Almost the same sentence?", 100, "Almost the same sentence."), # Perfect match required
+    ("Slightly different text.", "Slightly different words.", 80, ""), # Lower threshold
     # Empty inputs
-    ("", "Some sentence.", 95, True, ""),
-    ("Some sentence.", "", 95, True, "Some sentence."),
-    ("", "", 95, True, ""),
+    ("", "Some sentence.", 95, ""),
+    ("Some sentence.", "", 95, "Some sentence."),
+    ("", "", 95, ""),
     # Edge case: single sentences
-    ("Single sentence A.", "Single sentence A.", 95, True, ""),
-    ("Single sentence A.", "Single sentence B.", 95, True, "Single sentence A."),
+    ("Single sentence A.", "Single sentence A.", 95, ""),
+    ("Single sentence A.", "Single sentence B.", 95, "Single sentence A."),
     # --- Quote handling tests --- 
     # Expect removal based on core match, accepting token removal issues
-    ('Some text. "First quote sentence. Second quote sentence needs removing." More text.', 'Second quote sentence needs removing.', 95, True, 'Some text. "First quote sentence." More text.'),
-    ('"Remove this first. Keep this second." The text continues.', 'Remove this first.', 95, True, '"Keep this second." The text continues.'),
-    ('The text starts here. "Keep this first. Remove this second."', 'Remove this second.', 95, True, 'The text starts here. "Keep this first."'),
-    ('"Sentence one. Sentence two to remove. Sentence three."', 'Sentence two to remove.', 95, True, '"Sentence one. Sentence three."'),
+    ('Some text. "First quote sentence. Second quote sentence needs removing." More text.', 'Second quote sentence needs removing.', 95, 'Some text. "First quote sentence." More text.'),
+    ('"Remove this first. Keep this second." The text continues.', 'Remove this first.', 95, '"Keep this second." The text continues.'),
+    ('The text starts here. "Keep this first. Remove this second."', 'Remove this second.', 95, 'The text starts here. "Keep this first."'),
+    ('"Sentence one. Sentence two to remove. Sentence three."', 'Sentence two to remove.', 95, '"Sentence one. Sentence three."'),
     # --- Asterisk handling tests --- 
-    ('Some text. *First asterisk sentence. Second asterisk sentence needs removing.* More text.', 'Second asterisk sentence needs removing.', 95, True, 'Some text. *First asterisk sentence.* More text.'),
-    ('*Remove this first. Keep this second.* The text continues.', 'Remove this first.', 95, True, '*Keep this second.* The text continues.'),
-    ('The text starts here. *Keep this first. Remove this second.*', 'Remove this second.', 95, True, 'The text starts here. *Keep this first.*'),
-    ('*Sentence one. Sentence two to remove. Sentence three.*', 'Sentence two to remove.', 95, True, '*Sentence one. Sentence three.*'),
+    ('Some text. *First asterisk sentence. Second asterisk sentence needs removing.* More text.', 'Second asterisk sentence needs removing.', 95, 'Some text. *First asterisk sentence.* More text.'),
+    ('*Remove this first. Keep this second.* The text continues.', 'Remove this first.', 95, '*Keep this second.* The text continues.'),
+    ('The text starts here. *Keep this first. Remove this second.*', 'Remove this second.', 95, 'The text starts here. *Keep this first.*'),
+    ('*Sentence one. Sentence two to remove. Sentence three.*', 'Sentence two to remove.', 95, '*Sentence one. Sentence three.*'),
     # --- Mixed delimiter tests ---
-    ('Some text. *Asterisk text.* "Quote text." More text.', 'Quote text.', 95, True, 'Some text. *Asterisk text.* More text.'),
-    ('Some text. *Asterisk text.* "Quote text." More text.', 'Asterisk text.', 95, True, 'Some text. "Quote text." More text.'),
-    ('"Some text." *Asterisk text.* "Quote text." More text.', 'Asterisk text.', 95, True, '"Some text. Quote text." More text.'),
+    ('Some text. *Asterisk text.* "Quote text." More text.', 'Quote text.', 90, 'Some text. *Asterisk text.* More text.'),
+    ('Some text. *Asterisk text.* "Quote text." More text.', 'Asterisk text.', 95, 'Some text. "Quote text." More text.'),
+    ('"Some text." *Asterisk text.* "Quote text." More text.', 'Asterisk text.', 95, '"Some text. Quote text." More text.'),
 ])
-def test_dedupe_sentences(text_a, text_b, similarity_threshold, split_on_comma, expected):
-    assert dedupe_sentences(text_a, text_b, similarity_threshold=similarity_threshold, split_on_comma=split_on_comma) == expected
+def test_dedupe_sentences(text_a, text_b, similarity_threshold, expected):
+    assert dedupe_sentences(text_a, text_b, similarity_threshold=similarity_threshold) == expected
 
 # Test cases for min_length parameter in dedupe_sentences
 @pytest.mark.parametrize("text_a, text_b, min_length, similarity_threshold, expected", [
     # Basic min_length tests - Note: min_length applies to text_a sentences, not text_b
-    ("Short. This is a longer sentence.", "Short.", 10, 95, "This is a longer sentence."),  # "Short." sentence is skipped due to length
+    ("Short. This is a longer sentence.", "Short.", 10, 95, "Short. This is a longer sentence."),  # "Short." sentence is skipped due to length
     ("Short. This is a longer sentence.", "Short.", 4, 95, "This is a longer sentence."),  # Short sentence above min_length is deduped
     ("First short. Second short. Longer sentence here.", "First short.", 12, 95, "Second short. Longer sentence here."),  # Only dedupe sentences above min_length
     
@@ -53,7 +50,7 @@ def test_dedupe_sentences(text_a, text_b, similarity_threshold, split_on_comma, 
     ("A B C. Longer text here.", "A B C.", 6, 95, "A B C. Longer text here."),  # Just below min_length
     
     # Multiple sentences with varying lengths
-    ("Short1. Short2. Long sentence one. Long sentence two.", "Short1. Long sentence one.", 10, 95, "Long sentence two."),  # Short sentences below min_length, longs are checked
+    ("Short1. Short2. Long sentence one. Long sentence two.", "Short1. Long sentence one.", 10, 95, "Short1. Short2. Long sentence two."),  # Short sentences below min_length, longs are checked
     ("Short1. Short2. Long sentence one. Long sentence two.", "Short1. Long sentence one.", 6, 95, "Short2. Long sentence two."),
     
     # Special delimiters with min_length (quotes)
@@ -65,11 +62,56 @@ def test_dedupe_sentences(text_a, text_b, similarity_threshold, split_on_comma, 
     ('*Short text. Long sentence in asterisks.* Text after.', "Short text.", 5, 95, '*Long sentence in asterisks.* Text after.'),
     
     # Combined test cases
-    ("Short1. Short2. Long1. Long2.", "Short1. Long1.", 6, 95, "Short2. Long2."),  # Both shorts and longs above min_length
-    ("Short1. Short2. Long1. Long2.", "Short1. Long1.", 7, 95, "Short2."),  # Shorts below min_length, longs above
+    ("Apple. Orange. The orange is round. The car is fast.", "Apple. The car is fast.", 3, 95, "Orange. The orange is round."),  # Both shorts and longs above min_length
+    ("Apple. Orange. The orange is round. The car is fast.", "Apple. The car is fast.", 7, 95, "Apple. Orange. The orange is round."),  # Shorts below min_length, longs above
 ])
 def test_dedupe_sentences_min_length(text_a, text_b, min_length, similarity_threshold, expected):
     assert dedupe_sentences(text_a, text_b, similarity_threshold=similarity_threshold, min_length=min_length) == expected
+
+# Test cases for newline preservation in dedupe_sentences
+@pytest.mark.parametrize("text_a, text_b, similarity_threshold, expected", [
+    # Basic newline preservation
+    ("The orange is round.\nThe car is fast.\n\nI wonder what today will bring.", "This is a long sentence.\n\nI wonder what today will bring.", 95, "The orange is round.\nThe car is fast."),
+    
+    # Basic single-line removal
+    ("Line 1.\nLine 2.\nLine 3.", "Line 2.", 95, "Line 1.\nLine 3."),
+    
+    # Paragraph preservation
+    ("First paragraph.\n\nSecond paragraph.", "First paragraph.", 95, "Second paragraph."),
+    ("Multi-line.\nAnother line.\nDuplicate.", "Another line.", 95, "Multi-line.\nDuplicate."),
+    
+    # Special delimiters with newlines
+    ('"Line 1.\nLine 2."', "Line 2.", 95, '"Line 1."'),
+    ("*Line A.\nLine B.\nLine C.*", "Line B.", 95, "*Line A.\nLine C.*"),
+    
+    # Complex cases with mixed newlines and delimiters
+    ("Text starts.\n\n*Inner text.\nDuplicate text.*\n\nText ends.", "Duplicate text.", 95, "Text starts.\n\n*Inner text.*\n\nText ends."),
+    
+    # Multiple paragraphs with sentence deduplication
+    ("Paragraph one.\nDuplicate sentence.\n\nParagraph two.", "Duplicate sentence.", 95, "Paragraph one.\n\nParagraph two."),
+    
+    # Consecutive newlines
+    ("Text before.\n\n\nSentence to keep.\n\nSentence to remove.", "Sentence to remove.", 95, "Text before.\n\n\nSentence to keep."),
+    
+    # Quoted text with multiple lines
+    ('First line.\n"Second line.\nThird line to remove.\nFourth line."', "Third line to remove.", 95, 'First line.\n"Second line.\nFourth line."'),
+    
+    # Edge cases with newlines at beginning/end
+    ("\nFirst line.\nDuplicate line.", "Duplicate line.", 95, "First line."),
+    ("First line.\nDuplicate line.\n", "Duplicate line.", 95, "First line."),
+    ("\nDuplicate line.\n", "Duplicate line.", 95, ""),
+    
+    # Multi-paragraph deduplication 
+    ("Para 1.\n\nDuplicate para.\n\nPara 3.", "Duplicate para.", 95, "Para 1.\n\nPara 3."),
+    
+    # Combining with min_length (test implicitly, not through parameter)
+    ("Short.\nLonger line to remove.\nAnother short.", "Longer line to remove.", 95, "Short.\nAnother short."),
+    
+    # Complex document-like structure (similarity needs to be lower because sentences will contain the header text)
+    ("# Header\n\nIntro paragraph.\n\n## Section\n\nDuplicate content.\n\n### Subsection", "Duplicate content.", 75, "# Header\n\nIntro paragraph.\n\n### Subsection"),
+])
+def test_dedupe_sentences_newlines(text_a, text_b, similarity_threshold, expected):
+    assert dedupe_sentences(text_a, text_b, similarity_threshold=similarity_threshold) == expected
 
 # Test cases for dedupe_string
 @pytest.mark.parametrize("s, min_length, similarity_threshold, expected", [

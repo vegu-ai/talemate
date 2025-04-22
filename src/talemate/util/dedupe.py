@@ -6,6 +6,7 @@ import re # Add import for regex
 from typing import Callable
 __all__ = [
     "similarity_score",
+    "similarity_matches",
     "dedupe_sentences",
     "dedupe_string",
 ]
@@ -71,9 +72,57 @@ def compile_text_to_sentences(text: str) -> list[tuple[str, str]]:
         results.append((sentence, sentence.strip("".join(SPECIAL_MARKERS))))
     
     return results
+
+def similarity_matches(
+    text_a: str, 
+    text_b: str, 
+    similarity_threshold: int = 95, 
+    min_length: int | None = None
+) -> list[SimilarityMatch]:
+    """
+    Returns a list of similarity matches between two texts.
     
+    Arguments:
+        text_a (str): The first text.
+        text_b (str): The second text.
+        similarity_threshold (int): The similarity threshold to use when comparing sentences.
+        min_length (int): The minimum length of a sentence to be considered for deduplication. Shorter sentences are skipped. If None, all sentences are considered.
+
+    Returns:
+        list: A list of similarity matches.
+    """
+    
+    sentences_a = compile_text_to_sentences(text_a)
+    sentences_b = compile_text_to_sentences(text_b)
+
+    matches = []
+    left_neighbor = None
+    right_neighbor = None
+    for idx, (sentence_a, sentence_a_prepared) in enumerate(sentences_a):
+        left_neighbor = sentences_a[idx-1][0] if idx > 0 else None
+        right_neighbor = sentences_a[idx+1][0] if idx < len(sentences_a)-1 else None
+        if min_length and len(sentence_a) < min_length:
+            continue
+        for sentence_b, sentence_b_prepared in sentences_b:
+            if min_length and len(sentence_b) < min_length:
+                continue
+            similarity = fuzz.ratio(sentence_a_prepared, sentence_b_prepared)
+            if similarity >= similarity_threshold:
+                matches.append(
+                    SimilarityMatch(
+                        original=sentence_a,
+                        matched=sentence_b, 
+                        similarity=similarity, 
+                        left_neighbor=left_neighbor,
+                        right_neighbor=right_neighbor
+                    )
+                )
+                break
+            
+    return matches
 
 def dedupe_sentences(
+    
     text_a: str,
     text_b: str,
     similarity_threshold: int = 95,
@@ -99,34 +148,8 @@ def dedupe_sentences(
         str: the cleaned text_a.
     """
     
-    sentences_a = compile_text_to_sentences(text_a)
-    sentences_b = compile_text_to_sentences(text_b)
-    
-    # dedupe sentences
-    matches = []
-    left_neighbor = None
-    right_neighbor = None
-    for idx, (sentence_a, sentence_a_prepared) in enumerate(sentences_a):
-        left_neighbor = sentences_a[idx-1][0] if idx > 0 else None
-        right_neighbor = sentences_a[idx+1][0] if idx < len(sentences_a)-1 else None
-        if min_length and len(sentence_a) < min_length:
-            continue
-        for sentence_b, sentence_b_prepared in sentences_b:
-            if min_length and len(sentence_b) < min_length:
-                continue
-            similarity = fuzz.ratio(sentence_a_prepared, sentence_b_prepared)
-            print(f"SIMILARITY: {similarity} | {sentence_a_prepared} | {sentence_b_prepared}")
-            if similarity >= similarity_threshold:
-                matches.append(
-                    SimilarityMatch(
-                        original=sentence_a,
-                        matched=sentence_b, 
-                        similarity=similarity, 
-                        left_neighbor=left_neighbor,
-                        right_neighbor=right_neighbor
-                    )
-                )
-                break
+    # find similarity matches
+    matches = similarity_matches(text_a, text_b, similarity_threshold, min_length)
     
     # replace duplicates with empty strings
     # if the duplicate started or ended with a special marker, replace with
@@ -134,14 +157,32 @@ def dedupe_sentences(
     for match in matches:
         replace = ""
         original = match.original
-        shift = False
         
+        # handle special markers (asterisks and quotes)
         for special_marker in SPECIAL_MARKERS:
-            if original.count(special_marker) != 1:
+            
+            # we are looking for markers at the end or beginning of the sentence
+            # at an odd number of occurences
+            #
+            # those mean the sentence is part of a markup and the symbol
+            # must be carried over to the replacement so the markup remains
+            # complete
+            part_of_marker = original.startswith(special_marker) or original.endswith(special_marker)
+            
+            if not part_of_marker:
                 continue
             
-            replace = f"{special_marker}"
+            # if not odd number of special markers, skip
+            # an even number means the markup is fully contained within the sentence
+            if original.count(special_marker) % 2 == 0:
+                continue
             
+            # if the sentence is part of a markup, we need to carry over the marker
+            # to the replacement so the markup remains complete
+            replace = special_marker
+            
+            # balancing logic - some edge cases to handle issues
+            # with whitespace and special markers
             if original.startswith(special_marker):
                 if match.ln_startswith(special_marker):
                     replace = f"{special_marker} "
@@ -156,6 +197,7 @@ def dedupe_sentences(
         match_left = None
         match_right = None
         
+        # handle whitespace between neighbors
         if match.left_neighbor and match.right_neighbor:
             pattern_both = re.escape(match.left_neighbor) + r'(\s+)' + re.escape(original) + r'(\s+)' + re.escape(match.right_neighbor)
             match_both = re.search(pattern_both, text_a)
@@ -165,7 +207,6 @@ def dedupe_sentences(
         if match.right_neighbor:
             pattern_right = re.escape(original) + r'(\s+)' + re.escape(match.right_neighbor)
             match_right = re.search(pattern_right, text_a)
-
         
         if match.left_neighbor and match.right_neighbor and match_both:
             whitespace = match_both.group(1)
@@ -177,7 +218,11 @@ def dedupe_sentences(
             whitespace = match_right.group(1)
             original = f"{original}{whitespace}"
         
+        # Dedupe the original sentence by replacing it with the replacement
+        # which is either an empty string or a special marker (* or ")
         text_a = text_a.replace(original, replace)
+        
+        # call the on_dedupe callback if it is provided
         if on_dedupe:
             on_dedupe(match)
         if debug:
@@ -188,8 +233,9 @@ def dedupe_sentences(
                 matched=match.matched,
             )
 
-
+        # final clean up
         for special_marker in SPECIAL_MARKERS:
+            # idential markers with a space between can just be joined.
             text_a = text_a.replace(f'{special_marker} {special_marker}', " ")
         
 

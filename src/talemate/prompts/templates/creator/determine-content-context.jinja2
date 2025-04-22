@@ -18,10 +18,12 @@ Analyze the scenario description and determine a fitting content context.
 
 The content context should be a single short phrase that describes the expected experience when interacting with the scenario.
 {% endif %}
+Your response should be "Content context: a ..."
+
 Examples:
 
 {% for content_context in config.get('creator', {}).get('content_context',[]) -%}
 - {{ content_context }}
 {% endfor -%}
 <|CLOSE_SECTION|>
-{{ bot_token }}Content context:
+{{ bot_token }}Content context: a

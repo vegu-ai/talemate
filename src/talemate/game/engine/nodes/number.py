@@ -76,6 +76,45 @@ class MakeNumber(NumberNode):
         value = self.require_number_input("value", types)
         self.set_output_values({"value": value})
 
+@register("data/number/AsNumber")
+class AsNumber(NumberNode):
+    """Converts a value to a number
+    
+    Converts a value to a number, handling both string and numeric inputs.
+    
+    Inputs:
+    
+    - value: The value to convert to a number
+    
+    Outputs:
+    
+    - value: The converted number value
+    """
+    
+    class Fields:
+        number_type = PropertyField(
+            name="number_type",
+            description="Type of number to create",
+            type="str",
+            default="float",
+            choices=["int", "float"]
+        )
+    
+    def setup(self):
+        self.add_input("value", socket_type="any")
+        self.set_property("number_type", "int")
+        self.add_output("value", socket_type="int,float")
+        
+    async def run(self, state: GraphState):
+        
+        if self.get_property("number_type") == "int":
+            valid_types = (int,)
+        else:
+            valid_types = (float,)
+        
+        value = self.require_number_input("value", valid_types)
+        self.set_output_values({"value": value})
+
 @register("data/number/BasicArithmetic")
 class BasicArithmetic(NumberNode):
     """Performs basic arithmetic operations

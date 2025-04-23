@@ -35,12 +35,16 @@
 - `{{ scene_type.id }}`: {{ scene_type.description }}
 {% endfor %}
 <|SECTION:TASK|>
+{% if not require %}
 Determine whether or not a new scene intention is needed. If so, provide the type classification and intention of the new scene. If not, do nothing.
+{% else %}
+Determine the type classification and intention of the new scene.
+{% endif %}
 
 {% include "scene-intent-technical.jinja2" %}
 
 {% if last_message -%}
-Base your decision on the moment in the current scene:
+Base your decision on the moment in the current scene and the overall story intent:
 ```
 {{ last_message }}
 ```

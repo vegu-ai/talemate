@@ -314,7 +314,7 @@ class AutoDirectMixin:
     # actions
         
     @set_processing
-    async def auto_direct_set_scene_intent(self) -> ScenePhase | None:
+    async def auto_direct_set_scene_intent(self, require:bool=False) -> ScenePhase | None:
         
         async def set_scene_intention(type:str, intention:str) -> ScenePhase:
             await set_scene_phase(self.scene, type, intention)
@@ -346,6 +346,7 @@ class AutoDirectMixin:
             scene=self.scene,
             scene_type_ids=", ".join([f'"{scene_type.id}"' for scene_type in self.scene.intent_state.scene_types.values()]),
             retries=1,
+            require=require,
         )
         
         await focal_handler.request(

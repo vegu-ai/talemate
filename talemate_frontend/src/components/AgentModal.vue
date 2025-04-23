@@ -62,15 +62,84 @@
                       <div v-for="(action_config, config_key) in agent.data.actions[key].config" :key="config_key">
                         <div v-if="(action.enabled || actionAlwaysVisible(key, action)) && testConfigConditional(action_config)">
                           <!-- render config widgets based on action_config.type (int, str, bool, float) -->
-                          <v-text-field v-if="action_config.type === 'text' && action_config.choices === null" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" density="compact" @keyup="save(true)"></v-text-field>
 
-                          <v-textarea v-else-if="action_config.type === 'blob'" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" density="compact" @keyup="save(true)" rows="5"></v-textarea>
+                          <!-- text -->
+                          <v-text-field
+                            v-if="action_config.type === 'text' && action_config.choices === null" 
+                            v-model="action.config[config_key].value" 
+                            :label="action_config.label" 
+                            :hint="action_config.description" 
+                            density="compact" 
+                            @keyup="save(true)"
+                            class="mt-3"
+                            ></v-text-field>
 
-                          <v-select v-else-if="action_config.type === 'text' && action_config.choices !== null" v-model="action.config[config_key].value" :items="action_config.choices" :label="action_config.label" :hint="action_config.description" density="compact" item-title="label" item-value="value" @update:modelValue="save(false)" class="mt-3"></v-select>
+                          <!-- blob -->
+                          <v-textarea 
+                            v-else-if="action_config.type === 'blob'" 
+                            v-model="action.config[config_key].value" 
+                            :label="action_config.label" 
+                            :hint="action_config.description" 
+                            density="compact" 
+                            @keyup="save(true)"
+                            rows="5"
+                            class="mt-3"
+                            ></v-textarea>
 
-                          <v-slider v-if="action_config.type === 'number' && action_config.step !== null" v-model="action.config[config_key].value" :label="action_config.label" :hint="action_config.description" :min="action_config.min" :max="action_config.max" :step="action_config.step" density="compact" @update:modelValue="save(true)" color="primary" thumb-label="always"></v-slider>
+                          <!-- select -->
+                          <v-select 
+                            v-else-if="action_config.type === 'text' && action_config.choices !== null" 
+                            v-model="action.config[config_key].value" 
+                            :items="action_config.choices" 
+                            :label="action_config.label" 
+                            :hint="action_config.description" 
+                            density="compact" 
+                            item-title="label" 
+                            item-value="value" 
+                            @update:modelValue="save(false)" 
+                            class="mt-3"
+                          ></v-select>
 
-                          <v-checkbox v-if="action_config.type === 'bool'" v-model="action.config[config_key].value" :label="action_config.label" :messages="action_config.description" density="compact" @update:modelValue="save(false)" color="primary">
+                          <!-- flags -->
+                          <v-select 
+                            v-else-if="action_config.type === 'flags'"
+                            v-model="action.config[config_key].value" 
+                            :items="action_config.choices" 
+                            :label="action_config.label" 
+                            :hint="action_config.description" 
+                            item-title="label" 
+                            item-subtitle="help"
+                            multiple
+                            chips
+                            item-value="value" 
+                            @update:modelValue="save(false)" 
+                            class="mt-3"
+                          >
+                          </v-select>
+
+                          <!-- number -->
+                          <v-slider 
+                            v-if="action_config.type === 'number' && action_config.step !== null" 
+                            v-model="action.config[config_key].value" 
+                            :label="action_config.label" 
+                            :hint="action_config.description" 
+                            :min="action_config.min" 
+                            :max="action_config.max" 
+                            :step="action_config.step" 
+                            density="compact" 
+                            @update:modelValue="save(true)" 
+                            color="primary" 
+                            thumb-label="always"
+                            class="mt-3"
+                          ></v-slider>
+
+                          <!-- boolean -->
+                          <v-checkbox 
+                            v-if="action_config.type === 'bool'" 
+                            v-model="action.config[config_key].value" 
+                            :label="action_config.label" 
+                            :messages="action_config.description" 
+                            density="compact" @update:modelValue="save(false)" color="primary">
                             <!-- template details slot -->
                             <template v-slot:message="{ message }">
                               <span class="text-caption text-grey">{{ message }}</span>

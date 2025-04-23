@@ -55,7 +55,7 @@ ClientType = TypeVar("ClientType", bound=Client)
 
 
 class AgentActionConfig(BaseModel):
-    value: Union[int, float, str, bool, None] = None
+    value: Union[int, float, str, bool, list[bool | str | int | float], None] = None
 
 
 class AgentAction(BaseModel):

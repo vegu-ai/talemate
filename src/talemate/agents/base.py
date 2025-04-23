@@ -47,7 +47,7 @@ class AgentActionConfig(pydantic.BaseModel):
     type: str
     label: str
     description: str = ""
-    value: Union[int, float, str, bool, None] = None
+    value: Union[int, float, str, bool, list, None] = None
     default_value: Union[int, float, str, bool] = None
     max: Union[int, float, None] = None
     min: Union[int, float, None] = None
@@ -75,7 +75,6 @@ class AgentAction(pydantic.BaseModel):
     can_be_disabled: bool = False
     quick_toggle: bool = False
     experimental: bool = False
-
 
 class AgentDetail(pydantic.BaseModel):
     value: Union[str, None] = None
@@ -193,6 +192,7 @@ class Agent(ABC):
     websocket_handler = None
     essential = True
     ready_check_error = None
+    
 
     @property
     def agent_details(self):

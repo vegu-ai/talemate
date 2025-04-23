@@ -365,10 +365,10 @@ class AutoDirectMixin:
         
         scene_type_templates:TypedCollection = await world_state_manager.get_templates(types=["scene_type"])
         
-        async def add_from_template(name:str) -> SceneType:
-            template:TemplateSceneType | None = scene_type_templates.find_by_name(name)
+        async def add_from_template(id:str) -> SceneType:
+            template:TemplateSceneType | None = scene_type_templates.find_by_name(id)
             if not template:
-                log.warning("auto_direct_generate_scene_types: Template not found.", name=name)
+                log.warning("auto_direct_generate_scene_types: Template not found.", name=id)
                 return None
             return template.apply_to_scene(self.scene)
             

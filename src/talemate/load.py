@@ -7,6 +7,7 @@ import structlog
 import talemate.events as events
 import talemate.instance as instance
 from talemate import Actor, Character, Player, Scene
+from talemate.instance import get_agent
 from talemate.character import deactivate_character
 from talemate.config import load_config
 from talemate.context import SceneIsLoading
@@ -100,8 +101,13 @@ async def load_scene_from_character_card(scene, file_path):
     """
     Load a character card (tavern etc.) from the given file path.
     """
+    
+    director = get_agent("director")
+    LOADING_STEPS = 5
+    if director.auto_direct_enabled:
+        LOADING_STEPS += 3
 
-    loading_status = LoadingStatus(5)
+    loading_status = LoadingStatus(LOADING_STEPS)
     loading_status("Loading character card...")
 
     file_ext = os.path.splitext(file_path)[1].lower()
@@ -186,6 +192,28 @@ async def load_scene_from_character_card(scene, file_path):
         scene.assets.set_cover_image_from_file_path(file_path)
         character.cover_image = scene.assets.cover_image
 
+    # if auto direct is enabled, generate a story intent
+    # and then set the scene intent
+    try:
+        if director.auto_direct_enabled:
+            loading_status("Generating story intent...")
+            creator = get_agent("creator")
+            story_intent = await creator.contextual_generate_from_args(
+                context="story intent:overall",
+                length=256,
+            )
+            scene.intent_state.intent = story_intent
+            loading_status("Generating scene types...")
+            await director.auto_direct_generate_scene_types(
+                instructions=story_intent,
+                max_scene_types=2,
+            )
+            loading_status("Setting scene intent...")
+            await director.auto_direct_set_scene_intent(require=True)
+    except Exception as e:
+        log.error("generate story intent", error=e)
+
+    # update world state
     try:
         loading_status("Update world state ...")
         await scene.world_state.request_update(initial_only=True)

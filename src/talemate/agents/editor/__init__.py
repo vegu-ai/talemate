@@ -13,6 +13,7 @@ from talemate.agents.registry import register
 
 import talemate.agents.editor.nodes
 
+from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.agents.editor.revision import RevisionMixin
 
 if TYPE_CHECKING:
@@ -25,6 +26,7 @@ log = structlog.get_logger("talemate.agents.editor")
 
 @register()
 class EditorAgent(
+    MemoryRAGMixin,
     RevisionMixin,
     Agent,
 ):
@@ -79,8 +81,9 @@ class EditorAgent(
             ),
         }
         
+        MemoryRAGMixin.add_actions(self)
         RevisionMixin.add_actions(self)
-
+    
     @property
     def enabled(self):
         return self.is_enabled

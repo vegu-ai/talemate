@@ -7,7 +7,7 @@ import re
 from abc import ABC
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
-
+import uuid
 import pydantic
 import structlog
 from blinker import signal
@@ -560,7 +560,28 @@ class Agent(ABC):
         """
         return await fn(*args, **kwargs)
         
-
+    async def emit_message(self, header:str, message:str | list[dict], meta: dict = None, **data):
+        if not data:
+            data = {}
+            
+        if not meta:
+            meta = {}
+        
+        if "uuid" not in data:
+            data["uuid"] = str(uuid.uuid4())
+            
+        if "agent" not in data:
+            data["agent"] = self.agent_type
+        
+        data["header"] = header
+        emit(
+            "agent_message",
+            message=message,
+            data=data,
+            meta=meta,
+            websocket_passthrough=True,
+        )
+        
 @dataclasses.dataclass
 class AgentEmission:
     agent: Agent

@@ -23,6 +23,8 @@ YAML_OPTIONS = {
     "width": 100,
 }
 
+YAML_PRESERVE_NEWLINES = "If there are newlines, they should be preserved by using | style."
+
 class InvalidCallbackArguments(ValueError):
     pass
 
@@ -36,6 +38,12 @@ class State(pydantic.BaseModel):
 class Argument(pydantic.BaseModel):
     name: str
     type: str
+    preserve_newlines: bool = False
+    
+    def extra_instructions(self, state:State) -> str:
+        if state.schema_format == "yaml" and self.preserve_newlines:
+            return f" {YAML_PRESERVE_NEWLINES}"
+        return ""
     
 class Call(pydantic.BaseModel):
     name: str = pydantic.Field(validation_alias=pydantic.AliasChoices('name', 'function'))
@@ -84,7 +92,7 @@ class Callback(pydantic.BaseModel):
                 "argument_usage": argument_usage or {},
                 "arguments": self.arguments,
                 "state": self.state,
-                "examples": examples or []
+                "examples": examples or [],
             }
         )
         
@@ -96,7 +104,7 @@ class Callback(pydantic.BaseModel):
         return {
             "function": self.name,
             "arguments": {
-                argument.name: f"{argument.type} - {argument_usage.get(argument.name, '')}"
+                argument.name: f"{argument.type} - {argument_usage.get(argument.name, '')}{argument.extra_instructions(self.state)}"
                 for argument in self.arguments
             }
         } 

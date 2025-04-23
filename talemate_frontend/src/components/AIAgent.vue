@@ -301,6 +301,13 @@ export default {
             }
         },
         handleMessage(data) {
+
+            // When a new scene is loaded, clear the messages and agentHasMessages
+            if (data.type === "system" && data.id === 'scene.loaded') {
+                this.messages = {};
+                this.agentHasMessages = {};
+            }
+
             // Handle agent_status message type
             if (data.type === 'agent_status') {
                 // Find the client with the given name

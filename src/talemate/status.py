@@ -69,9 +69,10 @@ class set_loading:
 
 
 class LoadingStatus:
-    def __init__(self, max_steps: int):
+    def __init__(self, max_steps: int, cancellable: bool = False):
         self.max_steps = max_steps
         self.current_step = 0
+        self.cancellable = cancellable
 
     def __call__(self, message: str):
         self.current_step += 1
@@ -79,4 +80,14 @@ class LoadingStatus:
             "status",
             message=f"{message} [{self.current_step}/{self.max_steps}]",
             status="busy",
+            data={
+                "cancellable": self.cancellable,
+            },
+        )
+        
+    def done(self):
+        emit(
+            "status",
+            message="",
+            status="idle",
         )

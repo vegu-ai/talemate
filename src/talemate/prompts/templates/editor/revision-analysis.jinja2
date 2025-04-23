@@ -1,0 +1,30 @@
+{% include "scene-context.jinja2" %}
+<|SECTION:DRAFT TEXT|>
+{{ text }}
+<|CLOSE_SECTION|>
+{% set issues = 0 %}
+{% if repetition %}
+{% set issues = issues + 1 %}
+<|SECTION:ISSUE {{ issues }}: REPEATED TEXT|>
+These sentences have been classified as repetition and must either be substantially rewritten or removed. When removing a sentence, substitute something else, that's meaningful to the story and context.
+{% for repeat in repetition %}
+- {{ repeat["text_a"] }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif %}
+<|SECTION:TASK|>
+Rewrite the draft text to fix potential issues.
+
+1. Analyze each issue separately, taking into account the instructions and guidelines for it.
+2. Your confident plan for fixing the issues.
+3. Rewrite the text to fix the issues, the best you can, according to the plan you made.
+4. Your revised text MUST be prefixed by REVISION: so we can identify it.
+
+<|SECTION:RESPONSE FORMAT|>
+You MUST provide your response in the following format:
+
+ANALYSIS: ... your analysis of each explicitly mentioned issue and your plan for fixing it ...
+
+REVISION: ... your revision of the ENTIRE draft text ...
+<|CLOSE_SECTION|>
+{{ bot_token }}ANALYSIS:

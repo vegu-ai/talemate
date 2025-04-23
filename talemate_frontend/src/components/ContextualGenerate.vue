@@ -50,7 +50,7 @@
                     :disabled="busy"
                 ></v-select>
 
-                <v-textarea class="mt-1" ref="instructions" v-model="instructions" rows="2" label="Instructions"
+                <v-textarea class="mt-1" ref="instructions" v-model="instructions" rows="5" auto-grow label="Instructions"
                     hint="Additional instructions for the AI on how to generate the requested content" v-if="withInstructions"  :disabled="busy" :placeholder="instructionsPlaceholder"></v-textarea>
             </v-card-text>
             <v-card-actions>

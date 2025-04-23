@@ -1,0 +1,26 @@
+{% include "scene-context.jinja2" %}
+<|SECTION:DRAFT TEXT|>
+{{ text }}
+<|CLOSE_SECTION|>
+<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
+{{ focal.render_instructions() }}
+
+{{
+    focal.callbacks.rewrite_text.render(
+        "Rewrite the draft text to fix it according to the provided analysis.",
+        text="The revision of the ENTIRE draft text.",
+        examples=[
+            { "text": "... rewrite the text here ..." },
+        ],
+        
+    )
+}}
+<|SECTION:DRAFT TEXT|>
+{{ text }}
+<|CLOSE_SECTION|>
+<|SECTION:ANALYSIS|>
+{{ analysis }}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Rewrite the draft text to fix it according to the provided analysis.
+<|CLOSE_SECTION|>

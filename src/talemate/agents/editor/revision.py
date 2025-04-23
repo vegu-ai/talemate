@@ -13,6 +13,11 @@ from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.scene_message import CharacterMessage
 from talemate.util.dedupe import dedupe_sentences, SimilarityMatch
+from talemate.util import count_tokens
+from talemate.prompts import Prompt
+from talemate.exceptions import GenerationCancelled
+import talemate.game.focal as focal
+from talemate.status import LoadingStatus, set_loading
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -165,10 +170,17 @@ class RevisionMixin:
         Revise the text based on the revision method
         """
         
-        if self.revision_method == "dedupe":
-            return await self.revision_dedupe(text, character=character)
-        elif self.revision_method == "rewrite":
-            return await self.revision_rewrite(text, character=character)
+        try:
+            if self.revision_method == "dedupe":
+                return await self.revision_dedupe(text, character=character)
+            elif self.revision_method == "rewrite":
+                return await self.revision_rewrite(text, character=character)
+        except GenerationCancelled:
+            log.warning("revision_revise: generation cancelled", text=text)
+            return text
+        except Exception as e:
+            log.error("revision_revise: error", error=e)
+            return text
     
     
     async def revision_dedupe(self, text: str, character: "Character | None" = None):
@@ -260,4 +272,118 @@ class RevisionMixin:
         """
         Revise the text by rewriting
         """
-        pass
+        
+        original_text = text
+
+        # Step 1 - Find repetition
+        character_name_prefix = text.startswith(f"{character.name}: ") if character else False
+        
+        if character_name_prefix:
+            text = text[len(character.name) + 2:]
+            
+        compare_against:list[str] = await self.revision_collect_repetition_range()
+        
+        reasons = []
+        deduped = []
+        
+        def on_dedupe(match: SimilarityMatch):
+            deduped.append({
+                "text_a": match.original,
+                "text_b": match.matched,
+                "similarity": match.similarity
+            })
+            reasons.append(f"Repetition: {match.original} -> {match.matched} (similarity: {match.similarity})")
+            
+        for old_text in compare_against:
+            dedupe_sentences(
+                text, 
+                old_text, 
+                self.revision_repetition_threshold * 100, 
+                on_dedupe=on_dedupe,
+                min_length=self.revision_repetition_min_length
+            )
+            
+        log.debug("revision_rewrite: deduped", deduped=deduped)
+            
+        if not deduped:
+            # No repetition found, return original text
+            return original_text
+        
+        
+        loading_status = LoadingStatus(2, cancellable=True)
+        
+        # Step 2 - Rewrite
+        token_count = count_tokens(text)
+        
+        log.debug("revision_rewrite: token_count", token_count=token_count)
+        
+        loading_status("Editor - Issues identified, analyzing text...")
+        analysis = await Prompt.request(
+            "editor.revision-analysis",
+            self.client,
+            f"edit_768",
+            vars={
+                "text": text,
+                "character": character,
+                "scene": self.scene,
+                "response_length": token_count,
+                "max_tokens": self.client.max_token_length,
+                "repetition": deduped,
+            },
+        )
+        
+        async def rewrite_text(text:str) -> str:
+            return text
+            
+        focal_handler = focal.Focal(
+            self.client,
+            callbacks=[
+                focal.Callback(
+                    name="rewrite_text",
+                    arguments=[
+                        focal.Argument(name="text", type="str", preserve_newlines=True),
+                    ],
+                    fn=rewrite_text,
+                    multiple=False,
+                ),
+            ],
+            max_calls=1,
+            retries=1,
+            scene=self.scene,
+            analysis=analysis,
+            text=text,
+        )
+        
+        loading_status("Editor - Rewriting text...")
+        try:
+            await focal_handler.request(
+                "editor.revision-rewrite",
+            )
+                
+            try:
+                revision = focal_handler.state.calls[0].result
+            except Exception as e:
+                log.error("revision_rewrite: error", error=e)
+                return original_text
+
+            await self.emit_message(
+                "Rewrite",
+                message=[
+                    {"subtitle": "Reasons", "content": reasons},
+                    {"subtitle": "Original", "content": text},
+                    {"subtitle": "Revision", "content": revision},
+                ],
+                meta={
+                    "action": "revision_rewrite",
+                    "threshold": self.revision_repetition_threshold,
+                    "range": self.revision_repetition_range,
+                },
+                color="highlight4",
+            )
+            
+            if character_name_prefix:
+                revision = f"{character.name}: {revision}"
+                
+            return revision
+        finally:
+            loading_status.done()

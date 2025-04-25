@@ -77,7 +77,8 @@ def similarity_matches(
     text_a: str, 
     text_b: str, 
     similarity_threshold: int = 95, 
-    min_length: int | None = None
+    min_length: int | None = None,
+    split_on_comma: bool = False
 ) -> list[SimilarityMatch]:
     """
     Returns a list of similarity matches between two texts.
@@ -86,7 +87,10 @@ def similarity_matches(
         text_a (str): The first text.
         text_b (str): The second text.
         similarity_threshold (int): The similarity threshold to use when comparing sentences.
-        min_length (int): The minimum length of a sentence to be considered for deduplication. Shorter sentences are skipped. If None, all sentences are considered.
+        min_length (int): The minimum length of a sentence to be considered for deduplication. 
+            Shorter sentences are skipped. If None, all sentences are considered.
+        split_on_comma (bool): Whether to split sentences on commas. When true if the whole sentence does NOT trigger a similarity match,
+            the sentence will be split on commas and each comma will be checked for similarity.
 
     Returns:
         list: A list of similarity matches.
@@ -119,6 +123,26 @@ def similarity_matches(
                 )
                 break
             
+            if split_on_comma:
+                prev_comma_a = None
+                parts_a = sentence_a.split(",")
+                parts_b = sentence_b.split(",")
+                for idx_a, comma_a in enumerate(parts_a):
+                    for comma_b in parts_b:
+                        log.debug("checking comma", comma_a=comma_a, comma_b=comma_b)
+                        similarity = fuzz.ratio(comma_a.strip(), comma_b.strip())
+                        if similarity >= similarity_threshold:
+                            matches.append(
+                                SimilarityMatch(
+                                    original=comma_a,
+                                    matched=comma_b, 
+                                    similarity=similarity, 
+                                    left_neighbor=prev_comma_a,
+                                    right_neighbor=parts_a[idx_a+1] if idx_a < len(parts_a)-1 else None
+                                )
+                            )
+                            break
+                        
     return matches
 
 def dedupe_sentences(
@@ -128,7 +152,8 @@ def dedupe_sentences(
     similarity_threshold: int = 95,
     debug: bool = False,
     on_dedupe: Callable | None = None,
-    min_length: int | None = None
+    min_length: int | None = None,
+    split_on_comma: bool = False
 ) -> str:
     """
     Will split both texts into sentences and then compare each sentence in text_a
@@ -149,7 +174,7 @@ def dedupe_sentences(
     """
     
     # find similarity matches
-    matches = similarity_matches(text_a, text_b, similarity_threshold, min_length)
+    matches = similarity_matches(text_a, text_b, similarity_threshold, min_length, split_on_comma)
     
     # replace duplicates with empty strings
     # if the duplicate started or ended with a special marker, replace with

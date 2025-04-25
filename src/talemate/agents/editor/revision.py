@@ -78,10 +78,20 @@ class RevisionMixin:
                     type="number",
                     label="Repetition min length",
                     description="The minimum length of a sentence to be considered for repetition checking.",
-                    value=20,
+                    value=15,
                     min=1,
                     max=100,
                     step=1,
+                ),
+                "split_on_comma": AgentActionConfig(
+                    type="bool",
+                    label="Test parts of sentences, split on commas",
+                    condition=AgentActionConditional(
+                        attribute="revision.config.revision_method",
+                        value="rewrite",
+                    ),
+                    description="If a whole sentence does not trigger a repetition, split the sentence on commas and test each comma individually.",
+                    value=False,
                 )
             }
         )
@@ -107,6 +117,10 @@ class RevisionMixin:
     @property
     def revision_repetition_min_length(self):
         return self.actions["revision"].config["repetition_min_length"].value
+    
+    @property
+    def revision_split_on_comma(self):
+        return self.actions["revision"].config["split_on_comma"].value
     
     # signal connect
     
@@ -300,7 +314,8 @@ class RevisionMixin:
                 old_text, 
                 self.revision_repetition_threshold * 100, 
                 on_dedupe=on_dedupe,
-                min_length=self.revision_repetition_min_length
+                min_length=self.revision_repetition_min_length,
+                split_on_comma=self.revision_split_on_comma
             )
             
         log.debug("revision_rewrite: deduped", deduped=deduped)

@@ -1,5 +1,5 @@
 import pytest
-from talemate.util.dedupe import dedupe_sentences, dedupe_string
+from talemate.util.dedupe import dedupe_sentences, dedupe_string, similarity_matches
 
 # Test cases for dedupe_sentences
 @pytest.mark.parametrize("text_a, text_b, similarity_threshold, expected", [
@@ -148,3 +148,183 @@ def test_dedupe_sentences_newlines(text_a, text_b, similarity_threshold, expecte
 ])
 def test_dedupe_string(s, min_length, similarity_threshold, expected):
     assert dedupe_string(s, min_length=min_length, similarity_threshold=similarity_threshold) == expected
+
+# Test cases for similarity_matches function
+@pytest.mark.parametrize("text_a, text_b, similarity_threshold, min_length, split_on_comma, expected_count, check_properties", [
+    # Basic matching
+    (
+        "This is a test sentence. Another test sentence.", 
+        "This is a test sentence.", 
+        95, None, False, 
+        1, 
+        lambda matches: matches[0].original == "This is a test sentence." and matches[0].similarity >= 95
+    ),
+    
+    # Multiple matches
+    (
+        "First sentence. Second sentence. Third sentence.", 
+        "First sentence. Third sentence.", 
+        95, None, False, 
+        2, 
+        lambda matches: matches[0].original == "First sentence." and matches[1].original == "Third sentence."
+    ),
+    
+    # Similarity threshold testing
+    (
+        "Almost identical sentence.", 
+        "Almost identical sentences.",
+        90, None, False, 
+        1, 
+        lambda matches: matches[0].similarity >= 90
+    ),
+    (
+        "Almost identical sentence.", 
+        "Almost identical sentences.", 
+        99, None, False, 
+        0, 
+        lambda matches: True  # No matches expected
+    ),
+    
+    # min_length filtering
+    (
+        "Short. This is a longer sentence.", 
+        "Short. Different longer sentence.", 
+        95, 10, False, 
+        0, 
+        lambda matches: True  # Only "Short" would match but it's below min_length
+    ),
+    (
+        "Short. This is a longer sentence.", 
+        "Short. Different longer sentence.", 
+        95, 5, False, 
+        1, 
+        lambda matches: matches[0].original == "Short."
+    ),
+    
+    # split_on_comma testing
+    (
+        "Before comma, after comma.", 
+        "Something else, after comma.", 
+        95, None, True, 
+        1, 
+        lambda matches: "after comma" in matches[0].original
+    ),
+    (
+        "Before comma, after comma.", 
+        "Something else, after comma.", 
+        95, None, False, 
+        0, 
+        lambda matches: True  # Whole sentences don't match above threshold
+    ),
+    
+    # Special markers handling - note that the tokenizer splits sentences differently with special markers
+    (
+        "*This has asterisks.* Regular text.", 
+        "This has asterisks.", 
+        95, None, False, 
+        1, 
+        lambda matches: matches[0].original == "*This has asterisks."
+    ),
+    (
+        '"This has quotes." Regular text.', 
+        "This has quotes.", 
+        95, None, False, 
+        1, 
+        lambda matches: matches[0].original == '"This has quotes."'
+    ),
+    
+    # Neighbor detection
+    (
+        "First neighbor. Middle sentence. Last neighbor.", 
+        "Middle sentence.", 
+        95, None, False, 
+        1, 
+        lambda matches: (
+            matches[0].original == "Middle sentence." and 
+            matches[0].left_neighbor == "First neighbor." and 
+            matches[0].right_neighbor == "Last neighbor."
+        )
+    ),
+    
+    # Edge cases
+    (
+        "", 
+        "Some text.", 
+        95, None, False, 
+        0, 
+        lambda matches: True  # Empty text_a should have no matches
+    ),
+    (
+        "Some text.", 
+        "", 
+        95, None, False, 
+        0, 
+        lambda matches: True  # Empty text_b should have no matches
+    ),
+    (
+        "Single sentence.", 
+        "Single sentence.", 
+        95, None, False, 
+        1, 
+        lambda matches: matches[0].original == "Single sentence." and matches[0].similarity == 100
+    ),
+])
+def test_similarity_matches(text_a, text_b, similarity_threshold, min_length, split_on_comma, expected_count, check_properties):
+    matches = similarity_matches(
+        text_a, 
+        text_b, 
+        similarity_threshold=similarity_threshold,
+        min_length=min_length,
+        split_on_comma=split_on_comma
+    )
+    
+    assert len(matches) == expected_count
+    if expected_count > 0:
+        assert check_properties(matches)
+
+# Additional focused tests for specific behaviors
+def test_similarity_matches_with_min_length():
+    text_a = "Very short. This is a longer sentence that should be detected."
+    text_b = "Very short. This is a longer sentence that should be matched."
+    
+    # With min_length that filters out the short sentence
+    matches = similarity_matches(text_a, text_b, similarity_threshold=90, min_length=15)
+    assert len(matches) == 1
+    assert "longer sentence" in matches[0].original
+    
+    # Without min_length, both sentences should match
+    matches = similarity_matches(text_a, text_b, similarity_threshold=90)
+    assert len(matches) == 2
+    assert "Very short" in matches[0].original
+    assert "longer sentence" in matches[1].original
+
+def test_similarity_matches_comma_splitting():
+    text_a = "First part, similar middle part, last part."
+    text_b = "Different start, similar middle part, different end."
+    
+    # Without split_on_comma, no matches (whole sentences don't match enough)
+    matches = similarity_matches(text_a, text_b, similarity_threshold=95, split_on_comma=False)
+    assert len(matches) == 0
+    
+    # With split_on_comma, the middle part should match
+    matches = similarity_matches(text_a, text_b, similarity_threshold=95, split_on_comma=True)
+    assert len(matches) == 1
+    assert "similar middle part" in matches[0].original
+
+def test_similarity_matches_special_marker_handling():
+    # Test with both asterisks and quotes in the same text
+    text_a = "*Asterisk part.* Regular part. \"Quoted part.\""
+    text_b = "Asterisk part. Different text. Quoted part."
+    
+    matches = similarity_matches(text_a, text_b, similarity_threshold=90)
+    assert len(matches) == 2
+    
+    # Check that the special markers are preserved in the original but only at the beginning
+    # due to how the tokenizer works
+    asterisk_match = next((m for m in matches if "*" in m.original), None)
+    quote_match = next((m for m in matches if "\"" in m.original), None)
+    
+    assert asterisk_match is not None
+    assert quote_match is not None
+    assert asterisk_match.original == "*Asterisk part."
+    assert quote_match.original == "\"Quoted part.\""

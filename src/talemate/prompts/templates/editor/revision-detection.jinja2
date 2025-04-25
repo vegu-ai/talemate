@@ -1,16 +1,4 @@
-<|SECTION:SCENE|>
-{% set scene_context = scene.context_history(
-    budget=1024, 
-    min_dialogue=15, 
-    sections=False, 
-    keep_director=False, 
-    chapter_labels=True
-    ) 
--%}{# low budget on purpose to provide SOME context, but not get in the way of the task #}
-{% for scene_line in scene_context -%}
-{{ scene_line }}
-
-{% endfor %}
+{% include "scene-context.jinja2" %}
 <|CLOSE_SECTION|>
 {% set scene_analysis = agent_context_state["summarizer__scene_analysis"] %}
 {% if scene_analysis %}
@@ -24,7 +12,7 @@
 {{
     focal.callbacks.identify.render(
         "Identify a phrase in the draft text that qualifies as 'bad prose' according to the detection guidelines.",
-        phrase="The phrase to identify",
+        phrase="The phrase WITHIN the draft text. Don't just quote back from the guidelines, identify the phrase in the draft text.",
         reason="The reason why the phrase is bad prose",
         instructions="The instructions to fix the issue.",
         examples=[
@@ -43,15 +31,21 @@ Follow these to detect bad or unwanted prose:
 {{ instructions }}
 ```
 <|CLOSE_SECTION|>
-<|SECTION:DRAFT TEXT|>
-{{ text }}
-<|CLOSE_SECTION|>
 <|SECTION:TASK|>
 Analyze the draft text againts the `Guidelines for writing style`, and identify all phrases in the draft text that qualify as "bad prose" according to these detection guidelines. 
 
-YOU MUST ONLY EVALUATE AGAINST THE EXPLICITLY STATED DETECTION RULES.
+``` draft text
+{{ text }}
+```
 
-After the analysis, call the `identify` function for each phrase that qualifies as "bad prose" according to the detection guidelines.
+IMPORTANT RULES:
+1. YOU MUST ONLY EVALUATE AGAINST THE EXPLICITLY STATED DETECTION RULES.
+2. Identifying a phrase means, repeat it back as it is written in the draft text.
+3. DONT BE OVERZEALOUS. This is only meant to catch the worst offenders. Most of the time I would prefer you to do nothing.
+
+You MUST repeat your understanding of the task, and these rules.
+
+Then after your analysis, call the `identify` function for each phrase that qualifies as "bad prose" according to the detection guidelines.
 
 If not phrases qualify, don't call any functions.
 <|CLOSE_SECTION|>

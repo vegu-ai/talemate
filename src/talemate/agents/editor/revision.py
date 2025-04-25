@@ -147,7 +147,7 @@ class RevisionMixin:
         return self.actions["revision"].config["min_issues"].value
     
     @property
-    def revision_detect_bad_prose(self):
+    def revision_detect_bad_prose_enabled(self):
         return self.actions["revision"].config["detect_bad_prose"].value
     
     # signal connect
@@ -341,7 +341,7 @@ class RevisionMixin:
                 ),
             ],
             max_calls=5,
-            retries=1,
+            retries=0,
             scene=self.scene,
             text=text,
             instructions=self.scene.writing_style.instructions,
@@ -359,7 +359,7 @@ class RevisionMixin:
         """
         original_text = text
         writing_style = self.scene.writing_style
-        detect_bad_prose = self.revision_detect_bad_prose and writing_style
+        detect_bad_prose = self.revision_detect_bad_prose_enabled and writing_style
         
         if loading_status:
             loading_status.max_steps = 2
@@ -480,10 +480,7 @@ class RevisionMixin:
             log.error("revision_rewrite: error", error=e)
             return original_text
         
-        if character_name_prefix:
-            revision = f"{character.name}: {revision}"
-            
-        diff = dmp_inline_diff(original_text, revision)
+        diff = dmp_inline_diff(text, revision)
         await self.emit_message(
             "Rewrite",
             message=[

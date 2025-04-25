@@ -392,6 +392,7 @@ class Prompt:
         env.globals["query_text_eval"] = self.query_text_eval
         env.globals["instruct_text"] = self.instruct_text
         env.globals["agent_action"] = self.agent_action
+        env.globals["agent_config"] = self.agent_config
         env.globals["retrieve_memories"] = self.retrieve_memories
         env.globals["time_diff"] = self.time_diff
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
@@ -625,6 +626,16 @@ class Prompt:
         return loop.run_until_complete(
             world_state.analyze_text_and_extract_context("\n".join(lines), goal=goal)
         )
+        
+    def agent_config(self, config_path: str):
+
+        try:
+            agent_name, action_name, config_name = config_path.split(".")
+            agent = instance.get_agent(agent_name)
+            return agent.actions[action_name].config.get(config_name).value
+        except Exception as e:
+            log.error("agent_config", config_path=config_path, error=e)
+            return ""
 
     def agent_action(self, agent_name: str, _action_name: str, **kwargs):
         loop = asyncio.get_event_loop()

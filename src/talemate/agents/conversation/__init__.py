@@ -160,6 +160,22 @@ class ConversationAgent(
                 label="Auto Break Repetition",
                 description="Will attempt to automatically break AI repetition.",
             ),
+            "content": AgentAction(
+                enabled=True,
+                can_be_disabled=False,
+                container=True,
+                label="Content",
+                icon="mdi-script-text",
+                description="Content control settings",
+                config={
+                    "use_writing_style": AgentActionConfig(
+                        type="bool",
+                        label="Use Writing Style",
+                        description="Use the writing style selected in the scene settings",
+                        value=True,
+                    ),
+                }
+            ),
         }
         
         MemoryRAGMixin.add_actions(self)
@@ -211,6 +227,10 @@ class ConversationAgent(
     @property
     def generation_settings_actor_instructions_offset(self):
         return self.actions["generation_override"].config["actor_instructions_offset"].value
+
+    @property
+    def content_use_writing_style(self) -> bool:
+        return self.actions["content"].config["use_writing_style"].value
 
     def connect(self, scene):
         super().connect(scene)

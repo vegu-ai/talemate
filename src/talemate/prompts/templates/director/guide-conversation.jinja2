@@ -25,6 +25,15 @@ Content Classification: {{ scene.context }}
 {{ character.dialogue_instructions }}
 <|CLOSE_SECTION|>
 {% endif %}
+{# writign style #}{% if scene.writing_style and agent_config("conversation.content.use_writing_style") %}
+<|SECTION:WRITING STYLE|>
+There exists a style guide for the overall story, use it to inform your instructions and expand on how to incorporate the writing style into the dialogue:
+
+``` writing style
+{{ scene.writing_style.instructions }}
+```
+<|CLOSE_SECTION|>
+{# writing style end #}{% endif %}
 <|SECTION:TASK|>
 {% set character_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=1) or conversation_instruction  -%}
 {% if agent_context_state["conversation__instruction"] -%}
@@ -62,9 +71,6 @@ Explain {{ character.name }}'s way of speaking and mannerisms to guide the write
 - Summarize the scene analysis and its relevance to {{ character.name }}'s next moment.
   - Include relevant facts. (actors are forgetful)
 - Explain how {{ character.name }} should speak based on their personality and the scene's context
-
-{#IMPORTANT: Ensure that the dialogue does not become repetitive by analysing what makes it repetitive and how to avoid it as the actors have a tendency to repeat phrases. You can let them know if they have repeated a phrase or idea too many times. Provide examples of what NOT to say again.#}
-
 {% endif %}
 
 Focus solely on WHAT needs to be conveyed. Trust the writer to capture {{ character.name }}'s personality and style based on your character description. How do we make {{ character.name }} a believable, natural sounding character in this next moment?

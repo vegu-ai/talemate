@@ -29,6 +29,11 @@ dedupe_condition = AgentActionConditional(
     value="dedupe",
 )
 
+rewrite_condition = AgentActionConditional(
+    attribute="revision.config.revision_method",
+    value="rewrite",
+)
+
 class RevisionMixin:
     
     """
@@ -60,10 +65,10 @@ class RevisionMixin:
                     type="number",
                     label="Similarity threshold",
                     description="The similarity threshold for detecting repetition (percentage)",
-                    value=0.9,
-                    min=0.5,
-                    max=1,
-                    step=0.01,
+                    value=90,
+                    min=40,
+                    max=100,
+                    step=1,
                 ),
                 "repetition_range": AgentActionConfig(
                     type="number",
@@ -86,12 +91,19 @@ class RevisionMixin:
                 "split_on_comma": AgentActionConfig(
                     type="bool",
                     label="Test parts of sentences, split on commas",
-                    condition=AgentActionConditional(
-                        attribute="revision.config.revision_method",
-                        value="rewrite",
-                    ),
+                    condition=rewrite_condition,
                     description="If a whole sentence does not trigger a repetition, split the sentence on commas and test each comma individually.",
                     value=False,
+                ),
+                "min_issues": AgentActionConfig(
+                    type="number",
+                    label="Minimum issues",
+                    condition=rewrite_condition,
+                    description="The minimum number of issues to trigger a rewrite.",
+                    value=1,
+                    min=1,
+                    max=10,
+                    step=1,
                 )
             }
         )
@@ -121,6 +133,10 @@ class RevisionMixin:
     @property
     def revision_split_on_comma(self):
         return self.actions["revision"].config["split_on_comma"].value
+    
+    @property
+    def revision_min_issues(self):
+        return self.actions["revision"].config["min_issues"].value
     
     # signal connect
     
@@ -225,7 +241,7 @@ class RevisionMixin:
             text = dedupe_sentences(
                 text, 
                 old_text, 
-                self.revision_repetition_threshold * 100, 
+                self.revision_repetition_threshold, 
                 on_dedupe=on_dedupe,
                 min_length=self.revision_repetition_min_length
             )
@@ -297,7 +313,7 @@ class RevisionMixin:
             
         compare_against:list[str] = await self.revision_collect_repetition_range()
         
-        reasons = []
+        issues = []
         deduped = []
         
         def on_dedupe(match: SimilarityMatch):
@@ -306,13 +322,13 @@ class RevisionMixin:
                 "text_b": match.matched,
                 "similarity": match.similarity
             })
-            reasons.append(f"Repetition: {match.original} -> {match.matched} (similarity: {match.similarity})")
+            issues.append(f"Repetition: {match.original} -> {match.matched} (similarity: {match.similarity})")
             
         for old_text in compare_against:
             dedupe_sentences(
                 text, 
                 old_text, 
-                self.revision_repetition_threshold * 100, 
+                self.revision_repetition_threshold, 
                 on_dedupe=on_dedupe,
                 min_length=self.revision_repetition_min_length,
                 split_on_comma=self.revision_split_on_comma
@@ -322,6 +338,21 @@ class RevisionMixin:
             
         if not deduped:
             # No repetition found, return original text
+            return original_text
+        
+        num_issues = len(deduped)
+        
+        if num_issues < self.revision_min_issues:
+            log.debug("revision_rewrite: not enough issues found, returning original text", issues=num_issues, min_issues=self.revision_min_issues)
+            # Not enough issues found, return original text
+            await self.emit_message(
+                "Aborted rewrite",
+                message=[
+                    {"subtitle": "Issues", "content": issues},
+                    {"subtitle": "Message", "content": f"Not enough issues found, returning original text - minimum issues is {self.revision_min_issues}. Found {num_issues} issues."},
+                ],
+                color="orange",
+            )
             return original_text
         
         
@@ -384,7 +415,7 @@ class RevisionMixin:
             await self.emit_message(
                 "Rewrite",
                 message=[
-                    {"subtitle": "Reasons", "content": reasons},
+                    {"subtitle": "Issues", "content": issues},
                     {"subtitle": "Original", "content": text},
                     {"subtitle": "Revision", "content": revision},
                 ],

@@ -12,9 +12,9 @@ Examples of narration styles:
 - Provocative: "The woman glances your way with a look that could melt polyester. Too bad your leisure suit is 100% synthetic."
 {% endif %}
 {% endif %}
-{% if agent_context_state["narrator__writing_style"] and not writing_style_specified %}
+{% if agent_context_state["narrator__writing_style"] and not writing_style_specified and scene.writing_style %}
 ### Writing Style
-There exists an overall style guide for the narrative, use it to inform your instructions and expand on how to incorporate the writing style into the narration: "{{ agent_context_state["narrator__writing_style"].instructions }}"
+There exists an overall style guide for the narrative, use it to inform your instructions and expand on how to incorporate the writing style into the narration: "{{ scene.writing_style.instructions }}"
 
 {% if response_length > 500 %}Explain your understanding of the style guide, what does it mean and what are the expectations from the reader.{% endif %}
 {% endif %}

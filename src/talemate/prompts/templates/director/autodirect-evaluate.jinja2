@@ -1,5 +1,8 @@
 {% set extra_context_content -%}
 {% include "extra-context.jinja2" %}
+{% with include_dialogue_instructions=True -%}
+{% include "character-context.jinja2" %}
+{% endwith %}
 {% endset %}
 {{ extra_context_content }}
 {% set extra_context_tokens = count_tokens(extra_context_content) %}

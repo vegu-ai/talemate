@@ -24,7 +24,8 @@
                             <v-list-item v-for="(section, key) in message.message" :key="key">
                                 <v-list-item-subtitle>{{ section.subtitle }}</v-list-item-subtitle>
                                 <div v-if="typeof section.content === 'string'">
-                                    <div class="text-muted agent-message-text">
+                                    <div v-if="section.process === 'diff'" v-html="section.content" class="text-muted agent-message-text"></div>
+                                    <div v-else class="text-muted agent-message-text">
                                         {{ section.content }}
                                     </div>  
                                 </div>
@@ -113,5 +114,16 @@ export default {
 }
 .agent-message-text {
     white-space: pre-wrap;
+}
+
+</style>
+<style>
+span.diff-delete {
+    text-decoration: line-through;
+    color: rgb(var(--v-theme-delete));
+}
+.diff-insert {
+    text-decoration: underline;
+    color: rgb(var(--v-theme-success));
 }
 </style>

@@ -3,15 +3,24 @@
 {{ text }}
 <|CLOSE_SECTION|>
 {% set issues = 0 %}
-{% if repetition %}
+{# repetition #}{% if repetition %}
 {% set issues = issues + 1 %}
 <|SECTION:ISSUE {{ issues }}: REPEATED TEXT|>
 These sentences have been classified as repetition and must either be substantially rewritten or removed. When removing a sentence, substitute something else, that's meaningful to the story and context.
-{% for repeat in repetition %}
-- {{ repeat["text_a"] }}
+
+{% for repeat in repetition %}- `{{ repeat["text_a"].strip() }}`
 {% endfor %}
 <|CLOSE_SECTION|>
-{% endif %}
+{# end repetition #}{% endif %}
+{# unwanted prose #}{% if bad_prose %}
+{% set issues = issues + 1 %}
+<|SECTION:ISSUE {{ issues }}: UNWANTED PROSE|>
+These phrases or words have been identified by the director as bad, and MUST be changed accordingly.
+
+{% for phrase in bad_prose %}- `{{ phrase.phrase }}` -- {{ phrase.instructions }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{# end unwanted prose #}{% endif %}
 <|SECTION:TASK|>
 Rewrite the draft text to fix potential issues.
 
@@ -24,9 +33,7 @@ Rewrite the draft text to fix potential issues.
 <|SECTION:RESPONSE FORMAT|>
 You MUST provide your response in the following format:
 
-... repeat back your understanding of the task ...
-
-... your analysis of each explicitly mentioned issue and your plan for fixing it ...
-
-... your revision of the ENTIRE draft text ... 
+1. repeat back your understanding of the task
+2. your analysis of each explicitly mentioned issue and your plan for fixing it
+3. your revision of the ENTIRE draft text 
 <|CLOSE_SECTION|>

@@ -1,0 +1,57 @@
+<|SECTION:SCENE|>
+{% set scene_context = scene.context_history(
+    budget=1024, 
+    min_dialogue=15, 
+    sections=False, 
+    keep_director=False, 
+    chapter_labels=True
+    ) 
+-%}{# low budget on purpose to provide SOME context, but not get in the way of the task #}
+{% for scene_line in scene_context -%}
+{{ scene_line }}
+
+{% endfor %}
+<|CLOSE_SECTION|>
+{% set scene_analysis = agent_context_state["summarizer__scene_analysis"] %}
+{% if scene_analysis %}
+<|SECTION:SCENE ANALYSIS|>
+{{ scene_analysis }}
+<|CLOSE_SECTION|>
+{% endif %}
+<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
+{{ focal.render_instructions() }}
+
+{{
+    focal.callbacks.identify.render(
+        "Identify a phrase in the draft text that qualifies as 'bad prose' according to the detection guidelines.",
+        phrase="The phrase to identify",
+        reason="The reason why the phrase is bad prose",
+        instructions="The instructions to fix the issue.",
+        examples=[
+            { 
+                "phrase": "...",
+                "reason": "...",
+                "instructions": "..."
+            }
+        ],
+    )
+}}
+<|SECTION:Guidelines for writing style|>
+Follow these to detect bad or unwanted prose:
+
+```
+{{ instructions }}
+```
+<|CLOSE_SECTION|>
+<|SECTION:DRAFT TEXT|>
+{{ text }}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Analyze the draft text againts the `Guidelines for writing style`, and identify all phrases in the draft text that qualify as "bad prose" according to these detection guidelines. 
+
+YOU MUST ONLY EVALUATE AGAINST THE EXPLICITLY STATED DETECTION RULES.
+
+After the analysis, call the `identify` function for each phrase that qualifies as "bad prose" according to the detection guidelines.
+
+If not phrases qualify, don't call any functions.
+<|CLOSE_SECTION|>

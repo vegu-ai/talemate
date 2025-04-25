@@ -13,6 +13,7 @@ from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.scene_message import CharacterMessage
 from talemate.util.dedupe import dedupe_sentences, SimilarityMatch
+from talemate.util.diff import dmp_inline_diff
 from talemate.util import count_tokens
 from talemate.prompts import Prompt
 from talemate.exceptions import GenerationCancelled
@@ -104,7 +105,14 @@ class RevisionMixin:
                     min=1,
                     max=10,
                     step=1,
-                )
+                ),
+                "detect_bad_prose": AgentActionConfig(
+                    type="bool",
+                    label="Detect unwanted prose",
+                    description="Enable / Disable unwanted prose detection. Will use the writing style selected in the scene settings to determine unwanted phrases.",
+                    condition=rewrite_condition,
+                    value=False,
+                ),
             }
         )
         
@@ -137,6 +145,10 @@ class RevisionMixin:
     @property
     def revision_min_issues(self):
         return self.actions["revision"].config["min_issues"].value
+    
+    @property
+    def revision_detect_bad_prose(self):
+        return self.actions["revision"].config["detect_bad_prose"].value
     
     # signal connect
     
@@ -199,18 +211,21 @@ class RevisionMixin:
         """
         Revise the text based on the revision method
         """
+        loading_status = LoadingStatus(0, cancellable=True)
         
         try:
             if self.revision_method == "dedupe":
                 return await self.revision_dedupe(text, character=character)
             elif self.revision_method == "rewrite":
-                return await self.revision_rewrite(text, character=character)
+                return await self.revision_rewrite(text, character=character, loading_status=loading_status)
         except GenerationCancelled:
             log.warning("revision_revise: generation cancelled", text=text)
             return text
         except Exception as e:
             log.error("revision_revise: error", error=e)
             return text
+        finally:
+            loading_status.done()
     
     
     async def revision_dedupe(self, text: str, character: "Character | None" = None):
@@ -298,13 +313,57 @@ class RevisionMixin:
             
         return text
     
-    async def revision_rewrite(self, text: str, character: "Character | None" = None):
+    async def revision_detect_bad_prose(self, text: str) -> list[dict]:
+        """
+        Detect bad prose in the text
+        """
+        identified = []
+        
+        async def identify(phrase: str = None, reason: str = None, instructions: str = None, **kwargs):
+            identified.append({
+                "phrase": phrase,
+                "reason": reason,
+                "instructions": instructions,
+            })
+        
+        focal_handler = focal.Focal(
+            self.client,
+            callbacks=[
+                focal.Callback(
+                    name="identify",
+                    arguments=[
+                        focal.Argument(name="phrase", type="str"),
+                        focal.Argument(name="reason", type="str"),
+                        focal.Argument(name="instructions", type="str"),
+                    ],
+                    fn=identify,
+                    multiple=True,
+                ),
+            ],
+            max_calls=5,
+            retries=1,
+            scene=self.scene,
+            text=text,
+            instructions=self.scene.writing_style.instructions,
+        )
+        
+        await focal_handler.request(
+            "editor.revision-detection",
+        )
+        
+        return identified
+    
+    async def revision_rewrite(self, text: str, character: "Character | None" = None, loading_status: LoadingStatus = None):
         """
         Revise the text by rewriting
         """
-        
         original_text = text
-
+        writing_style = self.scene.writing_style
+        detect_bad_prose = self.revision_detect_bad_prose and writing_style
+        
+        if loading_status:
+            loading_status.max_steps = 2
+        
         # Step 1 - Find repetition
         character_name_prefix = text.startswith(f"{character.name}: ") if character else False
         
@@ -315,6 +374,7 @@ class RevisionMixin:
         
         issues = []
         deduped = []
+        bad_prose_identified = []
         
         def on_dedupe(match: SimilarityMatch):
             deduped.append({
@@ -336,11 +396,17 @@ class RevisionMixin:
             
         log.debug("revision_rewrite: deduped", deduped=deduped)
             
-        if not deduped:
+        if detect_bad_prose:
+            bad_prose_identified = await self.revision_detect_bad_prose(text)
+            for identified in bad_prose_identified:
+                issues.append(f"Bad prose: `{identified['phrase']}` (reason: {identified['reason']}, instructions: {identified['instructions']})")
+            log.debug("revision_rewrite: bad_prose_identified", bad_prose_identified=bad_prose_identified)
+            
+        if not issues:
             # No repetition found, return original text
             return original_text
         
-        num_issues = len(deduped)
+        num_issues = len(issues)
         
         if num_issues < self.revision_min_issues:
             log.debug("revision_rewrite: not enough issues found, returning original text", issues=num_issues, min_issues=self.revision_min_issues)
@@ -356,14 +422,14 @@ class RevisionMixin:
             return original_text
         
         
-        loading_status = LoadingStatus(2, cancellable=True)
-        
         # Step 2 - Rewrite
         token_count = count_tokens(text)
         
         log.debug("revision_rewrite: token_count", token_count=token_count)
         
-        loading_status("Editor - Issues identified, analyzing text...")
+        if loading_status:
+            loading_status("Editor - Issues identified, analyzing text...")
+            
         analysis = await Prompt.request(
             "editor.revision-analysis",
             self.client,
@@ -375,6 +441,7 @@ class RevisionMixin:
                 "response_length": token_count,
                 "max_tokens": self.client.max_token_length,
                 "repetition": deduped,
+                "bad_prose": bad_prose_identified,
             },
         )
         
@@ -400,36 +467,39 @@ class RevisionMixin:
             text=text,
         )
         
-        loading_status("Editor - Rewriting text...")
-        try:
-            await focal_handler.request(
-                "editor.revision-rewrite",
-            )
-                
-            try:
-                revision = focal_handler.state.calls[0].result
-            except Exception as e:
-                log.error("revision_rewrite: error", error=e)
-                return original_text
+        if loading_status:
+            loading_status("Editor - Rewriting text...")
 
-            await self.emit_message(
-                "Rewrite",
-                message=[
-                    {"subtitle": "Issues", "content": issues},
-                    {"subtitle": "Original", "content": text},
-                    {"subtitle": "Revision", "content": revision},
-                ],
-                meta={
-                    "action": "revision_rewrite",
-                    "threshold": self.revision_repetition_threshold,
-                    "range": self.revision_repetition_range,
-                },
-                color="highlight4",
-            )
+        await focal_handler.request(
+            "editor.revision-rewrite",
+        )
             
-            if character_name_prefix:
-                revision = f"{character.name}: {revision}"
-                
-            return revision
-        finally:
-            loading_status.done()
+        try:
+            revision = focal_handler.state.calls[0].result
+        except Exception as e:
+            log.error("revision_rewrite: error", error=e)
+            return original_text
+        
+        if character_name_prefix:
+            revision = f"{character.name}: {revision}"
+            
+        diff = dmp_inline_diff(original_text, revision)
+        await self.emit_message(
+            "Rewrite",
+            message=[
+                {"subtitle": "Issues", "content": issues},
+                {"subtitle": "Original", "content": text},
+                {"subtitle": "Changes", "content": diff, "process": "diff"},
+            ],
+            meta={
+                "action": "revision_rewrite",
+                "threshold": self.revision_repetition_threshold,
+                "range": self.revision_repetition_range,
+            },
+            color="highlight4",
+        )
+        
+        if character_name_prefix:
+            revision = f"{character.name}: {revision}"
+            
+        return revision

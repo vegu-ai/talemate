@@ -129,7 +129,6 @@ def similarity_matches(
                 parts_b = sentence_b.split(",")
                 for idx_a, comma_a in enumerate(parts_a):
                     for comma_b in parts_b:
-                        log.debug("checking comma", comma_a=comma_a, comma_b=comma_b)
                         similarity = fuzz.ratio(comma_a.strip(), comma_b.strip())
                         if similarity >= similarity_threshold:
                             matches.append(

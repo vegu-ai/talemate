@@ -86,6 +86,9 @@ class LoadingStatus:
         )
         
     def done(self):
+        if self.current_step == 0:
+            return
+        
         emit(
             "status",
             message="",

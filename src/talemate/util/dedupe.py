@@ -128,7 +128,11 @@ def similarity_matches(
                 parts_a = sentence_a.split(",")
                 parts_b = sentence_b.split(",")
                 for idx_a, comma_a in enumerate(parts_a):
+                    if min_length and len(comma_a) < min_length:
+                        continue
                     for comma_b in parts_b:
+                        if min_length and len(comma_b) < min_length:
+                            continue
                         similarity = fuzz.ratio(comma_a.strip(), comma_b.strip())
                         if similarity >= similarity_threshold:
                             matches.append(

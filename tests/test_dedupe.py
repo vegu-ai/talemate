@@ -328,3 +328,48 @@ def test_similarity_matches_special_marker_handling():
     assert quote_match is not None
     assert asterisk_match.original == "*Asterisk part."
     assert quote_match.original == "\"Quoted part.\""
+
+def test_similarity_matches_min_length_with_comma_splitting():
+    """Test that min_length is properly honored during split_on_comma operations."""
+    # Text with multiple comma-separated parts of varying lengths
+    text_a = "Short, Medium length part, Very long and detailed part of the sentence."
+    text_b = "Different, Medium length part, Another long and unrelated segment."
+    
+    # Should match "Medium length part" with split_on_comma=True and no min_length
+    matches = similarity_matches(
+        text_a, text_b, 
+        similarity_threshold=95, 
+        split_on_comma=True
+    )
+    assert len(matches) == 1
+    assert "Medium length part" in matches[0].original
+    
+    # Should NOT match "Short" due to min_length=10, but still match "Medium length part"
+    matches = similarity_matches(
+        text_a, text_b, 
+        similarity_threshold=95, 
+        min_length=10, 
+        split_on_comma=True
+    )
+    assert len(matches) == 1
+    assert "Medium length part" in matches[0].original
+    assert "Short" not in matches[0].original
+    
+    # With higher min_length, should still match the longer part
+    matches = similarity_matches(
+        text_a, text_b, 
+        similarity_threshold=95, 
+        min_length=15, 
+        split_on_comma=True
+    )
+    assert len(matches) == 1
+    assert "Medium length part" in matches[0].original
+    
+    # With very high min_length, should match nothing
+    matches = similarity_matches(
+        text_a, text_b, 
+        similarity_threshold=95, 
+        min_length=30, 
+        split_on_comma=True
+    )
+    assert len(matches) == 0

@@ -28,6 +28,8 @@ export default createVuetify({
           highlight3: colors.lightGreen.lighten3,
           highlight4: colors.red.lighten1,
           highlight5: colors.amber.lighten3,
+          highlight6: colors.orange.lighten3,
+          highlight7: colors.blue.lighten3,
           dirty: colors.orange.lighten2,
           instructions: colors.orange.lighten4,
 

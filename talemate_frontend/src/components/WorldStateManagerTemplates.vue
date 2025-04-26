@@ -181,14 +181,12 @@
                             <v-checkbox 
                             v-model="template.auto_create" 
                             label="Automatically create" 
-                            @update:model-value="dirty=true;"
-                            @blur="saveTemplate"
+                            @update:model-value="saveTemplate"
                             messages="Automatically create instances of this template for new games / characters."></v-checkbox>
                             <v-checkbox 
                             v-model="template.favorite" 
                             label="Favorite" 
-                            @update:model-value="dirty=true;"
-                            @blur="saveTemplate"
+                            @update:model-value="saveTemplate"
                             messages="Favorited templates will be available for quick setup."></v-checkbox>
     
                         </v-col>
@@ -243,24 +241,21 @@
                             <v-checkbox 
                                 v-model="template.supports_spice" 
                                 label="Supports spice" 
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
+                                @update:model-value="saveTemplate"
                                 hint="When an attribute supports spice, there is a small chance that the AI will apply a random generation affector to push the attribute in a potentially unexpected direction."
                                 messages="Randomly spice up this attribute during generation.">
                             </v-checkbox>
                             <v-checkbox
                                 v-model="template.supports_style"
                                 label="Supports writing style flavoring"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
+                                @update:model-value="saveTemplate"
                                 hint="When an attribute supports style, the AI will attempt to generate the attribute in a way that matches a selected writing style."
                                 messages="Generate this attribute in a way that matches a selected writing style.">
                             </v-checkbox>
                             <v-checkbox 
                                 v-model="template.favorite" 
                                 label="Favorite" 
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
+                                @update:model-value="saveTemplate"
                                 messages="Favorited templates will appear on the top of the list.">
                             </v-checkbox>
                         </v-col>
@@ -302,24 +297,21 @@
                             <v-checkbox 
                                 v-model="template.supports_spice" 
                                 label="Supports spice" 
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
+                                @update:model-value="saveTemplate"
                                 hint="When a detail supports spice, there is a small chance that the AI will apply a random generation affector to push the detail in a potentially unexpected direction."
                                 messages="Randomly spice up this detail during generation.">
                             </v-checkbox>
                             <v-checkbox
                                 v-model="template.supports_style"
                                 label="Supports writing style flavoring"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
+                                @update:model-value="saveTemplate"
                                 hint="When a detail supports style, the AI will attempt to generate the detail in a way that matches a selected writing style."
                                 messages="Generate this detail in a way that matches a selected writing style.">
                             </v-checkbox>
                             <v-checkbox 
                                 v-model="template.favorite" 
                                 label="Favorite" 
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
+                                @update:model-value="saveTemplate"
                                 messages="Favorited templates will appear on the top of the list.">
                             </v-checkbox>
                         </v-col>
@@ -428,8 +420,7 @@
                             <v-checkbox 
                                 v-model="template.favorite" 
                                 label="Favorite" 
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
+                                @update:model-value="saveTemplate"
                                 messages="Favorited spice collections will appear on the top of the list.">
                             </v-checkbox>
                         </v-col>
@@ -438,54 +429,10 @@
                 </div>
 
                 <div v-else-if="template.template_type === 'writing_style'">
-
-                    <!--
-                        - `name`
-                        - `description`
-                        - `instructions`
-                    -->
-
-                    <v-row>
-                        <v-col cols="12" sm="8" xl="4">
-                            <v-text-field 
-                                v-model="template.name" 
-                                label="Writing style name" 
-                                :rules="[v => !!v || 'Name is required']"
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                required>
-                            </v-text-field>
-                            <v-text-field 
-                                v-model="template.description" 
-                                label="Template description" 
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                required>
-                            </v-text-field>
-                            <v-textarea 
-                                v-model="template.instructions"
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                auto-grow rows="5" 
-                                placeholder="Use a narrative writing style that reminds of mid 90s point and click adventure games."
-                                label="Writing style instructions"
-                                hint="Instructions for the AI on how to apply this writing style to the generated content."
-                            ></v-textarea>
-                        </v-col>
-                        <v-col cols="12" sm="4" xl="8">
-                            <v-checkbox 
-                                v-model="template.favorite" 
-                                label="Favorite" 
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                messages="Favorited writing styles will appear on the top of the list.">
-                            </v-checkbox>
-                        </v-col>
-                    </v-row>
-
+                    <WorldStateManagerTemplateWritingStyle 
+                        :immutableTemplate="template"
+                        @update="(template) => applyAndSaveTemplate(template)"
+                    />
                 </div>
 
                 <div v-else-if="template.template_type === 'scene_type'">
@@ -527,8 +474,7 @@
                             <v-checkbox 
                                 v-model="template.favorite" 
                                 label="Favorite" 
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
+                                @update:model-value="saveTemplate"
                                 messages="Favorited scene types will appear on the top of the list.">
                             </v-checkbox>
                         </v-col>
@@ -581,12 +527,14 @@
 
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
+import WorldStateManagerTemplateWritingStyle from './WorldStateManagerTemplateWritingStyle.vue';
 
 export default {
     name: 'WorldStateManagerTemplates',
     components: {
         ConfirmActionInline,
         ContextualGenerate,
+        WorldStateManagerTemplateWritingStyle,
     },
     props: {
         immutableTemplates: Object
@@ -632,7 +580,7 @@ export default {
                 { "title": 'Character detail', "value": 'character_detail' },
                 { "title": "Spice collection", "value": 'spices'},
                 { "title": "Writing style", "value": 'writing_style'},
-                { "title": "Scene type", "value": 'scene_type'}
+                { "title": "Scene type", "value": 'scene_type'},
             ],
             attributePriorities: [
                 { "title": 'Low', "value": 1 },
@@ -648,7 +596,7 @@ export default {
                 character_detail: "Character detail templates are used to define details about a character. They generally are longer form questions or statements that can be used to flesh out a character's backstory or personality. The AI will use this template to generate content that matches the detail, based on the current progression of the scene or their backstory.",
                 spices: "Spice collections are used to define a set of instructions that can be applied during the generation of character attributes or details. They can be used to add a bit of randomness or unexpectedness. A template must explicitly support spice to be able to use a spice collection.",
                 writing_style: "Writing style templates are used to define a writing style that can be applied to the generated content. They can be used to add a specific flavor or tone. A template must explicitly support writing styles to be able to use a writing style template.",
-                scene_type: "Scene type templates are used to define different types of scenes that can be played in your game. Each scene type has different rules and constraints that guide the generation and flow of the scene."
+                scene_type: "Scene type templates are used to define different types of scenes that can be played in your game. Each scene type has different rules and constraints that guide the generation and flow of the scene.",
             }
         };
     },
@@ -825,6 +773,12 @@ export default {
         },
 
         // requests 
+        applyAndSaveTemplate(template, saveNew = false) {
+            console.log('applyAndSaveTemplate', template, saveNew);
+            this.template = template;
+            this.saveTemplate(saveNew);
+        },
+        
         saveTemplate(saveNew) {
 
             if(!this.template || (!this.template.uid && !saveNew)) {

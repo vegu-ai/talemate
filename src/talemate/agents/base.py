@@ -58,6 +58,7 @@ class AgentActionConfig(pydantic.BaseModel):
     expensive: bool = False
     quick_toggle: bool = False
     condition: Union[AgentActionConditional, None] = None
+    title: Union[str, None] = None
 
     class Config:
         arbitrary_types_allowed = True

@@ -63,6 +63,11 @@
                         <div v-if="(action.enabled || actionAlwaysVisible(key, action)) && testConfigConditional(action_config)">
                           <!-- render config widgets based on action_config.type (int, str, bool, float) -->
 
+                          <div v-if="action_config.title">
+                            <div class="text-caption text-muted text-uppercase">{{ action_config.title }}</div>
+                            <v-divider class="mb-2"></v-divider>
+                          </div>
+
                           <!-- text -->
                           <v-text-field
                             v-if="action_config.type === 'text' && action_config.choices === null" 

@@ -38,6 +38,11 @@ rewrite_condition = AgentActionConditional(
     value="rewrite",
 )
 
+detect_bad_prose_condition = AgentActionConditional(
+    attribute="revision.config.detect_bad_prose",
+    value=True,
+)
+
 class RevisionMixin:
     
     """
@@ -65,7 +70,26 @@ class RevisionMixin:
                         {"label": "Rewrite (AI assisted, slower and less dumb, propbably)", "value": "rewrite"},
                     ]
                 ),
+                "split_on_comma": AgentActionConfig(
+                    title="Preferences for rewriting",
+                    type="bool",
+                    label="Test parts of sentences, split on commas",
+                    condition=rewrite_condition,
+                    description="If a whole sentence does not trigger a revision issue, split the sentence on commas and test each comma individually.",
+                    value=False,
+                ),
+                "min_issues": AgentActionConfig(
+                    type="number",
+                    label="Minimum issues",
+                    condition=rewrite_condition,
+                    description="The minimum number of issues to trigger a rewrite.",
+                    value=1,
+                    min=1,
+                    max=10,
+                    step=1,
+                ),
                 "repetition_threshold": AgentActionConfig(
+                    title="Repetition",
                     type="number",
                     label="Similarity threshold",
                     description="The similarity threshold for detecting repetition (percentage)",
@@ -92,24 +116,8 @@ class RevisionMixin:
                     max=100,
                     step=1,
                 ),
-                "split_on_comma": AgentActionConfig(
-                    type="bool",
-                    label="Test parts of sentences, split on commas",
-                    condition=rewrite_condition,
-                    description="If a whole sentence does not trigger a repetition, split the sentence on commas and test each comma individually.",
-                    value=False,
-                ),
-                "min_issues": AgentActionConfig(
-                    type="number",
-                    label="Minimum issues",
-                    condition=rewrite_condition,
-                    description="The minimum number of issues to trigger a rewrite.",
-                    value=1,
-                    min=1,
-                    max=10,
-                    step=1,
-                ),
                 "detect_bad_prose": AgentActionConfig(
+                    title="Unwanted prose",
                     type="bool",
                     label="Detect unwanted prose",
                     description="Enable / Disable unwanted prose detection. Will use the writing style selected in the scene settings to determine unwanted phrases.",

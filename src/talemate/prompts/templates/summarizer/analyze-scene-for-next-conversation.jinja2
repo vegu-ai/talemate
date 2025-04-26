@@ -43,5 +43,5 @@ Note that the 'Potentially relevant information' sectitryon has been filled in f
 
 {% if length <= 256 %}Your analysis should be 1 - 2 paragraphs long.{% elif length <= 512 %}Your analysis should be 2 - 3 paragraphs long.{% endif %}
 
-Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
+{% if length <= 512 %}Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.{% endif %}
 <|CLOSE_SECTION|>

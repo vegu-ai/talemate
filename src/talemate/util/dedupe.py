@@ -9,6 +9,7 @@ __all__ = [
     "similarity_matches",
     "dedupe_sentences",
     "dedupe_string",
+    "split_sentences_on_comma",
 ]
 
 log = structlog.get_logger("talemate.util.dedupe")
@@ -71,6 +72,16 @@ def compile_text_to_sentences(text: str) -> list[tuple[str, str]]:
     for sentence in sentences:
         results.append((sentence, sentence.strip("".join(SPECIAL_MARKERS))))
     
+    return results
+
+def split_sentences_on_comma(sentences: list[str]) -> list[str]:
+    """
+    Split sentences on commas.
+    """
+    results = []
+    for sentence in sentences:
+        for part in sentence.split(","):
+            results.append(part.strip())
     return results
 
 def similarity_matches(

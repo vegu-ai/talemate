@@ -31,7 +31,9 @@ class PhraseDetection(pydantic.BaseModel):
     instructions: str
     # can be "unwanted" for now, more added later
     classification: Literal["unwanted"] = "unwanted"
-
+    match_method: Literal["regex", "semantic_similarity"] = "regex"
+    active: bool = True
+    
 @register("writing_style")
 class WritingStyle(Template):
     description: str | None = None

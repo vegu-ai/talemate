@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 import structlog
 import uuid
+import re
 from talemate.agents.base import (
     set_processing,
     AgentAction,
@@ -8,17 +9,19 @@ from talemate.agents.base import (
     AgentActionConditional,
 )
 import talemate.emit.async_signals
+from talemate.instance import get_agent
 from talemate.emit import emit
 from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.scene_message import CharacterMessage
-from talemate.util.dedupe import dedupe_sentences, SimilarityMatch
+from talemate.util.dedupe import dedupe_sentences, SimilarityMatch, compile_text_to_sentences, split_sentences_on_comma
 from talemate.util.diff import dmp_inline_diff
 from talemate.util import count_tokens
 from talemate.prompts import Prompt
 from talemate.exceptions import GenerationCancelled
 import talemate.game.focal as focal
 from talemate.status import LoadingStatus, set_loading
+from talemate.world_state.templates.content import PhraseDetection
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -113,6 +116,16 @@ class RevisionMixin:
                     condition=rewrite_condition,
                     value=False,
                 ),
+                "detect_bad_prose_threshold": AgentActionConfig(
+                    type="number",
+                    label="Unwanted prose threshold",
+                    condition=rewrite_condition,
+                    description="The threshold for detecting unwanted prose when using semantic similarity.",
+                    value=0.7,
+                    min=0.4,
+                    max=1.0,
+                    step=0.01,
+                ),
             }
         )
         
@@ -149,6 +162,10 @@ class RevisionMixin:
     @property
     def revision_detect_bad_prose_enabled(self):
         return self.actions["revision"].config["detect_bad_prose"].value
+    
+    @property
+    def revision_detect_bad_prose_threshold(self):
+        return self.actions["revision"].config["detect_bad_prose_threshold"].value
     
     # signal connect
     
@@ -317,41 +334,84 @@ class RevisionMixin:
         """
         Detect bad prose in the text
         """
-        identified = []
+        try:
+            sentences = compile_text_to_sentences(text)
+            identified = []
+            
+            writing_style = self.scene.writing_style
+            
+            if not writing_style or not writing_style.phrases:
+                return []
+            
+            if self.revision_split_on_comma:
+                sentences = split_sentences_on_comma([sentence[0] for sentence in sentences])
+            
+            for phrase in writing_style.phrases:
+                if not phrase.phrase or not phrase.instructions or not phrase.active:
+                    continue
+                
+                for sentence in sentences:
+                    if phrase.match_method == "semantic_similarity":
+                        identified.extend(await self._revision_detect_bad_prose_semantic_similarity(sentence, phrase))
+                    elif phrase.match_method == "regex":
+                        identified.extend(await self._revision_detect_bad_prose_regex(sentence, phrase))
+            
+            return identified
+        except Exception as e:
+            log.error("revision_detect_bad_prose: error", error=e)
+            return []
+    
+    async def _revision_detect_bad_prose_semantic_similarity(self, sentence: str, phrase: PhraseDetection) -> list[dict]:
+        """
+        Detect bad prose in the text using semantic similarity
+        """
+                
+        if str(phrase.classification).lower() != "unwanted":
+            return []
         
-        async def identify(phrase: str = None, reason: str = None, instructions: str = None, **kwargs):
-            identified.append({
-                "phrase": phrase,
-                "reason": reason,
-                "instructions": instructions,
-            })
+        memory_agent = get_agent("memory")
         
-        focal_handler = focal.Focal(
-            self.client,
-            callbacks=[
-                focal.Callback(
-                    name="identify",
-                    arguments=[
-                        focal.Argument(name="phrase", type="str"),
-                        focal.Argument(name="reason", type="str"),
-                        focal.Argument(name="instructions", type="str"),
-                    ],
-                    fn=identify,
-                    multiple=True,
-                ),
-            ],
-            max_calls=5,
-            retries=0,
-            scene=self.scene,
-            text=text,
-            instructions=self.scene.writing_style.instructions,
-        )
+        if not memory_agent:
+            return []
         
-        await focal_handler.request(
-            "editor.revision-detection",
-        )
+        result = await memory_agent.compare_strings(sentence, phrase.phrase)
         
-        return identified
+        if result["cosine_similarity"] < self.revision_detect_bad_prose_threshold:
+            return []
+
+        log.debug("revision_detect_bad_prose: match", sentence=sentence, phrase=phrase.phrase)
+        
+        return [
+            {
+                "phrase": sentence,
+                "instructions": phrase.instructions,
+                "reason": "Unwanted phrase found",
+                "matched": phrase.phrase,
+                "method": "semantic_similarity",
+                "similarity": result["cosine_similarity"],
+            }
+        ]
+    
+    async def _revision_detect_bad_prose_regex(self, sentence: str, phrase: PhraseDetection) -> list[dict]:
+        """
+        Detect bad prose in the text using regex
+        """
+        if str(phrase.classification).lower() != "unwanted":
+            return []
+        
+        pattern = re.compile(phrase.phrase)
+        if not pattern.search(sentence):
+            return []
+        
+        return [
+            {
+                "phrase": sentence,
+                "instructions": phrase.instructions,
+                "reason": "Unwanted phrase found",
+                "matched": phrase.phrase,
+                "method": "regex",
+            }
+        ]
     
     async def revision_rewrite(self, text: str, character: "Character | None" = None, loading_status: LoadingStatus = None):
         """
@@ -490,8 +550,13 @@ class RevisionMixin:
             ],
             meta={
                 "action": "revision_rewrite",
-                "threshold": self.revision_repetition_threshold,
-                "range": self.revision_repetition_range,
+                "repetition_threshold": self.revision_repetition_threshold,
+                "repetition_range": self.revision_repetition_range,
+                "repetition_min_length": self.revision_repetition_min_length,
+                "split_on_comma": self.revision_split_on_comma,
+                "min_issues": self.revision_min_issues,
+                "detect_bad_prose": self.revision_detect_bad_prose_enabled,
+                "detect_bad_prose_threshold": self.revision_detect_bad_prose_threshold,
             },
             color="highlight4",
         )

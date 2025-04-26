@@ -56,18 +56,39 @@
                     Add phrases that should be detected in the generated content. 
                     When these phrases are found, the AI may apply the specified instructions.
                 </p>
+
+                <v-alert v-if="hasAnyWithSemanticSimilarity" class="text-caption mb-4 text-muted" variant="text" icon="mdi-information-outline">
+                    <p>
+                        <strong class="text-warning">Some phrases are using semantic similarity.</strong>  This means that the phrases will be compared using the embedding model selected in the <span class="text-primary">Memory Agent</span>. This may do <b class="text-warning">A LOT of requests to the embedding model</b> as <b class="text-warning">each sentence in the content is compared to each phrase</b>. Its not advisable to use this with remote embedding APIs at this point (openai etc.).
+                    </p>
+                    <p>
+                        When running local models, using <b class="text-success">CUDA</b> is recommended.
+                    </p>
+                </v-alert>
                 
                 <v-table v-if="template.phrases && template.phrases.length > 0">
                     <thead>
                         <tr>
+                            <th class="td-active">Active</th>
                             <th>Phrase</th>
                             <th class="td-instructions">Instructions</th>
+                            <th class="td-type">Match method</th>
                             <th class="td-type">Classification</th>
                             <th class="td-actions text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="(phrase, index) in template.phrases" :key="index">
+                            <td>
+                                <v-checkbox
+                                    v-model="phrase.active"
+                                    density="compact"
+                                    hide-details
+                                    color="primary"
+                                    @update:model-value="save"
+                                ></v-checkbox>
+                            </td>
+                            
                             <td v-if="editIndex === index">
                                 <v-text-field v-model="editPhrase.phrase" variant="underlined" density="compact" hide-details></v-text-field>
                             </td>
@@ -77,7 +98,18 @@
                                 <v-textarea v-model="editPhrase.instructions" variant="underlined" density="compact" hide-details auto-grow rows="1"></v-textarea>
                             </td>
                             <td v-else>{{ phrase.instructions }}</td>
-                            
+
+                            <td v-if="editIndex === index">
+                                <v-select
+                                    v-model="editPhrase.match_method"
+                                    :items="matchMethodOptions"
+                                    variant="underlined"
+                                    density="compact"
+                                    hide-details
+                                ></v-select>
+                            </td>
+                            <td v-else>{{ phrase.match_method }}</td>
+
                             <td v-if="editIndex === index">
                                 <v-select
                                     v-model="editPhrase.classification"
@@ -100,6 +132,9 @@
                                     <v-btn variant="text" v-if="editIndex !== index" icon size="small" color="primary" @click="startEdit(index)">
                                         <v-icon>mdi-pencil</v-icon>
                                     </v-btn>
+                                    <v-btn variant="text" icon size="small" color="primary" class="ml-2" @click="duplicatePhrase(index)">
+                                        <v-icon>mdi-content-copy</v-icon>
+                                    </v-btn>
                                     <v-btn variant="text" icon size="small" color="delete" class="ml-2" @click="removePhrase(index)">
                                         <v-icon>mdi-delete</v-icon>
                                     </v-btn>
@@ -115,10 +150,19 @@
                 <v-form @submit.prevent="addPhrase" class="mt-4">
                     <v-divider class="mb-4"></v-divider>
                     <v-row>
-                        <v-col cols="12" md="6">
+                        <v-col cols="12" md="8">
                             <v-text-field v-model="newPhrase" label="Phrase" required hint="The phrase to detect (supports regex)"></v-text-field>
                         </v-col>
-                        <v-col cols="12" md="6">
+                        <v-col cols="12" md="2">
+                            <v-select
+                                v-model="newMatchMethod"
+                                :items="matchMethodOptions"
+                                label="Match method"
+                                required
+                                hint="How should this phrase be matched"
+                            ></v-select>
+                        </v-col>
+                        <v-col cols="12" md="2">
                             <v-select
                                 v-model="newClassification"
                                 :items="classificationOptions"
@@ -148,6 +192,9 @@ export default {
     computed: {
         phrasesCount() {
             return this.template.phrases ? this.template.phrases.length : 0;
+        },
+        hasAnyWithSemanticSimilarity() {
+            return this.template.phrases.some(phrase => phrase.match_method === 'semantic_similarity');
         }
     },
     watch: {
@@ -155,7 +202,10 @@ export default {
             handler(newVal) {
                 this.template = {
                     ...newVal,
-                    phrases: Array.isArray(newVal.phrases) ? [...newVal.phrases] : []
+                    phrases: Array.isArray(newVal.phrases) ? [...newVal.phrases].map(phrase => ({
+                        ...phrase,
+                        active: phrase.active === undefined ? true : phrase.active
+                    })) : []
                 }
             },
             deep: true,
@@ -175,14 +225,21 @@ export default {
             newPhrase: '',
             newInstructions: '',
             newClassification: 'unwanted',
+            newMatchMethod: 'regex',
             editIndex: -1,
             editPhrase: {
                 phrase: '',
                 instructions: '',
-                classification: 'unwanted'
+                classification: 'unwanted',
+                match_method: 'regex',
+                active: true
             },
             classificationOptions: [
                 { title: 'Unwanted', value: 'unwanted' }
+            ],
+            matchMethodOptions: [
+                { title: 'Regex', value: 'regex' },
+                { title: 'Semantic similarity (embedding)', value: 'semantic_similarity' }
             ]
         }
     },
@@ -198,12 +255,15 @@ export default {
             this.template.phrases.push({
                 phrase: this.newPhrase,
                 instructions: this.newInstructions,
-                classification: this.newClassification
+                classification: this.newClassification,
+                match_method: this.newMatchMethod,
+                active: true
             });
             
             this.newPhrase = '';
             this.newInstructions = '';
             this.newClassification = 'unwanted';
+            this.newMatchMethod = 'regex';
             this.dirty = true;
             this.save();
         },
@@ -212,12 +272,21 @@ export default {
             this.dirty = true;
             this.save();
         },
+        duplicatePhrase(index) {
+            const originalPhrase = this.template.phrases[index];
+            const duplicatedPhrase = { ...originalPhrase };
+            this.template.phrases.splice(index + 1, 0, duplicatedPhrase);
+            this.dirty = true;
+            this.save();
+        },
         startEdit(index) {
             this.editIndex = index;
             this.editPhrase = {
                 phrase: this.template.phrases[index].phrase,
                 instructions: this.template.phrases[index].instructions,
-                classification: this.template.phrases[index].classification || 'unwanted'
+                classification: this.template.phrases[index].classification || 'unwanted',
+                match_method: this.template.phrases[index].match_method || 'regex',
+                active: this.template.phrases[index].active === undefined ? true : this.template.phrases[index].active
             };
         },
         updatePhrase() {
@@ -226,7 +295,9 @@ export default {
             this.template.phrases[this.editIndex] = {
                 phrase: this.editPhrase.phrase,
                 instructions: this.editPhrase.instructions,
-                classification: this.editPhrase.classification || 'unwanted'
+                classification: this.editPhrase.classification || 'unwanted',
+                match_method: this.editPhrase.match_method || 'regex',
+                active: this.editPhrase.active === undefined ? true : this.editPhrase.active
             };
             
             this.editIndex = -1;
@@ -244,7 +315,10 @@ export default {
     created() {
         this.template = {
             ...this.immutableTemplate,
-            phrases: this.immutableTemplate.phrases ? [...this.immutableTemplate.phrases] : []
+            phrases: this.immutableTemplate.phrases ? [...this.immutableTemplate.phrases].map(phrase => ({
+                ...phrase,
+                active: phrase.active === undefined ? true : phrase.active
+            })) : []
         };
     }
 }
@@ -252,12 +326,15 @@ export default {
 
 <style scoped>
 .td-instructions {
-    width: 40%;
+    width: 30%;
 }
 .td-type {
-    width: 120px;
+    width: 200px;
 }
 .td-actions {
     width: 100px;
+}
+.td-active {
+    width: 80px;
 }
 </style> 

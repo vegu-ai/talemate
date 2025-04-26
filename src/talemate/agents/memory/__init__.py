@@ -4,6 +4,7 @@ import asyncio
 import functools
 import hashlib
 import uuid
+import numpy as np
 from typing import Callable
 
 import structlog
@@ -468,6 +469,33 @@ class MemoryAgent(Agent):
                 break
         return memory_context
 
+    @property
+    def embedding_function(self) -> Callable:
+        raise NotImplementedError()
+
+    async def compare_strings(self, string1: str, string2: str) -> dict:
+        """
+        Compare two strings using the current embedding function without touching the database.
+
+        Returns a dictionary with 'cosine_similarity' and 'euclidean_distance'.
+        """
+        
+        embed_fn = self.embedding_function
+        
+        # Embed the two strings
+        vec1 = np.array(embed_fn([string1])[0])
+        vec2 = np.array(embed_fn([string2])[0])
+
+        # Compute cosine similarity
+        cosine_sim = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+        # Compute Euclidean distance
+        euclidean_dist = np.linalg.norm(vec1 - vec2)
+
+        return {
+            "cosine_similarity": cosine_sim,
+            "euclidean_distance": euclidean_dist
+        }
 
 @register(condition=lambda: chromadb is not None)
 class ChromaDBMemoryAgent(MemoryAgent):
@@ -538,6 +566,14 @@ class ChromaDBMemoryAgent(MemoryAgent):
     @property
     def openai_api_key(self):
         return self.config.get("openai", {}).get("api_key")
+
+    @property
+    def embedding_function(self) -> Callable:
+        if not self.db or not hasattr(self.db, "_embedding_function") or self.db._embedding_function is None:
+            raise RuntimeError("Embedding function is not initialized. Make sure the database is set.")
+
+        embed_fn = self.db._embedding_function
+        return embed_fn
 
     def make_collection_name(self, scene) -> str:
         # generate plain text collection name

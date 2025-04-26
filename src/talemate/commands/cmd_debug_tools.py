@@ -138,3 +138,48 @@ class CmdSummarizerContextInvestigation(TalemateCommand):
         
         await summarizer.request_context_investigations(self.args[0], max_calls=1)
         
+        
+        
+@register
+class CmdMemoryCompareStrings(TalemateCommand):
+    """
+    Command class for the 'memory_compare_strings' command
+    """
+
+    name = "memory_compare_strings"
+    description = "Compare two strings using the long term memory"
+    aliases = ["compare_strings"]
+
+    async def run(self):
+        memory = get_agent("memory")
+
+        if not self.args:
+            self.emit("system", "You must specify two strings to compare")
+            return
+        
+        string1 = self.args[0]
+        string2 = self.args[1]
+
+        result = await memory.compare_strings(string1, string2)
+        self.emit("system", f"The strings are {result['cosine_similarity']} similar")
+        
+@register
+class CmdRunEditorRevision(TalemateCommand):
+    """
+    Command class for the 'run_editor_revision' command
+    """
+
+    name = "run_editor_revision"
+    description = "Run the editor revision"
+    aliases = ["run_revision"]
+    
+    async def run(self):
+        editor = get_agent("editor")
+        scene = self.scene
+        
+        last_message = scene.history[-1]
+        
+        result = await editor.revision_detect_bad_prose(str(last_message))
+        
+        self.emit("system", f"Result: {result}")
+        

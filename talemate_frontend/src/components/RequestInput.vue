@@ -18,6 +18,7 @@
                                 v-model="input"
                                 ref="input_multiline"
                                 @keydown.enter.ctrl="proceed"
+                                :placeholder="placeholder"
                                 :label="title"
                                 :rules="[rules.required]"
                                 messages="Press Ctrl+Enter to submit"
@@ -31,6 +32,7 @@
                                 ref="input_text"
                                 @keydown.enter.ctrl="proceed"
                                 :label="title"
+                                :placeholder="placeholder"
                                 :rules="[rules.required]"
                                 messages="Press Ctrl+Enter to submit"
                             ></v-text-field>
@@ -59,6 +61,10 @@ export default {
         title: String,
         instructions: String,
         icon: String,
+        placeholder: {
+            type: String,
+            default: '',
+        },
         contained: {
             type: Boolean,
             default: false,
@@ -102,7 +108,7 @@ export default {
         openDialog(extra_params) {
             this.open = true;
             this.extra_params = extra_params;
-            this.input = '';
+            this.input = extra_params.input || '';
             // auto focus on input next tick
             this.$nextTick(() => {
                 if(this.inputType === 'multiline') {

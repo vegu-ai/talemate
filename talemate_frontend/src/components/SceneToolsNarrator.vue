@@ -17,6 +17,9 @@
                 prepend-icon="mdi-script-text-play"
             >
                 <v-list-item-title>Progress Story <v-chip variant="text" color="highlight5" class="ml-1" size="x-small">Ctrl: Provide direction</v-chip></v-list-item-title>
+                <v-btn @click.stop="(e) => { actionProgress(e, PROGRESS_SHORTCUT_MINOR) }" variant="tonal" color="highlight2" class="mr-1" size="x-small" :prepend-icon="'mdi-dice-multiple'">Minor</v-btn>
+                <v-btn @click.stop="(e) => { actionProgress(e, PROGRESS_SHORTCUT_MAJOR) }" variant="tonal" color="highlight2" class="mr-1" size="x-small" :prepend-icon="'mdi-dice-multiple'">Major</v-btn>
+                <v-btn @click.stop="(e) => { actionProgress(e, PROGRESS_SHORTCUT_CURVEBALL) }" variant="tonal" color="highlight2" size="x-small" :prepend-icon="'mdi-dice-multiple'">Curveball</v-btn>
             </v-list-item>
 
             <!-- Environment -->
@@ -67,12 +70,16 @@
     <!-- narrative direction input -->
     <RequestInput ref="narrativeDirectionInput" title="Narrator Prompt"
         :instructions="'Prompt direction - provide an instruction for the narrator to follow for this action'"
-        input-type="multiline" icon="mdi-script-text-play" :size="750" @continue="applyDirection" />
+        input-type="multiline" icon="mdi-script-text-play" :size="750" @continue="applyDirection" placeholder="Slightly move the story forward." />
 
 </template>
 
 <script>
 import RequestInput from './RequestInput.vue';
+
+const PROGRESS_SHORTCUT_MINOR = "Introduce a minor change to the story.";
+const PROGRESS_SHORTCUT_MAJOR = "Introduce a major shift in the story.";
+const PROGRESS_SHORTCUT_CURVEBALL = "Introduce a major curveball in the story. Time to get crazy!";
 
 export default {
     name: "SceneToolsNarrator",
@@ -86,6 +93,9 @@ export default {
     inject: ['getWebsocket'],
     data() {
         return {
+            PROGRESS_SHORTCUT_MINOR,
+            PROGRESS_SHORTCUT_MAJOR,
+            PROGRESS_SHORTCUT_CURVEBALL,
         }
     },
     methods: {
@@ -137,7 +147,7 @@ export default {
         actionProgress(ev, narrativeDirection="") {
 
             if (ev.ctrlKey) {
-                this.requestDirection({action: 'Progress'});
+                this.requestDirection({action: 'Progress', input: narrativeDirection});
                 return;
             }
 

@@ -120,7 +120,7 @@ class NarratorAgent(
                     "instructions": AgentActionConfig(
                         type="text",
                         label="Instructions",
-                        value="Never wax poetic.",
+                        value="",
                         description="Extra instructions to give to the AI for narrative generation.",
                     ),
                     "jiggle": AgentActionConfig(

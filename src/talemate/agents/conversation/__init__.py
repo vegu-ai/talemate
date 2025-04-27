@@ -132,7 +132,7 @@ class ConversationAgent(
                     "instructions": AgentActionConfig(
                         type="blob",
                         label="Task Instructions",
-                        value="Write 1-3 sentences. Never wax poetic.",
+                        value="",
                         description="Allows to extend the task instructions - placed above the context history.",
                     ),
                     "actor_instructions": AgentActionConfig(

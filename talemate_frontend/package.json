@@ -27,15 +27,14 @@
     "webfontloader": "^1.6.28"
   },
   "devDependencies": {
-    "@babel/core": "^7.24.7",
-    "@babel/eslint-parser": "^7.24.7",
+    "@babel/core": "^7",
+    "@babel/eslint-parser": "^7",
     "@vue/cli-plugin-babel": "~5.0.8",
-    "@vue/cli-plugin-eslint": "~5.0.8",
-    "@vue/cli-service": "~5.0.8",
-    "eslint": "^8.0.0",
-    "eslint-plugin-vue": "^9.26.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-vue": "^10",
+    "postcss": "^8.5.3",
     "vue-cli-plugin-vuetify": "~2.5.8",
-    "webpack-plugin-vuetify": "^3.0.3"
+    "webpack-plugin-vuetify": "^3.1"
   },
   "eslintConfig": {
     "root": true,

@@ -5,7 +5,7 @@ import random
 import re
 import traceback
 import uuid
-from typing import Dict, Generator, List
+from typing import Dict, Generator, List, Callable
 
 import isodate
 import structlog
@@ -1067,6 +1067,7 @@ class Scene(Emitter):
         source: str = None,
         max_iterations: int = None, 
         stop_on_time_passage: bool = False,
+        on_iterate: Callable = None,
         **filters
     ) -> SceneMessage | None:
         """
@@ -1077,7 +1078,7 @@ class Scene(Emitter):
         - source: str - the source of the message
         - max_iterations: int - the maximum number of iterations to search for the message
         - stop_on_time_passage: bool - if True, the search will stop when a TimePassageMessage is found
-        
+        - on_iterate: Callable - a function to call on each iteration of the search
         Keyword Arguments:
         Any additional keyword arguments will be used to filter the messages against their attributes
         """
@@ -1088,10 +1089,14 @@ class Scene(Emitter):
         num_iterations = 0
         
         for idx in range(len(self.history) - 1, -1, -1):
+            
             if max_iterations is not None and num_iterations >= max_iterations:
                 return None
             
             message = self.history[idx]
+            
+            if on_iterate:
+                on_iterate(message)
             
             if isinstance(message, TimePassageMessage) and stop_on_time_passage:
                 return None

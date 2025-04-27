@@ -183,18 +183,27 @@ class AutoDirectMixin:
         if self.auto_direct_instruct_frequency == 1:
             return True
         
+        messages_since_last_instruction = 0
+        
+        def count_messages(message):
+            nonlocal messages_since_last_instruction
+            if message.typ in ["character", "narrator"]:
+                messages_since_last_instruction += 1
+        
+        
         last_instruction = self.scene.last_message_of_type(
             "director",
             character_name=actor_name,
             max_iterations=25,
+            on_iterate=count_messages,
         )
+        
+        log.debug("auto_direct_is_due_for_instruction", messages_since_last_instruction=messages_since_last_instruction, last_instruction=last_instruction.id if last_instruction else None)
         
         if not last_instruction:
             return True
         
-        last_message_id = self.scene.history[-1].id
-
-        return last_message_id - last_instruction.id >= self.auto_direct_instruct_frequency
+        return messages_since_last_instruction >= self.auto_direct_instruct_frequency
         
     def auto_direct_candidates(self) -> list["Character"]:
         """

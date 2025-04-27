@@ -64,7 +64,7 @@ export default {
         },
         agentLabel: {
             type: String,
-            required: true
+            default: "Agent"
         },
         messageReceiveTime: {
             type: Number,

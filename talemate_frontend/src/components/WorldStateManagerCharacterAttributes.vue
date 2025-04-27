@@ -25,14 +25,13 @@
                     </template>
                     <v-list-item>
                         <WorldStateManagerTemplateApplicator
-                        ref="templateApplicator"
-                        :validateTemplate="validateTemplate"
-                        :templates="templates"
-                        :source="source"
-                        :template-types="['character_attribute']"
-                        @apply-selected="applyTemplates"
-                        @done="applyTemplatesDone"
-                    />
+                            ref="templateApplicator"
+                            :validateTemplate="validateTemplate"
+                            :templates="templates"
+                            :source="source"
+                            :template-types="['character_attribute']"
+                            @apply-selected="applyTemplates"
+                            @done="applyTemplatesDone"/>
                     </v-list-item>
                 </v-list-group>
             </v-list>

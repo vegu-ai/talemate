@@ -35,7 +35,7 @@
                 <template v-slot:prepend>
                     <v-icon color="warning">mdi-human-greeting</v-icon>
                 </template>
-                <v-list-item-title>Introduce {{ character }}<v-chip variant="text" color="info" class="ml-1" size="x-small">Ctrl: no narration</v-chip></v-list-item-title>
+                <v-list-item-title>Introduce {{ character }}<v-chip variant="text" color="highlight5" class="ml-1" size="x-small">Ctrl: Advanced</v-chip></v-list-item-title>
                 <v-list-item-subtitle>Make {{ character }} an active character.</v-list-item-subtitle>
             </v-list-item>
 
@@ -48,11 +48,77 @@
             </v-list-item>
         </v-list>
     </v-menu>
+
+
+    <v-dialog v-model="dialogIntroduceCharacter" class="intro-character-dialog">
+        <v-card>
+            <v-card-title>
+                Make <span class="text-primary">{{ newIntroduction.name }}</span> a permanent character.
+            </v-card-title>
+            <v-card-text>
+
+                <v-row>
+                    <v-col cols="5">
+                        <div class="text-caption text-uppercase text-muted"><v-icon>mdi-cube-scan</v-icon> Templates ({{ introduceCharacterTemplateCount }})</div>
+                        <WorldStateManagerTemplateApplicator
+                            ref="templateApplicator"
+                            :validateTemplate="validateTemplate"
+                            :templates="worldStateTemplates"
+                            source="scene_tools_creative"
+                            :select-only="true"
+                            :template-types="['character_attribute', 'character_detail', 'state_reinforcement']"
+                            @selected="(templates) => { newIntroduction.templates = templates; console.log('TEMPLATES', templates) }"/>
+
+                    </v-col>
+                    <v-col cols="7">
+                        <div class="text-caption text-uppercase text-muted"><v-icon>mdi-cog</v-icon> Options</div>
+                        <v-row>
+                            <v-col cols="4">
+                                <v-checkbox v-model="newIntroduction.determine_name" label="Determine name" color="primary" hint="Try to determine an explicit name for the character."></v-checkbox>
+                            </v-col>
+                            <v-col cols="4">    
+                                <v-checkbox v-model="newIntroduction.active" label="Active" color="primary" hint="Make the character an active participant in the scene."></v-checkbox>
+                            </v-col>
+                            <v-col cols="4" v-if="newIntroduction.active">
+                                <v-checkbox v-model="newIntroduction.narrate_entry" label="Narrate entry" color="primary" hint="Narrate the character's entry into the scene."></v-checkbox>
+                            </v-col>
+                        </v-row>
+                        <v-row v-if="newIntroduction.narrate_entry && newIntroduction.active">
+                            <v-col cols="12">
+                                <v-textarea v-model="newIntroduction.narrate_entry_direction" :label="`Narration direction for ${newIntroduction.name}\'s entry into the scene'`" rows="4" auto-grow hide-details></v-textarea>
+                            </v-col>
+                        </v-row>
+                        <v-row>
+                            <v-col cols="12">
+                                <v-checkbox v-if="newIntroduction.templates.length > 0" v-model="newIntroduction.augment_attributes_enabled" label="Augment attributes" color="primary" messages="If your template selection includes character attributes, then this option will augment the character sheet with some additional attributes that are not already present."></v-checkbox>
+                                <v-textarea v-if="newIntroduction.augment_attributes_enabled" v-model="newIntroduction.augment_attributes" label="Augmentation instructions" class="mt-2" rows="2" auto-grow></v-textarea>
+                            </v-col>
+                        </v-row>
+
+                    </v-col>
+                </v-row>
+
+
+            </v-card-text>
+
+            <v-card-actions>
+                <v-btn @click="dialogIntroduceCharacter = false" color="cancel" prepend-icon="mdi-close">Cancel</v-btn>
+                <v-spacer></v-spacer>
+                <v-btn @click="introduceCharacter({}, newIntroduction)" color="primary" prepend-icon="mdi-human-greeting">Introduce</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 </template>
 
+
 <script>
+
+import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
 export default {
     name: 'SceneToolsCreative',
+    components: {
+        WorldStateManagerTemplateApplicator,
+    },
     props: {
         activeCharacters: Array,
         inactiveCharacters: Array,
@@ -60,9 +126,16 @@ export default {
         playerCharacterName: String,
         scene: Object,
         disabled: Boolean,
+        worldStateTemplates: Object,
     },
     inject: ['getWebsocket'],
     computed: {
+        introduceCharacterTemplateCount() {
+            if(!this.newIntroduction) {
+                return 0;
+            }
+            return this.newIntroduction.templates.length;
+        },
         deactivatableCharacters() {
             // activeCharacters without playerCharacterName
             let characters = [];
@@ -96,6 +169,18 @@ export default {
     },
     data() {
         return {
+            dialogIntroduceCharacter: false,
+            newIntroduction: null,
+            introduction: {
+                name: null,
+                templates: [],
+                active: true,
+                determine_name: true,
+                narrate_entry: true,
+                narrate_entry_direction: "",
+                augment_attributes_enabled: false,
+                augment_attributes: "Add some additional, interesting attributes that are not already present in the character sheet."
+            },
             creativeGameMenu: [
                 {
                     "value": "pc:prompt", 
@@ -154,13 +239,47 @@ export default {
             }
         },
 
-        introduceCharacter(ev, name) {
-            let modifyNoNarration = ev.ctrlKey;
-            if(!modifyNoNarration) {
-                this.sendHotButtonMessage('!persist_character:' + name);
-            } else {
-                this.sendHotButtonMessage('!persist_character:' + name + ':no');
+        validateTemplate(template) {
+            const valid_types = ['character_attribute', 'character_detail', 'state_reinforcement'];
+            if(!valid_types.includes(template.template_type)) {
+                return false;
             }
+            return true;
+        },
+
+        showAdvancedIntroduceCharacterDialog(name) {
+            this.newIntroduction = {...this.introduction};
+            this.newIntroduction.name = name;
+            this.dialogIntroduceCharacter = true;
+        },
+
+        introduceCharacter(ev, name) {
+            let advanced = ev.ctrlKey;
+            let payload = {};
+
+            if(typeof name === 'string' && !advanced) {
+                payload = { name: name };
+            } else if(typeof name === 'string' && advanced) {
+                return this.showAdvancedIntroduceCharacterDialog(name);
+            } else if(typeof name === 'object') {
+                payload = name;
+            }
+
+            if(!payload || !payload.name) {
+                return;
+            }
+
+            console.log('PAYLOAD', payload);
+
+            this.dialogIntroduceCharacter = false;
+
+            this.getWebsocket().send(JSON.stringify(
+                {
+                    type: 'director',
+                    action: 'persist_character',
+                    ...payload
+                }
+            ));
         }
     }
 }
@@ -177,5 +296,9 @@ export default {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.intro-character-dialog {
+    max-width: 1200px;
 }
 </style>

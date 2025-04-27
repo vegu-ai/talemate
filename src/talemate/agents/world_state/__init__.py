@@ -459,6 +459,7 @@ class WorldStateAgent(
         name: str,
         text: str = None,
         alteration_instructions: str = None,
+        augmentation_instructions: str = None,
     ) -> dict[str, str]:
         """
         Attempts to extract a character sheet from the given text.
@@ -475,6 +476,7 @@ class WorldStateAgent(
                 "name": name,
                 "character": self.scene.get_character(name),
                 "alteration_instructions": alteration_instructions or "",
+                "augmentation_instructions": augmentation_instructions or "",
             },
         )
 

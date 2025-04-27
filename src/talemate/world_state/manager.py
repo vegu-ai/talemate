@@ -652,8 +652,8 @@ class WorldStateManager:
     async def apply_templates(
         self,
         templates: list[world_state_templates.AnnotatedTemplate],
-        callback_start: Callable,
-        callback_done: Callable,
+        callback_start: Callable | None = None,
+        callback_done: Callable | None = None,
         **kwargs,
     ):
         """

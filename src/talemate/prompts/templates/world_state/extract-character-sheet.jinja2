@@ -10,19 +10,7 @@
 {% if text -%}
 {{ text }}
 {% endif -%}
-<|SECTION:TASK|>
-{% if not character %}
-Generate a real world character profile for {{ name }}, one attribute per line. You are a creative writer and are allowed to fill in any gaps in the profile with your own ideas.
-Expand on interesting details.
-{% else %}
-{{ character.sheet }}
-
-Update the character sheet with any realtime changes for {{ name }} based on the context and the following information. Add one attribute per line. You are a creative writer and are allowed to fill in any gaps in the profile with your own ideas.
-
-Treat updates as absolute, the new character sheet will replace the old one.
-
-Alteration instructions: {{ alteration_instructions }}
-{% endif %}
+{% set common_intructions %}
 Use an informal and colloquial register with a conversational tone. Overall, the narrative is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
 
 You must only generate attributes for {{ name }}. You are omniscient and can describe the character in detail.
@@ -36,4 +24,35 @@ Appearance: <description of appearance>
 
 Your response MUST be a character sheet with multiple attributes.
 Format MUST be one attribute per line, with a colon after the attribute name. 
+{% endset %}
+<|SECTION:TASK|>
+{% if not character or (not alteration_instructions and not augmentation_instructions) %}
+{# NEW CHARACTER #}
+Generate a real world character profile for {{ name }}, one attribute per line. You are a creative writer and are allowed to fill in any gaps in the profile with your own ideas.
+Expand on interesting details.
+
+{{ common_intructions }}
+{% elif alteration_instructions %}
+{# ALTER EXISTING CHARACTER #}
+{{ character.name }}'s character profile:
+{{ character.sheet }}
+
+Update the character sheet with any realtime changes for {{ name }} based on the context and the following information. Add one attribute per line. You are a creative writer and are allowed to fill in any gaps in the profile with your own ideas.
+
+Treat updates as absolute, the new character sheet will replace the old one.
+
+Alteration instructions: {{ alteration_instructions }}
+
+{{ common_intructions }}
+{% elif augmentation_instructions %}
+{# AUGMENT EXISTING CHARACTER #}
+{{ character.name }}'s character profile:
+{{ character.sheet }}
+
+Augment the character sheet with any additional attributes that are not already present, based on the content and the following instructions.
+
+Augmentation instructions: {{ augmentation_instructions }}
+
+{{ common_intructions }}
+{% endif %}
 {{ set_prepared_response("Name: "+name+"\nAge:") }}

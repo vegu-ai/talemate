@@ -231,6 +231,7 @@
                     :passive-characters="passiveCharacters"
                     :player-character-name="playerCharacterName"
                     :scene="scene"
+                    :world-state-templates="worldStateTemplates"
                 />
                 <!-- visualizer actions -->
              

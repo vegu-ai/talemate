@@ -2,6 +2,7 @@ import random
 import re
 import json
 import sseclient
+import requests
 import asyncio
 import httpx
 import structlog
@@ -168,10 +169,13 @@ class TextGeneratorWebuiClient(ClientBase):
             )
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._generate, prompt, parameters, kind)
+
+    def _generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
         """
-        import requests
         parameters["prompt"] = prompt.strip(" ")
         
         response = ""
@@ -190,7 +194,6 @@ class TextGeneratorWebuiClient(ClientBase):
             payload = json.loads(event.data)
             chunk = payload['choices'][0]['text']
             response += chunk
-            await asyncio.sleep(0.001)
             
         return response
 

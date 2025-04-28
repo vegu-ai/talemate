@@ -121,6 +121,12 @@ export default {
       this.editing = false;
     },
     startEdit() {
+
+      // if message id is null, don't edit
+      if(!this.message_id) {
+        return;
+      }
+
       this.editing_text = this.text;
       this.editing = true;
       this.$nextTick(() => {

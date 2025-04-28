@@ -76,7 +76,7 @@ class RevisionMixin:
                     label="Test parts of sentences, split on commas",
                     condition=rewrite_condition,
                     description="If a whole sentence does not trigger a revision issue, split the sentence on commas and test each comma individually.",
-                    value=False,
+                    value=True,
                 ),
                 "min_issues": AgentActionConfig(
                     type="number",
@@ -354,52 +354,82 @@ class RevisionMixin:
             if self.revision_split_on_comma:
                 sentences = split_sentences_on_comma([sentence[0] for sentence in sentences])
             
+            # collect all phrases by method
+            semantic_similarity_phrases = []
+            regex_phrases = []
+            
             for phrase in writing_style.phrases:
                 if not phrase.phrase or not phrase.instructions or not phrase.active:
                     continue
                 
-                for sentence in sentences:
-                    if phrase.match_method == "semantic_similarity":
-                        identified.extend(await self._revision_detect_bad_prose_semantic_similarity(sentence, phrase))
-                    elif phrase.match_method == "regex":
-                        identified.extend(await self._revision_detect_bad_prose_regex(sentence, phrase))
+                if phrase.match_method == "semantic_similarity":
+                    semantic_similarity_phrases.append(phrase)
+                elif phrase.match_method == "regex":
+                    regex_phrases.append(phrase)
             
+            # evaulate regex phrases first
+            for phrase in regex_phrases:
+                for sentence in sentences:
+                    identified.extend(await self._revision_detect_bad_prose_regex(sentence, phrase))
+                    
+            # next evaulate semantic similarity phrases at once
+            identified.extend(
+                await self._revision_detect_bad_prose_semantic_similarity(sentences, semantic_similarity_phrases)
+            )
             return identified
         except Exception as e:
             log.error("revision_detect_bad_prose: error", error=e)
             return []
     
-    async def _revision_detect_bad_prose_semantic_similarity(self, sentence: str, phrase: PhraseDetection) -> list[dict]:
+    async def _revision_detect_bad_prose_semantic_similarity(self, sentences: list[str], phrases: list[PhraseDetection]) -> list[dict]:
         """
         Detect bad prose in the text using semantic similarity
         """
                 
-        if str(phrase.classification).lower() != "unwanted":
-            return []
-        
         memory_agent = get_agent("memory")
         
         if not memory_agent:
             return []
         
-        result = await memory_agent.compare_strings(sentence, phrase.phrase)
-        
-        if result["cosine_similarity"] < self.revision_detect_bad_prose_threshold:
-            return []
+        """
+        Compare two lists of strings using the current embedding function without touching the database.
 
-        log.debug("revision_detect_bad_prose: match", sentence=sentence, phrase=phrase.phrase)
+        Returns a dictionary with:
+            - 'cosine_similarity_matrix': np.ndarray of shape (len(list_a), len(list_b))
+            - 'euclidean_distance_matrix': np.ndarray of shape (len(list_a), len(list_b))
+            - 'similarity_matches': list of (i, j, score) (filtered if threshold set, otherwise all)
+            - 'distance_matches': list of (i, j, distance) (filtered if threshold set, otherwise all)
+        """
+        threshold = self.revision_detect_bad_prose_threshold
         
-        return [
-            {
+        phrase_strings = [phrase.phrase for phrase in phrases]
+        
+        num_comparisons = len(sentences) * len(phrase_strings)
+        
+        log.debug("revision_detect_bad_prose: comparing sentences to phrases", num_comparisons=num_comparisons)
+        
+        result_matrix = await memory_agent.compare_string_lists(
+            sentences, 
+            phrase_strings, 
+            similarity_threshold=threshold
+        )
+        
+        result = []
+        
+        for match in result_matrix["similarity_matches"]:
+            sentence = sentences[match[0]]
+            phrase = phrases[match[1]]
+            result.append({
                 "phrase": sentence,
                 "instructions": phrase.instructions,
                 "reason": "Unwanted phrase found",
                 "matched": phrase.phrase,
                 "method": "semantic_similarity",
-                "similarity": result["cosine_similarity"],
-            }
-        ]
-    
+                "similarity": match[2],
+            })
+            
+        return result
+        
     async def _revision_detect_bad_prose_regex(self, sentence: str, phrase: PhraseDetection) -> list[dict]:
         """
         Detect bad prose in the text using regex

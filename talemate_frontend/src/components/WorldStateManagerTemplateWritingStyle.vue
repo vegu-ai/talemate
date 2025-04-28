@@ -58,11 +58,17 @@
                 </p>
 
                 <v-alert v-if="hasAnyWithSemanticSimilarity" class="text-caption mb-4 text-muted" variant="text" icon="mdi-information-outline">
-                    <p>
-                        <strong class="text-warning">Some phrases are using semantic similarity.</strong>  This means that the phrases will be compared using the embedding model selected in the <span class="text-primary">Memory Agent</span>. This may do <b class="text-warning">A LOT of requests to the embedding model</b> as <b class="text-warning">each sentence in the content is compared to each phrase</b>. Its not advisable to use this with remote embedding APIs at this point (openai etc.).
+                    <p class="text-uppercase">
+                        <strong class="text-warning">Some phrases are using semantic similarity.</strong> 
                     </p>
                     <p>
-                        When running local models, using <b class="text-success">CUDA</b> is recommended.
+                        Such phrases will be compared using the embedding model selected in the <span class="text-primary">Memory Agent</span>.
+                    </p>
+                    <p class="mt-2">
+                         This has the potential to do <b class="text-warning">A LOT of requests to the embedding model</b> as <b class="text-warning">each sentence in the content is compared to each phrase</b>. Batching is used when available, but its not advisable to use this with remote embedding APIs at this point (openai etc.).
+                    </p>
+                    <p class="mt-2">
+                        When running with local embeddings, using the gpu by setting the device to <b class="text-success">CUDA</b> is recommended.
                     </p>
                 </v-alert>
                 

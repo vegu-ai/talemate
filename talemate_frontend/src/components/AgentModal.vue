@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="localDialog" max-width="912px">
+  <v-dialog v-model="localDialog" max-width="1200px">
     <v-card>
       <v-card-title>
         <v-row>
@@ -16,7 +16,7 @@
       </v-card-title>
 
 
-      <v-card-text class="scrollable-content">
+      <v-card-text>
 
         <v-row>
           <v-col cols="4">
@@ -27,7 +27,7 @@
               </v-tab>
             </v-tabs>
           </v-col>
-          <v-col cols="8">
+          <v-col cols="8" class="scrollable-content">
             <v-window v-model="tab">
               <v-window-item :value="item.name" v-for="item in tabs" :key="item.name">
                 <v-select v-if="agent.data.requires_llm_client && tab === '_config'" v-model="selectedClient" :items="agent.data.client" label="Client"  @update:modelValue="save(false)"></v-select>
@@ -98,7 +98,6 @@
                             :items="action_config.choices" 
                             :label="action_config.label" 
                             :hint="action_config.description" 
-                            density="compact" 
                             item-title="label" 
                             item-value="value" 
                             @update:modelValue="save(false)" 
@@ -160,6 +159,18 @@
                             <div class="text-caption text-mutedheader">{{ action_config.label }}</div>
                             {{ action_config.note }}
                           </v-alert>
+                          <div v-else-if="action_config.note_on_value != null">
+                            <div v-for="(note, key) in action_config.note_on_value" :key="key">
+                              <v-alert v-if="testNoteConditional(action_config, key, note)" variant="outlined" density="compact" :type="note.type" class="my-2">
+                                <span :class="['text-caption text-uppercase mr-2']">
+                                  {{ key.replace(/_/g, ' ') }}
+                                </span>
+                                <span class="text-muted text-caption">
+                                  {{ note.text }}
+                                </span>
+                              </v-alert>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -306,6 +317,12 @@ export default {
       return value == config.condition.value;
     },
 
+    testNoteConditional(config, key, note) {
+      let test = config.value == key;
+      console.log("testNoteConditional: ", test, config, key, note);
+      return test;
+    },
+
     close() {
       this.$emit('update:dialog', false);
     },
@@ -341,7 +358,7 @@ export default {
 <style>
 .scrollable-content {
   overflow-y: auto;
-  max-height: 70vh;
+  max-height: 80vh;
   padding-right: 16px;
 }
 

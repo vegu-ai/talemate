@@ -43,6 +43,10 @@ class AgentActionConditional(pydantic.BaseModel):
     value: Union[int, float, str, bool, None] = None
 
 
+class AgentActionNote(pydantic.BaseModel):
+    type: str
+    text: str
+
 class AgentActionConfig(pydantic.BaseModel):
     type: str
     label: str
@@ -59,6 +63,8 @@ class AgentActionConfig(pydantic.BaseModel):
     quick_toggle: bool = False
     condition: Union[AgentActionConditional, None] = None
     title: Union[str, None] = None
+    
+    note_on_value: dict[str, AgentActionNote] = pydantic.Field(default_factory=dict)
 
     class Config:
         arbitrary_types_allowed = True

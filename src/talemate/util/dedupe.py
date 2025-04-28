@@ -8,6 +8,7 @@ __all__ = [
     "similarity_score",
     "similarity_matches",
     "dedupe_sentences",
+    "dedupe_sentences_from_matches",
     "dedupe_string",
     "split_sentences_on_comma",
 ]
@@ -29,6 +30,14 @@ class SimilarityMatch(pydantic.BaseModel):
     def rn_startswith(self, marker: str) -> bool:
         return self.right_neighbor and self.right_neighbor.startswith(marker)
     
+    def __hash__(self) -> int:
+        return hash(self.original)
+    
+    def __eq__(self, other):
+        if not isinstance(other, SimilarityMatch):
+            return False
+        return self.original == other.original
+
 def similarity_score(
     line: str, lines: list[str], similarity_threshold: int = 95
 ) -> tuple[bool, int, str]:
@@ -181,6 +190,7 @@ def dedupe_sentences(
         text_b (str): The second text.
         similarity_threshold (int): The similarity threshold to use when comparing sentences.
         debug (bool): Whether to log debug messages.
+        on_dedupe (Callable): A callback function that is called when a duplicate is found.
         split_on_comma (bool): Whether to split text_b sentences on commas as well.
         min_length (int): The minimum length of a sentence to be considered for deduplication. Shorter sentences are skipped. If None, all sentences are considered.
     Returns:
@@ -190,6 +200,13 @@ def dedupe_sentences(
     # find similarity matches
     matches = similarity_matches(text_a, text_b, similarity_threshold, min_length, split_on_comma)
     
+    return dedupe_sentences_from_matches(text_a, matches, on_dedupe=on_dedupe, debug=debug)
+    
+    
+def dedupe_sentences_from_matches(text_a: str, matches: list[SimilarityMatch], on_dedupe: Callable | None = None, debug: bool = False) -> str:
+    """
+    Dedupe sentences using fuzzy matching.
+    """
     # replace duplicates with empty strings
     # if the duplicate started or ended with a special marker, replace with
     # the marker (replace with both the start and end marker if both are present)

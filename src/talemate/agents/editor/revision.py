@@ -7,6 +7,7 @@ from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
     AgentActionConditional,
+    AgentActionNote,
 )
 import talemate.emit.async_signals
 from talemate.instance import get_agent
@@ -14,7 +15,14 @@ from talemate.emit import emit
 from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.scene_message import CharacterMessage
-from talemate.util.dedupe import dedupe_sentences, SimilarityMatch, compile_text_to_sentences, split_sentences_on_comma
+from talemate.util.dedupe import (
+    dedupe_sentences, 
+    SimilarityMatch, 
+    compile_text_to_sentences, 
+    split_sentences_on_comma, 
+    dedupe_sentences_from_matches,
+    similarity_matches
+)
 from talemate.util.diff import dmp_inline_diff
 from talemate.util import count_tokens
 from talemate.prompts import Prompt
@@ -58,7 +66,7 @@ class RevisionMixin:
             quick_toggle=True,
             label="Revision",
             icon="mdi-typewriter",
-            description="Remove / rewrite dialogue and narration based on criteria and instructions",
+            description="Remove / rewrite content based on criteria and instructions.",
             config={
                 "revision_method": AgentActionConfig(
                     type="text",
@@ -69,6 +77,24 @@ class RevisionMixin:
                         {"label": "Dedupe (Fast and dumb)", "value": "dedupe"},
                         {"label": "Rewrite (AI assisted, slower and less dumb, propbably)", "value": "rewrite"},
                     ]
+                ),
+                "repetition_detection_method": AgentActionConfig(
+                    type="text",
+                    label="Repetition detection method",
+                    description="The method to use to detect repetition",
+                    value="fuzzy",
+                    choices=[
+                       # fuzzy matching (not ai assisted)
+                       # semantic similarity (ai assisted, using memory agent embedding function)
+                       {"label": "Fuzzy matching", "value": "fuzzy"},
+                       {"label": "Semantic similarity (embeddings)", "value": "semantic_similarity"},
+                    ],
+                    note_on_value={
+                        "semantic_similarity": AgentActionNote(
+                            type="warning",
+                            text="Uses the memory agent's embedding function to compare the text. Will use batching when available, but has the potential to do A LOT of calls to the embedding model."
+                        )
+                    }
                 ),
                 "split_on_comma": AgentActionConfig(
                     title="Preferences for rewriting",
@@ -94,7 +120,7 @@ class RevisionMixin:
                     label="Similarity threshold",
                     description="The similarity threshold for detecting repetition (percentage)",
                     value=90,
-                    min=40,
+                    min=50,
                     max=100,
                     step=1,
                 ),
@@ -146,6 +172,10 @@ class RevisionMixin:
     @property
     def revision_method(self):
         return self.actions["revision"].config["revision_method"].value
+    
+    @property
+    def revision_repetition_detection_method(self):
+        return self.actions["revision"].config["repetition_detection_method"].value
     
     @property
     def revision_repetition_threshold(self):
@@ -247,29 +277,94 @@ class RevisionMixin:
             log.warning("revision_revise: generation cancelled", text=text)
             return text
         except Exception as e:
-            log.error("revision_revise: error", error=e)
+            log.exception("revision_revise: error", error=e)
             return text
         finally:
             loading_status.done()
     
     
-    async def revision_dedupe(self, text: str, character: "Character | None" = None):
+    async def _revision_evaluate_semantic_similarity(self, text: str, character: "Character | None" = None) -> list[SimilarityMatch]:
+        """
+        Detect repetition using semantic similarity
+        """
+        
+        memory_agent = get_agent("memory")
+        character_name_prefix = text.startswith(f"{character.name}: ") if character else False
+        
+        if character_name_prefix:
+            text = text[len(character.name) + 2:]
+            
+        compare_against:list[str] = await self.revision_collect_repetition_range()
+        
+        text_sentences = compile_text_to_sentences(text)
+        
+        history_sentences = []
+        for sentence in compare_against:
+            history_sentences.extend(compile_text_to_sentences(sentence))
+        
+        result_matrix = await memory_agent.compare_string_lists(
+            [i[1] for i in text_sentences],
+            [i[1] for i in history_sentences],
+            similarity_threshold=self.revision_repetition_threshold / 100,
+        )
+        
+        similarity_matches = []
+        
+        for match in result_matrix["similarity_matches"]:
+            index_text = match[0]
+            index_history = match[1]
+            sentence = text_sentences[index_text][1]
+            matched = history_sentences[index_history][1]
+            similarity_matches.append(SimilarityMatch(
+                original=str(sentence),
+                matched=str(matched),
+                similarity=round(match[2] * 100, 2),
+                left_neighbor=text_sentences[index_text - 1][1] if index_text > 0 else None,
+                right_neighbor=text_sentences[index_text + 1][1] if index_text < len(text_sentences) - 1 else None,
+            ))
+        
+        return list(set(similarity_matches))
+        
+    
+    async def _revision_evaluate_fuzzy_similarity(self, text: str, character: "Character | None" = None) -> list[SimilarityMatch]:
+        """
+        Detect repetition using fuzzy matching and dedupe
+        
+        Will return a tuple with the deduped text and the deduped text
+        """
+            
+        compare_against:list[str] = await self.revision_collect_repetition_range()
+        
+        matches = []
+        
+        for old_text in compare_against:
+            matches.extend(
+                similarity_matches(
+                    text, 
+                    old_text, 
+                    similarity_threshold=self.revision_repetition_threshold,
+                    min_length=self.revision_repetition_min_length,
+                    split_on_comma=self.revision_split_on_comma
+                )
+            )
+
+            
+        return list(set(matches))
+    
+    async def revision_dedupe(self, text: str, character: "Character | None" = None) -> str:
         """
         Revise the text by deduping
         """
 
         original_text = text
-        
         character_name_prefix = text.startswith(f"{character.name}: ") if character else False
         
-        if character_name_prefix:
-            # remove the character name prefix
-            text = text[len(character.name) + 2:]
-        
-        compare_against:list[str] = await self.revision_collect_repetition_range()
+        if self.revision_repetition_detection_method == "fuzzy":
+            matches = await self._revision_evaluate_fuzzy_similarity(text, character)
+        elif self.revision_repetition_detection_method == "semantic_similarity":
+            matches = await self._revision_evaluate_semantic_similarity(text, character)
         
         deduped = []
-        
         def on_dedupe(match: SimilarityMatch):
             deduped.append({
                 "text_a": match.original,
@@ -277,15 +372,8 @@ class RevisionMixin:
                 "similarity": match.similarity
             })
         
-        for old_text in compare_against:
-            text = dedupe_sentences(
-                text, 
-                old_text, 
-                self.revision_repetition_threshold, 
-                on_dedupe=on_dedupe,
-                min_length=self.revision_repetition_min_length
-            )
-        
+        text = dedupe_sentences_from_matches(text, matches, on_dedupe=on_dedupe)
+
         length_diff_percentage = 0
         
         if deduped:
@@ -462,44 +550,34 @@ class RevisionMixin:
         if loading_status:
             loading_status.max_steps = 2
         
-        # Step 1 - Find repetition
-        character_name_prefix = text.startswith(f"{character.name}: ") if character else False
-        
-        if character_name_prefix:
-            text = text[len(character.name) + 2:]
-            
-        compare_against:list[str] = await self.revision_collect_repetition_range()
-        
         issues = []
         deduped = []
+        repetition_matches = []
         bad_prose_identified = []
+        character_name_prefix = text.startswith(f"{character.name}: ") if character else False
         
-        def on_dedupe(match: SimilarityMatch):
+        # Step 1 - Detect repetition
+        if self.revision_repetition_detection_method == "fuzzy":
+            repetition_matches = await self._revision_evaluate_fuzzy_similarity(text, character)
+        elif self.revision_repetition_detection_method == "semantic_similarity":
+            repetition_matches = await self._revision_evaluate_semantic_similarity(text, character)
+            
+        for match in repetition_matches:
             deduped.append({
                 "text_a": match.original,
                 "text_b": match.matched,
                 "similarity": match.similarity
             })
-            issues.append(f"Repetition: {match.original} -> {match.matched} (similarity: {match.similarity})")
-            
-        for old_text in compare_against:
-            dedupe_sentences(
-                text, 
-                old_text, 
-                self.revision_repetition_threshold, 
-                on_dedupe=on_dedupe,
-                min_length=self.revision_repetition_min_length,
-                split_on_comma=self.revision_split_on_comma
-            )
-            
-        log.debug("revision_rewrite: deduped", deduped=deduped)
-            
+            issues.append(f"Repetition: `{match.original}` -> `{match.matched}` (similarity: {match.similarity})")
+        
+        # Step 2 - Detect bad prose
         if detect_bad_prose:
             bad_prose_identified = await self.revision_detect_bad_prose(text)
             for identified in bad_prose_identified:
                 issues.append(f"Bad prose: `{identified['phrase']}` (reason: {identified['reason']}, instructions: {identified['instructions']})")
             log.debug("revision_rewrite: bad_prose_identified", bad_prose_identified=bad_prose_identified)
             
+        # Step 3 - Check if we have enough issues to warrant a rewrite
         if not issues:
             # No repetition found, return original text
             return original_text
@@ -519,8 +597,7 @@ class RevisionMixin:
             )
             return original_text
         
-        
-        # Step 2 - Rewrite
+        # Step 4 - Rewrite
         token_count = count_tokens(text)
         
         log.debug("revision_rewrite: token_count", token_count=token_count)

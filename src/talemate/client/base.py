@@ -609,8 +609,37 @@ class ClientBase:
         # return the result of the completed task
         return done.pop().result()
         
+    async def abort_generation(self):
+        """
+        This function can be overwritten to trigger an abortion at the other
+        side of the client.
+        
+        So a generation is cancelled here, this can be used to cancel a generation
+        at the other side of the client.
+        """
+        pass
+
 
     async def send_prompt(
+        self,
+        prompt: str,
+        kind: str = "conversation",
+        finalize: Callable = lambda x: x,
+        retries: int = 2,
+    ) -> str:
+        """
+        Send a prompt to the AI and return its response.
+        :param prompt: The text prompt to send.
+        :return: The AI's response text.
+        """
+        
+        try:
+            return await self._send_prompt(prompt, kind, finalize, retries)
+        except GenerationCancelled:
+            await self.abort_generation()
+            raise
+        
+    async def _send_prompt(
         self,
         prompt: str,
         kind: str = "conversation",

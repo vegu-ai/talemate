@@ -75,7 +75,7 @@ class RevisionMixin:
                     value="dedupe",
                     choices=[
                         {"label": "Dedupe (Fast and dumb)", "value": "dedupe"},
-                        {"label": "Rewrite (AI assisted, slow and less dumb, propbably)", "value": "rewrite"},
+                        {"label": "Rewrite (AI assisted, slow and less dumb, probably)", "value": "rewrite"},
                     ]
                 ),
                 "split_on_comma": AgentActionConfig(

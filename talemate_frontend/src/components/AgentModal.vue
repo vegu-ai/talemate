@@ -161,7 +161,7 @@
                           </v-alert>
                           <div v-else-if="action_config.note_on_value != null">
                             <div v-for="(note, key) in action_config.note_on_value" :key="key">
-                              <v-alert v-if="testNoteConditional(action_config, key, note)" variant="outlined" density="compact" :type="note.type" class="my-2">
+                              <v-alert v-if="testNoteConditional(action_config, key, note)" variant="outlined" density="compact" :color="note.type" class="my-2">
                                 <span :class="['text-caption text-uppercase mr-2']">
                                   {{ key.replace(/_/g, ' ') }}
                                 </span>

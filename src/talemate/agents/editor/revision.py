@@ -75,26 +75,8 @@ class RevisionMixin:
                     value="dedupe",
                     choices=[
                         {"label": "Dedupe (Fast and dumb)", "value": "dedupe"},
-                        {"label": "Rewrite (AI assisted, slower and less dumb, propbably)", "value": "rewrite"},
+                        {"label": "Rewrite (AI assisted, slow and less dumb, propbably)", "value": "rewrite"},
                     ]
-                ),
-                "repetition_detection_method": AgentActionConfig(
-                    type="text",
-                    label="Repetition detection method",
-                    description="The method to use to detect repetition",
-                    value="fuzzy",
-                    choices=[
-                       # fuzzy matching (not ai assisted)
-                       # semantic similarity (ai assisted, using memory agent embedding function)
-                       {"label": "Fuzzy matching", "value": "fuzzy"},
-                       {"label": "Semantic similarity (embeddings)", "value": "semantic_similarity"},
-                    ],
-                    note_on_value={
-                        "semantic_similarity": AgentActionNote(
-                            type="warning",
-                            text="Uses the memory agent's embedding function to compare the text. Will use batching when available, but has the potential to do A LOT of calls to the embedding model."
-                        )
-                    }
                 ),
                 "split_on_comma": AgentActionConfig(
                     title="Preferences for rewriting",
@@ -114,39 +96,11 @@ class RevisionMixin:
                     max=10,
                     step=1,
                 ),
-                "repetition_threshold": AgentActionConfig(
-                    title="Repetition",
-                    type="number",
-                    label="Similarity threshold",
-                    description="The similarity threshold for detecting repetition (percentage)",
-                    value=90,
-                    min=50,
-                    max=100,
-                    step=1,
-                ),
-                "repetition_range": AgentActionConfig(
-                    type="number",
-                    label="Repetition range",
-                    description="Number of message in the backlog to check against when analyzing repetition.",
-                    value=15,
-                    min=1,
-                    max=100,
-                    step=1,
-                ),
-                "repetition_min_length": AgentActionConfig(
-                    type="number",
-                    label="Repetition min length",
-                    description="The minimum length of a sentence to be considered for repetition checking.",
-                    value=15,
-                    min=1,
-                    max=100,
-                    step=1,
-                ),
                 "detect_bad_prose": AgentActionConfig(
                     title="Unwanted prose",
                     type="bool",
                     label="Detect unwanted prose",
-                    description="Enable / Disable unwanted prose detection. Will use the writing style selected in the scene settings to determine unwanted phrases.",
+                    description="Enable / Disable unwanted prose detection. Will use the writing style's phrase detection to determine unwanted phrases. The scene MUST have a writing style selected.",
                     condition=rewrite_condition,
                     value=False,
                 ),
@@ -159,6 +113,52 @@ class RevisionMixin:
                     min=0.4,
                     max=1.0,
                     step=0.01,
+                ),
+                "repetition_detection_method": AgentActionConfig(
+                    title="Repetition",
+                    type="text",
+                    label="Repetition detection method",
+                    description="The method to use to detect repetition",
+                    value="fuzzy",
+                    choices=[
+                       # fuzzy matching (not ai assisted)
+                       # semantic similarity (ai assisted, using memory agent embedding function)
+                       {"label": "Fuzzy matching", "value": "fuzzy"},
+                       {"label": "Semantic similarity (embeddings)", "value": "semantic_similarity"},
+                    ],
+                    note_on_value={
+                        "semantic_similarity": AgentActionNote(
+                            type="warning",
+                            text="Uses the memory agent's embedding function to compare the text. Will use batching when available, but has the potential to do A LOT of calls to the embedding model."
+                        )
+                    }
+                ),
+                "repetition_threshold": AgentActionConfig(
+                    type="number",
+                    label="Similarity threshold",
+                    description="The similarity threshold for detecting repetition. How similar the text needs to be to be considered repetition.",
+                    value=85,
+                    min=50,
+                    max=100,
+                    step=1,
+                ),
+                "repetition_range": AgentActionConfig(
+                    type="number",
+                    label="Repetition range",
+                    description="Number of message in the history to check against when analyzing repetition.",
+                    value=15,
+                    min=1,
+                    max=100,
+                    step=1,
+                ),
+                "repetition_min_length": AgentActionConfig(
+                    type="number",
+                    label="Repetition min length",
+                    description="The minimum length of a sentence to be considered for repetition checking. (characters, not tokens)",
+                    value=15,
+                    min=1,
+                    max=100,
+                    step=1,
                 ),
             }
         )

@@ -481,17 +481,17 @@ files = [
 
 [[package]]
 name = "boto3"
-version = "1.38.3"
+version = "1.38.4"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "boto3-1.38.3-py3-none-any.whl", hash = "sha256:9218f86e2164e1bddb75d435bbde4fa651aa58687213d7e3e1b50f7eb8868f66"},
-    {file = "boto3-1.38.3.tar.gz", hash = "sha256:655d51abcd68a40a33c52dbaa2ca73fc63c746b894e2ae22ed8ddc1912ddd93f"},
+    {file = "boto3-1.38.4-py3-none-any.whl", hash = "sha256:ab315d38409f5b3262b653a10b0fac786bcff7e51e03dcb99ff38ba16bf85630"},
+    {file = "boto3-1.38.4.tar.gz", hash = "sha256:4990df0087fe7be944ba06c2d1e6512b5a24f821af5a4881f24309e13ae29e68"},
 ]
 
 [package.dependencies]
-botocore = ">=1.38.3,<1.39.0"
+botocore = ">=1.38.4,<1.39.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.12.0,<0.13.0"
 
@@ -500,13 +500,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.38.3"
+version = "1.38.4"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "botocore-1.38.3-py3-none-any.whl", hash = "sha256:96f823240fe3704b99c17d1d1b2fd2d1679cf56d2a55b095f00255b76087cbf0"},
-    {file = "botocore-1.38.3.tar.gz", hash = "sha256:790f8f966201781f5fcf486d48b4492e9f734446bbf9d19ef8159d08be854243"},
+    {file = "botocore-1.38.4-py3-none-any.whl", hash = "sha256:6206cf07be1069efaead2ddc858eb752dafef276ebbe88ac32b5c427b1d90570"},
+    {file = "botocore-1.38.4.tar.gz", hash = "sha256:6143546bb56f1da4dff8d285cb6a3b8b0b6442451fe5937cb48a62bf7275386f"},
 ]
 
 [package.dependencies]
@@ -697,13 +697,13 @@ files = [
 
 [[package]]
 name = "certifi"
-version = "2025.1.31"
+version = "2025.4.26"
 description = "Python package for providing Mozilla's CA Bundle."
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "certifi-2025.1.31-py3-none-any.whl", hash = "sha256:ca78db4565a652026a4db2bcdf68f2fb589ea80d0be70e03929ed730746b84fe"},
-    {file = "certifi-2025.1.31.tar.gz", hash = "sha256:3d5da6925056f6f18f119200434a4780a94263f10d1c21d032a6f6b2baa20651"},
+    {file = "certifi-2025.4.26-py3-none-any.whl", hash = "sha256:30350364dfe371162649852c63336a15c70c6510c2ad5015b21c2345311805f3"},
+    {file = "certifi-2025.4.26.tar.gz", hash = "sha256:0a816057ea3cdefcef70270d2c515e4506bbc954f417fa5ade2021213bb8f0c6"},
 ]
 
 [[package]]
@@ -4322,13 +4322,13 @@ typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
 
 [[package]]
 name = "pydantic-extra-types"
-version = "2.10.3"
+version = "2.10.4"
 description = "Extra Pydantic types."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pydantic_extra_types-2.10.3-py3-none-any.whl", hash = "sha256:e8b372752b49019cd8249cc192c62a820d8019f5382a8789d0f887338a59c0f3"},
-    {file = "pydantic_extra_types-2.10.3.tar.gz", hash = "sha256:dcc0a7b90ac9ef1b58876c9b8fdede17fbdde15420de9d571a9fccde2ae175bb"},
+    {file = "pydantic_extra_types-2.10.4-py3-none-any.whl", hash = "sha256:ce064595af3cab05e39ae062752432dcd0362ff80f7e695b61a3493a4d842db7"},
+    {file = "pydantic_extra_types-2.10.4.tar.gz", hash = "sha256:bf8236a63d061eb3ecb1b2afa78ba0f97e3f67aa11dbbff56ec90491e8772edc"},
 ]
 
 [package.dependencies]
@@ -4336,9 +4336,9 @@ pydantic = ">=2.5.2"
 typing-extensions = "*"
 
 [package.extras]
-all = ["pendulum (>=3.0.0,<4.0.0)", "phonenumbers (>=8,<9)", "pycountry (>=23)", "pymongo (>=4.0.0,<5.0.0)", "python-ulid (>=1,<2)", "python-ulid (>=1,<4)", "pytz (>=2024.1)", "semver (>=3.0.2)", "semver (>=3.0.2,<3.1.0)", "tzdata (>=2024.1)"]
+all = ["pendulum (>=3.0.0,<4.0.0)", "phonenumbers (>=8,<10)", "pycountry (>=23)", "pymongo (>=4.0.0,<5.0.0)", "python-ulid (>=1,<2)", "python-ulid (>=1,<4)", "pytz (>=2024.1)", "semver (>=3.0.2)", "semver (>=3.0.2,<3.1.0)", "tzdata (>=2024.1)"]
 pendulum = ["pendulum (>=3.0.0,<4.0.0)"]
-phonenumbers = ["phonenumbers (>=8,<9)"]
+phonenumbers = ["phonenumbers (>=8,<10)"]
 pycountry = ["pycountry (>=23)"]
 python-ulid = ["python-ulid (>=1,<2)", "python-ulid (>=1,<4)"]
 semver = ["semver (>=3.0.2)"]
@@ -4382,13 +4382,13 @@ windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
 name = "pymdown-extensions"
-version = "10.14.3"
+version = "10.15"
 description = "Extension pack for Python Markdown."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pymdown_extensions-10.14.3-py3-none-any.whl", hash = "sha256:05e0bee73d64b9c71a4ae17c72abc2f700e8bc8403755a00580b49a4e9f189e9"},
-    {file = "pymdown_extensions-10.14.3.tar.gz", hash = "sha256:41e576ce3f5d650be59e900e4ceff231e0aed2a88cf30acaee41e02f063a061b"},
+    {file = "pymdown_extensions-10.15-py3-none-any.whl", hash = "sha256:46e99bb272612b0de3b7e7caf6da8dd5f4ca5212c0b273feb9304e236c484e5f"},
+    {file = "pymdown_extensions-10.15.tar.gz", hash = "sha256:0e5994e32155f4b03504f939e501b981d306daf7ec2aa1cd2eb6bd300784f8f7"},
 ]
 
 [package.dependencies]
@@ -5175,13 +5175,13 @@ train = ["accelerate (>=0.20.3)", "datasets"]
 
 [[package]]
 name = "setuptools"
-version = "79.0.1"
+version = "80.0.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "setuptools-79.0.1-py3-none-any.whl", hash = "sha256:e147c0549f27767ba362f9da434eab9c5dc0045d5304feb602a0af001089fc51"},
-    {file = "setuptools-79.0.1.tar.gz", hash = "sha256:128ce7b8f33c3079fd1b067ecbb4051a66e8526e7b65f6cec075dfc650ddfa88"},
+    {file = "setuptools-80.0.0-py3-none-any.whl", hash = "sha256:a38f898dcd6e5380f4da4381a87ec90bd0a7eec23d204a5552e80ee3cab6bd27"},
+    {file = "setuptools-80.0.0.tar.gz", hash = "sha256:c40a5b3729d58dd749c0f08f1a07d134fb8a0a3d7f87dc33e7c5e1f762138650"},
 ]
 
 [package.extras]
@@ -5295,6 +5295,17 @@ files = [
 ]
 
 [[package]]
+name = "sseclient-py"
+version = "1.8.0"
+description = "SSE client for Python"
+optional = false
+python-versions = "*"
+files = [
+    {file = "sseclient-py-1.8.0.tar.gz", hash = "sha256:c547c5c1a7633230a38dc599a21a2dc638f9b5c297286b48b46b935c71fac3e8"},
+    {file = "sseclient_py-1.8.0-py2.py3-none-any.whl", hash = "sha256:4ecca6dc0b9f963f8384e9d7fd529bf93dd7d708144c4fb5da0e0a1a926fee83"},
+]
+
+[[package]]
 name = "starlette"
 version = "0.46.2"
 description = "The little ASGI library that shines."
@@ -5330,13 +5341,13 @@ typing = ["mypy (>=1.4)", "rich", "twisted"]
 
 [[package]]
 name = "sympy"
-version = "1.13.3"
+version = "1.14.0"
 description = "Computer algebra system (CAS) in Python"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 files = [
-    {file = "sympy-1.13.3-py3-none-any.whl", hash = "sha256:54612cf55a62755ee71824ce692986f23c88ffa77207b30c1368eda4a7060f73"},
-    {file = "sympy-1.13.3.tar.gz", hash = "sha256:b27fd2c6530e0ab39e275fc9b683895367e51d5da91baa8d3d64db2565fec4d9"},
+    {file = "sympy-1.14.0-py3-none-any.whl", hash = "sha256:e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5"},
+    {file = "sympy-1.14.0.tar.gz", hash = "sha256:d3d3fe8df1e5a0b42f0e7bdf50541697dbe7d23746e894990c030e2b05e72517"},
 ]
 
 [package.dependencies]
@@ -5755,13 +5766,13 @@ tutorials = ["matplotlib", "pandas", "tabulate"]
 
 [[package]]
 name = "typer"
-version = "0.15.2"
+version = "0.15.3"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "typer-0.15.2-py3-none-any.whl", hash = "sha256:46a499c6107d645a9c13f7ee46c5d5096cae6f5fc57dd11eccbbb9ae3e44ddfc"},
-    {file = "typer-0.15.2.tar.gz", hash = "sha256:ab2fab47533a813c49fe1f16b1a370fd5819099c00b119e0633df65f22144ba5"},
+    {file = "typer-0.15.3-py3-none-any.whl", hash = "sha256:c86a65ad77ca531f03de08d1b9cb67cd09ad02ddddf4b34745b5008f43b239bd"},
+    {file = "typer-0.15.3.tar.gz", hash = "sha256:818873625d0569653438316567861899f7e9972f2e6e0c16dab608345ced713c"},
 ]
 
 [package.dependencies]
@@ -6478,4 +6489,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "cd3d2b3e76738c48187e489f06bef8885afb857002070b826afbd0c638fd956f"
+content-hash = "cd4cb1e4aad1eed152e39995a034699630ea5529928cf6724fccc1dd6d044a22"

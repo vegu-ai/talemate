@@ -187,6 +187,7 @@ class TextGeneratorWebuiClient(ClientBase):
             headers=self.request_headers,
             stream=True,
         )
+        stream_response.raise_for_status()
         
         sse = sseclient.SSEClient(stream_response)
         

@@ -302,6 +302,12 @@ class RevisionMixin:
         for sentence in compare_against:
             history_sentences.extend(compile_text_to_sentences(sentence))
         
+        min_length = self.revision_repetition_min_length
+        
+        # strip min length sentences from both lists
+        text_sentences = [i for i in text_sentences if len(i[1]) >= min_length]
+        history_sentences = [i for i in history_sentences if len(i[1]) >= min_length]
+        
         result_matrix = await memory_agent.compare_string_lists(
             [i[1] for i in text_sentences],
             [i[1] for i in history_sentences],

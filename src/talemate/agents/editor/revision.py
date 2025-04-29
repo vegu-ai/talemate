@@ -555,6 +555,8 @@ class RevisionMixin:
         repetition_matches = []
         bad_prose_identified = []
         character_name_prefix = text.startswith(f"{character.name}: ") if character else False
+        if character_name_prefix:
+            text = text[len(character.name) + 2:]
         
         # Step 1 - Detect repetition
         if self.revision_repetition_detection_method == "fuzzy":
@@ -676,7 +678,7 @@ class RevisionMixin:
             color="highlight4",
         )
         
-        if character_name_prefix:
+        if character_name_prefix and not revision.startswith(f"{character.name}: "):
             revision = f"{character.name}: {revision}"
             
         return revision

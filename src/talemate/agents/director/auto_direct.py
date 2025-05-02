@@ -60,7 +60,7 @@ class AutoDirectMixin:
                     type="number",
                     label="Max. Idle Turns",
                     description="The maximum number of turns any actor can go without performing an action before they are considered overdue to do something.",
-                    value=8,
+                    value=5,
                     min=1,
                     max=100,
                     step=1,

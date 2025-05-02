@@ -56,7 +56,7 @@ class AgentSettingsNode(Node):
         agent = get_agent(self._agent_name)
         
         if not agent:
-            raise InputValueError(self, "_agent_name", f"Could not find agent: {self._agent_name}")
+            return
         
         self.add_output("agent_enabled", socket_type="bool")
         

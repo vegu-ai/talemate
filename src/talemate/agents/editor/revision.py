@@ -119,7 +119,7 @@ class RevisionMixin:
                     type="text",
                     label="Repetition detection method",
                     description="The method to use to detect repetition",
-                    value="fuzzy",
+                    value="semantic_similarity",
                     choices=[
                        # fuzzy matching (not ai assisted)
                        # semantic similarity (ai assisted, using memory agent embedding function)

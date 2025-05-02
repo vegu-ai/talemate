@@ -296,6 +296,24 @@ class Agent(ABC):
     
     # scene state
     
+    
+    def context_fingerpint(self, extra: list[str] = []) -> str | None:
+        active_agent_context = active_agent.get()
+        
+        if not active_agent_context:
+            return None
+        
+        if self.scene.history:
+            fingerprint = f"{self.scene.history[-1].fingerprint}-{active_agent_context.first.fingerprint}"
+        else:
+            fingerprint = f"START-{active_agent_context.first.fingerprint}"
+            
+        for extra_key in extra:
+            fingerprint += f"-{hash(extra_key)}"
+        
+        return fingerprint
+    
+    
     def get_scene_state(self, key:str, default=None):
         agent_state = self.scene.agent_state.get(self.agent_type, {})
         return agent_state.get(key, default)

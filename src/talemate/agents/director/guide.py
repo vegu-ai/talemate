@@ -102,6 +102,13 @@ class GuideSceneMixin:
                         {"label": "Medium Long (768)", "value": "768"},
                         {"label": "Long (1024)", "value": "1024"},
                     ]
+                ),
+                "cache_guidance": AgentActionConfig(
+                    type="bool",
+                    label="Cache guidance",
+                    description="Will not regenerate the guidance until the scene moves forward or the analysis changes.",
+                    value=False,
+                    quick_toggle=True,
                 )
             }
         )
@@ -124,6 +131,10 @@ class GuideSceneMixin:
     def guide_scene_guidance_length(self) -> int:
         return int(self.actions["guide_scene"].config["guidance_length"].value)
     
+    @property
+    def guide_scene_cache_guidance(self) -> bool:
+        return self.actions["guide_scene"].config["cache_guidance"].value
+    
     # signal connect
     
     def connect(self, scene):
@@ -141,6 +152,11 @@ class GuideSceneMixin:
             return
         
         guidance = None
+        
+        cached_guidance = await self.get_cached_guidance(emission.response)
+        
+        if cached_guidance:
+            return cached_guidance
         
         if emission.analysis_type == "narration" and self.guide_narrator:
             guidance = await self.guide_narrator_off_of_scene_analysis(
@@ -166,7 +182,39 @@ class GuideSceneMixin:
                 return
             
             self.set_context_states(actor_guidance=guidance)
-            
+
+        if guidance:
+            await self.set_cached_guidance(emission.response, guidance)
+    
+    # helpers
+    
+    def _cache_key(self) -> str:
+        return f"cached_guidance"
+    
+    async def get_cached_guidance(self, analysis:str) -> str | None:
+        """
+        Returns the cached guidance for the given analysis.
+        """
+        
+        if not self.guide_scene_cache_guidance:
+            return None
+        
+        key = self._cache_key()
+        cached_guidance = self.get_scene_state(key)
+        
+        if cached_guidance:
+            if cached_guidance.get("fp") == self.context_fingerpint(extra=[analysis]):
+                return cached_guidance.get("guidance")
+        
+        return None
+    
+    async def set_cached_guidance(self, analysis:str, guidance: str):
+        """
+        Sets the cached guidance for the given analysis.
+        """
+        key = self._cache_key()
+        self.set_scene_states(**{key: {"fp": self.context_fingerpint(extra=[analysis]), "guidance": guidance}})
+     
     # methods
     
     @set_processing

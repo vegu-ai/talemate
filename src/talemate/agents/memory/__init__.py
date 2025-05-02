@@ -516,6 +516,14 @@ class MemoryAgent(Agent):
         if not self.db or not hasattr(self.db, "_embedding_function") or self.db._embedding_function is None:
             raise RuntimeError("Embedding function is not initialized. Make sure the database is set.")
 
+        if not list_a or not list_b:
+            return {
+                "cosine_similarity_matrix": np.array([]),
+                "euclidean_distance_matrix": np.array([]),
+                "similarity_matches": [],
+                "distance_matches": []
+            }
+
         embed_fn = self.db._embedding_function
 
         # Batch embed all strings

@@ -55,6 +55,7 @@ class AutoDirectMixin:
                     min=1,
                     max=100,
                     step=1,
+                    title="Natural flow",
                 ),
                 "max_idle_turns": AgentActionConfig(
                     type="number",
@@ -75,6 +76,7 @@ class AutoDirectMixin:
                     step=1,
                 ),
                 "instruct_actors": AgentActionConfig(
+                    title="Instructions",
                     type="bool",
                     label="Instruct Actors",
                     description="Whether to instruct actors on what to do next.",

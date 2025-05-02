@@ -65,8 +65,10 @@
   
       <v-spacer></v-spacer>
 
+      <DirectorConsoleWidget :scene-active="sceneActive" @open-director-console="toggleNavigation('directorConsole')" />
+
       <VisualQueue ref="visualQueue" />
-      <v-app-bar-nav-icon v-if="sceneActive" @click="toggleNavigation('directorConsole')"><v-icon>mdi-bullhorn</v-icon></v-app-bar-nav-icon>
+
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="!ready"
@@ -287,6 +289,7 @@ import WorldStateManagerMenu from './WorldStateManagerMenu.vue';
 import IntroView from './IntroView.vue';
 import NodeEditor from './NodeEditor.vue';
 import DirectorConsole from './DirectorConsole.vue';
+import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
 // import debounce
 import { debounce } from 'lodash';
 
@@ -311,6 +314,7 @@ export default {
     NodeEditor,
     DirectorConsole,
     RateLimitAlert,
+    DirectorConsoleWidget,
   },
   name: 'TalemateApp',
   data() {

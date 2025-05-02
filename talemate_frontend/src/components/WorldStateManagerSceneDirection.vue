@@ -1,6 +1,14 @@
 <template>
     <v-row>
         <v-col cols="12" sm="12" md="12" lg="12" xl="8" xxl="6">
+            <v-alert density="compact" color="warning" variant="outlined" icon="mdi-flask" class="mt-4">
+                <p class="text-muted">
+                    <span class="text-warning font-weight-bold">WIP</span> Scene intention is an experimental work in progress.
+                </p>
+                <p class="text-muted">
+                    It is currently mostly used for the auto direction feature, although it may have a positive effect on scene analysis.
+                </p>
+            </v-alert>
             <v-form>
                 <!-- overall intention -->
                 <v-card-title>

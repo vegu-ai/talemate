@@ -14,7 +14,7 @@
                         Outline
                     </v-tab>
                     <v-tab value="director">
-                        <v-icon size="small" class="mr-1">mdi-dice-multiple</v-icon>
+                        <v-icon size="small" class="mr-1">mdi-bullhorn</v-icon>
                         Direction
                     </v-tab>
                     <!--

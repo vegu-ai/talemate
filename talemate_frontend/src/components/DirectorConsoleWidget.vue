@@ -1,7 +1,7 @@
 <template>
     <div class="director-console-widget">
         <v-app-bar-nav-icon v-if="sceneActive" @click="openDirectorConsole()" class="bullhorn-icon">
-            <v-icon>mdi-bullhorn</v-icon>
+            <v-icon :color="showMessage ? 'highlight5' : undefined">mdi-bullhorn</v-icon>
         </v-app-bar-nav-icon>
         
         <transition 
@@ -9,26 +9,25 @@
             leave-active-class="message-leave-active"
             enter-from-class="message-enter-from"
             leave-to-class="message-leave-to">
-            <div v-if="showMessage && latestMessage" class="message-popup">
-                <!-- Message title -->
-                <div class="message-title">
-                    <strong v-if="!latestMessage.character" class="text-info">Director</strong>
-                    <strong v-else class="text-secondary">Instruction for {{ latestMessage.character }}</strong>
-                </div>
-                
-                <!-- System message -->
-                <div v-if="!latestMessage.character" class="system-message">
-                    <v-chip color="info" size="x-small" class="mr-1"><v-icon size="small">mdi-brain</v-icon></v-chip>
-                    <span class="message-text text-caption">{{ latestMessage.message }}</span>
-                </div>
-                
-                <!-- Character instruction -->
-                <div v-else class="character-instruction">
-                    <v-chip color="secondary" size="x-small" class="mr-1"><v-icon size="small">mdi-bullhorn</v-icon></v-chip>
-                    <span v-if="latestMessage.message" class="message-text text-caption">
-                        {{ latestMessage.message }}
-                    </span>
-                </div>
+            <div v-if="showMessage && latestMessage" class="chip-container">
+                <v-chip
+                    v-if="!latestMessage.character"
+                    class="message-chip"
+                    color="info"
+                    size="small"
+                    prepend-icon="mdi-brain"
+                >
+                    Scene Action
+                </v-chip>
+                <v-chip
+                    v-else
+                    class="message-chip"
+                    color="director"
+                    size="small"
+                    prepend-icon="mdi-bullhorn"
+                >
+                    {{ latestMessage.character }}
+                </v-chip>
             </div>
         </transition>
     </div>
@@ -131,40 +130,17 @@ export default {
     z-index: 1001; /* Keep icon above the popup */
 }
 
-.message-popup {
+.chip-container {
     position: absolute;
     top: 50%;
     right: 100%;
     transform: translateY(-50%);
     z-index: 1000;
-    border-radius: 4px;
-    padding: 6px 12px;
     margin-right: 8px;
-    min-width: 400px;
-    max-width: 600px;
-    transform-origin: right center;
-    /* Let Vuetify handle the coloring */
-    background: var(--v-theme-surface);
 }
 
-.message-title {
-    margin-bottom: 2px;
-    font-size: 0.75rem;
-    line-height: 1;
-}
-
-.system-message, .character-instruction {
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
-
-.message-text {
-    flex: 1;
+.message-chip {
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-left: 6px;
 }
 
 /* Custom transition classes */

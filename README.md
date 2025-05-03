@@ -17,6 +17,7 @@ Roleplay with AI with a focus on strong narration and consistent world and game 
 - Context management for character details, world information, past events, and pinned information
 - Customizable templates for all prompts using Jinja2
 - Modern, responsive UI
+- Node editor
 
 ## Documentation
 

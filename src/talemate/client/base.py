@@ -56,7 +56,7 @@ class PromptData(pydantic.BaseModel):
     agent_stack: list[str] = pydantic.Field(default_factory=list)
     generation_parameters: dict = pydantic.Field(default_factory=dict)
     inference_preset: str = None
-    preset_group: str = None
+    preset_group: str | None = None
 
 
 class ErrorAction(pydantic.BaseModel):

@@ -76,25 +76,9 @@ class ConversationAgent(
     min_dialogue_length = 75
     websocket_handler = ConversationWebsocketHandler
 
-    def __init__(
-        self,
-        client: client.TaleMateClient,
-        kind: Optional[str] = "pygmalion",
-        logging_enabled: Optional[bool] = True,
-        **kwargs,
-    ):
-        self.client = client
-        self.kind = kind
-        self.logging_enabled = logging_enabled
-        self.logging_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-        # several agents extend this class, but we only want to initialize
-        # these actions for the conversation agent
-
-        if self.agent_type != "conversation":
-            return
-
-        self.actions = {
+    @classmethod
+    def init_actions(cls) -> dict[str, AgentAction]:
+        actions = {
             "generation_override": AgentAction(
                 enabled=True,
                 container=True,
@@ -177,8 +161,28 @@ class ConversationAgent(
                 }
             ),
         }
-        
-        MemoryRAGMixin.add_actions(self)
+        MemoryRAGMixin.add_actions(actions)
+        return actions
+
+    def __init__(
+        self,
+        client: client.TaleMateClient,
+        kind: Optional[str] = "pygmalion",
+        logging_enabled: Optional[bool] = True,
+        **kwargs,
+    ):
+        self.client = client
+        self.kind = kind
+        self.logging_enabled = logging_enabled
+        self.logging_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+        # several agents extend this class, but we only want to initialize
+        # these actions for the conversation agent
+
+        if self.agent_type != "conversation":
+            return
+
+        self.actions = ConversationAgent.init_actions()
 
     @property
     def conversation_format(self):

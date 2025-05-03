@@ -30,8 +30,8 @@ class ContextInvestigationMixin:
     """
     
     @classmethod
-    def add_actions(cls, summarizer):
-        summarizer.actions["context_investigation"] = AgentAction(
+    def add_actions(cls, actions: dict[str, AgentAction]):
+        actions["context_investigation"] = AgentAction(
             enabled=False,
             container=True,
             can_be_disabled=True,

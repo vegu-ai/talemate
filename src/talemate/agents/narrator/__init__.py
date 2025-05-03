@@ -94,16 +94,9 @@ class NarratorAgent(
     
     websocket_handler = NarratorWebsocketHandler
 
-    def __init__(
-        self,
-        client: client.TaleMateClient,
-        **kwargs,
-    ):
-        self.client = client
-
-        # agent actions
-
-        self.actions = {
+    @classmethod
+    def init_actions(cls) -> dict[str, AgentAction]:
+        actions = {
             "generation_override": AgentAction(
                 enabled=True,
                 label="Generation Settings",
@@ -201,7 +194,18 @@ class NarratorAgent(
             ),
         }
         
-        MemoryRAGMixin.add_actions(self)
+        MemoryRAGMixin.add_actions(actions)
+        return actions
+
+    def __init__(
+        self,
+        client: client.TaleMateClient,
+        **kwargs,
+    ):
+        self.client = client
+
+        # agent actions
+        self.actions = NarratorAgent.init_actions()
 
     @property
     def extra_instructions(self) -> str:

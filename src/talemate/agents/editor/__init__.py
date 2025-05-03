@@ -38,11 +38,10 @@ class EditorAgent(
 
     agent_type = "editor"
     verbose_name = "Editor"
-
-    def __init__(self, client, **kwargs):
-        self.client = client
-        self.is_enabled = True
-        self.actions = {
+    
+    @classmethod
+    def init_actions(cls) -> dict[str, AgentAction]:
+        actions = {
             "fix_exposition": AgentAction(
                 enabled=True,
                 can_be_disabled=True,
@@ -81,8 +80,14 @@ class EditorAgent(
             ),
         }
         
-        MemoryRAGMixin.add_actions(self)
-        RevisionMixin.add_actions(self)
+        MemoryRAGMixin.add_actions(actions)
+        RevisionMixin.add_actions(actions)
+        return actions
+
+    def __init__(self, client, **kwargs):
+        self.client = client
+        self.is_enabled = True
+        self.actions = EditorAgent.init_actions()
     
     @property
     def enabled(self):

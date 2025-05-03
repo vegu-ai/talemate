@@ -66,8 +66,8 @@ class GuideSceneMixin:
     """
     
     @classmethod
-    def add_actions(cls, director):
-        director.actions["guide_scene"] = AgentAction(
+    def add_actions(cls, actions: dict[str, AgentAction]):
+        actions["guide_scene"] = AgentAction(
             enabled=False,
             container=True,
             can_be_disabled=True,

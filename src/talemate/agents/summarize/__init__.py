@@ -60,11 +60,10 @@ class SummarizeAgent(
     agent_type = "summarizer"
     verbose_name = "Summarizer"
     auto_squish = False
-
-    def __init__(self, client, **kwargs):
-        self.client = client
-
-        self.actions = {
+    
+    @classmethod
+    def init_actions(cls) -> dict[str, AgentAction]:
+        actions = {
             "archive": AgentAction(
                 enabled=True,
                 label="Summarize to long-term memory archive",
@@ -104,11 +103,16 @@ class SummarizeAgent(
                 },
             ),
         }
-        
-        LayeredHistoryMixin.add_actions(self)
-        MemoryRAGMixin.add_actions(self)
-        SceneAnalyzationMixin.add_actions(self)
-        ContextInvestigationMixin.add_actions(self)
+        LayeredHistoryMixin.add_actions(actions)
+        MemoryRAGMixin.add_actions(actions)
+        SceneAnalyzationMixin.add_actions(actions)
+        ContextInvestigationMixin.add_actions(actions)
+        return actions
+
+    def __init__(self, client, **kwargs):
+        self.client = client
+
+        self.actions = SummarizeAgent.init_actions()
 
     @property
     def threshold(self):

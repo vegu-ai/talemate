@@ -66,8 +66,8 @@ class GenerateChoicesMixin:
     """
     
     @classmethod
-    def add_actions(cls, director):
-        director.actions["_generate_choices"] = AgentAction(
+    def add_actions(cls, actions: dict[str, AgentAction]):
+        actions["_generate_choices"] = AgentAction(
             enabled=True,
             container=True,
             can_be_disabled=True,

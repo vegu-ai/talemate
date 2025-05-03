@@ -50,8 +50,8 @@ class SceneAnalyzationMixin:
     """
     
     @classmethod
-    def add_actions(cls, summarizer):
-        summarizer.actions["analyze_scene"] = AgentAction(
+    def add_actions(cls, actions: dict[str, AgentAction]):
+        actions["analyze_scene"] = AgentAction(
             enabled=False,
             container=True,
             can_be_disabled=True,

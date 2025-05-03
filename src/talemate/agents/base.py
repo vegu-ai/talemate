@@ -200,7 +200,13 @@ class Agent(ABC):
     essential = True
     ready_check_error = None
     
-
+    @classmethod
+    def init_actions(cls, actions: dict[str, AgentAction] | None = None) -> dict[str, AgentAction]:
+        if actions is None:
+            actions = {}
+        
+        return actions
+    
     @property
     def agent_details(self):
         if hasattr(self, "client"):

@@ -64,16 +64,13 @@ class MemoryAgent(Agent):
     agent_type = "memory"
     verbose_name = "Memory"
 
-    def __init__(self, scene, **kwargs):
-        self.db = None
-        self.scene = scene
-        self.memory_tracker = {}
-        self.config = load_config()
-        self._ready_to_add = False
-
-        handlers["config_saved"].connect(self.on_config_saved)
+    @classmethod
+    def init_actions(cls, presets: list[dict] | None = None) -> dict[str, AgentAction]:
         
-        self.actions = {
+        if presets is None:
+            presets = []
+        
+        actions = {
             "_config": AgentAction(
                 enabled=True,
                 label="Configure",
@@ -83,7 +80,7 @@ class MemoryAgent(Agent):
                         type="text",
                         value="default",
                         label="Embeddings",
-                        choices=self.get_presets,
+                        choices=presets,
                         description="Which embeddings to use",
                     ),
                     "device": AgentActionConfig(
@@ -100,6 +97,18 @@ class MemoryAgent(Agent):
                 },
             ),
         }
+        return actions
+    
+    def __init__(self, scene, **kwargs):
+        self.db = None
+        self.scene = scene
+        self.memory_tracker = {}
+        self.config = load_config()
+        self._ready_to_add = False
+
+        handlers["config_saved"].connect(self.on_config_saved)
+        
+        self.actions = MemoryAgent.init_actions(presets=self.get_presets)
 
     @property
     def readonly(self):

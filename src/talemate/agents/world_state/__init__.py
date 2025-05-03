@@ -64,10 +64,9 @@ class WorldStateAgent(
     agent_type = "world_state"
     verbose_name = "World State"
 
-    def __init__(self, client, **kwargs):
-        self.client = client
-        self.is_enabled = True
-        self.actions = {
+    @classmethod
+    def init_actions(cls) -> dict[str, AgentAction]:
+        actions = {
             "update_world_state": AgentAction(
                 enabled=True,
                 can_be_disabled=True,
@@ -110,11 +109,15 @@ class WorldStateAgent(
                 },
             ),
         }
+        CharacterProgressionMixin.add_actions(actions)
+        return actions
 
+    def __init__(self, client, **kwargs):
+        self.client = client
+        self.is_enabled = True
         self.next_update = 0
         self.next_pin_check = 0
-        
-        CharacterProgressionMixin.add_actions(self)
+        self.actions = WorldStateAgent.init_actions()
 
     @property
     def enabled(self):

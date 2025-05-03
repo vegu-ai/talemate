@@ -17,9 +17,9 @@ log = structlog.get_logger()
 class MemoryRAGMixin:
     
     @classmethod
-    def add_actions(cls, agent):
+    def add_actions(cls, actions: dict[str, AgentAction]):
         
-        agent.actions["use_long_term_memory"] = AgentAction(
+        actions["use_long_term_memory"] = AgentAction(
             enabled=True,
             container=True,
             can_be_disabled=True,

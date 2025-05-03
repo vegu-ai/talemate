@@ -36,8 +36,8 @@ class AutoDirectMixin:
     """
     
     @classmethod
-    def add_actions(cls, summarizer):
-        summarizer.actions["auto_direct"] = AgentAction(
+    def add_actions(cls, actions: dict[str, AgentAction]):
+        actions["auto_direct"] = AgentAction(
             enabled=False,
             container=True,
             can_be_disabled=True,

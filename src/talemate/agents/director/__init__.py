@@ -47,12 +47,9 @@ class DirectorAgent(
     verbose_name = "Director"
     websocket_handler = DirectorWebsocketHandler
 
-    def __init__(self, client, **kwargs):
-        self.is_enabled = True
-        self.client = client
-        self.next_direct_character = {}
-        self.next_direct_scene = 0
-        self.actions = {
+    @classmethod
+    def init_actions(cls) -> dict[str, AgentAction]:
+        actions = {
             "direct": AgentAction(
                 enabled=True,
                 can_be_disabled=False,
@@ -78,11 +75,18 @@ class DirectorAgent(
                 },
             ), 
         }
-        
-        MemoryRAGMixin.add_actions(self)
-        GenerateChoicesMixin.add_actions(self)
-        GuideSceneMixin.add_actions(self)
-        AutoDirectMixin.add_actions(self)
+        MemoryRAGMixin.add_actions(actions)
+        GenerateChoicesMixin.add_actions(actions)
+        GuideSceneMixin.add_actions(actions)
+        AutoDirectMixin.add_actions(actions)
+        return actions
+
+    def __init__(self, client, **kwargs):
+        self.is_enabled = True
+        self.client = client
+        self.next_direct_character = {}
+        self.next_direct_scene = 0
+        self.actions = DirectorAgent.init_actions()
 
     @property
     def enabled(self):

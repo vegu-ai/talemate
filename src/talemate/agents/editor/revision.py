@@ -58,8 +58,8 @@ class RevisionMixin:
     """
     
     @classmethod
-    def add_actions(cls, editor):
-        editor.actions["revision"] = AgentAction(
+    def add_actions(cls, actions: dict[str, AgentAction]):
+        actions["revision"] = AgentAction(
             enabled=False,
             can_be_disabled=True,
             container=True,

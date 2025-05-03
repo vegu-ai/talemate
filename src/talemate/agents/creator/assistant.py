@@ -130,8 +130,8 @@ class AssistantMixin:
     """
     
     @classmethod
-    def add_actions(cls, creator):
-        creator.actions["autocomplete"] = AgentAction(
+    def add_actions(cls, actions: dict[str, AgentAction]):
+        actions["autocomplete"] = AgentAction(
             enabled=True,
             container=True,
             can_be_disabled=False,

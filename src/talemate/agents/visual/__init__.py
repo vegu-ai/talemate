@@ -54,13 +54,9 @@ class VisualBase(Agent):
 
     ACTIONS = {}
 
-    def __init__(self, client: ClientBase, *kwargs):
-        self.client = client
-        self.is_enabled = False
-        self.backend_ready = False
-        self.initialized = False
-        self.config = load_config()
-        self.actions = {
+    @classmethod
+    def init_actions(cls) -> dict[str, AgentAction]:
+        actions = {
             "_config": AgentAction(
                 enabled=True,
                 label="Configure",
@@ -145,8 +141,18 @@ class VisualBase(Agent):
             ),
         }
 
-        for action_name, action in self.ACTIONS.items():
-            self.actions[action_name] = action
+        for action_name, action in cls.ACTIONS.items():
+            actions[action_name] = action
+
+        return actions
+
+    def __init__(self, client: ClientBase, *kwargs):
+        self.client = client
+        self.is_enabled = False
+        self.backend_ready = False
+        self.initialized = False
+        self.config = load_config()
+        self.actions = VisualBase.init_actions()
 
         signal_handlers["config_saved"].connect(self.on_config_saved)
 

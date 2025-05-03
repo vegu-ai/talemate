@@ -12,7 +12,7 @@ from talemate.game.engine.nodes.core import (
     NodeStyle,
     UNRESOLVED,
 )
-from talemate.agents.registry import get_agent_types
+from talemate.agents.registry import get_agent_types, get_agent_class
 from talemate.agents.base import Agent
 from talemate.instance import get_agent
 
@@ -53,14 +53,16 @@ class AgentSettingsNode(Node):
     _agent_name:ClassVar[str | None] = None
     
     def setup(self):
-        agent = get_agent(self._agent_name)
+        agent_cls = get_agent_class(self._agent_name)
         
-        if not agent:
-            return
+        if not agent_cls:
+            raise InputValueError(self, "_agent_name", f"Could not find agent: {self._agent_name}")
         
         self.add_output("agent_enabled", socket_type="bool")
         
-        for action_name, action in agent.actions.items():
+        actions = agent_cls.init_actions()
+        
+        for action_name, action in actions.items():
             self.add_output(f"{action_name}_enabled", socket_type="bool")
             
             if not action.config:

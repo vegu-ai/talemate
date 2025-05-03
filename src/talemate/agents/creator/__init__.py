@@ -14,6 +14,8 @@ from .assistant import AssistantMixin
 from .character import CharacterCreatorMixin
 from .scenario import ScenarioCreatorMixin
 
+from talemate.agents.base import AgentAction
+
 import talemate.agents.creator.nodes
 
 @register()
@@ -31,16 +33,20 @@ class CreatorAgent(
     agent_type = "creator"
     verbose_name = "Creator"
 
+    @classmethod
+    def init_actions(cls) -> dict[str, AgentAction]:
+        actions = {}
+        MemoryRAGMixin.add_actions(actions)
+        AssistantMixin.add_actions(actions)
+        return actions
+
     def __init__(
         self,
-        client: client.TaleMateClient,
+        client: client.ClientBase,
         **kwargs,
     ):
         self.client = client
-        self.actions = {}
-        
-        MemoryRAGMixin.add_actions(self)
-        AssistantMixin.add_actions(self)
+        self.actions = CreatorAgent.init_actions()
 
     @set_processing
     async def generate_title(self, text: str):

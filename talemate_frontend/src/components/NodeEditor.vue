@@ -26,30 +26,33 @@
                         </v-btn>
                     </template>
 
-                    <v-list density="compact" v-model:selected="debugMenuSelected" select-strategy="leaf" color="secondary">
+                    <v-list density="compact" color="secondary">
                         <v-list-subheader>Debug Logging</v-list-subheader>
-                        <v-list-item value="logStateSet">
+                        <v-list-item>
                             SET State
-                            <template v-slot:prepend="{ isSelected }">
-                                <v-list-item-action start>
-                                    <v-checkbox-btn :model-value="isSelected"></v-checkbox-btn>
-                                </v-list-item-action>
+                            <template v-slot:prepend>
+                                <v-checkbox-btn 
+                                  :model-value="debugMenuSelected.includes('logStateSet')" 
+                                  @update:model-value="value => toggleDebugOption('logStateSet', value)"
+                                ></v-checkbox-btn>
                             </template>
                         </v-list-item>
-                        <v-list-item value="logStateGet">
+                        <v-list-item>
                             GET State
-                            <template v-slot:prepend="{ isSelected }">
-                                <v-list-item-action start>
-                                    <v-checkbox-btn :model-value="isSelected"></v-checkbox-btn>
-                                </v-list-item-action>
+                            <template v-slot:prepend>
+                                <v-checkbox-btn 
+                                  :model-value="debugMenuSelected.includes('logStateGet')" 
+                                  @update:model-value="value => toggleDebugOption('logStateGet', value)"
+                                ></v-checkbox-btn>
                             </template>
                         </v-list-item>
-                        <v-list-item value="clearLogOnTest">
+                        <v-list-item>
                             Clear Log on Test
-                            <template v-slot:prepend="{ isSelected }">
-                                <v-list-item-action start>
-                                    <v-checkbox-btn :model-value="isSelected"></v-checkbox-btn>
-                                </v-list-item-action>
+                            <template v-slot:prepend>
+                                <v-checkbox-btn 
+                                  :model-value="debugMenuSelected.includes('clearLogOnTest')" 
+                                  @update:model-value="value => toggleDebugOption('clearLogOnTest', value)"
+                                ></v-checkbox-btn>
                             </template>
                         </v-list-item>
                     </v-list>
@@ -711,12 +714,32 @@ export default {
                 console.log("Breakpoint released");
                 this.breakpoint = null;
             }
+        },
+
+        toggleDebugOption(option, value) {
+            if (value) {
+                this.debugMenuSelected.push(option);
+            } else {
+                this.debugMenuSelected = this.debugMenuSelected.filter(o => o !== option);
+            }
+            // Save to local storage
+            localStorage.setItem('talemate_debug_options', JSON.stringify(this.debugMenuSelected));
         }
     },
     
     mounted() {
         this.onResize();
         this.registerMessageHandler(this.handleMessage);
+
+        // Load debug menu state from local storage if available
+        const savedDebugOptions = localStorage.getItem('talemate_debug_options');
+        if (savedDebugOptions) {
+            try {
+                this.debugMenuSelected = JSON.parse(savedDebugOptions);
+            } catch (e) {
+                console.error("Failed to parse saved debug options", e);
+            }
+        }
 
         const nodeEditor = this;
 

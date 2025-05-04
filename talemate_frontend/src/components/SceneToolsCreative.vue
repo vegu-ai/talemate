@@ -29,6 +29,15 @@
                 <v-list-item-subtitle>Make {{ character }} an active character.</v-list-item-subtitle>
             </v-list-item>
 
+            <!-- persist a new character from instructions -->
+            <v-list-item @click="introduceCharacterFromInstructions()">
+                <template v-slot:prepend>
+                    <v-icon color="highlight5">mdi-human-greeting</v-icon>
+                </template>
+                <v-list-item-title>Introduce new character (Directed)</v-list-item-title>
+                <v-list-item-subtitle>Make a new character from instructions.</v-list-item-subtitle>
+            </v-list-item>
+
             <!-- persist passive characters -->
             <v-list-item v-for="(character, index) in potentialNewCharacters" :key="index"
                 @click="introduceCharacter($event, character)">
@@ -53,7 +62,12 @@
     <v-dialog v-model="dialogIntroduceCharacter" class="intro-character-dialog">
         <v-card>
             <v-card-title>
-                Make <span class="text-primary">{{ newIntroduction.name }}</span> a permanent character.
+                <div v-if="newIntroduction.name">
+                    Make <span class="text-primary">{{ newIntroduction.name }}</span> a permanent character.
+                </div>
+                <div v-else>
+                    Make a new character.
+                </div>
             </v-card-title>
             <v-card-text>
 
@@ -83,9 +97,15 @@
                                 <v-checkbox v-model="newIntroduction.narrate_entry" label="Narrate entry" color="primary" hint="Narrate the character's entry into the scene."></v-checkbox>
                             </v-col>
                         </v-row>
+                        <v-row v-if="!newIntroduction.name">
+                            <v-col cols="12">
+                                <v-textarea v-model="newIntroduction.content" label="Instructions for the new character. If you have a name in mind, mention it here." rows="4" auto-grow hide-details></v-textarea>
+                            </v-col>
+                        </v-row>
                         <v-row v-if="newIntroduction.narrate_entry && newIntroduction.active">
                             <v-col cols="12">
-                                <v-textarea v-model="newIntroduction.narrate_entry_direction" :label="`Narration direction for ${newIntroduction.name}\'s entry into the scene'`" rows="4" auto-grow hide-details></v-textarea>
+                                <!-- narration direction -->
+                                <v-textarea v-model="newIntroduction.narrate_entry_direction" :label="`Narration direction for ${newIntroduction.name || 'the character'}\'s entry into the scene`" rows="4" auto-grow hide-details></v-textarea>
                             </v-col>
                         </v-row>
                         <v-row>
@@ -175,6 +195,7 @@ export default {
                 name: null,
                 templates: [],
                 active: true,
+                content: "",
                 determine_name: true,
                 narrate_entry: true,
                 narrate_entry_direction: "",
@@ -183,21 +204,15 @@ export default {
             },
             creativeGameMenu: [
                 {
-                    "value": "pc:prompt", 
-                    "title": "Introduce new character (Directed)", 
-                    "icon": "mdi-account-plus", 
-                    "description": "Generate a new active character, based on prompt."
-                },
-                {
                     "value": "setenv_creative", 
-                    "title": "Creative Mode", 
+                    "title": "Node Editor", 
                     "icon": "mdi-puzzle-edit",
-                    "description": "Switch to creative mode (very early experimental version)",
+                    "description": "Switch to node editor",
                     "condition": () => { return this.isEnvironment('scene') }
                 },
                 {
                     "value": "setenv_scene", 
-                    "title": "Exit Creative Mode", 
+                    "title": "Exit Node Editor", 
                     "icon": "mdi-gamepad-square",
                     "description": "Switch to game mode",
                     "condition": () => { return this.isEnvironment('creative') }
@@ -253,6 +268,12 @@ export default {
             this.dialogIntroduceCharacter = true;
         },
 
+        introduceCharacterFromInstructions() {
+            this.newIntroduction = {...this.introduction};
+            this.newIntroduction.name = null;
+            this.dialogIntroduceCharacter = true;
+        },
+
         introduceCharacter(ev, name) {
             let advanced = ev.ctrlKey;
             let payload = {};
@@ -265,7 +286,11 @@ export default {
                 payload = name;
             }
 
-            if(!payload || !payload.name) {
+            if(!payload.name) {
+                payload.name = "new character";
+            }
+
+            if(!payload) {
                 return;
             }
 

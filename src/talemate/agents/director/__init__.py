@@ -155,7 +155,7 @@ class DirectorAgent(
         # Determine the character's name (or clarify if it's already set)
         if determine_name:
             loading_status("Determining character name")
-            name = await creator.determine_character_name(name)
+            name = await creator.determine_character_name(name, instructions=content)
             log.debug("persist_character", adjusted_name=name)
 
         # Create the blank character

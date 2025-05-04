@@ -7,9 +7,6 @@
 {% for memory in query_memory("Who is "+name+"?", as_question_answer=False, iterate=3) %}
 {{ memory }}
 {% endfor %}
-{% if text -%}
-{{ text }}
-{% endif -%}
 {% set common_intructions %}
 Use an informal and colloquial register with a conversational tone. Overall, the narrative is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
 
@@ -30,6 +27,10 @@ Format MUST be one attribute per line, with a colon after the attribute name.
 {# NEW CHARACTER #}
 Generate a real world character profile for {{ name }}, one attribute per line. You are a creative writer and are allowed to fill in any gaps in the profile with your own ideas.
 Expand on interesting details.
+
+{% if text -%}
+Instructions for the character: {{ text }}
+{% endif -%}
 
 {{ common_intructions }}
 {% elif alteration_instructions %}

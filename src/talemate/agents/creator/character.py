@@ -76,6 +76,7 @@ class CharacterCreatorMixin:
         character_name: str,
         allowed_names: list[str] = None,
         group: bool = False,
+        instructions: str = "",
     ) -> str:
         name = await Prompt.request(
             f"creator.determine-character-name",
@@ -87,6 +88,7 @@ class CharacterCreatorMixin:
                 "character_name": character_name,
                 "allowed_names": allowed_names or [],
                 "group": group,
+                "instructions": instructions,
             },
         )
         return name.split('"', 1)[0].strip().strip(".").strip()

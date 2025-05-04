@@ -11,7 +11,7 @@
 <|SECTION:TASK|>
 {% if not group -%}
 {# single character name -#}
-Determine character name based on the following sentence: {{ character_name }}
+Determine character name based on the following data: {{ character_name }}{% if instructions %}; {{ instructions }}{% endif %}
 
 {% if not allowed_names -%}
 If the character already has a distinct name, respond with the character's name.

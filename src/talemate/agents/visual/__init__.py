@@ -15,6 +15,7 @@ from talemate.agents.base import (
     set_processing,
 )
 from talemate.agents.registry import register
+from talemate.agents.editor.revision import RevisionDisabled
 from talemate.client.base import ClientBase
 from talemate.config import load_config
 from talemate.emit import emit
@@ -504,15 +505,16 @@ class VisualBase(Agent):
     @set_processing
     async def generate_environment_prompt(self, instructions: str = None):
 
-        response = await Prompt.request(
-            "visual.generate-environment-prompt",
-            self.client,
-            "visualize",
-            {
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-            },
-        )
+        with RevisionDisabled():
+            response = await Prompt.request(
+                "visual.generate-environment-prompt",
+                self.client,
+                "visualize",
+                {
+                    "scene": self.scene,
+                    "max_tokens": self.client.max_token_length,
+                },
+            )
 
         return response.strip()
 
@@ -523,18 +525,19 @@ class VisualBase(Agent):
 
         character = self.scene.get_character(character_name)
 
-        response = await Prompt.request(
-            "visual.generate-character-prompt",
-            self.client,
-            "visualize",
-            {
-                "scene": self.scene,
-                "character_name": character_name,
-                "character": character,
-                "max_tokens": self.client.max_token_length,
-                "instructions": instructions or "",
-            },
-        )
+        with RevisionDisabled():
+            response = await Prompt.request(
+                "visual.generate-character-prompt",
+                self.client,
+                "visualize",
+                {
+                    "scene": self.scene,
+                    "character_name": character_name,
+                    "character": character,
+                    "max_tokens": self.client.max_token_length,
+                    "instructions": instructions or "",
+                },
+            )
 
         return response.strip()
 

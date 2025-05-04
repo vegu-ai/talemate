@@ -28,8 +28,9 @@ from talemate.util import count_tokens
 from talemate.prompts import Prompt
 from talemate.exceptions import GenerationCancelled
 import talemate.game.focal as focal
-from talemate.status import LoadingStatus, set_loading
+from talemate.status import LoadingStatus
 from talemate.world_state.templates.content import PhraseDetection
+from contextvars import ContextVar
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -50,6 +51,16 @@ detect_bad_prose_condition = AgentActionConditional(
     attribute="revision.config.detect_bad_prose",
     value=True,
 )
+
+revision_disabled_context = ContextVar("revision_disabled", default=False)
+
+class RevisionDisabled:
+    
+    def __enter__(self):
+        self.token = revision_disabled_context.set(True)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        revision_disabled_context.reset(self.token)
 
 class RevisionMixin:
     
@@ -225,6 +236,13 @@ class RevisionMixin:
         
         if not self.revision_enabled:
             return
+        
+        try:
+            if revision_disabled_context.get():
+                log.debug("revision_on_generation: revision disabled through context", emission=emission)
+                return
+        except LookupError:
+            pass
         
         log.info("revise generation", emission=emission)
 

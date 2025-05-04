@@ -1,0 +1,48 @@
+name: Python Tests
+
+on:
+  push:
+    branches: [ master, main, 'prep-*' ]
+  pull_request:
+    branches: [ master, main, 'prep-*' ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install poetry
+      run: |
+        python -m pip install --upgrade pip
+        pip install poetry
+
+    - name: Cache poetry dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pypoetry
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+
+    - name: Install dependencies
+      run: |
+        python -m venv talemate_env
+        source talemate_env/bin/activate
+        poetry config virtualenvs.create false
+        poetry install
+
+    - name: Run tests
+      run: |
+        source talemate_env/bin/activate
+        pytest tests/ -p no:warnings 

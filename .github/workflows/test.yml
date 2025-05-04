@@ -42,6 +42,10 @@ jobs:
         poetry config virtualenvs.create false
         poetry install
 
+    - name: Setup configuration file
+      run: |
+        cp config.example.yaml config.yaml
+
     - name: Run tests
       run: |
         source talemate_env/bin/activate

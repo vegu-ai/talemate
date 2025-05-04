@@ -10,7 +10,7 @@ authors = ["VeguAITools"]
 license = "GNU Affero General Public License v3.0"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.12"
+python = ">=3.10,<3.14"
 astroid = "^2.8"
 jedi = "^0.18"
 black = "*"
@@ -55,8 +55,9 @@ sseclient-py = "^1.8.0"
 # ChromaDB
 chromadb = ">=0.4.17,<1"
 InstructorEmbedding = "^1.0.1"
-torch = "^2.4.0"
-torchaudio = "^2.4.0"
+#
+torch = "^2.7.0+cu128"
+torchaudio = "=2.7.0+cu128"
 # locked for instructor embeddings
 #sentence-transformers="==2.2.2"
 sentence_transformers=">=2.7.0"

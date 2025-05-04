@@ -49,7 +49,7 @@ jobs:
     - name: Download NLTK data
       run: |
         source talemate_env/bin/activate
-        python -c "import nltk; nltk.download('punkt')"
+        python -c "import nltk; nltk.download('punkt_tab')"
 
     - name: Run tests
       run: |

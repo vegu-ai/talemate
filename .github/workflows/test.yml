@@ -46,6 +46,11 @@ jobs:
       run: |
         cp config.example.yaml config.yaml
 
+    - name: Download NLTK data
+      run: |
+        source talemate_env/bin/activate
+        python -c "import nltk; nltk.download('punkt')"
+
     - name: Run tests
       run: |
         source talemate_env/bin/activate

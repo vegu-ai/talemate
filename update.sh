@@ -21,7 +21,7 @@ python3 -m poetry install
 if command -v nvcc >/dev/null 2>&1; then
     echo "CUDA found. Installing PyTorch with CUDA support..."
     python3 -m pip uninstall torch torchaudio -y
-    python3 -m pip install torch~=2.4.1 torchaudio~=2.4.1 --index-url https://download.pytorch.org/whl/cu121
+    python3 -m pip install torch~=2.7.0 torchaudio~=2.7.0 --index-url https://download.pytorch.org/whl/cu128
 else
     echo "CUDA not found. Keeping PyTorch installation without CUDA support..."
 fi

@@ -26,7 +26,7 @@ if [ $cuda == "y" ]; then
     echo "Installing PyTorch with CUDA support..."
     # uninstall torch and torchaudio
     pip uninstall torch torchaudio -y
-    pip install torch~=2.4.1 torchaudio~=2.4.1 --index-url https://download.pytorch.org/whl/cu121
+    pip install torch~=2.7.0 torchaudio~=2.7.0 --index-url https://download.pytorch.org/whl/cu128
 fi
 
 # copy config.example.yaml to config.yaml only if config.yaml doesn't exist

@@ -11,7 +11,7 @@ import asyncio
 import time
 import reprlib
 import json
-from enum import StrEnum, IntEnum
+from enum import IntEnum
 
 from talemate.game.engine.nodes.base_types import base_node_type, BASE_TYPES
 from talemate.game.engine.nodes.registry import get_node, register

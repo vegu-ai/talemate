@@ -123,34 +123,6 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "66424cea-d547-4450-9a52-e1b170738f1b": {
-      "title": "Switch",
-      "id": "66424cea-d547-4450-9a52-e1b170738f1b",
-      "properties": {
-        "pass_through": true
-      },
-      "x": 336,
-      "y": 554,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "f1f3d2e6-4684-452d-893d-b4cb48904f5a": {
-      "title": "Get Player Character",
-      "id": "f1f3d2e6-4684-452d-893d-b4cb48904f5a",
-      "properties": {},
-      "x": 626,
-      "y": 624,
-      "width": 212,
-      "height": 34,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/GetPlayerCharacter",
-      "base_type": "core/Node"
-    },
     "7655dd96-dca1-4896-a888-62dcb5e8820e": {
       "title": "RSwitch",
       "id": "7655dd96-dca1-4896-a888-62dcb5e8820e",
@@ -273,22 +245,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
-    "f4ebabcd-8c72-4aaf-b74a-6e0a99d6abab": {
-      "title": "SET local.character",
-      "id": "f4ebabcd-8c72-4aaf-b74a-6e0a99d6abab",
-      "properties": {
-        "name": "character",
-        "scope": "local"
-      },
-      "x": 1351,
-      "y": 562,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
       "base_type": "core/Node"
     },
     "a0a89451-06df-4e3b-8b9b-a86a8c3e21f9": {
@@ -491,19 +447,89 @@
       "registry": "core/RSwitch",
       "base_type": "core/Node"
     },
+    "f4ebabcd-8c72-4aaf-b74a-6e0a99d6abab": {
+      "title": "SET local.character",
+      "id": "f4ebabcd-8c72-4aaf-b74a-6e0a99d6abab",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 1250,
+      "y": 550,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "f1f3d2e6-4684-452d-893d-b4cb48904f5a": {
+      "title": "Get Player Character",
+      "id": "f1f3d2e6-4684-452d-893d-b4cb48904f5a",
+      "properties": {},
+      "x": 680,
+      "y": 620,
+      "width": 212,
+      "height": 34,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "scene/GetPlayerCharacter",
+      "base_type": "core/Node"
+    },
     "cf8f5ad8-9996-4d57-b6f9-b342c029a3a4": {
       "title": "Character Activity",
       "id": "cf8f5ad8-9996-4d57-b6f9-b342c029a3a4",
       "properties": {
         "since_time_passage": true
       },
-      "x": 590,
-      "y": 870,
+      "x": 450,
+      "y": 860,
       "width": 230,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "scene/history/ActiveCharacterActivity",
+      "base_type": "core/Node"
+    },
+    "bce100db-b2b4-4d6d-8a89-1c771af87ca6": {
+      "title": "RSwitch",
+      "id": "bce100db-b2b4-4d6d-8a89-1c771af87ca6",
+      "properties": {},
+      "x": 820,
+      "y": 780,
+      "width": 140,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
+    },
+    "66424cea-d547-4450-9a52-e1b170738f1b": {
+      "title": "Switch",
+      "id": "66424cea-d547-4450-9a52-e1b170738f1b",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 336,
+      "y": 554,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "babfe285-6c5e-42ad-b2eb-f444437a0737": {
+      "title": "round robin",
+      "id": "babfe285-6c5e-42ad-b2eb-f444437a0737",
+      "properties": {},
+      "x": 630,
+      "y": 710,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
       "base_type": "core/Node"
     }
   },
@@ -531,12 +557,6 @@
     ],
     "25d103db-739d-4985-be50-613fc307d5b4.value": [
       "66424cea-d547-4450-9a52-e1b170738f1b.value"
-    ],
-    "66424cea-d547-4450-9a52-e1b170738f1b.yes": [
-      "7655dd96-dca1-4896-a888-62dcb5e8820e.check"
-    ],
-    "f1f3d2e6-4684-452d-893d-b4cb48904f5a.character": [
-      "7655dd96-dca1-4896-a888-62dcb5e8820e.yes"
     ],
     "7655dd96-dca1-4896-a888-62dcb5e8820e.value": [
       "f4ebabcd-8c72-4aaf-b74a-6e0a99d6abab.value"
@@ -571,9 +591,6 @@
     "e81b24ca-ebe7-47f9-b89c-0a7ed70c36cc.value": [
       "4cdae8b0-015f-42f1-b0f8-86b4c091ebea.no"
     ],
-    "f4ebabcd-8c72-4aaf-b74a-6e0a99d6abab.name": [
-      "039be56c-d8bc-4093-bd34-47f784fe51d8.state"
-    ],
     "a0a89451-06df-4e3b-8b9b-a86a8c3e21f9.name": [
       "039be56c-d8bc-4093-bd34-47f784fe51d8.state_b"
     ],
@@ -596,11 +613,29 @@
       "44e83102-3be3-4ae9-8f0c-1a12ae3e21ea.check",
       "44e83102-3be3-4ae9-8f0c-1a12ae3e21ea.yes"
     ],
+    "f4ebabcd-8c72-4aaf-b74a-6e0a99d6abab.name": [
+      "039be56c-d8bc-4093-bd34-47f784fe51d8.state"
+    ],
+    "f1f3d2e6-4684-452d-893d-b4cb48904f5a.character": [
+      "7655dd96-dca1-4896-a888-62dcb5e8820e.yes"
+    ],
     "cf8f5ad8-9996-4d57-b6f9-b342c029a3a4.none_have_acted": [
-      "447044a8-65ac-4a88-8a63-76e9f281b527.check"
+      "bce100db-b2b4-4d6d-8a89-1c771af87ca6.yes"
     ],
     "cf8f5ad8-9996-4d57-b6f9-b342c029a3a4.characters": [
       "ff36d639-edb3-46ec-9045-9fa055dc11e0.object"
+    ],
+    "bce100db-b2b4-4d6d-8a89-1c771af87ca6.value": [
+      "447044a8-65ac-4a88-8a63-76e9f281b527.check"
+    ],
+    "66424cea-d547-4450-9a52-e1b170738f1b.yes": [
+      "7655dd96-dca1-4896-a888-62dcb5e8820e.check"
+    ],
+    "66424cea-d547-4450-9a52-e1b170738f1b.no": [
+      "babfe285-6c5e-42ad-b2eb-f444437a0737.value"
+    ],
+    "babfe285-6c5e-42ad-b2eb-f444437a0737.value": [
+      "bce100db-b2b4-4d6d-8a89-1c771af87ca6.check"
     ]
   },
   "groups": [
@@ -666,8 +701,8 @@
     },
     {
       "text": "Returns a list of a characters sorted by their activity in the scene. Sorted by most recent first.\n\nIf none have acted default to player character.",
-      "x": 590,
-      "y": 710,
+      "x": 1740,
+      "y": 460,
       "width": 333,
       "inherited": false
     }

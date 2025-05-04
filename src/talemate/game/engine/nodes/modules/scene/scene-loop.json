@@ -18,8 +18,8 @@
       "properties": {
         "value": null
       },
-      "x": 1141,
-      "y": 3083,
+      "x": 1137,
+      "y": 3082,
       "width": 206,
       "height": 39,
       "collapsed": false,
@@ -33,8 +33,8 @@
       "properties": {
         "trigger_conversation_generated": true
       },
-      "x": 746,
-      "y": 2827,
+      "x": 742,
+      "y": 2826,
       "width": 272,
       "height": 103,
       "collapsed": false,
@@ -50,8 +50,8 @@
         "prefix": "",
         "allow_commands": true
       },
-      "x": 746,
-      "y": 3117,
+      "x": 742,
+      "y": 3116,
       "width": 287,
       "height": 186,
       "collapsed": false,
@@ -65,8 +65,8 @@
       "properties": {
         "emit_message": true
       },
-      "x": 1106,
-      "y": 2847,
+      "x": 1102,
+      "y": 2846,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -78,8 +78,8 @@
       "title": "Generated Text",
       "id": "e2fb6f95-ee17-4a2f-acc0-62e245e4ee19",
       "properties": {},
-      "x": 1112,
-      "y": 2743,
+      "x": 1108,
+      "y": 2742,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -91,8 +91,8 @@
       "title": "Process Input",
       "id": "10bf33d8-41c6-406d-bbf4-944e850f3b61",
       "properties": {},
-      "x": 1134,
-      "y": 3197,
+      "x": 1130,
+      "y": 3196,
       "width": 296,
       "height": 66,
       "collapsed": false,
@@ -104,8 +104,8 @@
       "title": "yield_to_user",
       "id": "4967ef4d-0ec9-4d9e-97ad-a10935034592",
       "properties": {},
-      "x": 324,
-      "y": 3207,
+      "x": 320,
+      "y": 3206,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -117,8 +117,8 @@
       "title": "character",
       "id": "01907fa7-63c7-4064-bd80-eaad1bafc963",
       "properties": {},
-      "x": 324,
-      "y": 3027,
+      "x": 320,
+      "y": 3026,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -130,8 +130,8 @@
       "title": "yield_to_ai",
       "id": "10e33c80-f684-46c0-a0a7-2a7305e375ba",
       "properties": {},
-      "x": 334,
-      "y": 2857,
+      "x": 330,
+      "y": 2856,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -160,8 +160,8 @@
       "properties": {
         "stage": 10
       },
-      "x": 1584,
-      "y": 3037,
+      "x": 1580,
+      "y": 3036,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -189,8 +189,8 @@
       "title": "RSwitch",
       "id": "1c6025c9-8465-487f-b57e-12db302378ce",
       "properties": {},
-      "x": 516,
-      "y": 2857,
+      "x": 512,
+      "y": 2856,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -202,8 +202,8 @@
       "title": "ai_turns",
       "id": "a175ce77-dd20-475f-a324-175255b0ed85",
       "properties": {},
-      "x": 988,
-      "y": 2707,
+      "x": 984,
+      "y": 2706,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -262,8 +262,8 @@
       "title": "RSwitch",
       "id": "149280f6-8834-496b-9583-1ed9ccb2a187",
       "properties": {},
-      "x": 516,
-      "y": 3157,
+      "x": 512,
+      "y": 3156,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -275,8 +275,8 @@
       "title": "ai_turns",
       "id": "fa0ea413-7824-4b04-b194-7ceb27a89cd5",
       "properties": {},
-      "x": 988,
-      "y": 3367,
+      "x": 984,
+      "y": 3366,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -336,8 +336,8 @@
         "increment": 1,
         "reset": false
       },
-      "x": 745,
-      "y": 2705,
+      "x": 741,
+      "y": 2704,
       "width": 230,
       "height": 210,
       "collapsed": true,
@@ -354,8 +354,8 @@
         "increment": 1,
         "reset": true
       },
-      "x": 725,
-      "y": 3365,
+      "x": 721,
+      "y": 3364,
       "width": 230,
       "height": 210,
       "collapsed": true,
@@ -401,26 +401,13 @@
         "name": "skip_to_player",
         "scope": "shared"
       },
-      "x": 29,
+      "x": 30,
       "y": 2116,
       "width": 244,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "e5d1e95f-31af-4002-a912-bb0984a2eeac": {
-      "title": "skip_to_player",
-      "id": "e5d1e95f-31af-4002-a912-bb0984a2eeac",
-      "properties": {},
-      "x": 300,
-      "y": 2167,
-      "width": 140,
-      "height": 26,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Watch",
       "base_type": "core/Node"
     },
     "7b31eda5-084d-42bf-9e72-5920019340e8": {
@@ -487,7 +474,7 @@
       "title": "RSwitch Advanced",
       "id": "40a05cd8-d4cd-4442-9d8b-57e4980082f6",
       "properties": {},
-      "x": 860,
+      "x": 861,
       "y": 2486,
       "width": 213,
       "height": 78,
@@ -500,7 +487,7 @@
       "title": "Get Player Character",
       "id": "80c510ae-210d-4609-b736-4dd5803ddefd",
       "properties": {},
-      "x": 600,
+      "x": 601,
       "y": 2506,
       "width": 168,
       "height": 31,
@@ -515,7 +502,7 @@
       "properties": {
         "stage": 3
       },
-      "x": 1490,
+      "x": 1491,
       "y": 2336,
       "width": 210,
       "height": 118,
@@ -528,28 +515,13 @@
       "title": "Invert",
       "id": "c4175461-957a-4db7-b201-f6932848ae09",
       "properties": {},
-      "x": 1010,
+      "x": 1011,
       "y": 2336,
       "width": 140,
       "height": 26,
       "collapsed": true,
       "inherited": false,
       "registry": "core/Invert",
-      "base_type": "core/Node"
-    },
-    "0152b38c-dcfb-4ea3-bfa3-82178429047c": {
-      "title": "IS",
-      "id": "0152b38c-dcfb-4ea3-bfa3-82178429047c",
-      "properties": {
-        "pass_through": false
-      },
-      "x": 470,
-      "y": 2137,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Switch",
       "base_type": "core/Node"
     },
     "635db25b-8577-4915-9006-7ed4490b6453": {
@@ -758,7 +730,7 @@
         "name": "yield_to_user",
         "scope": "scene loop"
       },
-      "x": 1150,
+      "x": 1151,
       "y": 2110,
       "width": 221,
       "height": 122,
@@ -774,7 +746,7 @@
         "name": "yield_to_ai",
         "scope": "scene loop"
       },
-      "x": 1150,
+      "x": 1151,
       "y": 2290,
       "width": 216,
       "height": 124,
@@ -790,7 +762,7 @@
         "name": "character",
         "scope": "scene loop"
       },
-      "x": 1150,
+      "x": 1151,
       "y": 2490,
       "width": 216,
       "height": 124,
@@ -806,8 +778,8 @@
         "name": "character",
         "scope": "scene loop"
       },
-      "x": 60,
-      "y": 2980,
+      "x": 56,
+      "y": 2979,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -822,8 +794,8 @@
         "name": "yield_to_ai",
         "scope": "scene loop"
       },
-      "x": 60,
-      "y": 2790,
+      "x": 56,
+      "y": 2789,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -838,13 +810,80 @@
         "name": "yield_to_user",
         "scope": "scene loop"
       },
-      "x": 60,
-      "y": 3179,
+      "x": 56,
+      "y": 3178,
       "width": 235,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "e5d1e95f-31af-4002-a912-bb0984a2eeac": {
+      "title": "skip_to_player",
+      "id": "e5d1e95f-31af-4002-a912-bb0984a2eeac",
+      "properties": {},
+      "x": 320,
+      "y": 2150,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "f7e161be-846e-4179-bba1-e1fe2ab49c5b": {
+      "title": "Get Scene State",
+      "id": "f7e161be-846e-4179-bba1-e1fe2ab49c5b",
+      "properties": {},
+      "x": 41,
+      "y": 2340,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetSceneState",
+      "base_type": "core/Node"
+    },
+    "ab49fdda-6d6a-4005-b150-ace64094088a": {
+      "title": "Invert",
+      "id": "ab49fdda-6d6a-4005-b150-ace64094088a",
+      "properties": {},
+      "x": 298,
+      "y": 2375,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Invert",
+      "base_type": "core/Node"
+    },
+    "0152b38c-dcfb-4ea3-bfa3-82178429047c": {
+      "title": "IS",
+      "id": "0152b38c-dcfb-4ea3-bfa3-82178429047c",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 690,
+      "y": 2130,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "e81649bc-04b7-4828-9a79-dcba0b61c5ff": {
+      "title": "OR Router",
+      "id": "e81649bc-04b7-4828-9a79-dcba0b61c5ff",
+      "properties": {},
+      "x": 510,
+      "y": 2250,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ORRouter",
       "base_type": "core/Node"
     }
   },
@@ -932,9 +971,6 @@
     "5417dffb-9563-4442-a16d-de57793baced.value": [
       "e5d1e95f-31af-4002-a912-bb0984a2eeac.value"
     ],
-    "e5d1e95f-31af-4002-a912-bb0984a2eeac.value": [
-      "0152b38c-dcfb-4ea3-bfa3-82178429047c.value"
-    ],
     "7b31eda5-084d-42bf-9e72-5920019340e8.result": [
       "c31806be-1476-419b-9489-6781b62940b6.value"
     ],
@@ -949,11 +985,6 @@
     ],
     "c4175461-957a-4db7-b201-f6932848ae09.value": [
       "4466e1fe-a089-4245-8365-11792dbf7fdb.value"
-    ],
-    "0152b38c-dcfb-4ea3-bfa3-82178429047c.yes": [
-      "29db6d6b-ce84-4e3d-a201-d5c9cfa01fa8.value",
-      "40a05cd8-d4cd-4442-9d8b-57e4980082f6.check",
-      "c4175461-957a-4db7-b201-f6932848ae09.value"
     ],
     "4115fcf4-e542-4a5c-8317-a140450db216.yes": [
       "51404eb7-7194-4a1a-b588-5bd90f00f587.state"
@@ -1015,6 +1046,23 @@
     ],
     "f3171f31-ced7-4b34-8347-36aea942f189.value": [
       "4967ef4d-0ec9-4d9e-97ad-a10935034592.value"
+    ],
+    "e5d1e95f-31af-4002-a912-bb0984a2eeac.value": [
+      "e81649bc-04b7-4828-9a79-dcba0b61c5ff.a"
+    ],
+    "f7e161be-846e-4179-bba1-e1fe2ab49c5b.auto_progress": [
+      "ab49fdda-6d6a-4005-b150-ace64094088a.value"
+    ],
+    "ab49fdda-6d6a-4005-b150-ace64094088a.value": [
+      "e81649bc-04b7-4828-9a79-dcba0b61c5ff.b"
+    ],
+    "0152b38c-dcfb-4ea3-bfa3-82178429047c.yes": [
+      "40a05cd8-d4cd-4442-9d8b-57e4980082f6.check",
+      "c4175461-957a-4db7-b201-f6932848ae09.value",
+      "29db6d6b-ce84-4e3d-a201-d5c9cfa01fa8.value"
+    ],
+    "e81649bc-04b7-4828-9a79-dcba0b61c5ff.yes": [
+      "0152b38c-dcfb-4ea3-bfa3-82178429047c.value"
     ]
   },
   "groups": [
@@ -1040,8 +1088,8 @@
     },
     {
       "title": "Main Loop",
-      "x": 12,
-      "y": 2645,
+      "x": 8,
+      "y": 2644,
       "width": 1715,
       "height": 752,
       "color": "#88A",
@@ -1060,7 +1108,7 @@
     },
     {
       "title": "Handle forced yield to user",
-      "x": 7,
+      "x": 8,
       "y": 2034,
       "width": 1616,
       "height": 603,
@@ -1086,15 +1134,15 @@
     },
     {
       "text": "User Turn",
-      "x": 788,
-      "y": 3047,
+      "x": 784,
+      "y": 3046,
       "width": 200,
       "inherited": false
     },
     {
       "text": "AI Turn",
-      "x": 788,
-      "y": 2757,
+      "x": 784,
+      "y": 2756,
       "width": 200,
       "inherited": false
     },

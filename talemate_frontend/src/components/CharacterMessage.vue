@@ -36,7 +36,11 @@
           <span>{{ part.text }}</span>
         </span>
         <!-- continue conversation -->
-        <v-btn v-if="!editing && hovered && !continuing && isLastMessage" :disabled="uxLocked" size="x-small" class="ml-2" color="primary" variant="text" prepend-icon="mdi-fast-forward" @click="continueConversation">Continue</v-btn>
+         <v-tooltip v-if="!editing && hovered && !continuing && isLastMessage" location="top" text="Generate continuation" class="pre-wrap">
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" :disabled="uxLocked" size="x-small" class="ml-2" color="primary" variant="text" prepend-icon="mdi-fast-forward" @click="continueConversation"></v-btn>
+          </template>
+        </v-tooltip>
         <v-progress-circular v-else-if="continuing" class="ml-3 mr-3" size="14" indeterminate="disable-shrink"
         color="primary"></v-progress-circular>       
       </div>

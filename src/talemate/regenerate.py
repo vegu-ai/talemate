@@ -60,7 +60,12 @@ async def regenerate_message(message: SceneMessage, scene:"Scene") -> list[Scene
     else:
         # all other message types
         
-        agent = get_agent(message.meta.get("agent"))
+        try:
+            agent = get_agent(message.meta.get("agent"))
+        except Exception as e:
+            log.error(f"regenerate_message: Could not find agent", message=message, error=e)
+            return
+        
         if not agent:
             log.error(f"regenerate_message: Could not find agent", message=message)
             return

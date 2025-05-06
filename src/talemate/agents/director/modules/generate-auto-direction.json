@@ -1734,10 +1734,11 @@
       "title": "Auto Direct Evaluation",
       "id": "9d1a54de-9dbe-4dfd-8697-57332064c21b",
       "properties": {
-        "json_output": false,
+        "data_output": false,
         "response_length": 512,
         "action_type": "scene_direction",
-        "attempts": 2
+        "attempts": 2,
+        "json_output": false
       },
       "x": 950,
       "y": 3382,
@@ -2611,8 +2612,45 @@
   ],
   "extends": null,
   "base_type": "core/Graph",
-  "inputs": [],
-  "outputs": [],
+  "inputs": [
+    {
+      "id": "75ac6c61-35e3-435d-aad2-6da1e1c17f39",
+      "name": "state",
+      "optional": false,
+      "group": "",
+      "socket_type": "any"
+    },
+    {
+      "id": "fac54897-714c-49fe-96f2-fdd13a95b1f1",
+      "name": "characters",
+      "optional": false,
+      "group": "",
+      "socket_type": "list"
+    }
+  ],
+  "outputs": [
+    {
+      "id": "c076eec7-369c-480c-9c10-64373ca58a0f",
+      "name": "state",
+      "optional": false,
+      "group": null,
+      "socket_type": "any"
+    },
+    {
+      "id": "e7b8b7fa-eff2-4135-81dc-3a512d167233",
+      "name": "actor_direction",
+      "optional": false,
+      "group": null,
+      "socket_type": "any"
+    },
+    {
+      "id": "65b3482d-3d9c-47b2-a819-71dfd64c45d3",
+      "name": "narrator_direction",
+      "optional": false,
+      "group": null,
+      "socket_type": "any"
+    }
+  ],
   "style": {
     "title_color": "#572e44",
     "node_color": "#392c34",

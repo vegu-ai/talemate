@@ -165,19 +165,21 @@ export default {
 
             // First process all paths into node objects
             let nodes = this.library.map(path => {
-                const parts = path.split('/');
+                // Normalize path separators to forward slashes for consistent processing
+                const normalizedPath = path.replace(/\\/g, '/');
+                const parts = normalizedPath.split('/');
                 const filename = parts[parts.length - 1].replace('.json', '');
 
-                if (path.startsWith('scenes/')) {
+                if (normalizedPath.startsWith('scenes/')) {
                     return {
                         type: 'scene',
                         path: parts[1], // e.g. "infinity-quest"
                         filename,
-                        fullPath: path,
+                        fullPath: path, // Keep original path for backend communication
                         selected: path === this.selectedNodePath,
                         searchValue: `${filename} (${parts[1]})` // for search and display
                     };
-                } else if (path.startsWith('src/talemate/agents/')) {
+                } else if (normalizedPath.startsWith('src/talemate/agents/')) {
                     //  core agent modules
                     const agentName = parts[3];
                     
@@ -185,7 +187,7 @@ export default {
                         type: 'template',
                         path: agentName,
                         filename,
-                        fullPath: path,
+                        fullPath: path, // Keep original path for backend communication
                         selected: path === this.selectedNodePath,
                         searchValue: `${filename} (${agentName}) agent` // for search and display
                     };
@@ -199,7 +201,7 @@ export default {
                         type: 'template',
                         path: relativePath,
                         filename,
-                        fullPath: path,
+                        fullPath: path, // Keep original path for backend communication
                         selected: path === this.selectedNodePath,
                         searchValue: `${filename} (${relativePath})` // for search and display
                     };

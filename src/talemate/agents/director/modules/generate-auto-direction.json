@@ -1730,25 +1730,6 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "9d1a54de-9dbe-4dfd-8697-57332064c21b": {
-      "title": "Auto Direct Evaluation",
-      "id": "9d1a54de-9dbe-4dfd-8697-57332064c21b",
-      "properties": {
-        "data_output": false,
-        "response_length": 512,
-        "action_type": "scene_direction",
-        "attempts": 2,
-        "json_output": false
-      },
-      "x": 950,
-      "y": 3382,
-      "width": 292,
-      "height": 195,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/GenerateResponse",
-      "base_type": "core/Node"
-    },
     "7bbe179a-595b-4304-b01c-5c2857e3f334": {
       "title": "Stop",
       "id": "7bbe179a-595b-4304-b01c-5c2857e3f334",
@@ -2018,6 +1999,25 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "9d1a54de-9dbe-4dfd-8697-57332064c21b": {
+      "title": "Auto Direct Evaluation",
+      "id": "9d1a54de-9dbe-4dfd-8697-57332064c21b",
+      "properties": {
+        "data_output": false,
+        "response_length": 1024,
+        "action_type": "scene_direction",
+        "attempts": 2,
+        "json_output": false
+      },
+      "x": 950,
+      "y": 3382,
+      "width": 292,
+      "height": 195,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
       "base_type": "core/Node"
     }
   },
@@ -2349,9 +2349,6 @@
     "ce7a6346-28f0-4dfc-bce2-84ac258f94cd.value": [
       "55c1446a-e5fe-4117-8c06-1cf7577de48e.state"
     ],
-    "9d1a54de-9dbe-4dfd-8697-57332064c21b.response": [
-      "b046eee2-0cd3-416d-a67e-8d804b828295.value"
-    ],
     "b046eee2-0cd3-416d-a67e-8d804b828295.yes": [
       "5efac09e-0ff6-47ba-8991-db033e52a404.value"
     ],
@@ -2392,6 +2389,9 @@
     "a615b604-a268-47bd-8cdb-9011d4bab880.agent": [
       "9d1a54de-9dbe-4dfd-8697-57332064c21b.state",
       "9d1a54de-9dbe-4dfd-8697-57332064c21b.agent"
+    ],
+    "9d1a54de-9dbe-4dfd-8697-57332064c21b.response": [
+      "b046eee2-0cd3-416d-a67e-8d804b828295.value"
     ]
   },
   "groups": [
@@ -2612,45 +2612,8 @@
   ],
   "extends": null,
   "base_type": "core/Graph",
-  "inputs": [
-    {
-      "id": "75ac6c61-35e3-435d-aad2-6da1e1c17f39",
-      "name": "state",
-      "optional": false,
-      "group": "",
-      "socket_type": "any"
-    },
-    {
-      "id": "fac54897-714c-49fe-96f2-fdd13a95b1f1",
-      "name": "characters",
-      "optional": false,
-      "group": "",
-      "socket_type": "list"
-    }
-  ],
-  "outputs": [
-    {
-      "id": "c076eec7-369c-480c-9c10-64373ca58a0f",
-      "name": "state",
-      "optional": false,
-      "group": null,
-      "socket_type": "any"
-    },
-    {
-      "id": "e7b8b7fa-eff2-4135-81dc-3a512d167233",
-      "name": "actor_direction",
-      "optional": false,
-      "group": null,
-      "socket_type": "any"
-    },
-    {
-      "id": "65b3482d-3d9c-47b2-a819-71dfd64c45d3",
-      "name": "narrator_direction",
-      "optional": false,
-      "group": null,
-      "socket_type": "any"
-    }
-  ],
+  "inputs": [],
+  "outputs": [],
   "style": {
     "title_color": "#572e44",
     "node_color": "#392c34",

@@ -44,6 +44,7 @@
 {{ generation_context.original }}
 <|CLOSE_SECTION|>
 {% endif %}
+{# INFORMATION -#}{% with information=generation_context.information %}{% include "task-information.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 {#- SET TASK ACTION -#}
 {% if not generation_context.original %}

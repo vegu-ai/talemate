@@ -289,6 +289,11 @@ export default {
             if(!payload.name) {
                 payload.name = "new character";
             }
+            
+            // only send augmentation instructions if augment_attributes_enabled is true
+            if(!payload.augment_attributes_enabled) {
+                delete payload.augment_attributes;
+            }
 
             if(!payload) {
                 return;

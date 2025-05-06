@@ -178,6 +178,7 @@ class DirectorAgent(
                 await scene.world_state_manager.apply_templates(
                     templates.values(), 
                     character_name=character.name,
+                    information=content
                 )
                 
                 # if any of the templates are attribute templates, then we no longer need to
@@ -186,7 +187,7 @@ class DirectorAgent(
                 log.debug("persist_character", any_attribute_templates=any_attribute_templates)
                 
                 if any_attribute_templates and augment_attributes:
-                    log.debug("persist_character", augmenting_attributes=True)
+                    log.debug("persist_character", augmenting_attributes=augment_attributes)
                     loading_status("Augmenting character attributes")
                     additional_attributes = await world_state.extract_character_sheet(
                         name=name,
@@ -211,14 +212,15 @@ class DirectorAgent(
                 
             # Generate a description for the character
             loading_status("Generating character description")
-            description = await creator.determine_character_description(character)
+            description = await creator.determine_character_description(character, information=content)
             character.description = description
             log.debug("persist_character", description=description)
 
             # Generate a dialogue instructions for the character
             loading_status("Generating acting instructions")
             dialogue_instructions = await creator.determine_character_dialogue_instructions(
-                character
+                character,
+                information=content
             )
             character.dialogue_instructions = dialogue_instructions
             log.debug(

@@ -62,10 +62,11 @@ class Attribute(Template):
         response = await creator.contextual_generate_from_args(
             context=f"character attribute:{formatted_attribute}",
             instructions=formatted_instructions,
-            length=100,
+            length=192,
             character=character.name,
             uid="wsm.character_attribute",
             template=self,
+            information=kwargs.get("information", ""),
             **generation_options.model_dump(),
         )
 
@@ -126,10 +127,11 @@ class Detail(Template):
         response = await creator.contextual_generate_from_args(
             context=f"character detail:{formatted_detail}",
             instructions=formatted_instructions,
-            length=100,
+            length=256,
             character=character.name,
             uid="wsm.character_detail",
             template=self,
+            information=kwargs.get("information", ""),
             **generation_options.model_dump(),
         )
 

@@ -40,6 +40,7 @@ class ContentGenerationContext(pydantic.BaseModel):
     # scene intro:
     context: str
     instructions: str = ""
+    information: str = ""
     length: int = 100
     character: str | None = None
     original: str | None = None
@@ -187,6 +188,7 @@ class AssistantMixin:
         template: AnnotatedTemplate | None = None,
         context_aware: bool = True,
         history_aware: bool = True,
+        information: str = "",
     ):
         """
         Request content from the assistant.
@@ -210,6 +212,7 @@ class AssistantMixin:
             template=template,
             context_aware=context_aware,
             history_aware=history_aware,
+            information=information,
         )
 
         return await self.contextual_generate(generation_context)

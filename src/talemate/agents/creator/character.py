@@ -39,6 +39,7 @@ class CharacterCreatorMixin:
         self,
         character: Character,
         instructions: str = "",
+        information: str = "",
     ):
         instructions = await Prompt.request(
             f"creator.determine-character-dialogue-instructions",
@@ -49,6 +50,7 @@ class CharacterCreatorMixin:
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "instructions": instructions,
+                "information": information,
             },
         )
 
@@ -95,7 +97,11 @@ class CharacterCreatorMixin:
 
     @set_processing
     async def determine_character_description(
-        self, character: Character, text: str = ""
+        self, 
+        character: Character,
+        text: str = "",
+        instructions: str = "",
+        information: str = "",
     ):
         description = await Prompt.request(
             f"creator.determine-character-description",
@@ -106,6 +112,8 @@ class CharacterCreatorMixin:
                 "scene": self.scene,
                 "text": text,
                 "max_tokens": self.client.max_token_length,
+                "instructions": instructions,
+                "information": information,
             },
         )
         return description.strip()

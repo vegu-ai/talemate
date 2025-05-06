@@ -3,11 +3,12 @@
 {{ character.sheet }}
 {{ character.description }}
 <|CLOSE_SECTION|>
+{% include "task-information.jinja2" %}
 {% endset %}
-{{ extra_context_content }}
 {% set extra_context_tokens = count_tokens(extra_context_content) %}
 {% set budget=max_tokens-300-extra_context_tokens %}
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith -%}
+{{ extra_context_content }}
 <|SECTION:TASK|>
 Your task is to determine fitting dialogue instructions for {{ character.name }}.
 
@@ -24,5 +25,9 @@ The character MUST feel relatable to the audience.
 You must use simple language to describe the character's dialogue instructions.
 
 Keep the format similar and stick to one paragraph.
+
+{% if instructions -%}
+{{ instructions }}
+{% endif -%}
 <|CLOSE_SECTION|>
 {{ bot_token }}Dialogue instructions:

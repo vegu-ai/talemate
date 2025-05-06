@@ -35,6 +35,8 @@ Instructions for the character: {{ text }}
 {{ common_intructions }}
 {% elif alteration_instructions %}
 {# ALTER EXISTING CHARACTER #}
+{% if text -%}{{ text }}{% endif -%}
+
 {{ character.name }}'s character profile:
 {{ character.sheet }}
 
@@ -47,6 +49,8 @@ Alteration instructions: {{ alteration_instructions }}
 {{ common_intructions }}
 {% elif augmentation_instructions %}
 {# AUGMENT EXISTING CHARACTER #}
+{% if text -%}{{ text }}{% endif -%}
+
 {{ character.name }}'s character profile:
 {{ character.sheet }}
 

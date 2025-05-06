@@ -13,82 +13,41 @@
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
 
 <|SECTION:TASK|>
+You are a NARRATIVE PLANNER who analyzes scenes and decides what should happen next. Your task is to analyze the current scene moment and provide clear instructions to the WRITER who will create the next part based on your guidance. Do NOT write the actual content.
 
-{% set bullet_num=0 -%}
 {% if last_message -%}
-Evaluate the next moment in the scene following the current moment:
-```
+``` current moment
 {{ last_message }}
 ```
 {% if last_message.typ == "character" and last_message.character_name not in candidate_names %}NOTE: {{ last_message.character_name }} is NOT eligible for any further actions currently.{% endif %}
 {% else %}
-Evaluate the next moment in the scene.
-{% endif %}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. Briefly explain the meaning of the current moment in the scene. What was the meaning of their dialogue and actions?
-
-{% set bullet_num = bullet_num+1 %}
-{% with task_instructions="Explain your thought process about what should happen next." -%}
-{{ bullet_num }}. {% include "scene-intent-inline.jinja2" %}
-{% endwith %}
-
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. What would most engage and satisfy the reader at this moment, considering both their expectations and desires based on the genre and established story context?
-
-{% if candidates %}
-### Character Considerations
-Based on the ongoing scene and the available candidates, analyze which character is best positioned to take action next.
-
-Candidates eligible to take action:
-{% for character in candidates -%}
-- {{ character.name }}
-{% endfor %}
-
-Remember: Actions involve telling a character what to do, but NOT writing direct dialogue. For example: "John tells Mary about the secret he discovered" is acceptable, but "John says 'I found a secret'" is not. This is IMPORTANT, repeat back your understanding of this rule.
-
-Your instructions MUST be brief and to the point and easily understood.
-
-{% if '"You"' in candidate_names %}The "You" character refers to the player playing this interactive story. Refer to them as "You".{% endif %}
+Evaluate how to begin this scene.
 {% endif %}
 
-### Scene Direction Decision
-After analyzing the scene, decide on ONE of the following actions to take:
+{% include "scene-intent-inline.jinja2" %}
+
+### Available Direction Types
+Choose ONE type of direction to give to the writer:
 
 {% if candidates -%}
-- Have a specific character act (Character action) - Remember only these candidates are eligible for an action at this point: {{ candidate_names }}
+- CHARACTER ACTION: Instruct which character (available choices {{ candidate_names }}) should act next and what they should do.
+  Note: Character actions focus on what a character does, NOT their exact dialogue.
 {% endif %}
 {% if narrator_available %}
-- Narrate the current scene moment (Scene narration)
-- Progress the story forward (Story progression)
+- SCENE NARRATION: Instruct the writer to describe the current moment in more detail.
+- STORY PROGRESSION: Instruct the writer to move the story forward to the next moment.
 {% endif %}
 
-Make your decision based on what would create the most compelling and logical next moment in the scene.
+{% if '"You"' in candidate_names %}The "You" character refers to the player in this interactive story.{% endif %}
 
-Your response must include your analysis and THEN clearly state:
-- The type of direction you've chosen ({% if candidates %}character action, {% endif %}{% if narrator_available %}scene narration, or story progression{% endif %})
-{%- if candidates %}
-- If a character action, which character should act{% endif %}
-- A brief description of what should happen
+Be concise, clear and explicit about your choice, as it will be given to the writer who will be writing the next moment based on your instructions.
 
-{% if narrator_available %}
-### Notes on Story Progression
-This kind of direction is given directly to the narrator. It is used to advance the story to the next moment.
-It does NOT involve direct instructions to any characters.
+Provide:
 
-### Notes on Scene Narration
-This kind of direction is given directly to the narrator. It is used to flesh out the scene in more detail.
-You can ask the narrator to describe the setting, the characters, the actions etc., within the context of the current moment and the intention of the scene.
-{% endif %}
+1. Analysis and Plan
+2. Understanding of restrictions
+3. Decision
 
-### Expected Response Format
 Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
-
-RULES
-{understanding of the task and special rules. who is eligible for an action, what restrictions exist, etc.}
-
-ANALYSIS
-{analysis of the scene, what should happen next, and why and how do the rules apply}
-
-NEXT DIRECTION
-({type of direction})
-{your instructions for the direction{% if candidates %}, if instructing an actor make sure to formulate them as actionable instructions such as "Do this..", "You should..", "In order to..", etc.{% endif %}}
 <|CLOSE_SECTION|>
-{{ bot_token }}RULES
+{{ bot_token }}### 1. Analysis and Plan

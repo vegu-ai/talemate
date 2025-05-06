@@ -3,20 +3,24 @@
         <v-card-text>
             <v-toolbar floating density="compact" class="mb-2" color="grey-darken-4">
                 <v-text-field v-model="query" label="Content search"
+                    min-width="400"
                     append-inner-icon="mdi-magnify" clearable single-line hide-details density="compact"
                     variant="underlined" class="ml-1 mb-1 mr-1"
                     @keyup.enter="requestQuery"></v-text-field>
 
                 <v-select v-model="queryMetaKey" :items="metaKeys" label="Filter By Tag"
+                    min-width="200"
                     class="mr-1 mb-1" variant="underlined" single-line hide-details
                     density="compact"></v-select>
                 <v-select
                     v-if="queryMetaKey !== null && metaValuesByType[queryMetaKey]"
+                    min-width="200"
                     v-model="queryMetaValue"
                     :items="metaValuesByType[queryMetaKey]()" label="Tag value"
                     class="mr-1 mb-1" variant="underlined" single-line hide-details
                     density="compact"></v-select>
                 <v-text-field v-else v-model="queryMetaValue" label="Tag value" class="mr-1 mb-1"
+                    min-width="200"
                     variant="underlined" single-line hide-details density="compact"></v-text-field>
                 <v-spacer></v-spacer>
                 <!-- button that opens the tools menu -->

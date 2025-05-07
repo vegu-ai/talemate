@@ -7,6 +7,16 @@
     <v-card>
         <v-card-text>
             <v-select :items="sceneTypes" v-model="intent.phase.scene_type" label="Scene Type" class="text-caption" density="compact" @update:model-value="updateSceneIntent()"></v-select>
+            
+            <ContextualGenerate 
+                ref="phaseIntentGenerate"
+                uid="wsm.scene_phase_intent"
+                :context="'scene phase intent:' + intent.phase.scene_type" 
+                :original="intent.phase.intent"
+                :length="256"
+                :specify-length="true"
+                @generate="content => setAndUpdatePhaseIntent(content)"
+            />
             <v-textarea 
                 density="compact" 
                 v-model="intent.phase.intent" 
@@ -48,11 +58,13 @@
 
 <script>
 import DirectorConsoleMessage from './DirectorConsoleMessage.vue';
+import ContextualGenerate from './ContextualGenerate.vue';
 
 export default {
     name: 'DirectorConsole',
     components: {
-        DirectorConsoleMessage
+        DirectorConsoleMessage,
+        ContextualGenerate,
     },
     props: {
         scene: Object,
@@ -110,6 +122,11 @@ export default {
     methods: {
         clearMessages() {
             this.messages = [];
+        },
+        setAndUpdatePhaseIntent(content) {
+            this.intent.phase.intent = content;
+            this.dirty['intent.phase.intent'] = true;
+            this.updateSceneIntent();
         },
         updateSceneIntent() {
             if(!this.intent || !this.intent.intent) {

@@ -129,10 +129,10 @@
       </v-navigation-drawer>
 
       <!-- director console navigation drawer -->
-      <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" width="400" disable-resize-watcher>
+      <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" :width="directorConsoleWidth" disable-resize-watcher>
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bullhorn</v-icon> Director Console</v-list-subheader>
-          <DirectorConsole :scene="scene" v-if="sceneActive" />
+          <DirectorConsole :scene="scene" v-if="sceneActive" :open="directorConsoleDrawer" />
         </v-list>
       </v-navigation-drawer>
 
@@ -496,6 +496,17 @@ export default {
 
       return false;
 
+    },
+    directorConsoleWidth() {
+      // based on the screen width, set the width of the director console
+      const screenWidth = window.innerWidth;
+      if(screenWidth <= 1920) {
+        return 400;
+      } else if(screenWidth <= 2560) {
+        return 600;
+      } else {
+        return 800;
+      }
     }
   },
   mounted() {

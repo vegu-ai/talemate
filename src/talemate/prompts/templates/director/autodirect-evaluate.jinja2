@@ -31,7 +31,7 @@ Choose ONE type of direction to give to the writer:
 
 {% if candidates -%}
 - CHARACTER ACTION: Instruct which character (available choices {{ candidate_names }}) should act next and what they should do.
-  Note: Character actions focus on what a character does, NOT their exact dialogue.
+  Note: Character actions focus on what a character does, NOT their exact dialogue. Focus on ONE character doing ONE thing.
 {% endif %}
 {% if narrator_available %}
 - SCENE NARRATION: Instruct the writer to describe the current moment in more detail.
@@ -40,16 +40,16 @@ Choose ONE type of direction to give to the writer:
 
 {% if '"You"' in candidate_names %}The "You" character refers to the player in this interactive story.{% endif %}
 
-Be concise, clear and explicit about your choice, as it will be given to the writer who will be writing the next moment based on your instructions. Use terse, direct language. 
-Cut all unnecessary words and markup. Be blunt and brief like scribbles on a notepad.
-
-Provide a neatly formatted, plain text analysis (Items 1, 2 a-c, 3 a-c and 4) and your instructions (Item 5):
+Provide a neatly formatted, EASY TO READ, plain text analysis (Items 1 a-b, 2 a-c, 3 a-c and 4) and your instructions (Item 5):
 
 1. Your understanding of what instructions you can give.
+  a. What actions are available to you?
+{% if candidates %}
+  b. What characters are available to act?{% endif %}
 
 2. Your detailed understanding of the current moment
-  a. What characters are present and where are they?
-  b. What are they doing right now?
+  a. What characters are present and where are they? (list names and locations)
+  b. What are they doing right now? (briefly describe the action)
   c. What is the context of the last action in the scene (as pinned by the code block above)
 
 3. Your detailed understanding of the scene's intention, goal and pacing
@@ -59,6 +59,8 @@ Provide a neatly formatted, plain text analysis (Items 1, 2 a-c, 3 a-c and 4) an
 
 4. Consider your analysis of the last action in the scene (2) and the overal scene intention and goals (3). Its important to move the scene towards its goal, BUT we also don't want to leave the last action unresolved. For example if a question was asked or something was done that requires an immediate followup, then THAT always takes precedence over moving the scene towards the goal.
 
-5. Instuctions to the editor - Give your instructions on a personal level, directly to the editor. Be confident! (1-2 sentences)
+5. Instuctions to the editor - Give your instructions on a personal level, directly to the editor. EXPLICITLY state the action type and then provide your instructions (1-2 sentences) - REMEMBER to be careful about pacing, do one thing, not five.
+
+Be concise, clear and explicit about your choice, as it will be given to the writer who will be writing the next moment based on your instructions. Use terse, direct language. Be blunt and brief like scribbles on a notepad.
 <|CLOSE_SECTION|>
-{{ bot_token }}### 1. Understanding of Direction Choices
+{{ bot_token }}## 1. Understanding of Direction Choices

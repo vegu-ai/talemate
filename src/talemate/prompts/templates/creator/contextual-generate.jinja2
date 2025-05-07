@@ -87,11 +87,26 @@ The story will be told from {{ scene.get_player_character().name or "the reader'
 YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE STORY INTENTION TEXT.
 {#- SCENE PHASE INTENT -#}
 {% elif context_typ == "scene phase intent" %}
-{{ action_task }} scene intent for the currently active "{{ context_name }}" phase. This should describe the specific goal or objective for this phase of the scene.
+{% set context_name = "New scene intention"%}
+{{ action_task }} scene intentintion for the currently active "{{ context_name }}" phase. 
 
-YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE PHASE INTENTION TEXT.
+The purpose of the scene intention is to clearly and concisely state:
 
-This should be written in the form of a plan on how the scene should unfold next.
+1. Where we are as the scene starts (1 line)
+2. What is the new intention
+3. What goals / objectives need to be fulfilled for the scene to be complete (1 line per goal)
+4. Brief important notes for the execution of the scene (1-3 lines)
+
+You must provide information for all three points.
+
+Examples:
+
+1. We are in the kitchen, where Joseph and Melinda are cooking pancakes. Its a moment of bonding as they get to know each other.
+2. Create a comedic moment where Joseph drops a carton of eggs on Melinda's foot, resulting in a food fight.
+3. Goals
+  a. A food fight ensues and both of them are covered in ingredients.
+4. No important notes.
+
 {#- SCENE TYPE DESCRIPTION -#}
 {% elif context_typ == "scene type description" %}
 {{ action_task }} description for a "{{ context_name }}" scene type. The description should explain what this type of scene is about and its general characteristics.

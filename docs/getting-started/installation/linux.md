@@ -1,13 +1,12 @@
 
 ## Quick install instructions
 
-!!! warning
-    python 3.12 is currently not supported.
-
 ### Dependencies
 
+--8<-- "docs/snippets/common.md:python-versions"
+
 1. node.js and npm - see instructions [here](https://nodejs.org/en/download/package-manager/)
-1. python 3.10 or 3.11 - see instructions [here](https://www.python.org/downloads/)
+1. python- see instructions [here](https://www.python.org/downloads/)
 
 ### Installation
 

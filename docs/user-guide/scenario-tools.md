@@ -30,17 +30,20 @@ This will regenerate the most recent message, if it is an AI generated message, 
 
 Will open a context menu that allows you to have the actor perform actions.
 
-![Actor Actions](/talemate/img/0.26.0/scene-tool-character-actions.png)
+![Actor Actions](/talemate/img/0.30.0/scene-tool-character-actions.png)
 
 !!! info "Recommendation"
     Turn auto progress off if you want full control and use these actions to guide the scene.
 
     ![auto progress off](/talemate/img/0.26.0/auto-progress-off.png)
 
+#### :material-comment-account-outline: Actor Action (Specific Character)
 
-#### :material-bullhorn: Talk with direction - Specific Character
+Will pick a character to performan an action.
 
-Will prompt you for a direction and then have the actor will generate dialogue and actions based on that direction.
+##### Hold ctrl to provide direction
+
+If you hold the `ctrl` key while clicking the menu item it will prompt you for a direction to inform the character's action.
 
 Depending on what the `Actor Direction Mode` setting in the [:material-bullhorn: Director Agent Settings](/talemate/user-guide/agents/director/settings/#actor-direction-mode) the direction will either be given as an instruction or as inner monologue.
 
@@ -54,11 +57,7 @@ or
 
 > be annoyed at the situation and storm off
 
-#### :material-comment-account-outline: Talk - Specific Character
-
-Will cause the character to generate dialogue and actions based on the current scene state.
-
-#### :material-comment-text-outline: Talk
+#### :material-comment-text-outline: Actor Action
 
 Automatically picks a character to generate dialogue and actions based on the current scene state.
 
@@ -66,32 +65,38 @@ Automatically picks a character to generate dialogue and actions based on the cu
 
 Will open a context menu that allows you to have the narrator perform actions.
 
-![Narrator Actions](/talemate/img/0.26.0/scene-tool-narrator-actions.png)
+![Narrator Actions](/talemate/img/0.30.0/scene-tool-narrator-actions.png)
 
 
 #### :material-script-text-play: Progress Story
 
 Generates narrative text based on the current scene state, moving the story forward.
 
-#### :material-script-text-play: Progress Story with Direction
+All actions can be given directions by holding the `ctrl` key when clicking it.
 
-Will prompt you for a direction and then have the narrator generate narrative text based on that direction.
+##### Scope of progress
+
+By default the progress is aimed to move the scene forward slightly. As of version `0.30` there exist three sub actions here for `minor`, `major` and `curveball` style progression. How weill this works strongly depends on the model.
+
+All they do is try to coerce the narrator to provide a story progression at a bigger scale, with the curveball one aiming for a story upset.
+
+Note that you can still hold the `ctrl` key to provide further direction for these as well.
 
 #### :material-waves: Narrate Environment
 
-A special type of narration that aims to narrate the environment, focusing on visuals, sounds and other sensory information.
+A special type of narration that aims to narrate the environment, focusing on visuals, sounds and other sensory information that currently exist in the scene.
+
+#### :material-image-filter-hdr: Look at Scene
+
+Provide a descriptive, visually focused narration of what is currently happening.
+
+#### :material-account-eye: Look at (Character Name)
+
+Provide a descriptive, visually focused narration of the character's appearance / current action.
 
 #### :material-crystal-ball: Query
 
 Will prompt you for a question and then have the narrator generate narrative text based on that question.
-
-#### :material-table-headers-eye: Look at Scene
-
-Will narrate the current state of the scene, without progressing the story.
-
-#### :material-eye: Look at Character
-
-Will narrate the current state of a character, without progressing the story.
 
 ### :material-clock: Advance time
 
@@ -139,9 +144,9 @@ Will cause a regeneration of the world state.
 !!! info "Does not run state re-inforcement"
     Currently, this will not re-inforce the state of the world or characters, it will only update the world state context that is displayed in the left panel under the :material-earth: `World` section.
 
-### :material-puzzle-edit: Creative Actions
+### :material-puzzle-edit: Creative Tools
 
-![Creative Actions](/talemate/img/0.26.0/scene-tool-creative-actions.png)
+![Creative Actions](/talemate/img/0.30.0/scene-tool-creative-actions.png)
 
 #### :material-exit-run: Take character out of scene
 
@@ -169,31 +174,57 @@ If the current narration and scene progress has not yet indicated the character 
 !!! info "Keyboard modifiers"
     You can hold the `ctrl` key when clicking this action to disable the automatic narration altogether.
 
-#### :material-account-plus: Introduce new character - Directed
+#### :material-human-greeting: Introduce new character - Directed
 
-Will prompt you for a name and a description of the character, and then generate it and add it to the scene.
+Allows you to quickly generate a new, interactive character to add to the scene.
 
-![Prompt for character name](/talemate/img/0.26.0/scene-tool-creative-add-character-1.png)
+![Introduce new character 1](/talemate/img/0.30.0/scene-tool-intro-char-1.png)
 
-![Prompt for character description](/talemate/img/0.26.0/scene-tool-creative-add-character-2.png)
+##### Determine Name
 
-The AI will be prompted to generate a character based on the information you provide. THis may take a moment.
+If selected will try to generate a reasonable name from both your instructions AND the existing scene context. A reasonable name means "Joseph" instead of "Clumsy Cabbage Vendor".
 
-Once it is done, narrative text will be generated to introduce the character.
+##### Active
 
-![Character introduction](/talemate/img/0.26.0/scene-tool-creative-add-character-3.png)
+If selected this means the character will be inserted as an **active** character into the current scene right away.
 
-And the character will now be part of the scene and can be interacted with.
+If not selected the character will get created but exist as deactivated and will need to be called into the scene manually.
 
-![Character added to scene](/talemate/img/0.26.0/scene-tool-creative-add-character-4.png)
+##### Narrate entry
+
+If selected, the narrator will generate some flavor text for how the character enters the scene (if they arent already there). This will follow the instructions you provide in the text box below.
+
+##### Instructions for the new character
+
+Write any instructions that you want to pass along for the creation, this can be as little or as detailed as you want.
+
+##### Narration direction for the character's entry
+
+Write direction on how you want the character to enter the scene.
+
+!!! note "A character already interacting in the scene will not have their entrance narrated"
+    If the narrator has already established the character interacting with your characters this "entry narration" will be skipped. The check for this 100% based on an AI prompt so may not always work correctly.
+
+##### Templates
+
+Control attribute generation using your existing [World State Templates](/talemate/user-guide/world-editor/templates).
+
+![Select templates](/talemate/img/0.30.0/scene-tool-intro-char-templates.png)
+
+##### Augment Attributes
+
+If you are generating **any** attributes via templatews the default assumption is that you want full control over the attributes, so no additional attributes will be generated. However if you **do** want randomly generated attributes alongside your template generated ones you can check this box.
 
 #### :material-human-greeting: Introduce new character - From context
 
 If narration or dialogue has been generated that references a character that has not yet been created, you can use this action to introduce them and make them real and interactable.
 
-![World State Context](/talemate/img/0.26.0/scene-tool-creative-introduce-2.png)
+![World State Context](/talemate/img/0.30.0/scene-tool-creative-introduce-2.png)
 
 The AI will be prompted to generate a character based on what is known about them in the context.
+
+!!! note "Hold ctrl for advanced options"
+    You can hold `ctrl` to bring up the advanced options similar to when introducing a character from scratch.
 
 Once it is done, the character will now be part of the scene and can be interacted with.
 

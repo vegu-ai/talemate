@@ -14,6 +14,10 @@ Used for creative tasks like scene and character generation
 
 Will eventually become a Game Master type agent. Right now used for some very rudimentary scene direction. Allows complex scene control via the scoped api scripting.
 
+### Editor
+
+Will try to correct markup and optionally revise text to fix repetition and unwanted prose.
+
 ### Long-term Memory
 
 Attempts to select and add relevant information to the current context window.

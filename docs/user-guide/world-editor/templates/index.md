@@ -24,3 +24,6 @@ Writing style templates are used to define a writing style that can be applied t
 
 ### :material-image-auto-adjust: State Reinforcement
 State reinforcement templates are used to quickly (or even automatically) setup common attribues and states you want to track for characters or the world itself. They revolve around a question, statement or attribute name that you want to track for a character. The AI will use this template to generate content that matches the query, based on the current progression of the scene.
+
+### :material-movie-open: Scene Type
+Scene type templates are used to define different types of scenes that can be played in your game. Each scene type has different rules and constraints that guide the generation and flow of the scene.

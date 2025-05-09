@@ -53,6 +53,9 @@ When typing out your action / dialogue, you can hit the `ctrl+enter` key combina
 
     See [Prompt Templates](/talemate/user-guide/clients/prompt-templates) for more information.
 
+!!! note "Generation length"
+    The amount of text generated can be configured through the [Creator Agent Settings](/talemate/user-guide/agents/creator/settings)
+
 ## Auto progress
 
 By default Talemate will give the next turn to the AI after you have sent a message, automatically progressing the scene.

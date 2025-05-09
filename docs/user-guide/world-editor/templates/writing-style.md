@@ -4,11 +4,7 @@ Writing style templates are used to define a writing style that can be applied t
 
 ## Creating a writing style
 
-Fist, if you have not done so, [create a template group](/talemate/user-guide/world-editor/templates/groups) to store the template in.
-
-Then select the group you want to add the template to and click the **:material-plus: Create Template** button.
-
-![world editor templates create attribute template 1](/talemate/img/0.26.0/world-editor-templates-create-attribute-template-1.png)
+--8<-- "docs/snippets/common.md:world-editor-create-group"
 
 Next enter a template name and select **Writing style** as a template type.
 

@@ -44,6 +44,8 @@ Favorited templates will be shown at the top of the list of templates.
 
 ### Phrase Detection
 
+![Writing Style Phrase Detection](/talemate/img/0.30.0/writing-style-phrase-detection.png)
+
 Introduced in version `0.30.0` the writing style can now define certain phrases that should be detected in the content and handled in a specific way through the [Editor Agent's Revision Actions](/talemate/user-guide/agents/editor/settings#revision).
 
 !!! note "Writing style needs to be set in the scene"
@@ -51,7 +53,7 @@ Introduced in version `0.30.0` the writing style can now define certain phrases 
 
 Specifically this allows you to define a list of phrases that you do NOT want in your content. 
 
-THere are two methods of phrase matching
+There are two methods of phrase matching
 
 1. Regex (Regular Expressions) - This will match any phrase that matches the regex pattern.
 2. Semantic Similarity - This will match any phrase that has a semantic similarity above the defined threshold. Semantic similarity is calculated using the Memory agent's embedding function.
@@ -83,7 +85,6 @@ Semantic similarity is a more flexible way to match phrases. It will match any p
 
 When running with local embeddings, using CUDA is highly recommended.
 
-![Writing Style Phrase Detection](/talemate/img/0.30.0/writing-style-phrase-detection.png)
 
 ### Deactivation
 

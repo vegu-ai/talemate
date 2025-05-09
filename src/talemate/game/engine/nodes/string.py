@@ -108,9 +108,13 @@ class Split(Node):
         self.set_property("max_splits", -1)
         
     async def run(self, state: GraphState):
-        string = self.get_input_value("string")
+        string:str = self.get_input_value("string")
         delimiter = self.get_input_value("delimiter")
         max_splits = self.get_property("max_splits")
+        
+        # handle escaped newline delimiter
+        if delimiter == "\\n":
+            delimiter = "\n"
         
         parts = string.split(delimiter, maxsplit=max_splits)
         self.set_output_values({"parts": parts})
@@ -153,6 +157,10 @@ class Join(Node):
     async def run(self, state: GraphState):
         strings = self.get_input_value("strings")
         delimiter = self.get_input_value("delimiter")
+        
+        # handle escaped newline delimiter
+        if delimiter == "\\n":
+            delimiter = "\n"
         
         if not all(isinstance(s, str) for s in strings):
             raise InputValueError(self, "strings", "All items must be strings")

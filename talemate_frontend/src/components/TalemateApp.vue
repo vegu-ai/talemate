@@ -217,7 +217,7 @@
                         :color="messageInputColor()">
                         <template v-slot:prepend v-if="sceneActive && scene.environment !== 'creative'">
                           <!-- auto-complete button -->
-                          <v-btn @click="autocomplete" color="primary" icon variant="tonal">
+                          <v-btn @click="autocomplete" color="primary" icon variant="tonal" :disabled="!messageInput">
                             <v-icon>mdi-auto-fix</v-icon>
                           </v-btn>
                         </template>

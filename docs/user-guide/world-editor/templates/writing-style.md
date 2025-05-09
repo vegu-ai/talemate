@@ -42,6 +42,53 @@ Mark the template as a favorite to make it easier to find in the list of templat
 
 Favorited templates will be shown at the top of the list of templates.
 
+### Phrase Detection
+
+Introduced in version `0.30.0` the writing style can now define certain phrases that should be detected in the content and handled in a specific way through the [Editor Agent's Revision Actions](/talemate/user-guide/agents/editor/settings#revision).
+
+!!! note "Writing style needs to be set in the scene"
+    In order for the writing style's phrase detection to work, the writing style needs to be set in the [Scene Settings](/talemate/user-guide/world-editor/scene/settings).
+
+Specifically this allows you to define a list of phrases that you do NOT want in your content. 
+
+THere are two methods of phrase matching
+
+1. Regex (Regular Expressions) - This will match any phrase that matches the regex pattern.
+2. Semantic Similarity - This will match any phrase that has a semantic similarity above the defined threshold. Semantic similarity is calculated using the Memory agent's embedding function.
+
+#### Regex
+
+While you can certainly do overly complex regex patterns, most of time you will simply want to do groups of words that should be removed.
+
+For example
+
+```
+We're in this together as (a team|partners|friends)
+```
+
+This will match these three combinations:
+
+- We're in this together as a team
+- We're in this together as partners
+- We're in this together as friends
+
+If you are about to write a more complex pattern, consider switching to semantic similarity.
+
+#### Semantic Similarity
+
+Semantic similarity is a more flexible way to match phrases. It will match any phrase that has a semantic similarity above the defined threshold.
+
+!!! warning
+    This has the potential to do A LOT of requests to the embedding model as each sentence in the content is compared to each phrase. Batching is used when available, but its not advisable to use this with remote embedding APIs at this point (openai etc.).
+
+When running with local embeddings, using CUDA is highly recommended.
+
+![Writing Style Phrase Detection](/talemate/img/0.30.0/writing-style-phrase-detection.png)
+
+### Deactivation
+
+You can deactivate defined phrases by unselecting the **Active** checkbox, at which point it will no longer be considered for phrase detection.
+
 ## Create the template
 
 When you have filled out the form, click the **:material-cube-scan: Create Template** button to create the template.

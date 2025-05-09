@@ -18,8 +18,8 @@
       "properties": {
         "value": null
       },
-      "x": 1137,
-      "y": 3082,
+      "x": 1135,
+      "y": 3362,
       "width": 206,
       "height": 39,
       "collapsed": false,
@@ -33,8 +33,8 @@
       "properties": {
         "trigger_conversation_generated": true
       },
-      "x": 742,
-      "y": 2826,
+      "x": 740,
+      "y": 3106,
       "width": 272,
       "height": 103,
       "collapsed": false,
@@ -50,8 +50,8 @@
         "prefix": "",
         "allow_commands": true
       },
-      "x": 742,
-      "y": 3116,
+      "x": 740,
+      "y": 3396,
       "width": 287,
       "height": 186,
       "collapsed": false,
@@ -65,8 +65,8 @@
       "properties": {
         "emit_message": true
       },
-      "x": 1102,
-      "y": 2846,
+      "x": 1100,
+      "y": 3126,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -78,8 +78,8 @@
       "title": "Generated Text",
       "id": "e2fb6f95-ee17-4a2f-acc0-62e245e4ee19",
       "properties": {},
-      "x": 1108,
-      "y": 2742,
+      "x": 1106,
+      "y": 3022,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -91,8 +91,8 @@
       "title": "Process Input",
       "id": "10bf33d8-41c6-406d-bbf4-944e850f3b61",
       "properties": {},
-      "x": 1130,
-      "y": 3196,
+      "x": 1128,
+      "y": 3476,
       "width": 296,
       "height": 66,
       "collapsed": false,
@@ -104,8 +104,8 @@
       "title": "yield_to_user",
       "id": "4967ef4d-0ec9-4d9e-97ad-a10935034592",
       "properties": {},
-      "x": 320,
-      "y": 3206,
+      "x": 318,
+      "y": 3486,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -117,8 +117,8 @@
       "title": "character",
       "id": "01907fa7-63c7-4064-bd80-eaad1bafc963",
       "properties": {},
-      "x": 320,
-      "y": 3026,
+      "x": 318,
+      "y": 3306,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -130,43 +130,13 @@
       "title": "yield_to_ai",
       "id": "10e33c80-f684-46c0-a0a7-2a7305e375ba",
       "properties": {},
-      "x": 330,
-      "y": 2856,
+      "x": 328,
+      "y": 3136,
       "width": 140,
       "height": 26,
       "collapsed": true,
       "inherited": false,
       "registry": "core/Watch",
-      "base_type": "core/Node"
-    },
-    "5b3b9556-081b-4337-9e04-7b63316e0d94": {
-      "title": "Stage 2",
-      "id": "5b3b9556-081b-4337-9e04-7b63316e0d94",
-      "properties": {
-        "stage": 2
-      },
-      "x": 1151,
-      "y": 1718,
-      "width": 210,
-      "height": 118,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "c044e62a-a1c5-4dd5-a20f-6bc22f13df64": {
-      "title": "Stage 10",
-      "id": "c044e62a-a1c5-4dd5-a20f-6bc22f13df64",
-      "properties": {
-        "stage": 10
-      },
-      "x": 1580,
-      "y": 3036,
-      "width": 210,
-      "height": 118,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "2cdab649-8000-44e7-8c92-611fc40aab4b": {
@@ -176,8 +146,8 @@
         "name": "skip_to_player",
         "scope": "shared"
       },
-      "x": 33,
-      "y": 728,
+      "x": 32,
+      "y": 1015,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -189,8 +159,8 @@
       "title": "RSwitch",
       "id": "1c6025c9-8465-487f-b57e-12db302378ce",
       "properties": {},
-      "x": 512,
-      "y": 2856,
+      "x": 510,
+      "y": 3136,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -202,8 +172,8 @@
       "title": "ai_turns",
       "id": "a175ce77-dd20-475f-a324-175255b0ed85",
       "properties": {},
-      "x": 984,
-      "y": 2706,
+      "x": 982,
+      "y": 2986,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -262,8 +232,8 @@
       "title": "RSwitch",
       "id": "149280f6-8834-496b-9583-1ed9ccb2a187",
       "properties": {},
-      "x": 512,
-      "y": 3156,
+      "x": 510,
+      "y": 3436,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -275,8 +245,8 @@
       "title": "ai_turns",
       "id": "fa0ea413-7824-4b04-b194-7ceb27a89cd5",
       "properties": {},
-      "x": 984,
-      "y": 3366,
+      "x": 982,
+      "y": 3646,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -288,8 +258,8 @@
       "title": "Select Actor For Turn",
       "id": "7c7a6436-38f1-4bf3-9382-d480d64c14ea",
       "properties": {},
-      "x": 563,
-      "y": 1654,
+      "x": 561,
+      "y": 1941,
       "width": 176,
       "height": 111,
       "collapsed": false,
@@ -303,8 +273,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 370,
-      "y": 1683,
+      "x": 368,
+      "y": 1970,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -318,8 +288,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 350,
-      "y": 779,
+      "x": 349,
+      "y": 1066,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -336,8 +306,8 @@
         "increment": 1,
         "reset": false
       },
-      "x": 741,
-      "y": 2704,
+      "x": 739,
+      "y": 2984,
       "width": 230,
       "height": 210,
       "collapsed": true,
@@ -354,8 +324,8 @@
         "increment": 1,
         "reset": true
       },
-      "x": 721,
-      "y": 3364,
+      "x": 719,
+      "y": 3644,
       "width": 230,
       "height": 210,
       "collapsed": true,
@@ -401,8 +371,8 @@
         "name": "skip_to_player",
         "scope": "shared"
       },
-      "x": 30,
-      "y": 2116,
+      "x": 27,
+      "y": 2399,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -474,8 +444,8 @@
       "title": "RSwitch Advanced",
       "id": "40a05cd8-d4cd-4442-9d8b-57e4980082f6",
       "properties": {},
-      "x": 861,
-      "y": 2486,
+      "x": 858,
+      "y": 2769,
       "width": 213,
       "height": 78,
       "collapsed": false,
@@ -487,8 +457,8 @@
       "title": "Get Player Character",
       "id": "80c510ae-210d-4609-b736-4dd5803ddefd",
       "properties": {},
-      "x": 601,
-      "y": 2506,
+      "x": 598,
+      "y": 2789,
       "width": 168,
       "height": 31,
       "collapsed": false,
@@ -496,47 +466,17 @@
       "registry": "scene/GetPlayerCharacter",
       "base_type": "core/Node"
     },
-    "b4ed5835-bd7e-4aff-a832-a1eb2a23ef53": {
-      "title": "Stage 3",
-      "id": "b4ed5835-bd7e-4aff-a832-a1eb2a23ef53",
-      "properties": {
-        "stage": 3
-      },
-      "x": 1491,
-      "y": 2336,
-      "width": 210,
-      "height": 118,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "c4175461-957a-4db7-b201-f6932848ae09": {
       "title": "Invert",
       "id": "c4175461-957a-4db7-b201-f6932848ae09",
       "properties": {},
-      "x": 1011,
-      "y": 2336,
+      "x": 1008,
+      "y": 2619,
       "width": 140,
       "height": 26,
       "collapsed": true,
       "inherited": false,
       "registry": "core/Invert",
-      "base_type": "core/Node"
-    },
-    "635db25b-8577-4915-9006-7ed4490b6453": {
-      "title": "Stage 1",
-      "id": "635db25b-8577-4915-9006-7ed4490b6453",
-      "properties": {
-        "stage": 1
-      },
-      "x": 1260,
-      "y": 879,
-      "width": 210,
-      "height": 118,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "4115fcf4-e542-4a5c-8317-a140450db216": {
@@ -545,8 +485,8 @@
       "properties": {
         "pass_through": true
       },
-      "x": 820,
-      "y": 440,
+      "x": 819,
+      "y": 727,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -560,8 +500,8 @@
       "properties": {
         "exception": "LoopBreak"
       },
-      "x": 1100,
-      "y": 440,
+      "x": 1099,
+      "y": 727,
       "width": 215,
       "height": 80,
       "collapsed": false,
@@ -573,8 +513,8 @@
       "title": "Auto Direction",
       "id": "b2d1c52c-574e-40e7-9c0e-77e61492a0e3",
       "properties": {},
-      "x": 510,
-      "y": 729,
+      "x": 509,
+      "y": 1016,
       "width": 195,
       "height": 146,
       "collapsed": false,
@@ -586,8 +526,8 @@
       "title": "Directed Narrator",
       "id": "f13c3f09-e9f8-4b8d-b4da-f0bfded953ec",
       "properties": {},
-      "x": 830,
-      "y": 750,
+      "x": 829,
+      "y": 1037,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -602,8 +542,8 @@
         "name": "auto_direction",
         "scope": "scene loop"
       },
-      "x": 820,
-      "y": 580,
+      "x": 819,
+      "y": 867,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -618,8 +558,8 @@
         "name": "character",
         "scope": "scene loop"
       },
-      "x": 830,
-      "y": 830,
+      "x": 829,
+      "y": 1117,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -634,8 +574,8 @@
         "name": "yield_to_user",
         "scope": "scene loop"
       },
-      "x": 830,
-      "y": 1010,
+      "x": 829,
+      "y": 1297,
       "width": 221,
       "height": 122,
       "collapsed": false,
@@ -650,8 +590,8 @@
         "name": "yield_to_ai",
         "scope": "scene loop"
       },
-      "x": 830,
-      "y": 1190,
+      "x": 829,
+      "y": 1477,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -666,8 +606,8 @@
         "name": "yield_to_user",
         "scope": "scene loop"
       },
-      "x": 810,
-      "y": 1480,
+      "x": 808,
+      "y": 1767,
       "width": 221,
       "height": 122,
       "collapsed": false,
@@ -682,8 +622,8 @@
         "name": "character",
         "scope": "scene loop"
       },
-      "x": 810,
-      "y": 1670,
+      "x": 808,
+      "y": 1957,
       "width": 218,
       "height": 124,
       "collapsed": false,
@@ -698,8 +638,8 @@
         "name": "yield_to_ai",
         "scope": "scene loop"
       },
-      "x": 820,
-      "y": 1860,
+      "x": 818,
+      "y": 2147,
       "width": 216,
       "height": 124,
       "collapsed": false,
@@ -714,8 +654,8 @@
         "name": "auto_direction",
         "scope": "scene loop"
       },
-      "x": 30,
-      "y": 1630,
+      "x": 28,
+      "y": 1917,
       "width": 244,
       "height": 125,
       "collapsed": false,
@@ -730,8 +670,8 @@
         "name": "yield_to_user",
         "scope": "scene loop"
       },
-      "x": 1151,
-      "y": 2110,
+      "x": 1148,
+      "y": 2393,
       "width": 221,
       "height": 122,
       "collapsed": false,
@@ -746,8 +686,8 @@
         "name": "yield_to_ai",
         "scope": "scene loop"
       },
-      "x": 1151,
-      "y": 2290,
+      "x": 1148,
+      "y": 2573,
       "width": 216,
       "height": 124,
       "collapsed": false,
@@ -762,8 +702,8 @@
         "name": "character",
         "scope": "scene loop"
       },
-      "x": 1151,
-      "y": 2490,
+      "x": 1148,
+      "y": 2773,
       "width": 216,
       "height": 124,
       "collapsed": false,
@@ -778,8 +718,8 @@
         "name": "character",
         "scope": "scene loop"
       },
-      "x": 56,
-      "y": 2979,
+      "x": 54,
+      "y": 3259,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -794,8 +734,8 @@
         "name": "yield_to_ai",
         "scope": "scene loop"
       },
-      "x": 56,
-      "y": 2789,
+      "x": 54,
+      "y": 3069,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -810,8 +750,8 @@
         "name": "yield_to_user",
         "scope": "scene loop"
       },
-      "x": 56,
-      "y": 3178,
+      "x": 54,
+      "y": 3458,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -823,8 +763,8 @@
       "title": "skip_to_player",
       "id": "e5d1e95f-31af-4002-a912-bb0984a2eeac",
       "properties": {},
-      "x": 320,
-      "y": 2150,
+      "x": 317,
+      "y": 2433,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -836,8 +776,8 @@
       "title": "Get Scene State",
       "id": "f7e161be-846e-4179-bba1-e1fe2ab49c5b",
       "properties": {},
-      "x": 41,
-      "y": 2340,
+      "x": 38,
+      "y": 2623,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -849,8 +789,8 @@
       "title": "Invert",
       "id": "ab49fdda-6d6a-4005-b150-ace64094088a",
       "properties": {},
-      "x": 298,
-      "y": 2375,
+      "x": 295,
+      "y": 2658,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -864,8 +804,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 690,
-      "y": 2130,
+      "x": 687,
+      "y": 2413,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -877,13 +817,153 @@
       "title": "OR Router",
       "id": "e81649bc-04b7-4828-9a79-dcba0b61c5ff",
       "properties": {},
-      "x": 510,
-      "y": 2250,
+      "x": 507,
+      "y": 2533,
       "width": 140,
       "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "core/ORRouter",
+      "base_type": "core/Node"
+    },
+    "635db25b-8577-4915-9006-7ed4490b6453": {
+      "title": "Stage 2",
+      "id": "635db25b-8577-4915-9006-7ed4490b6453",
+      "properties": {
+        "stage": 2
+      },
+      "x": 1256,
+      "y": 1169,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "5b3b9556-081b-4337-9e04-7b63316e0d94": {
+      "title": "Stage 3",
+      "id": "5b3b9556-081b-4337-9e04-7b63316e0d94",
+      "properties": {
+        "stage": 3
+      },
+      "x": 1148,
+      "y": 2010,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "b4ed5835-bd7e-4aff-a832-a1eb2a23ef53": {
+      "title": "Stage 4",
+      "id": "b4ed5835-bd7e-4aff-a832-a1eb2a23ef53",
+      "properties": {
+        "stage": 4
+      },
+      "x": 1487,
+      "y": 2615,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "c044e62a-a1c5-4dd5-a20f-6bc22f13df64": {
+      "title": "Stage 10",
+      "id": "c044e62a-a1c5-4dd5-a20f-6bc22f13df64",
+      "properties": {
+        "stage": 10
+      },
+      "x": 1574,
+      "y": 3314,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "32f5cd41-6c2d-47a0-93e9-0681f4e45533": {
+      "title": "Switch",
+      "id": "32f5cd41-6c2d-47a0-93e9-0681f4e45533",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 550,
+      "y": 472,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "bdb9a354-70d2-4b57-90f5-c42cb6663e63": {
+      "title": "GET scene loop._iteration",
+      "id": "bdb9a354-70d2-4b57-90f5-c42cb6663e63",
+      "properties": {
+        "name": "_iteration",
+        "scope": "scene loop"
+      },
+      "x": 30,
+      "y": 462,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "d2374288-9586-485c-be7a-da89d24dbdbc": {
+      "title": "SET shared.skip_to_player",
+      "id": "d2374288-9586-485c-be7a-da89d24dbdbc",
+      "properties": {
+        "name": "skip_to_player",
+        "scope": "shared"
+      },
+      "x": 810,
+      "y": 472,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "7ed578c0-546c-4de1-8073-ab3402eb86a4": {
+      "title": "Stage 1",
+      "id": "7ed578c0-546c-4de1-8073-ab3402eb86a4",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1080,
+      "y": 522,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "b286d3c8-baee-443d-90f3-0f104c441bfc": {
+      "title": "Compare",
+      "id": "b286d3c8-baee-443d-90f3-0f104c441bfc",
+      "properties": {
+        "operation": "equals",
+        "tolerance": 0.0001,
+        "a": 0,
+        "b": "1"
+      },
+      "x": 280,
+      "y": 462,
+      "width": 210,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Compare",
       "base_type": "core/Node"
     }
   },
@@ -1063,13 +1143,25 @@
     ],
     "e81649bc-04b7-4828-9a79-dcba0b61c5ff.yes": [
       "0152b38c-dcfb-4ea3-bfa3-82178429047c.value"
+    ],
+    "32f5cd41-6c2d-47a0-93e9-0681f4e45533.yes": [
+      "d2374288-9586-485c-be7a-da89d24dbdbc.value"
+    ],
+    "bdb9a354-70d2-4b57-90f5-c42cb6663e63.value": [
+      "b286d3c8-baee-443d-90f3-0f104c441bfc.a"
+    ],
+    "d2374288-9586-485c-be7a-da89d24dbdbc.value": [
+      "7ed578c0-546c-4de1-8073-ab3402eb86a4.state_b"
+    ],
+    "b286d3c8-baee-443d-90f3-0f104c441bfc.result": [
+      "32f5cd41-6c2d-47a0-93e9-0681f4e45533.value"
     ]
   },
   "groups": [
     {
       "title": "Auto Direction",
-      "x": 6,
-      "y": 380,
+      "x": 5,
+      "y": 667,
       "width": 1401,
       "height": 965,
       "color": "#3f789e",
@@ -1078,8 +1170,8 @@
     },
     {
       "title": "Select Actor For Turn - Round Robin",
-      "x": 7,
-      "y": 1349,
+      "x": 5,
+      "y": 1635,
       "width": 1313,
       "height": 679,
       "color": "#3f789e",
@@ -1088,8 +1180,8 @@
     },
     {
       "title": "Main Loop",
-      "x": 8,
-      "y": 2644,
+      "x": 5,
+      "y": 2923,
       "width": 1715,
       "height": 752,
       "color": "#88A",
@@ -1108,11 +1200,21 @@
     },
     {
       "title": "Handle forced yield to user",
-      "x": 8,
-      "y": 2034,
+      "x": 5,
+      "y": 2317,
       "width": 1616,
       "height": 603,
       "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Always yield to user on initial start / load",
+      "x": 5,
+      "y": 381,
+      "width": 1310,
+      "height": 283,
+      "color": "#b58b2a",
       "font_size": 24,
       "inherited": false
     }
@@ -1120,36 +1222,36 @@
   "comments": [
     {
       "text": "If director auto-direction is enabled - run it and store the result.\n\n`enabled` will only be true if it generated a direction and does NOT hold just the state of agent setting.",
-      "x": 37,
-      "y": 427,
+      "x": 36,
+      "y": 714,
       "width": 197,
       "inherited": false
     },
     {
       "text": "If auto direction is disabled OR failed to generate a direction, fall back to default turn selection using Select Actor For Turn (round robin)",
-      "x": 57,
-      "y": 1424,
+      "x": 55,
+      "y": 1711,
       "width": 432,
       "inherited": false
     },
     {
       "text": "User Turn",
-      "x": 784,
-      "y": 3046,
+      "x": 782,
+      "y": 3326,
       "width": 200,
       "inherited": false
     },
     {
       "text": "AI Turn",
-      "x": 784,
-      "y": 2756,
+      "x": 782,
+      "y": 3036,
       "width": 200,
       "inherited": false
     },
     {
       "text": "Only proceed if `auto_direction` hasn't generated anything.",
-      "x": 309,
-      "y": 1554,
+      "x": 307,
+      "y": 1841,
       "width": 200,
       "inherited": false
     },
@@ -1162,8 +1264,8 @@
     },
     {
       "text": "Only proceed if `skip_to_player` is NOT set.",
-      "x": 300,
-      "y": 809,
+      "x": 299,
+      "y": 1096,
       "width": 192,
       "inherited": false
     }

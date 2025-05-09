@@ -1298,8 +1298,15 @@ class SceneLoop(Loop):
         if state.shared.get("signal_game_loop", True) and trigger_game_loop:
             await scene.signals["game_loop"].send(game_loop)
 
+        if "scene_loop" in state.shared:
+            _iteration = state.shared["scene_loop"].get("_iteration", 0)
+        else:
+            _iteration = 0
+
         state.shared["signal_game_loop"] = True
-        state.shared["scene_loop"] = {}
+        state.shared["scene_loop"] = {
+            "_iteration": _iteration + 1
+        }
         state.shared["creative_mode"] = scene.environment == "creative"
         
         await async_signals.get("scene_loop_start_cycle").send(self.scene_loop_event)

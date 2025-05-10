@@ -172,14 +172,15 @@ export default {
   },
   computed: {
     availablePresets() {
+      let items = [{ title: 'Default', value: '' }]
       if(!this.immutableConfig || !this.immutableConfig.presets) {
-        return [];
+        return items;
       }
       const inferenceGroups = this.immutableConfig.presets.inference_groups;
       if(!inferenceGroups || !Object.keys(inferenceGroups).length) {
-        return [];
+        return items;
       }
-      let items = [{ title: 'Default', value: '' }]
+      
       for (const [key, value] of Object.entries(inferenceGroups)) {
         items.push({
           title: value.name,

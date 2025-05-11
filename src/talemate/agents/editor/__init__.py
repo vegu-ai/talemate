@@ -244,6 +244,12 @@ class EditorAgent(
 
     @set_processing
     async def cleanup_user_input(self, text: str, as_narration: bool = False, force: bool = False):
+       
+        # special prefix characters - when found, never edit
+        PREFIX_CHARACTERS = ("!", "@", "/")
+        if text.startswith(PREFIX_CHARACTERS):
+            return text
+        
         if (not self.fix_exposition_user_input or not self.fix_exposition_enabled) and not force:
             return text
         

@@ -403,19 +403,6 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "333fbd4e-298b-4f0a-b2d6-778f170f981c": {
-      "title": "Editor Settings",
-      "id": "333fbd4e-298b-4f0a-b2d6-778f170f981c",
-      "properties": {},
-      "x": 48,
-      "y": 1841,
-      "width": 270,
-      "height": 146,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/editor/Settings",
-      "base_type": "core/Node"
-    },
     "9085c005-594d-4f90-8339-491d2abe2f18": {
       "title": "GET local.cleaned_input",
       "id": "9085c005-594d-4f90-8339-491d2abe2f18",
@@ -1266,22 +1253,6 @@
       "registry": "core/Switch",
       "base_type": "core/Node"
     },
-    "e88a4d9e-f1e7-46c2-acd3-0d61fe0259b5": {
-      "title": "Trim",
-      "id": "e88a4d9e-f1e7-46c2-acd3-0d61fe0259b5",
-      "properties": {
-        "mode": "both",
-        "chars": "\""
-      },
-      "x": 538,
-      "y": 2436,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/Trim",
-      "base_type": "core/Node"
-    },
     "93ca6a99-2bef-462d-8e26-f7d0d237709e": {
       "title": "Starts With @",
       "id": "93ca6a99-2bef-462d-8e26-f7d0d237709e",
@@ -1463,6 +1434,35 @@
       "inherited": false,
       "registry": "state/GetState",
       "base_type": "core/Node"
+    },
+    "333fbd4e-298b-4f0a-b2d6-778f170f981c": {
+      "title": "Editor Settings",
+      "id": "333fbd4e-298b-4f0a-b2d6-778f170f981c",
+      "properties": {},
+      "x": 60,
+      "y": 1860,
+      "width": 329,
+      "height": 426,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/editor/Settings",
+      "base_type": "core/Node"
+    },
+    "e88a4d9e-f1e7-46c2-acd3-0d61fe0259b5": {
+      "title": "Trim",
+      "id": "e88a4d9e-f1e7-46c2-acd3-0d61fe0259b5",
+      "properties": {
+        "mode": "both",
+        "chars": "\"*"
+      },
+      "x": 538,
+      "y": 2436,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Trim",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1539,9 +1539,6 @@
     ],
     "96b8da8d-fa7a-429e-aad3-8d0ae8e7007a.value": [
       "1376e65b-24a3-468d-9fc1-9b9c540d1e1b.state"
-    ],
-    "333fbd4e-298b-4f0a-b2d6-778f170f981c.agent_enabled": [
-      "e41e7c51-ee47-439b-a970-030252cd7feb.check"
     ],
     "9085c005-594d-4f90-8339-491d2abe2f18.value": [
       "8212a594-173d-4668-81cf-77795e5980b2.no"
@@ -1686,10 +1683,6 @@
     "864c47fa-5c53-49b6-a01e-ed8cf8df0d32.no": [
       "ca4c6749-8f99-4354-9102-a6e111d23177.value"
     ],
-    "e88a4d9e-f1e7-46c2-acd3-0d61fe0259b5.result": [
-      "93ca6a99-2bef-462d-8e26-f7d0d237709e.string",
-      "474eb227-10a6-4cdf-832c-ebce5da6d052.value"
-    ],
     "93ca6a99-2bef-462d-8e26-f7d0d237709e.result": [
       "841db767-4a0a-46a2-b661-0653934d5c3b.check"
     ],
@@ -1725,6 +1718,13 @@
     ],
     "20df13a8-439a-4546-951d-6422a7a59155.value": [
       "99a49891-916e-4609-9ae9-e816d9ed0cfc.a"
+    ],
+    "333fbd4e-298b-4f0a-b2d6-778f170f981c.agent_enabled": [
+      "e41e7c51-ee47-439b-a970-030252cd7feb.check"
+    ],
+    "e88a4d9e-f1e7-46c2-acd3-0d61fe0259b5.result": [
+      "93ca6a99-2bef-462d-8e26-f7d0d237709e.string",
+      "474eb227-10a6-4cdf-832c-ebce5da6d052.value"
     ]
   },
   "groups": [

@@ -252,13 +252,15 @@ class NarratorAgent(
 
         result = result.strip().strip(":").strip()
 
-        if "#" in result:
-            result = result.split("#")[0]
-
         character_names = [c.name for c in self.scene.get_characters()]
 
         cleaned = []
         for line in result.split("\n"):
+            
+            # skip lines that start with a #
+            if line.startswith("#"):
+                continue
+            
             log.debug("clean_result", line=line)
             
             character_dialogue_detected = False

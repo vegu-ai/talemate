@@ -14,7 +14,7 @@
 {{
     focal.callbacks.act.render(
         "Instruct the actor portraying the character to take the next action. IMPORTANT: Only the following characters are eligible to take action: "+candidate_names+".",
-        name="Character Name",
+        name="Character Name - this must be one of the following characters: "+candidate_names+".",
         instructions="The acting instructions for the actor portraying the character. Provide a brief, concise direction (1-2 short sentences) including key emotional state and actions. This argument is optional, if you want the actor to continue their course of action from the previous message, you can omit it. You MUST NOT write direct speech. Formulate this as an actionable instruction such as \"Do this..\", \"You should..\", \"In order to..\", etc.",
         examples=[
             {"name": "John", "instructions": "Open the door cautiously and call out hesitantly. You should show visible fear as you descend the basement stairs."},

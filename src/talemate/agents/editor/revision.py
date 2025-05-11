@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 import structlog
 import uuid
+import pydantic
 import re
 from talemate.agents.base import (
     set_processing,
@@ -52,15 +53,29 @@ detect_bad_prose_condition = AgentActionConditional(
     value=True,
 )
 
+class RevisionContextState(pydantic.BaseModel):
+    message_id: int | None = None
+
 revision_disabled_context = ContextVar("revision_disabled", default=False)
+revision_context = ContextVar("revision_context", default=RevisionContextState())
+
 
 class RevisionDisabled:
-    
     def __enter__(self):
         self.token = revision_disabled_context.set(True)
 
     def __exit__(self, exc_type, exc_value, traceback):
         revision_disabled_context.reset(self.token)
+
+class RevisionContext:
+    def __init__(self, message_id: int | None = None):
+        self.message_id = message_id
+
+    def __enter__(self):
+        self.token = revision_context.set(RevisionContextState(message_id=self.message_id))
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        revision_context.reset(self.token)
 
 class RevisionMixin:
     
@@ -79,6 +94,13 @@ class RevisionMixin:
             icon="mdi-typewriter",
             description="Remove / rewrite content based on criteria and instructions.",
             config={
+                "automatic_revision": AgentActionConfig(
+                    type="bool",
+                    label="Automatic revision",
+                    description="Enable / Disable automatic revision.",
+                    value=True,
+                    quick_toggle=True,
+                ),
                 "revision_method": AgentActionConfig(
                     type="text",
                     label="Revision method",
@@ -181,6 +203,10 @@ class RevisionMixin:
         return self.actions["revision"].enabled
     
     @property
+    def revision_automatic_enabled(self):
+        return self.actions["revision"].config["automatic_revision"].value
+    
+    @property
     def revision_method(self):
         return self.actions["revision"].config["revision_method"].value
     
@@ -234,7 +260,7 @@ class RevisionMixin:
         Called when a conversation or narrator message is generated
         """
         
-        if not self.revision_enabled:
+        if not self.revision_enabled or not self.revision_automatic_enabled:
             return
         
         try:
@@ -262,9 +288,12 @@ class RevisionMixin:
         
         scene:"Scene" = self.scene
         
+        ctx = revision_context.get()
+        
         messages = scene.collect_messages(
             typ=["narrator", "character"],
-            max_messages=self.revision_repetition_range
+            max_messages=self.revision_repetition_range,
+            start_idx=scene.message_index(ctx.message_id) -1 if ctx.message_id else None
         )
         
         return_messages = []
@@ -600,7 +629,7 @@ class RevisionMixin:
         if detect_bad_prose:
             bad_prose_identified = await self.revision_detect_bad_prose(text)
             for identified in bad_prose_identified:
-                issues.append(f"Bad prose: `{identified['phrase']}` (reason: {identified['reason']}, instructions: {identified['instructions']})")
+                issues.append(f"Bad prose: `{identified['phrase']}` (reason: {identified['reason']}, matched: {identified['matched']}, instructions: {identified['instructions']})")
             log.debug("revision_rewrite: bad_prose_identified", bad_prose_identified=bad_prose_identified)
             
         # Step 3 - Check if we have enough issues to warrant a rewrite

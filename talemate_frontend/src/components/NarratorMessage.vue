@@ -44,6 +44,12 @@
           Create Pin
         </v-chip>
 
+        <!-- revision -->
+        <v-chip size="x-small" class="ml-2" label color="dirty" v-if="!editing && hovered && editorRevisionsEnabled && isLastMessage" variant="outlined" @click="reviseMessage(message_id)" :disabled="uxLocked">
+          <v-icon class="mr-1">mdi-typewriter</v-icon>
+          Editor Revision
+        </v-chip>
+
         <!-- fork scene -->
         <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered" variant="outlined"
           @click="forkSceneInitiate(message_id)" :disabled="uxLocked">
@@ -65,8 +71,41 @@
 import { parseText } from '@/utils/textParser';
 
 export default {
-  props: ['text', 'message_id', 'uxLocked', 'isLastMessage'],
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'openWorldStateManager'],
+  // props: ['text', 'message_id', 'uxLocked', 'isLastMessage'],
+
+  props: {
+    text: {
+      type: String,
+      required: true
+    },
+    message_id: {
+      required: true
+    },
+    uxLocked: {
+      type: Boolean,
+      required: true
+    },
+    isLastMessage: {
+      type: Boolean,
+      required: true
+    },
+    editorRevisionsEnabled: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  inject: [
+    'requestDeleteMessage', 
+    'getWebsocket', 
+    'createPin', 
+    'forkSceneInitiate', 
+    'fixMessageContinuityErrors', 
+    'autocompleteRequest', 
+    'autocompleteInfoMessage', 
+    'getMessageStyle', 
+    'openWorldStateManager',
+    'reviseMessage',
+  ],
   computed: {
     parts() {
       return parseText(this.text);

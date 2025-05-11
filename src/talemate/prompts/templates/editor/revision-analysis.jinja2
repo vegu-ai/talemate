@@ -8,7 +8,7 @@
 <|SECTION:ISSUE {{ issues }}: REPEATED TEXT|>
 These sentences have been classified as repetition and must either be substantially rewritten or removed. When removing a sentence, substitute something else, that's meaningful to the story and context.
 
-{% for repeat in repetition %}- `{{ repeat["text_a"].strip() }}`
+{% for repeat in repetition %}- MATCH: `{{ repeat["text_a"].strip() }}`
 {% endfor %}
 <|CLOSE_SECTION|>
 {# end repetition #}{% endif %}
@@ -16,8 +16,11 @@ These sentences have been classified as repetition and must either be substantia
 {% set issues = issues + 1 %}
 <|SECTION:ISSUE {{ issues }}: UNWANTED PROSE|>
 These phrases or words have been identified by the director as bad, and MUST be changed accordingly.
+Important: These are semantic matches based on meaning, not literal text. Focus on the underlying concept or idea that triggered the match, rather than expecting exact phrase matches.
 
-{% for phrase in bad_prose %}- `{{ phrase.phrase }}` -- {{ phrase.instructions }}
+{% for phrase in bad_prose %}- MATCH: `{{ phrase.phrase }}`
+  - TRIGGER: "{{ phrase.matched }}"
+  - INSTRUCTIONS: {{ phrase.instructions }}
 {% endfor %}
 <|CLOSE_SECTION|>
 {# end unwanted prose #}{% endif %}

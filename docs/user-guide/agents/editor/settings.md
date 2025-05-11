@@ -49,6 +49,10 @@ This means it comes at a noticable delay IF it finds issues, but the improvement
 
 Check this to enable revision.
 
+##### Automatic Revision
+
+Check this to enable automatic revision - this will analyze each incoming actor or narrator message and attempt to fix it if there are issues.
+
 ##### Revision Method
 
 Which method to use to fix issues. 

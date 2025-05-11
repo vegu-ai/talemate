@@ -15,6 +15,7 @@ import talemate.agents.editor.nodes
 
 from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.agents.editor.revision import RevisionMixin
+from talemate.agents.editor.websocket_handler import EditorWebsocketHandler
 
 if TYPE_CHECKING:
     from talemate.agents.conversation import ConversationAgentEmission
@@ -38,6 +39,7 @@ class EditorAgent(
 
     agent_type = "editor"
     verbose_name = "Editor"
+    websocket_handler = EditorWebsocketHandler
     
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:

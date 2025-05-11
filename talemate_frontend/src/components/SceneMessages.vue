@@ -10,7 +10,7 @@
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -43,7 +43,7 @@
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`">
-                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" />
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
@@ -99,6 +99,9 @@ export default {
             type: Boolean,
             default: false,
         },
+        agentStatus: {
+            type: Object,
+        }
     },
     components: {
         CharacterMessage,
@@ -122,6 +125,11 @@ export default {
             },
         }
     },
+    computed: {
+        editorRevisionsEnabled() {
+            return this.agentStatus && this.agentStatus.editor && this.agentStatus.editor.actions && this.agentStatus.editor.actions["revision"] && this.agentStatus.editor.actions["revision"].enabled;
+        }
+    },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput'],
     provide() {
         return {
@@ -131,6 +139,7 @@ export default {
             forkSceneInitiate: this.forkSceneInitiate,
             getMessageColor: this.getMessageColor,
             getMessageStyle: this.getMessageStyle,
+            reviseMessage: this.reviseMessage,
         }
     },
     methods: {
@@ -264,6 +273,14 @@ export default {
                 action: 'fork_new_scene',
                 message_id: message_id,
                 save_name: save_name,
+            }));
+        },
+
+        reviseMessage(message_id) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'editor',
+                action: 'request_revision',
+                message_id: message_id,
             }));
         },
 

@@ -1124,6 +1124,7 @@ class Scene(Emitter):
         max_iterations: int = 100,
         max_messages: int | None = None,
         stop_on_time_passage: bool = False,
+        start_idx: int | None = None,
     ):
         """
         Finds all messages in the history that match the given typ and source
@@ -1135,7 +1136,11 @@ class Scene(Emitter):
         messages = []
         iterations = 0
         collected = 0
-        for idx in range(len(self.history) - 1, -1, -1):
+        
+        if start_idx is None:
+            start_idx = len(self.history) - 1
+        
+        for idx in range(start_idx, -1, -1):
             message = self.history[idx]
             if (not typ or message.typ in typ) and (
                 not source or message.source == source

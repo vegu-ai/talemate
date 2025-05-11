@@ -186,7 +186,12 @@
                       </v-alert>
                     </div>
 
-                    <SceneMessages ref="sceneMessages" :appearance-config="appConfig ? appConfig.appearance : {}" :ux-locked="uxLocked" />
+                    <SceneMessages 
+                    ref="sceneMessages" 
+                    :appearance-config="appConfig ? appConfig.appearance : {}" 
+                    :ux-locked="uxLocked" 
+                    :agent-status="agentStatus"
+                    />
 
                     <div ref="sceneToolsContainer">
                       <SceneTools 
@@ -801,6 +806,7 @@ export default {
         // active - has the agent been active in the last 5 seconds?
         recentlyActive: recentlyActive,
         details: data.client,
+        actions: data.data.actions,
       }
 
       if(recentlyActive && !busy) {

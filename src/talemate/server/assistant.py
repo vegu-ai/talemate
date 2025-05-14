@@ -95,7 +95,7 @@ class AssistantPlugin:
 
             emit("autocomplete_suggestion", completion)
         except Exception as e:
-            log.error("Error running autocomplete", error=str(e))
+            log.exception("Error running autocomplete", error=str(e))
             emit("autocomplete_suggestion", "")
 
 

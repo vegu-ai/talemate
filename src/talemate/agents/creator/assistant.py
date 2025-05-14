@@ -340,7 +340,7 @@ class AssistantMixin:
         if not response_length:
             response_length = self.autocomplete_dialogue_suggestion_length
         
-        # continueing recent character message
+        # continuing recent character message
         non_anchor, anchor = util.split_anchor_text(input, 10)
         
         self.scene.log.debug(
@@ -352,9 +352,12 @@ class AssistantMixin:
 
         continuing_message = False
         
-        message = self.scene.history[-1]
-        if isinstance(message, CharacterMessage) and message.character_name == character.name:
-            continuing_message = input.strip() == message.without_name.strip()
+        try:
+            message = self.scene.history[-1]
+            if isinstance(message, CharacterMessage) and message.character_name == character.name:
+                continuing_message = input.strip() == message.without_name.strip()
+        except IndexError:
+            pass
 
         if input.strip().endswith('"'):
             prefix = ' *'

@@ -155,14 +155,15 @@ class GuideSceneMixin:
         
         cached_guidance = await self.get_cached_guidance(emission.response)
         
-        if cached_guidance:
-            return cached_guidance
-        
         if emission.analysis_type == "narration" and self.guide_narrator:
-            guidance = await self.guide_narrator_off_of_scene_analysis(
-                emission.response,
-                response_length=self.guide_scene_guidance_length,
-            )
+            
+            if cached_guidance:
+                guidance = cached_guidance
+            else:
+                guidance = await self.guide_narrator_off_of_scene_analysis(
+                    emission.response,
+                    response_length=self.guide_scene_guidance_length,
+                )
             
             if not guidance:
                 log.warning("director.guide_scene.narration: Empty resonse")
@@ -171,11 +172,15 @@ class GuideSceneMixin:
             self.set_context_states(narrator_guidance=guidance)
         
         elif emission.analysis_type == "conversation" and self.guide_actors:   
-            guidance = await self.guide_actor_off_of_scene_analysis(
-                emission.response,
-                emission.template_vars.get("character"),
-                response_length=self.guide_scene_guidance_length,
-            )
+            
+            if cached_guidance:
+                guidance = cached_guidance
+            else:
+                guidance = await self.guide_actor_off_of_scene_analysis(
+                    emission.response,
+                    emission.template_vars.get("character"),
+                    response_length=self.guide_scene_guidance_length,
+                )
             
             if not guidance:
                 log.warning("director.guide_scene.conversation: Empty resonse")

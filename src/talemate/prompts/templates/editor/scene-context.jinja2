@@ -7,6 +7,7 @@
 {{ context_investigation }}
 <|CLOSE_SECTION|>
 {% endif %}
+{% include "dynamic-instructions.jinja2" %}
 {% include "scene-intent.jinja2" %}
 {% endset %}
 {{ rendered_context }}

@@ -89,6 +89,20 @@ class AgentDetail(pydantic.BaseModel):
     icon: Union[str, None] = None
     color: str = "grey"
 
+class DynamicInstruction(pydantic.BaseModel):
+    title: str
+    content: str
+    
+    def __str__(self) -> str:
+        return "\n".join(
+            [
+                f"<|SECTION:{self.title}|>",
+                self.content,
+                "<|CLOSE_SECTION|>"
+            ]
+        )
+        
+
 def args_and_kwargs_to_dict(fn, args: list, kwargs: dict, filter:list[str] = None) -> dict:
     """
     Takes a list of arguments and a dict of keyword arguments and returns
@@ -621,6 +635,7 @@ class AgentEmission:
 class AgentTemplateEmission(AgentEmission):
     template_vars: dict = dataclasses.field(default_factory=dict)
     response: str = None
+    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(default_factory=list)
     
 @dataclasses.dataclass
 class RagBuildSubInstructionEmission(AgentEmission):

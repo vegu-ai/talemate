@@ -7,6 +7,8 @@ from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
     AgentEmission,
+    AgentTemplateEmission,
+    DynamicInstruction,
 )
 from talemate.agents.context import active_agent
 from talemate.prompts import Prompt
@@ -16,6 +18,7 @@ from talemate.util import strip_partial_sentences
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
     from talemate.agents.summarize.analyze_scene import SceneAnalysisEmission
+    from talemate.agents.editor.revision import RevisionAnalysisEmission
 
 log = structlog.get_logger()
 
@@ -145,6 +148,9 @@ class GuideSceneMixin:
         talemate.emit.async_signals.get("agent.summarization.scene_analysis.cached").connect(
             self.on_summarization_scene_analysis_after
         )
+        talemate.emit.async_signals.get("editor.revision-analysis.before").connect(
+            self.on_editor_revision_analysis_before
+        )
         
     async def on_summarization_scene_analysis_after(self, emission: "SceneAnalysisEmission"):
         
@@ -191,14 +197,25 @@ class GuideSceneMixin:
         if guidance:
             await self.set_cached_guidance(emission.response, guidance)
     
+    async def on_editor_revision_analysis_before(self, emission: AgentTemplateEmission):
+        cached_guidance = await self.get_cached_guidance(emission.response)
+        if cached_guidance:
+            emission.dynamic_instructions.append(DynamicInstruction(
+                title="Guidance",
+                content=cached_guidance
+            ))
+        
     # helpers
     
     def _cache_key(self) -> str:
         return f"cached_guidance"
     
-    async def get_cached_guidance(self, analysis:str) -> str | None:
+    async def get_cached_guidance(self, analysis:str | None = None) -> str | None:
         """
         Returns the cached guidance for the given analysis.
+        
+        If analysis is not provided, it will return the cached guidance for the last analysis regardless
+        of the fingerprint.
         """
         
         if not self.guide_scene_cache_guidance:
@@ -208,7 +225,9 @@ class GuideSceneMixin:
         cached_guidance = self.get_scene_state(key)
         
         if cached_guidance:
-            if cached_guidance.get("fp") == self.context_fingerpint(extra=[analysis]):
+            if not analysis:
+                return cached_guidance.get("guidance")
+            elif cached_guidance.get("fp") == self.context_fingerpint(extra=[analysis]):
                 return cached_guidance.get("guidance")
         
         return None

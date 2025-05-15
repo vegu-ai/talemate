@@ -7,6 +7,7 @@ from talemate.agents.base import (
     AgentActionConfig,
     AgentEmission,
     AgentTemplateEmission,
+    DynamicInstruction,
 )
 from talemate.prompts import Prompt
 from talemate.util import strip_partial_sentences
@@ -153,6 +154,9 @@ class SceneAnalyzationMixin:
         talemate.emit.async_signals.get("agent.summarization.rag_build_sub_instruction").connect(
             self.on_rag_build_sub_instruction
         )
+        talemate.emit.async_signals.get("editor.revision-analysis.before").connect(
+            self.on_editor_revision_analysis_before
+        )
         
     async def on_inject_instructions(
         self, 
@@ -219,6 +223,14 @@ class SceneAnalyzationMixin:
         
         if sub_instruction:
             emission.sub_instruction = sub_instruction
+    
+    async def on_editor_revision_analysis_before(self, emission: AgentTemplateEmission):
+        last_analysis = self.get_scene_state("scene_analysis")
+        if last_analysis:
+            emission.dynamic_instructions.append(DynamicInstruction(
+                title="Scene Analysis",
+                content=last_analysis
+            ))
     
     # helpers
     

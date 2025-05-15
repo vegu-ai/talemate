@@ -1,7 +1,16 @@
+"""
+Editor agent mixin that handles editing of dialogue and narration based on criteria and instructions
+
+Signals:
+- editor.revision-analysis.before - sent before the revision analysis is requested
+- editor.revision-analysis.after - sent after the revision analysis is requested
+"""
+
 from typing import TYPE_CHECKING
 import structlog
 import uuid
 import pydantic
+import dataclasses
 import re
 from talemate.agents.base import (
     set_processing,
@@ -9,6 +18,7 @@ from talemate.agents.base import (
     AgentActionConfig,
     AgentActionConditional,
     AgentActionNote,
+    AgentTemplateEmission,
 )
 import talemate.emit.async_signals
 from talemate.instance import get_agent
@@ -38,6 +48,8 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger()
 
+## CONFIG CONDITIONALS
+
 dedupe_condition = AgentActionConditional(
     attribute="revision.config.revision_method",
     value="dedupe",
@@ -53,12 +65,13 @@ detect_bad_prose_condition = AgentActionConditional(
     value=True,
 )
 
+## CONTEXT
+
 class RevisionContextState(pydantic.BaseModel):
     message_id: int | None = None
 
 revision_disabled_context = ContextVar("revision_disabled", default=False)
 revision_context = ContextVar("revision_context", default=RevisionContextState())
-
 
 class RevisionDisabled:
     def __enter__(self):
@@ -76,6 +89,16 @@ class RevisionContext:
 
     def __exit__(self, exc_type, exc_value, traceback):
         revision_context.reset(self.token)
+
+
+## SIGNALS
+
+talemate.emit.async_signals.register(
+    "editor.revision-analysis.before",
+    "editor.revision-analysis.after",
+)
+
+## MIXIN
 
 class RevisionMixin:
     
@@ -659,6 +682,21 @@ class RevisionMixin:
         
         if loading_status:
             loading_status("Editor - Issues identified, analyzing text...")
+           
+        template_vars = {
+            "text": text,
+            "character": character,
+            "scene": self.scene,
+            "response_length": token_count,
+            "max_tokens": self.client.max_token_length,
+            "repetition": deduped,
+            "bad_prose": bad_prose_identified,
+        }
+        
+        emission = AgentTemplateEmission(agent=self, template_vars=template_vars)
+        await talemate.emit.async_signals.get("editor.revision-analysis.before").send(
+            emission
+        )
             
         analysis = await Prompt.request(
             "editor.revision-analysis",
@@ -672,7 +710,13 @@ class RevisionMixin:
                 "max_tokens": self.client.max_token_length,
                 "repetition": deduped,
                 "bad_prose": bad_prose_identified,
+                "dynamic_instructions": emission.dynamic_instructions,
             },
+        )
+        
+        emission.response = analysis
+        await talemate.emit.async_signals.get("editor.revision-analysis.after").send(
+            emission
         )
         
         async def rewrite_text(text:str) -> str:

@@ -266,6 +266,8 @@ class NarratorAgent(
             character_dialogue_detected = False
             
             for character_name in character_names:
+                if not character_name:
+                    continue
                 if line.lower().startswith(f"{character_name}:"):
                     character_dialogue_detected = True
                 elif line.startswith(f"{character_name.upper()}"):

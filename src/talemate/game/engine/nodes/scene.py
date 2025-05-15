@@ -1236,6 +1236,67 @@ class RestoreScene(Node):
             "state": state
         })
 
+@register("scene/SetIntroduction")
+class SetIntroduction(Node):
+    """
+    Set the introduction text for the scene
+    
+    Inputs:
+    
+    - state: The graph state
+    - introduction: The introduction text
+    
+    Properties:
+    
+    - introduction: The introduction text
+    - emit_history: Whether to re-emit the entire history of the scene
+    
+    Outputs:
+    
+    - state: The graph state
+    """
+    
+    class Fields:
+        introduction = PropertyField(
+            name="introduction",
+            description="The introduction text",
+            type="text",
+            default=UNRESOLVED
+        )
+        
+        emit_history = PropertyField(
+            name="emit_history",
+            description="Whether to re-emit the entire history of the scene",
+            type="bool",
+            default=True
+        )
+        
+    def __init__(self, title="Set Introduction", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("state")
+        self.add_input("introduction", socket_type="str")
+        self.set_property("introduction", UNRESOLVED)
+        self.set_property("emit_history", True)
+        self.add_output("state")
+        
+    async def run(self, state: GraphState):
+        scene:"Scene" = active_scene.get()
+        introduction = self.require_input("introduction")
+        emit_history = self.get_input_value("emit_history")
+        
+        scene.set_intro(introduction)
+        
+        if emit_history:
+            await scene.emit_history()
+        
+        self.set_output_values({
+            "state": state
+        })
+        
+        
+    
 @register("scene/SceneLoop", as_base_type=True) 
 class SceneLoop(Loop):
     

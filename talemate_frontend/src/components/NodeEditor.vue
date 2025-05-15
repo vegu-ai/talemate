@@ -347,7 +347,9 @@ export default {
     methods: {
 
         isTalemateModule(path) {
-            return !path.startsWith("scenes/") && !path.startsWith("templates/");
+            // Normalize path separators to forward slashes for consistent processing
+            const normalizedPath = path.replace(/\\/g, '/');
+            return !normalizedPath.startsWith("scenes/") && !normalizedPath.startsWith("templates/");
         },
 
         openPropertyEditor(type, value, callback, validator, title) {

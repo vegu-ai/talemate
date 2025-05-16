@@ -10,7 +10,7 @@ The `Scene Loop` is the main node that will be used to drive the scene.
 
 Since for this scene we are concerned with setting up the initial story in a dynamic way, but are not overly concerned with changing any of the actual loop logic we can chose to inherit the scene loop from the default talemate loop.
 
-The scene loop node should already be selected in the *Modules** library.
+The scene loop node should already be selected in the **Modules** library.
 
 ![Scene Loop](./img/2-0001.png)
 

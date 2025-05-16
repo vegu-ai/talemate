@@ -137,6 +137,7 @@ export default {
         'unregisterMessageHandler',
         'setEnvCreative',
         'setEnvScene',
+        'getSelectedNodes',
     ],
     emits: ['create-node', 'load-node'],
     computed: {
@@ -248,8 +249,10 @@ export default {
                 name: name || '',
                 registry: registry || '',
                 type: type,
+                nodes: this.getSelectedNodes(),
             };
             this.newModuleDialog = true;
+            console.log("SELECTED NODES", this.getSelectedNodes());
         },
 
         deleteModule(path) {
@@ -274,6 +277,7 @@ export default {
                 extend_from: extendFrom,
                 module_type: this.newModule.type,
                 registry: this.newModule.registry,
+                nodes: this.newModule.nodes,
             }));
 
             this.newModuleDialog = false;

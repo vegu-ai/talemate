@@ -188,7 +188,7 @@
 
 <script>
 import { LGraphCanvas, LiteGraph } from 'litegraph.js';
-import { initializeGraphFromJSON, convertGraphToJSON } from '@/utils/litegraphUtils'
+import { initializeGraphFromJSON, convertGraphToJSON, convertSelectedGraphToJSON} from '@/utils/litegraphUtils'
 //import '@/utils/litegraphSearchBox'
 import { Codemirror } from 'vue-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
@@ -232,6 +232,12 @@ export default {
         'setEnvCreative',
         'setEnvScene',
     ],
+
+    provide() {
+        return {
+            getSelectedNodes: this.getSelectedNodes,
+        }
+    },
     
     data() {
         return {
@@ -447,6 +453,10 @@ export default {
                 this.onResize();
                 this.applyNodeState();
             });
+        },
+
+        getSelectedNodes() {
+            return convertSelectedGraphToJSON(this.graph, this.canvas.selected_nodes);
         },
 
         initiateCustomSceneLoop() {

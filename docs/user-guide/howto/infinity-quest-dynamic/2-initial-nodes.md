@@ -6,9 +6,9 @@ In the **Infinity Quest Dynamic** tab you will see the node editor on the left a
 
 To begin with we need to ensure that our scene has a custom `Scene Loop`.
 
-The `Scene Loop` is the main node that will be used to drive the scene.
+The `Scene Loop` is the main node that will be used to drive the scene. It is where turn selection and other scene logic is handled.
 
-Since for this scene we are concerned with setting up the initial story in a dynamic way, but are not overly concerned with changing any of the actual loop logic we can chose to inherit the scene loop from the default talemate loop.
+Since for this scene we are concerned with setting up the initial story in a dynamic way, but don't care about changing any of the actual loop logic its easiest to inherit the scene loop from the default talemate loop.
 
 The scene loop node should already be selected in the **Modules** library.
 
@@ -93,12 +93,12 @@ Open the `On Scene Init` node module.
 
 Search for the following nodes and (remember double click for search or right click for node context menu) add them to the canvas:
 
-- `Generate Progress Narration`
-- `Make Bool`
-- `Make Text`
-- `Set Introduction`
+- `Generate Progress Narration` - This node will be used to generate the introduction text, using the narrator agent.
+- `Make Bool` - For now we will use this to simply turn our node chain on.
+- `Make Text` - This will be used for us to provide instructions to the narrator agent.
+- `Set Introduction` - This will store the generated introduction text with the scene.
 
-Then hook them up like so:
+Once you have added all the nodes, hook them up like so:
 
 ![Scene Loop - On Scene Init](./img/2-0011.png)
 

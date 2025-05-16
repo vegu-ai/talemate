@@ -1348,7 +1348,7 @@ class SceneLoop(Loop):
         
         trigger_game_loop = self.get_property("trigger_game_loop")
         
-        if state.verbosity >= NodeVerbosity.NORMAL:
+        if state.verbosity >= NodeVerbosity.VERBOSE:
             log.warning("TRIGGER GAME LOOP", id=self.id, trigger_game_loop=trigger_game_loop, signal_game_loop=state.shared.get("signal_game_loop"), skip_to_player=state.shared.get("skip_to_player"))  
         
         if trigger_game_loop:

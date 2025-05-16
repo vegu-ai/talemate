@@ -64,60 +64,6 @@ class RequestDeleteNodeModule(pydantic.BaseModel):
 class RequestTestRun(pydantic.BaseModel):
     graph: dict
     
-# New function to create a module from selected nodes
-async def create_module_from_nodes(scene, nodes_data, title, registry, module_type, filename):
-    """
-    Create a new module using selected nodes from the editor.
-    
-    Args:
-        scene: The current scene context
-        nodes_data: JSON data from convertSelectedGraphToJSON including nodes and connections
-        title: Title for the new module
-        registry: Registry path for the new module
-        module_type: Type of module to create (e.g., "graph", "command/Command")
-        filename: Filename for the new module
-        
-    Returns:
-        The created module class
-    """
-    from talemate.game.engine.nodes.layout import import_flat_graph
-    
-    graph_cls = BASE_TYPES.get(module_type)
-    if not graph_cls:
-        return None
-    
-    # Create basic graph definition
-    graph_def = graph_cls(title=title).model_dump()
-    graph_def["registry"] = registry
-    
-    # Import the node definition to create the class
-    new_graph_cls = import_node_definition(graph_def, scene._NODE_DEFINITIONS)
-    
-    # Create an instance of the graph
-    new_graph = new_graph_cls()
-    
-    # Create a flat data structure compatible with import_flat_graph
-    flat_data = {
-        "nodes": nodes_data.get("nodes", []),
-        "connections": nodes_data.get("connections", []),
-        "comments": nodes_data.get("comments", []),
-        "groups": nodes_data.get("groups", []),
-        "properties": {},
-        "registry": registry,
-        "base_type": module_type,
-        "title": title,
-        "extends": None
-    }
-    
-    # Use import_flat_graph to properly create the graph
-    populated_graph = import_flat_graph(flat_data, new_graph)
-    
-    # Save the module
-    new_graph_cls._module_path = await save_node_module(
-        scene, populated_graph, filename, set_as_main=False
-    )
-    
-    return new_graph_cls
 
 class NodeEditorPlugin(Plugin):
     router = "node_editor"
@@ -206,7 +152,7 @@ class NodeEditorPlugin(Plugin):
             registry = request.registry.replace("$N", normalize_registry_name(request.name))
             title = request.name.title()
             
-            new_graph_cls = await create_module_from_nodes(
+            new_graph_cls = await self._create_module_from_nodes(
                 self.scene,
                 request.nodes,
                 title,
@@ -310,7 +256,58 @@ class NodeEditorPlugin(Plugin):
         
         await self.handle_request_node_module({"path": filename})
         # await self.handle_request_node_library({})
+    
+    async def _create_module_from_nodes(self, scene, nodes_data, title, registry, module_type, filename):
+        """
+        Create a new module using selected nodes from the editor.
         
+        Args:
+            scene: The current scene context
+            nodes_data: JSON data from convertSelectedGraphToJSON including nodes and connections
+            title: Title for the new module
+            registry: Registry path for the new module
+            module_type: Type of module to create (e.g., "graph", "command/Command")
+            filename: Filename for the new module
+            
+        Returns:
+            The created module class
+        """
+        graph_cls = BASE_TYPES.get(module_type)
+        if not graph_cls:
+            return None
+        
+        # Create basic graph definition
+        graph_def = graph_cls(title=title).model_dump()
+        graph_def["registry"] = registry
+        
+        # Import the node definition to create the class
+        new_graph_cls = import_node_definition(graph_def, scene._NODE_DEFINITIONS)
+        
+        # Create an instance of the graph
+        new_graph = new_graph_cls()
+        
+        # Create a flat data structure compatible with import_flat_graph
+        flat_data = {
+            "nodes": nodes_data.get("nodes", []),
+            "connections": nodes_data.get("connections", []),
+            "comments": nodes_data.get("comments", []),
+            "groups": nodes_data.get("groups", []),
+            "properties": {},
+            "registry": registry,
+            "base_type": module_type,
+            "title": title,
+            "extends": None
+        }
+        
+        # Use import_flat_graph to properly create the graph
+        populated_graph = import_flat_graph(flat_data, new_graph)
+        
+        # Save the module
+        new_graph_cls._module_path = await save_node_module(
+            scene, populated_graph, filename, set_as_main=False
+        )
+        
+        return new_graph_cls    
     
     async def handle_request_node_module(self, data: dict):
         

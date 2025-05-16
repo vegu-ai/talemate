@@ -2,7 +2,7 @@
 
 In part 3 we left off at generating a random story premise for the crew of the Starlight Nomad.
 
-We are uising the `Creator` agent to generate a list of sci-fi topics and then picking a random one to inform the generation of the introduction.
+To recap - We are using the `Creator` agent to generate a list of sci-fi topics and then picking a random one to inform the generation of the introduction.
 
 We can leverage additional agents to further improve the quality of the introduction.
 

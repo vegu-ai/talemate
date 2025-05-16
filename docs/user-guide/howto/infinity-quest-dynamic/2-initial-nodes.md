@@ -56,6 +56,8 @@ The event module will be created and automatically loaded. You should be present
 
 For now, go back to the `Scene Loop` by clicking on it in the **Modules** library.
 
+![Scene Loop - Extended](./img/2-0003.png)
+
 Double click the canvas above the existing nodes and type in "on scene" and select the `On Scene Init` node that we created moments ago.
 
 ![Scene Loop - On Scene Init](./img/2-0007.png)

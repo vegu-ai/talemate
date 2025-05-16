@@ -62,6 +62,63 @@ export function handleFitGroupToNodes(group, canvas) {
 }
 
 /**
+ * Creates a new group that encompasses all selected nodes.
+ * @param {LGraphCanvas} canvas The canvas instance with selected nodes.
+ * @returns {boolean} True if a group was created, false otherwise.
+ */
+export function handleCreateGroupFromSelectedNodes(canvas) {
+    // Check if we have selected nodes
+    if (!canvas.selected_nodes || Object.keys(canvas.selected_nodes).length === 0) {
+        return false; // No nodes selected
+    }
+
+    canvas.graph.beforeChange();
+
+    // Calculate bounding box of all selected nodes
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const selectedNodes = Object.values(canvas.selected_nodes);
+    
+    for (const node of selectedNodes) {
+        minX = Math.min(minX, node.pos[0]);
+        minY = Math.min(minY, node.pos[1]);
+        maxX = Math.max(maxX, node.pos[0] + node.size[0]);
+        maxY = Math.max(maxY, node.pos[1] + node.size[1]);
+    }
+
+    // Constants for padding and title height
+    const padding = 25;
+    const titleHeight = LiteGraph.NODE_TITLE_HEIGHT;
+    const topPadding = padding + 20; // Extra top padding
+
+    // Create the new group with proper dimensions
+    const new_group = new LiteGraph.LGraphGroup();
+    new_group.title = "Group"; // Default title
+    
+    // Position and size the group to encompass the nodes plus padding
+    new_group.pos = [minX - padding, minY - topPadding - titleHeight];
+    
+    // Width/height calculation (add padding on both sides)
+    const width = (maxX - minX) + (padding * 2);
+    const height = (maxY - minY) + padding + topPadding + titleHeight;
+    
+    // Apply size (with minimums)
+    new_group.size = [Math.max(140, width), Math.max(80, height)];
+    
+    // Add the group to the graph
+    canvas.graph.add(new_group);
+    
+    // Add the nodes to the group
+    for (const node of selectedNodes) {
+        new_group._nodes.push(node);
+    }
+    
+    canvas.graph.afterChange();
+    canvas.setDirty(true, true);
+    
+    return true; // Indicate the event was handled
+}
+
+/**
  * Snaps the given group vertically to the closest group above it if within tolerance.
  * Triggered by Alt+Clicking the group title.
  * @param {LGraphGroup} group The group to snap.

@@ -5,6 +5,7 @@
  * @return {LGraph} The modified graph
  */
 import { LiteGraph, LGraphCanvas } from 'litegraph.js';
+import { handleCreateGroupFromSelectedNodes } from './groupInteractions.js';
 
 // Track if we've already modified the canvas prototype
 let canvasPrototypeModified = false;
@@ -59,6 +60,29 @@ export function trackRecentNodes(graph, max_recent_nodes = 10) {
         
         LGraphCanvas.prototype.getCanvasMenuOptions = function() {
             const options = original_getCanvasMenuOptions.call(this);
+            
+            // Add "Create Group from Selection" option if there are selected nodes
+            if (this.selected_nodes && Object.keys(this.selected_nodes).length > 0) {
+                // Check if the option already exists to avoid duplicates
+                const hasCreateGroupOption = options.some(
+                    item => item && item.content === "Create Group from Selection"
+                );
+                
+                if (!hasCreateGroupOption) {
+                    // Add a separator if there isn't one at the beginning
+                    if (options.length > 0 && options[0] !== null) {
+                        options.unshift(null);
+                    }
+                    
+                    // Add the option to create a group from selected nodes
+                    options.unshift({
+                        content: "Create Group from Selection",
+                        callback: () => {
+                            handleCreateGroupFromSelectedNodes(this);
+                        }
+                    });
+                }
+            }
             
             // Add recent nodes to the menu if there are any
             if (this.graph && this.graph.recent_nodes && this.graph.recent_nodes.length > 0) {

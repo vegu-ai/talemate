@@ -2,7 +2,7 @@
 import { LGraph, LiteGraph, LGraphCanvas, LGraphNode } from 'litegraph.js';
 import { CommentNode } from './commentNode.js';
 import { trackRecentNodes } from './recentNodes.js';
-import { handleFitGroupToNodes, handleDuplicateGroup, handleVerticalSnapGroup } from './groupInteractions.js';
+import { handleFitGroupToNodes, handleDuplicateGroup, handleVerticalSnapGroup, handleCreateGroupFromSelectedNodes } from './groupInteractions.js';
 
 const UNRESOLVED = "<class 'talemate.game.engine.nodes.core.UNRESOLVED'>";
 

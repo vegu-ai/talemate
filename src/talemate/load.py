@@ -113,8 +113,9 @@ async def load_scene_from_character_card(scene, file_path):
     file_ext = os.path.splitext(file_path)[1].lower()
     image_format = file_ext.lstrip(".")
     image = False
-    if not scene.get_player_character():
-        await scene.add_actor(default_player_character())
+        
+    await handle_no_player_character(scene)
+        
     # If a json file is found, use Character.load_from_json instead
     if file_ext == ".json":
         character = load_character_from_json(file_path)
@@ -322,9 +323,7 @@ async def load_scene_from_data(
         await scene.add_actor(actor)
 
     # if there is nio player character, add the default player character
-
-    if not scene.get_player_character() and not empty:
-        await scene.add_actor(default_player_character())
+    await handle_no_player_character(scene)
 
     # the scene has been saved before (since we just loaded it), so we set the saved flag to True
     # as long as the scene has a memory_id.
@@ -382,6 +381,22 @@ async def transfer_character(scene, scene_json_path, character_name):
         )
 
     return scene
+
+
+async def handle_no_player_character(scene):
+    """
+    Handle the case where there is no player character in the scene.
+    """
+    
+    player = default_player_character()
+    
+    if not player:
+        # force scene into creative mode
+        scene.environment = "creative"
+        log.warning("No player character found, forcing scene into creative mode")
+        return
+    
+    await scene.add_actor(player)
 
 
 def load_conversation_log(file_path):
@@ -505,7 +520,7 @@ def load_from_image_metadata(image_path: str, file_format: str):
     return character_from_chara_data(metadata)
 
 
-def default_player_character():
+def default_player_character() -> Player | None:
     """
     Return a default player character.
     :return: Default player character.
@@ -514,6 +529,11 @@ def default_player_character():
         load_config().get("game", {}).get("default_player_character", {})
     )
     name = default_player_character.get("name")
+    
+    if not name:
+        # We don't have a valid default player character, so we return None
+        return None
+    
     color = default_player_character.get("color", "cyan")
     description = default_player_character.get("description", "")
 

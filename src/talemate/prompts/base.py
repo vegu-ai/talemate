@@ -561,7 +561,7 @@ class Prompt:
 
         if not as_question_answer:
             return loop.run_until_complete(
-                world_state.analyze_text_and_answer_question(text, query, short=short)
+                world_state.analyze_text_and_answer_question(text, query, response_length=10 if short else 512)
             )
 
         return "\n".join(

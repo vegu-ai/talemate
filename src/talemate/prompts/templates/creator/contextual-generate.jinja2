@@ -56,7 +56,7 @@
 {% if context_typ == "list" -%}
 {% if generation_context.original and generation_context.instructions -%}
   {# determine whether user wants to replace or add to the list -#}
-  {% if query_text_eval("Does the user want to add to the existing list", generation_context.instructions) -%}
+  {% if generation_context.get_state('extend') or query_text_eval("Does the user want to add to the existing list", generation_context.instructions) -%}
   {% set action_task = "Add to the existing" -%}
   {% set _ = generation_context.set_state('extend', true) %}
   {% endif -%}

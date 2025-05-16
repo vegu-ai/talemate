@@ -132,8 +132,7 @@ class DetermineCharacterDialogueInstructions(AgentNode):
         self.set_output_values({
             "dialogue_instructions": dialogue_instructions
         })
-        
-        
+
 @register("agents/creator/ContextualGenerate")
 class ContextualGenerate(AgentNode):
     """
@@ -286,4 +285,52 @@ class ContextualGenerate(AgentNode):
         self.set_output_values({
             "state": state,
             "text": text
+        })
+        
+@register("agents/creator/GenerateThematicList")
+class GenerateThematicList(AgentNode):
+    """
+    Generates a list of thematic items based on the instructions.
+    """
+    _agent_name:ClassVar[str] = "creator"
+    
+    class Fields:
+        instructions = PropertyField(
+            name="instructions",
+            description="The instructions to use in generating the list",
+            type="str",
+            default=UNRESOLVED
+        )
+        iterations = PropertyField(
+            name="iterations",
+            description="The number of iterations to use in generating the list - 1 iteration will generate 20 items.",
+            type="int",
+            default=1,
+            step=1,
+            min=1,
+            max=10,
+        )
+        
+    def __init__(self, title="Generate Thematic List", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("state")
+        self.add_input("instructions", socket_type="str", optional=True)
+
+        self.set_property("instructions", UNRESOLVED)
+        self.set_property("iterations", 1)
+        
+        self.add_output("state")
+        self.add_output("list", socket_type="list")
+        
+    async def run(self, state: GraphState):
+        instructions = self.normalized_input_value("instructions")
+        iterations = self.require_number_input("iterations")
+        
+        list = await self.agent.generate_thematic_list(instructions, iterations)
+        
+        self.set_output_values({
+            "state": state,
+            "list": list
         })

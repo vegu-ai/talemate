@@ -124,6 +124,8 @@ class ContentGenerationContext(pydantic.BaseModel):
     def set_state(self, key: str, value: str | int | float | bool):
         self.state[key] = value
 
+    def get_state(self, key: str) -> str | int | float | bool | None:
+        return self.state.get(key)
 
 class AssistantMixin:
     """
@@ -189,6 +191,7 @@ class AssistantMixin:
         context_aware: bool = True,
         history_aware: bool = True,
         information: str = "",
+        **kwargs,
     ):
         """
         Request content from the assistant.
@@ -214,6 +217,9 @@ class AssistantMixin:
             history_aware=history_aware,
             information=information,
         )
+        
+        for key, value in kwargs.items():
+            generation_context.set_state(key, value)
 
         return await self.contextual_generate(generation_context)
 
@@ -325,6 +331,41 @@ class AssistantMixin:
             length=length,
             **generation_options.model_dump(),
         )
+        
+    @set_processing
+    async def generate_thematic_list(
+        self,
+        instructions: str,
+        iterations: int = 1,
+        length: int = 256,
+        generation_options: GenerationOptions = None,
+    ) -> list[str]:
+        """
+        Wrapper for contextual_generate that generates a list of items.
+        """
+        if not generation_options:
+            generation_options = GenerationOptions()
+        
+        i = 0
+        
+        result = []
+        
+        while i < iterations:
+            i += 1
+            _result = await self.contextual_generate_from_args(
+                context="list:",
+                instructions=instructions,
+                length=length,
+                original="\n".join(result) if result else None,
+                extend=i>1,
+                **generation_options.model_dump(),
+            )
+            
+            _result = json.loads(_result)
+            
+            result = list(set(result + _result))
+            
+        return result
 
     @set_processing
     async def autocomplete_dialogue(

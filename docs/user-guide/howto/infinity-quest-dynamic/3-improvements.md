@@ -75,7 +75,7 @@ Find and add the following nodes:
 ![Stage 1 - Minimized](./img/3-0004.png)
 
 !!! note "Staging out the module execution"
-    A node chain connected to a stage node will be executed in order of the stage number. The node change at Stage 0 runs before the node change at Stage 1. This allows us to control the flow of the module execution.
+    A node chain connected to a stage node will be executed in order of the stage number. The node chain at Stage 0 runs before the node chain at Stage 1. This allows control over the flow of the module execution.
 
     Read more about staging in the [Node Editor Core Concepts - Staging](/talemate/user-guide/node-editor/core-concepts/staging) part of the documentation.
 
@@ -83,9 +83,85 @@ Now when the `RESET` switch is flipped, the `intro_generated` state will be unse
 
 ![Reset](./img/3-0006.png)
 
-## 3.3 - Oh look, its another gravity well!
+## 3.3 - Something odd.
+
+You may realize that as you click regenerate the introduction may become stale or change very little.
+
+This is because once we have generated an introduction that introduction will be part of the context for the next generation and will influence it. 
+
+The severity of this problem will vary from model to model.
+
+The fix is easy, simply wipe the introduction before generating a new one.
+
+Hold `Alt` and drag the `Set Introduction` node to clone it, then hook it inbetween the `UNSET game.intro_generated` and `Stage 0` nodes.
+
+Make sure to edit it's `introduction` input to be a blank string.
+
+![Wipe Introduction](./img/3-0012.png)
+
+## 3.4 - Oh look, its another gravity well!
 
 Anyone who has asked AI to generate novel story beats knows that its not always... great. It will repeat the same concepts a lot and be off to trope-land in no time. Obviously this depends on the model, but we can do some stuff to increase our odds of getting something interesting!
 
+If we were to give the AI a random concept to inform the generation, that's one way to to steer it off its biases.
 
+### Random theme to inform the generation
+
+1. Generate a list of concepts (using the creator agent)
+1. Pick a random concept from the list
+1. Format the instructions so it includes the concept
+
+Add the following nodes:
+
+1. `Generate Thematic List` - this prompts the creator agent to generate a list of concepts
+1. `Random` - this picks a random concept from the list
+1. `Dict Set` - this sets the `theme` state variable to the random concept
+1. `Format` - this formats the instructions so it includes the concept
+
+Once you have added the nodes to the canvas, connect them up:
+
+1. `<Switch>.no` -> `<Generate Thematic List>.state`
+1. `<Generate Thematic List>.list` -> `<Random>.choices`
+1. In the `Generate Thematic List` node edit the instructions to be:
+    ```
+    A list of sci-fi topics. Keep each item short (1-3 words).
+    ```
+1. In the `Random` node edit the `method` to `"choice"`
+
+![Random](./img/3-0007.png)
+
+Next:
+
+1. `<Random>.result` -> `<Dict Set>.value`
+1. `<Make Text>.text` -> `<Format>.template`
+1. `<Format>.result` -> `<Contextual Generate>.instructions`
+1. In the `Dict Set` node edit the `key` to `"theme"`
+1. In the `Make Text` node edit the `value` to be:
+    ```
+    Generate the introduction to a random exciting scenario 
+    for the crew of the Starlight Nomad.
+
+    The theme is: "{theme}"
+    ```
+
+![Format](./img/3-0008.png)
+
+Finally add a `Watch` node and connect it to the `<Random>.result` output, so we can see the random theme in the node editor log. (I edited the title to `Theme`)
+
+![Theme](./img/3-0009.png)
+
+Lets run to test this out.
+
+So here it generated a list of sci-fi topics, picked "Black hole" and then generated the introduction based on this selection:
+
+![Theme](./img/3-0010.png)
+![Theme - Result](./img/3-0011.png)
+
+!!! tip "Increase the number of items in the list"
+    You can increase the iterations of the list generation by editing the `iterations` property of the `Generate Thematic List` node.
+
+    The first iteration will generate 20 items and any additional iterations will add 10 items to the list. Each iteration is a separate request to the creator agent and there are likely diminishing returns the more iterations you do. (there are only so many topics..)
+
+!!! tip "Maintain a manual list"
+    You don't have to use the creator agent to generate a list of themes. You can maintain a manual list of themes by using the `Make List` node, which allows you to edit a list using JSON.
 

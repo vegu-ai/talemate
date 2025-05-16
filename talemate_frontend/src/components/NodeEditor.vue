@@ -188,7 +188,8 @@
 
 <script>
 import { LGraphCanvas, LiteGraph } from 'litegraph.js';
-import { initializeGraphFromJSON, convertGraphToJSON, convertSelectedGraphToJSON} from '@/utils/litegraphUtils'
+import { initializeGraphFromJSON} from '@/utils/litegraphUtils'
+import { convertGraphToJSON, convertSelectedGraphToJSON } from '@/utils/exportGraph.js'
 //import '@/utils/litegraphSearchBox'
 import { Codemirror } from 'vue-codemirror'
 import { markdown } from '@codemirror/lang-markdown'

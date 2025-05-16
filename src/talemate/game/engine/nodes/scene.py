@@ -1292,7 +1292,7 @@ class SetIntroduction(Node):
             await scene.emit_history()
         
         self.set_output_values({
-            "state": state
+            "state": self.get_input_value("state")
         })
         
         

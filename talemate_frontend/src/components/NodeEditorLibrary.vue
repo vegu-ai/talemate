@@ -52,9 +52,21 @@
 
     <v-dialog v-model="newModuleDialog" :max-width="600" :contained="true" @keydown.esc="newModuleDialog = false">
         <v-card>
-            <v-card-title>Create new module</v-card-title>
+            <v-card-title>
+                <v-icon :icon="newModule.icon" size="small" class="mr-2"></v-icon>
+                Create new {{ newModule.label }}</v-card-title>
             <v-card-text>
+                <v-alert v-if="newModule.nodes" density="compact" color="primary" variant="outlined" icon="mdi-graph-outline" class="mt-0 mb-4">
+                    <span class="text-caption text-muted">You are creating a new module from a selection of {{ newModule.nodes.nodes.length }} nodes.</span>
+                </v-alert>
+                <v-alert v-else-if="newModule.type === 'extend'" density="compact" color="primary" variant="outlined" icon="mdi-information-outline" class="mt-0 mb-4">
+                    <span class="text-caption text-muted">You are extending from <span class="text-primary">{{ newModule.registry }}</span></span>
+                </v-alert>
+                <v-alert v-else-if="newModule.type === 'copy'" density="compact" color="primary" variant="outlined" icon="mdi-information-outline" class="mt-0 mb-4">
+                    <span class="text-caption text-muted">You are copying from <span class="text-primary">{{ newModule.registry }}</span></span>
+                </v-alert>
                 <v-form v-model="newModuleValid" @submit.prevent="createModule">
+
                     <v-text-field 
                         v-model="newModule.name" 
                         :rules="newModuleNameRules" 
@@ -69,9 +81,6 @@
                         messages="Node registry path. (e.g., path/to/my/modules/$N) - $N will be substituted with a name generated from the title."
                         @keydown.enter="createModule"
                     ></v-text-field>
-                    <v-alert v-if="newModule.type === 'extend'" color="muted" class="text-caption" variant="text">
-                        Extending from {{ newModule.registry }}
-                    </v-alert>
                 </v-form>
             </v-card-text>
             <v-card-actions>
@@ -115,6 +124,9 @@ export default {
                 name: '',
                 registry: '',
                 type: '',
+                nodes: null,
+                icon: '',
+                label: '',
             }
         }
     },
@@ -235,6 +247,32 @@ export default {
     },
     methods: {
 
+        typeToIcon(type) {
+            switch(type) {
+                case 'copy': return 'mdi-file-multiple';
+                case 'extend': return 'mdi-source-fork';
+                case 'command/Command': return 'mdi-console-line';
+                case 'core/Event': return 'mdi-alpha-e-circle';
+                case 'core/functions/Function': return 'mdi-function';
+                case 'core/Graph': return 'mdi-file';
+                case 'scene/SceneLoop': return 'mdi-source-branch-sync';
+                default: return 'mdi-graph-outline';
+            }
+        },
+
+        typeToLabel(type) {
+            switch(type) {
+                case 'copy': return 'Copy';
+                case 'extend': return 'Extension';
+                case 'command/Command': return 'Command';
+                case 'core/Event': return 'Event';
+                case 'core/functions/Function': return 'Function';
+                case 'core/Graph': return 'Module';
+                case 'scene/SceneLoop': return 'Scene Loop';
+                default: return 'Module';
+            }
+        },
+
         validateRegistry(registry) {
             // if newModule.type is extend then the new registry
             // path cannot be the same as the selected node registry
@@ -250,8 +288,15 @@ export default {
                 registry: registry || '',
                 type: type,
                 nodes: this.getSelectedNodes(),
+                icon: this.typeToIcon(type),
+                label: this.typeToLabel(type),
             };
             this.newModuleDialog = true;
+
+            // copy and extend type will always null the nodes property
+            if(type === 'copy' || type === 'extend') {
+                this.newModule.nodes = null;
+            }
         },
 
         deleteModule(path) {

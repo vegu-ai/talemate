@@ -252,7 +252,6 @@ export default {
                 nodes: this.getSelectedNodes(),
             };
             this.newModuleDialog = true;
-            console.log("SELECTED NODES", this.getSelectedNodes());
         },
 
         deleteModule(path) {

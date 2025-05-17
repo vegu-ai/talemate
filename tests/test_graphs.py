@@ -2,6 +2,7 @@ import os
 import json
 import pytest
 import contextvars
+from unittest.mock import MagicMock
 import talemate.game.engine.nodes.load_definitions
 import talemate.agents.director
 from talemate.context import active_scene, ActiveScene
@@ -77,9 +78,18 @@ class MockClient(ClientBase):
         
         return response_stack.popleft()
 
+class MockScene(Scene):
+    
+    @property
+    def auto_progress(self):
+        """
+        These tests currently assume that auto_progress is True
+        """
+        return True
+
 @pytest.fixture
 def mock_scene():
-    scene = Scene()
+    scene = MockScene()
     bootstrap_scene(scene)
     return scene
 

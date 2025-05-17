@@ -35,3 +35,5 @@ markdown_extensions:
 plugins:
   - awesome-pages
   - glightbox
+extra_css:
+  - style.css

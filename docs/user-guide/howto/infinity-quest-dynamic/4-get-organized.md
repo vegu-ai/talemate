@@ -1,6 +1,6 @@
 # 4 - Get organized
 
-Before increasing the complexity of the current workflow any further, lets do a couple things.
+Before increasing the complexity of the current graph any further, lets do a couple things.
 
 ## 4.1 - Create a new submodule
 

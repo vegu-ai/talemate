@@ -38,7 +38,11 @@ Both characters should now be in the character list.
 
 ![Import Kaira](./img/1-0003.png)
 
-Save the scene project again.
+Make sure to then also activate both characters. Click on each name in the character list and then click the **Activate** button.
+
+![Activate Characters](./img/1-0007.png)
+
+**Save** the scene project again.
 
 ## 1.3 - Finalize
 

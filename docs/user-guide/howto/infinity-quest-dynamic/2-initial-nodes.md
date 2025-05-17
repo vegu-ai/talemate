@@ -26,6 +26,8 @@ This will create a copy of the scene loop node and add it to the scene.
 
 In the node window you will see a bunch of `(Inherited, Locked)` groups. These come from the default talemate loop that was extended and cannot be edited or changed in this copy. If the default talemate loop is changed in the future, this copy will automatically inherit the changes to these nodes.
 
+![Scene Loop - Extended - Node Editor view](./img/2-0020.png)
+
 !!! note More about inheritance
     Read the [Node Editor - Inheritance](/talemate/user-guide/node-editor/core-concepts/module-inheritance/) documentation for more information about how inheritance works in the node editor.
 
@@ -42,7 +44,7 @@ Find the **:material-plus: Create Module** button and select **Event**.
 In the modal fill in the `Name` and `Registry` fields:
 
 - **Name**: `On Scene Init`
-- **Registry**: `infinity-quest/$N`
+- **Registry**: `infinity-quest-dynamic/$N`
 
 The `registry` value determines where in the node creation menu the new module will exist. Its also a unique id for the module itself. `$N` will be replaced with a normalized version of `Name`.
 

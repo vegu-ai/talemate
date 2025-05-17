@@ -1,4 +1,4 @@
-# 4 - Agentic Workflow
+# 5 - Agentic Workflow
 
 In part 3 we left off at generating a random story premise for the crew of the Starlight Nomad.
 

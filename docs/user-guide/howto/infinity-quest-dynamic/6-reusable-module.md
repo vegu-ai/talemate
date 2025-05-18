@@ -45,12 +45,12 @@ An extension of the default Talemate scene loop where we added an instance of th
 
 ![Scene Loop Extension](./img/6-0002.png)
 
-### Premisse Generation Module
-![Premisse Generation Module](./img/load-module-generate-premise.png)
+### Premise Generation Module
+![Premise Generation Module](./img/load-module-generate-premise.png)
 
 This module is responsible for generating the a scene introduction based on random sci-fi theme with the help of the Summarizer agent for additional exploration of the concept.
 
-![Premisse Generation Module](./img/6-0003.png)
+![Premise Generation Module](./img/6-0003.png)
 
 ## 6.2 Plan
 
@@ -644,3 +644,53 @@ Fill in a `topic`.
 > sci-fi with eldritch and cosmic horror elements
 
 **:material-movie-play:** Start the scene loop to test that everything's still working.
+
+## 6.8 - Making it a Talemate Module
+
+Currently there is no UX for making a module a Talemate module.
+
+While we work on the tooling for this, here is how to do it manually.
+
+In the `talemate` directory find the `scenes` directory, and there find the folder for this project.
+
+So if you followed the example to the point, it should be `scenes/infinity-quest-dynamic`.
+
+In there find the `nodes` directory.
+
+It should have three files in it:
+
+- `dynamic-premise.json`
+- `generate-premise.json`
+- `scene-loop.json`
+
+Copy **both** the `dynamic-premise.json` and `generate-premise.json` files to the `templates/modules` directory. (relative to the talemate folder)
+
+!!! note
+    If the `modules` directory does not exist, create it.
+
+Restart talemate.
+
+To test that this worked, create a new scene project.
+
+Filter the **Modules** library for `premise` and both should be available. (albeit locked for editing)
+
+![Modules library showing both modules](./img/6-0026.png)
+
+Extend the scene loop so we can edit it. (Remember how we did this in [part 1](./1-scene-project.md))
+
+Search for the `Dynamic Premise` node and add it to the scene loop.
+
+![Search for Dynamic Premise](./img/6-0027.png)
+
+![Added Dynamic Premise](./img/6-0028.png)
+
+Looking good!
+
+!!! tip "Keep editing through the original infinity-quest-dynamic scene"
+    Since the `Infinity Quest Dynamic` scene still has its own copies of these modules, you can come back to it and make changes.
+
+    The load order of modules assures that modules living with the scene take precedence over the ones in the `templates/modules` directory.
+
+    So a good workflow is to make and test changes in a dedicated scene project and whenever you are happy with it copy the new modules to the `templates/modules` directory.
+
+    This works as long as the module title and registry values are the same.

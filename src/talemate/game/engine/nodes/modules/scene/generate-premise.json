@@ -888,21 +888,6 @@
       "registry": "core/ErrorHandler",
       "base_type": "core/Node"
     },
-    "1937cd37-346a-4c39-be5c-5033bbf9e09e": {
-      "title": "Instruction Template",
-      "id": "1937cd37-346a-4c39-be5c-5033bbf9e09e",
-      "properties": {
-        "value": "Generate the introduction to a random exciting scenario \nfor the crew of the Starlight Nomad.\n\nThe theme is: \"{theme}\"\n\nUse the following analysis to guide your creation of the scenario premise:\n\n{theme_analysis}"
-      },
-      "x": 279,
-      "y": 730,
-      "width": 272,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
     "6ab6598b-151d-44ef-920f-0810f6da88b5": {
       "title": "Contextual Generate",
       "id": "6ab6598b-151d-44ef-920f-0810f6da88b5",
@@ -1076,6 +1061,21 @@
       "inherited": false,
       "registry": "data/string/MakeText",
       "base_type": "core/Node"
+    },
+    "1937cd37-346a-4c39-be5c-5033bbf9e09e": {
+      "title": "Instruction Template",
+      "id": "1937cd37-346a-4c39-be5c-5033bbf9e09e",
+      "properties": {
+        "value": "Generate the introduction to a random exciting story-line.\n\nThe theme is: \"{theme}\"\n\nUse the following analysis to guide your creation of the scenario premise:\n\n{theme_analysis}"
+      },
+      "x": 279,
+      "y": 730,
+      "width": 272,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1235,9 +1235,6 @@
     "f7b9fa16-c3ed-4c8c-8624-1b79a5bdf1d1.fn": [
       "396c90e5-9aee-4edd-b952-a26505362aff.fn"
     ],
-    "1937cd37-346a-4c39-be5c-5033bbf9e09e.value": [
-      "90a21c0e-38af-4099-847e-2a0bfa1c7666.template"
-    ],
     "6ab6598b-151d-44ef-920f-0810f6da88b5.state": [
       "44bf83e8-c6b9-4c45-8dd6-e22aedff879b.state"
     ],
@@ -1265,6 +1262,9 @@
     ],
     "a9e0118c-f630-4723-9a09-af0c45b42b53.value": [
       "55979f0a-d3c9-4a76-960f-7ac0f3fcd76a.template_text"
+    ],
+    "1937cd37-346a-4c39-be5c-5033bbf9e09e.value": [
+      "90a21c0e-38af-4099-847e-2a0bfa1c7666.template"
     ]
   },
   "groups": [

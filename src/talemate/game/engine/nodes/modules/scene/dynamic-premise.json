@@ -2,7 +2,7 @@
   "title": "Dynamic Premise",
   "id": "c03c5512-0c2f-4cf8-9887-c813f6de1d52",
   "properties": {
-    "event_name": null
+    "event_name": "scene_loop_init"
   },
   "x": 0,
   "y": 0,
@@ -145,50 +145,12 @@
         "scope": "local"
       },
       "x": 326,
-      "y": -947,
+      "y": -945,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "43013315-b65d-4c51-bdab-fdffe051224f": {
-      "title": "PROP reset",
-      "id": "43013315-b65d-4c51-bdab-fdffe051224f",
-      "properties": {
-        "property_name": "reset",
-        "property_type": "bool",
-        "default": "false",
-        "choices": [],
-        "description": ""
-      },
-      "x": 26,
-      "y": -947,
-      "width": 215,
-      "height": 174,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
-      "base_type": "core/Node"
-    },
-    "3f749c9f-71b0-4e9c-b99d-859e53f20569": {
-      "title": "PROP analysis_instructions",
-      "id": "3f749c9f-71b0-4e9c-b99d-859e53f20569",
-      "properties": {
-        "property_name": "analysis_instructions",
-        "property_type": "text",
-        "default": "",
-        "choices": [],
-        "description": ""
-      },
-      "x": 26,
-      "y": -707,
-      "width": 262,
-      "height": 174,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
       "base_type": "core/Node"
     },
     "c327b0c4-900e-4d27-a0b9-0d47e8479732": {
@@ -199,50 +161,12 @@
         "scope": "local"
       },
       "x": 326,
-      "y": -707,
+      "y": -705,
       "width": 260,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "86df3111-98d7-46a1-aa1d-93e6c53e282b": {
-      "title": "PROP analysis_enabled",
-      "id": "86df3111-98d7-46a1-aa1d-93e6c53e282b",
-      "properties": {
-        "property_name": "analysis_enabled",
-        "property_type": "bool",
-        "default": "true",
-        "choices": [],
-        "description": ""
-      },
-      "x": 26,
-      "y": -447,
-      "width": 260,
-      "height": 174,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
-      "base_type": "core/Node"
-    },
-    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff": {
-      "title": "PROP topic",
-      "id": "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff",
-      "properties": {
-        "property_name": "topic",
-        "property_type": "str",
-        "default": "",
-        "choices": [],
-        "description": ""
-      },
-      "x": 36,
-      "y": -207,
-      "width": 215,
-      "height": 174,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
       "base_type": "core/Node"
     },
     "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb": {
@@ -253,7 +177,7 @@
         "scope": "local"
       },
       "x": 326,
-      "y": -447,
+      "y": -445,
       "width": 218,
       "height": 122,
       "collapsed": false,
@@ -269,27 +193,12 @@
         "scope": "local"
       },
       "x": 326,
-      "y": -217,
+      "y": -215,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "08309808-d1f1-4a94-9027-363eceed41d1": {
-      "title": "Stage -1",
-      "id": "08309808-d1f1-4a94-9027-363eceed41d1",
-      "properties": {
-        "stage": -1
-      },
-      "x": 756,
-      "y": -577,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117": {
@@ -400,6 +309,97 @@
       "inherited": false,
       "registry": "state/GetState",
       "base_type": "core/Node"
+    },
+    "08309808-d1f1-4a94-9027-363eceed41d1": {
+      "title": "Stage -1",
+      "id": "08309808-d1f1-4a94-9027-363eceed41d1",
+      "properties": {
+        "stage": -1
+      },
+      "x": 730,
+      "y": -598,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569": {
+      "title": "PROP analysis_instructions",
+      "id": "3f749c9f-71b0-4e9c-b99d-859e53f20569",
+      "properties": {
+        "property_name": "analysis_instructions",
+        "property_type": "text",
+        "default": "",
+        "choices": [],
+        "description": "Instructions for the analysis"
+      },
+      "x": 26,
+      "y": -705,
+      "width": 262,
+      "height": 174,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "43013315-b65d-4c51-bdab-fdffe051224f": {
+      "title": "PROP reset",
+      "id": "43013315-b65d-4c51-bdab-fdffe051224f",
+      "properties": {
+        "property_name": "reset",
+        "property_type": "bool",
+        "default": "false",
+        "choices": [],
+        "description": "Reset the introduction"
+      },
+      "x": 26,
+      "y": -945,
+      "width": 271,
+      "height": 181,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff": {
+      "title": "PROP topic",
+      "id": "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff",
+      "properties": {
+        "property_name": "topic",
+        "property_type": "str",
+        "default": "",
+        "choices": [],
+        "description": "The overarching topic"
+      },
+      "x": 29,
+      "y": -201,
+      "width": 256,
+      "height": 174,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "86df3111-98d7-46a1-aa1d-93e6c53e282b": {
+      "title": "PROP analysis_enabled",
+      "id": "86df3111-98d7-46a1-aa1d-93e6c53e282b",
+      "properties": {
+        "property_name": "analysis_enabled",
+        "property_type": "bool",
+        "default": "true",
+        "choices": [],
+        "description": "Theme analysis"
+      },
+      "x": 26,
+      "y": -445,
+      "width": 260,
+      "height": 174,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -424,32 +424,8 @@
     "efc1c906-d725-4941-acab-a369366411d4.value": [
       "08309808-d1f1-4a94-9027-363eceed41d1.state"
     ],
-    "43013315-b65d-4c51-bdab-fdffe051224f.name": [
-      "efc1c906-d725-4941-acab-a369366411d4.name"
-    ],
-    "43013315-b65d-4c51-bdab-fdffe051224f.value": [
-      "efc1c906-d725-4941-acab-a369366411d4.value"
-    ],
-    "3f749c9f-71b0-4e9c-b99d-859e53f20569.name": [
-      "c327b0c4-900e-4d27-a0b9-0d47e8479732.name"
-    ],
-    "3f749c9f-71b0-4e9c-b99d-859e53f20569.value": [
-      "c327b0c4-900e-4d27-a0b9-0d47e8479732.value"
-    ],
     "c327b0c4-900e-4d27-a0b9-0d47e8479732.value": [
       "08309808-d1f1-4a94-9027-363eceed41d1.state_b"
-    ],
-    "86df3111-98d7-46a1-aa1d-93e6c53e282b.name": [
-      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.name"
-    ],
-    "86df3111-98d7-46a1-aa1d-93e6c53e282b.value": [
-      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value"
-    ],
-    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.name": [
-      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.name"
-    ],
-    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.value": [
-      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value"
     ],
     "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value": [
       "08309808-d1f1-4a94-9027-363eceed41d1.state_c"
@@ -478,6 +454,30 @@
     ],
     "cc9ec8d5-64ce-4e16-b424-216aa12da8ca.value": [
       "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.analysis_enabled"
+    ],
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569.name": [
+      "c327b0c4-900e-4d27-a0b9-0d47e8479732.name"
+    ],
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569.value": [
+      "c327b0c4-900e-4d27-a0b9-0d47e8479732.value"
+    ],
+    "43013315-b65d-4c51-bdab-fdffe051224f.name": [
+      "efc1c906-d725-4941-acab-a369366411d4.name"
+    ],
+    "43013315-b65d-4c51-bdab-fdffe051224f.value": [
+      "efc1c906-d725-4941-acab-a369366411d4.value"
+    ],
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.name": [
+      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.name"
+    ],
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.value": [
+      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value"
+    ],
+    "86df3111-98d7-46a1-aa1d-93e6c53e282b.name": [
+      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.name"
+    ],
+    "86df3111-98d7-46a1-aa1d-93e6c53e282b.value": [
+      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value"
     ]
   },
   "groups": [
@@ -494,7 +494,7 @@
     {
       "title": "Properties",
       "x": 1,
-      "y": -1027,
+      "y": -1025,
       "width": 990,
       "height": 1019,
       "color": "#8AA",
@@ -508,9 +508,21 @@
   "inputs": [],
   "outputs": [],
   "module_properties": {
+    "analysis_instructions": {
+      "name": "analysis_instructions",
+      "description": "Instructions for the analysis",
+      "type": "text",
+      "default": "",
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
     "reset": {
       "name": "reset",
-      "description": "",
+      "description": "Reset the introduction",
       "type": "bool",
       "default": false,
       "choices": [],
@@ -520,10 +532,10 @@
       "max": null,
       "ephemeral": false
     },
-    "analysis_instructions": {
-      "name": "analysis_instructions",
-      "description": "",
-      "type": "text",
+    "topic": {
+      "name": "topic",
+      "description": "The overarching topic",
+      "type": "str",
       "default": "",
       "choices": [],
       "readonly": false,
@@ -534,21 +546,9 @@
     },
     "analysis_enabled": {
       "name": "analysis_enabled",
-      "description": "",
+      "description": "Theme analysis",
       "type": "bool",
       "default": true,
-      "choices": [],
-      "readonly": false,
-      "step": null,
-      "min": null,
-      "max": null,
-      "ephemeral": false
-    },
-    "topic": {
-      "name": "topic",
-      "description": "",
-      "type": "str",
-      "default": "",
       "choices": [],
       "readonly": false,
       "step": null,

@@ -29,28 +29,6 @@
       "registry": "core/Input",
       "base_type": "core/Node"
     },
-    "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0": {
-      "title": "Contextual Generate",
-      "id": "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0",
-      "properties": {
-        "context_type": "scene intro",
-        "context_name": "general",
-        "instructions": null,
-        "length": 256,
-        "character": null,
-        "uid": null,
-        "context_aware": true,
-        "history_aware": true
-      },
-      "x": 681,
-      "y": 1730,
-      "width": 237,
-      "height": 406,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/creator/ContextualGenerate",
-      "base_type": "core/Node"
-    },
     "531c3abf-1827-4db2-a6d8-1daba3f05bbd": {
       "title": "GET local.topic",
       "id": "531c3abf-1827-4db2-a6d8-1daba3f05bbd",
@@ -1263,7 +1241,7 @@
         "context_type": "scene intent",
         "context_name": "story expectations",
         "instructions": null,
-        "length": 256,
+        "length": 512,
         "character": null,
         "uid": null,
         "context_aware": true,
@@ -1277,14 +1255,33 @@
       "inherited": false,
       "registry": "agents/creator/ContextualGenerate",
       "base_type": "core/Node"
+    },
+    "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0": {
+      "title": "Contextual Generate",
+      "id": "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0",
+      "properties": {
+        "context_type": "scene intro",
+        "context_name": "general",
+        "instructions": null,
+        "length": 512,
+        "character": null,
+        "uid": null,
+        "context_aware": true,
+        "history_aware": true
+      },
+      "x": 681,
+      "y": 1730,
+      "width": 237,
+      "height": 406,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
     }
   },
   "edges": {
     "ba261322-afc9-4d6d-be45-b071446d8f0e.value": [
       "eb68c23f-72be-4115-95ca-1f7b212b16f5.value"
-    ],
-    "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.text": [
-      "83655997-bb35-4f8b-a5ff-eca5b78acfbe.value"
     ],
     "531c3abf-1827-4db2-a6d8-1daba3f05bbd.name": [
       "08e3d297-9342-40e6-9ddc-f86283d8728a.key"
@@ -1508,6 +1505,9 @@
     ],
     "6ab6598b-151d-44ef-920f-0810f6da88b5.text": [
       "44bf83e8-c6b9-4c45-8dd6-e22aedff879b.intent"
+    ],
+    "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.text": [
+      "83655997-bb35-4f8b-a5ff-eca5b78acfbe.value"
     ]
   },
   "groups": [

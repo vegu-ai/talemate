@@ -213,6 +213,9 @@ Click the **:material-movie-play:** icon in the top right corner of the graph to
 
 ![start scene loop](./img/5-0012.png)
 
+!!! note "Testing via scene loop requires a save."
+    If you are inside of a sub-module and are testing by starting the scene loop, the child module **needs** to be saved first, otherwise changes will not be reflected in the test run.
+
 Once the introduction is generated, we now need to manually stop the scene loop test, by pressing the **:material-stop:** icon in the top right corner of the graph.
 
 ![stop scene loop](./img/5-0013.png)

@@ -510,6 +510,22 @@ Chain all three `Dict Set` nodes together, with each connecting to the `dict` in
 
 **Save** the graph.
 
+### Adjusting the Generate Introduction stage
+
+This i will leave as is for now, but i will update the `Instruction Template` text to remove the infinity quest reference.
+
+```
+Generate the introduction to a random exciting story-line.
+
+The theme is: "{theme}"
+
+Use the following analysis to guide your creation of the scenario premise:
+
+{theme_analysis}
+```
+
+**Save** the graph.
+
 ## 6.5 - A switch for analysis
 
 My general approach is that i want to be able to turn off long running queries to the agents.

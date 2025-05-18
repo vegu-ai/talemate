@@ -1,0 +1,45 @@
+{
+  "title": "Scene Loop",
+  "id": "65ce268e-fe97-4dd5-9eda-4ce1c03218f8",
+  "properties": {
+    "trigger_game_loop": true
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "scene/SceneLoop",
+  "nodes": {
+    "2d1ef9e6-fd08-4f50-ad9a-7c8d4ade74e9": {
+      "title": "Dynamic Premise",
+      "id": "2d1ef9e6-fd08-4f50-ad9a-7c8d4ade74e9",
+      "properties": {
+        "event_name": "scene_loop_init",
+        "reset": true,
+        "analysis_instructions": "",
+        "analysis_enabled": true,
+        "topic": "sci-fi with cosmic horror"
+      },
+      "x": 10,
+      "y": -190,
+      "width": 231,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/dynamicPremise",
+      "base_type": "core/Event"
+    }
+  },
+  "edges": {},
+  "groups": [],
+  "comments": [],
+  "extends": "src/talemate/game/engine/nodes/modules/scene/scene-loop.json",
+  "sleep": 0.001,
+  "base_type": "scene/SceneLoop",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": null
+}

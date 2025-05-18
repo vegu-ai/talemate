@@ -364,6 +364,19 @@ def gnerate_intro_scenes():
                 media_type="image/png",
             ),
         ),
+        RecentScene(
+            name="Infinity Quest Dynamic Story",
+            path=os.path.join(
+                scenes_dir(), "infinity-quest-dynamic-story-v2", "infinity-quest.json"
+            ),
+            filename="infinity-quest.json",
+            date=datetime.datetime.now().isoformat(),
+            cover_image=Asset(
+                id="e7c712a0b276342d5767ba23806b03912d10c7c4b82dd1eec0056611e2cd5404",
+                file_type="png",
+                media_type="image/png",
+            ),
+        ),
     ]
 
     return scenes

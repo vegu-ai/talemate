@@ -90,7 +90,7 @@ function convertSocketType(type) {
 
 // Helper to determine widget type from field type
 function getWidgetType(field) {
-    if (field.choices) {
+    if (field.choices && field.choices.length > 0) {
         return 'combo';
     }
     

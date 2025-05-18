@@ -76,15 +76,20 @@ def list_node_files(search_paths: list[str] = None, dedupe:bool=True) -> list[st
     return files
 
 def export_flat_graph(graph:"Graph") -> dict:
+    
+    fields = {}
+    for name, field in graph.field_definitions.items():
+        fields[name] = field.model_dump()
+    for name, field in graph.module_properties.items():
+        fields[name] = field.model_dump()
+    
     flat = {
         "nodes": [],
         "connections": [],
         "groups": [group.model_dump() for group in graph.groups],
         "comments": [comment.model_dump() for comment in graph.comments],
         "properties": graph.model_dump().get("properties", {}),
-        "fields": {
-            name: field.model_dump() for name, field in graph.field_definitions.items()
-        },
+        "fields": fields,
         "registry": graph.registry,
         "base_type": graph.base_type,
         "title": graph.title,

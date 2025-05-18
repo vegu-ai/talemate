@@ -991,6 +991,112 @@ class Output(Node):
         
         self.add_input("value", optional=True)
 
+@register("core/ModuleProperty")
+class ModuleProperty(Node):
+    """
+    A node that can be placed to define a property of a Graph
+    
+    Properties:
+    
+    - property_name: The name of the property
+    - proeprty_type: The type of the property
+    - default: The default value of the property
+    - choices: The choices of the property
+    - readonly: Whether the property is readonly
+    - ephemeral: Whether the property is ephemeral
+    - required: Whether the property is required
+    
+    Outputs:
+    
+    - value: The value of the property
+    """
+    
+    
+    class Fields:
+        property_name = PropertyField(
+            name="property_name",
+            description="Property Name",
+            type="str",
+            default="",
+        )
+        property_type = PropertyField(
+            name="property_type",
+            description="Property Type",
+            type="str",
+            default="",
+            choices=[
+                "str", "bool", "int", "float", "text"
+            ]
+        )
+        default = PropertyField(
+            name="default",
+            description="Default Value",
+            type="any",
+            default=UNRESOLVED,
+        )
+        choices = PropertyField(
+            name="choices",
+            description="Choices",
+            type="list",
+            default=[],
+        )
+        description = PropertyField(
+            name="description",
+            description="Description",
+            type="str",
+            default="",
+        )
+        
+        
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            node_color="#2c3339",
+            title_color="#2e4657",
+            icon="F0AE7", #variable
+            auto_title="PROP {property_name}"
+        )
+    
+    @property
+    def to_property_field(self) -> PropertyField:
+        return PropertyField(
+            name=self.get_property("property_name"),
+            description=self.get_property("description"),
+            type=self.get_property("property_type"),
+            default=self.cast_value(self.get_property("default")),
+            choices=self.get_property("choices"),
+        )
+        
+    def __init__(self, title="Module Property", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.set_property("property_name", "")
+        self.set_property("property_type", "")
+        self.set_property("default", UNRESOLVED)
+        self.set_property("choices", UNRESOLVED)
+        self.set_property("description", "")
+        self.add_output("value")
+
+    def cast_value(self, value: Any) -> Any:
+        if self.get_property("property_type") in ["str", "text"]:
+            return str(value)
+        elif self.get_property("property_type") == "bool":
+            if isinstance(value, str):
+                if value.lower() in ["true", "yes", "1"]:
+                    return True
+                elif value.lower() in ["false", "no", "0"]:
+                    return False
+                else:
+                    return bool(value)
+            return bool(value)
+        elif self.get_property("property_type") == "int":
+            return int(value)
+        elif self.get_property("property_type") == "float":
+            return float(value)
+        return str(value)
+
 @register("core/Route")
 class Route(Node):
     """
@@ -1240,6 +1346,9 @@ class Graph(NodeBase):
     def output_nodes(self) -> list[Output]:
         return [node for node in self.nodes.values() if isinstance(node, Output)]
     
+    @property
+    def module_property_nodes(self) -> list[ModuleProperty]:
+        return [node for node in self.nodes.values() if isinstance(node, ModuleProperty)]
 
     @pydantic.computed_field(description="Inputs")
     @property
@@ -1299,6 +1408,27 @@ class Graph(NodeBase):
         self._outputs = outputs
         
         return outputs
+    
+    @pydantic.computed_field(description="Module Fields")
+    @property
+    def module_properties(self) -> dict[str, PropertyField]:
+        # Dynamically find all ModuleProperty nodes and return them
+        # as a list of PropertyField objects
+        
+        if hasattr(self, "_module_properties"):
+            return self._module_properties
+        
+        properties = {}
+        for node in self.module_property_nodes:
+            name = node.get_property("property_name")
+            if name not in properties:
+                properties[name] = node.to_property_field
+            else:
+                log.warning("Duplicate module property", name=name)
+            
+        self._module_properties = properties
+        
+        return properties
     
     @pydantic.computed_field(description="Node style")
     @property
@@ -1713,6 +1843,15 @@ class Graph(NodeBase):
                     log.debug(f"Setting input value for {node.title} to {socket_value}")
                 node.set_output_values({
                     "value": socket_value
+                })
+                
+            # for module property nodes we need to set their output socket values
+            # base on the property value
+            for node in self.module_property_nodes:
+                name = node.get_property("property_name")
+                value = self.get_property(name)
+                node.set_output_values({
+                    "value": node.cast_value(value)
                 })
             
             # Separate into weakly connected components (isolated chains)

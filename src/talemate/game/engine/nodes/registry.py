@@ -144,6 +144,10 @@ def export_node_definitions() -> dict:
         
         for prop_name in node.properties.keys():
             field_defs[prop_name] = node.get_property_field(prop_name).model_dump()
+            
+        if hasattr(node, "module_properties"):
+            for prop_name, prop_data in node.module_properties.items():
+                field_defs[prop_name] = prop_data.model_dump()
         
         exported_node = {
             "fields": field_defs,

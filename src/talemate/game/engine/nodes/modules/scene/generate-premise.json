@@ -20,104 +20,13 @@
         "input_group": "",
         "num": 1
       },
-      "x": 2165,
-      "y": -491,
+      "x": 2651,
+      "y": -642,
       "width": 210,
       "height": 154,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Input",
-      "base_type": "core/Node"
-    },
-    "83655997-bb35-4f8b-a5ff-eca5b78acfbe": {
-      "title": "SET local.intro",
-      "id": "83655997-bb35-4f8b-a5ff-eca5b78acfbe",
-      "properties": {
-        "name": "intro",
-        "scope": "local"
-      },
-      "x": 1105,
-      "y": 625,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "90484246-29a6-4dca-96a1-c8803376400d": {
-      "title": "true",
-      "id": "90484246-29a6-4dca-96a1-c8803376400d",
-      "properties": {
-        "value": true
-      },
-      "x": 511,
-      "y": 594,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
-    "90a21c0e-38af-4099-847e-2a0bfa1c7666": {
-      "title": "Format",
-      "id": "90a21c0e-38af-4099-847e-2a0bfa1c7666",
-      "properties": {},
-      "x": 585,
-      "y": 772,
-      "width": 140,
-      "height": 46,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/Format",
-      "base_type": "core/Node"
-    },
-    "f9d2b981-75f4-49c9-a1bf-74e75424e0dc": {
-      "title": "Dict Set",
-      "id": "f9d2b981-75f4-49c9-a1bf-74e75424e0dc",
-      "properties": {
-        "key": ""
-      },
-      "x": 28,
-      "y": 787,
-      "width": 210,
-      "height": 98,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/DictSet",
-      "base_type": "core/Node"
-    },
-    "07ed0fd9-c6d1-42b3-8ebc-4f51a5cee477": {
-      "title": "GET local.theme_analysis",
-      "id": "07ed0fd9-c6d1-42b3-8ebc-4f51a5cee477",
-      "properties": {
-        "name": "theme_analysis",
-        "scope": "local"
-      },
-      "x": -222,
-      "y": 777,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "2af4bece-d324-4555-92cc-94432d9243b8": {
-      "title": "GET local.theme",
-      "id": "2af4bece-d324-4555-92cc-94432d9243b8",
-      "properties": {
-        "name": "theme",
-        "scope": "local"
-      },
-      "x": -222,
-      "y": 977,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
       "base_type": "core/Node"
     },
     "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0": {
@@ -133,8 +42,8 @@
         "context_aware": true,
         "history_aware": true
       },
-      "x": 850,
-      "y": 626,
+      "x": 681,
+      "y": 1730,
       "width": 237,
       "height": 406,
       "collapsed": false,
@@ -282,19 +191,6 @@
       "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
-    "bd8fa024-ef74-45be-9ba4-fc3b99790772": {
-      "title": "Template Variables",
-      "id": "bd8fa024-ef74-45be-9ba4-fc3b99790772",
-      "properties": {},
-      "x": 846,
-      "y": 229,
-      "width": 170,
-      "height": 46,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/TemplateVariables",
-      "base_type": "core/Node"
-    },
     "8841e87b-e372-482f-b58f-e0a892e1b7b9": {
       "title": "Prompt From Template",
       "id": "8841e87b-e372-482f-b58f-e0a892e1b7b9",
@@ -304,43 +200,12 @@
         "template_text": ""
       },
       "x": 1086,
-      "y": 319,
+      "y": 348,
       "width": 210,
       "height": 146,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/PromptFromTemplate",
-      "base_type": "core/Node"
-    },
-    "b3a2a89e-d3ef-4921-aac1-e464451f5347": {
-      "title": "SET local.theme_analysis",
-      "id": "b3a2a89e-d3ef-4921-aac1-e464451f5347",
-      "properties": {
-        "name": "theme_analysis",
-        "scope": "local"
-      },
-      "x": 1646,
-      "y": 189,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "b13e3c4b-7df7-450e-b7b5-a96d7b4bd0dd": {
-      "title": "Stage 2",
-      "id": "b13e3c4b-7df7-450e-b7b5-a96d7b4bd0dd",
-      "properties": {
-        "stage": 2
-      },
-      "x": 1896,
-      "y": 189,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "b0f1ff55-d727-4055-8e2d-cd3a267f8164": {
@@ -350,27 +215,12 @@
         "agent_name": "summarizer"
       },
       "x": 521,
-      "y": 144,
+      "y": 173,
       "width": 230,
       "height": 58,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/GetAgent",
-      "base_type": "core/Node"
-    },
-    "277e5de6-e128-4675-b80b-a212149e3fd0": {
-      "title": "Dict Set",
-      "id": "277e5de6-e128-4675-b80b-a212149e3fd0",
-      "properties": {
-        "key": ""
-      },
-      "x": 516,
-      "y": 269,
-      "width": 210,
-      "height": 98,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/DictSet",
       "base_type": "core/Node"
     },
     "0f4128ac-8840-463a-8348-4f003fe0b6fe": {
@@ -380,7 +230,7 @@
         "key": ""
       },
       "x": 276,
-      "y": 99,
+      "y": 128,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -395,7 +245,7 @@
         "key": ""
       },
       "x": 26,
-      "y": -81,
+      "y": -52,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -411,7 +261,7 @@
         "scope": "local"
       },
       "x": -214,
-      "y": -91,
+      "y": -62,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -427,7 +277,7 @@
         "scope": "local"
       },
       "x": -219,
-      "y": 114,
+      "y": 143,
       "width": 260,
       "height": 126,
       "collapsed": false,
@@ -443,43 +293,9 @@
         "scope": "local"
       },
       "x": -223,
-      "y": 292,
+      "y": 321,
       "width": 260,
       "height": 126,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "085729eb-fefb-4490-9e39-1aafca07289f": {
-      "title": "Generate Response",
-      "id": "085729eb-fefb-4490-9e39-1aafca07289f",
-      "properties": {
-        "data_output": false,
-        "response_length": 1024,
-        "action_type": "analyze",
-        "attempts": 1
-      },
-      "x": 1370,
-      "y": 178,
-      "width": 251,
-      "height": 190,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/GenerateResponse",
-      "base_type": "core/Node"
-    },
-    "2ad9c727-c61b-402b-a11c-e7d7f1f4b322": {
-      "title": "GET local.analysis_enabled",
-      "id": "2ad9c727-c61b-402b-a11c-e7d7f1f4b322",
-      "properties": {
-        "name": "analysis_enabled",
-        "scope": "local"
-      },
-      "x": 860,
-      "y": 39,
-      "width": 210,
-      "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
@@ -492,7 +308,7 @@
         "pass_through": false
       },
       "x": 1100,
-      "y": 79,
+      "y": 108,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -507,8 +323,8 @@
         "name": "intro",
         "scope": "local"
       },
-      "x": 2170,
-      "y": -250,
+      "x": 2656,
+      "y": -401,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -523,8 +339,8 @@
         "name": "theme",
         "scope": "local"
       },
-      "x": 2170,
-      "y": -30,
+      "x": 2656,
+      "y": -181,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -540,8 +356,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 2440,
-      "y": -490,
+      "x": 2926,
+      "y": -641,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -557,8 +373,8 @@
         "output_name": "text",
         "num": 1
       },
-      "x": 2440,
-      "y": -250,
+      "x": 2926,
+      "y": -401,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -574,8 +390,8 @@
         "output_name": "theme",
         "num": 2
       },
-      "x": 2450,
-      "y": -30,
+      "x": 2936,
+      "y": -181,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -712,21 +528,6 @@
       "x": -224,
       "y": -461,
       "width": 237,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
-    "a3de6cce-c44f-4cd7-b4c2-511baf2e0dbf": {
-      "title": "Theme Analysis Template",
-      "id": "a3de6cce-c44f-4cd7-b4c2-511baf2e0dbf",
-      "properties": {
-        "value": "<|SECTION:STORY BASELINE|>\n{{ scene.description }}\n\n<|SECTION:PROTAGONISTS|>\n{% for character in scene.characters %}\n### {{ character.name }}\n{{ character.description }}\n{% endfor %}\n\n<|SECTION:CONTEXT OF YOUR TASK|>\nA topic description of \"{{ topic }}\" was given and a random theme was picked to bootstrap a new storyline: \"{{ theme }}\".\n\n<|SECTION:TASK|>\nAnalyze the theme \"{{ theme }}\" in the context of the topic \"{{ topic }}\".\n\nProvide a brief exploration of this theme, including:\n1. Key concepts or ideas involved and how they fit the context\n2. Potential storylines or conflicts\n3. How it might affect the protagonists of the story\n\n{% if analysis_instructions %}\n{{ analysis_instructions }}\n{% endif %}\n\nKeep your analysis concise and to the point.\n\nYour analysis will be used to set up the premise for the next storyline in the `{{ scene.name }}` series."
-      },
-      "x": 516,
-      "y": 429,
-      "width": 300,
       "height": 58,
       "collapsed": false,
       "inherited": false,
@@ -888,87 +689,19 @@
       "registry": "core/ErrorHandler",
       "base_type": "core/Node"
     },
-    "6ab6598b-151d-44ef-920f-0810f6da88b5": {
-      "title": "Contextual Generate",
-      "id": "6ab6598b-151d-44ef-920f-0810f6da88b5",
-      "properties": {
-        "context_type": "scene intent",
-        "context_name": "overall",
-        "instructions": null,
-        "length": 256,
-        "character": null,
-        "uid": null,
-        "context_aware": true,
-        "history_aware": true
-      },
-      "x": 488,
-      "y": 1236,
-      "width": 237,
-      "height": 406,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/creator/ContextualGenerate",
-      "base_type": "core/Node"
-    },
     "44bf83e8-c6b9-4c45-8dd6-e22aedff879b": {
       "title": "Set Scene Intent",
       "id": "44bf83e8-c6b9-4c45-8dd6-e22aedff879b",
       "properties": {
         "intent": ""
       },
-      "x": 778,
-      "y": 1236,
+      "x": 773,
+      "y": 1193,
       "width": 210,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "scene/intention/SetSceneIntent",
-      "base_type": "core/Node"
-    },
-    "78329395-ffe5-4683-9642-debc07203bdb": {
-      "title": "Dict Set",
-      "id": "78329395-ffe5-4683-9642-debc07203bdb",
-      "properties": {
-        "key": "theme"
-      },
-      "x": 295,
-      "y": 852,
-      "width": 210,
-      "height": 98,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/DictSet",
-      "base_type": "core/Node"
-    },
-    "6f662764-4a83-4db4-a350-d24224efd36b": {
-      "title": "SET local.template_variables",
-      "id": "6f662764-4a83-4db4-a350-d24224efd36b",
-      "properties": {
-        "name": "template_variables",
-        "scope": "local"
-      },
-      "x": 549,
-      "y": 910,
-      "width": 235,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "fc181553-db26-4666-a679-afd5edfd4ab5": {
-      "title": "Stage 3",
-      "id": "fc181553-db26-4666-a679-afd5edfd4ab5",
-      "properties": {
-        "stage": 3
-      },
-      "x": 1339,
-      "y": 650,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "55979f0a-d3c9-4a76-960f-7ac0f3fcd76a": {
@@ -979,8 +712,8 @@
         "template_file": "",
         "template_text": ""
       },
-      "x": 48,
-      "y": 1400,
+      "x": 43,
+      "y": 1357,
       "width": 210,
       "height": 146,
       "collapsed": false,
@@ -988,27 +721,12 @@
       "registry": "prompt/PromptFromTemplate",
       "base_type": "core/Node"
     },
-    "fd2c09be-8994-49a3-98b8-d7d3e2304aa2": {
-      "title": "Stage 4",
-      "id": "fd2c09be-8994-49a3-98b8-d7d3e2304aa2",
-      "properties": {
-        "stage": 4
-      },
-      "x": 1028,
-      "y": 1240,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "ea9bf575-80e1-4296-9f52-c3e0d79a6335": {
       "title": "Render Prompt",
       "id": "ea9bf575-80e1-4296-9f52-c3e0d79a6335",
       "properties": {},
-      "x": 288,
-      "y": 1400,
+      "x": 283,
+      "y": 1357,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -1023,8 +741,8 @@
         "name": "template_variables",
         "scope": "local"
       },
-      "x": -218,
-      "y": 1510,
+      "x": -223,
+      "y": 1467,
       "width": 235,
       "height": 125,
       "collapsed": false,
@@ -1038,8 +756,8 @@
       "properties": {
         "value": true
       },
-      "x": 342,
-      "y": 1260,
+      "x": 337,
+      "y": 1217,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -1047,14 +765,409 @@
       "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
+    "83655997-bb35-4f8b-a5ff-eca5b78acfbe": {
+      "title": "SET local.intro",
+      "id": "83655997-bb35-4f8b-a5ff-eca5b78acfbe",
+      "properties": {
+        "name": "intro",
+        "scope": "local"
+      },
+      "x": 934,
+      "y": 1726,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "bd8fa024-ef74-45be-9ba4-fc3b99790772": {
+      "title": "Template Variables",
+      "id": "bd8fa024-ef74-45be-9ba4-fc3b99790772",
+      "properties": {},
+      "x": 850,
+      "y": 259,
+      "width": 170,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/TemplateVariables",
+      "base_type": "core/Node"
+    },
+    "277e5de6-e128-4675-b80b-a212149e3fd0": {
+      "title": "Dict Set",
+      "id": "277e5de6-e128-4675-b80b-a212149e3fd0",
+      "properties": {
+        "key": ""
+      },
+      "x": 516,
+      "y": 298,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "2ad9c727-c61b-402b-a11c-e7d7f1f4b322": {
+      "title": "GET local.analysis_enabled",
+      "id": "2ad9c727-c61b-402b-a11c-e7d7f1f4b322",
+      "properties": {
+        "name": "analysis_enabled",
+        "scope": "local"
+      },
+      "x": 860,
+      "y": 79,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "7d00d4cb-553c-4fb5-ad77-478198bd08e0": {
+      "title": "Template Variables",
+      "id": "7d00d4cb-553c-4fb5-ad77-478198bd08e0",
+      "properties": {},
+      "x": 92,
+      "y": 820,
+      "width": 170,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/TemplateVariables",
+      "base_type": "core/Node"
+    },
+    "95e1204b-b62f-47b2-ad7b-01e11288ecce": {
+      "title": "GET local.analysis_enabled",
+      "id": "95e1204b-b62f-47b2-ad7b-01e11288ecce",
+      "properties": {
+        "name": "analysis_enabled",
+        "scope": "local"
+      },
+      "x": 340,
+      "y": 670,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322": {
+      "title": "Switch",
+      "id": "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 580,
+      "y": 710,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "dd9ea0f4-c777-426c-8124-601db7f92668": {
+      "title": "Prompt From Template",
+      "id": "dd9ea0f4-c777-426c-8124-601db7f92668",
+      "properties": {
+        "scope": "scene",
+        "template_file": "",
+        "template_text": ""
+      },
+      "x": 452,
+      "y": 940,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/PromptFromTemplate",
+      "base_type": "core/Node"
+    },
+    "b3a2a89e-d3ef-4921-aac1-e464451f5347": {
+      "title": "SET local.theme_analysis",
+      "id": "b3a2a89e-d3ef-4921-aac1-e464451f5347",
+      "properties": {
+        "name": "theme_analysis",
+        "scope": "local"
+      },
+      "x": 1646,
+      "y": 218,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "8995d417-0c41-480e-a300-07c57260e1c7": {
+      "title": "Dict Set",
+      "id": "8995d417-0c41-480e-a300-07c57260e1c7",
+      "properties": {
+        "key": ""
+      },
+      "x": 1891,
+      "y": 169,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "b13e3c4b-7df7-450e-b7b5-a96d7b4bd0dd": {
+      "title": "Stage 2",
+      "id": "b13e3c4b-7df7-450e-b7b5-a96d7b4bd0dd",
+      "properties": {
+        "stage": 2
+      },
+      "x": 2131,
+      "y": 169,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "c12346ff-7182-4513-b045-94ccb8217d5a": {
+      "title": "director",
+      "id": "c12346ff-7182-4513-b045-94ccb8217d5a",
+      "properties": {
+        "agent_name": "director"
+      },
+      "x": -193,
+      "y": 693,
+      "width": 230,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "d6e69490-3be8-4307-9aa3-85589edf905b": {
+      "title": "GET local.template_variables",
+      "id": "d6e69490-3be8-4307-9aa3-85589edf905b",
+      "properties": {
+        "name": "template_variables",
+        "scope": "local"
+      },
+      "x": -223,
+      "y": 843,
+      "width": 235,
+      "height": 125,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "ac0a4a5f-c440-41d7-9af1-2a0bdce0b8df": {
+      "title": "SET local.template_variables",
+      "id": "ac0a4a5f-c440-41d7-9af1-2a0bdce0b8df",
+      "properties": {
+        "name": "template_variables",
+        "scope": "local"
+      },
+      "x": 861,
+      "y": -91,
+      "width": 235,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "a3de6cce-c44f-4cd7-b4c2-511baf2e0dbf": {
+      "title": "Theme Analysis Template",
+      "id": "a3de6cce-c44f-4cd7-b4c2-511baf2e0dbf",
+      "properties": {
+        "value": "<|SECTION:STORY BASELINE|>\n{{ scene.description }}\n\n<|SECTION:PROTAGONISTS|>\n{% for character in scene.characters %}\n### {{ character.name }}\n{{ character.description }}\n{% endfor %}\n\n<|SECTION:CONTEXT OF YOUR TASK|>\nA topic description of \"{{ topic }}\" was given and a random theme was picked to bootstrap a new storyline: \"{{ theme }}\".\n\n<|SECTION:TASK|>\nAnalyze the theme \"{{ theme }}\" in the context of the topic \"{{ topic }}\".\n\nProvide a brief exploration of this theme, including:\n1. Key concepts or ideas involved and how they fit the context\n2. Potential storylines or conflicts\n3. How it might affect the protagonists of the story\n\n{% if analysis_instructions %}\n{{ analysis_instructions }}\n{% endif %}\n\nKeep your analysis concise and to the point.\n\nYour analysis will be used to set up the premise for the next storyline in the `{{ scene.name }}` series."
+      },
+      "x": 510,
+      "y": 460,
+      "width": 300,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "b99d35b6-46be-4268-98e7-19dd0d0155c6": {
+      "title": "GET local.template_variables",
+      "id": "b99d35b6-46be-4268-98e7-19dd0d0155c6",
+      "properties": {
+        "name": "template_variables",
+        "scope": "local"
+      },
+      "x": 1124,
+      "y": 624,
+      "width": 235,
+      "height": 125,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "c5d05d7b-6b85-4b76-9a40-fee92b540a2f": {
+      "title": "SET local.story_choice",
+      "id": "c5d05d7b-6b85-4b76-9a40-fee92b540a2f",
+      "properties": {
+        "name": "story_choice",
+        "scope": "local"
+      },
+      "x": 1145,
+      "y": 813,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "bdc931fb-873f-4b34-96e0-67f0458430e8": {
+      "title": "Dict Set",
+      "id": "bdc931fb-873f-4b34-96e0-67f0458430e8",
+      "properties": {
+        "key": null
+      },
+      "x": 1404,
+      "y": 804,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "9cab6c50-f98d-48f5-a34c-6dd6b3d0cafa": {
+      "title": "Stage 3",
+      "id": "9cab6c50-f98d-48f5-a34c-6dd6b3d0cafa",
+      "properties": {
+        "stage": 3
+      },
+      "x": 1664,
+      "y": 814,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "532c7aba-0a3f-497a-a70e-50105592f76f": {
+      "title": "Render Prompt",
+      "id": "532c7aba-0a3f-497a-a70e-50105592f76f",
+      "properties": {},
+      "x": 500,
+      "y": 1936,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/RenderPrompt",
+      "base_type": "core/Node"
+    },
+    "90484246-29a6-4dca-96a1-c8803376400d": {
+      "title": "true",
+      "id": "90484246-29a6-4dca-96a1-c8803376400d",
+      "properties": {
+        "value": true
+      },
+      "x": 530,
+      "y": 1726,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "3aebfba2-4d7f-4ca5-b60b-f8b6acb5e2f0": {
+      "title": "GET local.template_variables",
+      "id": "3aebfba2-4d7f-4ca5-b60b-f8b6acb5e2f0",
+      "properties": {
+        "name": "template_variables",
+        "scope": "local"
+      },
+      "x": -227,
+      "y": 1995,
+      "width": 235,
+      "height": 125,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "5c2b46e1-e788-4726-8644-5a4f1510023c": {
+      "title": "Template Variables",
+      "id": "5c2b46e1-e788-4726-8644-5a4f1510023c",
+      "properties": {},
+      "x": 43,
+      "y": 1935,
+      "width": 170,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/TemplateVariables",
+      "base_type": "core/Node"
+    },
+    "e341e070-355f-4203-a577-c9cc131bfe9c": {
+      "title": "Prompt From Template",
+      "id": "e341e070-355f-4203-a577-c9cc131bfe9c",
+      "properties": {
+        "scope": "scene",
+        "template_file": "",
+        "template_text": ""
+      },
+      "x": 263,
+      "y": 1895,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/PromptFromTemplate",
+      "base_type": "core/Node"
+    },
+    "c91d620a-1cec-40d6-b23a-e2c19d8e766f": {
+      "title": "director",
+      "id": "c91d620a-1cec-40d6-b23a-e2c19d8e766f",
+      "properties": {
+        "agent_name": "creator"
+      },
+      "x": -217,
+      "y": 1865,
+      "width": 230,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "1937cd37-346a-4c39-be5c-5033bbf9e09e": {
+      "title": "Instruction Template",
+      "id": "1937cd37-346a-4c39-be5c-5033bbf9e09e",
+      "properties": {
+        "value": "{% if story_choice %}Generate the introduction for this new \"{{ scene_title }}\" story: \"{{ story_choice }}\".\n{% else %}\nGenerate the introduction to a new \"{{ scene_title }}\" story based on the topic \"{{ topic }}\" and the theme \"{{ theme }}\".\n{% endif %}"
+      },
+      "x": -137,
+      "y": 1725,
+      "width": 272,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
     "a9e0118c-f630-4723-9a09-af0c45b42b53": {
       "title": "Make Text",
       "id": "a9e0118c-f630-4723-9a09-af0c45b42b53",
       "properties": {
-        "value": "Take this analysis of the theme into consideration when creating the story intent:\n\n\n{{ theme_analysis }}"
+        "value": "Generate a story intent based on the the following premise:\n\n{{ story_choice }}"
       },
-      "x": -210,
-      "y": 1340,
+      "x": -215,
+      "y": 1297,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1062,49 +1175,113 @@
       "registry": "data/string/MakeText",
       "base_type": "core/Node"
     },
-    "1937cd37-346a-4c39-be5c-5033bbf9e09e": {
-      "title": "Instruction Template",
-      "id": "1937cd37-346a-4c39-be5c-5033bbf9e09e",
+    "1f84a0b8-e007-4d44-a831-cb85d1cc7155": {
+      "title": "Generate Response",
+      "id": "1f84a0b8-e007-4d44-a831-cb85d1cc7155",
       "properties": {
-        "value": "Generate the introduction to a random exciting story-line.\n\nThe theme is: \"{theme}\"\n\nUse the following analysis to guide your creation of the scenario premise:\n\n{theme_analysis}"
+        "data_output": false,
+        "response_length": 512,
+        "action_type": "scene_direction",
+        "attempts": 1
       },
-      "x": 279,
-      "y": 730,
-      "width": 272,
+      "x": 847,
+      "y": 803,
+      "width": 251,
+      "height": 190,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "0d4607c9-2dbb-44a0-b5fb-4878f8401a5f": {
+      "title": "Solidify Choice Template",
+      "id": "0d4607c9-2dbb-44a0-b5fb-4878f8401a5f",
+      "properties": {
+        "value": "<|SECTION:STORY BASELINE|>\n{{ scene_title }}\n\n{{ scene.description }}\n\n<|SECTION:PROTAGONISTS|>\n{% for character in scene.characters %}\n### {{ character.name }}\n{{ character.description }}\n{% endfor %}\n\n<|SECTION:CONTEXT OF YOUR TASK|>\nA topic description of \"{{ topic }}\" was given and a random theme was picked to bootstrap a new storyline: \"{{ theme }}\".\n\nThe topic and theme were considered and the following analysis was generated:\n\n<|SECTION:THEME ANALYSIS|>\n{{ theme_analysis }}\n\n<|SECTION:TASK|>\nThe analysis contains multiple proposals for potential story lines. \n\nYour task is to pick the most interesting one and then briefly explain how this story line makes sense within the context of  {{ scene_title }}.\n\nYour choice and explanation will be given to the story editor to write the introduction to this new story line.\n\nBe concise and to the point."
+      },
+      "x": 62,
+      "y": 1020,
+      "width": 300,
       "height": 58,
       "collapsed": false,
       "inherited": false,
       "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "085729eb-fefb-4490-9e39-1aafca07289f": {
+      "title": "Generate Response",
+      "id": "085729eb-fefb-4490-9e39-1aafca07289f",
+      "properties": {
+        "data_output": false,
+        "response_length": 1024,
+        "action_type": "scene_direction",
+        "attempts": 1
+      },
+      "x": 1370,
+      "y": 207,
+      "width": 251,
+      "height": 190,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "fc181553-db26-4666-a679-afd5edfd4ab5": {
+      "title": "Stage 5",
+      "id": "fc181553-db26-4666-a679-afd5edfd4ab5",
+      "properties": {
+        "stage": 5
+      },
+      "x": 1183,
+      "y": 1755,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "fd2c09be-8994-49a3-98b8-d7d3e2304aa2": {
+      "title": "Stage 4",
+      "id": "fd2c09be-8994-49a3-98b8-d7d3e2304aa2",
+      "properties": {
+        "stage": 4
+      },
+      "x": 1023,
+      "y": 1191,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "6ab6598b-151d-44ef-920f-0810f6da88b5": {
+      "title": "Contextual Generate",
+      "id": "6ab6598b-151d-44ef-920f-0810f6da88b5",
+      "properties": {
+        "context_type": "scene intent",
+        "context_name": "story expectations",
+        "instructions": null,
+        "length": 256,
+        "character": null,
+        "uid": null,
+        "context_aware": true,
+        "history_aware": true
+      },
+      "x": 483,
+      "y": 1193,
+      "width": 237,
+      "height": 406,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/ContextualGenerate",
       "base_type": "core/Node"
     }
   },
   "edges": {
     "ba261322-afc9-4d6d-be45-b071446d8f0e.value": [
       "eb68c23f-72be-4115-95ca-1f7b212b16f5.value"
-    ],
-    "83655997-bb35-4f8b-a5ff-eca5b78acfbe.value": [
-      "fc181553-db26-4666-a679-afd5edfd4ab5.state"
-    ],
-    "90484246-29a6-4dca-96a1-c8803376400d.value": [
-      "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.state"
-    ],
-    "90a21c0e-38af-4099-847e-2a0bfa1c7666.result": [
-      "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.instructions"
-    ],
-    "f9d2b981-75f4-49c9-a1bf-74e75424e0dc.dict": [
-      "78329395-ffe5-4683-9642-debc07203bdb.dict"
-    ],
-    "07ed0fd9-c6d1-42b3-8ebc-4f51a5cee477.name": [
-      "f9d2b981-75f4-49c9-a1bf-74e75424e0dc.key"
-    ],
-    "07ed0fd9-c6d1-42b3-8ebc-4f51a5cee477.value": [
-      "f9d2b981-75f4-49c9-a1bf-74e75424e0dc.value"
-    ],
-    "2af4bece-d324-4555-92cc-94432d9243b8.name": [
-      "78329395-ffe5-4683-9642-debc07203bdb.key"
-    ],
-    "2af4bece-d324-4555-92cc-94432d9243b8.value": [
-      "78329395-ffe5-4683-9642-debc07203bdb.value"
     ],
     "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.text": [
       "83655997-bb35-4f8b-a5ff-eca5b78acfbe.value"
@@ -1136,23 +1313,11 @@
     "53be9345-9126-4012-916a-014eb0004101.value": [
       "7422c62a-7655-454e-b6a4-2ed726cd8870.state"
     ],
-    "bd8fa024-ef74-45be-9ba4-fc3b99790772.variables": [
-      "8841e87b-e372-482f-b58f-e0a892e1b7b9.variables"
-    ],
-    "bd8fa024-ef74-45be-9ba4-fc3b99790772.agent": [
-      "085729eb-fefb-4490-9e39-1aafca07289f.agent"
-    ],
     "8841e87b-e372-482f-b58f-e0a892e1b7b9.prompt": [
       "085729eb-fefb-4490-9e39-1aafca07289f.prompt"
     ],
-    "b3a2a89e-d3ef-4921-aac1-e464451f5347.value": [
-      "b13e3c4b-7df7-450e-b7b5-a96d7b4bd0dd.state"
-    ],
     "b0f1ff55-d727-4055-8e2d-cd3a267f8164.agent": [
       "bd8fa024-ef74-45be-9ba4-fc3b99790772.agent"
-    ],
-    "277e5de6-e128-4675-b80b-a212149e3fd0.dict": [
-      "bd8fa024-ef74-45be-9ba4-fc3b99790772.merge_with"
     ],
     "0f4128ac-8840-463a-8348-4f003fe0b6fe.dict": [
       "277e5de6-e128-4675-b80b-a212149e3fd0.dict"
@@ -1177,12 +1342,6 @@
     ],
     "2d8aab05-4563-4ac6-8242-2171be615b16.value": [
       "277e5de6-e128-4675-b80b-a212149e3fd0.value"
-    ],
-    "085729eb-fefb-4490-9e39-1aafca07289f.response": [
-      "b3a2a89e-d3ef-4921-aac1-e464451f5347.value"
-    ],
-    "2ad9c727-c61b-402b-a11c-e7d7f1f4b322.value": [
-      "17ac652c-fb77-43ec-9184-2ad84cd4ae1e.value"
     ],
     "17ac652c-fb77-43ec-9184-2ad84cd4ae1e.yes": [
       "085729eb-fefb-4490-9e39-1aafca07289f.state"
@@ -1217,9 +1376,6 @@
     "290d821f-6be9-4130-9965-4f0823342725.value": [
       "8fbb2ad2-2c28-44cb-bc40-f2a02bfa4e16.template_text"
     ],
-    "a3de6cce-c44f-4cd7-b4c2-511baf2e0dbf.value": [
-      "8841e87b-e372-482f-b58f-e0a892e1b7b9.template_text"
-    ],
     "8f405443-0bd3-419d-8122-66225592e716.emitted": [
       "69332967-7ac9-4940-b7f4-7a77d2333f05.state_b"
     ],
@@ -1235,18 +1391,8 @@
     "f7b9fa16-c3ed-4c8c-8624-1b79a5bdf1d1.fn": [
       "396c90e5-9aee-4edd-b952-a26505362aff.fn"
     ],
-    "6ab6598b-151d-44ef-920f-0810f6da88b5.state": [
-      "44bf83e8-c6b9-4c45-8dd6-e22aedff879b.state"
-    ],
-    "6ab6598b-151d-44ef-920f-0810f6da88b5.text": [
-      "44bf83e8-c6b9-4c45-8dd6-e22aedff879b.intent"
-    ],
     "44bf83e8-c6b9-4c45-8dd6-e22aedff879b.state": [
       "fd2c09be-8994-49a3-98b8-d7d3e2304aa2.state"
-    ],
-    "78329395-ffe5-4683-9642-debc07203bdb.dict": [
-      "90a21c0e-38af-4099-847e-2a0bfa1c7666.variables",
-      "6f662764-4a83-4db4-a350-d24224efd36b.value"
     ],
     "55979f0a-d3c9-4a76-960f-7ac0f3fcd76a.prompt": [
       "ea9bf575-80e1-4296-9f52-c3e0d79a6335.prompt"
@@ -1260,11 +1406,108 @@
     "d4017f75-26f2-4220-ab5a-c0bf769063f0.value": [
       "6ab6598b-151d-44ef-920f-0810f6da88b5.state"
     ],
+    "83655997-bb35-4f8b-a5ff-eca5b78acfbe.value": [
+      "fc181553-db26-4666-a679-afd5edfd4ab5.state"
+    ],
+    "bd8fa024-ef74-45be-9ba4-fc3b99790772.variables": [
+      "8841e87b-e372-482f-b58f-e0a892e1b7b9.variables"
+    ],
+    "bd8fa024-ef74-45be-9ba4-fc3b99790772.agent": [
+      "085729eb-fefb-4490-9e39-1aafca07289f.agent"
+    ],
+    "277e5de6-e128-4675-b80b-a212149e3fd0.dict": [
+      "bd8fa024-ef74-45be-9ba4-fc3b99790772.merge_with",
+      "ac0a4a5f-c440-41d7-9af1-2a0bdce0b8df.value"
+    ],
+    "2ad9c727-c61b-402b-a11c-e7d7f1f4b322.value": [
+      "17ac652c-fb77-43ec-9184-2ad84cd4ae1e.value"
+    ],
+    "7d00d4cb-553c-4fb5-ad77-478198bd08e0.variables": [
+      "dd9ea0f4-c777-426c-8124-601db7f92668.variables"
+    ],
+    "7d00d4cb-553c-4fb5-ad77-478198bd08e0.agent": [
+      "1f84a0b8-e007-4d44-a831-cb85d1cc7155.agent"
+    ],
+    "95e1204b-b62f-47b2-ad7b-01e11288ecce.value": [
+      "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322.value"
+    ],
+    "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322.yes": [
+      "1f84a0b8-e007-4d44-a831-cb85d1cc7155.state"
+    ],
+    "dd9ea0f4-c777-426c-8124-601db7f92668.prompt": [
+      "1f84a0b8-e007-4d44-a831-cb85d1cc7155.prompt"
+    ],
+    "b3a2a89e-d3ef-4921-aac1-e464451f5347.name": [
+      "8995d417-0c41-480e-a300-07c57260e1c7.key"
+    ],
+    "b3a2a89e-d3ef-4921-aac1-e464451f5347.value": [
+      "8995d417-0c41-480e-a300-07c57260e1c7.value"
+    ],
+    "8995d417-0c41-480e-a300-07c57260e1c7.value": [
+      "b13e3c4b-7df7-450e-b7b5-a96d7b4bd0dd.state"
+    ],
+    "c12346ff-7182-4513-b045-94ccb8217d5a.agent": [
+      "7d00d4cb-553c-4fb5-ad77-478198bd08e0.agent"
+    ],
+    "d6e69490-3be8-4307-9aa3-85589edf905b.value": [
+      "7d00d4cb-553c-4fb5-ad77-478198bd08e0.merge_with"
+    ],
+    "ac0a4a5f-c440-41d7-9af1-2a0bdce0b8df.value": [
+      "8995d417-0c41-480e-a300-07c57260e1c7.dict"
+    ],
+    "a3de6cce-c44f-4cd7-b4c2-511baf2e0dbf.value": [
+      "8841e87b-e372-482f-b58f-e0a892e1b7b9.template_text"
+    ],
+    "b99d35b6-46be-4268-98e7-19dd0d0155c6.value": [
+      "bdc931fb-873f-4b34-96e0-67f0458430e8.dict"
+    ],
+    "c5d05d7b-6b85-4b76-9a40-fee92b540a2f.name": [
+      "bdc931fb-873f-4b34-96e0-67f0458430e8.key"
+    ],
+    "c5d05d7b-6b85-4b76-9a40-fee92b540a2f.value": [
+      "bdc931fb-873f-4b34-96e0-67f0458430e8.value"
+    ],
+    "bdc931fb-873f-4b34-96e0-67f0458430e8.value": [
+      "9cab6c50-f98d-48f5-a34c-6dd6b3d0cafa.state"
+    ],
+    "532c7aba-0a3f-497a-a70e-50105592f76f.rendered": [
+      "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.instructions"
+    ],
+    "90484246-29a6-4dca-96a1-c8803376400d.value": [
+      "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.state"
+    ],
+    "3aebfba2-4d7f-4ca5-b60b-f8b6acb5e2f0.value": [
+      "5c2b46e1-e788-4726-8644-5a4f1510023c.merge_with"
+    ],
+    "5c2b46e1-e788-4726-8644-5a4f1510023c.variables": [
+      "e341e070-355f-4203-a577-c9cc131bfe9c.variables"
+    ],
+    "e341e070-355f-4203-a577-c9cc131bfe9c.prompt": [
+      "532c7aba-0a3f-497a-a70e-50105592f76f.prompt"
+    ],
+    "c91d620a-1cec-40d6-b23a-e2c19d8e766f.agent": [
+      "5c2b46e1-e788-4726-8644-5a4f1510023c.agent"
+    ],
+    "1937cd37-346a-4c39-be5c-5033bbf9e09e.value": [
+      "e341e070-355f-4203-a577-c9cc131bfe9c.template_text"
+    ],
     "a9e0118c-f630-4723-9a09-af0c45b42b53.value": [
       "55979f0a-d3c9-4a76-960f-7ac0f3fcd76a.template_text"
     ],
-    "1937cd37-346a-4c39-be5c-5033bbf9e09e.value": [
-      "90a21c0e-38af-4099-847e-2a0bfa1c7666.template"
+    "1f84a0b8-e007-4d44-a831-cb85d1cc7155.response": [
+      "c5d05d7b-6b85-4b76-9a40-fee92b540a2f.value"
+    ],
+    "0d4607c9-2dbb-44a0-b5fb-4878f8401a5f.value": [
+      "dd9ea0f4-c777-426c-8124-601db7f92668.template_text"
+    ],
+    "085729eb-fefb-4490-9e39-1aafca07289f.response": [
+      "b3a2a89e-d3ef-4921-aac1-e464451f5347.value"
+    ],
+    "6ab6598b-151d-44ef-920f-0810f6da88b5.state": [
+      "44bf83e8-c6b9-4c45-8dd6-e22aedff879b.state"
+    ],
+    "6ab6598b-151d-44ef-920f-0810f6da88b5.text": [
+      "44bf83e8-c6b9-4c45-8dd6-e22aedff879b.intent"
     ]
   },
   "groups": [
@@ -1279,19 +1522,19 @@
       "inherited": false
     },
     {
-      "title": "Generate Introduction - Stage 3",
-      "x": -247,
-      "y": 514,
-      "width": 1821,
-      "height": 610,
+      "title": "Generate Introduction - Stage 5",
+      "x": -248,
+      "y": 1627,
+      "width": 1672,
+      "height": 534,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Outputs",
-      "x": 2140,
-      "y": -571,
+      "x": 2626,
+      "y": -722,
       "width": 545,
       "height": 720,
       "color": "#8A8",
@@ -1300,10 +1543,10 @@
     },
     {
       "title": "Analyze Theme - Stage 2",
-      "x": -247,
+      "x": -248,
       "y": -171,
-      "width": 2381,
-      "height": 682,
+      "width": 2614,
+      "height": 712,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1340,23 +1583,26 @@
     },
     {
       "title": "Generate Story Intention - Stage 4",
-      "x": -247,
-      "y": 1127,
-      "width": 1555,
-      "height": 587,
+      "x": -248,
+      "y": 1113,
+      "width": 1502,
+      "height": 511,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Choose Theme and Solidify Story Choice - Stage 3",
+      "x": -248,
+      "y": 544,
+      "width": 2147,
+      "height": 566,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     }
   ],
   "comments": [
-    {
-      "text": "Responsible for analyzing the selected theme and proposing potential story lines in the context of the encompassing story baseline.",
-      "x": 1370,
-      "y": 49,
-      "width": 411,
-      "inherited": false
-    },
     {
       "text": "Generates a list of short relevant themes to use to bootstrap a new story line.  Will consider the overarching topic.",
       "x": 770,
@@ -1366,9 +1612,16 @@
     },
     {
       "text": "Takes the selected theme from Stage 1 and the analysis of it from Stage 2 and uses it to generate a new introductory text for the scene, starting a new storyline.",
-      "x": 1107,
-      "y": 795,
+      "x": 938,
+      "y": 1899,
       "width": 354,
+      "inherited": false
+    },
+    {
+      "text": "Responsible for analyzing the selected theme and proposing potential story lines in the context of the encompassing story baseline.",
+      "x": 1381,
+      "y": 429,
+      "width": 411,
       "inherited": false
     }
   ],

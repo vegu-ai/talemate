@@ -1123,36 +1123,6 @@
       "registry": "agents/GetAgent",
       "base_type": "core/Node"
     },
-    "1937cd37-346a-4c39-be5c-5033bbf9e09e": {
-      "title": "Instruction Template",
-      "id": "1937cd37-346a-4c39-be5c-5033bbf9e09e",
-      "properties": {
-        "value": "{% if story_choice %}Generate the introduction for this new \"{{ scene_title }}\" story: \"{{ story_choice }}\".\n{% else %}\nGenerate the introduction to a new \"{{ scene_title }}\" story based on the topic \"{{ topic }}\" and the theme \"{{ theme }}\".\n{% endif %}"
-      },
-      "x": -137,
-      "y": 1725,
-      "width": 272,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
-    "a9e0118c-f630-4723-9a09-af0c45b42b53": {
-      "title": "Make Text",
-      "id": "a9e0118c-f630-4723-9a09-af0c45b42b53",
-      "properties": {
-        "value": "Generate a story intent based on the the following premise:\n\n{{ story_choice }}"
-      },
-      "x": -215,
-      "y": 1297,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
     "1f84a0b8-e007-4d44-a831-cb85d1cc7155": {
       "title": "Generate Response",
       "id": "1f84a0b8-e007-4d44-a831-cb85d1cc7155",
@@ -1276,6 +1246,36 @@
       "collapsed": false,
       "inherited": false,
       "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
+    },
+    "1937cd37-346a-4c39-be5c-5033bbf9e09e": {
+      "title": "Instruction Template",
+      "id": "1937cd37-346a-4c39-be5c-5033bbf9e09e",
+      "properties": {
+        "value": "{% if story_choice %}Generate the introduction for this new \"{{ scene_title }}\" story: \n\n{{ story_choice }}\n\n{% else %}\nGenerate the introduction to a new \"{{ scene_title }}\" story based on the topic \"{{ topic }}\" and the theme \"{{ theme }}\".\n{% endif %}"
+      },
+      "x": -137,
+      "y": 1725,
+      "width": 272,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "a9e0118c-f630-4723-9a09-af0c45b42b53": {
+      "title": "Make Text",
+      "id": "a9e0118c-f630-4723-9a09-af0c45b42b53",
+      "properties": {
+        "value": "Generate a story intent based on the the following premise:\n\n{{ story_choice }}"
+      },
+      "x": -215,
+      "y": 1297,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
       "base_type": "core/Node"
     }
   },
@@ -1485,12 +1485,6 @@
     "c91d620a-1cec-40d6-b23a-e2c19d8e766f.agent": [
       "5c2b46e1-e788-4726-8644-5a4f1510023c.agent"
     ],
-    "1937cd37-346a-4c39-be5c-5033bbf9e09e.value": [
-      "e341e070-355f-4203-a577-c9cc131bfe9c.template_text"
-    ],
-    "a9e0118c-f630-4723-9a09-af0c45b42b53.value": [
-      "55979f0a-d3c9-4a76-960f-7ac0f3fcd76a.template_text"
-    ],
     "1f84a0b8-e007-4d44-a831-cb85d1cc7155.response": [
       "c5d05d7b-6b85-4b76-9a40-fee92b540a2f.value"
     ],
@@ -1508,6 +1502,12 @@
     ],
     "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.text": [
       "83655997-bb35-4f8b-a5ff-eca5b78acfbe.value"
+    ],
+    "1937cd37-346a-4c39-be5c-5033bbf9e09e.value": [
+      "e341e070-355f-4203-a577-c9cc131bfe9c.template_text"
+    ],
+    "a9e0118c-f630-4723-9a09-af0c45b42b53.value": [
+      "55979f0a-d3c9-4a76-960f-7ac0f3fcd76a.template_text"
     ]
   },
   "groups": [

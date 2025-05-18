@@ -141,7 +141,6 @@ Generate a new line of example dialogue for {{ character_name }}.
 
 ### Rules for generating dialogue:
 You must only respond with the generated dialogue example.
-Always contain actions in asterisks. For example, *{{ character_name}} smiles*.
 Always contain dialogue in quotation marks. For example, {{ character_name}}: "Hello!"
 You must only generate one line of example dialogue for {{ character_name }}.
 
@@ -152,7 +151,6 @@ You must only generate one line of example dialogue for {{ character_name }}.
 {% endif -%}
 {#- SCENE INTRO -#}
 {% elif context_typ == "scene intro" %}
-{% set context_name = "scene introduction"%}
 {{ action_task }} introduction for the scene. This is the first text that is shown to {{ scene.get_player_character().name or "the reader" }} when they start the scene. 
 
 It must contain enough context for the reader to dive right in. Assume that the reader has not looked at the character or scene descriptions.
@@ -188,6 +186,8 @@ Only spoken words should be within ".
 {{ character_name }}'s {{ context_name }}:{{ generation_context.partial }}
 {%- elif context_typ == 'character dialogue' -%}
 {{ character_name }}:{{ generation_context.partial }}
+{%- elif context_typ == 'scene intro' -%}
+Scene introduction:{{ generation_context.partial }}
 {%- else -%}
 {{ context_name }}:{{ generation_context.partial }}
 {%- endif -%}

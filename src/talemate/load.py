@@ -385,10 +385,15 @@ async def transfer_character(scene, scene_json_path, character_name):
     return scene
 
 
-async def handle_no_player_character(scene):
+async def handle_no_player_character(scene: Scene) -> None:
     """
     Handle the case where there is no player character in the scene.
     """
+    
+    existing_player = scene.get_player_character()
+    
+    if existing_player:
+        return
     
     player = default_player_character()
     

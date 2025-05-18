@@ -385,9 +385,13 @@ In the `Generate Theme` group add the following nodes:
 
 **Make Text**
 
+I am chosing to rewrite the instructions to be a bit more compatible with what a user might type into the `topic` input.
+
+Its good to keep in mind that a user doesn't know what the entire prompt looks like, so their input may not always be ideal. Of course if you're just using this for yourself, this matters less.
+
 - **value**
 ```
-A list of {{ topic }} topics. Keep each item short (1-3 words).
+A list of topics to use for brain storming. The overarching theme is described as "{{ topic }}". Keep each item short (1-3 words). One of these items will be chosen to bootstrap a new story line.
 ```
 
 Retitle to `Instructions`

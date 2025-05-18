@@ -1008,6 +1008,7 @@ class ModuleProperty(Node):
     
     Outputs:
     
+    - name: The name of the property
     - value: The value of the property
     """
     
@@ -1077,6 +1078,7 @@ class ModuleProperty(Node):
         self.set_property("default", UNRESOLVED)
         self.set_property("choices", UNRESOLVED)
         self.set_property("description", "")
+        self.add_output("name")
         self.add_output("value")
 
     def cast_value(self, value: Any) -> Any:
@@ -1851,6 +1853,7 @@ class Graph(NodeBase):
                 name = node.get_property("property_name")
                 value = self.get_property(name)
                 node.set_output_values({
+                    "name": name,
                     "value": node.cast_value(value)
                 })
             

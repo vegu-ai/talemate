@@ -128,8 +128,9 @@
                     <v-card>
                         <v-card-title>{{ propertyEditorTitle || 'Edit Node Property' }}</v-card-title>
                         <v-alert v-if="propertyEditorValidationErrorMessage" type="error" variant="text"  density="compact">{{ propertyEditorValidationErrorMessage }}</v-alert>
-                        <v-card-text v-if="propertyEditorType === 'text'" @keydown.enter="() => { submitPropertyEditor(); }">
-                            <v-text-field ref="propertyEditorTextInput" v-model="propertyEditorValue" label="Value" outlined></v-text-field>
+                        <v-card-text v-if="propertyEditorType === 'text'">
+                            <v-text-field ref="propertyEditorTextInput" v-model="propertyEditorValue" label="Value" outlined
+                            @keydown.enter="() => { submitPropertyEditor(); }"></v-text-field>
                         </v-card-text>
                         <v-card-text v-else-if="propertyEditorType === 'json'">
                             <Codemirror
@@ -386,12 +387,12 @@ export default {
                 ev.preventDefault();
                 ev.stopPropagation();
             }
-
-
             
             // if last char is a line break, remove it
-            if(this.propertyEditorValue.endsWith("\n")) {
+            if(this.propertyEditorValue && this.propertyEditorValue.endsWith("\n")) {
                 this.propertyEditorValue = this.propertyEditorValue.slice(0, -1);
+            } else if(!this.propertyEditorValue) {
+                this.propertyEditorValue = "";
             }
 
             if(this.propertyEditorValidator) {

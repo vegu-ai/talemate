@@ -98,9 +98,9 @@ function getWidgetType(field) {
         case 'bool':
         case '<class \'bool\'>':
             return 'toggle';
+        case 'number':
         case 'int':
         case '<class \'int\'>':
-            return 'number';
         case 'float':
         case '<class \'float\'>':
             return 'number';
@@ -364,8 +364,6 @@ function createNodeClass(nodeDefinition) {
                         );
                     }
                 }
-
-                console.log("widget", widget, field, this.properties);
 
                 widget.readonly = field.readonly || false;
                 widget.disabled = widget.readonly;

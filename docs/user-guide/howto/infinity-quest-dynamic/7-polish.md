@@ -1,6 +1,10 @@
 # 7 - Polish
 
-Some things I am doing as i am wrapping up this tutorial and the `Dynamic Premise` module to ship with talemate.
+Some things I am doing as i am wrapping up this tutorial and the `Dynamic Premise` module to ship with the next `0.30` release.
+
+This part is going to be a bit more scattered as i am doing it on the fly as finish the implementation.
+
+I don't think you need to do all (or even any) of these, but it's going to be beneficial to review the process and understand the concepts.
 
 1. Status indication
 1. Comments
@@ -191,3 +195,15 @@ To fix this, simply set the description of each of the `Module Property` nodes.
 Now if we add the `Dynamic Premise` node to a scene loop, we can see that the `event_name` property is now set to `scene_loop_init` by default.
 
 ![Scene loop showing default event](./img/7-0010.png)
+
+## 7.6 - Final thoughts
+
+### A missing stage and some reorganization
+
+After testing the module for a bit, i am noting that story intention should be generated before the introduction.
+
+There could also be a benefit of adding another stage after analysis that picks and expands on one of the story line suggestions put forth by the analysis.
+
+I will likely do this, but since none of this introduces any new concepts it will not be part of the tutorial.
+
+You can always open up the final `Generate Premise` module and see how it is put together in the end.

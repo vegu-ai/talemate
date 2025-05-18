@@ -1,0 +1,566 @@
+{
+  "title": "Dynamic Premise",
+  "id": "c03c5512-0c2f-4cf8-9887-c813f6de1d52",
+  "properties": {
+    "event_name": null
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "scene/dynamicPremise",
+  "nodes": {
+    "e4eee8cc-10dc-4a04-9a77-d9598b202924": {
+      "title": "Switch",
+      "id": "e4eee8cc-10dc-4a04-9a77-d9598b202924",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 298,
+      "y": 79,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "a14b3571-899f-47e6-90cd-6bf0fec6e4bb": {
+      "title": "Set Introduction",
+      "id": "a14b3571-899f-47e6-90cd-6bf0fec6e4bb",
+      "properties": {
+        "introduction": null,
+        "emit_history": true
+      },
+      "x": 841,
+      "y": 358,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/SetIntroduction",
+      "base_type": "core/Node"
+    },
+    "7c8b1e17-c5a4-4eb3-a1dc-d9b5ea782e6b": {
+      "title": "UNSET game.intro_generated",
+      "id": "7c8b1e17-c5a4-4eb3-a1dc-d9b5ea782e6b",
+      "properties": {
+        "name": "intro_generated",
+        "scope": "game"
+      },
+      "x": 558,
+      "y": 79,
+      "width": 254,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/ConditionalUnsetState",
+      "base_type": "core/Node"
+    },
+    "e601163e-fc37-4bd4-bffa-866f2ec6457e": {
+      "title": "Stage 0",
+      "id": "e601163e-fc37-4bd4-bffa-866f2ec6457e",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1094,
+      "y": 119,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "4e9136e5-4557-4ef6-9124-9468d9e39815": {
+      "title": "SET game.intro_generated",
+      "id": "4e9136e5-4557-4ef6-9124-9468d9e39815",
+      "properties": {
+        "name": "intro_generated",
+        "scope": "game"
+      },
+      "x": 1100,
+      "y": 350,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "ca241a90-daa3-40e4-9b7a-b857c334cd39": {
+      "title": "Stage 2",
+      "id": "ca241a90-daa3-40e4-9b7a-b857c334cd39",
+      "properties": {
+        "stage": 2
+      },
+      "x": 1375,
+      "y": 402,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "85be1eb8-f1ca-47c4-b30f-539a1c10dae3": {
+      "title": "Set Introduction",
+      "id": "85be1eb8-f1ca-47c4-b30f-539a1c10dae3",
+      "properties": {
+        "introduction": "",
+        "emit_history": true
+      },
+      "x": 845,
+      "y": 92,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/SetIntroduction",
+      "base_type": "core/Node"
+    },
+    "a593c81a-25af-4199-abe6-884962c3492d": {
+      "title": "GET local.reset",
+      "id": "a593c81a-25af-4199-abe6-884962c3492d",
+      "properties": {
+        "name": "reset",
+        "scope": "local"
+      },
+      "x": 28,
+      "y": 80,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "efc1c906-d725-4941-acab-a369366411d4": {
+      "title": "SET local.reset",
+      "id": "efc1c906-d725-4941-acab-a369366411d4",
+      "properties": {
+        "name": null,
+        "scope": "local"
+      },
+      "x": 326,
+      "y": -947,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "43013315-b65d-4c51-bdab-fdffe051224f": {
+      "title": "PROP reset",
+      "id": "43013315-b65d-4c51-bdab-fdffe051224f",
+      "properties": {
+        "property_name": "reset",
+        "property_type": "bool",
+        "default": "false",
+        "choices": [],
+        "description": ""
+      },
+      "x": 26,
+      "y": -947,
+      "width": 215,
+      "height": 174,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569": {
+      "title": "PROP analysis_instructions",
+      "id": "3f749c9f-71b0-4e9c-b99d-859e53f20569",
+      "properties": {
+        "property_name": "analysis_instructions",
+        "property_type": "text",
+        "default": "",
+        "choices": [],
+        "description": ""
+      },
+      "x": 26,
+      "y": -707,
+      "width": 262,
+      "height": 174,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "c327b0c4-900e-4d27-a0b9-0d47e8479732": {
+      "title": "SET local.analysis_instructions",
+      "id": "c327b0c4-900e-4d27-a0b9-0d47e8479732",
+      "properties": {
+        "name": null,
+        "scope": "local"
+      },
+      "x": 326,
+      "y": -707,
+      "width": 260,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "86df3111-98d7-46a1-aa1d-93e6c53e282b": {
+      "title": "PROP analysis_enabled",
+      "id": "86df3111-98d7-46a1-aa1d-93e6c53e282b",
+      "properties": {
+        "property_name": "analysis_enabled",
+        "property_type": "bool",
+        "default": "true",
+        "choices": [],
+        "description": ""
+      },
+      "x": 26,
+      "y": -447,
+      "width": 260,
+      "height": 174,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff": {
+      "title": "PROP topic",
+      "id": "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff",
+      "properties": {
+        "property_name": "topic",
+        "property_type": "str",
+        "default": "",
+        "choices": [],
+        "description": ""
+      },
+      "x": 36,
+      "y": -207,
+      "width": 215,
+      "height": 174,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb": {
+      "title": "SET local.analysis_enabled",
+      "id": "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb",
+      "properties": {
+        "name": null,
+        "scope": "local"
+      },
+      "x": 326,
+      "y": -447,
+      "width": 218,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b": {
+      "title": "SET local.topic",
+      "id": "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b",
+      "properties": {
+        "name": null,
+        "scope": "local"
+      },
+      "x": 326,
+      "y": -217,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "08309808-d1f1-4a94-9027-363eceed41d1": {
+      "title": "Stage -1",
+      "id": "08309808-d1f1-4a94-9027-363eceed41d1",
+      "properties": {
+        "stage": -1
+      },
+      "x": 756,
+      "y": -577,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117": {
+      "title": "Generate Premise",
+      "id": "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117",
+      "properties": {
+        "analysis_instructions": "",
+        "topic": "",
+        "analysis_enabled": true
+      },
+      "x": 529,
+      "y": 529,
+      "width": 235,
+      "height": 97,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/generatePremise",
+      "base_type": "core/Graph"
+    },
+    "7438bc9b-4b38-4c5c-a9a8-df5ebf098691": {
+      "title": "Theme",
+      "id": "7438bc9b-4b38-4c5c-a9a8-df5ebf098691",
+      "properties": {},
+      "x": 859,
+      "y": 569,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "37313611-7de1-478b-8840-e5ea7ba856fe": {
+      "title": "GET game.intro_generated",
+      "id": "37313611-7de1-478b-8840-e5ea7ba856fe",
+      "properties": {
+        "name": "intro_generated",
+        "scope": "game"
+      },
+      "x": 29,
+      "y": 319,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "11965433-d217-47d1-bc37-8808426798ce": {
+      "title": "Switch",
+      "id": "11965433-d217-47d1-bc37-8808426798ce",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 279,
+      "y": 339,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "2a4e0aed-e85a-4fba-ae30-630c71f91db9": {
+      "title": "GET local.topic",
+      "id": "2a4e0aed-e85a-4fba-ae30-630c71f91db9",
+      "properties": {
+        "name": "topic",
+        "scope": "local"
+      },
+      "x": 29,
+      "y": 509,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "907bc1c7-c19b-4a28-ba0c-c386bbfd0aa9": {
+      "title": "GET local.analysis_instructions",
+      "id": "907bc1c7-c19b-4a28-ba0c-c386bbfd0aa9",
+      "properties": {
+        "name": "analysis_instructions",
+        "scope": "local"
+      },
+      "x": 29,
+      "y": 699,
+      "width": 260,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "cc9ec8d5-64ce-4e16-b424-216aa12da8ca": {
+      "title": "GET local.analysis_enabled",
+      "id": "cc9ec8d5-64ce-4e16-b424-216aa12da8ca",
+      "properties": {
+        "name": "analysis_enabled",
+        "scope": "local"
+      },
+      "x": 35,
+      "y": 888,
+      "width": 250,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "e4eee8cc-10dc-4a04-9a77-d9598b202924.yes": [
+      "7c8b1e17-c5a4-4eb3-a1dc-d9b5ea782e6b.state"
+    ],
+    "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.state": [
+      "4e9136e5-4557-4ef6-9124-9468d9e39815.value"
+    ],
+    "7c8b1e17-c5a4-4eb3-a1dc-d9b5ea782e6b.state": [
+      "85be1eb8-f1ca-47c4-b30f-539a1c10dae3.state"
+    ],
+    "4e9136e5-4557-4ef6-9124-9468d9e39815.value": [
+      "ca241a90-daa3-40e4-9b7a-b857c334cd39.state"
+    ],
+    "85be1eb8-f1ca-47c4-b30f-539a1c10dae3.state": [
+      "e601163e-fc37-4bd4-bffa-866f2ec6457e.state"
+    ],
+    "a593c81a-25af-4199-abe6-884962c3492d.value": [
+      "e4eee8cc-10dc-4a04-9a77-d9598b202924.value"
+    ],
+    "efc1c906-d725-4941-acab-a369366411d4.value": [
+      "08309808-d1f1-4a94-9027-363eceed41d1.state"
+    ],
+    "43013315-b65d-4c51-bdab-fdffe051224f.name": [
+      "efc1c906-d725-4941-acab-a369366411d4.name"
+    ],
+    "43013315-b65d-4c51-bdab-fdffe051224f.value": [
+      "efc1c906-d725-4941-acab-a369366411d4.value"
+    ],
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569.name": [
+      "c327b0c4-900e-4d27-a0b9-0d47e8479732.name"
+    ],
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569.value": [
+      "c327b0c4-900e-4d27-a0b9-0d47e8479732.value"
+    ],
+    "c327b0c4-900e-4d27-a0b9-0d47e8479732.value": [
+      "08309808-d1f1-4a94-9027-363eceed41d1.state_b"
+    ],
+    "86df3111-98d7-46a1-aa1d-93e6c53e282b.name": [
+      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.name"
+    ],
+    "86df3111-98d7-46a1-aa1d-93e6c53e282b.value": [
+      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value"
+    ],
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.name": [
+      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.name"
+    ],
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.value": [
+      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value"
+    ],
+    "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value": [
+      "08309808-d1f1-4a94-9027-363eceed41d1.state_c"
+    ],
+    "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value": [
+      "08309808-d1f1-4a94-9027-363eceed41d1.state_d"
+    ],
+    "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.text": [
+      "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.introduction"
+    ],
+    "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.theme": [
+      "7438bc9b-4b38-4c5c-a9a8-df5ebf098691.value"
+    ],
+    "37313611-7de1-478b-8840-e5ea7ba856fe.value": [
+      "11965433-d217-47d1-bc37-8808426798ce.value"
+    ],
+    "11965433-d217-47d1-bc37-8808426798ce.no": [
+      "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.state",
+      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.state"
+    ],
+    "2a4e0aed-e85a-4fba-ae30-630c71f91db9.value": [
+      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.topic"
+    ],
+    "907bc1c7-c19b-4a28-ba0c-c386bbfd0aa9.value": [
+      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.analysis_instructions"
+    ],
+    "cc9ec8d5-64ce-4e16-b424-216aa12da8ca.value": [
+      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.analysis_enabled"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Generate Introduction",
+      "x": 3,
+      "y": -1,
+      "width": 1607,
+      "height": 1037,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Properties",
+      "x": 1,
+      "y": -1027,
+      "width": 990,
+      "height": 1019,
+      "color": "#8AA",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Event",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {
+    "reset": {
+      "name": "reset",
+      "description": "",
+      "type": "bool",
+      "default": false,
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "analysis_instructions": {
+      "name": "analysis_instructions",
+      "description": "",
+      "type": "text",
+      "default": "",
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "analysis_enabled": {
+      "name": "analysis_enabled",
+      "description": "",
+      "type": "bool",
+      "default": true,
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "topic": {
+      "name": "topic",
+      "description": "",
+      "type": "str",
+      "default": "",
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
+  "style": {
+    "title_color": "#57532e",
+    "node_color": "#39382c",
+    "icon": "F0BF8",
+    "auto_title": null
+  }
+}

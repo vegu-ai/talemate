@@ -279,6 +279,11 @@ function createNodeClass(nodeDefinition) {
                 // Set default value if available
                 this.properties[key] = field.default !== undefined ? field.default : null;
 
+                // if property is still not set, check if nodeDefinition.properties has as value
+                if(!this.properties[key] && nodeDefinition.properties && nodeDefinition.properties[key]) {
+                    this.properties[key] = nodeDefinition.properties[key];
+                }
+
                 // if default is UNRESOLVED, set to null
                 if (this.properties[key] === UNRESOLVED) {
                     this.properties[key] = null;
@@ -359,6 +364,8 @@ function createNodeClass(nodeDefinition) {
                         );
                     }
                 }
+
+                console.log("widget", widget, field, this.properties);
 
                 widget.readonly = field.readonly || false;
                 widget.disabled = widget.readonly;

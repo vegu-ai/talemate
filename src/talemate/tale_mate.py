@@ -1924,9 +1924,7 @@ class Scene(Emitter):
         
         # emit intro
         intro:str = self.get_intro()
-        self.narrator_message(intro)
-        
-        
+                
         # cycle npcs again and if they have a greeting_text
         # emit it
         for npc in self.npcs:
@@ -1939,6 +1937,8 @@ class Scene(Emitter):
             if similar_to_intro:
                 continue
             emit("character", f"{npc.name}: {npc.greeting_text}", character=npc)
+            
+        self.narrator_message(intro)
         
         # emit history
         for message in self.history[-self.max_backscroll:]:

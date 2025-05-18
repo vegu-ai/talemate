@@ -180,8 +180,12 @@ class TemplateVariables(Node):
         if not hasattr(agent, "client"):
             raise InputValueError(self, "agent", "Agent does not have a client")
         
+        
+        scene = active_scene.get()
+        
         variables = {
-            "scene": active_scene.get(),
+            "scene": scene,
+            "scene_title": scene.title or scene.name,
             "max_tokens": agent.client.max_token_length,
         }
         

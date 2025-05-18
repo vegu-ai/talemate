@@ -3,6 +3,8 @@
 {% if context_typ == 'scene phase intent' or context_typ == 'scene type description' or context_typ == 'scene type instructions' -%}
 {% with exclude_phase_intent=True %}{% include "scene-intent.jinja2" %}{% endwith %}
 {% include "scene-types.jinja2" %}
+{% else %}
+{% include "scene-intent.jinja2" %}
 {% endif %}
 {% if context_typ == 'character attribute' or context_typ == 'character detail' or context_typ == 'scene intro' -%}
   {% for other_character in scene.get_characters() -%}
@@ -157,6 +159,7 @@ It must contain enough context for the reader to dive right in. Assume that the 
 
 It must setup an interesting entry point for the reader to participate in the scene and interact with {% if scene.num_npc_characters() %}the other characters and the environment.{% else %}the environment.{% endif %}
 
+Only spoken words should be within ".
 {#- GENERAL CONTEXT -#}
 {% else %}
 {% if context_name.endswith("?") -%}

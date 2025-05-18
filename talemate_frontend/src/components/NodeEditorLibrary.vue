@@ -60,10 +60,10 @@
                     <span class="text-caption text-muted">You are creating a new module from a selection of {{ newModule.nodes.nodes.length }} nodes.</span>
                 </v-alert>
                 <v-alert v-else-if="newModule.type === 'extend'" density="compact" color="primary" variant="outlined" icon="mdi-information-outline" class="mt-0 mb-4">
-                    <span class="text-caption text-muted">You are extending from <span class="text-primary">{{ newModule.registry }}</span></span>
+                    <span class="text-caption text-muted">You are extending from <span class="text-primary">{{ newModule.original_registry }}</span></span>
                 </v-alert>
                 <v-alert v-else-if="newModule.type === 'copy'" density="compact" color="primary" variant="outlined" icon="mdi-information-outline" class="mt-0 mb-4">
-                    <span class="text-caption text-muted">You are copying from <span class="text-primary">{{ newModule.registry }}</span></span>
+                    <span class="text-caption text-muted">You are copying from <span class="text-primary">{{ newModule.original_registry }}</span></span>
                 </v-alert>
                 <v-form v-model="newModuleValid" @submit.prevent="createModule">
 
@@ -127,6 +127,9 @@ export default {
                 nodes: null,
                 icon: '',
                 label: '',
+                original_registry: null,
+                copy_from: null,
+                extend_from: null,
             }
         }
     },
@@ -290,12 +293,21 @@ export default {
                 nodes: this.getSelectedNodes(),
                 icon: this.typeToIcon(type),
                 label: this.typeToLabel(type),
+                original_registry: null,
+                copy_from: null,
+                extend_from: null,
             };
             this.newModuleDialog = true;
 
             // copy and extend type will always null the nodes property
             if(type === 'copy' || type === 'extend') {
                 this.newModule.nodes = null;
+                this.newModule.original_registry = this.selectedNodeRegistry;
+                if(type === 'copy') {
+                    this.newModule.copy_from = this.selectedNodePath;
+                } else if(type === 'extend') {
+                    this.newModule.extend_from = this.selectedNodePath;
+                }
             }
         },
 
@@ -304,21 +316,14 @@ export default {
         },
 
         createModule() {
-            let copyFrom = null;
-            let extendFrom = null;
-
             console.log("Creating node", this.newModule);
-            if(this.newModule.type === 'copy')
-                copyFrom = this.selectedNodePath;
-            else if(this.newModule.type === 'extend')
-                extendFrom = this.selectedNodePath;
             
             this.getWebsocket().send(JSON.stringify({
                 type: 'node_editor',
                 action: 'create_mode_module',
                 name: this.newModule.name,
-                copy_from: copyFrom,
-                extend_from: extendFrom,
+                copy_from: this.newModule.copy_from,
+                extend_from: this.newModule.extend_from,
                 module_type: this.newModule.type,
                 registry: this.newModule.registry,
                 nodes: this.newModule.nodes,

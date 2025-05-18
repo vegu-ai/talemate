@@ -242,6 +242,9 @@ class NodeEditorPlugin(Plugin):
                         set_as_main = False
                         break
             
+            new_graph_cls._registry = registry
+            graph.registry = registry
+            
             new_graph_cls._module_path = await save_node_module(
                 self.scene, graph, filename, set_as_main=set_as_main
             )

@@ -1924,20 +1924,6 @@ class Scene(Emitter):
         
         # emit intro
         intro:str = self.get_intro()
-                
-        # cycle npcs again and if they have a greeting_text
-        # emit it
-        for npc in self.npcs:
-            
-            if not npc.greeting_text:
-                continue
-            
-            similar_to_intro, _, _ = util.similarity_score(npc.greeting_text, [intro])
-            
-            if similar_to_intro:
-                continue
-            emit("character", f"{npc.name}: {npc.greeting_text}", character=npc)
-            
         self.narrator_message(intro)
         
         # emit history

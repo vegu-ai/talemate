@@ -458,9 +458,11 @@ Additionally I am deciding to coerce the response to be a bit more concise and t
 {{ character.description }}
 {% endfor %}
 
+<|SECTION:CONTEXT OF YOUR TASK|>
+A topic description of "{{ topic }}" was given and a random theme was picked to bootstrap a new storyline: "{{ theme }}".
+
 <|SECTION:TASK|>
-Analyze the following `{{ topic }}` theme:
-{{ theme }}
+Analyze the theme "{{ theme }}" in the context of the topic "{{ topic }}".
 
 Provide a brief exploration of this theme, including:
 1. Key concepts or ideas involved and how they fit the context

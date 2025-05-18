@@ -31,14 +31,14 @@
             <v-text-field v-model="nodeLibrarySearch" placeholder="Filter" prepend-inner-icon="mdi-magnify" variant="underlined"></v-text-field>
         </v-toolbar>
 
-        <ConfirmActionPrompt :max-width="400" :contained="true" ref="confirmModuleDelete" description="Are you sure you want to delete this module?" actionLabel="Delete module" @confirm="(params) => requestModuleDelete(params.path)" color="delete"></ConfirmActionPrompt>
+        <ConfirmActionPrompt :max-width="400" :contained="true" ref="confirmModuleDelete" description="Are you sure you want to delete the {filename} module?" actionLabel="Delete module" @confirm="(params) => requestModuleDelete(params.path)" color="delete"></ConfirmActionPrompt>
 
         <v-card-text style="height: 300px; overflow-y: auto;">
             <div class="tiles pb-8">
                 <v-card v-for="(node, idx) in listedNodes.scenes" :key="idx" :class="'tile mr-2 pb-2 mb-2'+(node.selected?' module-selected':'')" elevation="7" color="primary" variant="tonal" @click="$emit('load-node', node.fullPath)" density="compact">
                     <v-card-title class="text-caption font-weight-bold pb-0">{{ node.filename }}</v-card-title>
                     <v-card-subtitle class="text-caption">{{ node.path }}</v-card-subtitle>
-                    <v-icon @click.stop="deleteModule(node.fullPath)" size="x-small" class="module-card-icon">mdi-close-circle-outline</v-icon>
+                    <v-icon @click.stop="deleteModule(node.fullPath, node.filename)" size="x-small" class="module-card-icon">mdi-close-circle-outline</v-icon>
                 </v-card>
                 <v-card 
                 v-for="(node, idx) in listedNodes.templates" :key="idx" :class="'tile mr-2 mb-2 pb-2 position-relative'+(node.selected?' module-locked-selected':'')" elevation="7" :color="node.selected ? 'locked_node' : 'locked_node'" variant="tonal" @click="$emit('load-node', node.fullPath)" density="compact">
@@ -311,8 +311,8 @@ export default {
             }
         },
 
-        deleteModule(path) {
-            this.$refs.confirmModuleDelete.initiateAction({path: path});
+        deleteModule(path, filename) {
+            this.$refs.confirmModuleDelete.initiateAction({path: path, filename: filename});
         },
 
         createModule() {

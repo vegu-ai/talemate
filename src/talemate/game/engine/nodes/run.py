@@ -479,6 +479,12 @@ class Function(Graph):
     @pydantic.computed_field(description="Node style")
     @property
     def style(self) -> NodeStyle:
+        
+        # If a style is defined in the graph it overrides the default
+        defined_style = super().style
+        if defined_style:
+            return defined_style
+        
         return NodeStyle(
             node_color="#392f2c",
             title_color="#573a2e",

@@ -400,6 +400,24 @@
       "inherited": false,
       "registry": "core/ModuleProperty",
       "base_type": "core/Node"
+    },
+    "536380db-ae7a-4ab3-bc3f-c08a47896998": {
+      "title": "Module Style",
+      "id": "536380db-ae7a-4ab3-bc3f-c08a47896998",
+      "properties": {
+        "node_color": "#27233a",
+        "title_color": "#3d315b",
+        "auto_title": null,
+        "icon": "F15D6"
+      },
+      "x": 1010,
+      "y": -150,
+      "width": 210,
+      "height": 130,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -558,9 +576,9 @@
     }
   },
   "style": {
-    "title_color": "#57532e",
-    "node_color": "#39382c",
-    "icon": "F0BF8",
+    "title_color": "#3d315b",
+    "node_color": "#27233a",
+    "icon": "F15D6",
     "auto_title": null
   }
 }

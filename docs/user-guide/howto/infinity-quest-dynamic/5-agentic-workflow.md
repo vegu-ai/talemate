@@ -67,15 +67,32 @@ Next add the following nodes to the `Generate Theme` group:
 
 Then connect them:
 
-- `<Make Bool>.value` -> `<Generate Thematic List>.state`
-- `<Theme>.value` -> `<Set State>.value`
-- `<Set State>.state` -> `<Stage>.state`
+- `<Make Bool>.value` :material-transit-connection-horizontal: `<Generate Thematic List>.state`
+- `<Theme>.value` :material-transit-connection-horizontal: `<Set State>.value`
+- `<Set State>.state` :material-transit-connection-horizontal: `<Stage>.state`
 
-In the `Set State` node set the `name` to `theme` and leave the `scope` as `local`. `Shift` click the title to auto title it to `SET local.theme`.
+---
 
-In the `Make Bool` node set the value to `true`. `Shift` click the title to auto title it to `true`.
+**Set State**
 
-In the `Stage` node set the `stage` to `1`.
+- **name**: `theme`
+- **scope**: `local`
+
+`Shift` click the title to auto title it to `SET local.theme`.
+
+---
+
+**Make Bool**
+
+- **value**: `true`
+
+`Shift` click the title to auto title it to `true`.
+
+---
+
+**Stage**
+
+- **stage**: `1`
 
 !!! tip "Local scope"
     The local state only exists for the duration of the module execution, so its ideal for passing data between stages.
@@ -118,20 +135,50 @@ Add the following nodes to the `Generate Introduction` group:
 
 Then connect them:
 
-- `<Get State>.value` -> `<Dict Set>.value`
-- `<Make Bool>.value` -> `<Contextual Generate>.state`
-- `<Contextual Generate>.text` -> `<Set State>.value`
-- `<Set State>.value` -> `<Stage>.state`
+- `<Get State>.value` :material-transit-connection-horizontal: `<Dict Set>.value`
+- `<Make Bool>.value` :material-transit-connection-horizontal: `<Contextual Generate>.state`
+- `<Contextual Generate>.text` :material-transit-connection-horizontal: `<Set State>.value`
+- `<Set State>.value` :material-transit-connection-horizontal: `<Stage>.state`
 
-In the `Get State` node set the `name` to `theme` and leave the `scope` as `local`. `Shift` click the title to auto title it to `GET local.theme`.
+---
 
-In the `Make Bool` node set the value to `true`. `Shift` click the title to auto title it to `true`.
+**Get State**
 
-In the `Set State` node set the `name` to `intro` and leave the `scope` as `local`. `Shift` click the title to auto title it to `SET local.intro`.
+- **name**: `theme`
+- **scope**: `local`
 
-In the `Stage` node set the `stage` to `3`.
+`Shift` click the title to auto title it to `GET local.theme`.
+
+---
+
+**Make Bool**
+
+- **value**: `true`
+
+`Shift` click the title to auto title it to `true`.
+
+---
+
+**Set State**
+
+- **name**: `intro`
+- **scope**: `local`
+
+`Shift` click the title to auto title it to `SET local.intro`.
+
+---
+
+**Stage**
+
+- **stage**: `3`
+
+---
+
+**Make Text**
 
 Retitle the `Make Text` node to `Instruction Template`.
+
+---
 
 ![generate introduction group](./img/5-0008.png)
 
@@ -163,7 +210,21 @@ You can connect the `IN state` node to the `OUT state` node.
 
 Next add two `Get State` nodes to the `Sockets` group.
 
-Set one to `local.theme` and the other to `local.intro` and connect them to their respective output nodes.
+---
+
+**First Get State**
+
+- **name**: `theme`
+- **scope**: `local`
+
+---
+
+**Second Get State**
+
+- **name**: `intro`
+- **scope**: `local`
+
+Connect them to their respective output nodes.
 
 ![connected sockets](./img/5-0010.png)
 
@@ -240,48 +301,94 @@ Add the following nodes to the `Analyze Theme` group:
 
 Then connect them:
 
-- `<Get State>.value` -> `<Dict Set>.value`
-- `<Make Text>.text` -> `<Prompt from Template>.template_text`
-- `<Dict Set>.dict` -> `<Prompt from Template>.variables`
-- `<Prompt from Template>.prompt` -> `<Generate Response>.prompt`
-- `<Make Bool>.value` -> `<Generate Response>.state`
-- `<Get Agent>.agent` -> `<Generate Response>.agent`
-- `<Generate Response>.response` -> `<Set State>.value`
-- `<Set State>.value` -> `<Stage>.state`
+- `<Get State>.value` :material-transit-connection-horizontal: `<Dict Set>.value`
+- `<Make Text>.text` :material-transit-connection-horizontal: `<Prompt from Template>.template_text`
+- `<Dict Set>.dict` :material-transit-connection-horizontal: `<Prompt from Template>.variables`
+- `<Prompt from Template>.prompt` :material-transit-connection-horizontal: `<Generate Response>.prompt`
+- `<Make Bool>.value` :material-transit-connection-horizontal: `<Generate Response>.state`
+- `<Get Agent>.agent` :material-transit-connection-horizontal: `<Generate Response>.agent`
+- `<Generate Response>.response` :material-transit-connection-horizontal: `<Set State>.value`
+- `<Set State>.value` :material-transit-connection-horizontal: `<Stage>.state`
 
-In the `Get State` node set the `name` to `theme` and leave the `scope` as `local`. `Shift` click the title to auto title it to `GET local.theme`.
+---
 
-In the `Get Agent` node set the `agent_name` to `Summarizer`. `Shift` click the title to auto title it to `summarizer`.
+**Get State**
 
-In the `Make Text` node set the text to:
-```
-Analyze the following sci-fi theme:
-{{theme}}
+- **name**: `theme`
+- **scope**: `local`
 
-Provide a detailed exploration of this theme, including:
-1. Key concepts or technologies involved
-2. Potential storylines or conflicts
-3. How it might affect the crew of the Starlight Nomad
+`Shift` click the title to auto title it to `GET local.theme`.
 
-Your analysis will be used to set up the premise for the next storyline in the Infinity Quest series.
-```
+---
+
+**Get Agent**
+
+- **agent_name**: `Summarizer`
+
+`Shift` click the title to auto title it to `summarizer`.
+
+---
+
+**Make Text**
+
+- **text**:
+    ```
+    Analyze the following sci-fi theme:
+    {{theme}}
+
+    Provide a detailed exploration of this theme, including:
+    1. Key concepts or technologies involved
+    2. Potential storylines or conflicts
+    3. How it might affect the crew of the Starlight Nomad
+
+    Your analysis will be used to set up the premise for the next storyline in the Infinity Quest series.
+    ```
 
 !!! note "Prompt from Template.template_text expects a jinja2 template"
     This means variable names need to be wrapped in `{{}}` to be interpreted as variables.
 
     So `{{ theme }}` instead of `{theme}` like we used before when passing to the string `Format` node.
 
-Retitle this node to `Theme Analysis Template`.
 
-In the `Dict Set` node set the `key` to `theme`.
+Retitle the `Make Text` node to `Theme Analysis Template`.
 
-In the `Make Bool` node set the value to `true`. `Shift` click the title to auto title it to `true`.
+---
 
-In the `Generate Response` node set the the `response_length` to `768` (tokens) and the `action_type` to `analyze`.
+**Dict Set**
 
-In the `Set State` node set the `name` to `theme_analysis` and leave the `scope` as `local`. `Shift` click the title to auto title it to `SET local.theme_analysis`.
+- **key**: `theme`
 
-In the `Stage` node set the `stage` to `2`.
+---
+
+**Make Bool**
+
+- **value**: `true`
+
+`Shift` click the title to auto title it to `true`.
+
+---
+
+**Generate Response**
+
+- **response_length**: `768`
+- **action_type**: `analyze`
+
+---
+
+**Set State**
+
+- **name**: `theme_analysis`
+- **scope**: `local`
+
+`Shift` click the title to auto title it to `SET local.theme_analysis`.
+
+---
+
+**Stage**
+
+- **stage**: `2`
+
+---
 
 ![analyze theme group](./img/5-0014.png)
 
@@ -334,17 +441,30 @@ Now, in the `Generate Introduction` group, we need to use the `theme_analysis` s
 
 Add another `Get State` node to the `Generate Introduction` group.
 
-Set the `name` to `theme_analysis` and leave the `scope` as `local`. `Shift` click the title to auto title it to `GET local.theme_analysis`.
+---
+
+**Get State**
+
+- **name**: `theme_analysis`
+- **scope**: `local`
+
+`Shift` click the title to auto title it to `GET local.theme_analysis`.
+
+---
 
 Hold `Alt` and drag the `Dict Set` node to clone it.
 
+---
+
 Connect the nodes:
 
-- `<GET local.theme_analysis>.value` -> `<Dict Set>.value`
-- `<GET local.theme_analysis>.name` -> `<Dict Set>.key`
-- `<Dict Set>.dict` -> `<Dict Set>.dict`: feeding the new dict into the old dict
+- `<GET local.theme_analysis>.value` :material-transit-connection-horizontal: `<Dict Set>.value`
+- `<GET local.theme_analysis>.name` :material-transit-connection-horizontal: `<Dict Set>.key`
+- `<Dict Set>.dict` :material-transit-connection-horizontal: `<Dict Set>.dict`: feeding the new dict into the old dict
 
 Lets also connect the `name` field of the `<GET local.theme>` node to the `key` field of its `<Dict Set>` node.
+
+- `<GET local.theme>.name` :material-transit-connection-horizontal: `<Dict Set>.key`
 
 ![dict set node](./img/5-0018.png)
 

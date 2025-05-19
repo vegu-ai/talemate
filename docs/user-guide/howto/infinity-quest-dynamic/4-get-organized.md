@@ -77,8 +77,8 @@ Then hit the `delete` key.
 
 Find the `Generate Premise` node and add it to the graph.
 
-1. `<Switch>.no` -> `<Generate Premise>.state`
-1. `<Generate Premise>.text` -> `<Set Intrudoction>.introduction`
+1. `<Switch>.no` :material-transit-connection-horizontal: `<Generate Premise>.state`
+1. `<Generate Premise>.text` :material-transit-connection-horizontal: `<Set Introduction>.introduction`
 
 ![replaced module](./img/4-0008.png)
 
@@ -106,7 +106,7 @@ Increase the `num` to `1`.
 
 Hold `Shift` and click the title to auto title it to `OUT theme`.
 
-Connect the `<Theme>.value` output to the `<OUT Theme>.value` input.
+- `<Theme>.value` :material-transit-connection-horizontal: `<OUT Theme>.value`
 
 ![theme output](./img/4-0011.png)
 
@@ -114,9 +114,9 @@ Connect the `<Theme>.value` output to the `<OUT Theme>.value` input.
 
 Add a **Module Style** node to the graph and place it anywhere. It does not need to be connected to anything.
 
-![module style](./img/4-0012.png)
-
 Right click the node and Select `Style Presets` -> `Agent Generation`.
+
+![module style](./img/4-0012.png)
 
 ![applied style](./img/4-0013.png)
 
@@ -131,7 +131,9 @@ Confirm that the `Generate Premise` node now has a theme output and a color styl
 
 ![style applied](./img/4-0014.png)
 
-Add a new `Watch` node, set its title to `Theme` and connect the `<Generate Premise>.theme` output to the `<Watch>.value` input. Then minimize the node by clicking the icon in the title.
+Add a new `Watch` node, set its title to `Theme` and connect it:
+
+- `<Generate Premise>.theme` :material-transit-connection-horizontal: `<Watch>.value`
 
 ![watch node](./img/4-0015.png)
 

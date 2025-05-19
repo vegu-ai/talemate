@@ -14,9 +14,9 @@ Load the `On Scen Init` module that we made in part 2.
 
 1. Remove the `Generate Progress Narration` node.
 1. Add a `Contextual Generate` node.
-1. Connect the `Switch` node's `no` output to the `Contextual Generate` node's `state` input.
-1. Connect the `Contextual Generate` node's `text` output to the `Set Introduction` node's `introduction` input.
-1. Connect the `Make Text` node's `text` output to the `Contextual Generate` node's `instructions` input.
+1. `<Switch>.no` :material-transit-connection-horizontal: `<Contextual Generate>.state`
+1. `<Contextual Generate>.text` :material-transit-connection-horizontal: `<Set Introduction>.introduction`
+1. `<Make Text>.text` :material-transit-connection-horizontal: `<Contextual Generate>.instructions`
 
 Then in the `Contextual Generate` node's properties:
 
@@ -40,7 +40,10 @@ Stage 0 - reset the game state for `intro_generated` IF we manually flip a switc
 
 Stage 1 - generate the introduction as we do now.
 
-Find and add the following nodes:
+
+### Stage 0 - Reset the `intro_generated` state
+
+Add the following nodes:
 
 1. `Stage` (x2)
 1. `Make Bool`
@@ -51,13 +54,21 @@ Find and add the following nodes:
     You can hold `alt` and click and drag a node to clone it.
 
 
-### Stage 0 - Reset the `intro_generated` state
+Connect the nodes:
 
-1. `Make Bool.value` -> `Switch.value`
-1. `Switch.yes` -> `Unset State (Conditional).state`
-1. `<Unset State (Conditional)>.state` -> `<Stage>.state`
-1. `<Unset State (Conditional)>.name` -> `intro_generated`
-1. `<Unset State (Conditional)>.scope` -> `game`
+1. `<Make Bool>.value` :material-transit-connection-horizontal: `<Switch>.value`
+1. `<Switch>.yes` :material-transit-connection-horizontal: `<Unset State (Conditional)>.state`
+1. `<Unset State (Conditional)>.state` :material-transit-connection-horizontal: `<Stage>.state`
+
+---
+
+**Unset State (Conditional)**
+
+- **name**: `intro_generated`
+- **scope**: `game`
+
+---
+
 1. Shift click the `Stage` node title to auto title it to `Stage 0`
 1. Shift click the `Unset State (Conditional)` node title to auto title it to `UNSET game.intro_generated`
 1. Right click the `Make Bool` node and select `Edit Title` and change it to `RESET`.
@@ -66,7 +77,7 @@ Find and add the following nodes:
 
 ### Stage 1 - Generate the introduction
 
-1. Connect any `SET game.intro_generated` output to `Stage` node's `state` input
+1. `<SET game.intro_generated>.value` :material-transit-connection-horizontal: `<Stage>.state`
 2. Set `Stage.stage` to `1`
 3. Shift click the `Stage` node title to auto title it to `Stage 1`
 4. Click the node icon to minimize it
@@ -118,37 +129,68 @@ Add the following nodes:
 1. `Dict Set` - this sets the `theme` state variable to the random concept
 1. `Format` - this formats the instructions so it includes the concept
 
-Once you have added the nodes to the canvas, connect them up:
+---
 
-1. `<Switch>.no` -> `<Generate Thematic List>.state`
-1. `<Generate Thematic List>.list` -> `<Random>.choices`
-1. In the `Generate Thematic List` node edit the instructions to be:
+**Generate Thematic List**
+
+- **instructions**:
     ```
     A list of sci-fi topics. Keep each item short (1-3 words).
     ```
-1. In the `Random` node edit the `method` to `"choice"`
+
+---
+
+**Random**
+
+- **method**: `choice`
+
+---
+
+Connect the nodes:
+
+1. `<Switch>.no` :material-transit-connection-horizontal: `<Generate Thematic List>.state`
+1. `<Generate Thematic List>.list` :material-transit-connection-horizontal: `<Random>.choices`
+
+---
 
 ![Random](./img/3-0007.png)
 
-Next:
+---
 
-1. `<Random>.result` -> `<Dict Set>.value`
-1. `<Make Text>.text` -> `<Format>.template`
-1. `<Format>.result` -> `<Contextual Generate>.instructions`
-1. In the `Dict Set` node edit the `key` to `"theme"`
-1. In the `Make Text` node edit the `value` to be:
+**Dict Set**
+
+- **key**: `theme`
+
+---
+
+**Make Text**
+
+- **value**:
     ```
     Generate the introduction to a random exciting scenario 
     for the crew of the Starlight Nomad.
-
-    The theme is: "{theme}"
     ```
+
+---
+
+Connect the nodes:
+
+1. `<Random>.result` :material-transit-connection-horizontal: `<Dict Set>.value`
+1. `<Make Text>.value` :material-transit-connection-horizontal: `<Format>.template`
+1. `<Dict Set>.dict` :material-transit-connection-horizontal: `<Format>.variables`
+1. `<Format>.result` :material-transit-connection-horizontal: `<Contextual Generate>.instructions`
+
+---
 
 ![Format](./img/3-0008.png)
 
-Finally add a `Watch` node and connect it to the `<Random>.result` output, so we can see the random theme in the node editor log. (I edited the title to `Theme`)
+---
 
-![Theme](./img/3-0009.png)
+Finally add a `Watch` node and connect it:
+
+- `<Random>.result` :material-transit-connection-horizontal: `<Watch>.value`
+
+This allows you to watch the `theme` state variable and see the changes as we pick a new random theme.
 
 Lets run to test this out.
 

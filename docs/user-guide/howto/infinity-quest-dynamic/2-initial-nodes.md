@@ -171,7 +171,12 @@ Find and add the following nodes to the canvas:
 
 ### 2.4.1 - Setting the state
 
-1. Connect the `Set Introduction` node's `state` output to the `Set State` node's `value` input.
+!!! note "Instructions going forward"
+    Going forward node connection instructions will be provided in the format:
+
+    `<Node>.output_name` :material-transit-connection-horizontal: `<Node>.input_name`
+
+1. `<Set Introduction>.state` :material-transit-connection-horizontal: `<Set State>.value`
 1. In the `Set State` node set the `name` field to `intro_generated` and the `scope` to `game`.
 1. `Shift+Click` the `Set State` node title to auto-title it.
 
@@ -179,10 +184,10 @@ With this we're essentially saying if the `Set Introduction` node is executed se
 
 ### 2.4.2 - Checking the state
 
-1. Grab the `Switch` node and connect it to the `value` output of the `Get State` node.
+1. `<Get State>.value` :material-transit-connection-horizontal: `<Switch>.value`
 1. In the `Switch` node set the `pass_through` field to `false`.
-1. Connect the `state` input of the `Generate Progress Narration` node to the `Switch` node's `no` output.
-1. Connect the `state` input of the `Set Introduction` node to the `Switch` node's `no` output.
+1. `<Switch>.no` :material-transit-connection-horizontal: `<Generate Progress Narration>.state`
+1. `<Switch>.no` :material-transit-connection-horizontal: `<Set Introduction>.state`
 1. In the `Get State` node set the `name` field to `intro_generated` and the `scope` to `game`.
 1. `Shift+Click` the `Get State` node title to auto-title it.
 

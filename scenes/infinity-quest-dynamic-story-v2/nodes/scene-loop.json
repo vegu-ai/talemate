@@ -1,6 +1,6 @@
 {
   "title": "Scene Loop",
-  "id": "65ce268e-fe97-4dd5-9eda-4ce1c03218f8",
+  "id": "118a86b4-d0d0-48c6-999d-7c280832d1b4",
   "properties": {
     "trigger_game_loop": true
   },
@@ -17,15 +17,15 @@
       "id": "2d1ef9e6-fd08-4f50-ad9a-7c8d4ade74e9",
       "properties": {
         "event_name": "scene_loop_init",
-        "reset": true,
         "analysis_instructions": "",
-        "analysis_enabled": true,
-        "topic": "sci-fi with cosmic horror"
+        "reset": true,
+        "topic": "sci-fi with cosmic horror",
+        "analysis_enabled": true
       },
-      "x": 10,
-      "y": -190,
-      "width": 231,
-      "height": 154,
+      "x": 30,
+      "y": -170,
+      "width": 229,
+      "height": 134,
       "collapsed": false,
       "inherited": false,
       "registry": "scene/dynamicPremise",
@@ -33,8 +33,27 @@
     }
   },
   "edges": {},
-  "groups": [],
-  "comments": [],
+  "groups": [
+    {
+      "title": "Randomize Story",
+      "x": 5,
+      "y": -245,
+      "width": 516,
+      "height": 234,
+      "color": "#a1309b",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [
+    {
+      "text": "Will generate a randomized story line based on the topic given",
+      "x": 290,
+      "y": -200,
+      "width": 215,
+      "inherited": false
+    }
+  ],
   "extends": "src/talemate/game/engine/nodes/modules/scene/scene-loop.json",
   "sleep": 0.001,
   "base_type": "scene/SceneLoop",

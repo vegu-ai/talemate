@@ -1267,7 +1267,7 @@
       "title": "Make Text",
       "id": "a9e0118c-f630-4723-9a09-af0c45b42b53",
       "properties": {
-        "value": "Generate a story intent based on the the following premise:\n\n{{ story_choice }}"
+        "value": "Generate a story intent based on the the following premise, make sure to include broad strokes of the overall story:\n\n{{ story_choice }}"
       },
       "x": -215,
       "y": 1297,

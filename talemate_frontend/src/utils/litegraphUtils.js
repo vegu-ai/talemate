@@ -43,6 +43,12 @@ const stylePresets = [
         node_color: "#5f2323",
         title_color: "#7f2e2e",
         icon: "F0159"  // alert
+    },
+    {
+        name: "Talemate Tint",
+        node_color: "#27233a",
+        title_color: "#3d315b",
+        icon: "F09DE"  // circle
     }
     // Add more presets here as needed
 ];
@@ -464,6 +470,22 @@ function createNodeClass(nodeDefinition) {
     // Set node title
     NodeClass.title = nodeDefinition.title;
     
+    // Patch: Custom computeSize to remove bottom gap if no sockets
+    NodeClass.prototype.computeSize = function() {
+        const size = LGraphNode.prototype.computeSize.call(this);
+        const gap = 20;
+        const noSockets = (
+            (!this.inputs || this.inputs.length === 0) &&
+            (!this.outputs || this.outputs.length === 0)
+        );
+
+        if(noSockets) {
+            size[1] = size[1] - gap;
+        }
+        return size;
+    };
+
+
     // When a connection is made to a socket where a widget is present, disable the widget
     NodeClass.prototype.onConnectionsChange = function(direction, targetSlot, state, linkInfo, socket) {
         if(direction === LiteGraph.INPUT) {

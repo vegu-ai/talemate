@@ -71,9 +71,9 @@ Then `double click` the comment to edit it.
 
 ## 7.3 - Error Handling
 
-Right now if something goes wrong in the `Generate Premise` node, the failing stage will just fail on its own and proceed to next stages.
+Right now if something goes wrong in the `Generate Premise` node, the status emission will stick around. 
 
-Generally if ANY of the stages fail, we should just abort.
+Lets fix that.
 
 --8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-generate-premise"
 
@@ -81,25 +81,45 @@ Add a new group called `Error Handling` and color it `red`.
 
 Add the following nodes to the group:
 
-- `Emit Status`
-- `Stop`
-- `Define Function`
-- `Get Function`
+- `Emit Status (Conditional)` x2 - Will be used to send a new status message
+- `Argument` - Error handlers are function definitions, we need an argument to pass the exception to
+- `Unpack Exception` - Unpacks the exception into a name and message
+- `core/Case` - Used to select which message to emit based on the exception name
+- `Coallesce` - Coallesce into single return value
+- `Return` - Return value for the error handler function (needs to be True to indicate error was caught)
+- `Define Function` - Defines the error handler function
+- `Get Function` - Retrieves the error handler function
 - `Error Handler`
 
 ---
 
-**Emit Status**
+**Argument**
 
-- **message**: `Something went wrong`
-- **status**: `error`
+- **name**: `exc`
+
+`Shift` + click the node title to auto-title it to `exc`.
+
+---
+
+**Case**
+
+- **case_a**: `GenerationCancelled`
+
+---
+
+**Emit Status (Conditional) - Generation Cancelled**
+
+- **message**: `Generation cancelled`
+- **status**: `warning`
 - **as_scene_message**: `true`
 
 ---
 
-**Stop**
+**Emit Status (Conditional) - Generation Failed**
 
-- **exception**: `StopGraphExecution`
+- **message**: `Something went wrong.`
+- **status**: `error`
+- **as_scene_message**: `true`
 
 ---
 
@@ -107,7 +127,7 @@ Add the following nodes to the group:
 
 - **name**: `error_handler`
 
-`Shift` click the title to auto-title it to `DEF error_handler`.
+`Shift` + click the node title to auto-title it to `DEF error_handler`.
 
 ---
 
@@ -115,20 +135,24 @@ Add the following nodes to the group:
 
 - **name**: `error_handler`
 
-`Shift` click the title to auto-title it to `FN error_handler`.
+`Shift` + click the node title to auto-title it to `FN error_handler`.
 
 ---
 
-Connect the nodes as follows:
+Then connect the nodes as follows:
 
-- `<Emit Status>.emitted` :material-transit-connection-horizontal: `<Stop>.state`
-- `<Stop>.state` :material-transit-connection-horizontal: `<DEF error_handler>.nodes`
+- `<exc>.value` :material-transit-connection-horizontal: `<Unpack Exception>.exc`
+- `<Unpack Exception>.name` :material-transit-connection-horizontal: `<Case>.value`
+- `<Case>.a` :material-transit-connection-horizontal: `<Emit Status (Conditional) - Generation Cancelled>.state`
+- `<Case>.none` :material-transit-connection-horizontal: `<Emit Status (Conditional) - Generation Failed>.state`
+- `<Emit Status (Conditional) - Generation Cancelled>.state` :material-transit-connection-horizontal: `<Coallesce>.a`
+- `<Emit Status (Conditional) - Generation Failed>.state` :material-transit-connection-horizontal: `<Coallesce>.b`
+- `<Coallesce>.value` :material-transit-connection-horizontal: `<Return>.value`
+- `<Return>.value` :material-transit-connection-horizontal: `<DEF error_handler>.nodes`
 
 ---
 
 - `<FN error_handler>.fn` :material-transit-connection-horizontal: `<Error Handler>.fn`
-
----
 
 ![Error Handling](./img/7-0004.png)
 

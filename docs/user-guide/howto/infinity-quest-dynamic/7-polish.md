@@ -14,7 +14,7 @@ I don't think you need to do all (or even any) of these, but it's going to be be
 
 ## 7.1 - Status Indication
 
-We want to show some status indication wile the `Dynamic Premise` node is generating a premise.
+We want to show some status indication wile the `Dynamic Premise` node is working.
 
 --8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-generate-premise"
 
@@ -53,7 +53,7 @@ I am also dragging the existing `Module Style` node into this group as well, jus
 
 ![Init - Stage 0](./img/7-0001.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 **:material-movie-play:** Start the scene loop to test.
 
@@ -181,12 +181,7 @@ To fix this, simply set the description of each of the `Module Property` nodes.
 
 ![Properties panel inputs now properly labeled](./img/7-0009.png)
 
-!!! note "Technically, redundant"
-    Its just another way to set a default for our properties, i am mostly being pedantic at this point.
-
-    Setting the default this way will however cause the value to propagate upwards to the node widget inputs. So that could be something to keep in mind. Its what we want to happen for the `event_name` property at least.
-
-Now if we add the `Dynamic Premise` node to a scene loop, we can see that the `event_name` property is now set to `scene_loop_init` by default.
+If we add a new `Dynamic Premise` node to a scene loop, we can see that the `event_name` property is now set to `scene_loop_init` by default.
 
 ![Scene loop showing default event](./img/7-0010.png)
 

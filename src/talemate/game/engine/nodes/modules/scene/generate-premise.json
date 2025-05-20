@@ -10,25 +10,6 @@
   "inherited": false,
   "registry": "scene/generatePremise",
   "nodes": {
-    "ba261322-afc9-4d6d-be45-b071446d8f0e": {
-      "title": "IN state",
-      "id": "ba261322-afc9-4d6d-be45-b071446d8f0e",
-      "properties": {
-        "input_type": "any",
-        "input_name": "state",
-        "input_optional": false,
-        "input_group": "",
-        "num": 1
-      },
-      "x": 2651,
-      "y": -642,
-      "width": 210,
-      "height": 154,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Input",
-      "base_type": "core/Node"
-    },
     "531c3abf-1827-4db2-a6d8-1daba3f05bbd": {
       "title": "GET local.topic",
       "id": "531c3abf-1827-4db2-a6d8-1daba3f05bbd",
@@ -154,21 +135,6 @@
       "registry": "state/SetState",
       "base_type": "core/Node"
     },
-    "53be9345-9126-4012-916a-014eb0004101": {
-      "title": "true",
-      "id": "53be9345-9126-4012-916a-014eb0004101",
-      "properties": {
-        "value": true
-      },
-      "x": 626,
-      "y": -461,
-      "width": 210,
-      "height": 58,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
     "8841e87b-e372-482f-b58f-e0a892e1b7b9": {
       "title": "Prompt From Template",
       "id": "8841e87b-e372-482f-b58f-e0a892e1b7b9",
@@ -177,8 +143,8 @@
         "template_file": "",
         "template_text": ""
       },
-      "x": 1086,
-      "y": 348,
+      "x": 1087,
+      "y": 347,
       "width": 210,
       "height": 146,
       "collapsed": false,
@@ -192,8 +158,8 @@
       "properties": {
         "agent_name": "summarizer"
       },
-      "x": 521,
-      "y": 173,
+      "x": 522,
+      "y": 172,
       "width": 230,
       "height": 58,
       "collapsed": false,
@@ -207,8 +173,8 @@
       "properties": {
         "key": ""
       },
-      "x": 276,
-      "y": 128,
+      "x": 277,
+      "y": 127,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -222,8 +188,8 @@
       "properties": {
         "key": ""
       },
-      "x": 26,
-      "y": -52,
+      "x": 27,
+      "y": -53,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -238,8 +204,8 @@
         "name": "theme",
         "scope": "local"
       },
-      "x": -214,
-      "y": -62,
+      "x": -213,
+      "y": -63,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -254,8 +220,8 @@
         "name": "analysis_instructions",
         "scope": "local"
       },
-      "x": -219,
-      "y": 143,
+      "x": -218,
+      "y": 142,
       "width": 260,
       "height": 126,
       "collapsed": false,
@@ -270,28 +236,13 @@
         "name": "topic",
         "scope": "local"
       },
-      "x": -223,
-      "y": 321,
+      "x": -222,
+      "y": 320,
       "width": 260,
       "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "17ac652c-fb77-43ec-9184-2ad84cd4ae1e": {
-      "title": "Switch",
-      "id": "17ac652c-fb77-43ec-9184-2ad84cd4ae1e",
-      "properties": {
-        "pass_through": false
-      },
-      "x": 1100,
-      "y": 108,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Switch",
       "base_type": "core/Node"
     },
     "d83755ec-46f4-4d0d-9f03-45e4c9f0baf6": {
@@ -301,24 +252,8 @@
         "name": "intro",
         "scope": "local"
       },
-      "x": 2656,
-      "y": -401,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "e50adef8-badf-4c69-ad16-10abf540f21b": {
-      "title": "GET local.theme",
-      "id": "e50adef8-badf-4c69-ad16-10abf540f21b",
-      "properties": {
-        "name": "theme",
-        "scope": "local"
-      },
-      "x": 2656,
-      "y": -181,
+      "x": -770,
+      "y": 903,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -334,8 +269,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 2926,
-      "y": -641,
+      "x": -500,
+      "y": 663,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -351,8 +286,8 @@
         "output_name": "text",
         "num": 1
       },
-      "x": 2926,
-      "y": -401,
+      "x": -500,
+      "y": 903,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -368,8 +303,8 @@
         "output_name": "theme",
         "num": 2
       },
-      "x": 2936,
-      "y": -181,
+      "x": -490,
+      "y": 1123,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -545,23 +480,6 @@
       "registry": "util/ModuleStyle",
       "base_type": "core/Node"
     },
-    "8f405443-0bd3-419d-8122-66225592e716": {
-      "title": "Emit Status",
-      "id": "8f405443-0bd3-419d-8122-66225592e716",
-      "properties": {
-        "message": "Generating a new story line",
-        "status": "busy",
-        "as_scene_message": true
-      },
-      "x": 9,
-      "y": -749,
-      "width": 282,
-      "height": 146,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "event/EmitStatus",
-      "base_type": "core/Node"
-    },
     "69332967-7ac9-4940-b7f4-7a77d2333f05": {
       "title": "Stage 0",
       "id": "69332967-7ac9-4940-b7f4-7a77d2333f05",
@@ -673,8 +591,8 @@
       "properties": {
         "intent": ""
       },
-      "x": 773,
-      "y": 1193,
+      "x": 937,
+      "y": 1172,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -690,8 +608,8 @@
         "template_file": "",
         "template_text": ""
       },
-      "x": 43,
-      "y": 1357,
+      "x": 44,
+      "y": 1247,
       "width": 210,
       "height": 146,
       "collapsed": false,
@@ -703,8 +621,8 @@
       "title": "Render Prompt",
       "id": "ea9bf575-80e1-4296-9f52-c3e0d79a6335",
       "properties": {},
-      "x": 283,
-      "y": 1357,
+      "x": 284,
+      "y": 1247,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -719,28 +637,13 @@
         "name": "template_variables",
         "scope": "local"
       },
-      "x": -223,
-      "y": 1467,
+      "x": -222,
+      "y": 1357,
       "width": 235,
       "height": 125,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "d4017f75-26f2-4220-ab5a-c0bf769063f0": {
-      "title": "true",
-      "id": "d4017f75-26f2-4220-ab5a-c0bf769063f0",
-      "properties": {
-        "value": true
-      },
-      "x": 337,
-      "y": 1217,
-      "width": 210,
-      "height": 58,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
     "83655997-bb35-4f8b-a5ff-eca5b78acfbe": {
@@ -750,8 +653,8 @@
         "name": "intro",
         "scope": "local"
       },
-      "x": 934,
-      "y": 1726,
+      "x": 939,
+      "y": 1687,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -763,8 +666,8 @@
       "title": "Template Variables",
       "id": "bd8fa024-ef74-45be-9ba4-fc3b99790772",
       "properties": {},
-      "x": 850,
-      "y": 259,
+      "x": 851,
+      "y": 258,
       "width": 170,
       "height": 46,
       "collapsed": false,
@@ -778,8 +681,8 @@
       "properties": {
         "key": ""
       },
-      "x": 516,
-      "y": 298,
+      "x": 517,
+      "y": 297,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -794,8 +697,8 @@
         "name": "analysis_enabled",
         "scope": "local"
       },
-      "x": 860,
-      "y": 79,
+      "x": 861,
+      "y": 78,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -807,8 +710,8 @@
       "title": "Template Variables",
       "id": "7d00d4cb-553c-4fb5-ad77-478198bd08e0",
       "properties": {},
-      "x": 92,
-      "y": 820,
+      "x": 93,
+      "y": 795,
       "width": 170,
       "height": 46,
       "collapsed": false,
@@ -823,28 +726,13 @@
         "name": "analysis_enabled",
         "scope": "local"
       },
-      "x": 340,
-      "y": 670,
+      "x": 341,
+      "y": 645,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322": {
-      "title": "Switch",
-      "id": "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322",
-      "properties": {
-        "pass_through": false
-      },
-      "x": 580,
-      "y": 710,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Switch",
       "base_type": "core/Node"
     },
     "dd9ea0f4-c777-426c-8124-601db7f92668": {
@@ -855,8 +743,8 @@
         "template_file": "",
         "template_text": ""
       },
-      "x": 452,
-      "y": 940,
+      "x": 453,
+      "y": 915,
       "width": 210,
       "height": 146,
       "collapsed": false,
@@ -871,8 +759,8 @@
         "name": "theme_analysis",
         "scope": "local"
       },
-      "x": 1646,
-      "y": 218,
+      "x": 1888,
+      "y": 213,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -886,28 +774,13 @@
       "properties": {
         "key": ""
       },
-      "x": 1891,
-      "y": 169,
+      "x": 2133,
+      "y": 164,
       "width": 210,
       "height": 98,
       "collapsed": false,
       "inherited": false,
       "registry": "data/DictSet",
-      "base_type": "core/Node"
-    },
-    "b13e3c4b-7df7-450e-b7b5-a96d7b4bd0dd": {
-      "title": "Stage 2",
-      "id": "b13e3c4b-7df7-450e-b7b5-a96d7b4bd0dd",
-      "properties": {
-        "stage": 2
-      },
-      "x": 2131,
-      "y": 169,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "c12346ff-7182-4513-b045-94ccb8217d5a": {
@@ -916,8 +789,8 @@
       "properties": {
         "agent_name": "director"
       },
-      "x": -193,
-      "y": 693,
+      "x": -192,
+      "y": 668,
       "width": 230,
       "height": 58,
       "collapsed": false,
@@ -932,8 +805,8 @@
         "name": "template_variables",
         "scope": "local"
       },
-      "x": -223,
-      "y": 843,
+      "x": -222,
+      "y": 818,
       "width": 235,
       "height": 125,
       "collapsed": false,
@@ -948,8 +821,8 @@
         "name": "template_variables",
         "scope": "local"
       },
-      "x": 861,
-      "y": -91,
+      "x": 862,
+      "y": -92,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -963,8 +836,8 @@
       "properties": {
         "value": "<|SECTION:STORY BASELINE|>\n{{ scene.description }}\n\n<|SECTION:PROTAGONISTS|>\n{% for character in scene.characters %}\n### {{ character.name }}\n{{ character.description }}\n{% endfor %}\n\n<|SECTION:CONTEXT OF YOUR TASK|>\nA topic description of \"{{ topic }}\" was given and a random theme was picked to bootstrap a new storyline: \"{{ theme }}\".\n\n<|SECTION:TASK|>\nAnalyze the theme \"{{ theme }}\" in the context of the topic \"{{ topic }}\".\n\nProvide a brief exploration of this theme, including:\n1. Key concepts or ideas involved and how they fit the context\n2. Potential storylines or conflicts\n3. How it might affect the protagonists of the story\n\n{% if analysis_instructions %}\n{{ analysis_instructions }}\n{% endif %}\n\nKeep your analysis concise and to the point.\n\nYour analysis will be used to set up the premise for the next storyline in the `{{ scene.name }}` series."
       },
-      "x": 510,
-      "y": 460,
+      "x": 511,
+      "y": 459,
       "width": 300,
       "height": 58,
       "collapsed": false,
@@ -979,8 +852,8 @@
         "name": "template_variables",
         "scope": "local"
       },
-      "x": 1124,
-      "y": 624,
+      "x": 1424,
+      "y": 625,
       "width": 235,
       "height": 125,
       "collapsed": false,
@@ -995,8 +868,8 @@
         "name": "story_choice",
         "scope": "local"
       },
-      "x": 1145,
-      "y": 813,
+      "x": 1445,
+      "y": 814,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1010,8 +883,8 @@
       "properties": {
         "key": null
       },
-      "x": 1404,
-      "y": 804,
+      "x": 1704,
+      "y": 805,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -1019,47 +892,17 @@
       "registry": "data/DictSet",
       "base_type": "core/Node"
     },
-    "9cab6c50-f98d-48f5-a34c-6dd6b3d0cafa": {
-      "title": "Stage 3",
-      "id": "9cab6c50-f98d-48f5-a34c-6dd6b3d0cafa",
-      "properties": {
-        "stage": 3
-      },
-      "x": 1664,
-      "y": 814,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "532c7aba-0a3f-497a-a70e-50105592f76f": {
       "title": "Render Prompt",
       "id": "532c7aba-0a3f-497a-a70e-50105592f76f",
       "properties": {},
-      "x": 500,
-      "y": 1936,
+      "x": 505,
+      "y": 1897,
       "width": 140,
       "height": 26,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/RenderPrompt",
-      "base_type": "core/Node"
-    },
-    "90484246-29a6-4dca-96a1-c8803376400d": {
-      "title": "true",
-      "id": "90484246-29a6-4dca-96a1-c8803376400d",
-      "properties": {
-        "value": true
-      },
-      "x": 530,
-      "y": 1726,
-      "width": 210,
-      "height": 58,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
     "3aebfba2-4d7f-4ca5-b60b-f8b6acb5e2f0": {
@@ -1069,8 +912,8 @@
         "name": "template_variables",
         "scope": "local"
       },
-      "x": -227,
-      "y": 1995,
+      "x": -222,
+      "y": 1956,
       "width": 235,
       "height": 125,
       "collapsed": false,
@@ -1082,8 +925,8 @@
       "title": "Template Variables",
       "id": "5c2b46e1-e788-4726-8644-5a4f1510023c",
       "properties": {},
-      "x": 43,
-      "y": 1935,
+      "x": 48,
+      "y": 1896,
       "width": 170,
       "height": 46,
       "collapsed": false,
@@ -1099,8 +942,8 @@
         "template_file": "",
         "template_text": ""
       },
-      "x": 263,
-      "y": 1895,
+      "x": 268,
+      "y": 1856,
       "width": 210,
       "height": 146,
       "collapsed": false,
@@ -1114,46 +957,13 @@
       "properties": {
         "agent_name": "creator"
       },
-      "x": -217,
-      "y": 1865,
+      "x": -212,
+      "y": 1826,
       "width": 230,
       "height": 58,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/GetAgent",
-      "base_type": "core/Node"
-    },
-    "1f84a0b8-e007-4d44-a831-cb85d1cc7155": {
-      "title": "Generate Response",
-      "id": "1f84a0b8-e007-4d44-a831-cb85d1cc7155",
-      "properties": {
-        "data_output": false,
-        "response_length": 512,
-        "action_type": "scene_direction",
-        "attempts": 1
-      },
-      "x": 847,
-      "y": 803,
-      "width": 251,
-      "height": 190,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/GenerateResponse",
-      "base_type": "core/Node"
-    },
-    "0d4607c9-2dbb-44a0-b5fb-4878f8401a5f": {
-      "title": "Solidify Choice Template",
-      "id": "0d4607c9-2dbb-44a0-b5fb-4878f8401a5f",
-      "properties": {
-        "value": "<|SECTION:STORY BASELINE|>\n{{ scene_title }}\n\n{{ scene.description }}\n\n<|SECTION:PROTAGONISTS|>\n{% for character in scene.characters %}\n### {{ character.name }}\n{{ character.description }}\n{% endfor %}\n\n<|SECTION:CONTEXT OF YOUR TASK|>\nA topic description of \"{{ topic }}\" was given and a random theme was picked to bootstrap a new storyline: \"{{ theme }}\".\n\nThe topic and theme were considered and the following analysis was generated:\n\n<|SECTION:THEME ANALYSIS|>\n{{ theme_analysis }}\n\n<|SECTION:TASK|>\nThe analysis contains multiple proposals for potential story lines. \n\nYour task is to pick the most interesting one and then briefly explain how this story line makes sense within the context of  {{ scene_title }}.\n\nYour choice and explanation will be given to the story editor to write the introduction to this new story line.\n\nBe concise and to the point."
-      },
-      "x": 62,
-      "y": 1020,
-      "width": 300,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
       "base_type": "core/Node"
     },
     "085729eb-fefb-4490-9e39-1aafca07289f": {
@@ -1165,8 +975,8 @@
         "action_type": "scene_direction",
         "attempts": 1
       },
-      "x": 1370,
-      "y": 207,
+      "x": 1612,
+      "y": 202,
       "width": 251,
       "height": 190,
       "collapsed": false,
@@ -1180,23 +990,8 @@
       "properties": {
         "stage": 5
       },
-      "x": 1183,
-      "y": 1755,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "fd2c09be-8994-49a3-98b8-d7d3e2304aa2": {
-      "title": "Stage 4",
-      "id": "fd2c09be-8994-49a3-98b8-d7d3e2304aa2",
-      "properties": {
-        "stage": 4
-      },
-      "x": 1023,
-      "y": 1191,
+      "x": 1188,
+      "y": 1716,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -1217,8 +1012,8 @@
         "context_aware": true,
         "history_aware": true
       },
-      "x": 483,
-      "y": 1193,
+      "x": 647,
+      "y": 1172,
       "width": 237,
       "height": 406,
       "collapsed": false,
@@ -1239,8 +1034,8 @@
         "context_aware": true,
         "history_aware": true
       },
-      "x": 681,
-      "y": 1730,
+      "x": 686,
+      "y": 1691,
       "width": 237,
       "height": 406,
       "collapsed": false,
@@ -1254,8 +1049,8 @@
       "properties": {
         "value": "{% if story_choice %}Generate the introduction for this new \"{{ scene_title }}\" story: \n\n{{ story_choice }}\n\n{% else %}\nGenerate the introduction to a new \"{{ scene_title }}\" story based on the topic \"{{ topic }}\" and the theme \"{{ theme }}\".\n{% endif %}"
       },
-      "x": -137,
-      "y": 1725,
+      "x": -132,
+      "y": 1686,
       "width": 272,
       "height": 58,
       "collapsed": false,
@@ -1269,20 +1064,307 @@
       "properties": {
         "value": "Generate a story intent based on the the following premise, make sure to include broad strokes of the overall story:\n\n{{ story_choice }}"
       },
-      "x": -215,
-      "y": 1297,
+      "x": -214,
+      "y": 1187,
       "width": 210,
       "height": 58,
       "collapsed": false,
       "inherited": false,
       "registry": "data/string/MakeText",
       "base_type": "core/Node"
+    },
+    "8f405443-0bd3-419d-8122-66225592e716": {
+      "title": "Emit Status",
+      "id": "8f405443-0bd3-419d-8122-66225592e716",
+      "properties": {
+        "message": "Generating a new story line",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 9,
+      "y": -749,
+      "width": 282,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitStatus",
+      "base_type": "core/Node"
+    },
+    "53be9345-9126-4012-916a-014eb0004101": {
+      "title": "true",
+      "id": "53be9345-9126-4012-916a-014eb0004101",
+      "properties": {
+        "value": true
+      },
+      "x": 380,
+      "y": -490,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "b13e3c4b-7df7-450e-b7b5-a96d7b4bd0dd": {
+      "title": "Stage 2",
+      "id": "b13e3c4b-7df7-450e-b7b5-a96d7b4bd0dd",
+      "properties": {
+        "stage": 2
+      },
+      "x": 2371,
+      "y": 169,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "37ecc888-c9e2-4138-9d33-fe06e52d05cb": {
+      "title": "Emit Status (Conditional)",
+      "id": "37ecc888-c9e2-4138-9d33-fe06e52d05cb",
+      "properties": {
+        "message": "Generating a new story line - Selecting theme",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 520,
+      "y": -490,
+      "width": 210,
+      "height": 166,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "17ac652c-fb77-43ec-9184-2ad84cd4ae1e": {
+      "title": "Switch",
+      "id": "17ac652c-fb77-43ec-9184-2ad84cd4ae1e",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 1101,
+      "y": 107,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "ba261322-afc9-4d6d-be45-b071446d8f0e": {
+      "title": "IN state",
+      "id": "ba261322-afc9-4d6d-be45-b071446d8f0e",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": "",
+        "num": 1
+      },
+      "x": -766,
+      "y": 664,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "e50adef8-badf-4c69-ad16-10abf540f21b": {
+      "title": "GET local.theme",
+      "id": "e50adef8-badf-4c69-ad16-10abf540f21b",
+      "properties": {
+        "name": "theme",
+        "scope": "local"
+      },
+      "x": -765,
+      "y": 1138,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "f31cd7cc-169b-461f-88c7-5ad5bfabc6d5": {
+      "title": "Emit Status (Conditional)",
+      "id": "f31cd7cc-169b-461f-88c7-5ad5bfabc6d5",
+      "properties": {
+        "message": "Generating a new story line - Analyzing theme",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 1362,
+      "y": 203,
+      "width": 210,
+      "height": 166,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "9cab6c50-f98d-48f5-a34c-6dd6b3d0cafa": {
+      "title": "Stage 3",
+      "id": "9cab6c50-f98d-48f5-a34c-6dd6b3d0cafa",
+      "properties": {
+        "stage": 3
+      },
+      "x": 1971,
+      "y": 815,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322": {
+      "title": "Switch",
+      "id": "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 581,
+      "y": 685,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "d65d29ca-55e7-43af-b5d6-847eac15bfa7": {
+      "title": "Emit Status (Conditional)",
+      "id": "d65d29ca-55e7-43af-b5d6-847eac15bfa7",
+      "properties": {
+        "message": "Generating a new story line - Selecting story idea.",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 881,
+      "y": 745,
+      "width": 210,
+      "height": 166,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "fd2c09be-8994-49a3-98b8-d7d3e2304aa2": {
+      "title": "Stage 4",
+      "id": "fd2c09be-8994-49a3-98b8-d7d3e2304aa2",
+      "properties": {
+        "stage": 4
+      },
+      "x": 1191,
+      "y": 1170,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "5093769d-17b3-4a02-9180-aaf4cdf844a0": {
+      "title": "Emit Status (Conditional)",
+      "id": "5093769d-17b3-4a02-9180-aaf4cdf844a0",
+      "properties": {
+        "message": "Generating a new story line - Generating story intention.",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 420,
+      "y": 1190,
+      "width": 210,
+      "height": 166,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "d4017f75-26f2-4220-ab5a-c0bf769063f0": {
+      "title": "true",
+      "id": "d4017f75-26f2-4220-ab5a-c0bf769063f0",
+      "properties": {
+        "value": true
+      },
+      "x": 280,
+      "y": 1190,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "a87aa8ff-384e-422d-8dd4-1c96768dddbf": {
+      "title": "Emit Status (Conditional)",
+      "id": "a87aa8ff-384e-422d-8dd4-1c96768dddbf",
+      "properties": {
+        "message": "Generating a new story line - Generating narration",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 460,
+      "y": 1702,
+      "width": 210,
+      "height": 166,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "90484246-29a6-4dca-96a1-c8803376400d": {
+      "title": "true",
+      "id": "90484246-29a6-4dca-96a1-c8803376400d",
+      "properties": {
+        "value": true
+      },
+      "x": 340,
+      "y": 1702,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "0d4607c9-2dbb-44a0-b5fb-4878f8401a5f": {
+      "title": "Solidify Choice Template",
+      "id": "0d4607c9-2dbb-44a0-b5fb-4878f8401a5f",
+      "properties": {
+        "value": "<|SECTION:STORY BASELINE|>\n{{ scene_title }}\n\n{{ scene.description }}\n\n<|SECTION:PROTAGONISTS|>\n{% for character in scene.characters %}\n### {{ character.name }}\n{{ character.description }}\n{% endfor %}\n\n<|SECTION:CONTEXT OF YOUR TASK|>\nA topic description of \"{{ topic }}\" was given and a random theme was picked to bootstrap a new storyline: \"{{ theme }}\".\n\nThe topic and theme were considered and the following analysis was generated:\n\n<|SECTION:THEME ANALYSIS|>\n{{ theme_analysis }}\n\n<|SECTION:TASK|>\nThe analysis contains multiple proposals for potential story lines. \n\nYour task is to pick the most interesting one and then briefly explain how this story line makes sense within the context of  {{ scene_title }}.\n\nInclude broad strokes about what the story line could be.\n\n\nYour choice and explanation will be given to the story editor to write the introduction to this new story line.\n\nBe concise and to the point."
+      },
+      "x": 63,
+      "y": 995,
+      "width": 300,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "1f84a0b8-e007-4d44-a831-cb85d1cc7155": {
+      "title": "Generate Response",
+      "id": "1f84a0b8-e007-4d44-a831-cb85d1cc7155",
+      "properties": {
+        "data_output": false,
+        "response_length": 512,
+        "action_type": "scene_direction",
+        "attempts": 1
+      },
+      "x": 1147,
+      "y": 804,
+      "width": 251,
+      "height": 190,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
     }
   },
   "edges": {
-    "ba261322-afc9-4d6d-be45-b071446d8f0e.value": [
-      "eb68c23f-72be-4115-95ca-1f7b212b16f5.value"
-    ],
     "531c3abf-1827-4db2-a6d8-1daba3f05bbd.name": [
       "08e3d297-9342-40e6-9ddc-f86283d8728a.key"
     ],
@@ -1306,9 +1388,6 @@
     ],
     "de75cf1f-f2e6-4f88-ad8e-77ca2d35ea74.value": [
       "94603a9b-e6a5-4944-a621-558dd9395818.state"
-    ],
-    "53be9345-9126-4012-916a-014eb0004101.value": [
-      "7422c62a-7655-454e-b6a4-2ed726cd8870.state"
     ],
     "8841e87b-e372-482f-b58f-e0a892e1b7b9.prompt": [
       "085729eb-fefb-4490-9e39-1aafca07289f.prompt"
@@ -1340,14 +1419,8 @@
     "2d8aab05-4563-4ac6-8242-2171be615b16.value": [
       "277e5de6-e128-4675-b80b-a212149e3fd0.value"
     ],
-    "17ac652c-fb77-43ec-9184-2ad84cd4ae1e.yes": [
-      "085729eb-fefb-4490-9e39-1aafca07289f.state"
-    ],
     "d83755ec-46f4-4d0d-9f03-45e4c9f0baf6.value": [
       "16f6c12f-22ca-4ff5-86f1-6f605cdb98a7.value"
-    ],
-    "e50adef8-badf-4c69-ad16-10abf540f21b.value": [
-      "6bed1f60-8b79-41c0-a8e7-bb8a157c0f32.value"
     ],
     "8627e3dc-6ad8-42ed-84fc-8d793fbfd85c.value": [
       "08e99d86-5908-4959-8b37-c6f64344ab45.value"
@@ -1373,9 +1446,6 @@
     "290d821f-6be9-4130-9965-4f0823342725.value": [
       "8fbb2ad2-2c28-44cb-bc40-f2a02bfa4e16.template_text"
     ],
-    "8f405443-0bd3-419d-8122-66225592e716.emitted": [
-      "69332967-7ac9-4940-b7f4-7a77d2333f05.state_b"
-    ],
     "08e3d297-9342-40e6-9ddc-f86283d8728a.dict": [
       "8fbb2ad2-2c28-44cb-bc40-f2a02bfa4e16.variables"
     ],
@@ -1399,9 +1469,6 @@
     ],
     "b2b78f64-c308-470a-a492-9f8e605208a9.value": [
       "55979f0a-d3c9-4a76-960f-7ac0f3fcd76a.variables"
-    ],
-    "d4017f75-26f2-4220-ab5a-c0bf769063f0.value": [
-      "6ab6598b-151d-44ef-920f-0810f6da88b5.state"
     ],
     "83655997-bb35-4f8b-a5ff-eca5b78acfbe.value": [
       "fc181553-db26-4666-a679-afd5edfd4ab5.state"
@@ -1427,9 +1494,6 @@
     ],
     "95e1204b-b62f-47b2-ad7b-01e11288ecce.value": [
       "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322.value"
-    ],
-    "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322.yes": [
-      "1f84a0b8-e007-4d44-a831-cb85d1cc7155.state"
     ],
     "dd9ea0f4-c777-426c-8124-601db7f92668.prompt": [
       "1f84a0b8-e007-4d44-a831-cb85d1cc7155.prompt"
@@ -1470,9 +1534,6 @@
     "532c7aba-0a3f-497a-a70e-50105592f76f.rendered": [
       "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.instructions"
     ],
-    "90484246-29a6-4dca-96a1-c8803376400d.value": [
-      "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.state"
-    ],
     "3aebfba2-4d7f-4ca5-b60b-f8b6acb5e2f0.value": [
       "5c2b46e1-e788-4726-8644-5a4f1510023c.merge_with"
     ],
@@ -1484,12 +1545,6 @@
     ],
     "c91d620a-1cec-40d6-b23a-e2c19d8e766f.agent": [
       "5c2b46e1-e788-4726-8644-5a4f1510023c.agent"
-    ],
-    "1f84a0b8-e007-4d44-a831-cb85d1cc7155.response": [
-      "c5d05d7b-6b85-4b76-9a40-fee92b540a2f.value"
-    ],
-    "0d4607c9-2dbb-44a0-b5fb-4878f8401a5f.value": [
-      "dd9ea0f4-c777-426c-8124-601db7f92668.template_text"
     ],
     "085729eb-fefb-4490-9e39-1aafca07289f.response": [
       "b3a2a89e-d3ef-4921-aac1-e464451f5347.value"
@@ -1508,6 +1563,51 @@
     ],
     "a9e0118c-f630-4723-9a09-af0c45b42b53.value": [
       "55979f0a-d3c9-4a76-960f-7ac0f3fcd76a.template_text"
+    ],
+    "8f405443-0bd3-419d-8122-66225592e716.emitted": [
+      "69332967-7ac9-4940-b7f4-7a77d2333f05.state_b"
+    ],
+    "53be9345-9126-4012-916a-014eb0004101.value": [
+      "37ecc888-c9e2-4138-9d33-fe06e52d05cb.state"
+    ],
+    "37ecc888-c9e2-4138-9d33-fe06e52d05cb.state": [
+      "7422c62a-7655-454e-b6a4-2ed726cd8870.state"
+    ],
+    "17ac652c-fb77-43ec-9184-2ad84cd4ae1e.yes": [
+      "f31cd7cc-169b-461f-88c7-5ad5bfabc6d5.state"
+    ],
+    "ba261322-afc9-4d6d-be45-b071446d8f0e.value": [
+      "eb68c23f-72be-4115-95ca-1f7b212b16f5.value"
+    ],
+    "e50adef8-badf-4c69-ad16-10abf540f21b.value": [
+      "6bed1f60-8b79-41c0-a8e7-bb8a157c0f32.value"
+    ],
+    "f31cd7cc-169b-461f-88c7-5ad5bfabc6d5.state": [
+      "085729eb-fefb-4490-9e39-1aafca07289f.state"
+    ],
+    "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322.yes": [
+      "d65d29ca-55e7-43af-b5d6-847eac15bfa7.state"
+    ],
+    "d65d29ca-55e7-43af-b5d6-847eac15bfa7.state": [
+      "1f84a0b8-e007-4d44-a831-cb85d1cc7155.state"
+    ],
+    "5093769d-17b3-4a02-9180-aaf4cdf844a0.state": [
+      "6ab6598b-151d-44ef-920f-0810f6da88b5.state"
+    ],
+    "d4017f75-26f2-4220-ab5a-c0bf769063f0.value": [
+      "5093769d-17b3-4a02-9180-aaf4cdf844a0.state"
+    ],
+    "a87aa8ff-384e-422d-8dd4-1c96768dddbf.state": [
+      "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.state"
+    ],
+    "90484246-29a6-4dca-96a1-c8803376400d.value": [
+      "a87aa8ff-384e-422d-8dd4-1c96768dddbf.state"
+    ],
+    "0d4607c9-2dbb-44a0-b5fb-4878f8401a5f.value": [
+      "dd9ea0f4-c777-426c-8124-601db7f92668.template_text"
+    ],
+    "1f84a0b8-e007-4d44-a831-cb85d1cc7155.response": [
+      "c5d05d7b-6b85-4b76-9a40-fee92b540a2f.value"
     ]
   },
   "groups": [
@@ -1523,18 +1623,18 @@
     },
     {
       "title": "Generate Introduction - Stage 5",
-      "x": -248,
-      "y": 1627,
-      "width": 1672,
-      "height": 534,
+      "x": -247,
+      "y": 1606,
+      "width": 1670,
+      "height": 516,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Outputs",
-      "x": 2626,
-      "y": -722,
+      "x": -801,
+      "y": 582,
       "width": 545,
       "height": 720,
       "color": "#8A8",
@@ -1543,10 +1643,10 @@
     },
     {
       "title": "Analyze Theme - Stage 2",
-      "x": -248,
-      "y": -171,
-      "width": 2614,
-      "height": 712,
+      "x": -247,
+      "y": -172,
+      "width": 2853,
+      "height": 714,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1583,20 +1683,20 @@
     },
     {
       "title": "Generate Story Intention - Stage 4",
-      "x": -248,
-      "y": 1113,
-      "width": 1502,
-      "height": 511,
+      "x": -247,
+      "y": 1089,
+      "width": 1673,
+      "height": 513,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Choose Theme and Solidify Story Choice - Stage 3",
-      "x": -248,
-      "y": 544,
-      "width": 2147,
-      "height": 566,
+      "x": -247,
+      "y": 545,
+      "width": 2453,
+      "height": 541,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1612,74 +1712,23 @@
     },
     {
       "text": "Takes the selected theme from Stage 1 and the analysis of it from Stage 2 and uses it to generate a new introductory text for the scene, starting a new storyline.",
-      "x": 938,
-      "y": 1899,
+      "x": 943,
+      "y": 1860,
       "width": 354,
       "inherited": false
     },
     {
       "text": "Responsible for analyzing the selected theme and proposing potential story lines in the context of the encompassing story baseline.",
-      "x": 1381,
-      "y": 429,
+      "x": 1623,
+      "y": 424,
       "width": 411,
       "inherited": false
     }
   ],
   "extends": null,
   "base_type": "core/Graph",
-  "inputs": [
-    {
-      "id": "3d2a1dc5-4533-4114-87d6-686bb598e38f",
-      "name": "state",
-      "optional": false,
-      "group": "",
-      "socket_type": "any"
-    },
-    {
-      "id": "d81d36c1-7f0c-44f1-a85a-e7942edd1185",
-      "name": "topic",
-      "optional": false,
-      "group": "",
-      "socket_type": "str"
-    },
-    {
-      "id": "d50625d8-d084-4d76-b849-f867bb1a3c76",
-      "name": "analysis_instructions",
-      "optional": true,
-      "group": "",
-      "socket_type": "str"
-    },
-    {
-      "id": "012140fd-9a59-4695-8a56-1ca8d202c6b5",
-      "name": "analysis_enabled",
-      "optional": true,
-      "group": "",
-      "socket_type": "bool"
-    }
-  ],
-  "outputs": [
-    {
-      "id": "ccbdd3e7-3a7f-4c6c-9f7a-e8d217f251a4",
-      "name": "state",
-      "optional": false,
-      "group": null,
-      "socket_type": "any"
-    },
-    {
-      "id": "52ad9bf7-d7d9-4322-8689-5e7c392871cc",
-      "name": "text",
-      "optional": false,
-      "group": null,
-      "socket_type": "str"
-    },
-    {
-      "id": "1b763fc9-98c4-46d3-b5d3-4d8c91220e8e",
-      "name": "theme",
-      "optional": false,
-      "group": null,
-      "socket_type": "str"
-    }
-  ],
+  "inputs": [],
+  "outputs": [],
   "module_properties": {},
   "style": {
     "title_color": "#572e44",

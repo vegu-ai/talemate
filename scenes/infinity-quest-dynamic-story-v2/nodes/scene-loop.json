@@ -1,6 +1,6 @@
 {
   "title": "Scene Loop",
-  "id": "118a86b4-d0d0-48c6-999d-7c280832d1b4",
+  "id": "e6127b47-5ff1-4c6a-acbf-3fbf04166d42",
   "properties": {
     "trigger_game_loop": true
   },
@@ -18,7 +18,7 @@
       "properties": {
         "event_name": "scene_loop_init",
         "analysis_instructions": "",
-        "reset": true,
+        "reset": false,
         "topic": "sci-fi with cosmic horror",
         "analysis_enabled": true
       },

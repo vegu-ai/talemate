@@ -188,7 +188,40 @@ class EmitStatus(Node):
         self.set_output_values({
             "emitted": True,
         })
-
+        
+@register("event/EmitStatusConditional")
+class EmitStatusConditional(EmitStatus):
+    """
+    Emits a status message if a condition is met
+    
+    Inputs:
+    
+    - state: The graph state
+    - message: The message text to emit
+    - status: The status of the message
+    - as_scene_message: Whether to emit the message as a scene message (optional)
+    
+    Outputs:
+    
+    - state: The graph state
+    - emitted: Whether the message was emitted (True) or not (False)
+    """
+    
+    def __init__(self, title="Emit Status (Conditional)", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("state")
+        self.add_output("state")
+        super().setup()
+        
+    async def run(self, state: GraphState):
+        _state = self.get_input_value("state")
+        await super().run(state)
+        self.set_output_values({
+            "state": _state,
+        })
+        
 @register("event/EmitSceneStatus")
 class EmitSceneStatus(Node):
     """
@@ -244,6 +277,7 @@ class EmitAgentMessage(Node):
     
     Inputs:
     
+    - state: The graph state
     - message: The message text to emit
     - agent: The agent
     - header: The header of the message

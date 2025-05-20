@@ -1341,10 +1341,10 @@ class SceneLoop(Loop):
         connect_listeners(self, state, disconnect=True)
         
         if not state.data.get("_scene_loop_init"):
-            await async_signals.get("scene_loop_init").send(self.scene_loop_event)
             state.data["_scene_loop_init"] = True
             state.data["_commands"] = {}
             await self.register_commands(scene, state)
+            await async_signals.get("scene_loop_init").send(self.scene_loop_event)
         
         trigger_game_loop = self.get_property("trigger_game_loop")
         

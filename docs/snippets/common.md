@@ -17,3 +17,23 @@ Then select the group you want to add the template to and click the **:material-
 
     See [Writing Style Templates](/talemate/user-guide/world-editor/templates/writing-style) for more information on how to create a writing style and add unwanted phrases.
 <!--- --8<-- [end:editor-revision-unwanted-propse-requirement] -->
+
+<!--- --8<-- [start:documentation-is-a-work-in-progress] -->
+!!! abstract "Documentation is a work in progress"
+    Documentation is an ongoing effort and some parts are more complete than others.
+<!--- --8<-- [end:documentation-is-a-work-in-progress] -->
+
+<!--- --8<-- [start:save-scene-project] -->
+!!! success "Save!"
+    **:material-content-save: Save** the scene project.
+<!--- --8<-- [end:save-scene-project] -->
+
+<!--- --8<-- [start:save-graph] -->
+!!! success "Save!"
+    **:material-check-circle-outline: Save** the graph.
+<!--- --8<-- [end:save-graph] -->
+
+<!--- --8<-- [start:alert-graph-changed] -->
+!!! load "Graph Change"
+    We're loading a new graph.
+<!--- --8<-- [end:alert-graph-changed] -->

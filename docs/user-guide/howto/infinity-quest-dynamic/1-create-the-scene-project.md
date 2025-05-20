@@ -1,22 +1,32 @@
 # 1 - Scene Project
 
-Creating the scene project and saving it.
-
 ## 1.1 - Create the scene project
 
-Load up talemate and find the **Create :material-plus:** button in the left sidebar.
-
-Click it.
+On the Talemate **:material-home: Home** tab find the **Create :material-plus:** button in the left sidebar.
 
 ![Create Scene Project](./img/1-btn-create-scene.png)
 
-Ignore the node editor for now and head to the **:material-earth-box: World Editor** tab.
+Click it and wait a moment for the blank scene to load.
+
+Click the **:material-earth-box: World Editor** tab.
 
 Fill in `Title`, `Description` and `Content Context`
 
-Then click the **Save** button. Enter a file name `infinity-quest-dynamic` and click **Save**.
+---
+
+**Title**: `Infinity Quest Dynamic`
+
+**Content Context**: `an epic sci-fi adventure`
+
+**Description**: 
+```
+Captain Elmer Farstield and his trusty first officer, Kaira, embark upon a daring mission into uncharted space. Their small but mighty exploration vessel, the Starlight Nomad, is equipped with state-of-the-art technology and crewed by an elite team of scientists, engineers, and pilots. Together they brave the vast cosmos seeking answers to humanity's most pressing questions about life beyond our solar system.
+```
+---
 
 ![Save Scene Project](./img/1-save-project.png)
+
+Then click the **Save** button. Enter a file name `infinity-quest-dynamic` and click **Save**.
 
 ## 1.2 - Lets import characters
 
@@ -42,7 +52,7 @@ Make sure to then also activate both characters. Click on each name in the chara
 
 ![Activate Characters](./img/1-0007.png)
 
-**Save** the scene project again.
+--8<-- "docs/snippets/common.md:save-scene-project"
 
 ## 1.3 - Finalize
 
@@ -57,7 +67,7 @@ Head over to **Scene**, then **Settings** and set both fields accordingly:
 
 ![Set Restoration File](./img/1-0005.png)
 
-Save the scene project again.
+--8<-- "docs/snippets/common.md:save-scene-project"
 
 ### Optionally
 

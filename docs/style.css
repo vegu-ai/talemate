@@ -1,3 +1,22 @@
 pre > code {
     white-space: pre-wrap;
 }
+
+/* Custom load admonition */
+.md-typeset .admonition.load,
+.md-typeset details.load {
+    border-color: #9c27b0;
+}
+
+.md-typeset .load > .admonition-title,
+.md-typeset .load > summary {
+    background-color: rgba(156, 39, 176, 0.1);
+    border-color: #9c27b0;
+}
+
+.md-typeset .load > .admonition-title::before,
+.md-typeset .load > summary::before {
+    background-color: #9c27b0;
+    -webkit-mask-image: var(--md-admonition-icon--load);
+            mask-image: var(--md-admonition-icon--load);
+}

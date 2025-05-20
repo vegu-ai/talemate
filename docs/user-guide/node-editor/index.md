@@ -2,8 +2,10 @@
 
 The node editor is introduced with version `0.30.0` and is a major new feature in talemate.
 
-It allows the code-less creation of more complex scenes and scenarios.
+It allows the code-less creation of more complex scenes and re-usable modules.
 
-Documentation is a work in progress.
+## Documentation Status
 
-Please see the [Infinity Quest Dynamic - HowTo](/talemate/user-guide/howto/infinity-quest-dynamic/) for a crash course on how to use the node editor.
+--8<-- "docs/snippets/common.md:documentation-is-a-work-in-progress"
+
+See the [Node Editor - Crash Course](/talemate/user-guide/howto/node-editor-crash-course/infinity-quest-dynamic/) tutorial for an introduction to the node editor.

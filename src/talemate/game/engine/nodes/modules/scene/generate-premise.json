@@ -10,22 +10,6 @@
   "inherited": false,
   "registry": "scene/generatePremise",
   "nodes": {
-    "531c3abf-1827-4db2-a6d8-1daba3f05bbd": {
-      "title": "GET local.topic",
-      "id": "531c3abf-1827-4db2-a6d8-1daba3f05bbd",
-      "properties": {
-        "name": "topic",
-        "scope": "local"
-      },
-      "x": -221,
-      "y": -329,
-      "width": 245,
-      "height": 125,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
     "94603a9b-e6a5-4944-a621-558dd9395818": {
       "title": "Stage 1",
       "id": "94603a9b-e6a5-4944-a621-558dd9395818",
@@ -197,22 +181,6 @@
       "registry": "data/DictSet",
       "base_type": "core/Node"
     },
-    "42227ab2-9ef4-4760-9486-fc23c06a50e3": {
-      "title": "GET local.theme",
-      "id": "42227ab2-9ef4-4760-9486-fc23c06a50e3",
-      "properties": {
-        "name": "theme",
-        "scope": "local"
-      },
-      "x": -213,
-      "y": -63,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
     "7ab85266-2ce1-4434-8a32-e76710b97a88": {
       "title": "GET local.analysis_instructions",
       "id": "7ab85266-2ce1-4434-8a32-e76710b97a88",
@@ -252,8 +220,8 @@
         "name": "intro",
         "scope": "local"
       },
-      "x": -770,
-      "y": 903,
+      "x": -768,
+      "y": 1144,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -269,8 +237,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": -500,
-      "y": 663,
+      "x": -498,
+      "y": 904,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -286,8 +254,8 @@
         "output_name": "text",
         "num": 1
       },
-      "x": -500,
-      "y": 903,
+      "x": -498,
+      "y": 1144,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -303,8 +271,8 @@
         "output_name": "theme",
         "num": 2
       },
-      "x": -490,
-      "y": 1123,
+      "x": -488,
+      "y": 1364,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -322,8 +290,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": -1393,
-      "y": -493,
+      "x": -1391,
+      "y": -491,
       "width": 252,
       "height": 154,
       "collapsed": false,
@@ -338,8 +306,8 @@
         "name": "topic",
         "scope": "local"
       },
-      "x": -1083,
-      "y": -483,
+      "x": -1081,
+      "y": -481,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -357,8 +325,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": -1393,
-      "y": -253,
+      "x": -1391,
+      "y": -251,
       "width": 252,
       "height": 154,
       "collapsed": false,
@@ -373,8 +341,8 @@
         "name": "analysis_instructions",
         "scope": "local"
       },
-      "x": -1103,
-      "y": -253,
+      "x": -1101,
+      "y": -251,
       "width": 260,
       "height": 122,
       "collapsed": false,
@@ -392,8 +360,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": -1392,
-      "y": -12,
+      "x": -1390,
+      "y": -10,
       "width": 252,
       "height": 154,
       "collapsed": false,
@@ -408,8 +376,8 @@
         "name": "analysis_enabled",
         "scope": "local"
       },
-      "x": -847,
-      "y": -13,
+      "x": -845,
+      "y": -11,
       "width": 260,
       "height": 122,
       "collapsed": false,
@@ -423,8 +391,8 @@
       "properties": {
         "default": true
       },
-      "x": -1087,
-      "y": 7,
+      "x": -1085,
+      "y": 9,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -445,21 +413,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
-    "6c50e530-c90a-4c31-83bb-ce6dacc459b8": {
-      "title": "Stage -1",
-      "id": "6c50e530-c90a-4c31-83bb-ce6dacc459b8",
-      "properties": {
-        "stage": -1
-      },
-      "x": -505,
-      "y": -232,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "ece4f875-661f-4aea-8392-3c12c920bfe1": {
@@ -518,8 +471,8 @@
         "status": "error",
         "as_scene_message": true
       },
-      "x": -1093,
-      "y": 255,
+      "x": -1091,
+      "y": 496,
       "width": 270,
       "height": 153,
       "collapsed": false,
@@ -533,8 +486,8 @@
       "properties": {
         "exception": "StopGraphExecution"
       },
-      "x": -780,
-      "y": 257,
+      "x": -778,
+      "y": 498,
       "width": 260,
       "height": 79,
       "collapsed": false,
@@ -548,8 +501,8 @@
       "properties": {
         "name": "error_handler"
       },
-      "x": -1080,
-      "y": 493,
+      "x": -1078,
+      "y": 734,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -563,8 +516,8 @@
       "properties": {
         "name": "error_handler"
       },
-      "x": -488,
-      "y": 257,
+      "x": -486,
+      "y": 498,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -576,8 +529,8 @@
       "title": "Error Handler",
       "id": "396c90e5-9aee-4edd-b952-a26505362aff",
       "properties": {},
-      "x": -831,
-      "y": 499,
+      "x": -829,
+      "y": 740,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -1162,8 +1115,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": -766,
-      "y": 664,
+      "x": -764,
+      "y": 905,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1178,8 +1131,8 @@
         "name": "theme",
         "scope": "local"
       },
-      "x": -765,
-      "y": 1138,
+      "x": -764,
+      "y": 1379,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1362,15 +1315,133 @@
       "inherited": false,
       "registry": "prompt/GenerateResponse",
       "base_type": "core/Node"
+    },
+    "6c50e530-c90a-4c31-83bb-ce6dacc459b8": {
+      "title": "Stage -2",
+      "id": "6c50e530-c90a-4c31-83bb-ce6dacc459b8",
+      "properties": {
+        "stage": -2
+      },
+      "x": -498,
+      "y": -227,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "058f5b1d-6de3-43eb-9311-d3b5d92bafe0": {
+      "title": "Stage -1",
+      "id": "058f5b1d-6de3-43eb-9311-d3b5d92bafe0",
+      "properties": {
+        "stage": -1
+      },
+      "x": -485,
+      "y": 263,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "e3d42215-165c-44d1-907f-a39f71a1209f": {
+      "title": "Input Value Error",
+      "id": "e3d42215-165c-44d1-907f-a39f71a1209f",
+      "properties": {
+        "message": "Topic needs to be specified",
+        "field": "topic"
+      },
+      "x": -775,
+      "y": 263,
+      "width": 262,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/InputValueError",
+      "base_type": "core/Node"
+    },
+    "531c3abf-1827-4db2-a6d8-1daba3f05bbd": {
+      "title": "GET local.topic",
+      "id": "531c3abf-1827-4db2-a6d8-1daba3f05bbd",
+      "properties": {
+        "name": "topic",
+        "scope": "local"
+      },
+      "x": -220,
+      "y": -330,
+      "width": 245,
+      "height": 125,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "42227ab2-9ef4-4760-9486-fc23c06a50e3": {
+      "title": "GET local.theme",
+      "id": "42227ab2-9ef4-4760-9486-fc23c06a50e3",
+      "properties": {
+        "name": "theme",
+        "scope": "local"
+      },
+      "x": -210,
+      "y": -50,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "55ef5134-53b4-4615-b5ba-74114f57904c": {
+      "title": "As Bool",
+      "id": "55ef5134-53b4-4615-b5ba-74114f57904c",
+      "properties": {
+        "default": false
+      },
+      "x": -1270,
+      "y": 250,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "61afec01-eaa5-4640-8c4a-702439fc5a81": {
+      "title": "Switch",
+      "id": "61afec01-eaa5-4640-8c4a-702439fc5a81",
+      "properties": {
+        "pass_through": false
+      },
+      "x": -1020,
+      "y": 250,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "9cd1916d-99cc-4670-8b1c-8271bbe37f4d": {
+      "title": "GET local.topic",
+      "id": "9cd1916d-99cc-4670-8b1c-8271bbe37f4d",
+      "properties": {
+        "name": "topic",
+        "scope": "local"
+      },
+      "x": -1550,
+      "y": 250,
+      "width": 245,
+      "height": 125,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
     }
   },
   "edges": {
-    "531c3abf-1827-4db2-a6d8-1daba3f05bbd.name": [
-      "08e3d297-9342-40e6-9ddc-f86283d8728a.key"
-    ],
-    "531c3abf-1827-4db2-a6d8-1daba3f05bbd.value": [
-      "08e3d297-9342-40e6-9ddc-f86283d8728a.value"
-    ],
     "40d341e5-affa-4f3c-acae-7cebb556c1c6.result": [
       "208eccc3-9eb8-4938-b182-ee9fa4626677.value"
     ],
@@ -1400,12 +1471,6 @@
     ],
     "cd5dda3f-42d6-41ff-abb7-91c4b97de6af.dict": [
       "0f4128ac-8840-463a-8348-4f003fe0b6fe.dict"
-    ],
-    "42227ab2-9ef4-4760-9486-fc23c06a50e3.name": [
-      "cd5dda3f-42d6-41ff-abb7-91c4b97de6af.key"
-    ],
-    "42227ab2-9ef4-4760-9486-fc23c06a50e3.value": [
-      "cd5dda3f-42d6-41ff-abb7-91c4b97de6af.value"
     ],
     "7ab85266-2ce1-4434-8a32-e76710b97a88.name": [
       "0f4128ac-8840-463a-8348-4f003fe0b6fe.key"
@@ -1608,6 +1673,30 @@
     ],
     "1f84a0b8-e007-4d44-a831-cb85d1cc7155.response": [
       "c5d05d7b-6b85-4b76-9a40-fee92b540a2f.value"
+    ],
+    "e3d42215-165c-44d1-907f-a39f71a1209f.state": [
+      "058f5b1d-6de3-43eb-9311-d3b5d92bafe0.state"
+    ],
+    "531c3abf-1827-4db2-a6d8-1daba3f05bbd.name": [
+      "08e3d297-9342-40e6-9ddc-f86283d8728a.key"
+    ],
+    "531c3abf-1827-4db2-a6d8-1daba3f05bbd.value": [
+      "08e3d297-9342-40e6-9ddc-f86283d8728a.value"
+    ],
+    "42227ab2-9ef4-4760-9486-fc23c06a50e3.name": [
+      "cd5dda3f-42d6-41ff-abb7-91c4b97de6af.key"
+    ],
+    "42227ab2-9ef4-4760-9486-fc23c06a50e3.value": [
+      "cd5dda3f-42d6-41ff-abb7-91c4b97de6af.value"
+    ],
+    "55ef5134-53b4-4615-b5ba-74114f57904c.value": [
+      "61afec01-eaa5-4640-8c4a-702439fc5a81.value"
+    ],
+    "61afec01-eaa5-4640-8c4a-702439fc5a81.no": [
+      "e3d42215-165c-44d1-907f-a39f71a1209f.state"
+    ],
+    "9cd1916d-99cc-4670-8b1c-8271bbe37f4d.value": [
+      "55ef5134-53b4-4615-b5ba-74114f57904c.value"
     ]
   },
   "groups": [
@@ -1633,8 +1722,8 @@
     },
     {
       "title": "Outputs",
-      "x": -801,
-      "y": 582,
+      "x": -800,
+      "y": 823,
       "width": 545,
       "height": 720,
       "color": "#8A8",
@@ -1653,8 +1742,8 @@
     },
     {
       "title": "Inputs",
-      "x": -1418,
-      "y": -573,
+      "x": -1416,
+      "y": -571,
       "width": 1165,
       "height": 740,
       "color": "#88A",
@@ -1667,14 +1756,14 @@
       "y": -829,
       "width": 802,
       "height": 251,
-      "color": "#b58b2a",
+      "color": "#8AA",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Error Handler",
-      "x": -1118,
-      "y": 175,
+      "x": -1116,
+      "y": 416,
       "width": 864,
       "height": 401,
       "color": "#A88",
@@ -1700,6 +1789,16 @@
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
+    },
+    {
+      "title": "Input Validation",
+      "x": -1571,
+      "y": 173,
+      "width": 1320,
+      "height": 237,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
     }
   ],
   "comments": [
@@ -1722,6 +1821,13 @@
       "x": 1623,
       "y": 424,
       "width": 411,
+      "inherited": false
+    },
+    {
+      "text": "If topic is a \"\" turn it into False.",
+      "x": -1270,
+      "y": 330,
+      "width": 235,
       "inherited": false
     }
   ],

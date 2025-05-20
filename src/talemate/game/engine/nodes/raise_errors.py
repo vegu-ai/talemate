@@ -18,6 +18,8 @@ from talemate.game.engine.nodes.core import (
 
 __all__ = [
     "ActedAsCharacter",
+    "InputValueErrorNode",
+    "Stop",
 ]
 
 log = structlog.get_logger("talemate.game.engine.nodes.core.raise")
@@ -134,7 +136,7 @@ class Stop(Node):
 
     
 @register("raise/InputValueError")
-class InputValueError(Node):
+class InputValueErrorNode(Node):
     """
     Raises an InputValueError exception.
     
@@ -192,5 +194,5 @@ class InputValueError(Node):
             "state": self.get_input_value("state")
         })
         
-        raise InputValueError(state.graph, message, field)
+        raise InputValueError(self, field, message)
     

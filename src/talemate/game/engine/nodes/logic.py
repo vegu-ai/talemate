@@ -223,6 +223,13 @@ class Switch(Node):
             description="If True, the value will be passed through to the output, otherwise True will be passed through"
         )
     
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            icon="F0641",
+        )
+    
     def __init__(self, title="Switch", **kwargs):
         super().__init__(title=title, **kwargs)
         
@@ -269,6 +276,13 @@ class RSwitch(Node):
     - value: the value to return
     """
     
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            icon="F0641",
+        )
+    
     def __init__(self, title="RSwitch", **kwargs):
         super().__init__(title=title, **kwargs)
         
@@ -309,6 +323,13 @@ class RSwitchAdvanced(Node):
     - yes: the value to return if the check value is truthy
     - no: the value to return if the check value is not truthy
     """
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            icon="F0641",
+        )
     
     def __init__(self, title="RSwitch Advanced", **kwargs):
         super().__init__(title=title, **kwargs)

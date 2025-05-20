@@ -434,6 +434,7 @@ class Case(Node):
         self.add_output("b")
         self.add_output("c")
         self.add_output("d")
+        self.add_output("none")
         
     async def run(self, state: GraphState):
         value = self.get_input_value("value")
@@ -448,7 +449,7 @@ class Case(Node):
         case_b = self.get_property("case_b")
         case_c = self.get_property("case_c")
         case_d = self.get_property("case_d")
-        
+
         if compare_to == case_a:
             self.set_output_values({"a": value})
         elif compare_to == case_b:
@@ -457,6 +458,8 @@ class Case(Node):
             self.set_output_values({"c": value})
         elif compare_to == case_d:
             self.set_output_values({"d": value})
+        else:
+            self.set_output_values({"none": value})
             
         if state.verbosity >= NodeVerbosity.NORMAL:
             log.debug(f"Case {self.title} value: {value} attribute_name: {attribute_name} cases: {case_a}, {case_b}, {case_c}, {case_d}", compare_to=compare_to)

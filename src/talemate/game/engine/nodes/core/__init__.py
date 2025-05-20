@@ -1907,6 +1907,8 @@ class Graph(NodeBase):
                     except PASSTHROUGH_ERRORS as exc:
                         if emit_state:
                             await self.node_state_pop(node_state, node, state)
+                        
+                        await self.attempt_catch_with_node_error_handler(state, exc)
                         raise exc
                     except ModuleError as exc:
                         if emit_state:
@@ -1915,18 +1917,7 @@ class Graph(NodeBase):
                         if emit_state:
                             await self.node_state_pop(node_state, node, state, error=traceback.format_exc())
                             
-                        error_handlers = await self.get_nodes(lambda n: hasattr(n, "catch"))
-                        if not error_handlers:
-                            raise exc
-                        
-                        caught = False
-                        for error_handler in error_handlers:
-                            if await error_handler.catch(state, exc):
-                                caught = True
-                        
-                        if not caught:
-                            raise exc
-                    
+                        await self.attempt_catch_with_node_error_handler(state, exc)
                     
                     # route Output node values to their corresponding output sockets
                     if isinstance(node, Output):
@@ -1950,6 +1941,31 @@ class Graph(NodeBase):
             finally:
                 raise exc
 
+    async def attempt_catch_with_node_error_handler(self, state: GraphState, exc: Exception):
+        
+        """Attempt to catch an exception with a node error handler
+
+        Args:
+            state (GraphState): The current state of the graph
+            exc (Exception): The exception to catch
+
+        Raises:
+            Will re-raise the exception if no error handler is found
+        """
+        
+        error_handlers = await self.get_nodes(lambda n: hasattr(n, "catch"))
+        if not error_handlers:
+            raise exc
+        
+        caught = False
+        for error_handler in error_handlers:
+            if await error_handler.catch(state, exc):
+                caught = True
+                break
+        
+        if not caught:
+            raise exc
+        
 
 @base_node_type("core/Loop")
 class Loop(Graph):

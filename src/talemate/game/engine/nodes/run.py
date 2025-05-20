@@ -17,7 +17,9 @@ from talemate.game.engine.nodes.core import (
     Socket,
     UNRESOLVED,
     PASSTHROUGH_ERRORS,
+    TYPE_CHOICES,
 )
+from talemate.game.engine.nodes.core.exception import ExceptionWrapper
 from talemate.game.engine.nodes.base_types import base_node_type
 from talemate.context import active_scene
 import talemate.emit.async_signals as async_signals
@@ -28,6 +30,10 @@ log = structlog.get_logger("talemate.game.engine.nodes.core.run")
 async_signals.register(
     "nodes_breakpoint",
 )
+
+TYPE_CHOICES.extend([
+    "exception",
+])
 
 @dataclasses.dataclass
 class BreakpointEvent:
@@ -694,9 +700,41 @@ class ErrorHandler(Node):
             log.error(f"fn must be a FunctionWrapper instance, got {fn} instead")
             return False
     
+        exc_wrapper = ExceptionWrapper(
+            name=exc.__class__.__name__,
+            message=str(exc),
+        )
         
-        caught = await fn(exc=exc)
+        caught = await fn(exc=exc_wrapper)
         
         log.debug("Error handler result", result=caught)
         
         return caught
+    
+
+@register("core/functions/UnpackException")
+class UnpackException(Node):
+    """
+    Unpacks an ExceptionWrapper instance into an description and message
+    """
+    
+    def __init__(self, title="Unpack Exception", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("exc", socket_type="exception")
+        self.add_output("name")
+        self.add_output("message")
+        
+    async def run(self, state:GraphState):
+        exc = self.get_input_value("exc")
+        
+        if not isinstance(exc, ExceptionWrapper):
+            log.error("Expected ExceptionWrapper instance, got %s instead", type(exc).__name__)
+            return
+        
+        self.set_output_values({
+            "name": exc.name,
+            "message": exc.message,
+        })
+    

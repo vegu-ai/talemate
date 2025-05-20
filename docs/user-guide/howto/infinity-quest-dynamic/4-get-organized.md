@@ -4,6 +4,8 @@ Before increasing the complexity of the current graph any further, lets do a cou
 
 ## 4.1 - Create a new submodule
 
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-on-scene-init"
+
 As graphs get more complex it may make sense to split out certain parts of the graph into separate node modules.
 
 Hold `Ctrl` and drag a rectangle to select node chain from `<Generate Thematic List>` to `<Contextual Generate|>`.
@@ -59,13 +61,11 @@ Your cleaned up module should look like this:
 
 ![cleaned up module](./img/4-0007.png)
 
-**Save** the module.
+--8<-- "docs/snippets/common.md:save-graph"
 
 ### Replace in `On Scene Init`
 
-Load the `On Scene Init` module. 
-
-![load-module-on-scene-init](./img/load-module-on-scene-init.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-on-scene-init"
 
 Replace the node chain we just made into a submodule with the submodule.
 
@@ -82,7 +82,9 @@ Find the `Generate Premise` node and add it to the graph.
 
 ![replaced module](./img/4-0008.png)
 
-**Save** the graph and lets :material-play: play it to confirm it still works.
+--8<-- "docs/snippets/common.md:save-graph"
+
+Push the :material-play: button to confirm it still works.
 
 ![play](./img/4-0009.png)
 
@@ -95,9 +97,7 @@ Lets improve the module a bit.
 - Style the node so its more obvious its going to call agent actions.
 - Add an output socket for the `theme` so we can investigate what theme was generated.
 
-Load the `Generate Premise` module.
-
-![Load module](./img/4-0010.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-generate-premise"
 
 Hold `Alt` and drag the existing `OUT text` node to clone it.
 
@@ -110,7 +110,7 @@ Hold `Shift` and click the title to auto title it to `OUT theme`.
 
 ![theme output](./img/4-0011.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 Add a **Module Style** node to the graph and place it anywhere. It does not need to be connected to anything.
 
@@ -120,12 +120,11 @@ Right click the node and Select `Style Presets` -> `Agent Generation`.
 
 ![applied style](./img/4-0013.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
-Load the `On Scene Init` module
+---
 
-![load-module-on-scene-init](./img/load-module-on-scene-init.png)
-
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-on-scene-init"
 
 Confirm that the `Generate Premise` node now has a theme output and a color style applied. (You may need to resize the node to fit the new output socket.)
 
@@ -137,6 +136,8 @@ Add a new `Watch` node, set its title to `Theme` and connect it:
 
 ![watch node](./img/4-0015.png)
 
-**Save** the graph and lets :material-play: play it. And we once again can observe what theme was generated.
+--8<-- "docs/snippets/common.md:save-graph"
+
+Lets :material-play: play it. And we once again can observe what theme was generated.
 
 ![play](./img/4-0016.png)

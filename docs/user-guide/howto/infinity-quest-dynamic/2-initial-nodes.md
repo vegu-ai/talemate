@@ -110,7 +110,7 @@ Click on the `event_name` node property and type in `scene_loop_init`.
 
 ![Scene Loop - On Scene Init](./img/2-0010.png)
 
-Next click **Save** in the top right of the node editor.
+Next click **Save** in the top right of the node editor. ![Save Graph button on upper right of node editor](/talemate/img/0.30.0/save-graph.png)
 
 --8<-- "docs/snippets/common.md:save-graph"
 
@@ -218,6 +218,8 @@ Find and add the following nodes to the canvas:
 
 !!! note "Auto titling"
     This is a feature **some** nodes have that automatically titles the node based on the value of their properties. In the case of the `Set State` node, it will title the node to `SET {scope}.{name}`, so in this case `SET game.intro_generated`.
+
+    Hold `Shift` and click the node **title** to auto-title it.
 
 With this we're essentially saying if the `Set Introduction` node is executed set the `intro_generated` state variable to `true`.
 

@@ -30,7 +30,7 @@ Then select the group you want to add the template to and click the **:material-
 
 <!--- --8<-- [start:save-graph] -->
 !!! success "Save!"
-    **:material-check-circle-outline: Save** the graph.
+    **:material-check-circle-outline: Save** the graph. 
 <!--- --8<-- [end:save-graph] -->
 
 <!--- --8<-- [start:alert-graph-changed] -->

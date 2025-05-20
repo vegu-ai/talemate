@@ -16,9 +16,7 @@ I don't think you need to do all (or even any) of these, but it's going to be be
 
 We want to show some status indication wile the `Dynamic Premise` node is generating a premise.
 
-Load the `generate-premise` module.
-
-![Load generate-premise module](./img/load-module-generate-premise.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-generate-premise"
 
 Looking at the stages we have Input processing at stage `-1` and then `Theme Generation` at stage `1`.
 
@@ -77,9 +75,7 @@ Right now if something goes wrong in the `Generate Premise` node, the failing st
 
 Generally if ANY of the stages fail, we should just abort.
 
-Load the `generate-premise` module.
-
-![Load generate-premise module](./img/load-module-generate-premise.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-generate-premise"
 
 Add a new group called `Error Handling` and color it `red`.
 
@@ -136,7 +132,7 @@ Connect the nodes as follows:
 
 ![Error Handling](./img/7-0004.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 !!! note "Learn more about functions and error handling"
     Learn more about functions and error handling in the [Functions](/talemate/user-guide/node-editor/core-concepts/functions/) and [Error Handling](/talemate/user-guide/node-editor/core-concepts/error-handling/) sections of the documentation.
@@ -163,9 +159,7 @@ The user shouldn't have to manually set the `scene_loop_init` event for the `Dyn
 
 Good thing we can set a default.
 
-Open the `Dynamic Premise` module.
-
-![Open Dynamic Premise module](./img/load-module-dynamic-premise.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-dynamic-premise"
 
 Find the `Properties` panel in the upper left corner of the node editor and expand it.
 
@@ -173,7 +167,7 @@ Enter `scene_loop_init` in the `Event to listen for` field.
 
 ![Set default event](./img/7-0007.png)
 
-**Save** the module.
+--8<-- "docs/snippets/common.md:save-graph"
 
 I am also noting that there are 3 unlabled inputs in that panel from the `Module Property` nodes we have added.
 
@@ -181,7 +175,7 @@ To fix this, simply set the description of each of the `Module Property` nodes.
 
 ![Set descriptions](./img/7-0008.png)
 
-**Save** the module.
+--8<-- "docs/snippets/common.md:save-graph"
 
 **Reload** the module.
 

@@ -12,9 +12,7 @@ For example, if we get the theme "Quantum flux", we could ask the `Summarizer` t
 
 ## 5.1 - Plan
 
-Load the `Generate Premise` module.
-
-![load-module-generate-premise](./img/load-module-generate-premise.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-generate-premise"
 
 ![generate-premise-graph](./img/4-0011.png)
 
@@ -182,7 +180,7 @@ Retitle the `Make Text` node to `Instruction Template`.
 
 ![generate introduction group](./img/5-0008.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 ## 5.4 - Reorganize inputs and outputs
 
@@ -238,7 +236,7 @@ Connect them to their respective output nodes.
 
     Passing the state to the `OUT state` is not a requirement, but it is a good practice to do so.
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 ## 5.5 - Delete the original `Generate Premise` group
 
@@ -260,7 +258,7 @@ and a `Module Style` node somewhere.
 
 ![three groups](./img/5-0011.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 ## 5.6 - Quick test
 
@@ -392,7 +390,7 @@ Retitle the `Make Text` node to `Theme Analysis Template`.
 
 ![analyze theme group](./img/5-0014.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 Lets test the graph again.
 
@@ -410,7 +408,7 @@ Now every `Set State` node will log its value to the editor log, including our `
 
 ![debug log](./img/5-0016.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 ## 5.8 - Use the analysis
 
@@ -481,11 +479,17 @@ Use the following analysis to guide your creation of the scenario premise:
 {theme_analysis}
 ```
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 :material-movie-play: Start the scene loop again and you should see the `Generate Introduction` stage use the `theme_analysis` state to generate the introduction.
 
 Lets look what the final prompt to the `Creator` agent looks like.
+
+!!! tip "Inspecting prompts"
+    You can open the talemate **:material-bug:** debug tools and click on any of the prompts to inspect them.
+
+    ![debug tools](./img/debug-tools-prompt-inspect.png)
+
 
 ```
 ... Other context ...

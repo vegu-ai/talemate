@@ -1,4 +1,4 @@
-# 3 - Beam me up, Scotty!
+# 3 - Improvements
 
 Right now we have a version of Infinity Quest that when started queries whatever AI model you have setup to randomly generate a random scene introduction based on what little scene information is available, hopefully delivering something that could start off an interesting story.
 
@@ -11,6 +11,8 @@ Talemate already has a dedicated node to generate the scene introduction text, w
 We should use this node instead of the narrator generation node.
 
 Load the `On Scen Init` module that we made in part 2.
+
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-on-scene-init"
 
 1. Remove the `Generate Progress Narration` node.
 1. Add a `Contextual Generate` node.
@@ -29,6 +31,8 @@ Then in the `Contextual Generate` node's properties:
 The result should hopefully a bit more fitting for a story introduction text (or it may not be, AI things!)
 
 ![Contextual Generate - Result](./img/3-0002.png)
+
+--8<-- "docs/snippets/common.md:save-graph"
 
 ## 3.2 - Make testing this.. not awkward.
 
@@ -94,6 +98,8 @@ Now when the `RESET` switch is flipped, the `intro_generated` state will be unse
 
 ![Reset](./img/3-0006.png)
 
+--8<-- "docs/snippets/common.md:save-graph"
+
 ## 3.3 - Something odd.
 
 You may realize that as you click regenerate the introduction may become stale or change very little.
@@ -109,6 +115,8 @@ Hold `Alt` and drag the `Set Introduction` node to clone it, then hook it inbetw
 Make sure to edit it's `introduction` input to be a blank string.
 
 ![Wipe Introduction](./img/3-0012.png)
+
+--8<-- "docs/snippets/common.md:save-graph"
 
 ## 3.4 - Oh look, its another gravity well!
 
@@ -190,7 +198,11 @@ Finally add a `Watch` node and connect it:
 
 - `<Random>.result` :material-transit-connection-horizontal: `<Watch>.value`
 
+Change it's title to `Theme`.
+
 This allows you to watch the `theme` state variable and see the changes as we pick a new random theme.
+
+--8<-- "docs/snippets/common.md:save-graph"
 
 Lets run to test this out.
 

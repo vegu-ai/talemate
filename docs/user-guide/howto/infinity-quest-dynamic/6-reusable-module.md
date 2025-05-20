@@ -70,7 +70,7 @@ For now the easiest way to rename it is to simply create a copy.
 
 So load the `on-scene-init` module and create a copy of it.
 
-![Load on-scene-init module](./img/load-module-on-scene-init.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-on-scene-init"
 
 Click the **:material-plus: CREATE MODULE** button and then **Copy current**.
 
@@ -85,7 +85,7 @@ In the modal change
 
 Now load the `scene-loop` module and replace the `On Scene Init` module with the new `Dynamic Premise` module.
 
-![Load scene-loop module](./img/load-module-scene-loop.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-scene-loop"
 
 ![Scene Loop Extension](./img/6-0002.png)
 
@@ -95,7 +95,7 @@ Then add the `Dynamic Premise` module to the scene loop and set the `event_name`
 
 ![Scene Loop Extension](./img/6-0006.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 **:material-movie-play:** Start the scene loop to test that everything's still working.
 
@@ -105,9 +105,7 @@ Then find the old `on-scene-init` module in the library and press the :material-
 
 ## 6.2 Exposing a Reset Toggle
 
-Load the `dynamic-premise` module.
-
-![Load dynamic-premise module](./img/load-module-dynamic-premise.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-dynamic-premise"
 
 We have the node chain that lets us reset the premise generation.
 
@@ -168,17 +166,19 @@ Then in the `Get State` node set the following:
 
 ![Properties group and updated reset toggle](./img/6-0010.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
-Load the `scene-loop` module.
+---
 
-![Load scene-loop module](./img/load-module-scene-loop.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-scene-loop"
 
 Confirm that the `Dynamic Premise` node now has a `reset` property that is a boolean on / off switch.
 
 ![Dynamic Premise node with reset toggle](./img/6-0011.png)
 
 ## 6.3 Fixing the registry path for the Generate Premise Module
+
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-dynamic-premise"
 
 Still in the `Dynamic Premise` module, looking at the `Generate Premise` node, it currently exposes no properties to edit.
 
@@ -188,9 +188,7 @@ But, hold on, its path still is registered as `infinity-quest-dynamic/generatePr
 
 So we need to change it.
 
-Load the `generate-premise` module.
-
-![Load generate-premise module](./img/load-module-generate-premise.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-generate-premise"
 
 Create a copy of the module. (Same as before)
 
@@ -205,19 +203,17 @@ Since we are keeping the name the same, it will simply replace the existing `gen
 !!! warning "Dont restart talemate right now"
     Currently the old reference is still loaded in talemate, so we can load the `dynamic-premise` module without any issues and remove it. Restarting talemate will cause the old reference to be removed and the dynamic premise module may no longer load.
 
-Load the `dynamic-premise` module.
-
-![Load dynamic-premise module](./img/load-module-dynamic-premise.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-dynamic-premise"
 
 Delete the old `Generate Premise` node.
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 Add the new `Generate Premise` node and connect it like how the old one was connected.
 
 ![Scene Loop Extension](./img/6-0015.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 !!! bug "The node editor can be a bit buggy here (v0.30.0)"
     It may be that when searching for the new node you will find the old one as well (or even multiples of it). Just make sure you select the one that has the path as `scene/generatePremise`.
@@ -228,9 +224,7 @@ Add the new `Generate Premise` node and connect it like how the old one was conn
 
 ## 6.4 Content control inputs
 
-Load the `generate-premise` module.
-
-![Load generate-premise module](./img/load-module-generate-premise.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-generate-premise"
 
 ### Investigating the current properties
 
@@ -358,7 +352,7 @@ Connect the nodes as follows:
 
 ![Module Properties](./img/6-0016.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 ### Adjusting the Generate Theme stage
 
@@ -508,7 +502,7 @@ Chain all three `Dict Set` nodes together, with each connecting to the `dict` in
 
 ![Analyze Theme](./img/6-0018.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 ### Adjusting the Generate Introduction stage
 
@@ -524,7 +518,7 @@ Use the following analysis to guide your creation of the scenario premise:
 {theme_analysis}
 ```
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 ## 6.5 - A switch for analysis
 
@@ -567,7 +561,7 @@ Connect the nodes as follows:
 
 ![Switch connected to state](./img/6-0020.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 Next we need to add an `Input` node to expose this new `analysis_enabled` property.
 
@@ -613,13 +607,11 @@ Connect the nodes as follows:
 
 ![Module Properties](./img/6-0021.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 ## 6.6 - Propagating through Dynamic Premise
 
-Load the `dynamic-premise` module.
-
-![Load dynamic-premise module](./img/load-module-dynamic-premise.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-dynamic-premise"
 
 Good news! Looks like the `Generate Premise` node is exposing the 3 new socket inputs we added to the `generate-premise` module.
 
@@ -638,19 +630,17 @@ Easy enough, just do the now familiar flow of adding three `Module Property` nod
 
 ![Module Properties](./img/6-0023.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 Now add three `Get State` nodes to the `Generate Introduction` group and connect them to the `topic`, `analysis_instructions` and `analysis_enabled` inputs of the `Generate Premise` node.
 
 ![Generate Introduction](./img/6-0024.png)
 
-**Save** the graph.
+--8<-- "docs/snippets/common.md:save-graph"
 
 ## 6.7 - Testing
 
-Load the `scene-loop` module.
-
-![Load scene-loop module](./img/load-module-scene-loop.png)
+--8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-scene-loop"
 
 Confirm the `Dynamic Premise` node now is exposing:
 

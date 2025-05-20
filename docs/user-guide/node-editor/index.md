@@ -8,4 +8,4 @@ It allows the code-less creation of more complex scenes and re-usable modules.
 
 --8<-- "docs/snippets/common.md:documentation-is-a-work-in-progress"
 
-See the [Node Editor - Crash Course](/talemate/user-guide/howto/node-editor-crash-course/infinity-quest-dynamic/) tutorial for an introduction to the node editor.
+See the [Node Editor - Crash Course](/talemate/user-guide/howto/infinity-quest-dynamic/) tutorial for an introduction to the node editor.

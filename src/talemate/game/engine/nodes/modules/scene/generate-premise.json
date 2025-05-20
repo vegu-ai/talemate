@@ -1627,8 +1627,59 @@
   ],
   "extends": null,
   "base_type": "core/Graph",
-  "inputs": [],
-  "outputs": [],
+  "inputs": [
+    {
+      "id": "3d2a1dc5-4533-4114-87d6-686bb598e38f",
+      "name": "state",
+      "optional": false,
+      "group": "",
+      "socket_type": "any"
+    },
+    {
+      "id": "d81d36c1-7f0c-44f1-a85a-e7942edd1185",
+      "name": "topic",
+      "optional": false,
+      "group": "",
+      "socket_type": "str"
+    },
+    {
+      "id": "d50625d8-d084-4d76-b849-f867bb1a3c76",
+      "name": "analysis_instructions",
+      "optional": true,
+      "group": "",
+      "socket_type": "str"
+    },
+    {
+      "id": "012140fd-9a59-4695-8a56-1ca8d202c6b5",
+      "name": "analysis_enabled",
+      "optional": true,
+      "group": "",
+      "socket_type": "bool"
+    }
+  ],
+  "outputs": [
+    {
+      "id": "ccbdd3e7-3a7f-4c6c-9f7a-e8d217f251a4",
+      "name": "state",
+      "optional": false,
+      "group": null,
+      "socket_type": "any"
+    },
+    {
+      "id": "52ad9bf7-d7d9-4322-8689-5e7c392871cc",
+      "name": "text",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "1b763fc9-98c4-46d3-b5d3-4d8c91220e8e",
+      "name": "theme",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    }
+  ],
   "module_properties": {},
   "style": {
     "title_color": "#572e44",

@@ -624,14 +624,14 @@ class NodeBase(pydantic.BaseModel):
         return getattr(FieldMeta, name)
         
     
-    def set_property(self, name: str, value: Any, state: GraphState = None):
+    def set_property(self, name: str, value: Any, state: GraphState | None = None):
         """Set a property value"""
         if state is None:
             self.properties[name] = value
         else:
             state.set_node_property(self, name, value)
             
-    def get_property(self, name: str, state: GraphState = None) -> Any:
+    def get_property(self, name: str, state: GraphState | None = None) -> Any:
         """Get a property value"""
         
         if state is None:
@@ -647,8 +647,8 @@ class NodeBase(pydantic.BaseModel):
         # Find matching input socket
         for socket in self.inputs:
             if socket.name == name:
-                # If socket has a value, use it
-                if socket.value is not UNRESOLVED:
+                # If socket is connected use it
+                if socket.source:
                     return socket.value
                 # Otherwise fall back to property
                 break

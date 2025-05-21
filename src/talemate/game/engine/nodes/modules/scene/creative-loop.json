@@ -1,5 +1,5 @@
 {
-  "title": "Scene Loop",
+  "title": "Creative Loop",
   "id": "3cebcd71-fcbe-4cd1-81e4-58cb2b7e0247",
   "properties": {
     "trigger_game_loop": false
@@ -8,7 +8,7 @@
   "y": 0,
   "width": 200,
   "height": 100,
-  "registry": "scene/SceneLoop",
+  "registry": "scene/CreativeLoop",
   "base_type": "scene/SceneLoop",
   "nodes": {
     "996c4655-25be-4cd0-9ea8-a733ccfd66aa": {

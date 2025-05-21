@@ -1,6 +1,6 @@
 {
   "title": "Scene Loop",
-  "id": "e6127b47-5ff1-4c6a-acbf-3fbf04166d42",
+  "id": "a1fd3fa0-527f-4f5d-9bea-622e75822a3a",
   "properties": {
     "trigger_game_loop": true
   },
@@ -20,12 +20,13 @@
         "analysis_instructions": "",
         "reset": false,
         "topic": "sci-fi with cosmic horror",
-        "analysis_enabled": true
+        "analysis_enabled": true,
+        "intro_length": 512
       },
-      "x": 30,
-      "y": -170,
-      "width": 229,
-      "height": 134,
+      "x": 32,
+      "y": -187,
+      "width": 225,
+      "height": 158,
       "collapsed": false,
       "inherited": false,
       "registry": "scene/dynamicPremise",
@@ -36,10 +37,10 @@
   "groups": [
     {
       "title": "Randomize Story",
-      "x": 5,
-      "y": -245,
-      "width": 516,
-      "height": 234,
+      "x": 6,
+      "y": -262,
+      "width": 518,
+      "height": 257,
       "color": "#a1309b",
       "font_size": 24,
       "inherited": false
@@ -48,8 +49,8 @@
   "comments": [
     {
       "text": "Will generate a randomized story line based on the topic given",
-      "x": 290,
-      "y": -200,
+      "x": 292,
+      "y": -217,
       "width": 215,
       "inherited": false
     }

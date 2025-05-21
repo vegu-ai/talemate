@@ -220,8 +220,8 @@
         "name": "intro",
         "scope": "local"
       },
-      "x": -766,
-      "y": 1265,
+      "x": -765,
+      "y": 1275,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -237,8 +237,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": -496,
-      "y": 1025,
+      "x": -495,
+      "y": 1035,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -254,8 +254,8 @@
         "output_name": "text",
         "num": 1
       },
-      "x": -496,
-      "y": 1265,
+      "x": -495,
+      "y": 1275,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -271,8 +271,8 @@
         "output_name": "theme",
         "num": 2
       },
-      "x": -486,
-      "y": 1485,
+      "x": -485,
+      "y": 1495,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -290,8 +290,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": -1391,
-      "y": -491,
+      "x": -1680,
+      "y": -748,
       "width": 252,
       "height": 154,
       "collapsed": false,
@@ -306,8 +306,8 @@
         "name": "topic",
         "scope": "local"
       },
-      "x": -1081,
-      "y": -481,
+      "x": -1370,
+      "y": -738,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -325,8 +325,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": -1391,
-      "y": -251,
+      "x": -1680,
+      "y": -508,
       "width": 252,
       "height": 154,
       "collapsed": false,
@@ -341,8 +341,8 @@
         "name": "analysis_instructions",
         "scope": "local"
       },
-      "x": -1101,
-      "y": -251,
+      "x": -1390,
+      "y": -508,
       "width": 260,
       "height": 122,
       "collapsed": false,
@@ -360,8 +360,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": -1390,
-      "y": -10,
+      "x": -1679,
+      "y": -267,
       "width": 252,
       "height": 154,
       "collapsed": false,
@@ -376,8 +376,8 @@
         "name": "analysis_enabled",
         "scope": "local"
       },
-      "x": -845,
-      "y": -11,
+      "x": -1134,
+      "y": -268,
       "width": 260,
       "height": 122,
       "collapsed": false,
@@ -391,28 +391,13 @@
       "properties": {
         "default": true
       },
-      "x": -1085,
-      "y": 9,
+      "x": -1374,
+      "y": -248,
       "width": 210,
       "height": 58,
       "collapsed": false,
       "inherited": false,
       "registry": "core/AsBool",
-      "base_type": "core/Node"
-    },
-    "290d821f-6be9-4130-9965-4f0823342725": {
-      "title": "Instructions",
-      "id": "290d821f-6be9-4130-9965-4f0823342725",
-      "properties": {
-        "value": "A list of topics to use for brain storming. The overarching theme is described as \"{{ topic }}\". Keep each item short (1-3 words). One of these items will be chosen to bootstrap a new story line."
-      },
-      "x": -224,
-      "y": -461,
-      "width": 237,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
       "base_type": "core/Node"
     },
     "ece4f875-661f-4aea-8392-3c12c920bfe1": {
@@ -1040,8 +1025,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": -762,
-      "y": 1026,
+      "x": -761,
+      "y": 1036,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1056,8 +1041,8 @@
         "name": "theme",
         "scope": "local"
       },
-      "x": -762,
-      "y": 1500,
+      "x": -761,
+      "y": 1510,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1176,23 +1161,6 @@
       "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
-    "a87aa8ff-384e-422d-8dd4-1c96768dddbf": {
-      "title": "Emit Status (Conditional)",
-      "id": "a87aa8ff-384e-422d-8dd4-1c96768dddbf",
-      "properties": {
-        "message": "Generating a new story line - Generating narration",
-        "status": "busy",
-        "as_scene_message": true
-      },
-      "x": 460,
-      "y": 1702,
-      "width": 210,
-      "height": 166,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "event/EmitStatusConditional",
-      "base_type": "core/Node"
-    },
     "90484246-29a6-4dca-96a1-c8803376400d": {
       "title": "true",
       "id": "90484246-29a6-4dca-96a1-c8803376400d",
@@ -1241,36 +1209,6 @@
       "registry": "prompt/GenerateResponse",
       "base_type": "core/Node"
     },
-    "6c50e530-c90a-4c31-83bb-ce6dacc459b8": {
-      "title": "Stage -2",
-      "id": "6c50e530-c90a-4c31-83bb-ce6dacc459b8",
-      "properties": {
-        "stage": -2
-      },
-      "x": -498,
-      "y": -227,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "058f5b1d-6de3-43eb-9311-d3b5d92bafe0": {
-      "title": "Stage -1",
-      "id": "058f5b1d-6de3-43eb-9311-d3b5d92bafe0",
-      "properties": {
-        "stage": -1
-      },
-      "x": -485,
-      "y": 263,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "e3d42215-165c-44d1-907f-a39f71a1209f": {
       "title": "Input Value Error",
       "id": "e3d42215-165c-44d1-907f-a39f71a1209f",
@@ -1279,7 +1217,7 @@
         "field": "topic"
       },
       "x": -775,
-      "y": 263,
+      "y": 273,
       "width": 262,
       "height": 122,
       "collapsed": false,
@@ -1326,7 +1264,7 @@
         "default": false
       },
       "x": -1270,
-      "y": 250,
+      "y": 260,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1341,7 +1279,7 @@
         "pass_through": false
       },
       "x": -1020,
-      "y": 250,
+      "y": 260,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -1357,7 +1295,7 @@
         "scope": "local"
       },
       "x": -1550,
-      "y": 250,
+      "y": 260,
       "width": 245,
       "height": 125,
       "collapsed": false,
@@ -1372,8 +1310,8 @@
         "name": "exc",
         "typ": "str"
       },
-      "x": -2134,
-      "y": 573,
+      "x": -2133,
+      "y": 582,
       "width": 210,
       "height": 82,
       "collapsed": false,
@@ -1387,8 +1325,8 @@
       "properties": {
         "name": "error_handler"
       },
-      "x": -688,
-      "y": 495,
+      "x": -687,
+      "y": 504,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -1400,8 +1338,8 @@
       "title": "Return",
       "id": "c796a34f-2549-42a8-ba94-541c407edac8",
       "properties": {},
-      "x": -693,
-      "y": 667,
+      "x": -692,
+      "y": 676,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -1413,8 +1351,8 @@
       "title": "Coallesce",
       "id": "83233713-efc3-46f3-b37b-6c131afa562d",
       "properties": {},
-      "x": -890,
-      "y": 677,
+      "x": -889,
+      "y": 686,
       "width": 140,
       "height": 86,
       "collapsed": false,
@@ -1430,8 +1368,8 @@
         "status": "error",
         "as_scene_message": true
       },
-      "x": -1270,
-      "y": 747,
+      "x": -1269,
+      "y": 756,
       "width": 267,
       "height": 168,
       "collapsed": false,
@@ -1443,8 +1381,8 @@
       "title": "Error Handler",
       "id": "396c90e5-9aee-4edd-b952-a26505362aff",
       "properties": {},
-      "x": -446,
-      "y": 513,
+      "x": -445,
+      "y": 522,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -1456,8 +1394,8 @@
       "title": "Unpack Exception",
       "id": "ef940748-c669-4b3e-a819-034a7fb4c3ce",
       "properties": {},
-      "x": -1874,
-      "y": 573,
+      "x": -1873,
+      "y": 582,
       "width": 170,
       "height": 46,
       "collapsed": false,
@@ -1471,8 +1409,8 @@
       "properties": {
         "name": "error_handler"
       },
-      "x": -488,
-      "y": 662,
+      "x": -487,
+      "y": 671,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -1490,8 +1428,8 @@
         "case_c": "",
         "case_d": ""
       },
-      "x": -1640,
-      "y": 577,
+      "x": -1639,
+      "y": 586,
       "width": 277,
       "height": 235,
       "collapsed": false,
@@ -1507,13 +1445,155 @@
         "status": "warning",
         "as_scene_message": true
       },
-      "x": -1270,
-      "y": 520,
+      "x": -1269,
+      "y": 529,
       "width": 267,
       "height": 168,
       "collapsed": false,
       "inherited": false,
       "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "290d821f-6be9-4130-9965-4f0823342725": {
+      "title": "Instructions",
+      "id": "290d821f-6be9-4130-9965-4f0823342725",
+      "properties": {
+        "value": "A list of topics to use for brain storming. The overarching theme is described as \"{{ topic }}\". Keep each item short (1-3 words). One of these items will be chosen to bootstrap a new story line."
+      },
+      "x": -224,
+      "y": -461,
+      "width": 237,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "8ac96580-b955-4cab-b612-1e6409f51430": {
+      "title": "IN intro_length",
+      "id": "8ac96580-b955-4cab-b612-1e6409f51430",
+      "properties": {
+        "input_type": "int",
+        "input_name": "intro_length",
+        "input_optional": true,
+        "input_group": "",
+        "num": 2
+      },
+      "x": -1680,
+      "y": -18,
+      "width": 252,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "4ade4a72-cd70-4217-a7f9-7eb858009903": {
+      "title": "RSwitch",
+      "id": "4ade4a72-cd70-4217-a7f9-7eb858009903",
+      "properties": {},
+      "x": -1150,
+      "y": -17,
+      "width": 140,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
+    },
+    "87845ffc-8a5a-4bd5-bb96-17d4b881de6a": {
+      "title": "SET local.intro_length",
+      "id": "87845ffc-8a5a-4bd5-bb96-17d4b881de6a",
+      "properties": {
+        "name": "intro_length",
+        "scope": "local"
+      },
+      "x": -960,
+      "y": -17,
+      "width": 260,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "6c50e530-c90a-4c31-83bb-ce6dacc459b8": {
+      "title": "Stage -2",
+      "id": "6c50e530-c90a-4c31-83bb-ce6dacc459b8",
+      "properties": {
+        "stage": -2
+      },
+      "x": -486,
+      "y": -377,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "a87aa8ff-384e-422d-8dd4-1c96768dddbf": {
+      "title": "Emit Status (Conditional)",
+      "id": "a87aa8ff-384e-422d-8dd4-1c96768dddbf",
+      "properties": {
+        "message": "Generating a new story line - Generating narration",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 460,
+      "y": 1710,
+      "width": 210,
+      "height": 166,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "12894421-c57a-4d7c-8580-de334830f7e2": {
+      "title": "GET local.intro_length",
+      "id": "12894421-c57a-4d7c-8580-de334830f7e2",
+      "properties": {
+        "name": "intro_length",
+        "scope": "local"
+      },
+      "x": 430,
+      "y": 1800,
+      "width": 348,
+      "height": 126,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "7b7c9437-78b8-41b2-be3c-1a8adc5b5c22": {
+      "title": "MakeNumber",
+      "id": "7b7c9437-78b8-41b2-be3c-1a8adc5b5c22",
+      "properties": {
+        "value": 512,
+        "number_type": "int"
+      },
+      "x": -1398,
+      "y": 74,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Make",
+      "base_type": "core/Node"
+    },
+    "058f5b1d-6de3-43eb-9311-d3b5d92bafe0": {
+      "title": "Stage -1",
+      "id": "058f5b1d-6de3-43eb-9311-d3b5d92bafe0",
+      "properties": {
+        "stage": -1
+      },
+      "x": -483,
+      "y": 273,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
       "base_type": "core/Node"
     }
   },
@@ -1583,9 +1663,6 @@
     ],
     "2629c91a-74d2-4c25-962d-f1b74163147b.value": [
       "931767d1-0a60-48a0-b754-7189573dcfe8.value"
-    ],
-    "290d821f-6be9-4130-9965-4f0823342725.value": [
-      "8fbb2ad2-2c28-44cb-bc40-f2a02bfa4e16.template_text"
     ],
     "08e3d297-9342-40e6-9ddc-f86283d8728a.dict": [
       "8fbb2ad2-2c28-44cb-bc40-f2a02bfa4e16.variables"
@@ -1729,9 +1806,6 @@
     "d4017f75-26f2-4220-ab5a-c0bf769063f0.value": [
       "5093769d-17b3-4a02-9180-aaf4cdf844a0.state"
     ],
-    "a87aa8ff-384e-422d-8dd4-1c96768dddbf.state": [
-      "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.state"
-    ],
     "90484246-29a6-4dca-96a1-c8803376400d.value": [
       "a87aa8ff-384e-422d-8dd4-1c96768dddbf.state"
     ],
@@ -1791,6 +1865,28 @@
     ],
     "dc8fe5d6-baa6-4741-89a5-227df7bc559f.state": [
       "83233713-efc3-46f3-b37b-6c131afa562d.a"
+    ],
+    "290d821f-6be9-4130-9965-4f0823342725.value": [
+      "8fbb2ad2-2c28-44cb-bc40-f2a02bfa4e16.template_text"
+    ],
+    "8ac96580-b955-4cab-b612-1e6409f51430.value": [
+      "4ade4a72-cd70-4217-a7f9-7eb858009903.check",
+      "4ade4a72-cd70-4217-a7f9-7eb858009903.yes"
+    ],
+    "4ade4a72-cd70-4217-a7f9-7eb858009903.value": [
+      "87845ffc-8a5a-4bd5-bb96-17d4b881de6a.value"
+    ],
+    "87845ffc-8a5a-4bd5-bb96-17d4b881de6a.value": [
+      "6c50e530-c90a-4c31-83bb-ce6dacc459b8.state_d"
+    ],
+    "a87aa8ff-384e-422d-8dd4-1c96768dddbf.state": [
+      "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.state"
+    ],
+    "12894421-c57a-4d7c-8580-de334830f7e2.value": [
+      "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.length"
+    ],
+    "7b7c9437-78b8-41b2-be3c-1a8adc5b5c22.value": [
+      "4ade4a72-cd70-4217-a7f9-7eb858009903.no"
     ]
   },
   "groups": [
@@ -1816,8 +1912,8 @@
     },
     {
       "title": "Outputs",
-      "x": -798,
-      "y": 944,
+      "x": -797,
+      "y": 954,
       "width": 545,
       "height": 720,
       "color": "#8A8",
@@ -1836,10 +1932,10 @@
     },
     {
       "title": "Inputs",
-      "x": -1416,
-      "y": -571,
-      "width": 1165,
-      "height": 740,
+      "x": -1705,
+      "y": -828,
+      "width": 1454,
+      "height": 1007,
       "color": "#88A",
       "font_size": 24,
       "inherited": false
@@ -1856,8 +1952,8 @@
     },
     {
       "title": "Error Handler",
-      "x": -2159,
-      "y": 414,
+      "x": -2158,
+      "y": 423,
       "width": 1906,
       "height": 525,
       "color": "#A88",
@@ -1887,7 +1983,7 @@
     {
       "title": "Input Validation",
       "x": -1571,
-      "y": 173,
+      "y": 183,
       "width": 1320,
       "height": 237,
       "color": "#b58b2a",
@@ -1920,7 +2016,7 @@
     {
       "text": "If topic is a \"\" turn it into False.",
       "x": -1270,
-      "y": 330,
+      "y": 340,
       "width": 235,
       "inherited": false
     }

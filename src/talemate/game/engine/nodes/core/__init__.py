@@ -1082,6 +1082,11 @@ class ModuleProperty(Node):
         self.add_output("value")
 
     def cast_value(self, value: Any) -> Any:
+        
+        # if UNRESOLVED return default
+        if value is UNRESOLVED:
+            value = self.get_property("default")
+        
         if self.get_property("property_type") in ["str", "text"]:
             return str(value)
         elif self.get_property("property_type") == "bool":

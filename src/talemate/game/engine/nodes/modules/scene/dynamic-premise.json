@@ -35,8 +35,8 @@
         "name": null,
         "scope": "local"
       },
-      "x": 326,
-      "y": -945,
+      "x": 323,
+      "y": -1210,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -51,8 +51,8 @@
         "name": null,
         "scope": "local"
       },
-      "x": 326,
-      "y": -705,
+      "x": 323,
+      "y": -970,
       "width": 260,
       "height": 122,
       "collapsed": false,
@@ -67,8 +67,8 @@
         "name": null,
         "scope": "local"
       },
-      "x": 326,
-      "y": -445,
+      "x": 323,
+      "y": -710,
       "width": 218,
       "height": 122,
       "collapsed": false,
@@ -83,8 +83,8 @@
         "name": null,
         "scope": "local"
       },
-      "x": 326,
-      "y": -215,
+      "x": 323,
+      "y": -480,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -100,40 +100,8 @@
         "scope": "local"
       },
       "x": 26,
-      "y": 1320,
+      "y": 1321,
       "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "907bc1c7-c19b-4a28-ba0c-c386bbfd0aa9": {
-      "title": "GET local.analysis_instructions",
-      "id": "907bc1c7-c19b-4a28-ba0c-c386bbfd0aa9",
-      "properties": {
-        "name": "analysis_instructions",
-        "scope": "local"
-      },
-      "x": 26,
-      "y": 1510,
-      "width": 260,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "cc9ec8d5-64ce-4e16-b424-216aa12da8ca": {
-      "title": "GET local.analysis_enabled",
-      "id": "cc9ec8d5-64ce-4e16-b424-216aa12da8ca",
-      "properties": {
-        "name": "analysis_enabled",
-        "scope": "local"
-      },
-      "x": 32,
-      "y": 1699,
-      "width": 250,
       "height": 122,
       "collapsed": false,
       "inherited": false,
@@ -150,8 +118,8 @@
         "choices": [],
         "description": "Instructions for the analysis"
       },
-      "x": 26,
-      "y": -705,
+      "x": 23,
+      "y": -970,
       "width": 262,
       "height": 174,
       "collapsed": false,
@@ -169,8 +137,8 @@
         "choices": [],
         "description": "Reset the introduction"
       },
-      "x": 26,
-      "y": -945,
+      "x": 23,
+      "y": -1210,
       "width": 271,
       "height": 181,
       "collapsed": false,
@@ -188,8 +156,8 @@
         "choices": [],
         "description": "The overarching topic"
       },
-      "x": 29,
-      "y": -201,
+      "x": 26,
+      "y": -466,
       "width": 256,
       "height": 174,
       "collapsed": false,
@@ -207,8 +175,8 @@
         "choices": [],
         "description": "Theme analysis"
       },
-      "x": 26,
-      "y": -445,
+      "x": 23,
+      "y": -710,
       "width": 260,
       "height": 174,
       "collapsed": false,
@@ -252,7 +220,7 @@
         "emit_history": true
       },
       "x": 1048,
-      "y": 1207,
+      "y": 1208,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -265,30 +233,13 @@
       "id": "7438bc9b-4b38-4c5c-a9a8-df5ebf098691",
       "properties": {},
       "x": 1108,
-      "y": 1447,
+      "y": 1448,
       "width": 140,
       "height": 26,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Watch",
       "base_type": "core/Node"
-    },
-    "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117": {
-      "title": "Generate Premise",
-      "id": "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117",
-      "properties": {
-        "analysis_instructions": "",
-        "topic": "",
-        "analysis_enabled": true
-      },
-      "x": 778,
-      "y": 1407,
-      "width": 235,
-      "height": 97,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/generatePremise",
-      "base_type": "core/Graph"
     },
     "11965433-d217-47d1-bc37-8808426798ce": {
       "title": "Switch",
@@ -297,7 +248,7 @@
         "pass_through": false
       },
       "x": 278,
-      "y": 1177,
+      "y": 1178,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -327,8 +278,8 @@
       "properties": {
         "stage": 0
       },
-      "x": 730,
-      "y": -600,
+      "x": 727,
+      "y": -865,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -344,7 +295,7 @@
         "scope": "game"
       },
       "x": 518,
-      "y": 1257,
+      "y": 1258,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -360,7 +311,7 @@
         "scope": "game"
       },
       "x": 26,
-      "y": 1130,
+      "y": 1131,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -421,7 +372,7 @@
         "stage": 4
       },
       "x": 1323,
-      "y": 1184,
+      "y": 1185,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -473,24 +424,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "raise/Stop",
-      "base_type": "core/Node"
-    },
-    "536380db-ae7a-4ab3-bc3f-c08a47896998": {
-      "title": "Module Style",
-      "id": "536380db-ae7a-4ab3-bc3f-c08a47896998",
-      "properties": {
-        "node_color": "#27233a",
-        "title_color": "#3d315b",
-        "auto_title": null,
-        "icon": "F15D6"
-      },
-      "x": -230,
-      "y": -990,
-      "width": 210,
-      "height": 130,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "util/ModuleStyle",
       "base_type": "core/Node"
     },
     "fef395e3-0ac9-48b0-827c-12e72ecaba1c": {
@@ -691,6 +624,139 @@
       "inherited": false,
       "registry": "data/number/Compare",
       "base_type": "core/Node"
+    },
+    "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117": {
+      "title": "Generate Premise",
+      "id": "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117",
+      "properties": {
+        "analysis_instructions": "",
+        "topic": "",
+        "analysis_enabled": true
+      },
+      "x": 778,
+      "y": 1408,
+      "width": 234,
+      "height": 108,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/generatePremise",
+      "base_type": "core/Graph"
+    },
+    "536380db-ae7a-4ab3-bc3f-c08a47896998": {
+      "title": "Module Style",
+      "id": "536380db-ae7a-4ab3-bc3f-c08a47896998",
+      "properties": {
+        "node_color": "#27233a",
+        "title_color": "#3d315b",
+        "auto_title": null,
+        "icon": "F15D6"
+      },
+      "x": -230,
+      "y": -1250,
+      "width": 210,
+      "height": 130,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "907bc1c7-c19b-4a28-ba0c-c386bbfd0aa9": {
+      "title": "GET local.analysis_instructions",
+      "id": "907bc1c7-c19b-4a28-ba0c-c386bbfd0aa9",
+      "properties": {
+        "name": "analysis_instructions",
+        "scope": "local"
+      },
+      "x": 30,
+      "y": 1501,
+      "width": 260,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "cc9ec8d5-64ce-4e16-b424-216aa12da8ca": {
+      "title": "GET local.analysis_enabled",
+      "id": "cc9ec8d5-64ce-4e16-b424-216aa12da8ca",
+      "properties": {
+        "name": "analysis_enabled",
+        "scope": "local"
+      },
+      "x": 30,
+      "y": 1681,
+      "width": 250,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "a99989f1-d426-4195-9918-ac659bf24510": {
+      "title": "GET local.intro_length",
+      "id": "a99989f1-d426-4195-9918-ac659bf24510",
+      "properties": {
+        "name": "intro_length",
+        "scope": "local"
+      },
+      "x": 30,
+      "y": 1861,
+      "width": 250,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "def10ae9-f0f7-45a2-9fd6-42e58dc353ed": {
+      "title": "SET local.intro_length",
+      "id": "def10ae9-f0f7-45a2-9fd6-42e58dc353ed",
+      "properties": {
+        "name": null,
+        "scope": "local"
+      },
+      "x": 350,
+      "y": -210,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "880b6010-cdca-42d0-9dcb-58abecd31599": {
+      "title": "Stage 0",
+      "id": "880b6010-cdca-42d0-9dcb-58abecd31599",
+      "properties": {
+        "stage": 0
+      },
+      "x": 660,
+      "y": -210,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "bb66531f-71dc-4ab5-820e-8b9d6059f450": {
+      "title": "PROP intro_length",
+      "id": "bb66531f-71dc-4ab5-820e-8b9d6059f450",
+      "properties": {
+        "property_name": "intro_length",
+        "property_type": "int",
+        "default": "512",
+        "choices": [],
+        "description": "Length of the introduction"
+      },
+      "x": 30,
+      "y": -210,
+      "width": 256,
+      "height": 174,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -711,12 +777,6 @@
     ],
     "2a4e0aed-e85a-4fba-ae30-630c71f91db9.value": [
       "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.topic"
-    ],
-    "907bc1c7-c19b-4a28-ba0c-c386bbfd0aa9.value": [
-      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.analysis_instructions"
-    ],
-    "cc9ec8d5-64ce-4e16-b424-216aa12da8ca.value": [
-      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.analysis_enabled"
     ],
     "3f749c9f-71b0-4e9c-b99d-859e53f20569.name": [
       "c327b0c4-900e-4d27-a0b9-0d47e8479732.name"
@@ -750,12 +810,6 @@
     ],
     "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.state": [
       "ca241a90-daa3-40e4-9b7a-b857c334cd39.state"
-    ],
-    "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.text": [
-      "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.introduction"
-    ],
-    "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.theme": [
-      "7438bc9b-4b38-4c5c-a9a8-df5ebf098691.value"
     ],
     "11965433-d217-47d1-bc37-8808426798ce.no": [
       "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.state",
@@ -818,6 +872,30 @@
     ],
     "331ca96e-1a3c-48ea-9cfe-5b6962448063.result": [
       "be9bdeff-2232-4e00-894c-6476c4efdbc7.value"
+    ],
+    "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.text": [
+      "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.introduction"
+    ],
+    "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.theme": [
+      "7438bc9b-4b38-4c5c-a9a8-df5ebf098691.value"
+    ],
+    "907bc1c7-c19b-4a28-ba0c-c386bbfd0aa9.value": [
+      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.analysis_instructions"
+    ],
+    "cc9ec8d5-64ce-4e16-b424-216aa12da8ca.value": [
+      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.analysis_enabled"
+    ],
+    "a99989f1-d426-4195-9918-ac659bf24510.value": [
+      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.intro_length"
+    ],
+    "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.value": [
+      "880b6010-cdca-42d0-9dcb-58abecd31599.state"
+    ],
+    "bb66531f-71dc-4ab5-820e-8b9d6059f450.name": [
+      "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.name"
+    ],
+    "bb66531f-71dc-4ab5-820e-8b9d6059f450.value": [
+      "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.value"
     ]
   },
   "groups": [
@@ -825,18 +903,18 @@
       "title": "Generate Premise - Stage 4",
       "x": 1,
       "y": 1028,
-      "width": 1560,
-      "height": 818,
+      "width": 1557,
+      "height": 980,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Properties - Stage 0",
-      "x": 1,
-      "y": -1025,
-      "width": 990,
-      "height": 1019,
+      "x": -2,
+      "y": -1290,
+      "width": 964,
+      "height": 1279,
       "color": "#8AA",
       "font_size": 24,
       "inherited": false
@@ -876,7 +954,7 @@
     {
       "text": "SetState here so we don't infinitely try to generate premise if something goes wrong.",
       "x": 518,
-      "y": 1107,
+      "y": 1108,
       "width": 200,
       "inherited": false
     },
@@ -969,6 +1047,18 @@
       "description": "Theme analysis",
       "type": "bool",
       "default": true,
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "intro_length": {
+      "name": "intro_length",
+      "description": "Length of the introduction",
+      "type": "int",
+      "default": 512,
       "choices": [],
       "readonly": false,
       "step": null,

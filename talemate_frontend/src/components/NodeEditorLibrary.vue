@@ -67,7 +67,8 @@
                 </v-alert>
                 <v-form v-model="newModuleValid" @submit.prevent="createModule">
 
-                    <v-text-field 
+                    <v-text-field
+                        :disabled="creatingNode"
                         v-model="newModule.name" 
                         :rules="newModuleNameRules" 
                         label="Name" 
@@ -75,6 +76,7 @@
                         @keydown.enter="createModule"
                     ></v-text-field>
                     <v-text-field 
+                        :disabled="creatingNode"
                         v-model="newModule.registry" 
                         :rules="newModuleRegistryRules" 
                         label="Registry" 
@@ -84,11 +86,11 @@
                 </v-form>
             </v-card-text>
             <v-card-actions>
-                <v-btn @click="newModuleDialog = false" color="muted" prepend-icon="mdi-cancel">
+                <v-btn :disabled="creatingNode" @click="newModuleDialog = false" color="muted" prepend-icon="mdi-cancel">
                     Cancel
                 </v-btn>
                 <v-spacer></v-spacer>
-                <v-btn @click="createModule" color="primary" prepend-icon="mdi-check-circle-outline">
+                <v-btn :disabled="creatingNode" @click="createModule" color="primary" prepend-icon="mdi-check-circle-outline">
                     Continue
                 </v-btn>
             </v-card-actions>
@@ -120,6 +122,7 @@ export default {
             newModuleRegistryRulesError: "New module registry cannot be the same as the selected node registry",
             newModuleValid: false,
             newModuleDialog: false,
+            creatingNode: false,
             newModule: {
                 name: '',
                 registry: '',
@@ -317,7 +320,7 @@ export default {
 
         createModule() {
             console.log("Creating node", this.newModule);
-            
+            this.creatingNode = true;
             this.getWebsocket().send(JSON.stringify({
                 type: 'node_editor',
                 action: 'create_mode_module',
@@ -329,7 +332,6 @@ export default {
                 nodes: this.newModule.nodes,
             }));
 
-            this.newModuleDialog = false;
         },
 
         requestModuleDelete(path) {
@@ -355,6 +357,8 @@ export default {
                 this.library = message.data;
             } else if(message.action === 'created_node_module') {
                 this.requestNodeLibrary();
+                this.creatingNode = false;
+                this.newModuleDialog = false;
             } else if(message.action === 'deleted_node_module') {
                 this.requestNodeLibrary();
                 // select the first node in the list
@@ -368,6 +372,8 @@ export default {
                         this.$emit('load-node', '');
                     }
                 }
+            } else if(message.action === 'operation_done') {
+                this.creatingNode = false;
             }
         }
     },

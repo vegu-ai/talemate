@@ -26,6 +26,7 @@ __all__ = [
     'import_talemate_node_definitions',
     'normalize_registry_name',
     'get_nodes_by_base_type',
+    'validate_registry_path',
 ]
 
 log = structlog.get_logger("talemate.game.engine.nodes.registry")
@@ -114,6 +115,38 @@ class register:
         if self.as_base_type:
             base_node_type(self.name)(cls)
         return cls
+
+def validate_registry_path(path:str, node_definitions:dict | None = None):
+    """
+    Validates a registry path to ensure it is a valid path.
+    
+    Arguments:
+    
+    - path (str): The registry path to validate
+    - node_definitions (dict): The node definitions to validate against
+    
+    Raises:
+    
+    - ValueError: if the path is invalid
+    """
+    
+    if not node_definitions:
+        node_definitions = export_node_definitions()
+    
+    if not path:
+        raise ValueError("Empty registry path")
+    
+    # path needs to have at least one / with two parts
+    parts = path.split("/")
+    if len(parts) < 2:
+        raise ValueError("Registry path must contain at least two parts (e.g., 'my/node')")
+    
+    # the path can not be the prefix of an existing path
+    # e.g., can't put a node where a path is already registered
+    for existing_path in node_definitions["nodes"].keys():
+        if existing_path.startswith(path + "/"):
+            raise ValueError(f"Registry path {path} is colliding with {existing_path}")
+        
         
 def export_node_definitions() -> dict:
     export = {

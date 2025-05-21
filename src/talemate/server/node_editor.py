@@ -12,7 +12,13 @@ from talemate.context import interaction
 from talemate.game.engine.nodes.core import Graph, Loop, GraphState, Listen, graph_state, PASSTHROUGH_ERRORS, dynamic_node_import, load_extended_components
 from talemate.game.engine.nodes.scene import SceneLoop
 from talemate.game.engine.nodes.base_types import BASE_TYPES
-from talemate.game.engine.nodes.registry import export_node_definitions, import_node_definition, normalize_registry_name, get_node
+from talemate.game.engine.nodes.registry import (
+    export_node_definitions, 
+    import_node_definition, 
+    normalize_registry_name, 
+    get_node,
+    validate_registry_path,
+)
 from talemate.game.engine.nodes.layout import normalize_node_filename, export_flat_graph, import_flat_graph, load_graph, list_node_files, PathInfo
 from talemate.game.engine.nodes.run import BreakpointEvent
 from talemate.save import save_node_module
@@ -146,10 +152,19 @@ class NodeEditorPlugin(Plugin):
         
         filename = normalize_node_filename(request.name)
         
+        registry = request.registry.replace("$N", normalize_registry_name(request.name))
+        node_definitions = export_node_definitions()
+        try:
+            validate_registry_path(registry, node_definitions)
+        except ValueError as e:
+            return await self.signal_operation_failed(str(e))
         
         if request.nodes and not request.copy_from and not request.extend_from:
             # Create a module from selected nodes
-            registry = request.registry.replace("$N", normalize_registry_name(request.name))
+            
+            if registry in node_definitions["nodes"]:
+                return await self.signal_operation_failed(f"Cannot create blank module at existing path: {registry}. If you intend to override it, create it as a copy.")
+            
             title = request.name.title()
             
             new_graph_cls = await self._create_module_from_nodes(
@@ -165,17 +180,17 @@ class NodeEditorPlugin(Plugin):
                 return await self.signal_operation_failed("Invalid module type")
                 
         elif not request.copy_from and not request.extend_from:
+            # create a new module from scratch
+            
+            if registry in node_definitions["nodes"]:
+                return await self.signal_operation_failed(f"Cannot create new module at existing path: {registry}. If you intend to override it, create it as a copy.")
             
             graph_cls = BASE_TYPES.get(request.module_type)
 
             if not graph_cls:
                 return await self.signal_operation_failed("Invalid module type")
             
-            registry = request.registry.replace("$N", normalize_registry_name(request.name))
-            
             title = request.name.title()
-            
-            #new_graph_cls = dynamic_node_import(graph_cls(title=title).model_dump(), registry)
             
             graph_def = graph_cls(title=title).model_dump()
             graph_def["registry"] = registry
@@ -186,11 +201,9 @@ class NodeEditorPlugin(Plugin):
             )
         
         elif request.extend_from:
+            # extend from a node module (inheritance)
             
             extend_from = request.extend_from
-            
-            # blank graph using the extend_from graph base type
-            
             extend_graph, _ = load_graph(extend_from, search_paths=[self.scene.nodes_dir])
             
             if not extend_graph:
@@ -203,8 +216,6 @@ class NodeEditorPlugin(Plugin):
             if not graph_cls:
                 return await self.signal_operation_failed("Invalid module type")
             
-            registry = request.registry.replace("$N", normalize_registry_name(request.name))
-            
             graph_def = graph_cls(title=request.name.title(), extends=extend_from).model_dump()
             graph_def["registry"] = registry
             
@@ -215,13 +226,12 @@ class NodeEditorPlugin(Plugin):
             )
                 
         elif request.copy_from:
+            # copy from a node module
+            
             copy_from = request.copy_from
             
             graph, _ = load_graph(copy_from, search_paths=[self.scene.nodes_dir])
             graph.title = request.name.title()
-            #new_graph_cls = dynamic_node_import(graph.model_dump(), registry)
-            
-            registry = request.registry.replace("$N", normalize_registry_name(request.name))
             
             graph_def = graph.model_dump()
             graph_def["registry"] = registry
@@ -258,7 +268,6 @@ class NodeEditorPlugin(Plugin):
         )
         
         await self.handle_request_node_module({"path": filename})
-        # await self.handle_request_node_library({})
     
     async def _create_module_from_nodes(self, scene, nodes_data, title, registry, module_type, filename):
         """

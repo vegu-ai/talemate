@@ -3,9 +3,9 @@
 This tutorial will guide you through creating a dynamic story generator using Talemate's node editor. You'll learn how to build a system that automatically creates unique story introductions based on random themes, with AI-powered analysis to make each story engaging and coherent.
 
 !!! info "Tutorial origins"
-    This tutorial documents some of the process of porting the original Infinity Quest project from its template-based system to Talemate's new node editor. The end result of this port is the `Dynamic Premise` node, which is now available in Talemate v0.30 and later. Although there are some final improvements in the module that are not covered in this tutorial.
+    This tutorial documents some of the process of porting the original Infinity Quest project from its template-based system to Talemate's new node editor. The end result of this port is the `Dynamic Storyline` node, which is now available in Talemate v0.30 and later. Although there are some final improvements in the module that are not covered in this tutorial.
 
-    ![Dynamic Premise Node](./img/overview.png)
+    ![Dynamic Storyline Node](./img/overview.png)
 
 The tutorial follows a practical learning path:
 

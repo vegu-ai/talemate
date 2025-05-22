@@ -1,5 +1,5 @@
 {
-  "title": "Generate Premise",
+  "title": "Generate Storyline",
   "id": "b9c310ea-90e2-4a93-bc76-e2ca255e65a6",
   "properties": {},
   "x": 0,
@@ -8,7 +8,7 @@
   "height": 100,
   "collapsed": false,
   "inherited": false,
-  "registry": "scene/generatePremise",
+  "registry": "scene/generateStoryline",
   "nodes": {
     "94603a9b-e6a5-4944-a621-558dd9395818": {
       "title": "Stage 1",
@@ -2023,8 +2023,66 @@
   ],
   "extends": null,
   "base_type": "core/Graph",
-  "inputs": [],
-  "outputs": [],
+  "inputs": [
+    {
+      "id": "f5a5e72c-976c-404c-9928-391fcb6cdb15",
+      "name": "topic",
+      "optional": false,
+      "group": "",
+      "socket_type": "str"
+    },
+    {
+      "id": "17d0063e-8471-4939-8171-d6b55ad9471d",
+      "name": "analysis_instructions",
+      "optional": true,
+      "group": "",
+      "socket_type": "str"
+    },
+    {
+      "id": "06baf1c2-33ae-4b58-90ac-46f8eab9c749",
+      "name": "analysis_enabled",
+      "optional": true,
+      "group": "",
+      "socket_type": "bool"
+    },
+    {
+      "id": "14a5a901-3a21-4e08-ada8-6f3ddc4bff4a",
+      "name": "state",
+      "optional": false,
+      "group": "",
+      "socket_type": "any"
+    },
+    {
+      "id": "3bc1beeb-000b-46d9-92bd-ec4c5dceb639",
+      "name": "intro_length",
+      "optional": true,
+      "group": "",
+      "socket_type": "int"
+    }
+  ],
+  "outputs": [
+    {
+      "id": "02f061fd-d4d0-404d-ba99-20171b206944",
+      "name": "state",
+      "optional": false,
+      "group": null,
+      "socket_type": "any"
+    },
+    {
+      "id": "34a79217-9452-4b1b-b715-5c994a29731b",
+      "name": "text",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "f1a881c2-afb7-4667-8234-980aea236a4d",
+      "name": "theme",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    }
+  ],
   "module_properties": {},
   "style": {
     "title_color": "#572e44",

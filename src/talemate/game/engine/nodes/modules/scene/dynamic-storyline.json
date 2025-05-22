@@ -1,5 +1,5 @@
 {
-  "title": "Dynamic Premise",
+  "title": "Dynamic Storyline",
   "id": "c03c5512-0c2f-4cf8-9887-c813f6de1d52",
   "properties": {
     "event_name": "scene_loop_init"
@@ -10,7 +10,7 @@
   "height": 100,
   "collapsed": false,
   "inherited": false,
-  "registry": "scene/dynamicPremise",
+  "registry": "scene/dynamicStoryline",
   "nodes": {
     "7c8b1e17-c5a4-4eb3-a1dc-d9b5ea782e6b": {
       "title": "UNSET game.intro_generated",
@@ -625,23 +625,6 @@
       "registry": "data/number/Compare",
       "base_type": "core/Node"
     },
-    "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117": {
-      "title": "Generate Premise",
-      "id": "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117",
-      "properties": {
-        "analysis_instructions": "",
-        "topic": "",
-        "analysis_enabled": true
-      },
-      "x": 778,
-      "y": 1408,
-      "width": 234,
-      "height": 108,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/generatePremise",
-      "base_type": "core/Graph"
-    },
     "536380db-ae7a-4ab3-bc3f-c08a47896998": {
       "title": "Module Style",
       "id": "536380db-ae7a-4ab3-bc3f-c08a47896998",
@@ -757,6 +740,19 @@
       "inherited": false,
       "registry": "core/ModuleProperty",
       "base_type": "core/Node"
+    },
+    "958c9db5-6df8-4d04-919d-c0a4b42fe3f8": {
+      "title": "Generate Storyline",
+      "id": "958c9db5-6df8-4d04-919d-c0a4b42fe3f8",
+      "properties": {},
+      "x": 770,
+      "y": 1420,
+      "width": 228,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/generateStoryline",
+      "base_type": "core/Graph"
     }
   },
   "edges": {
@@ -776,7 +772,7 @@
       "08309808-d1f1-4a94-9027-363eceed41d1.state_d"
     ],
     "2a4e0aed-e85a-4fba-ae30-630c71f91db9.value": [
-      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.topic"
+      "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.topic"
     ],
     "3f749c9f-71b0-4e9c-b99d-859e53f20569.name": [
       "c327b0c4-900e-4d27-a0b9-0d47e8479732.name"
@@ -819,7 +815,7 @@
       "e601163e-fc37-4bd4-bffa-866f2ec6457e.state"
     ],
     "4e9136e5-4557-4ef6-9124-9468d9e39815.value": [
-      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.state"
+      "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.state"
     ],
     "37313611-7de1-478b-8840-e5ea7ba856fe.value": [
       "11965433-d217-47d1-bc37-8808426798ce.value"
@@ -873,20 +869,14 @@
     "331ca96e-1a3c-48ea-9cfe-5b6962448063.result": [
       "be9bdeff-2232-4e00-894c-6476c4efdbc7.value"
     ],
-    "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.text": [
-      "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.introduction"
-    ],
-    "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.theme": [
-      "7438bc9b-4b38-4c5c-a9a8-df5ebf098691.value"
-    ],
     "907bc1c7-c19b-4a28-ba0c-c386bbfd0aa9.value": [
-      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.analysis_instructions"
+      "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.analysis_instructions"
     ],
     "cc9ec8d5-64ce-4e16-b424-216aa12da8ca.value": [
-      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.analysis_enabled"
+      "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.analysis_enabled"
     ],
     "a99989f1-d426-4195-9918-ac659bf24510.value": [
-      "bc83e9cb-d24a-40f5-a5fa-f9fcf8175117.intro_length"
+      "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.intro_length"
     ],
     "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.value": [
       "880b6010-cdca-42d0-9dcb-58abecd31599.state"
@@ -896,6 +886,12 @@
     ],
     "bb66531f-71dc-4ab5-820e-8b9d6059f450.value": [
       "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.value"
+    ],
+    "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.text": [
+      "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.introduction"
+    ],
+    "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.theme": [
+      "7438bc9b-4b38-4c5c-a9a8-df5ebf098691.value"
     ]
   },
   "groups": [

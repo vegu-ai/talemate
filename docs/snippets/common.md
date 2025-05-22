@@ -20,7 +20,7 @@ Then select the group you want to add the template to and click the **:material-
 
 <!--- --8<-- [start:documentation-is-a-work-in-progress] -->
 !!! abstract "Documentation is a work in progress"
-    Documentation is an ongoing effort and some parts are more complete than others.
+    Documentation is an ongoing effort and some parts are more complete than others, with some missing entirely. Thanks for your patience, its being worked on!
 <!--- --8<-- [end:documentation-is-a-work-in-progress] -->
 
 <!--- --8<-- [start:save-scene-project] -->
@@ -32,8 +32,3 @@ Then select the group you want to add the template to and click the **:material-
 !!! success "Save!"
     **:material-check-circle-outline: Save** the module. 
 <!--- --8<-- [end:save-graph] -->
-
-<!--- --8<-- [start:alert-graph-changed] -->
-!!! load "Graph Change"
-    We're loading a new graph.
-<!--- --8<-- [end:alert-graph-changed] -->

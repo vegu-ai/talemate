@@ -27,6 +27,7 @@ __all__ = [
     'normalize_registry_name',
     'get_nodes_by_base_type',
     'validate_registry_path',
+    'NodeNotFoundError',
 ]
 
 log = structlog.get_logger("talemate.game.engine.nodes.registry")
@@ -34,6 +35,9 @@ log = structlog.get_logger("talemate.game.engine.nodes.registry")
 NODES = {}
 
 INITIAL_IMPORT_DONE = False
+
+class NodeNotFoundError(ValueError):
+    pass
 
 def normalize_registry_name(name:str) -> str:
     """
@@ -73,7 +77,7 @@ def get_node(name):
     
     cls = NODES.get(name)
     if not cls:
-        raise ValueError(f"Node type '{name}' not found")
+        raise NodeNotFoundError(f"Node type '{name}' not found")
     return cls
 
 def get_nodes_by_base_type(base_type:str) -> list["NodeBase"]:

@@ -5,7 +5,7 @@ import pydantic
 import structlog
 from pathlib import Path
 from .core import Graph, UNRESOLVED, NodeBase, Group, Comment, load_extended_components, SaveContext
-from .registry import get_node
+from .registry import get_node, NodeNotFoundError
 from .base_types import get_base_type
 from talemate.game.engine.nodes import SEARCH_PATHS, TALEMATE_ROOT
 
@@ -317,12 +317,27 @@ def load_graph_from_file(file_path: str, graph_cls = None, search_paths: list[st
             graph_cls = get_base_type(data["base_type"])
         if not graph_cls:
             graph_cls = Graph
+            
+        remove_invalid_nodes(data["nodes"])
+        
         return graph_cls(**data).reinitialize(), PathInfo(
             full_path=str(file_path),
             relative_path=os.path.relpath(file_path, TALEMATE_ROOT),
             search_paths=[str(path) for path in search_paths] if search_paths else []
         )
 
+def remove_invalid_nodes(nodes:dict):
+    """
+    Remove nodes that have no properties
+    """
+    
+    for node_id, node_data in list(nodes.items()):
+        registry_name = node_data["registry"]
+        try:
+            get_node(node_data["registry"])
+        except NodeNotFoundError:
+            log.error("Removing UNKNOWN node", registry_name=registry_name)
+            del nodes[node_id]
 
 async def save_graph(graph: Graph, file_path: str):
     with SaveContext():

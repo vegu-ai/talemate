@@ -1,7 +1,7 @@
 <template>
     <div v-if="isConnected()">
-        <v-list v-for="(agent, index) in state.agents" :key="index" density="compact">
-            <v-list-item @click="editAgent(index)">
+        <v-list density="compact">
+            <v-list-item  v-for="(agent, index) in state.agents" :key="index" @click="editAgent(index)">
                 <v-list-item-title>
                     <v-progress-circular v-if="agent.status === 'busy'" indeterminate="disable-shrink" color="primary"
                         size="14"></v-progress-circular>

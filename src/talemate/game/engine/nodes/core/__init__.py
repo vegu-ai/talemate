@@ -18,6 +18,7 @@ from talemate.game.engine.nodes.registry import get_node, register
 from talemate.exceptions import ExitScene, ResetScene, RestartSceneLoop, ActedAsCharacter, GenerationCancelled
 import talemate.emit.async_signals as async_signals
 from talemate.util.async_tools import shared_debounce
+from talemate.context import active_scene
 
 log = structlog.get_logger("talemate.game.engine.nodes.core")
 
@@ -2182,8 +2183,14 @@ class Listen(Graph):
         try:
             state:GraphState = graph_state.get()
         except LookupError:
-            log.error("Event node executed outside of active graph state")
-            return
+            # we are outside of the graph state, however we can still attempt
+            # to get the scene's graph state
+            scene = active_scene.get()
+            if scene and getattr(scene, "nodegraph_state", None):
+                state = scene.nodegraph_state
+            else:
+                log.error("Event node executed outside of active graph state")
+                return
             
         node_state = await self.node_state_push(self, state)
         try:

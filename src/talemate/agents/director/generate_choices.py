@@ -35,6 +35,7 @@ if TYPE_CHECKING:
 @dataclasses.dataclass
 class GenerateChoicesEmission(AgentTemplateEmission):
     character: "Character | None" = None
+    choices: list[str] = dataclasses.field(default_factory=list)
 
 class GenerateChoicesMixin:
     
@@ -209,6 +210,7 @@ class GenerateChoicesMixin:
         )
         
         emission.response = response
+        emission.choices = choices
         await talemate.emit.async_signals.get("agent.director.generate_choices.generated").send(emission)
         
         return emission.response

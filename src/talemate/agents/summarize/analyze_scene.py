@@ -190,9 +190,15 @@ class SceneAnalyzationMixin:
             analysis = await self.get_cached_analysis(emission_type)
             if analysis:
                 await talemate.emit.async_signals.get("agent.summarization.scene_analysis.cached").send(
-                    SceneAnalysisEmission(agent=self, analysis_type=emission_type, response=analysis, template_vars={
-                        "character": emission.character if hasattr(emission, "character") else None,
-                    })
+                    SceneAnalysisEmission(
+                        agent=self, 
+                        analysis_type=emission_type, 
+                        response=analysis, 
+                        template_vars={
+                            "character": emission.character if hasattr(emission, "character") else None,
+                        },
+                        dynamic_instructions=emission.dynamic_instructions
+                    )
                 )
         
         if not analysis and self.analyze_scene:
@@ -375,9 +381,13 @@ class SceneAnalyzationMixin:
             "analysis_sub_type": analysis_sub_type,
         }
         
+        emission = SceneAnalysisEmission(agent=self, template_vars=template_vars, analysis_type=typ)
+        
         await talemate.emit.async_signals.get("agent.summarization.scene_analysis.before").send(
-            SceneAnalysisEmission(agent=self, template_vars=template_vars, analysis_type=typ)
+            emission
         )
+        
+        template_vars["dynamic_instructions"] = emission.dynamic_instructions
         
         response = await Prompt.request(
             f"summarizer.analyze-scene-for-next-{typ}",

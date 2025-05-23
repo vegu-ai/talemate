@@ -19,6 +19,7 @@ from talemate.instance import get_agent
 from talemate.prompts.base import Prompt, PrependTemplateDirectories
 from talemate.client.presets import make_kind
 from talemate.context import active_scene
+from talemate.util import strip_partial_sentences
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -298,6 +299,8 @@ class GenerateResponse(Node):
         data_output = self.get_property("data_output")
         attempts = self.get_property("attempts") or 1
         
+        prompt.agent_type = agent.agent_type
+        
         kind = make_kind(
             action_type=action_type,
             length=response_length,
@@ -311,6 +314,11 @@ class GenerateResponse(Node):
             log.info(f"Sending prompt to agent {agent.agent_type} with kind {kind}")
         
         async def send_prompt(*args, **kwargs):
+            prompt.vars.update(
+                {
+                    "response_length": response_length,
+                }
+            )
             return await prompt.send(agent.client, kind=kind)
         send_prompt.__name__= self.title.replace(" ", "_").lower()
         
@@ -332,4 +340,51 @@ class GenerateResponse(Node):
             "agent": agent
         })
         
+        
+@register("prompt/CleanResponse")
+class CleanResponse(Node):
+    """
+    Cleans a response
+    
+    Inputs:
+    
+    - response: The response to clean
+    
+    Properties:
+    
+    - partial_sentences: Strip partial sentences from the response
+    
+    Outputs:
+    
+    - cleaned: The cleaned response
+    """
+    
+    class Fields:
+        strip_partial_sentences = PropertyField(
+            name="partial_sentences",
+            type="bool",
+            description="Strip partial sentences from the response",
+            default=True
+        )
+    
+    def __init__(self, title="Clean Response", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("response", socket_type="str")
+        
+        self.set_property("partial_sentences", True)
+        
+        self.add_output("cleaned", socket_type="str")
+        
+    async def run(self, graph_state: GraphState):
+        response = self.require_input("response")
+        partial_sentences = self.get_property("partial_sentences")
+        
+        if partial_sentences:
+            response = strip_partial_sentences(response)
+        
+        self.set_output_values({
+            "cleaned": response
+        })
         

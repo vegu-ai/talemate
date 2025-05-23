@@ -422,7 +422,13 @@ class SceneAnalyzationMixin:
         
         
         await talemate.emit.async_signals.get("agent.summarization.scene_analysis.after").send(
-            SceneAnalysisEmission(agent=self, template_vars=template_vars, response=response, analysis_type=typ)
+            SceneAnalysisEmission(
+                agent=self, 
+                template_vars=template_vars, 
+                response=response, 
+                analysis_type=typ,
+                dynamic_instructions=emission.dynamic_instructions
+            )
         )
         
         self.set_context_states(scene_analysis=response)

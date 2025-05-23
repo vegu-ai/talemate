@@ -16,7 +16,9 @@ These sentences have been classified as repetition and must either be substantia
 {% set issues = issues + 1 %}
 <|SECTION:ISSUE {{ issues }}: UNWANTED PROSE|>
 These phrases or words have been identified by the director as bad, and MUST be changed accordingly.
-Important: These are semantic matches based on meaning, not literal text. Focus on the underlying concept or idea that triggered the match, rather than expecting exact phrase matches.
+Important: These are semantic matches based on meaning, not literal text. Focus on the underlying concept or idea that triggered the match, rather than expecting exact phrase matches. 
+
+You must state your greater understanding of why these issues were flagged in the first place so you do not replace them with something equally bad or worse.
 
 {% for phrase in bad_prose %}- MATCH: `{{ phrase.phrase }}`
   - TRIGGER: "{{ phrase.matched }}"
@@ -30,6 +32,7 @@ Important: These are semantic matches based on meaning, not literal text. Focus 
 3. Tell us your confident plan for fixing the issues.
 4. Rewrite the text to fix the issues, the best you can, according to the plan you made.
   - Keep your changes minimal, don't get carried away. DONT MAKE IT LONGER. This is NOT about adding detail.
+  - Make one revision in total - so analyze issues first, then fix them all at once!
 
 Repeat back your understanding of the task, then work and report each step 1 - 4, sequentially.
 <|CLOSE_SECTION|>

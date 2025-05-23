@@ -32,10 +32,6 @@ Content Classification: This is a specific scene from {{ scene.context }}
 {% endif -%}
 {# END MEMORY #}
 {# DYNAMIC INSTRUCTIONS #}
-{% if active_agent and active_agent.state.dynamic_instructions %}
-{% for dynamic_instruction in active_agent.state.dynamic_instructions %}
-{{ dynamic_instruction }}
-{% endfor %}
-{% endif %}
+{% include "dynamic-instructions.jinja2" %}
 {# END DYNAMIC INSTRUCTIONS #}
 <|CLOSE_SECTION|>

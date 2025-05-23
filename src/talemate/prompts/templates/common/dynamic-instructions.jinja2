@@ -2,4 +2,8 @@
 {% for instruction in dynamic_instructions %}
 {{ instruction }}
 {% endfor %}
+{% elif active_agent and active_agent.state.dynamic_instructions %}
+{% for instruction in active_agent.state.dynamic_instructions %}
+{{ instruction }}
+{% endfor %}
 {% endif %}

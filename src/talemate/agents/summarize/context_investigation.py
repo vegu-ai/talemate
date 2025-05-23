@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING
 from talemate.agents.base import (
     set_processing,
     AgentAction,
-    AgentActionConfig
+    AgentActionConfig,
+    DynamicInstruction,
 )
 from talemate.prompts import Prompt
 from talemate.instance import get_agent
@@ -161,13 +162,12 @@ class ContextInvestigationMixin:
         context_investigation = self.get_scene_state("context_investigation")
         log.debug("summarizer.on_inject_context_investigation", context_investigation=context_investigation, emission=emission)
         if context_investigation:
-            emission.dynamic_instructions.append("\n".join(
-                [
-                    "<|SECTION:CONTEXT INVESTIGATION|>",
-                    context_investigation,
-                    "<|CLOSE_SECTION|>"
-                ]
-            ))
+            emission.dynamic_instructions.append(
+                DynamicInstruction(
+                    title="Context Investigation",
+                    content=context_investigation
+                )
+            )
     
     # methods
     

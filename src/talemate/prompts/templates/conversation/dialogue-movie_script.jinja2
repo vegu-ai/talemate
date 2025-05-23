@@ -64,9 +64,7 @@ YOU MUST ONLY WRITE NEW DIALOGUE FOR {{ talking_character.name.upper() }}.
 {% endif -%}
 <|CLOSE_SECTION|>
 
-{% for dynamic_instruction in dynamic_instructions %}
-{{ dynamic_instruction }}
-{% endfor %}
+{% include "dynamic-instructions.jinja2" %}
 
 <|SECTION:How to use internal notes|>
 Internal notes may be given to you to help you with consistency when writing.

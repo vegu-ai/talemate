@@ -15,7 +15,14 @@ from talemate.client.context import (
 )
 import talemate.emit.async_signals
 import talemate.util as util
-from talemate.agents.base import Agent, AgentAction, AgentActionConfig, AgentEmission, store_context_state
+from talemate.agents.base import (
+    Agent,
+    AgentAction,
+    AgentActionConfig,
+    AgentEmission,
+    DynamicInstruction,
+    store_context_state,
+)
 from talemate.agents.base import set_processing as _set_processing
 from talemate.agents.context import active_agent
 from talemate.agents.world_state import TimePassageEmission
@@ -42,7 +49,7 @@ log = structlog.get_logger("talemate.agents.narrator")
 @dataclasses.dataclass
 class NarratorAgentEmission(AgentEmission):
     generation: list[str] = dataclasses.field(default_factory=list)
-    dynamic_instructions: list[str] = dataclasses.field(default_factory=list)
+    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(default_factory=list)
 
 
 talemate.emit.async_signals.register(

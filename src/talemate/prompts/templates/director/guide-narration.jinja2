@@ -15,11 +15,7 @@
 {{ rendered_context_content }}
 {% set rendered_context_tokens = count_tokens(rendered_context_content) -%}
 {# DYNAMIC INSTRUCTIONS #}
-{% if active_agent and active_agent.state.dynamic_instructions %}
-{% for dynamic_instruction in active_agent.state.dynamic_instructions %}
-{{ dynamic_instruction }}
-{% endfor %}
-{% endif %}
+{% include "dynamic-instructions.jinja2" %}
 {# END DYNAMIC INSTRUCTIONS #}
 <|SECTION:SCENE|>
 Content Classification: {{ scene.context }}

@@ -207,13 +207,12 @@ class SceneAnalyzationMixin:
             
         if not analysis:
             return
-        emission.dynamic_instructions.append("\n".join(
-            [
-                "<|SECTION:SCENE ANALYSIS|>",
-                analysis,
-                "<|CLOSE_SECTION|>"
-            ]
-        ))
+        emission.dynamic_instructions.append(
+            DynamicInstruction(
+                title="Scene Analysis",
+                content=analysis
+            )
+        )
     
     async def on_rag_build_sub_instruction(self, emission:"RagBuildSubInstructionEmission"):
         """

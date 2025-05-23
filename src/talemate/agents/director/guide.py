@@ -148,7 +148,7 @@ class GuideSceneMixin:
         talemate.emit.async_signals.get("agent.summarization.scene_analysis.cached").connect(
             self.on_summarization_scene_analysis_after
         )
-        talemate.emit.async_signals.get("editor.revision-analysis.before").connect(
+        talemate.emit.async_signals.get("agent.editor.revision-analysis.before").connect(
             self.on_editor_revision_analysis_before
         )
         

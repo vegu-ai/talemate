@@ -2,8 +2,8 @@
 Editor agent mixin that handles editing of dialogue and narration based on criteria and instructions
 
 Signals:
-- editor.revision-analysis.before - sent before the revision analysis is requested
-- editor.revision-analysis.after - sent after the revision analysis is requested
+- agent.editor.revision-analysis.before - sent before the revision analysis is requested
+- agent.editor.revision-analysis.after - sent after the revision analysis is requested
 """
 
 from typing import TYPE_CHECKING
@@ -94,8 +94,8 @@ class RevisionContext:
 ## SIGNALS
 
 talemate.emit.async_signals.register(
-    "editor.revision-analysis.before",
-    "editor.revision-analysis.after",
+    "agent.editor.revision-analysis.before",
+    "agent.editor.revision-analysis.after",
 )
 
 ## MIXIN
@@ -694,7 +694,7 @@ class RevisionMixin:
         }
         
         emission = AgentTemplateEmission(agent=self, template_vars=template_vars)
-        await talemate.emit.async_signals.get("editor.revision-analysis.before").send(
+        await talemate.emit.async_signals.get("agent.editor.revision-analysis.before").send(
             emission
         )
             
@@ -715,7 +715,7 @@ class RevisionMixin:
         )
         
         emission.response = analysis
-        await talemate.emit.async_signals.get("editor.revision-analysis.after").send(
+        await talemate.emit.async_signals.get("agent.editor.revision-analysis.after").send(
             emission
         )
         

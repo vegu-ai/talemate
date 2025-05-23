@@ -154,7 +154,7 @@ class SceneAnalyzationMixin:
         talemate.emit.async_signals.get("agent.summarization.rag_build_sub_instruction").connect(
             self.on_rag_build_sub_instruction
         )
-        talemate.emit.async_signals.get("editor.revision-analysis.before").connect(
+        talemate.emit.async_signals.get("agent.editor.revision-analysis.before").connect(
             self.on_editor_revision_analysis_before
         )
         

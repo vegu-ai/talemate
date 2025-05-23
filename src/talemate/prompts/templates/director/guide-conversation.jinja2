@@ -1,6 +1,7 @@
 {% set rendered_context_content -%}
 {% include "character-context.jinja2" -%}
 {% include "memory-context.jinja2" -%}
+{% include "dynamic-instructions.jinja2" %}
 {% endset %}
 {% set rendered_context_tokens = count_tokens(rendered_context_content) -%}
 {{ rendered_context_content }}

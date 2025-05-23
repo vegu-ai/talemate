@@ -28,6 +28,7 @@ from talemate.agents.base import (
     AgentActionConfig,
     AgentDetail,
     AgentEmission,
+    DynamicInstruction,
     set_processing,
     store_context_state,
 )
@@ -49,7 +50,7 @@ class ConversationAgentEmission(AgentEmission):
     actor: Actor
     character: Character
     generation: list[str]
-    dynamic_instructions: list[str] = dataclasses.field(default_factory=list)
+    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(default_factory=list)
 
 
 talemate.emit.async_signals.register(

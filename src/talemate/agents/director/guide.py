@@ -6,7 +6,6 @@ from talemate.agents.base import (
     set_processing as _set_processing,
     AgentAction,
     AgentActionConfig,
-    AgentEmission,
     AgentTemplateEmission,
     DynamicInstruction,
 )
@@ -30,10 +29,8 @@ talemate.emit.async_signals.register(
 
 
 @dataclasses.dataclass
-class DirectorGuidanceEmission(AgentEmission):
-    generation: str = ""
-    dynamic_instructions: list[str] = dataclasses.field(default_factory=list)
-
+class DirectorGuidanceEmission(AgentTemplateEmission):
+    pass
 
 def set_processing(fn):
     """
@@ -53,9 +50,9 @@ def set_processing(fn):
         agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
         
         response = await fn(self, *args, **kwargs)
-        emission.generation = [response]
+        emission.response = response
         await talemate.emit.async_signals.get("agent.director.guide.generated").send(emission)
-        return emission.generation[0]
+        return emission.response
 
     return wrapper
 

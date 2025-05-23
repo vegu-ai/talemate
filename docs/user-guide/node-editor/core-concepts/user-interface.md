@@ -1,4 +1,4 @@
-# User Interface
+# Using the node editor
 
 --8<-- "docs/snippets/common.md:documentation-is-a-work-in-progress"
 

@@ -20,3 +20,22 @@ pre > code {
     -webkit-mask-image: var(--md-admonition-icon--load);
             mask-image: var(--md-admonition-icon--load);
 }
+
+/* custom event payload admonition */
+.md-typeset .admonition.payload,
+.md-typeset details.payload {
+    border-color: #616799;
+}
+
+.md-typeset .payload > .admonition-title,
+.md-typeset .payload > summary {
+    background-color: rgba(97, 103, 153, 0.1);
+    border-color: #616799;
+}
+
+.md-typeset .payload > .admonition-title::before,
+.md-typeset .payload > summary::before {
+    background-color: #616799;
+    -webkit-mask-image: var(--md-admonition-icon--payload);
+    mask-image: var(--md-admonition-icon--payload);
+}

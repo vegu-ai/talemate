@@ -22,6 +22,7 @@ theme:
       example: octicons/beaker-16
       quote: octicons/quote-16
       load: material/open-in-new
+      payload: material/list-box
 markdown_extensions:
   - attr_list
   - pymdownx.emoji:

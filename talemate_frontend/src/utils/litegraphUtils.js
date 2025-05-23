@@ -713,6 +713,26 @@ export function lockNode(node, setInherited = false) {
     node.clonable = false;
     node.locked = true;
     node.resizable = false;
+
+    // Ensure all widgets on the node become read-only when the node is locked
+    if (node.widgets && node.widgets.length) {
+        node.widgets.forEach(widget => {
+            widget.readonly = true;
+            widget.disabled = true; // Some widgets rely on this flag instead of readonly
+
+            // Propagate the readonly flag to widget options if present
+            if (widget.options) {
+                widget.options.readonly = true;
+                widget.options.disabled = true;
+            }
+        });
+
+        // Force a redraw so the UI reflects the disabled state immediately
+        if (node.graph && node.graph.list_of_graphcanvas && node.graph.list_of_graphcanvas.length > 0) {
+            node.graph.list_of_graphcanvas[0].setDirty(true, true);
+        }
+    }
+
     if(setInherited) {
         node.inherited = true;
     }

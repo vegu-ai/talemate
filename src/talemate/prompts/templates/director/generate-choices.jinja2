@@ -12,7 +12,6 @@
 {% endfor %}
 {% endblock -%}
 <|CLOSE_SECTION|>
-{% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
 Generate {{ num_choices }} interesting actions for {{ character.name }} to advance the current scene in this text adventure game. Consider:
 
@@ -50,4 +49,5 @@ ACTIONS:
 1. <first action choice, formatted as a short button label>
 2. <second action choice, formatted as a short button label>
 ...
+{% include "dynamic-instructions.jinja2" %}
 {{ set_prepared_response('ANALYSIS:') }}

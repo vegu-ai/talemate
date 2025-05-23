@@ -11,14 +11,19 @@ from talemate.game.engine.nodes.core import (
     NodeVerbosity,
     NodeStyle,
     UNRESOLVED,
+    TYPE_CHOICES,
 )
 from talemate.agents.registry import get_agent_types, get_agent_class
-from talemate.agents.base import Agent
+from talemate.agents.base import Agent, DynamicInstruction as DynamicInstructionType
 from talemate.instance import get_agent
 
 from .state import ConditionalSetState, ConditionalUnsetState, ConditionalCounterState, StateManipulation, HasState, GetState
 
 log = structlog.get_logger("talemate.game.engine.nodes.agent")
+
+TYPE_CHOICES.extend([
+    "dynamic_instruction",
+])
 
 class AgentNode(Node):
     
@@ -432,3 +437,45 @@ class CounterAgentState(AgentStateManipulation, ConditionalCounterState):
     
     def __init__(self, title="Counter Agent State", **kwargs):
         super().__init__(title=title, **kwargs)
+        
+@register("agents/DynamicInstruction")
+class DynamicInstruction(Node):
+    """
+    Dynamic instruction object to use for instruction injection
+    in event handlers
+    """
+    
+    class Fields:
+        header = PropertyField(
+            name="header",
+            description="The header of the dynamic instruction",
+            type="str",
+            default=UNRESOLVED,
+        )
+        
+        content = PropertyField(
+            name="content",
+            description="The content of the dynamic instruction",
+            type="text",
+            default=UNRESOLVED,
+        )
+        
+    def __init__(self, title="Dynamic Instruction", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("header", socket_type="str", optional=True)
+        self.add_input("content", socket_type="text", optional=True)
+        
+        self.set_property("header", UNRESOLVED)
+        self.set_property("content", UNRESOLVED)
+        
+        self.add_output("dynamic_instruction", socket_type="dynamic_instruction")
+        
+    async def run(self, state: GraphState):
+        header = self.require_input("header")
+        content = self.require_input("content")
+        
+        self.set_output_values({
+            "dynamic_instruction": DynamicInstructionType(title=header, content=content)
+        })

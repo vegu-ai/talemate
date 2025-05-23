@@ -16,12 +16,28 @@ The prompt template system uses [Jinja2 templating](https://jinja.palletsproject
 
 ## Core Nodes
 
-**`Prompt from Template`** 
+### `Prompt from Template`
 
-- The primary node for working with templates. It accepts:
+The primary node for working with templates. It accepts:
+
 - `template_text` - For inline template content via a connected string input
 - `template_file` - For loading templates from files
 - `variables` - A dictionary of values to substitute into the template
+
+### `Template Variables`
+
+A node that sets common variables that are often used in talemate promps, such as `scene` and `max_tokens`. Can be merged with a dict to extend the variables.
+
+### `Generate Response`
+
+A node that generates a response from a prompt. It accepts:
+
+- `prompt` - The prompt to generate a response from
+- `agent` - The agent to generate a response from
+- `action_type` - The type of action (this will determine the inference parameters)
+- `data_output` - Whether to expect and output to a data structure
+- `response_length` - The maximum length of the response
+- `attempts` - The number of attempts to generate a response in case of failure
 
 ## Template Sources
 
@@ -33,7 +49,7 @@ Set the `template_file` property to load templates stored as `.jinja2` files in 
 
 ## Variables
 
-Templates use `{{variable_name}}` syntax for variable substitution. Pass variables through the `variables` input as a dictionary, typically built using chained `Dict Set` nodes.
+Templates use `{{variable_name}}` syntax for variable substitution. Pass variables through the `variables` input as a dictionary, typically built using chained `Dict Set` nodes in combination with the `Template Variables` node.
 
 ## Node Workflow
 
@@ -151,7 +167,7 @@ The result of the `Generate Response` prompt is first fed into a `Clean Response
 
     What then follows is the task itself.
 
-    We close the section with the `CLOSE_SECTION` token.
+    We close the section with the `CLOSE_SECTION` instruction.
 
     ```
     <|CLOSE_SECTION|>

@@ -50,9 +50,13 @@ Include character information with conditional detail:
 {% for character in scene.characters %}
 ### {{ character.name }}
 {% if max_tokens > 6000 -%}
+{# we have lots of space so print the whole character sheet #}
 {{ character.sheet }}
 {% else -%}
-{{ character.filtered_sheet(['age', 'gender']) }}
+{# we have limited space so print the bare minimum and then query memory for personality #}
+{# bare minimum attributes that are guaranteed to be available #}
+{{ character.filtered_sheet(['name', 'gender', 'age']) }}
+{# query memory for personality #}
 {{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
 {% endif %}
 {{ character.description }}
@@ -93,4 +97,76 @@ The `{% include %}` directive allows you to reuse existing templates. Common inc
 {% else -%}
   {{ condensed_content }}
 {% endif %}
+```
+
+### Response scaffolding
+
+You can use the `{{ bot_token }}` variable to separate the prompt and any response scaffolding you want to do.
+
+!!! note "Scaffolding?"
+
+    Scaffolding is a technique where you provide the beginning of the response, and then let the agent continue.
+
+    This can be useful when you want to coerce the agent down a specific path or formatting.
+
+```
+<|SECTION:TASK|>
+Analyze the current moment in the scene and then make a prediction about what will happen next.
+
+Do your analysis first!
+
+Provide your response in the following format:
+
+ANALYSIS: .. your analysis ..
+
+PREDICTION: .. your prediction ..
+<|CLOSE_SECTION|>
+{{ bot_token }}ANALYSIS:
+```
+
+Its important to note that with this approach, anything you put after the `{{ bot_token }}` will be missing from the response. So in this example the `ANALYSIS:` string will not be part of the response.
+
+If you need it, you can instead use the `set_prepared_response` function.
+
+```
+<|SECTION:TASK|>
+Analyze the current moment in the scene and then make a prediction about what will happen next.
+
+Do your analysis first!
+
+Provide your response in the following format:
+
+ANALYSIS: .. your analysis ..
+
+PREDICTION: .. your prediction ..
+<|CLOSE_SECTION|>
+{{ set_prepared_response("ANALYSIS: ") }}
+```
+
+### Response scaffolding for data structures
+
+Scaffolding can be exceptionally helpful if you are prompting the agent to generate a data structure and nothing else, because you can simply coerce it to start with the data structure you want.
+
+```
+<|SECTION:TASK|>
+Generate a list of objects in the scene, provide a name and description for each object.
+
+
+  ```json
+  {
+    "objects": [
+      {
+        "name": "an old shelf",
+        "description": "a shelf that is old and has a few scratches on it"
+      },
+      {
+        "name": "a dirty carpet",
+        "description": "a carpet that is dirty and has a few stains on it"
+      }
+    ]
+  }
+  ```
+
+<|CLOSE_SECTION|>
+{{ set_data_response({"objects": [{"name":""}]}) }}
 ```

@@ -14,7 +14,7 @@
                     tabindex="-1">
                     <v-list-item 
                         v-for="node in filteredNodes" 
-                        :key="node.id"
+                        :key="node.registry"
                         :value="node.registry"
                         tabindex="0"
                         ref="listItems">
@@ -47,9 +47,18 @@ export default {
           // filter by node.registry and node.title
           // nodes is an object literal with keys as the node type and values as the node definition
           // so we need to filter by the node definition title and registry
-          const filtered = Object.values(this.nodes).filter(node => {
+          let filtered = Object.values(this.nodes).filter(node => {
             return node.title.toLowerCase().includes(this.searchQuery.toLowerCase()) || node.registry.toLowerCase().includes(this.searchQuery.toLowerCase());
           });
+
+          // Ensure uniqueness by registry (safeguard against duplicates)
+          const uniqueNodes = new Map();
+          filtered.forEach(node => {
+            if (!uniqueNodes.has(node.registry)) {
+              uniqueNodes.set(node.registry, node);
+            }
+          });
+          filtered = Array.from(uniqueNodes.values());
 
           // sort by startswith this.searchQuery
           // and then alphabetically

@@ -698,7 +698,6 @@ export default {
 
       if (data.type === 'app_config') {
         this.appConfig = data.data;
-        console.log("App Config", this.appConfig);
         if(data.version)
           this.version = data.version;
         return;
@@ -1052,7 +1051,6 @@ export default {
       this.websocket.send(JSON.stringify({ type: 'configure_clients', clients: clients }));
     },
     saveAgents(agents) {
-      console.log({ type: 'configure_agents', agents: agents })
       this.websocket.send(JSON.stringify({ type: 'configure_agents', agents: agents }));
     },
     requestSceneAssets(asset_ids) {
@@ -1129,21 +1127,17 @@ export default {
     },
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
       this.tab = 'world';
-      console.log("onOpenWorldStateManager", {tab, sub1, sub2, sub3})
-      console.trace("onOpenWorldStateManager", {tab, sub1, sub2, sub3})
       this.$nextTick(() => {
         this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
       });
     },
     onWorldStateManagerNavigateR(tab, meta) {
-      console.trace("onWorldStateManagerNavigateR", {tab, meta})
       this.$nextTick(() => {
         if(this.$refs.worldStateManagerMenu)
           this.$refs.worldStateManagerMenu.update(tab, meta);
       });
     },
     onWorldStateManagerSelectedCharacter(character) {
-      console.trace("onWorldStateManagerSelectedCharacter", character)
       this.$nextTick(() => {
         if(this.$refs.worldStateManagerMenu)
           this.$refs.worldStateManagerMenu.setCharacter(character)

@@ -1,7 +1,13 @@
 <template>
     <v-card density="compact" style="min-height:250px">
         <v-toolbar density="compact" color="mutedbg">
-            <v-toolbar-title><v-icon color="primary">mdi-group</v-icon> Modules</v-toolbar-title>
+            <v-toolbar-title><v-icon color="primary">mdi-group</v-icon> Modules
+
+                <v-chip color="primary" variant="tonal" size="small" class="ml-2">
+                    {{ listedNodes.filteredNodeCount }} / {{ listedNodes.totalNodeCount }}
+                </v-chip>
+
+            </v-toolbar-title>
 
             <v-spacer></v-spacer>
 
@@ -41,7 +47,7 @@
                     <v-icon @click.stop="deleteModule(node.fullPath, node.filename)" size="x-small" class="module-card-icon">mdi-close-circle-outline</v-icon>
                 </v-card>
                 <v-card 
-                v-for="(node, idx) in listedNodes.templates" :key="idx" :class="'tile mr-2 mb-2 pb-2 position-relative'+(node.selected?' module-locked-selected':'')" elevation="7" :color="node.selected ? 'locked_node' : 'locked_node'" variant="tonal" @click="$emit('load-node', node.fullPath)" density="compact">
+                v-for="(node, idx) in listedNodes.templates" :key="idx" :class="'tile mr-2 mb-2 pb-2 position-relative'+(node.selected?' module-locked-selected':'')" elevation="7" :color="node.selected ? `${node.subType}_node_selected` : `${node.subType}_node`" variant="tonal" @click="$emit('load-node', node.fullPath)" density="compact">
                     <v-card-title class="text-caption font-weight-bold pb-0">{{ node.filename }}</v-card-title>
                     <v-card-subtitle class="text-caption">{{ node.path }}</v-card-subtitle>
                     <v-icon size="x-small" class="module-card-icon">mdi-lock</v-icon>
@@ -146,7 +152,7 @@ export default {
         selectedNodeName: String,
         maxNodesListed: {
             type: Number,
-            default: 20
+            default: 30
         }
     },
     inject: [
@@ -182,55 +188,68 @@ export default {
             here we take everything after library and before the filename
             */
 
+            let selectedNode = null;
+
             // First process all paths into node objects
             let nodes = this.library.map(path => {
                 // Normalize path separators to forward slashes for consistent processing
                 const normalizedPath = path.replace(/\\/g, '/');
                 const parts = normalizedPath.split('/');
                 const filename = parts[parts.length - 1].replace('.json', '');
+                const filenameParts = filename.split('-').join(' ');
+     
+                const libraryIndex = parts.indexOf('modules');
+                const relativePath = parts.slice(libraryIndex + 1, -1).join('/');
+                const isCoreModule = normalizedPath.startsWith('src/talemate/');
+                const isAgentModule = normalizedPath.startsWith('src/talemate/agents/');
+                const isSceneModule = normalizedPath.startsWith('scenes/');
 
-                if (normalizedPath.startsWith('scenes/')) {
-                    return {
-                        type: 'scene',
-                        path: parts[1], // e.g. "infinity-quest"
-                        filename,
-                        fullPath: path, // Keep original path for backend communication
-                        selected: path === this.selectedNodePath,
-                        searchValue: `${filename} (${parts[1]})` // for search and display
-                    };
-                } else if (normalizedPath.startsWith('src/talemate/agents/')) {
-                    //  core agent modules
+                let _path = relativePath;
+                let searchValue = `${filename} (${parts[1]}) ${filenameParts}`;
+                let type = (isSceneModule) ? 'scene' : 'template';
+                let subType = (isCoreModule) ? 'core' : 'template';
+
+                if(isSceneModule) {
+                    _path = parts[1];
+                    subType = 'scene';
+                } else if (isAgentModule) {
                     const agentName = parts[3];
-                    
-                    return {
-                        type: 'template',
-                        path: agentName,
-                        filename,
-                        fullPath: path, // Keep original path for backend communication
-                        selected: path === this.selectedNodePath,
-                        searchValue: `${filename} (${agentName}) agent` // for search and display
-                    };
-
-                } else {
-                    // For templates, take everything after '/modules/' and before filename
-                    const libraryIndex = parts.indexOf('modules');
-                    const relativePath = parts.slice(libraryIndex + 1, -1).join('/');
-
-                    return {
-                        type: 'template',
-                        path: relativePath,
-                        filename,
-                        fullPath: path, // Keep original path for backend communication
-                        selected: path === this.selectedNodePath,
-                        searchValue: `${filename} (${relativePath})` // for search and display
-                    };
+                    searchValue = `${searchValue} (${agentName}) $agent`;
+                    _path = agentName;
+                } else if(!isCoreModule) {
+                    subType = 'template';
+                    searchValue = `${searchValue} $template`;
                 }
+
+                return {
+                    type: type,
+                    path: _path,
+                    isCoreModule,
+                    isAgentModule,
+                    subType,
+                    isSceneModule,
+                    filename,
+                    fullPath: path, // Keep original path for backend communication
+                    selected: path === this.selectedNodePath,
+                    searchValue: searchValue // for search and display
+                };
+
             }).filter(node => node !== null);
 
-            console.log({nodes});
+            const totalNodes = nodes.length;
+
+            if(this.selectedNodePath) {
+                selectedNode = nodes.find(node => node.fullPath === this.selectedNodePath);
+            }
+
+            // drop the selected node from the list
+            if(selectedNode) {
+                nodes = nodes.filter(node => node.fullPath !== this.selectedNodePath);
+            }
+
 
             // apply filter from search
-            if (this.nodeLibrarySearch) {
+            if (this.nodeLibrarySearch && this.nodeLibrarySearch.length > 1) {
                 const searchTerm = this.nodeLibrarySearch.toLowerCase();
                 nodes = nodes.filter(node =>
                     node.searchValue.toLowerCase().includes(searchTerm) ||
@@ -243,10 +262,22 @@ export default {
                 nodes = nodes.slice(0, this.maxNodesListed);
             }
 
+            // selected node is always added regardless of filtering
+            if(selectedNode) {
+                nodes.unshift(selectedNode);
+            }
+            
+
+            // sort by filename
+            nodes.sort((a, b) => a.filename.localeCompare(b.filename));
+
             // Group nodes by type
             return {
                 scenes: nodes.filter(node => node.type === 'scene'),
-                templates: nodes.filter(node => node.type === 'template')
+                templates: nodes.filter(node => node.type === 'template'),
+                totalNodeCount: totalNodes,
+                filteredNodeCount: nodes.length,
+                hiddenNodeCount: totalNodes - nodes.length,
             };
 
         }

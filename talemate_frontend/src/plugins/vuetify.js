@@ -38,8 +38,10 @@ export default createVuetify({
 
           // node editor
           nodeeditorbg: colors.grey.darken2,
-          locked_node: colors.blueGrey.lighten1,
-          locked_node_selected: colors.blueGrey.darken1,
+          core_node: colors.blueGrey.lighten1,
+          core_node_selected: colors.blueGrey.lighten1,
+          template_node: colors.brown.lighten2,
+          template_node_selected: colors.brown.lighten2,
           scene_node: colors.deepPurple.lighten2,
           scene_node_selected: colors.deepPurple.lighten1,
 

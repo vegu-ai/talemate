@@ -60,9 +60,6 @@
                 </v-menu>
 
 
-                <v-btn @click="requestSceneNodesWithConfirm" color="primary" icon>
-                    <v-icon>mdi-refresh</v-icon>
-                </v-btn>
                 <span v-if="!testing">
                     <v-tooltip text="Start the scene loop">
                         <template v-slot:activator="{ props }">

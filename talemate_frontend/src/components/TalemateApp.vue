@@ -684,6 +684,7 @@ export default {
         // collect character.name into list of active characters
         this.activeCharacters = data.data.characters.map((character) => character.name);
         this.agentState = data.data.agent_state;
+        this.syncActAs();
         return;
       }
 
@@ -962,6 +963,29 @@ export default {
       this.websocket.send(JSON.stringify(param_copy));
     },
 
+    syncActAs() {
+      // sets the appropriate actAs
+
+
+      // acting as narrator, narrator is always valid, do nothing
+      if(this.actAs == "$narrator") {
+        return;
+      }
+
+      // acting as a character, check if the character is still valid
+      if(this.actAs && this.activeCharacters.includes(this.actAs)) {
+        return;
+      }
+
+      // if actAs is null and we have characters, just leave it as null (which will default it to the player character)
+      if(!this.actAs && this.activeCharacters.length > 0) {
+        return;
+      }
+
+      // at this point we need a change of actAs so cycle to next option
+      this.cycleActAs();
+    },
+
     cycleActAs() {
 
       // will cycle through activeCharacters, which is a dict of character names
@@ -970,6 +994,12 @@ export default {
       // if actAs is null it means the player is acting as themselves
 
       const playerCharacterName = this.getPlayerCharacterName();
+
+      // if there are no characters, set actAs to $narrator
+      if(!this.activeCharacters || this.activeCharacters.length === 0) {
+        this.actAs = "$narrator";
+        return;
+      }
 
       // if current actAs is $narrator, set actAs to the first character in the list
       if(this.actAs === "$narrator") {

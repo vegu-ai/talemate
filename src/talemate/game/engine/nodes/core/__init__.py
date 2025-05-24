@@ -11,6 +11,7 @@ import asyncio
 import time
 import reprlib
 import json
+import re
 from enum import IntEnum
 
 from talemate.game.engine.nodes.base_types import base_node_type, BASE_TYPES
@@ -513,7 +514,10 @@ class NodeBase(pydantic.BaseModel):
     def __init__(self, *args, **kwargs):
         
         if kwargs.get("title", "Node") == "Node":
-            kwargs["title"] = self.__class__.__name__
+            title = self.__class__.__name__
+            # replace camel case with spaces
+            title = re.sub(r'(?<!^)(?=[A-Z])', ' ', title)
+            kwargs["title"] = title
         
         # never override the registry through kwargs
         kwargs.pop("registry", None)
@@ -1980,7 +1984,7 @@ class Loop(Graph):
     
     sleep: float = 0.001
     
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs):    
         super().__init__(**kwargs)
         
     def setup(self):

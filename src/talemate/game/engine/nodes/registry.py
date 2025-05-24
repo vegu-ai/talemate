@@ -110,7 +110,11 @@ class register:
     def __init__(self, name, as_base_type:bool=False, container:dict|None=None):
         self.name = name
         self.as_base_type = as_base_type
-        self.container = container or NODES
+        self.container = container
+        
+        if self.container is None:
+            self.container = NODES
+        
 
     def __call__(self, cls):
         self.container[self.name] = cls

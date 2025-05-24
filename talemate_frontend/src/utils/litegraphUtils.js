@@ -677,6 +677,10 @@ function createNodeClass(nodeDefinition) {
         return newNode;
     };
 
+    NodeClass.prototype.getSlotMenuOptions = function(slot) {
+        return []
+    }
+
     return NodeClass;
 }
 
@@ -1248,7 +1252,110 @@ LGraphCanvas.prototype.processMouseDown = function(e) {
     }
     // --- End Group Logic ---
 
-    // If no custom group logic handled the click, proceed with the original logic
+    // --- Multi-node ALT+Drag clone logic ---
+    if (e.altKey && e.which === 1 && this.selected_nodes && Object.keys(this.selected_nodes).length > 1) {
+        // If the cursor is over one of the currently selected nodes
+        const clickedNode = this.graph.getNodeOnPos(e.canvasX, e.canvasY);
+        if (clickedNode && this.selected_nodes[clickedNode.id]) {
+            // Prepare history action
+            this.graph.beforeChange();
+
+            const selectedList = Object.values(this.selected_nodes);
+            const clonedNodes = [];
+            const idMap = {};
+
+            // First pass – clone every selected node
+            selectedList.forEach(originalNode => {
+                const clone = originalNode.clone();
+                clone.pos = [originalNode.pos[0], originalNode.pos[1]]; // same position, will move during drag
+                this.graph.add(clone);
+                clonedNodes.push(clone);
+                idMap[originalNode.id] = clone.id;
+                if (originalNode.talemateId) {
+                    idMap[originalNode.talemateId] = clone.talemateId || clone.id;
+                }
+            });
+
+            // Second pass – recreate internal connections between the cloned nodes
+            selectedList.forEach(originalNode => {
+                if (!originalNode.outputs) return;
+                originalNode.outputs.forEach((output, outputIdx) => {
+                    if (!output.links) return;
+                    output.links.forEach(linkId => {
+                        const linkInfo = this.graph.links[linkId];
+                        if (!linkInfo) return;
+                        const targetId = linkInfo.target_id;
+                        if (!this.selected_nodes[targetId]) return; // only duplicate connections within the selection
+                        const newOrigin = this.graph.getNodeById(idMap[originalNode.id]);
+                        const newTarget = this.graph.getNodeById(idMap[targetId]);
+                        if (newOrigin && newTarget) {
+                            newOrigin.connect(outputIdx, newTarget, linkInfo.target_slot);
+                        }
+                    });
+                });
+            });
+
+            // Replace selection with the cloned nodes
+            this.selectNodes(clonedNodes);
+
+            // Store drag info so we can move the clones while the pointer moves
+            this._cloning_multi_drag = {
+                active: true,
+                clones: clonedNodes,
+                lastX: e.canvasX,
+                lastY: e.canvasY
+            };
+
+            // Block default handler (which would clone only one node)
+            e.preventDefault();
+            e.stopPropagation();
+            return true;
+        }
+    }
+
+    // If no custom logic handled the click, proceed with the original logic
     return original_processMouseDown.call(this, e);
+};
+
+// Preserve references to the original handlers
+const original_processMouseMove = LGraphCanvas.prototype.processMouseMove;
+const original_processMouseUp = LGraphCanvas.prototype.processMouseUp;
+
+// Override processMouseMove to move the duplicated selection while dragging
+LGraphCanvas.prototype.processMouseMove = function(e) {
+    if (this._cloning_multi_drag && this._cloning_multi_drag.active) {
+        this.adjustMouseEvent(e);
+        const info = this._cloning_multi_drag;
+        const dxCanvas = e.canvasX - info.lastX;
+        const dyCanvas = e.canvasY - info.lastY;
+        if (dxCanvas !== 0 || dyCanvas !== 0) {
+            const dxGraph = dxCanvas / this.ds.scale;
+            const dyGraph = dyCanvas / this.ds.scale;
+            info.clones.forEach(node => {
+                node.pos[0] += dxGraph;
+                node.pos[1] += dyGraph;
+            });
+            info.lastX = e.canvasX;
+            info.lastY = e.canvasY;
+            this.setDirty(true, true);
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        return true;
+    }
+    return original_processMouseMove.call(this, e);
+};
+
+// Override processMouseUp to finish the drag operation and register history
+LGraphCanvas.prototype.processMouseUp = function(e) {
+    if (this._cloning_multi_drag && this._cloning_multi_drag.active) {
+        this._cloning_multi_drag.active = false;
+        delete this._cloning_multi_drag;
+        this.graph.afterChange();
+        e.preventDefault();
+        e.stopPropagation();
+        return true;
+    }
+    return original_processMouseUp.call(this, e);
 };
 

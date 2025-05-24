@@ -22,7 +22,7 @@ Then select the group you want to add the template to and click the **:material-
 !!! abstract "Documentation is a work in progress"
     Documentation is an ongoing effort and some parts are more complete than others, with some missing entirely. Thanks for your patience, its being worked on!
 
-    See the [Node Editor - Crash Course](/talemate/user-guide/howto/infinity-quest-dynamic/) tutorial for an introduction to the node editor.
+    See the [Node Editor - Crash Course](/talemate/user-guide/howto/infinity-quest-dynamic/) tutorial for an extensive introduction to the node editor.
 <!--- --8<-- [end:documentation-is-a-work-in-progress] -->
 
 <!--- --8<-- [start:save-scene-project] -->

@@ -13,18 +13,14 @@ class NumberNode(Node):
         
         value = self.require_input(name)
         
-        if isinstance(value, str):
-            try:
-                if float in types:
-                    value = float(value)
-                else:
-                    value = int(value)
-            except ValueError:
-                raise InputValueError(self, name, "Invalid number")
+        try:
+            if float in types:
+                value = float(value)
+            else:
+                value = int(value)
+        except ValueError:
+            raise InputValueError(self, name, "Invalid number")
             
-        if not isinstance(value, types):
-            raise InputValueError(self, name, "Value must be a number")
-        
         return value
 
 @register("data/number/Make")

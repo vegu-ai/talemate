@@ -7,14 +7,19 @@
                     {{ listedNodes.filteredNodeCount }} / {{ listedNodes.totalNodeCount }}
                 </v-chip>
 
+
+
             </v-toolbar-title>
 
             <v-spacer></v-spacer>
 
+            <v-chip v-if="!sceneReadyForNodeEditing" color="warning" variant="text" size="x-small" prepend-icon="mdi-alert-circle-outline">
+                Save project to be able to create modules
+            </v-chip>
 
             <v-menu density="compact">
                 <template v-slot:activator="{ props }">
-                    <v-btn v-bind="props" color="primary" variant="text" prepend-icon="mdi-plus">
+                    <v-btn :disabled="!canCreateModules" v-bind="props" color="primary" variant="text" prepend-icon="mdi-plus">
                         Create module
                     </v-btn>
                 </template>
@@ -41,14 +46,14 @@
 
         <v-card-text style="height: 300px; overflow-y: auto;">
             <div class="tiles pb-8">
-                <v-card v-for="(node, idx) in listedNodes.scenes" :key="idx" :class="'tile mr-2 pb-2 mb-2'+(node.selected?' module-selected':'')" elevation="7" color="primary" variant="tonal" @click="$emit('load-node', node.fullPath)" density="compact">
-                    <v-card-title class="text-caption font-weight-bold pb-0">{{ node.filename }}</v-card-title>
+                <v-card v-for="(node, idx) in listedNodes.scenes" :key="idx" :class="'tile mr-2 pb-2 mb-2 pr-1'+(node.selected?' module-selected':'')" elevation="7" color="primary" variant="tonal" @click="$emit('load-node', node.fullPath)" density="compact">
+                    <v-card-title class="text-caption font-weight-bold pb-0 pt-1">{{ node.filename }}</v-card-title>
                     <v-card-subtitle class="text-caption">{{ node.path }}</v-card-subtitle>
                     <v-icon @click.stop="deleteModule(node.fullPath, node.filename)" size="x-small" class="module-card-icon">mdi-close-circle-outline</v-icon>
                 </v-card>
                 <v-card 
-                v-for="(node, idx) in listedNodes.templates" :key="idx" :class="'tile mr-2 mb-2 pb-2 position-relative'+(node.selected?' module-locked-selected':'')" elevation="7" :color="node.selected ? `${node.subType}_node_selected` : `${node.subType}_node`" variant="tonal" @click="$emit('load-node', node.fullPath)" density="compact">
-                    <v-card-title class="text-caption font-weight-bold pb-0">{{ node.filename }}</v-card-title>
+                v-for="(node, idx) in listedNodes.templates" :key="idx" :class="'tile mr-2 mb-2 pb-2 pr-1 position-relative'+(node.selected?' module-locked-selected':'')" elevation="7" :color="node.selected ? `${node.subType}_node_selected` : `${node.subType}_node`" variant="tonal" @click="$emit('load-node', node.fullPath)" density="compact">
+                    <v-card-title class="text-caption font-weight-bold pb-0 pt-1">{{ node.filename }}</v-card-title>
                     <v-card-subtitle class="text-caption">{{ node.path }}</v-card-subtitle>
                     <v-icon size="x-small" class="module-card-icon">mdi-lock</v-icon>
                 </v-card>
@@ -150,6 +155,7 @@ export default {
         selectedNodePath: String,
         selectedNodeRegistry: String,
         selectedNodeName: String,
+        sceneReadyForNodeEditing: Boolean,
         maxNodesListed: {
             type: Number,
             default: 30
@@ -165,6 +171,11 @@ export default {
     ],
     emits: ['create-node', 'load-node'],
     computed: {
+
+        canCreateModules() {
+            return this.sceneReadyForNodeEditing;
+        },
+
         listedNodes() {
             /*
             first we want to turn the library list of paths into node objects

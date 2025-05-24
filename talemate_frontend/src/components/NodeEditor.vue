@@ -172,6 +172,7 @@
                 :selectedNodePath="selectedNodePath"
                 :selectedNodeName="graph ? graph.talemateTitle : null"
                 :selectedNodeRegistry="graph ? graph.talemateRegistry : null"
+                :sceneReadyForNodeEditing="sceneReadyForNodeEditing"
                 @load-node="(path) => requestSceneNodesWithConfirm({path})"
             />
 
@@ -329,6 +330,12 @@ export default {
         },
         clearLogOnTest() {
             return this.debugMenuSelected.includes('clearLogOnTest');
+        },
+        sceneReadyForNodeEditing() {
+            if(!this.scene) {
+                return false;
+            }
+            return this.scene.data.save_files && this.scene.data.save_files.length > 0;
         }
     },
     

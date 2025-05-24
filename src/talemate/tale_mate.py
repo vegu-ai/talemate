@@ -1690,7 +1690,7 @@ class Scene(Emitter):
             data={
                 "path": self.full_path,
                 "filename": self.filename,
-                "prject_name": self.project_name,
+                "project_name": self.project_name,
                 "nodes_filename": self.nodes_filename,
                 "creative_nodes_filename": self.creative_nodes_filename,
                 "save_files": self.save_files,

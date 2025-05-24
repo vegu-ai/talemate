@@ -1,6 +1,6 @@
 {
   "title": "Scene Loop",
-  "id": "828412b8-3dc4-4cd4-a1ab-190392ce934a",
+  "id": "4b15390b-e007-4bfb-b360-fd316008cf23",
   "properties": {
     "trigger_game_loop": true
   },
@@ -51,7 +51,7 @@
       "y": -214,
       "width": 629,
       "height": 163,
-      "color": "#8A8",
+      "color": "#a1309b",
       "font_size": 24,
       "inherited": false
     }
@@ -62,5 +62,6 @@
   "base_type": "scene/SceneLoop",
   "inputs": [],
   "outputs": [],
+  "module_properties": {},
   "style": null
 }

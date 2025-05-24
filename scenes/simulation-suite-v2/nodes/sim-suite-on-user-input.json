@@ -616,6 +616,24 @@
       "inherited": false,
       "registry": "core/Stage",
       "base_type": "core/Node"
+    },
+    "6f9d1abc-5fea-4135-a6c2-0d866e9c3a62": {
+      "title": "Module Style",
+      "id": "6f9d1abc-5fea-4135-a6c2-0d866e9c3a62",
+      "properties": {
+        "node_color": "#27233a",
+        "title_color": "#3d315b",
+        "auto_title": null,
+        "icon": "F0E7B"
+      },
+      "x": 1600,
+      "y": 250,
+      "width": 210,
+      "height": 110,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -801,10 +819,11 @@
   "base_type": "core/Event",
   "inputs": [],
   "outputs": [],
+  "module_properties": {},
   "style": {
-    "title_color": "#57532e",
-    "node_color": "#39382c",
-    "icon": "F0BF8",
+    "title_color": "#3d315b",
+    "node_color": "#27233a",
+    "icon": "F0E7B",
     "auto_title": null
   }
 }

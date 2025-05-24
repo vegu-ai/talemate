@@ -419,6 +419,24 @@
       "inherited": false,
       "registry": "data/string/MakeText",
       "base_type": "core/Node"
+    },
+    "0c7e221d-0367-455b-9eca-b0e0d3df2a37": {
+      "title": "Module Style",
+      "id": "0c7e221d-0367-455b-9eca-b0e0d3df2a37",
+      "properties": {
+        "node_color": "#27233a",
+        "title_color": "#3d315b",
+        "auto_title": null,
+        "icon": "F0E7B"
+      },
+      "x": 900,
+      "y": 210,
+      "width": 210,
+      "height": 110,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -556,10 +574,11 @@
   "base_type": "core/Event",
   "inputs": [],
   "outputs": [],
+  "module_properties": {},
   "style": {
-    "title_color": "#57532e",
-    "node_color": "#39382c",
-    "icon": "F0BF8",
+    "title_color": "#3d315b",
+    "node_color": "#27233a",
+    "icon": "F0E7B",
     "auto_title": null
   }
 }

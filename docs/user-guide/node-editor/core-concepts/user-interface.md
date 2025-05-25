@@ -2,6 +2,12 @@
 
 --8<-- "docs/snippets/common.md:documentation-is-a-work-in-progress"
 
+The node editor is available in the main scene window once the scene is switched to creative mode.
+
+Switch to creative mode through the creative mode toggle in the scene toolbar.
+
+![Switch to creative mode](../img/toggle-node-editor.png)
+
 ## Module Library
 
 ![Module Library](../img/user-interface-0001.png)

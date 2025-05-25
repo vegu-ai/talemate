@@ -566,6 +566,13 @@ class MakeList(Node):
             default="any",
             generate_choices=lambda: TYPE_CHOICES
         )
+        
+        items = PropertyField(
+            name="items",
+            description="Initial items in the list",
+            type="list",
+            default=[],
+        )
     
     def __init__(self, title="Make List", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -575,6 +582,7 @@ class MakeList(Node):
         self.add_input("item_type", socket_type="str", optional=True)
         
         self.set_property("item_type", "any")
+        self.set_property("items", [])
         
         self.add_output("list", socket_type="list")
         
@@ -587,7 +595,7 @@ class MakeList(Node):
             log.debug("Creating new list", item_type=item_type)
         
         # Create a new empty list
-        new_list = []
+        new_list = self.get_property("items")
         
         self.set_output_values({
             "list": new_list

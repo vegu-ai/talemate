@@ -29,11 +29,11 @@ The screenshot below (`functions-0001.png`) shows a complete inline-function set
 
 ![Inline Function Example](../img/functions-0001.png)
 
-1. **Make List**
+**Make List**
 
 A *Make List* node creates the list `[1, 2, 3, 4]` (you set this in its **items** property).  Its **list** output is what we want to process.
 
-2. **Function body**
+**Function body**
 
 Build the function that doubles a single number:
 
@@ -41,15 +41,15 @@ Build the function that doubles a single number:
 - *Basic Arithmetic* – multiplies `item × 2`.  
 - *Return* node – outputs the result.  
 
-3. **Define Function** 
+**Define Function** 
+ 
+Give it a *name* like `double_number` and connect its **nodes** input to the **Return** node (the tail of the body).  This wraps the sub-graph as a callable function.
 
-The *Define Function* node sits outside the dashed box.  Give it a *name* like `double_number` and connect its **nodes** input to the **Return** node (the tail of the body).  This wraps the sub-graph as a callable function.
-
-4. **Get Function**
+**Get Function**
 
 Elsewhere drop a *Get Function* node, set its *name* to `double_number`, and take the **fn** output.
 
-5. **Call For Each** 
+**Call For Each** 
 
 Feed the original list into **items** and the function wrapper into **fn**.  Set *argument_name* to `item`.  The node iterates through `[1, 2, 3, 4]`, calls the function for each, and outputs a list `[2, 4, 6, 8]` on **results**.
 
@@ -105,6 +105,7 @@ Besides the core nodes there are a few helpers that make working with functions 
 * **Call For Each** – Iterate over a list and invoke the function for every item.  Property *argument_name* sets the parameter that receives the current element.
 * **Breakpoint** – Pause execution when hit so you can inspect the current *GraphState* (useful while developing a complex function).
 * **Error Handler** – Catch exceptions and delegate them to a user-defined function for graceful recovery.
+* **Coallesce** - Allows you to combine multiple branches into a single function definition for inline functions.
 
 ---
 
@@ -164,7 +165,7 @@ Step-by-step:
 - `template`: `focal-answer`  
 - `callbacks`: the list coming from *List Append* which currently contains just our `answer` callback.  
 - `agent`: whatever agent you want to use (e.g. `summarizer`).  
-- `state`: optional – here a *Make Bool* just feeds `true` so the state socket is live.
+- `state`: enable the node – here a *Make Bool* just feeds `true` so the state socket is live.
 
 5. **Process AI Function Call** (not shown in the screenshots but usually added afterwards) can inspect the returned `calls` list to confirm the function was invoked and examine the arguments.
 

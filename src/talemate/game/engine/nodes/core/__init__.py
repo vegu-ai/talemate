@@ -509,6 +509,13 @@ class NodeBase(pydantic.BaseModel):
         for name, value in self.properties.items():
             fields[name] = self.get_property_field(name)
         
+        # if the class has a Fields object, add any remaining fields from that
+        if hasattr(self.__class__, "Fields"):
+            for name, value in self.__class__.Fields.__dict__.items():
+                # if the field is a PropertyField and it's not already in the fields dictionary, add it
+                if isinstance(value, PropertyField) and name not in fields:
+                    fields[name] = value
+        
         return fields
     
     def __init__(self, *args, **kwargs):

@@ -70,8 +70,12 @@ Content Classification: {{ scene.context }}
 {% elif response_length < 700 %}{% set num_sentences="4-5" -%}
 {% elif response_length < 1000 %}{% set num_sentences="6-7" -%}
 {% else %}{% set num_sentences="7-8" -%}
-{% endif %}Fit your instructions within {{ num_sentences }} sentences.
+{% endif %}Fit your guidance within {{ num_sentences }} sentences.
 
 Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
+
+Provide your response in the following format:
+
+GUIDANCE: ... your guidance for the narrator ...
 <|CLOSE_SECTION|>
-{{ bot_token }} Instructions:
+{{ bot_token }} GUIDANCE:

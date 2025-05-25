@@ -84,6 +84,12 @@ Finally ALWAYS briefly state the formatting guidelines: Speech MUST go inside ""
 {% elif response_length < 700 %}{% set num_sentences="6-7" -%}
 {% elif response_length < 1000 %}{% set num_sentences="7-8" -%}
 {% else %}{% set num_sentences="8-10" -%}
-{% endif %}Fit your instructions within {{ num_sentences }} sentences.
+{% endif %}Fit your guidance within {{ num_sentences }} sentences.
+
+Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
+
+Provide your response in the following format:
+
+GUIDANCE: ... your guidance for the story writer ...
 <|CLOSE_SECTION|>
-{{ bot_token }} Instructions:
+{{ bot_token }} GUIDANCE:

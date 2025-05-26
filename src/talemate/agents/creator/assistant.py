@@ -428,6 +428,9 @@ class AssistantMixin:
         )
 
         response = response.replace("...", "").lstrip("").rstrip().replace("END-OF-LINE", "")
+        
+        if prefix:
+            response = prefix + response
 
         if not response:
             if emit_signal:

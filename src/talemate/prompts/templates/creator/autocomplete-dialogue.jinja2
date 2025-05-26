@@ -5,19 +5,27 @@
 {% endwith %}
 <|CLOSE_SECTION|>
 {% endset %}
+{% set character_guidance_content -%}
+{%- with character=character -%}
+    {% include "character-guidance.jinja2" %}
+{% endwith %}
+{% endset %}
 {{ rendered_context_content }}
 {% set rendered_context_tokens = count_tokens(rendered_context_content) -%}
+{% set rendered_character_guidance_tokens = count_tokens(character_guidance_content) -%}
+{% set budget = max_tokens-300-rendered_context_tokens-rendered_character_guidance_tokens -%}
 <|SECTION:SCENE|>
 {% if continuing_message -%}
-{% for scene_context in scene.context_history(budget=max_tokens-300-rendered_context_tokens, min_dialogue=20, sections=False)[:-1] -%}
+{% for scene_context in scene.context_history(budget=budget, min_dialogue=20, sections=False)[:-1] -%}
 {{ scene_context }}
 {% endfor %}
 {% else %}
-{% for scene_context in scene.context_history(budget=max_tokens-300-rendered_context_tokens, min_dialogue=20, sections=False) -%}
+{% for scene_context in scene.context_history(budget=budget, min_dialogue=20, sections=False) -%}
 {{ scene_context }}
 {% endfor %}
 {% endif %}
 <|CLOSE_SECTION|>
+{{ character_guidance_content }}
 <|SECTION:TASK|>
 {% set bullet_num=0 -%}
 You are assisting a script editor in writing the next line of dialogue or action for {{ character.name.upper() }} in the current scene.

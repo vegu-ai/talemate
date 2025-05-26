@@ -192,7 +192,12 @@ class GuideSceneMixin:
             self.set_context_states(actor_guidance=guidance)
 
         if guidance:
-            await self.set_cached_guidance(emission.response, guidance)
+            await self.set_cached_guidance(
+                emission.response, 
+                guidance, 
+                emission.analysis_type, 
+                emission.template_vars.get("character")
+            )
     
     async def on_editor_revision_analysis_before(self, emission: AgentTemplateEmission):
         cached_guidance = await self.get_cached_guidance(emission.response)
@@ -229,12 +234,34 @@ class GuideSceneMixin:
         
         return None
     
-    async def set_cached_guidance(self, analysis:str, guidance: str):
+    async def set_cached_guidance(self, analysis:str, guidance: str, analysis_type: str, character: "Character | None" = None):
         """
         Sets the cached guidance for the given analysis.
         """
         key = self._cache_key()
-        self.set_scene_states(**{key: {"fp": self.context_fingerpint(extra=[analysis]), "guidance": guidance}})
+        self.set_scene_states(**{
+            key: {
+                "fp": self.context_fingerpint(extra=[analysis]), 
+                "guidance": guidance,
+                "analysis_type": analysis_type,
+                "character": character.name if character else None,
+            }
+        })
+    
+    async def get_cached_character_guidance(self, character_name: str) -> str | None:
+        """
+        Returns the cached guidance for the given character.
+        """
+        key = self._cache_key()
+        cached_guidance = self.get_scene_state(key)
+        
+        if not cached_guidance:
+            return None
+        
+        if cached_guidance.get("character") == character_name and cached_guidance.get("analysis_type") == "conversation":
+            return cached_guidance.get("guidance")
+        
+        return None
      
     # methods
     

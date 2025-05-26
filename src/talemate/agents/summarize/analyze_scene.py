@@ -42,6 +42,7 @@ class SceneAnalysisDeepAnalysisEmission(AgentEmission):
     analysis_sub_type: str | None = None
     max_content_investigations: int = 1
     character: "Character" = None
+    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(default_factory=list)
 
 
 class SceneAnalyzationMixin:

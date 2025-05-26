@@ -178,28 +178,14 @@
       "title": "functions",
       "id": "4d3bb32c-557c-441f-a97c-0058fe425bb3",
       "properties": {
-        "item_type": "any"
+        "item_type": "any",
+        "items": []
       },
       "x": 469,
       "y": 1652,
       "width": 210,
       "height": 78,
       "collapsed": true,
-      "inherited": false,
-      "registry": "data/MakeList",
-      "base_type": "core/Node"
-    },
-    "632d4a0e-3327-409b-aaa4-ed38b932286b": {
-      "title": "Make List",
-      "id": "632d4a0e-3327-409b-aaa4-ed38b932286b",
-      "properties": {
-        "item_type": "str"
-      },
-      "x": 30,
-      "y": 1160,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
       "inherited": false,
       "registry": "data/MakeList",
       "base_type": "core/Node"
@@ -704,8 +690,8 @@
         "name": "user_message",
         "scope": "scene loop"
       },
-      "x": 57,
-      "y": 3714,
+      "x": 51,
+      "y": 3706,
       "width": 258,
       "height": 143,
       "collapsed": false,
@@ -719,8 +705,8 @@
       "properties": {
         "hidden": true
       },
-      "x": 407,
-      "y": 3714,
+      "x": 401,
+      "y": 3706,
       "width": 277,
       "height": 60,
       "collapsed": false,
@@ -789,21 +775,6 @@
       "registry": "data/DictSet",
       "base_type": "core/Node"
     },
-    "06bd4d5f-c6fd-4439-ac9b-a675f35d6d61": {
-      "title": "Make Text",
-      "id": "06bd4d5f-c6fd-4439-ac9b-a675f35d6d61",
-      "properties": {
-        "value": "The simulation computer has executed the following changes:\n\n```\n{simulation_stack}\n```\n\n\nGenerate the nessecary narration to encapsulate these actions."
-      },
-      "x": 760,
-      "y": 3077,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
     "1476cf7e-654b-401a-8a0d-71dbe1971bee": {
       "title": "Push History",
       "id": "1476cf7e-654b-401a-8a0d-71dbe1971bee",
@@ -848,22 +819,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "817edd7f-2862-4ee6-b1ed-ebdc9fece6c4": {
-      "title": "GET scene loop.simulation_stack",
-      "id": "817edd7f-2862-4ee6-b1ed-ebdc9fece6c4",
-      "properties": {
-        "name": "simulation_calls",
-        "scope": "scene loop"
-      },
-      "x": 20,
-      "y": 2997,
-      "width": 281,
-      "height": 129,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
       "base_type": "core/Node"
     },
     "9b424999-8a69-4c87-9aa5-c3a0ed6ac708": {
@@ -915,8 +870,8 @@
         "status": "success",
         "as_scene_message": true
       },
-      "x": 50,
-      "y": 3964,
+      "x": 44,
+      "y": 3956,
       "width": 267,
       "height": 146,
       "collapsed": false,
@@ -964,8 +919,8 @@
         "name": "rounds",
         "scope": "game"
       },
-      "x": 159,
-      "y": 3451,
+      "x": 153,
+      "y": 3443,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -980,8 +935,8 @@
         "value": 0,
         "number_type": "int"
       },
-      "x": 59,
-      "y": 3501,
+      "x": 53,
+      "y": 3493,
       "width": 210,
       "height": 82,
       "collapsed": true,
@@ -995,8 +950,8 @@
       "properties": {
         "stage": 100
       },
-      "x": 930,
-      "y": 3530,
+      "x": 924,
+      "y": 3522,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -1010,8 +965,8 @@
       "properties": {
         "stage": 101
       },
-      "x": 510,
-      "y": 3970,
+      "x": 504,
+      "y": 3962,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -1026,8 +981,8 @@
         "name": null,
         "scope": "game"
       },
-      "x": 600,
-      "y": 3450,
+      "x": 594,
+      "y": 3442,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1043,8 +998,8 @@
         "a": 0,
         "b": "1"
       },
-      "x": 420,
-      "y": 3520,
+      "x": 414,
+      "y": 3512,
       "width": 210,
       "height": 126,
       "collapsed": true,
@@ -1165,6 +1120,53 @@
       "inherited": false,
       "registry": "core/Output",
       "base_type": "core/Node"
+    },
+    "06bd4d5f-c6fd-4439-ac9b-a675f35d6d61": {
+      "title": "Make Text",
+      "id": "06bd4d5f-c6fd-4439-ac9b-a675f35d6d61",
+      "properties": {
+        "value": "The simulation computer has executed the following changes:\n\n```\n{simulation_stack}\n```\n\n\nGenerate the nessecary narration to encapsulate these actions."
+      },
+      "x": 760,
+      "y": 3077,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "817edd7f-2862-4ee6-b1ed-ebdc9fece6c4": {
+      "title": "GET scene loop.simulation_calls",
+      "id": "817edd7f-2862-4ee6-b1ed-ebdc9fece6c4",
+      "properties": {
+        "name": "simulation_calls",
+        "scope": "scene loop"
+      },
+      "x": 20,
+      "y": 3000,
+      "width": 281,
+      "height": 129,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "632d4a0e-3327-409b-aaa4-ed38b932286b": {
+      "title": "Make List",
+      "id": "632d4a0e-3327-409b-aaa4-ed38b932286b",
+      "properties": {
+        "item_type": "str",
+        "items": []
+      },
+      "x": 30,
+      "y": 1160,
+      "width": 211,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeList",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1197,9 +1199,6 @@
     ],
     "4d3bb32c-557c-441f-a97c-0058fe425bb3.list": [
       "d9715df8-780a-4927-bfad-cbb1719faad4.list"
-    ],
-    "632d4a0e-3327-409b-aaa4-ed38b932286b.list": [
-      "06175a92-abbe-4483-9ab2-abaee2104728.value"
     ],
     "482abc1b-d89e-4fae-a3db-5a8641bfece0.value": [
       "79db98f5-829c-4557-9a5d-893c7e0d8caf.default"
@@ -1318,18 +1317,11 @@
     "662668b4-5722-4215-8299-e9cad9812751.dict": [
       "9b424999-8a69-4c87-9aa5-c3a0ed6ac708.variables"
     ],
-    "06bd4d5f-c6fd-4439-ac9b-a675f35d6d61.value": [
-      "9b424999-8a69-4c87-9aa5-c3a0ed6ac708.template"
-    ],
     "1476cf7e-654b-401a-8a0d-71dbe1971bee.message": [
       "e072a0d3-e87a-4156-84a7-02ffc75579c7.state"
     ],
     "06175a92-abbe-4483-9ab2-abaee2104728.name": [
       "3d4baf70-0e43-48cf-80b5-6488326692ff.state"
-    ],
-    "817edd7f-2862-4ee6-b1ed-ebdc9fece6c4.value": [
-      "d08ecd6b-8bff-43f9-b8d4-dc2a8b3449a7.object",
-      "bd518119-5914-4d91-9df7-785e6d11e82f.strings"
     ],
     "9b424999-8a69-4c87-9aa5-c3a0ed6ac708.result": [
       "32944b02-d2f9-45c0-a222-79facd994472.narrative_direction"
@@ -1378,6 +1370,16 @@
     ],
     "2835f8a4-387e-40b5-afca-03f989c626bc.value": [
       "4fbb0e7a-2971-4380-a70f-bf3d5bac0614.value"
+    ],
+    "06bd4d5f-c6fd-4439-ac9b-a675f35d6d61.value": [
+      "9b424999-8a69-4c87-9aa5-c3a0ed6ac708.template"
+    ],
+    "817edd7f-2862-4ee6-b1ed-ebdc9fece6c4.value": [
+      "d08ecd6b-8bff-43f9-b8d4-dc2a8b3449a7.object",
+      "bd518119-5914-4d91-9df7-785e6d11e82f.strings"
+    ],
+    "632d4a0e-3327-409b-aaa4-ed38b932286b.list": [
+      "06175a92-abbe-4483-9ab2-abaee2104728.value"
     ]
   },
   "groups": [
@@ -1423,8 +1425,8 @@
     },
     {
       "title": "Finalize",
-      "x": 7,
-      "y": 3361,
+      "x": 1,
+      "y": 3353,
       "width": 1181,
       "height": 781,
       "color": "#8AA",
@@ -1459,8 +1461,8 @@
     },
     {
       "text": "Once processed we don't want the instruction to the simulation show up in the context anymore.",
-      "x": 417,
-      "y": 3804,
+      "x": 411,
+      "y": 3796,
       "width": 260,
       "inherited": false
     }
@@ -1469,5 +1471,6 @@
   "base_type": "core/Graph",
   "inputs": [],
   "outputs": [],
+  "module_properties": {},
   "style": null
 }

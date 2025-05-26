@@ -602,7 +602,7 @@ class RevisionMixin:
             return []
         
         pattern = re.compile(phrase.phrase)
-        if not pattern.search(sentence):
+        if not pattern.search(sentence, re.IGNORECASE):
             return []
         
         return [

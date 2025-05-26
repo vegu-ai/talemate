@@ -105,9 +105,10 @@
         </v-card>
 
 
-        <!-- Section 1: Game Interaction -->
-        <v-card class="hotbuttons-section-1">
-            <v-card-actions>
+        <!-- Section 2: Game Actions & Tools -->
+        <v-card class="hotbuttons-section-2">
+            <v-card-text class="pa-2">
+                <div class="d-flex flex-wrap align-center" style="gap: 4px;">
 
                 <!-- actor actions -->
 
@@ -125,7 +126,7 @@
 
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon>
+                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon variant="text">
                             <v-icon>mdi-clock</v-icon>
                         </v-btn>
                     </template>
@@ -138,19 +139,11 @@
                     </v-list>
                 </v-menu>
 
-            </v-card-actions>
-        </v-card>
-
-        <!-- Section 2: Tools -->
-        <v-card class="hotbuttons-section-2">
-            <v-card-actions>
-
-
                 <!-- world tools -->
 
                 <v-menu max-width="500px">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon>
+                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon variant="text">
                             <v-icon>mdi-earth</v-icon>
                         </v-btn>
                     </template>
@@ -239,7 +232,7 @@
                     <template v-slot:activator="{ props }">
                         <v-progress-circular class="ml-1 mr-1" size="24" v-if="agentStatus.visual && agentStatus.visual.busy" indeterminate="disable-shrink"
                         color="secondary"></v-progress-circular>   
-                        <v-btn v-else class="hotkey mx-1" v-bind="props" :disabled="appBusy || !visualAgentReady" color="primary" icon>
+                        <v-btn v-else class="hotkey mx-1" v-bind="props" :disabled="appBusy || !visualAgentReady" color="primary" icon variant="text">
                             <v-icon>mdi-image-frame</v-icon>
                         </v-btn>
                     </template>
@@ -263,7 +256,7 @@
 
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon>
+                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon variant="text">
                             <v-icon>mdi-content-save</v-icon>
                         </v-btn>
                     </template>
@@ -278,8 +271,11 @@
                     </v-list>
                 </v-menu>
 
-            </v-card-actions>
+                </div>
+            </v-card-text>
         </v-card>
+
+
 
     </div>
 </template>
@@ -611,6 +607,8 @@ export default {
     display: flex;
     justify-content: flex-start;
     margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 5px;
 }
 
 .hotbuttons-section-1,
@@ -618,7 +616,88 @@ export default {
 .hotbuttons-section-3 {
     display: flex;
     align-items: center;
-    margin-right: 5px;
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+/* Make card content responsive */
+.hotbuttons-section-2 .v-card-text {
+    padding: 8px !important;
+}
+
+.hotbuttons-section-2 .d-flex {
+    min-height: 40px;
+}
+
+/* Consistent button styling for all sections */
+.hotbuttons-section .v-btn,
+.hotbuttons-section-1 .v-btn,
+.hotbuttons-section-2 .v-btn {
+    min-width: 40px !important;
+    width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    margin: 2px !important;
+}
+
+.hotbuttons-section .v-btn.v-btn--icon,
+.hotbuttons-section-1 .v-btn.v-btn--icon,
+.hotbuttons-section-2 .v-btn.v-btn--icon {
+    border-radius: 50% !important;
+}
+
+.hotbuttons-section .v-progress-circular,
+.hotbuttons-section-1 .v-progress-circular,
+.hotbuttons-section-2 .v-progress-circular {
+    margin: 2px 4px;
+}
+
+/* Ensure proper spacing for child components */
+.hotbuttons-section-2 > div > * {
+    margin: 2px;
+}
+
+/* Ensure v-card-actions maintains compact styling */
+.hotbuttons-section-1 .v-card-actions {
+    padding: 8px !important;
+    min-height: 40px;
+}
+
+@media (max-width: 768px) {
+    .hotbuttons-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .hotbuttons-section-1,
+    .hotbuttons-section-2,
+    .hotbuttons-section-3 {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    
+    .hotbuttons-section-2 .d-flex {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .hotbuttons-section {
+        gap: 3px;
+    }
+    
+    .hotbuttons-section-2 .d-flex {
+        gap: 2px !important;
+    }
+    
+    .hotbuttons-section .v-btn,
+    .hotbuttons-section-1 .v-btn,
+    .hotbuttons-section-2 .v-btn {
+        min-width: 36px !important;
+        width: 36px !important;
+        height: 36px !important;
+        margin: 1px !important;
+    }
 }
 
 .pre-wrap {
@@ -636,5 +715,12 @@ export default {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.hotbuttons-section .v-btn.v-btn--variant-elevated,
+.hotbuttons-section-1 .v-btn.v-btn--variant-elevated,
+.hotbuttons-section-2 .v-btn.v-btn--variant-elevated {
+    background-color: transparent !important;
+    box-shadow: none !important;
 }
 </style>

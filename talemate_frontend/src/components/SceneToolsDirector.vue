@@ -1,7 +1,7 @@
 <template>
     <v-menu location="top">
         <template v-slot:activator="{ props }">
-            <v-btn class="hotkey mx-1" v-bind="props" :disabled="disabled" color="primary" icon>
+            <v-btn class="hotkey mx-1" v-bind="props" :disabled="disabled" color="primary" icon variant="text">
                 <v-icon>mdi-bullhorn</v-icon>
             </v-btn>
         </template>

@@ -1,7 +1,7 @@
 <template>
     <v-menu>
         <template v-slot:activator="{ props }">
-            <v-btn class="hotkey mx-1" v-bind="props" :disabled="disabled" color="primary" icon>
+            <v-btn class="hotkey mx-1" v-bind="props" :disabled="disabled" color="primary" icon variant="text">
                 <v-icon>mdi-puzzle-edit</v-icon>
                 <v-icon v-if="potentialNewCharactersExist()" class="btn-notification" color="warning">mdi-human-greeting</v-icon>
             </v-btn>

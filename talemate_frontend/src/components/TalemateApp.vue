@@ -1301,8 +1301,8 @@ export default {
 .scene-container {
   flex-shrink: 0;
   max-width: 1600px;
-  min-width: 800px;
   margin: 0 auto;
   width: 100%;
+  overflow-x: auto;
 }
 </style>

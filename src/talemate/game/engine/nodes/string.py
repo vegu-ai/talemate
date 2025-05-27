@@ -437,6 +437,7 @@ class Extract(Node):
     
     - left_anchor: The left anchor
     - right_anchor: The right anchor
+    - trim: Whether to trim the result
     
     Outputs:
     
@@ -456,6 +457,12 @@ class Extract(Node):
             type="str",
             default=""
         )
+        trim = PropertyField(
+            name="trim",
+            description="Whether to trim the result",
+            type="bool",
+            default=True
+        )
         
     def __init__(self, title="Extract", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -467,6 +474,7 @@ class Extract(Node):
         
         self.set_property("left_anchor", "")
         self.set_property("right_anchor", "")
+        self.set_property("trim", True)
         
         self.add_output("result", socket_type="str")
         
@@ -474,12 +482,16 @@ class Extract(Node):
         string = self.get_input_value("string")
         left_anchor = self.normalized_input_value("left_anchor") or ""
         right_anchor = self.normalized_input_value("right_anchor") or ""
+        trim = self.normalized_input_value("trim")
         
         parts = string.split(left_anchor, 1)
         if len(parts) > 1:
             result = parts[1].split(right_anchor, 1)[0]
         else:
             result = ""
+            
+        if trim:
+            result = result.strip()
             
         self.set_output_values({"result": result})
     

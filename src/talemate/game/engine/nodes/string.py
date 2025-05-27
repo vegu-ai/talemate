@@ -347,11 +347,15 @@ class Trim(Node):
         chars = self.get_input_value("chars")
         mode = self.get_property("mode")
         
+        # handle escaped newline chars
+        if chars and "\\n" in chars:
+            chars = chars.replace("\\n", "\n")
+        
         if mode == "left":
             result = string.lstrip(chars)
         elif mode == "right":
             result = string.rstrip(chars)
-        else:  # both
+        else:
             result = string.strip(chars)
             
         self.set_output_values({"result": result})

@@ -508,8 +508,12 @@ class CharacterMessage(Node):
         if isinstance(from_choice, str):
             extra["from_choice"] = from_choice
         
+        # prefix name: if not already prefixed
+        if not message.startswith(f"{character.name}: "):
+            message = f"{character.name}: {message}"
+        
         message = scene_message.CharacterMessage(
-            f"{character.name}: {message}", source=source, **extra
+            message, source=source, **extra
         )
         
         self.set_output_values({

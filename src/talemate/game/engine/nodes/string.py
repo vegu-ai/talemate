@@ -418,6 +418,71 @@ class Substring(Node):
         result = string[start:end]
         self.set_output_values({"result": result})
 
+@register("data/string/Extract")
+class Extract(Node):
+    """
+    Extracts a portion of a string using a left and right anchor
+    
+    Whatever is between the left and right anchors will be extracted.
+    
+    The first occurrence of the left anchor will be used.
+    
+    Inputs:
+    
+    - string: The string to extract from
+    - left_anchor: The left anchor
+    - right_anchor: The right anchor
+    
+    Properties:
+    
+    - left_anchor: The left anchor
+    - right_anchor: The right anchor
+    
+    Outputs:
+    
+    - result: The extracted substring
+    """
+    
+    class Fields:
+        left_anchor = PropertyField(
+            name="left_anchor",
+            description="The left anchor",
+            type="str",
+            default=""
+        )
+        right_anchor = PropertyField(
+            name="right_anchor",
+            description="The right anchor",
+            type="str",
+            default=""
+        )
+        
+    def __init__(self, title="Extract", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("string", socket_type="str")
+        self.add_input("left_anchor", socket_type="str", optional=True)
+        self.add_input("right_anchor", socket_type="str", optional=True)
+        
+        self.set_property("left_anchor", "")
+        self.set_property("right_anchor", "")
+        
+        self.add_output("result", socket_type="str")
+        
+    async def run(self, state: GraphState):
+        string = self.get_input_value("string")
+        left_anchor = self.normalized_input_value("left_anchor") or ""
+        right_anchor = self.normalized_input_value("right_anchor") or ""
+        
+        parts = string.split(left_anchor, 1)
+        if len(parts) > 1:
+            result = parts[1].split(right_anchor, 1)[0]
+        else:
+            result = ""
+            
+        self.set_output_values({"result": result})
+    
 
 @register("data/string/StringCheck")
 class StringCheck(Node):

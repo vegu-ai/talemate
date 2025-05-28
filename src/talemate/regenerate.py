@@ -28,7 +28,7 @@ log = structlog.get_logger("talemate.regenerate")
 
 
 async def regenerate_character_message(message: CharacterMessage, scene:"Scene") -> CharacterMessage:
-    character:"Character" = scene.get_character(message.character_name)
+    character:"Character | None" = scene.get_character(message.character_name)
     
     if not character:
         log.error("regenerate_character_message: Could not find character", message=message)

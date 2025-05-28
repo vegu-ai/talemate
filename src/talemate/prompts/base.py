@@ -101,7 +101,6 @@ def validate_line(line):
         not line.strip().startswith("//")
         and not line.strip().startswith("/*")
         and not line.strip().startswith("[end of")
-        and not line.strip().startswith("</")
     )
 
 

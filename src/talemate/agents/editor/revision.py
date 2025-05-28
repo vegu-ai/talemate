@@ -131,8 +131,23 @@ class RevisionMixin:
                     value="dedupe",
                     choices=[
                         {"label": "Dedupe (Fast and dumb)", "value": "dedupe"},
-                        {"label": "Rewrite (AI assisted, slow and less dumb, probably)", "value": "rewrite"},
-                    ]
+                        {"label": "Unslop (AI assisted)", "value": "unslop"},
+                        {"label": "Rewrite (AI assisted)", "value": "rewrite"},
+                    ],
+                    note_on_value={
+                        "dedupe": AgentActionNote(
+                            type="primary",
+                            text="This runs after every actor or narrator generation and will attempt to dedupe the text if repetition is detected. Will remove content without substituting it, so may cause sentence structure or logic issues."
+                        ),
+                        "unslop": AgentActionNote(
+                            type="primary",
+                            text="This calls 1 additional prompt after every actor or narrator generation and will attempt to remove repetition, purple prose, unnatural dialogue, and over-description. May cause details to be lost."
+                        ),
+                        "rewrite": AgentActionNote(
+                            type="primary",
+                            text="Each narrator or actor generation will be checked for repetition and unwanted prose. If issues are found, a rewrite of the problematic part(s) will be attempted. (+2 prompts)"
+                        )
+                    }
                 ),
                 "split_on_comma": AgentActionConfig(
                     title="Preferences for rewriting",
@@ -343,6 +358,8 @@ class RevisionMixin:
                 return await self.revision_dedupe(text, character=character)
             elif self.revision_method == "rewrite":
                 return await self.revision_rewrite(text, character=character, loading_status=loading_status)
+            elif self.revision_method == "unslop":
+                return await self.revision_unslop(text, character=character, loading_status=loading_status)
         except GenerationCancelled:
             log.warning("revision_revise: generation cancelled", text=text)
             return text
@@ -779,3 +796,99 @@ class RevisionMixin:
             revision = f"{character.name}: {revision}"
             
         return revision
+
+    async def revision_unslop(
+        self, 
+        text: str, 
+        character: "Character | None" = None, 
+        response_length: int = 768, 
+        loading_status: LoadingStatus = None,
+        scene_analysis: str = None
+    ) -> str:
+        """
+        Unslop the text
+        """
+        
+        original_text = text
+        
+        character_name_prefix = text.startswith(f"{character.name}: ") if character else False
+        if character_name_prefix:
+            text = text[len(character.name) + 2:]
+      
+        # Step 1 - Detect repetition
+        if self.revision_repetition_detection_method == "fuzzy":
+            repetition_matches = await self._revision_evaluate_fuzzy_similarity(text, character)
+        elif self.revision_repetition_detection_method == "semantic_similarity":
+            repetition_matches = await self._revision_evaluate_semantic_similarity(text, character)
+
+        repetition_issues = []
+        repetition_instructions = []
+        for match in repetition_matches:
+            repetition_instructions.append({
+                "text_a": match.original,
+                "text_b": match.matched,
+                "similarity": match.similarity
+            })
+            repetition_issues.append(f"Repetition: `{match.original}` -> `{match.matched}` (similarity: {match.similarity})")
+        
+        summarizer = get_agent("summarizer")
+        scene_analysis = await summarizer.get_cached_analysis(
+            "conversation" if character else "narration"
+        )
+        
+        response = await Prompt.request(
+            "editor.unslop",
+            self.client,
+            "edit_768",
+            vars={
+                "text": text,
+                "scene_analysis": scene_analysis,
+                "character": character,
+                "scene": self.scene,
+                "response_length": response_length,
+                "max_tokens": self.client.max_token_length,
+                "repetition": repetition_instructions,
+            },
+        )
+        
+        # extract <FIX>...</FIX>
+        
+        if "<FIX>" not in response:
+            log.error("revision_unslop: no <FIX> found in response", response=response)
+            return original_text
+
+        fix = response.split("<FIX>", 1)[1]
+        
+        if "</FIX>" in fix:
+            fix = fix.split("</FIX>", 1)[0]
+        else:
+            log.error("revision_unslop: no </FIX> found in response", response=response)
+            return original_text
+        
+        if not fix:
+            log.error("revision_unslop: no fix found", response=response)
+            return original_text
+        
+        fix = fix.strip()
+        
+        
+        # send diff to user
+        diff = dmp_inline_diff(text, fix)
+        await self.emit_message(
+            "Unslop",
+            message=[
+                {"subtitle": "Issues", "content": repetition_issues},
+                {"subtitle": "Original", "content": text},
+                {"subtitle": "Changes", "content": diff, "process": "diff"},
+            ],
+            meta={
+                "action": "revision_unslop",
+            },
+            color="highlight4",
+        )
+        
+        if character_name_prefix and not fix.startswith(f"{character.name}: "):
+            fix = f"{character.name}: {fix}"
+            
+        return fix
+        

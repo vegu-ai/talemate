@@ -161,7 +161,7 @@ class EditorAgent(
         if not self.enabled:
             return
 
-        log.info("editing conversation", emission=emission)
+        log.debug("editing conversation", generation=emission.generation)
 
         edited = []
         for text in emission.generation:
@@ -181,7 +181,7 @@ class EditorAgent(
         if not self.enabled:
             return
 
-        log.info("editing narrator", emission=emission)
+        log.debug("editing narrator", generation=emission.generation)
 
         edited = []
 

@@ -101,14 +101,14 @@ talemate.emit.async_signals.register(
 ## SCHEMAS
 
 class Issues(pydantic.BaseModel):
-    repetition: list[SimilarityMatch]
+    repetition: list[dict]
     bad_prose: list[PhraseDetection]
-    repetition_instructions: list[str]
-    bad_prose_instructions: list[str]
+    repetition_log: list[str]
+    bad_prose_log: list[str]
     
     @property
-    def issues(self) -> list[str]:
-        return self.repetition_instructions + self.bad_prose_instructions
+    def log(self) -> list[str]:
+        return self.repetition_log + self.bad_prose_log
 
 ## MIXIN
 
@@ -644,7 +644,13 @@ class RevisionMixin:
             }
         ]
     
-    async def revision_rewrite(self, text: str, character: "Character | None" = None, loading_status: LoadingStatus = None):
+    async def revision_rewrite(
+        self, 
+        text: str, 
+        character: "Character | None" = None, 
+        loading_status: LoadingStatus = None,
+        scene_analysis: str = None
+    ) -> str:
         """
         Revise the text by rewriting
         """
@@ -652,44 +658,16 @@ class RevisionMixin:
         writing_style = self.scene.writing_style
         detect_bad_prose = self.revision_detect_bad_prose_enabled and writing_style
         
-        if loading_status:
-            loading_status.max_steps = 2
-        
-        issues = []
-        deduped = []
-        repetition_matches = []
-        bad_prose_identified = []
         character_name_prefix = text.startswith(f"{character.name}: ") if character else False
         if character_name_prefix:
             text = text[len(character.name) + 2:]
-        
-        # Step 1 - Detect repetition
-        if self.revision_repetition_detection_method == "fuzzy":
-            repetition_matches = await self._revision_evaluate_fuzzy_similarity(text, character)
-        elif self.revision_repetition_detection_method == "semantic_similarity":
-            repetition_matches = await self._revision_evaluate_semantic_similarity(text, character)
             
-        for match in repetition_matches:
-            deduped.append({
-                "text_a": match.original,
-                "text_b": match.matched,
-                "similarity": match.similarity
-            })
-            issues.append(f"Repetition: `{match.original}` -> `{match.matched}` (similarity: {match.similarity})")
+        issues = await self.collect_issues(text, character)
         
-        # Step 2 - Detect bad prose
-        if detect_bad_prose:
-            bad_prose_identified = await self.revision_detect_bad_prose(text)
-            for identified in bad_prose_identified:
-                issues.append(f"Bad prose: `{identified['phrase']}` (reason: {identified['reason']}, matched: {identified['matched']}, instructions: {identified['instructions']})")
-            log.debug("revision_rewrite: bad_prose_identified", bad_prose_identified=bad_prose_identified)
-            
-        # Step 3 - Check if we have enough issues to warrant a rewrite
-        if not issues:
-            # No repetition found, return original text
-            return original_text
+        if loading_status:
+            loading_status.max_steps = 2
         
-        num_issues = len(issues)
+        num_issues = len(issues.log)
         
         if num_issues < self.revision_min_issues:
             log.debug("revision_rewrite: not enough issues found, returning original text", issues=num_issues, min_issues=self.revision_min_issues)
@@ -697,7 +675,7 @@ class RevisionMixin:
             await self.emit_message(
                 "Aborted rewrite",
                 message=[
-                    {"subtitle": "Issues", "content": issues},
+                    {"subtitle": "Issues", "content": issues.log},
                     {"subtitle": "Message", "content": f"Not enough issues found, returning original text - minimum issues is {self.revision_min_issues}. Found {num_issues} issues."},
                 ],
                 color="orange",
@@ -718,8 +696,8 @@ class RevisionMixin:
             "scene": self.scene,
             "response_length": token_count,
             "max_tokens": self.client.max_token_length,
-            "repetition": deduped,
-            "bad_prose": bad_prose_identified,
+            "repetition": issues.repetition,
+            "bad_prose": issues.bad_prose,
         }
         
         emission = AgentTemplateEmission(agent=self, template_vars=template_vars)
@@ -737,8 +715,8 @@ class RevisionMixin:
                 "scene": self.scene,
                 "response_length": token_count,
                 "max_tokens": self.client.max_token_length,
-                "repetition": deduped,
-                "bad_prose": bad_prose_identified,
+                "repetition": issues.repetition,
+                "bad_prose": issues.bad_prose,
                 "dynamic_instructions": emission.dynamic_instructions,
             },
         )
@@ -787,7 +765,7 @@ class RevisionMixin:
         await self.emit_message(
             "Rewrite",
             message=[
-                {"subtitle": "Issues", "content": issues},
+                {"subtitle": "Issues", "content": issues.log},
                 {"subtitle": "Original", "content": text},
                 {"subtitle": "Changes", "content": diff, "process": "diff"},
             ],
@@ -878,7 +856,7 @@ class RevisionMixin:
         await self.emit_message(
             "Unslop",
             message=[
-                {"subtitle": "Issues", "content": issues.issues},
+                {"subtitle": "Issues", "content": issues.log},
                 {"subtitle": "Original", "content": text},
                 {"subtitle": "Changes", "content": diff, "process": "diff"},
             ],
@@ -900,9 +878,10 @@ class RevisionMixin:
         writing_style = self.scene.writing_style
         detect_bad_prose = self.revision_detect_bad_prose_enabled and writing_style
         
-        repetition_issues = []
-        repetition_instructions = []
-        bad_prose_instructions = []
+        repetition_log = []
+        bad_prose_log = []
+        
+        repetition = []
         bad_prose = []
         
         # Step 1 - Detect repetition
@@ -912,23 +891,23 @@ class RevisionMixin:
             repetition_matches = await self._revision_evaluate_semantic_similarity(text, character)
             
         for match in repetition_matches:
-            repetition_instructions.append({
+            repetition.append({
                 "text_a": match.original,
                 "text_b": match.matched,
                 "similarity": match.similarity
             })
-            repetition_issues.append(f"Repetition: `{match.original}` -> `{match.matched}` (similarity: {match.similarity})")
+            repetition_log.append(f"Repetition: `{match.original}` -> `{match.matched}` (similarity: {match.similarity})")
             
         # Step 2 - Detect bad prose
         if detect_bad_prose:
             bad_prose = await self.revision_detect_bad_prose(text)
             for identified in bad_prose:
-                bad_prose_instructions.append(f"Bad prose: `{identified['phrase']}` (reason: {identified['reason']}, matched: {identified['matched']}, instructions: {identified['instructions']})")
+                bad_prose_log.append(f"Bad prose: `{identified['phrase']}` (reason: {identified['reason']}, matched: {identified['matched']}, instructions: {identified['instructions']})")
         
         
         return Issues(
-            repetition=repetition_matches,
+            repetition=repetition,
             bad_prose=bad_prose,
-            repetition_instructions=repetition_instructions,
-            bad_prose_instructions=bad_prose_instructions,
+            repetition_log=repetition_log,
+            bad_prose_log=bad_prose_log,
         )

@@ -21,7 +21,6 @@ Important: These are semantic matches based on meaning, not literal text. Focus 
 You must state your greater understanding of why these issues were flagged in the first place so you do not replace them with something equally bad or worse.
 
 {% for phrase in bad_prose %}- MATCH: `{{ phrase.phrase }}`
-  - TRIGGER: "{{ phrase.matched }}"
   - INSTRUCTIONS: {{ phrase.instructions }}
 {% endfor %}
 <|CLOSE_SECTION|>

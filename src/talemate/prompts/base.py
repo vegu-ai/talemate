@@ -398,6 +398,7 @@ class Prompt:
         env.globals["to_int"] = lambda x: int(x)
         env.globals["to_str"] = lambda x: str(x)
         env.globals["config"] = self.config
+        env.globals["li"] = self.get_bullet_num
         env.globals["len"] = lambda x: len(x)
         env.globals["max"] = lambda x, y: max(x, y)
         env.globals["min"] = lambda x, y: min(x, y)
@@ -513,6 +514,11 @@ class Prompt:
         while not loop.done:
             result = await self.send(client, kind=kind)
             loop.update(result)
+
+    def get_bullet_num(self):
+        _bullet_num = self.vars.get("bullet_num", 1)
+        self.vars["bullet_num"] = _bullet_num + 1
+        return _bullet_num
 
     def query_scene(
         self,

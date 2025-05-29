@@ -40,7 +40,7 @@ log = structlog.get_logger("talemate.agents.base")
 
 class AgentActionConditional(pydantic.BaseModel):
     attribute: str
-    value: Union[int, float, str, bool, None] = None
+    value: int | float | str | bool | list[int | float | str | bool] | None = None
 
 
 class AgentActionNote(pydantic.BaseModel):

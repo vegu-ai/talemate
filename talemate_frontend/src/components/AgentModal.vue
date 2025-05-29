@@ -306,7 +306,12 @@ export default {
         return true;
 
       let value = getProperty(this.agent.actions, action.condition.attribute+".value");
-      return value == action.condition.value;
+
+      if(Array.isArray(action.condition.value)) {
+        return action.condition.value.some(v => v == value);
+      } else {
+        return value == action.condition.value;
+      }
     },
 
     testConfigConditional(config) {
@@ -314,7 +319,12 @@ export default {
         return true;
 
       let value = getProperty(this.agent.actions, config.condition.attribute+".value");
-      return value == config.condition.value;
+
+      if(Array.isArray(config.condition.value)) {
+        return config.condition.value.some(v => v == value);
+      } else {
+        return value == config.condition.value;
+      }
     },
 
     testNoteConditional(config, key, note) {

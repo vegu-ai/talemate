@@ -174,6 +174,42 @@ Jennifer couldn't find her keys. She checked the kitchen counter first, then her
 ---
 
 <REVIEW>
+The morning sun streamed through the window as Emma turned to face her partner.
+"I trust you," she said, her voice barely above a whisper. "You know that, right?"
+Marcus nodded slowly. "I know. And I trust you too, Emma. We've been through so much together."
+She reached for his hand, searching his eyes for reassurance.
+</REVIEW>
+
+<UNWANTED_PROSE>
+- MATCH: `"I trust you,"`
+  - INSTRUCTIONS: Explicit trust declarations in dialogue feel unnatural. Show trust through actions or context instead of stating it directly.
+- MATCH: `"And I trust you too, Emma."`
+  - INSTRUCTIONS: Explicit trust declarations in dialogue feel unnatural. Show trust through actions or context instead of stating it directly.
+</UNWANTED_PROSE>
+
+<ANALYSIS>
+- Thought process: This scene has characters explicitly saying "I trust you" which the UNWANTED_PROSE flags identify as unnatural dialogue. Real people rarely make such direct declarations - trust is demonstrated through actions, vulnerability, or implied through context. The scene also has some name overuse with Emma being addressed directly.
+- Purple prose: MINOR - "voice barely above a whisper"
+- Unnatural dialogue: MAJOR ISSUES - explicit trust declarations flagged in UNWANTED_PROSE
+- Over-description: NO
+- Length: OK
+- Tense: PAST - "The morning sun streamed"
+- Mature content: N/A
+- Name overuse: YES - "Emma" used when speaking TO her
+- Talking vs Showing: SEVERE - explicitly stating trust instead of showing it
+- Unwanted prose: YES - trust declarations that need to be replaced per instructions
+</ANALYSIS>
+
+<FIX>
+The morning sun streamed through the window as Emma turned to face her partner.
+"Here," she said quietly, handing him the spare key to her apartment.
+Marcus closed his fingers around it, understanding the weight of the gesture. "We've been through so much together."
+She squeezed his hand, meeting his eyes with a small smile.
+</FIX>
+
+---
+
+<REVIEW>
 "I, um, I don't think that's a good idea," Sarah stammered, her emerald eyes glistening with unshed tears as she contemplated the dire ramifications of their proposed course of action.
 "Why ever not?" inquired Thomas, his brow furrowing in consternation.
 "It's just... I mean... um... something feels wrong about it," she whispered softly.
@@ -281,31 +317,34 @@ He crossed to the window, checking if it had been forced open. "Someone was look
 {% include "character-guidance.jinja2" %}
 
 {% include "content-classification.jinja2" %}
-
 <|SECTION:TASK|>
 Fix bad AI writing by making it simpler, shorter, and more natural. 
 
 **Rules:**
-1. REDUCE purple prose - Replace flowery language with simple words
-2. PRESERVE KEY DETAILS - Keep ALL concrete facts that matter to the scene:
+{{ li() }}. REDUCE purple prose - Replace flowery language with simple words
+{{ li() }}. PRESERVE KEY DETAILS - Keep ALL concrete facts that matter to the scene:
    - Plot-relevant information (who, what, when, where, why)
    - Character-revealing details (speech patterns, meaningful actions, emotional states)
    - Unique objects, settings, or sensory details that create atmosphere
    - Any detail that would change the meaning if removed
    Only cut pure embellishment that adds no information
-3. MAKE dialogue natural - Use contractions, casual speech, how people actually talk  
-4. CUT excessive description - Remove unnecessary details, measurements, and over-explanation
-5. BE CONCISE - Remove only redundant or purple prose. Length reduction is a side effect, not the goal
-6. MATCH THE ORIGINAL TENSE - If the REVIEW passage is in present tense, keep the FIX in present tense. If it's in past tense, keep it in past tense. Only change tense when the original is inconsistent and you're clearly standardising it. 
-7. PRESERVE mature content - Keep swear words, slang, and raw language exactly as written
-8. AVOID name overuse - NEVER use names when talking TO someone. When removing names:
+{{ li() }}. MAKE dialogue natural - Use contractions, casual speech, how people actually talk  
+{{ li() }}. CUT excessive description - Remove unnecessary details, measurements, and over-explanation
+{{ li() }}. BE CONCISE - Remove only redundant or purple prose. Length reduction is a side effect, not the goal
+{{ li() }}. MATCH THE ORIGINAL TENSE - If the REVIEW passage is in present tense, keep the FIX in present tense. If it's in past tense, keep it in past tense. Only change tense when the original is inconsistent and you're clearly standardising it. 
+{{ li() }}. PRESERVE mature content - Keep swear words, slang, and raw language exactly as written
+{{ li() }}. AVOID name overuse - NEVER use names when talking TO someone. When removing names:
    - For romantic partners/spouses: Can use "hun," "babe," "sweetie"
    - For children/family: Can use "sweetie," "buddy," "Mom," "Dad," "sis"
    - For friends: Can use "man," "dude," "buddy" (if casual relationship)
    - For colleagues/acquaintances/unclear relationships: Just remove the name, don't add anything
    ONLY use actual names when talking ABOUT someone who isn't there.
-9. SHOW don't tell - Use actions and natural dialogue instead of having characters announce their feelings or narrate their actions
-{% if repetition %}10. REMOVE REPETITION - Address the repetition issues. These sentences have been classified as repetition and must either be substantially rewritten or removed. When replacing a sentence, substitute something else, that's meaningful to the story and context.
+{{ li() }}. SHOW don't tell - Use actions and natural dialogue instead of having characters announce their feelings or narrate their actions
+{% if repetition %}
+{{ li() }}. REMOVE REPETITION - Address the repetition issues. These sentences have been classified as repetition and must either be substantially rewritten or removed. When replacing a sentence, substitute something else, that's meaningful to the story and context.
+{% endif %}
+{% if bad_prose %}
+{{ li() }}. REMOVE UNWANTED PROSE - Address the unwanted prose issues. These phrases have been identified by the director as bad, and MUST be changed accordingly.
 {% endif %}
 
 **Common dialogue fixes:**
@@ -346,6 +385,12 @@ Use the examples for a deeper understanding of the task and provide your analysi
 {% for repeat in repetition %}`{{ repeat["text_a"].strip() }}`
 {% endfor -%}
 </REPETITION>
+{% endif %}
+{% if bad_prose %}<UNWANTED_PROSE>
+{% for phrase in bad_prose %}- MATCH: `{{ phrase.phrase }}`
+  - INSTRUCTIONS: {{ phrase.instructions }}
+{% endfor -%}
+</UNWANTED_PROSE>
 {% endif %}
 
 {{ set_prepared_response("<ANALYSIS>\n- Thought process") }}

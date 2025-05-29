@@ -55,7 +55,7 @@ She reaches for the door handle. Her index finger extends first, followed by her
 </REVIEW>
 
 <ANALYSIS>
-- Thought process: This is the most over-complicated way to describe opening a door I've ever seen. It's like a technical manual for alien researchers studying human movement. Nobody needs to know the temperature of a door handle or the exact angle of wrist rotation.
+- Thought process: While the exact measurements and finger-by-finger description is excessive, we should keep that the handle was cold - it's a sensory detail that adds atmosphere without being purple prose.
 - Purple prose: NO
 - Unnatural dialogue: N/A - no dialogue
 - Over-description: EXTREME - every finger movement, exact temperature, precise measurements
@@ -67,7 +67,7 @@ She reaches for the door handle. Her index finger extends first, followed by her
 </ANALYSIS>
 
 <FIX>
-She opens the door.
+She gripped the cold metal handle and turned it, opening the door.
 </FIX>
 
 ---
@@ -117,9 +117,9 @@ Mark lifted his ceramic coffee mug—white, 12 ounces, with a small chip on the 
 </ANALYSIS>
 
 <FIX>
-Mark grabbed his coffee mug and took a long sip, then rubbed his temples.
+Mark grabbed his chipped coffee mug and took a long sip, then rubbed his temples.
 "Rough morning?" his coworker asked, noticing the dark circles under his eyes.
-He just grunted in response.
+"Need more caffeine," he muttered.
 </FIX>
 
 {% if decensor %}---
@@ -280,24 +280,31 @@ He crossed to the window, checking if it had been forced open. "Someone was look
 
 {% include "character-guidance.jinja2" %}
 
+{% include "content-classification.jinja2" %}
+
 <|SECTION:TASK|>
 Fix bad AI writing by making it simpler, shorter, and more natural. 
 
 **Rules:**
 1. REDUCE purple prose - Replace flowery language with simple words
-2. MAKE dialogue natural - Use contractions, casual speech, how people actually talk  
-3. CUT excessive description - Remove unnecessary details, measurements, and over-explanation
-4. BE CONCISE - The fixed version should usually be shorter than the original
-5. MATCH THE ORIGINAL TENSE - If the REVIEW passage is in present tense, keep the FIX in present tense. If it's in past tense, keep it in past tense. Only change tense when the original is inconsistent and you're clearly standardising it.
-6. PRESERVE mature content - Keep swear words, slang, and raw language exactly as written
-7. AVOID name overuse - NEVER use names when talking TO someone. When removing names:
+2. PRESERVE KEY DETAILS - Keep ALL concrete facts that matter to the scene:
+   - Plot-relevant information (who, what, when, where, why)
+   - Character-revealing details (speech patterns, meaningful actions, emotional states)
+   - Unique objects, settings, or sensory details that create atmosphere
+   - Any detail that would change the meaning if removed
+   Only cut pure embellishment that adds no information
+3. MAKE dialogue natural - Use contractions, casual speech, how people actually talk  
+4. CUT excessive description - Remove unnecessary details, measurements, and over-explanation
+5. BE CONCISE - Remove only redundant or purple prose. Length reduction is a side effect, not the goal
+6. MATCH THE ORIGINAL TENSE - If the REVIEW passage is in present tense, keep the FIX in present tense. If it's in past tense, keep it in past tense. Only change tense when the original is inconsistent and you're clearly standardising it. 
+7. PRESERVE mature content - Keep swear words, slang, and raw language exactly as written
+8. AVOID name overuse - NEVER use names when talking TO someone. When removing names:
    - For romantic partners/spouses: Can use "hun," "babe," "sweetie"
    - For children/family: Can use "sweetie," "buddy," "Mom," "Dad," "sis"
    - For friends: Can use "man," "dude," "buddy" (if casual relationship)
    - For colleagues/acquaintances/unclear relationships: Just remove the name, don't add anything
    ONLY use actual names when talking ABOUT someone who isn't there.
-8. SHOW don't tell - Use actions and natural dialogue instead of having characters announce their feelings or narrate their actions
-9. PRESERVE KEY DETAILS - Keep concrete facts that matter to the scene (who, what, when, where, unique objects, sensory anchors) AND character speech patterns (stuttering, "um/uh," verbal tics, accents, repeated phrases). Cut embellishment, not personality or information.
+9. SHOW don't tell - Use actions and natural dialogue instead of having characters announce their feelings or narrate their actions
 {% if repetition %}10. REMOVE REPETITION - Address the repetition issues. These sentences have been classified as repetition and must either be substantially rewritten or removed. When replacing a sentence, substitute something else, that's meaningful to the story and context.
 {% endif %}
 
@@ -326,6 +333,10 @@ Mixed examples:
 - "John, did you see Mary?" → "Did you see Mary?" (remove John, keep Mary)
 - "Thanks for helping, Anna. Tom really appreciated it" → "Thanks for helping. Tom really appreciated it"
 - "Mom, where's Dad?" → "Mom, where's Dad?" (family terms stay)
+
+**What to keep vs cut:**
+KEEP: Actions that reveal character, sensory details that set mood, specific objects that matter, emotional indicators
+CUT: Redundant adjectives, exact measurements, clinical language, overwrought metaphors
 
 Use the examples for a deeper understanding of the task and provide your analysis and fix, with the fix being the final output.
 

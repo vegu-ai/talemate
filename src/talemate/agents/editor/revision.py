@@ -903,6 +903,7 @@ class RevisionMixin:
         repetition_issues = []
         repetition_instructions = []
         bad_prose_instructions = []
+        bad_prose = []
         
         # Step 1 - Detect repetition
         if self.revision_repetition_detection_method == "fuzzy":
@@ -923,6 +924,7 @@ class RevisionMixin:
             bad_prose = await self.revision_detect_bad_prose(text)
             for identified in bad_prose:
                 bad_prose_instructions.append(f"Bad prose: `{identified['phrase']}` (reason: {identified['reason']}, matched: {identified['matched']}, instructions: {identified['instructions']})")
+        
         
         return Issues(
             repetition=repetition_matches,

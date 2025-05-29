@@ -863,8 +863,8 @@ class RevisionMixin:
         
         if "</FIX>" in fix:
             fix = fix.split("</FIX>", 1)[0]
-        else:
-            log.error("revision_unslop: no </FIX> found in response", response=response)
+        elif "<" in fix:
+            log.error("revision_unslop: no </FIX> found in response, but other tags found, aborting.", response=response)
             return original_text
         
         if not fix:

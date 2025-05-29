@@ -669,6 +669,9 @@ class RevisionMixin:
         
         num_issues = len(issues.log)
         
+        if not num_issues:
+            return original_text
+        
         if num_issues < self.revision_min_issues:
             log.debug("revision_rewrite: not enough issues found, returning original text", issues=num_issues, min_issues=self.revision_min_issues)
             # Not enough issues found, return original text

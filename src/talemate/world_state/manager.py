@@ -873,15 +873,19 @@ class WorldStateManager:
 
         await self.scene.add_actor(actor)
         
-        if generate_attributes:
-            base_attributes = await world_state.extract_character_sheet(
-                name=name, text=description
-            )
-            character.update(base_attributes=base_attributes)
+        try:
+            if generate_attributes:
+                base_attributes = await world_state.extract_character_sheet(
+                    name=name, text=description
+                )
+                character.update(base_attributes=base_attributes)
 
 
-        if not active:
-            await deactivate_character(self.scene, name)
+            if not active:
+                await deactivate_character(self.scene, name)
+        except Exception as e:
+            await self.scene.remove_actor(actor)
+            raise e
 
         return character
 

@@ -12,6 +12,7 @@ from talemate.instance import get_agent
 from talemate.world_state.manager import WorldStateManager, Suggestion
 from talemate.status import set_loading
 import talemate.game.focal as focal
+from talemate.server.websocket_plugin import Plugin
 
 from .scene_intent import SceneIntentMixin
 
@@ -185,7 +186,7 @@ class SuggestionPayload(pydantic.BaseModel):
     id: str
     proposal_uid: str | None = None
 
-class WorldStateManagerPlugin(SceneIntentMixin):
+class WorldStateManagerPlugin(SceneIntentMixin, Plugin):
     router = "world_state_manager"
 
     @property
@@ -198,27 +199,6 @@ class WorldStateManagerPlugin(SceneIntentMixin):
 
     def __init__(self, websocket_handler):
         self.websocket_handler = websocket_handler
-
-    async def handle(self, data: dict):
-        log.info("World state manager action", action=data.get("action"))
-
-        fn = getattr(self, f"handle_{data.get('action')}", None)
-
-        if fn is None:
-            return
-
-        await fn(data)
-
-    async def signal_operation_done(self):
-        self.websocket_handler.queue_put(
-            {"type": "world_state_manager", "action": "operation_done", "data": {}}
-        )
-
-        if self.scene.auto_save:
-            await self.scene.save(auto=True)
-        else:
-            self.scene.saved = False
-            self.scene.emit_status()
 
     async def handle_get_character_list(self, data):
         character_list = await self.world_state_manager.get_character_list()
@@ -941,16 +921,21 @@ class WorldStateManagerPlugin(SceneIntentMixin):
     async def handle_create_character(self, data):
         payload = CreateCharacterPayload(**data)
 
-        character = await self.world_state_manager.create_character(
-            generate=payload.generate,
-            instructions=payload.instructions,
-            name=payload.name,
-            description=payload.description,
-            is_player=payload.is_player,
-            generate_attributes=payload.generate_attributes,
-            generation_options=payload.generation_options,
-            active=payload.is_player or not self.scene.has_active_npcs,
-        )
+        try:
+            character = await self.world_state_manager.create_character(
+                generate=payload.generate,
+                instructions=payload.instructions,
+                name=payload.name,
+                description=payload.description,
+                is_player=payload.is_player,
+                generate_attributes=payload.generate_attributes,
+                generation_options=payload.generation_options,
+                active=payload.is_player or not self.scene.has_active_npcs,
+            )
+        except Exception as e:
+            log.error("Error creating character", error=e)
+            await self.signal_operation_failed("Error creating character")
+            return
 
         self.websocket_handler.queue_put(
             {

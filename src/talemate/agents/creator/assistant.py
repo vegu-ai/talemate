@@ -20,7 +20,7 @@ from talemate.world_state.templates import (
     Spices,
     WritingStyle,
 )
-from talemate.agents.base import AgentAction, AgentActionConfig
+from talemate.agents.base import AgentAction, AgentActionConfig, AgentTemplateEmission
 import talemate.emit.async_signals as async_signals
 
 if TYPE_CHECKING:
@@ -40,25 +40,31 @@ async_signals.register(
 )
 
 @dataclasses.dataclass
-class ContextualGenerateEmission:
+class ContextualGenerateEmission(AgentTemplateEmission):
     """
     A context for generating content.
     """
 
-    content_generation_context: "ContentGenerationContext"
-    response: str | None = None
-    cleaned_response: str | None = None
+    content_generation_context: "ContentGenerationContext | None" = None
+    character: "Character | None" = None
+    
+    @property
+    def context_type(self) -> str:
+        return self.content_generation_context.computed_context[0]
+    
+    @property
+    def context_name(self) -> str:
+        return self.content_generation_context.computed_context[1]
 
 @dataclasses.dataclass
-class AutocompleteEmission:
+class AutocompleteEmission(AgentTemplateEmission):
     """
     A context for generating content.
     """
 
-    input: str
-    type: str
+    input: str = ""
+    type: str = ""
     character: "Character | None" = None
-    response: str | None = None
 
 class ContentGenerationContext(pydantic.BaseModel):
     """
@@ -273,59 +279,63 @@ class AssistantMixin:
             generation_context=generation_context,
         )
         
+        character = self.scene.get_character(generation_context.character) if generation_context.character else None
+        
+        template_vars = {
+            "scene": self.scene,
+            "max_tokens": self.client.max_token_length,
+            "generation_context": generation_context,
+            "context_typ": context_typ,
+            "context_name": context_name,
+            "can_coerce": self.client.can_be_coerced,
+            "character_name": generation_context.character,
+            "context_aware": generation_context.context_aware,
+            "history_aware": generation_context.history_aware,
+            "character": character,
+            "template": generation_context.template,
+        }
+    
         emission = ContextualGenerateEmission(
+            agent=self,
             content_generation_context=generation_context,
+            character=character,
+            template_vars=template_vars,
         )
         
         await async_signals.get("agent.creator.contextual_generate.before").send(emission)
+
+        template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
         content = await Prompt.request(
             f"creator.contextual-generate",
             self.client,
             kind,
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "generation_context": generation_context,
-                "context_typ": context_typ,
-                "context_name": context_name,
-                "can_coerce": self.client.can_be_coerced,
-                "character_name": generation_context.character,
-                "context_aware": generation_context.context_aware,
-                "history_aware": generation_context.history_aware,
-                "character": (
-                    self.scene.get_character(generation_context.character)
-                    if generation_context.character
-                    else None
-                ),
-                "template": generation_context.template,
-            },
+            vars=template_vars,
         )
         
         emission.response = content
         
-        try:
-            if not generation_context.partial:
-                content = util.strip_partial_sentences(content)
+        if not generation_context.partial:
+            content = util.strip_partial_sentences(content)
 
-            if context_typ == "list":
-                try:
-                    content = json.dumps(extract_list(content), indent=2)
-                except Exception as e:
-                    log.warning("Failed to extract list", error=e)
-                    content = "[]"
-            elif context_typ == "character dialogue":
-                if not content.startswith(generation_context.character + ":"):
-                    content = generation_context.character + ": " + content
-                content = util.strip_partial_sentences(content)
-                emission.cleaned_response  = await editor.cleanup_character_message(content, generation_context.character.name)
-                return emission.cleaned_response
-            
-            emission.cleaned_response = content.strip().strip("*").strip()
-            return emission.cleaned_response
-        finally:
+        if context_typ == "list":
+            try:
+                content = json.dumps(extract_list(content), indent=2)
+            except Exception as e:
+                log.warning("Failed to extract list", error=e)
+                content = "[]"
+        elif context_typ == "character dialogue":
+            if not content.startswith(generation_context.character + ":"):
+                content = generation_context.character + ": " + content
+            content = util.strip_partial_sentences(content)
+            emission.response  = await editor.cleanup_character_message(content, generation_context.character.name)
             await async_signals.get("agent.creator.contextual_generate.after").send(emission)
-            
+            return emission.response
+        
+        emission.response = content.strip().strip("*").strip()
+        
+        await async_signals.get("agent.creator.contextual_generate.after").send(emission)
+        return emission.response
 
 
     @set_processing
@@ -452,30 +462,36 @@ class AssistantMixin:
         else:
             prefix = ''
         
+        template_vars = {
+            "scene": self.scene,
+            "max_tokens": self.client.max_token_length,
+            "input": input.strip(),
+            "character": character,
+            "can_coerce": self.client.can_be_coerced,
+            "response_length": response_length,
+            "continuing_message": continuing_message,
+            "anchor": anchor,
+            "non_anchor": non_anchor,
+            "prefix": prefix,
+        }
+        
         emission = AutocompleteEmission(
+            agent=self,
             input=input,
             type="dialogue",
             character=character,
+            template_vars=template_vars,
         )
         
         await async_signals.get("agent.creator.autocomplete.before").send(emission)
+
+        template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
         response = await Prompt.request(
             f"creator.autocomplete-dialogue",
             self.client,
             f"create_{response_length}",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "input": input.strip(),
-                "character": character,
-                "can_coerce": self.client.can_be_coerced,
-                "response_length": response_length,
-                "continuing_message": continuing_message,
-                "anchor": anchor,
-                "non_anchor": non_anchor,
-                "prefix": prefix,
-            },
+            vars=template_vars,
             pad_prepended_response=False,
             dedupe_enabled=False,
         )
@@ -532,26 +548,32 @@ class AssistantMixin:
             input=input
         )
         
+        template_vars = {
+            "scene": self.scene,
+            "max_tokens": self.client.max_token_length,
+            "input": input.strip(),
+            "can_coerce": self.client.can_be_coerced,
+            "response_length": response_length,
+            "anchor": anchor,
+            "non_anchor": non_anchor,
+        }
+        
         emission = AutocompleteEmission(
+            agent=self,
             input=input,
             type="narrative",
+            template_vars=template_vars,
         )
         
         await async_signals.get("agent.creator.autocomplete.before").send(emission)
+
+        template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
         response = await Prompt.request(
             f"creator.autocomplete-narrative",
             self.client,
             f"create_{response_length}",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "input": input.strip(),
-                "can_coerce": self.client.can_be_coerced,
-                "response_length": response_length,
-                "anchor": anchor,
-                "non_anchor": non_anchor,
-            },
+            vars=template_vars,
             pad_prepended_response=False,
             dedupe_enabled=False,
         )

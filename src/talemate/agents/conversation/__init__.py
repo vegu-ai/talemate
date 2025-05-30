@@ -49,7 +49,7 @@ log = structlog.get_logger("talemate.agents.conversation")
 class ConversationAgentEmission(AgentEmission):
     actor: Actor
     character: Character
-    generation: list[str]
+    response: str
     dynamic_instructions: list[DynamicInstruction] = dataclasses.field(default_factory=list)
 
 
@@ -290,7 +290,7 @@ class ConversationAgent(
         
         inject_instructions_emission = ConversationAgentEmission(
             agent=self,
-            generation="", 
+            response="", 
             actor=None, 
             character=character, 
         )
@@ -379,7 +379,7 @@ class ConversationAgent(
         character = actor.character
 
         emission = ConversationAgentEmission(
-            agent=self, generation="", actor=actor, character=character
+            agent=self, response="", actor=actor, character=character
         )
         await talemate.emit.async_signals.get(
             "agent.conversation.before_generate"
@@ -466,20 +466,21 @@ class ConversationAgent(
             rf"{character.name}:\s+", f"{character.name}: ", total_result
         )
 
-        response_message = util.parse_messages_from_str(total_result, [character.name])
+        response = total_result
 
-        log.info("conversation agent", result=response_message)
+        log.info("conversation agent", response=response)
         emission = ConversationAgentEmission(
-            agent=self, generation=response_message, actor=actor, character=character
+            agent=self, 
+            actor=actor, 
+            character=character, 
+            response=response,
         )        
         if emit_signals:
             await talemate.emit.async_signals.get("agent.conversation.generated").send(
                 emission
             )
 
-        # log.info("conversation agent", generation=emission.generation)
-
-        messages = [CharacterMessage(message, from_choice=instruction) for message in emission.generation]
+        messages = [CharacterMessage(response, from_choice=instruction)]
         return messages
 
     def allow_repetition_break(

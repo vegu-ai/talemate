@@ -63,6 +63,7 @@ class AgentActionConfig(pydantic.BaseModel):
     quick_toggle: bool = False
     condition: Union[AgentActionConditional, None] = None
     title: Union[str, None] = None
+    value_migration: Union[Callable, None] = pydantic.Field(default=None, exclude=True)
     
     note_on_value: dict[str, AgentActionNote] = pydantic.Field(default_factory=dict)
 
@@ -432,6 +433,8 @@ class Agent(ABC):
                         .get(config_key, {})
                         .get("value", config.value)
                     )
+                    if config.value_migration and callable(config.value_migration):
+                        config.value = config.value_migration(config.value)
                 except AttributeError:
                     pass
 

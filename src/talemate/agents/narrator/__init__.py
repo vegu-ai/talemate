@@ -49,6 +49,7 @@ log = structlog.get_logger("talemate.agents.narrator")
 @dataclasses.dataclass
 class NarratorAgentEmission(AgentEmission):
     generation: list[str] = dataclasses.field(default_factory=list)
+    response: str = dataclasses.field(default="")
     dynamic_instructions: list[DynamicInstruction] = dataclasses.field(default_factory=list)
 
 
@@ -79,9 +80,9 @@ def set_processing(fn):
         agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
         
         response = await fn(self, *args, **kwargs)
-        emission.generation = [response]
+        emission.response = response
         await talemate.emit.async_signals.get("agent.narrator.generated").send(emission)
-        return emission.generation[0]
+        return emission.response
 
     return narration_wrapper
 

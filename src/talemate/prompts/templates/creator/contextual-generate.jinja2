@@ -53,6 +53,7 @@
 {{ generation_context.original }}
 <|CLOSE_SECTION|>
 {% endif %}
+{# DYNAMIC INSTRUCTIONS #}{% include "dynamic-instructions.jinja2" %}{# END DYNAMIC INSTRUCTIONS #}
 {# INFORMATION -#}{% with information=generation_context.information %}{% include "task-information.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 {#- SET TASK ACTION -#}

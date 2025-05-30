@@ -6,7 +6,7 @@ Signals:
 - agent.editor.revision-analysis.after - sent after the revision analysis is requested
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 import structlog
 import uuid
 import pydantic
@@ -20,11 +20,12 @@ from talemate.agents.base import (
     AgentActionNote,
     AgentTemplateEmission,
 )
-import talemate.emit.async_signals
 from talemate.instance import get_agent
 from talemate.emit import emit
+import talemate.emit.async_signals as async_signals
 from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
+from talemate.agents.creator.assistant import ContextualGenerateEmission
 from talemate.scene_message import CharacterMessage
 from talemate.util.dedupe import (
     dedupe_sentences, 
@@ -65,6 +66,11 @@ detect_bad_prose_condition = AgentActionConditional(
     value=True,
 )
 
+automatic_revision_condition = AgentActionConditional(
+    attribute="revision.config.automatic_revision",
+    value=True,
+)
+
 ## CONTEXT
 
 class RevisionContextState(pydantic.BaseModel):
@@ -91,24 +97,55 @@ class RevisionContext:
         revision_context.reset(self.token)
 
 
-## SIGNALS
-
-talemate.emit.async_signals.register(
-    "agent.editor.revision-analysis.before",
-    "agent.editor.revision-analysis.after",
-)
-
 ## SCHEMAS
 
 class Issues(pydantic.BaseModel):
-    repetition: list[dict]
-    bad_prose: list[PhraseDetection]
-    repetition_log: list[str]
-    bad_prose_log: list[str]
+    repetition: list[dict] = pydantic.Field(default_factory=list)
+    repetition_matches: list[SimilarityMatch] = pydantic.Field(default_factory=list)
+    bad_prose: list[PhraseDetection] = pydantic.Field(default_factory=list)
+    repetition_log: list[str] = pydantic.Field(default_factory=list)
+    bad_prose_log: list[str] = pydantic.Field(default_factory=list)
     
     @property
     def log(self) -> list[str]:
         return self.repetition_log + self.bad_prose_log
+
+class RevisionInformation(pydantic.BaseModel):
+    text: str | None = None
+    revision_method: Literal["dedupe", "rewrite", "unslop"] | None = None
+    character: object = None
+    context_type: str | None = None
+    context_name: str | None = None
+    loading_status: LoadingStatus | None = pydantic.Field(default_factory=LoadingStatus, exclude=True)
+    
+    class Config:
+        arbitrary_types_allowed = True
+
+CONTEXTUAL_GENERATION_TYPES = [
+    "character attribute",
+    "character detail",
+    "scene intent",
+    "scene phase intent",
+    "scene intro",
+]
+
+## SIGNALS
+
+async_signals.register(
+    "agent.editor.revision-analysis.before",
+    "agent.editor.revision-analysis.after",
+    "agent.editor.revision-revise.before",
+    "agent.editor.revision-revise.after",
+)
+
+@dataclasses.dataclass
+class RevisionEmission(AgentTemplateEmission):
+    """
+    Emission for the revision agent
+    """
+    
+    info: RevisionInformation = dataclasses.field(default_factory=RevisionInformation)
+    issues: Issues = dataclasses.field(default_factory=Issues)
 
 ## MIXIN
 
@@ -136,6 +173,32 @@ class RevisionMixin:
                     value=True,
                     quick_toggle=True,
                 ),
+                "automatic_revision_targets": AgentActionConfig(
+                    type="flags",
+                    label="Automatic revision targets",
+                    condition=automatic_revision_condition,
+                    description="Which types of messages to automatically revise.",
+                    value=["character", "narrator"],
+                    value_migration=lambda v: ["character", "narrator"] if v is True else [] if v is False else v,
+                    choices=sorted([
+                        {
+                            "label": "Character Messages",
+                            "value": "character",
+                            "help": "Automatically revise actor actions.",
+                        },
+                        {
+                            "label": "Narration Messages",
+                            "value": "narrator",
+                            "help": "Automatically revise narrator actions.",
+                        },
+                        {
+                            "label": "Contextual generation",
+                            "value": "contextual_generation",
+                            "help": "Automatically revise generated context (character attributes, details, etc).",
+                        }
+                    ], key=lambda x: x["label"])
+                ),
+                
                 "revision_method": AgentActionConfig(
                     type="text",
                     label="Revision method",
@@ -149,15 +212,15 @@ class RevisionMixin:
                     note_on_value={
                         "dedupe": AgentActionNote(
                             type="primary",
-                            text="This runs after every actor or narrator generation and will attempt to dedupe the text if repetition is detected. Will remove content without substituting it, so may cause sentence structure or logic issues."
+                            text="This will attempt to dedupe the text if repetition is detected. Will remove content without substituting it, so may cause sentence structure or logic issues."
                         ),
                         "unslop": AgentActionNote(
                             type="primary",
-                            text="This calls 1 additional prompt after every actor or narrator generation and will attempt to remove repetition, purple prose, unnatural dialogue, and over-description. May cause details to be lost."
+                            text="This calls 1 additional prompt after a generation and will attempt to remove repetition, purple prose, unnatural dialogue, and over-description. May cause details to be lost."
                         ),
                         "rewrite": AgentActionNote(
                             type="primary",
-                            text="Each narrator or actor generation will be checked for repetition and unwanted prose. If issues are found, a rewrite of the problematic part(s) will be attempted. (+2 prompts)"
+                            text="Each generation will be checked for repetition and unwanted prose. If issues are found, a rewrite of the problematic part(s) will be attempted. (+2 prompts)"
                         )
                     }
                 ),
@@ -253,8 +316,12 @@ class RevisionMixin:
         return self.actions["revision"].enabled
     
     @property
-    def revision_automatic_enabled(self):
+    def revision_automatic_enabled(self) -> bool:
         return self.actions["revision"].config["automatic_revision"].value
+    
+    @property
+    def revision_automatic_targets(self) -> list[str]:
+        return self.actions["revision"].config["automatic_revision_targets"].value
     
     @property
     def revision_method(self):
@@ -295,22 +362,37 @@ class RevisionMixin:
     # signal connect
     
     def connect(self, scene):
-        talemate.emit.async_signals.get("agent.conversation.generated").connect(
+        async_signals.get("agent.conversation.generated").connect(
             self.revision_on_generation
         )
-        talemate.emit.async_signals.get("agent.narrator.generated").connect(
+        async_signals.get("agent.narrator.generated").connect(
+            self.revision_on_generation
+        )
+        async_signals.get("agent.creator.contextual_generate.after").connect(
             self.revision_on_generation
         )
         # connect to the super class AFTER so these run first.
         super().connect(scene)
         
         
-    async def revision_on_generation(self, emission: ConversationAgentEmission | NarratorAgentEmission):
+    async def revision_on_generation(
+        self, 
+        emission: ConversationAgentEmission | NarratorAgentEmission | ContextualGenerateEmission,
+    ):
         """
         Called when a conversation or narrator message is generated
         """
         
-        if not self.revision_enabled or not self.revision_automatic_enabled:
+        if not self.revision_enabled:
+            return
+        
+        if isinstance(emission, ContextualGenerateEmission) and "contextual_generation" not in self.revision_automatic_targets:
+            return
+        
+        if isinstance(emission, ConversationAgentEmission) and "character" not in self.revision_automatic_targets:
+            return
+        
+        if isinstance(emission, NarratorAgentEmission) and "narrator" not in self.revision_automatic_targets:
             return
         
         try:
@@ -320,13 +402,21 @@ class RevisionMixin:
         except LookupError:
             pass
         
+        info = RevisionInformation(
+            text = emission.response,
+            character = getattr(emission, "character", None),
+            context_type = getattr(emission, "context_type", None),
+            context_name = getattr(emission, "context_name", None),
+        )
+        
+        if isinstance(emission, ContextualGenerateEmission) and info.context_type not in CONTEXTUAL_GENERATION_TYPES:
+            return
+        
+        revised_text = await self.revision_revise(info)
+        
+        emission.response = revised_text
+        
         log.info("revise generation", emission=emission)
-
-        edited = []
-        for text in emission.generation:
-            text = await self.revision_revise(text, character=getattr(emission, "character", None))
-            edited.append(text)
-        emission.generation = edited
 
     # helpers
     
@@ -359,27 +449,29 @@ class RevisionMixin:
     # actions
     
     @set_processing
-    async def revision_revise(self, text: str, character: "Character | None" = None):
+    async def revision_revise(
+        self, 
+        info: RevisionInformation,
+    ):
         """
         Revise the text based on the revision method
         """
-        loading_status = LoadingStatus(0, cancellable=True)
         
         try:
             if self.revision_method == "dedupe":
-                return await self.revision_dedupe(text, character=character)
+                return await self.revision_dedupe(info)
             elif self.revision_method == "rewrite":
-                return await self.revision_rewrite(text, character=character, loading_status=loading_status)
+                return await self.revision_rewrite(info)
             elif self.revision_method == "unslop":
-                return await self.revision_unslop(text, character=character, loading_status=loading_status)
+                return await self.revision_unslop(info)
         except GenerationCancelled:
-            log.warning("revision_revise: generation cancelled", text=text)
-            return text
+            log.warning("revision_revise: generation cancelled", text=info.text)
+            return info.text
         except Exception as e:
             log.exception("revision_revise: error", error=e)
-            return text
+            return info.text
         finally:
-            loading_status.done()
+            info.loading_status.done()
     
     
     async def _revision_evaluate_semantic_similarity(self, text: str, character: "Character | None" = None) -> list[SimilarityMatch]:
@@ -456,80 +548,6 @@ class RevisionMixin:
             
         return list(set(matches))
     
-    async def revision_dedupe(self, text: str, character: "Character | None" = None) -> str:
-        """
-        Revise the text by deduping
-        """
-
-        original_text = text
-        character_name_prefix = text.startswith(f"{character.name}: ") if character else False
-        
-        if self.revision_repetition_detection_method == "fuzzy":
-            matches = await self._revision_evaluate_fuzzy_similarity(text, character)
-        elif self.revision_repetition_detection_method == "semantic_similarity":
-            matches = await self._revision_evaluate_semantic_similarity(text, character)
-        
-        deduped = []
-        def on_dedupe(match: SimilarityMatch):
-            deduped.append({
-                "text_a": match.original,
-                "text_b": match.matched,
-                "similarity": match.similarity
-            })
-        
-        text = dedupe_sentences_from_matches(text, matches, on_dedupe=on_dedupe)
-
-        length_diff_percentage = 0
-        
-        if deduped:
-            length_diff_percentage = round((len(original_text) - len(text)) / len(original_text) * 100, 2)
-            log.debug("revision_dedupe: deduped text", text=text, length_diff_percentage=length_diff_percentage)
-        
-        if not text:
-            log.warning("revision_dedupe: no text after dedupe, reverting to original text", original_text=original_text)
-            emit("agent_message", 
-                message=f"No text remained after dedupe, reverting to original text - similarity threshold is likely too low.",
-                data={
-                    "uuid": str(uuid.uuid4()),
-                    "agent": "editor",
-                    "header": "Aborted dedupe",
-                    "color": "red",
-                }, 
-                meta={
-                    "action": "revision_dedupe",
-                    "threshold": self.revision_repetition_threshold,
-                    "range": self.revision_repetition_range,
-                },
-                websocket_passthrough=True
-            )
-            return original_text
-        
-        if character_name_prefix:
-            text = f"{character.name}: {text}"
-            
-        for dedupe in deduped:
-            text_a = dedupe['text_a']
-            text_b = dedupe['text_b']
-            
-            message = f"{text_a} -> {text_b}"
-            emit("agent_message", 
-                message=message,
-                data={
-                    "uuid": str(uuid.uuid4()),
-                    "agent": "editor",
-                    "header": "Removed repetition",
-                    "color": "highlight4",
-                }, 
-                meta={
-                    "action": "revision_dedupe",
-                    "similarity": dedupe['similarity'],
-                    "threshold": self.revision_repetition_threshold,
-                    "range": self.revision_repetition_range,
-                },
-                websocket_passthrough=True
-            )
-            
-        return text
     
     async def revision_detect_bad_prose(self, text: str) -> list[dict]:
         """
@@ -643,20 +661,160 @@ class RevisionMixin:
                 "method": "regex",
             }
         ]
+
+    async def revision_collect_issues(
+        self, 
+        text: str, 
+        character: "Character | None" = None,
+        detect_bad_prose: bool = True,
+    ) -> Issues:
+        """
+        Collect issues from the text
+        """
+        writing_style = self.scene.writing_style
+        detect_bad_prose = (
+            self.revision_detect_bad_prose_enabled and 
+            writing_style and 
+            detect_bad_prose
+        )
+        
+        repetition_log = []
+        bad_prose_log = []
+        
+        repetition = []
+        bad_prose = []
+        
+        # Step 1 - Detect repetition
+        if self.revision_repetition_detection_method == "fuzzy":
+            repetition_matches = await self._revision_evaluate_fuzzy_similarity(text, character)
+        elif self.revision_repetition_detection_method == "semantic_similarity":
+            repetition_matches = await self._revision_evaluate_semantic_similarity(text, character)
+            
+        for match in repetition_matches:
+            repetition.append({
+                "text_a": match.original,
+                "text_b": match.matched,
+                "similarity": match.similarity
+            })
+            repetition_log.append(f"Repetition: `{match.original}` -> `{match.matched}` (similarity: {match.similarity})")
+            
+        # Step 2 - Detect bad prose
+        if detect_bad_prose:
+            bad_prose = await self.revision_detect_bad_prose(text)
+            for identified in bad_prose:
+                bad_prose_log.append(f"Bad prose: `{identified['phrase']}` (reason: {identified['reason']}, matched: {identified['matched']}, instructions: {identified['instructions']})")
+        
+        
+        return Issues(
+            repetition=repetition,
+            repetition_matches=repetition_matches,
+            bad_prose=bad_prose,
+            repetition_log=repetition_log,
+            bad_prose_log=bad_prose_log,
+        )
+        
+
+    async def revision_dedupe(
+        self, 
+        info: RevisionInformation,
+    ) -> str:
+        """
+        Revise the text by deduping
+        """
+        
+        info.revision_method = "dedupe"
+        
+        text = info.text
+        character = info.character
+
+        original_text = text
+        character_name_prefix = text.startswith(f"{character.name}: ") if character else False
+        if character_name_prefix:
+            text = text[len(character.name) + 2:]
+        
+        original_length = len(text)
+        
+        issues = await self.revision_collect_issues(text, character, detect_bad_prose=False)
+        
+        if not issues.repetition_matches:
+            return original_text
+        
+        emission = RevisionEmission(agent=self, info=info, issues=issues)
+        
+        await async_signals.get("agent.editor.revision-revise.before").send(emission)
+        
+        emission.response = dedupe_sentences_from_matches(text, issues.repetition_matches)
+        
+        await async_signals.get("agent.editor.revision-revise.after").send(emission)
+                
+        text = emission.response
+        
+        # remove empty quotes and asterisks
+        text = text.replace("\"\"", "").replace("**", "")
+        
+        deduped_length = len(text)
+
+        # calculate reduction percentage
+        reduction = round((original_length - deduped_length) / original_length * 100, 2)
+
+        if reduction > 90:
+            log.warning("revision_dedupe: reduction is too high, reverting to original text", original_text=original_text, reduction=reduction)
+            emit("agent_message", 
+                message=f"No text remained after dedupe, reverting to original text - similarity threshold is likely too low.",
+                data={
+                    "uuid": str(uuid.uuid4()),
+                    "agent": "editor",
+                    "header": "Aborted dedupe",
+                    "color": "red",
+                }, 
+                meta={
+                    "action": "revision_dedupe",
+                    "threshold": self.revision_repetition_threshold,
+                    "range": self.revision_repetition_range,
+                },
+                websocket_passthrough=True
+            )
+            return original_text
+        
+        if character_name_prefix:
+            text = f"{character.name}: {text}"
+            
+        for dedupe in issues.repetition:
+            text_a = dedupe['text_a']
+            text_b = dedupe['text_b']
+            
+            message = f"{text_a} -> {text_b}"
+            emit("agent_message", 
+                message=message,
+                data={
+                    "uuid": str(uuid.uuid4()),
+                    "agent": "editor",
+                    "header": "Removed repetition",
+                    "color": "highlight4",
+                }, 
+                meta={
+                    "action": "revision_dedupe",
+                    "similarity": dedupe['similarity'],
+                    "threshold": self.revision_repetition_threshold,
+                    "range": self.revision_repetition_range,
+                },
+                websocket_passthrough=True
+            )
+            
+        return text
     
     async def revision_rewrite(
         self, 
-        text: str, 
-        character: "Character | None" = None, 
-        loading_status: LoadingStatus = None,
-        scene_analysis: str = None
+        info: RevisionInformation,
     ) -> str:
         """
         Revise the text by rewriting
         """
+        
+        text = info.text
+        character = info.character
+        loading_status = info.loading_status
         original_text = text
-        writing_style = self.scene.writing_style
-        detect_bad_prose = self.revision_detect_bad_prose_enabled and writing_style
         
         character_name_prefix = text.startswith(f"{character.name}: ") if character else False
         if character_name_prefix:
@@ -703,11 +861,18 @@ class RevisionMixin:
             "bad_prose": issues.bad_prose,
         }
         
-        emission = AgentTemplateEmission(agent=self, template_vars=template_vars)
-        await talemate.emit.async_signals.get("agent.editor.revision-analysis.before").send(
+        emission = RevisionEmission(
+            agent=self, 
+            template_vars=template_vars, 
+            info=info, 
+            issues=issues,
+        )
+        
+        await async_signals.get("agent.editor.revision-revise.before").send(
             emission
         )
-            
+        await async_signals.get("agent.editor.revision-analysis.before").send(emission)
+        
         analysis = await Prompt.request(
             "editor.revision-analysis",
             self.client,
@@ -721,18 +886,19 @@ class RevisionMixin:
                 "repetition": issues.repetition,
                 "bad_prose": issues.bad_prose,
                 "dynamic_instructions": emission.dynamic_instructions,
+                "context_type": info.context_type,
+                "context_name": info.context_name,
             },
             dedupe_enabled=False,
         )
         
-        emission.response = analysis
-        await talemate.emit.async_signals.get("agent.editor.revision-analysis.after").send(
-            emission
-        )
-        
         async def rewrite_text(text:str) -> str:
             return text
-            
+        
+        emission.response = analysis
+        await async_signals.get("agent.editor.revision-analysis.after").send(emission)
+        analysis = emission.response
+        
         focal_handler = focal.Focal(
             self.client,
             callbacks=[
@@ -765,6 +931,10 @@ class RevisionMixin:
             log.error("revision_rewrite: error", error=e)
             return original_text
         
+        emission.response = revision
+        await async_signals.get("agent.editor.revision-revise.after").send(emission)
+        revision = emission.response
+        
         diff = dmp_inline_diff(text, revision)
         await self.emit_message(
             "Rewrite",
@@ -793,15 +963,15 @@ class RevisionMixin:
 
     async def revision_unslop(
         self, 
-        text: str, 
-        character: "Character | None" = None, 
-        response_length: int = 768, 
-        loading_status: LoadingStatus = None,
-        scene_analysis: str = None
+        info: RevisionInformation,
+        response_length: int = 768,
     ) -> str:
         """
         Unslop the text
         """
+        
+        text = info.text
+        character = info.character
         
         original_text = text
         
@@ -811,15 +981,28 @@ class RevisionMixin:
         
         issues = await self.revision_collect_issues(text, character)
         
-        log.debug("revision_unslop: issues", issues=issues)
 
         summarizer = get_agent("summarizer")
         scene_analysis = await summarizer.get_cached_analysis(
             "conversation" if character else "narration"
         )
         
+        template = "editor.unslop"
+        if info.context_type:
+            template = f"editor.unslop-contextual-generation"
+        
+        log.debug("revision_unslop: issues", issues=issues, template=template)
+        
+        emission = RevisionEmission(
+            agent=self,
+            info=info,
+            issues=issues,
+        )
+        
+        await async_signals.get("agent.editor.revision-revise.before").send(emission)
+        
         response = await Prompt.request(
-            "editor.unslop",
+            template,
             self.client,
             "edit_768",
             vars={
@@ -831,6 +1014,9 @@ class RevisionMixin:
                 "max_tokens": self.client.max_token_length,
                 "repetition": issues.repetition,
                 "bad_prose": issues.bad_prose,
+                "dynamic_instructions": emission.dynamic_instructions,
+                "context_type": info.context_type,
+                "context_name": info.context_name,
             },
             dedupe_enabled=False,
         )
@@ -855,6 +1041,10 @@ class RevisionMixin:
         
         fix = fix.strip()
         
+        emission.response = fix
+        await async_signals.get("agent.editor.revision-revise.after").send(emission)
+        fix = emission.response
+        
         # send diff to user
         diff = dmp_inline_diff(text, fix)
         await self.emit_message(
@@ -875,43 +1065,12 @@ class RevisionMixin:
             
         return fix
         
-    async def revision_collect_issues(self, text: str, character: "Character | None" = None) -> Issues:
-        """
-        Collect issues from the text
-        """
-        writing_style = self.scene.writing_style
-        detect_bad_prose = self.revision_detect_bad_prose_enabled and writing_style
+    def inject_prompt_paramters(
+        self, prompt_param: dict, kind: str, agent_function_name: str
+    ):
+        super().inject_prompt_paramters(prompt_param, kind, agent_function_name)
         
-        repetition_log = []
-        bad_prose_log = []
-        
-        repetition = []
-        bad_prose = []
-        
-        # Step 1 - Detect repetition
-        if self.revision_repetition_detection_method == "fuzzy":
-            repetition_matches = await self._revision_evaluate_fuzzy_similarity(text, character)
-        elif self.revision_repetition_detection_method == "semantic_similarity":
-            repetition_matches = await self._revision_evaluate_semantic_similarity(text, character)
-            
-        for match in repetition_matches:
-            repetition.append({
-                "text_a": match.original,
-                "text_b": match.matched,
-                "similarity": match.similarity
-            })
-            repetition_log.append(f"Repetition: `{match.original}` -> `{match.matched}` (similarity: {match.similarity})")
-            
-        # Step 2 - Detect bad prose
-        if detect_bad_prose:
-            bad_prose = await self.revision_detect_bad_prose(text)
-            for identified in bad_prose:
-                bad_prose_log.append(f"Bad prose: `{identified['phrase']}` (reason: {identified['reason']}, matched: {identified['matched']}, instructions: {identified['instructions']})")
-        
-        
-        return Issues(
-            repetition=repetition,
-            bad_prose=bad_prose,
-            repetition_log=repetition_log,
-            bad_prose_log=bad_prose_log,
-        )
+        if agent_function_name == "revision_revise":
+            if prompt_param.get("extra_stopping_strings") is None:
+                prompt_param["extra_stopping_strings"] = []
+            prompt_param["extra_stopping_strings"] += ["</FIX>"]

@@ -161,17 +161,12 @@ class EditorAgent(
         if not self.enabled:
             return
 
-        log.debug("editing conversation", generation=emission.generation)
+        log.debug("editing conversation", response=emission.response)
 
-        edited = []
-        for text in emission.generation:
-            edit = await self.add_detail(text, emission.character)
+        edit = await self.add_detail(emission.response, emission.character)
+        edit = await self.cleanup_character_message(edit, emission.character)
 
-            edit = await self.cleanup_character_message(edit, emission.character)
-
-            edited.append(edit)
-
-        emission.generation = edited
+        emission.response = edit
 
     async def on_narrator_generated(self, emission: NarratorAgentEmission):
         """
@@ -181,15 +176,9 @@ class EditorAgent(
         if not self.enabled:
             return
 
-        log.debug("editing narrator", generation=emission.generation)
-
-        edited = []
-
-        for text in emission.generation:
-            edit = await self.clean_up_narration(text)
-            edited.append(edit)
-
-        emission.generation = edited
+        log.debug("editing narrator", response=emission.response)
+        edit = await self.clean_up_narration(emission.response)
+        emission.response = edit
 
     @set_processing
     async def cleanup_character_message(self, content: str, character: Character, force: bool = False):

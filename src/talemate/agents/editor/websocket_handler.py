@@ -6,7 +6,7 @@ from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
 from talemate.status import set_loading
 from talemate.scene_message import CharacterMessage
-from talemate.agents.editor.revision import RevisionContext
+from talemate.agents.editor.revision import RevisionContext, RevisionInformation
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -54,6 +54,10 @@ class EditorWebsocketHandler(Plugin):
             raise Exception("Message not found")
         
         with RevisionContext(message.id):
-            revised = await editor.revision_revise(message.message, character=character)
+            info = RevisionInformation(
+                text=message.message,
+                character=character,
+            )
+            revised = await editor.revision_revise(info)
         
         scene.edit_message(message.id, revised)

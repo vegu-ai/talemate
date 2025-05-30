@@ -26,6 +26,7 @@
 {% endif %}
 <|CLOSE_SECTION|>
 {{ character_guidance_content }}
+{% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
 {% set bullet_num=0 -%}
 You are assisting a script editor in writing the next line of dialogue or action for {{ character.name.upper() }} in the current scene.

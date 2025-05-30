@@ -28,8 +28,14 @@ List of currently supported events.
 | [`agent.conversation.before_generate`](#agentconversationbefore_generate) | Conversation Agent |
 | [`agent.conversation.inject_instructions`](#agentconversationinject_instructions) | Conversation Agent |
 | [`agent.conversation.generated`](#agentconversationgenerated) | Conversation Agent |
+| [`agent.creator.contextual_generate.before`](#agentcreatorcontextual_generatebefore) | Creator Agent |
+| [`agent.creator.contextual_generate.after`](#agentcreatorcontextual_generateafter) | Creator Agent |
+| [`agent.creator.autocomplete.before`](#agentcreatorautocompletebefore) | Creator Agent |
+| [`agent.creator.autocomplete.after`](#agentcreatorautocompleteafter) | Creator Agent |
 | [`agent.editor.revision-analysis.before`](#agenteditorrevision-analysisbefore) | Editor Agent |
 | [`agent.editor.revision-analysis.after`](#agenteditorrevision-analysisafter) | Editor Agent |
+| [`agent.editor.revision-revise.before`](#agenteditorrevision-revisebefore) | Editor Agent |
+| [`agent.editor.revision-revise.after`](#agenteditorrevision-reviseafter) | Editor Agent |
 | [`agent.narrator.before_generate`](#agentnarratorbefore_generate) | Narrator Agent |
 | [`agent.narrator.inject_instructions`](#agentnarratorinject_instructions) | Narrator Agent |
 | [`agent.narrator.generated`](#agentnarratorgenerated) | Narrator Agent |
@@ -251,10 +257,106 @@ Handlers can edit `generation` in-place to clean up or transform the text (the E
     | `agent` | `ConversationAgent` | The agent instance |
     | `actor` | `Actor` | Actor that spoke |
     | `character` | `Character` | The speaking character |
-    | `generation` | `list[str]` | **Mutable.** Final text lines that will be turned into messages |
+    | `response` | `str` | **Mutable.** Final text lines that will be turned into messages |
+
+## Creator Agent Events
+
+### agent.creator.contextual_generate.before
+
+Contextual generation are things like character attributes, details, scene introductions, etc.
+
+Emitted **before** the Creator agent sends the prompt to the model.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `CreatorAgent` | The agent instance |
+    | `character` | `Character` | The character that the contextual generation is for |
+    | `template_vars` | `dict` | Variables that will be fed into the prompt – **mutable** |
+    | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable.** Push additional `DynamicInstruction` objects to influence generation |
+
+### agent.creator.contextual_generate.after
+
+Emitted **after** the Creator agent receives the model output but **before** the message is pushed to history.  
+Handlers can edit `response` in-place to clean up or transform the text (the Editor agent does this).
+
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `CreatorAgent` | The agent instance |
+    | `response` | `str` | **Mutable.** Final text lines that will be turned into messages |
+    | `template_vars` | `dict` | Variables that were fed into the prompt – **mutable** |
+    | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable.** Push additional `DynamicInstruction` objects to influence generation |
+
+### agent.creator.autocomplete.before
+
+Autocomplete generation for character action or narrative text.
+
+Emitted **before** the Creator agent sends the prompt to the model.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `CreatorAgent` | The agent instance |
+    | `input` | `str` | The input text that the autocomplete is for |
+    | `type` | `str` | The type of autocomplete (e.g. `dialogue`, `narrative`) |
+    | `character` | `Character` | The character that the autocomplete is for |
+    | `template_vars` | `dict` | Variables that will be fed into the prompt – **mutable** |
+    | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable.** Push additional `DynamicInstruction` objects to influence generation |
+
+### agent.creator.autocomplete.after
+
+Emitted **after** the Creator agent receives the model output but **before** the message is pushed to history.  
+Handlers can edit `response` in-place to clean up or transform the text (the Editor agent does this).
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `CreatorAgent` | The agent instance |
+    | `response` | `str` | **Mutable.** Final text lines that will be turned into messages |
+    | `input` | `str` | The input text that the autocomplete is for |
+    | `type` | `str` | The type of autocomplete (e.g. `dialogue`, `narrative`) |
+    | `character` | `Character` | The character that the autocomplete is for |
+    | `template_vars` | `dict` | Variables that were fed into the prompt – **mutable** |
+    | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable.** Push additional `DynamicInstruction` objects to influence generation |
 
 ## Editor Agent Events
 
+### agent.editor.revision-revise.before
+
+Emitted **before** the Editor agent requests the revision-revise prompt.  
+Handlers can add extra revise instructions via `dynamic_instructions` or adjust `template_vars`.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `EditorAgent` | The agent instance |
+    | `template_vars` | `dict` | Variables that will be fed into the prompt – **mutable** |
+    | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable.** Push additional `DynamicInstruction` objects to influence generation |
+
+---
+
+### agent.editor.revision-revise.after
+
+Emitted **after** the Editor agent receives the model output but **before** the message is pushed to history.  
+Handlers can edit `response` in-place to clean up or transform the text (the Editor agent does this).
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `EditorAgent` | The agent instance |
+    | `response` | `str` | **Mutable.** Final text lines that will be turned into messages |
+    | `template_vars` | `dict` | Variables that were fed into the prompt – **mutable** |
+    | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable.** Push additional `DynamicInstruction` objects to influence generation |
+
+---
 ### agent.editor.revision-analysis.before
 
 Emitted **before** the Editor agent requests the revision-analysis prompt.  
@@ -321,7 +423,7 @@ Handlers can edit `generation` in-place to clean up or transform the text (the E
     | Field | Type | Notes |
     |-------|------|-------|
     | `agent` | `NarratorAgent` | The agent instance |
-    | `generation` | `list[str]` | **Mutable.** Final text lines that will be turned into messages |
+    | `response` | `str` | **Mutable.** Final text lines that will be turned into messages |
 
 ## Director Agent Events
 

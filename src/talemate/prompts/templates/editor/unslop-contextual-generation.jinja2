@@ -201,8 +201,4 @@ If there are no changes needed use a <NO_FIX_REQUIRED/> tag.
 <TYPE>{{ context_type_description }}</TYPE>
 <REVIEW>{{ text }}</REVIEW>
 
-{% if decensor %}
-{{ set_prepared_response("<ANALYSIS>\n- Mature content: ACCEPTABLE\n- Thought process:") }}
-{% else %}
 {{ set_prepared_response("<ANALYSIS>\n- Thought process:") }}
-{% endif %}

@@ -424,9 +424,5 @@ If there are no changes needed use a <NO_FIX_REQUIRED/> tag.
 {% endfor -%}
 </UNWANTED_PROSE>
 {% endif %}
-{% if decensor %}
-{{ set_prepared_response("<ANALYSIS>\n- Mature content: ACCEPTABLE\n- Thought process:") }}
-{% else %}
-{{ set_prepared_response("<ANALYSIS>\n- Thought process:") }}
-{% endif %}
-{% endif %}
+
+{{ set_prepared_response("<ANALYSIS>\n- Thought process") }}

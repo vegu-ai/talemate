@@ -890,6 +890,11 @@ class ChromaDBMemoryAgent(MemoryAgent):
             return
 
         where = {"$and": [{k: v} for k, v in meta.items()]}
+        
+        # if there is only one item in $and reduce it to the key value pair
+        if len(where["$and"]) == 1:
+            where = where["$and"][0]
+        
         self.db.delete(where=where)
         log.debug("chromadb agent delete", meta=meta, where=where)
 

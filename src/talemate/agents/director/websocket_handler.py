@@ -36,8 +36,10 @@ class PersistCharacterPayload(pydantic.BaseModel):
     active: bool = True
     determine_name: bool = True
     augment_attributes: str = ""
+    generate_attributes: bool = True
     
     content: str = ""
+    description: str = ""
 
 
 class DirectorWebsocketHandler(Plugin):
@@ -94,8 +96,19 @@ class DirectorWebsocketHandler(Plugin):
         
         # add as asyncio task
         task = asyncio.create_task(self.director.persist_character(**payload.model_dump()))
-        def handle_task_done(task):
+        async def handle_task_done(task):
             if task.exception():
                 log.exception("Error persisting character", error=task.exception())
-        
-        task.add_done_callback(handle_task_done)
+                await self.signal_operation_failed("Error persisting character")
+            else:
+                self.websocket_handler.queue_put(
+                    {
+                        "type": self.router,
+                        "action": "character_persisted",
+                        "character": task.result(),
+                    }
+                )
+                await self.signal_operation_done()
+
+        task.add_done_callback(lambda task: asyncio.create_task(handle_task_done(task)))
+

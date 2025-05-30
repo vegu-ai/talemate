@@ -296,6 +296,14 @@ class Character:
 
         self.memory_dirty = True
 
+    async def purge_from_memory(self):
+        """
+        Purges this character's details from memory.
+        """
+        memory_agent = get_agent("memory")
+        await memory_agent.delete({"character": self.name})
+        log.info("purged character from memory", character=self.name)
+
     async def commit_to_memory(self, memory_agent):
         """
         Commits this character's details to the memory agent. (vectordb)
@@ -1273,7 +1281,7 @@ class Scene(Emitter):
             await actor.character.commit_to_memory(memory_helper.agent)
 
 
-    async def remove_character(self, character: Character):
+    async def remove_character(self, character: Character, purge_from_memory: bool = True):
         """
         Remove a character from the scene
         
@@ -1287,6 +1295,9 @@ class Scene(Emitter):
         
         if character.name in self.inactive_characters:
             del self.inactive_characters[character.name]
+            
+        if purge_from_memory:
+            await character.purge_from_memory()
 
 
     async def remove_actor(self, actor: Actor):

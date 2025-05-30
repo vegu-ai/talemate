@@ -383,7 +383,7 @@ class RevisionMixin:
         Called when a conversation or narrator message is generated
         """
         
-        if not self.revision_enabled:
+        if not self.revision_enabled or not self.revision_automatic_enabled:
             return
         
         if isinstance(emission, ContextualGenerateEmission) and "contextual_generation" not in self.revision_automatic_targets:

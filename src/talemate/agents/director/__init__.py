@@ -138,6 +138,8 @@ class DirectorAgent(
         narrate_entry: bool = False,
         narrate_entry_direction: str = "",
         augment_attributes: str = "",
+        generate_attributes: bool = True,
+        description: str = "",
     ) -> Character:
         world_state = instance.get_agent("world_state")
         creator = instance.get_agent("creator")
@@ -186,7 +188,7 @@ class DirectorAgent(
                 any_attribute_templates = any(template.template_type == "character_attribute" for template in templates.values())
                 log.debug("persist_character", any_attribute_templates=any_attribute_templates)
                 
-                if any_attribute_templates and augment_attributes:
+                if any_attribute_templates and augment_attributes and generate_attributes:
                     log.debug("persist_character", augmenting_attributes=augment_attributes)
                     loading_status("Augmenting character attributes")
                     additional_attributes = await world_state.extract_character_sheet(
@@ -197,7 +199,7 @@ class DirectorAgent(
                     character.base_attributes.update(additional_attributes)
 
             # Generate a character sheet if there are no attribute templates
-            if not any_attribute_templates:
+            if not any_attribute_templates and generate_attributes:
                 loading_status("Generating character sheet")
                 log.debug("persist_character", extracting_character_sheet=True)
                 if not attributes:
@@ -211,10 +213,11 @@ class DirectorAgent(
                 character.base_attributes = attributes
                 
             # Generate a description for the character
-            loading_status("Generating character description")
-            description = await creator.determine_character_description(character, information=content)
-            character.description = description
-            log.debug("persist_character", description=description)
+            if not description:
+                loading_status("Generating character description")
+                description = await creator.determine_character_description(character, information=content)
+                character.description = description
+                log.debug("persist_character", description=description)
 
             # Generate a dialogue instructions for the character
             loading_status("Generating acting instructions")

@@ -124,8 +124,8 @@ class RevisionInformation(pydantic.BaseModel):
 CONTEXTUAL_GENERATION_TYPES = [
     "character attribute",
     "character detail",
-    "scene intent",
-    "scene phase intent",
+    #"scene intent",
+    #"scene phase intent",
     "scene intro",
 ]
 

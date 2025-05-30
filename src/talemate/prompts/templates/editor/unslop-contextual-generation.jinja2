@@ -119,26 +119,6 @@ The ancient crypt reeks of decay. Torchlight flickers across the damp stone wall
 
 ---
 
-<TYPE>Story intention</TYPE>
-<REVIEW>
-This narrative shall be a profound exploration of the human condition, delving into the labyrinthine depths of moral ambiguity where the dichotomy between righteousness and malevolence becomes but a gossamer veil. Readers will embark upon an odyssey through psychological landscapes that challenge their preconceived notions, forcing them to confront the Jungian shadows within their own psyche. Expect a symphony of philosophical discourse interwoven with visceral action sequences that serve as metaphorical representations of internal struggles.
-</REVIEW>
-
-<ANALYSIS>
-- Thought process: This reads like someone swallowed a philosophy textbook and a thesaurus. It's trying to say "this story explores moral gray areas and has action with deeper meaning" but makes it sound like a graduate thesis.
-- Purple prose: SEVERE - "labyrinthine depths," "gossamer veil," "Jungian shadows"
-- Over-description: YES - simple story intentions made pretentiously complex
-- Academic pretension: EXTREME - unnecessary philosophical jargon
-- Length: TOO LONG - could explain the story's intent much more simply
-- Mature content: N/A
-</ANALYSIS>
-
-<FIX>
-This story explores moral gray areas where right and wrong blur together. Readers will face challenging psychological themes and question their assumptions. The action sequences reflect internal character struggles.
-</FIX>
-
----
-
 <TYPE>Character attribute: appearance</TYPE>
 <REVIEW>
 Marcus stands tall at 6'2" with the lean build of a swimmer. His dark hair is kept short and practical, often messy from running his hands through it when thinking. A thin scar runs through his left eyebrow - a souvenir from a childhood accident. He typically wears dark jeans and plain t-shirts, preferring function over fashion.
@@ -212,10 +192,6 @@ If there are no changes needed use a <NO_FIX_REQUIRED/> tag.
 {% set context_type_description = "Character attribute: "+context_name %}
 {% elif context_type == "character detail" -%}
 {% set context_type_description = "Character detail: "+context_name %}
-{% elif context_type == "scene intent" -%}
-{% set context_type_description = "Story intention" %}
-{% elif context_type == "scene phase intent" -%}
-{% set context_type_description = "Scene intention" %}
 {% elif context_type == "scene intro" -%}
 {% set context_type_description = "Scene introduction" %}
 {%- endif -%}

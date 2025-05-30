@@ -425,7 +425,8 @@ If there are no changes needed use a <NO_FIX_REQUIRED/> tag.
 </UNWANTED_PROSE>
 {% endif %}
 {% if decensor %}
-{{ set_prepared_response("<ANALYSIS>\n- Mature content: PRESERVE - keep swear words, slang, and raw language exactly as written\n- Thought process:") }}
+{{ set_prepared_response("<ANALYSIS>\n- Mature content: ACCEPTABLE\n- Thought process:") }}
 {% else %}
 {{ set_prepared_response("<ANALYSIS>\n- Thought process:") }}
+{% endif %}
 {% endif %}

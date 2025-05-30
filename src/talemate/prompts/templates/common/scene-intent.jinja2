@@ -1,6 +1,6 @@
 {# overarching story intention #}{% if scene.intent_state.intent %}
 <|SECTION:INTENTION OF THIS STORY|>
-The overarching intention of this story. Use it to guide your decisions in the scene.
+The overarching intention of this story. {% if not instructions %}Use it to guide your decisions in the scene.{% else %}{{ instructions }}{% endif %}
 
 {{ scene.intent_state.intent }}
 {% endif %}

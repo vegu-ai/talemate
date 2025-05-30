@@ -340,6 +340,8 @@ Sarah poured him a coffee. "Want to talk through it?"
 
 {% include "character-guidance.jinja2" %}
 
+{% with exclude_phase_intent=True instructions="Any changes you propose MUST respect the vision and intention of the story."%}{% include "scene-intent.jinja2" %}{% endwith %}
+
 {% include "content-classification.jinja2" %}
 
 {% include "dynamic-instructions.jinja2" %}

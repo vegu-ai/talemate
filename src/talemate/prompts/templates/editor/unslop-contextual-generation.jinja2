@@ -137,6 +137,24 @@ This narrative shall be a profound exploration of the human condition, delving i
 This story explores moral gray areas where right and wrong blur together. Readers will face challenging psychological themes and question their assumptions. The action sequences reflect internal character struggles.
 </FIX>
 
+---
+
+<TYPE>Character attribute: appearance</TYPE>
+<REVIEW>
+Marcus stands tall at 6'2" with the lean build of a swimmer. His dark hair is kept short and practical, often messy from running his hands through it when thinking. A thin scar runs through his left eyebrow - a souvenir from a childhood accident. He typically wears dark jeans and plain t-shirts, preferring function over fashion.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This is actually well-written. It gives us clear physical details without drowning them in metaphors. The scar adds character without being overdramatic, and the clothing preference tells us something about his personality.
+- Purple prose: NONE
+- Over-description: NO - appropriate level of detail
+- Clichés: NONE
+- Length: OK - concise but complete
+- Mature content: N/A
+</ANALYSIS>
+
+<NO_FIX_REQUIRED/>
+
 {% with exclude_phase_intent=True %}{% include "scene-intent.jinja2" %}{% endwith %}
 
 {% include "content-classification.jinja2" %}
@@ -185,6 +203,10 @@ The text will be marked with a TYPE tag indicating what kind of content it is:
 - "Muscles rippling like coiled serpents" → "Well-muscled"
 - "Labyrinthine depths of moral ambiguity" → "Moral gray areas"
 - "Symphony of impending doom" → "Ominous sounds"
+
+Use the examples for a deeper understanding of the task and provide your analysis and fix, with the fix being the final output.
+
+If there are no changes needed use a <NO_FIX_REQUIRED/> tag.
 
 {% if context_type == "character attribute" -%}
 {% set context_type_description = "Character attribute: "+context_name %}

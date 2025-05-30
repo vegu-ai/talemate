@@ -297,6 +297,30 @@ He crossed to the window, checking if it had been forced open. "Someone was look
 
 ---
 
+<REVIEW>
+"Hey, you okay?" Sarah asked, noticing the dark circles under his eyes.
+Marcus shrugged. "Just tired. Been working late on the Morrison case."
+"That bad?"
+"Yeah." He rubbed his face. "The witness testimonies don't add up. Something's off."
+Sarah poured him a coffee. "Want to talk through it?"
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This dialogue is natural and flows well. Characters use contractions, speak in fragments, and show emotion through actions rather than stating feelings. No purple prose or name overuse.
+- Purple prose: NONE
+- Unnatural dialogue: NO - speaks like real people
+- Over-description: NO - just enough action to support dialogue
+- Length: OK
+- Tense: PAST - "Sarah asked"
+- Mature content: N/A
+- Name overuse: NO - names used appropriately
+- Talking vs Showing: GOOD - shows tiredness through appearance and actions
+</ANALYSIS>
+
+<NO_FIX_REQUIRED/>
+
+---
+
 {% set history = scene.context_history(
     budget=1024, 
     min_dialogue=20, 
@@ -380,6 +404,8 @@ KEEP: Actions that reveal character, sensory details that set mood, specific obj
 CUT: Redundant adjectives, exact measurements, clinical language, overwrought metaphors
 
 Use the examples for a deeper understanding of the task and provide your analysis and fix, with the fix being the final output.
+
+If there are no changes needed use a <NO_FIX_REQUIRED/> tag.
 
 <REVIEW>{{ text }}</REVIEW>
 {% if repetition %}

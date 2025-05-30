@@ -1,4 +1,5 @@
 // exportGraph.js
+import { v4 as uuidv4 } from 'uuid';
 
 // Convert LiteGraph graph back to JSON format
 export function convertGraphToJSON(graph) {
@@ -16,7 +17,7 @@ export function convertGraphToJSON(graph) {
         } else if(new String(node.id).length === 36) {
             node.talemateId = node.id;
         } else {
-            node.talemateId = crypto.randomUUID();
+            node.talemateId = uuidv4();
         }
     }
 
@@ -159,7 +160,7 @@ export function convertSelectedGraphToJSON(graph, selectedNodes) {
             if (new String(node.id).length === 36) {
                 node.talemateId = node.id;
             } else {
-                node.talemateId = crypto.randomUUID();
+                node.talemateId = uuidv4();
             }
         }
     }
@@ -329,7 +330,7 @@ export function convertSelectedGraphToJSON(graph, selectedNodes) {
         
         // Create Input nodes
         inputs.forEach((input, index) => {
-            const input_id = crypto.randomUUID();
+            const input_id = uuidv4();
             const input_type = (input.type == "*" || !input.type) ? "any" : input.type;
             const input_title = input.title || `input_${index}`;
             
@@ -366,7 +367,7 @@ export function convertSelectedGraphToJSON(graph, selectedNodes) {
         
         // Create Output nodes
         outputs.forEach((output, index) => {
-            const output_id = crypto.randomUUID();
+            const output_id = uuidv4();
             const output_type = (output.type == "*" || !output.type) ? "any" : output.type;
             const output_title = output.title || `output_${index}`;
             

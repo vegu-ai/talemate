@@ -1,8 +1,8 @@
-import asyncio
 import json
 import random
 import uuid
-from typing import TYPE_CHECKING, Tuple, Union
+from typing import TYPE_CHECKING, Tuple
+import dataclasses
 
 import pydantic
 import structlog
@@ -21,6 +21,7 @@ from talemate.world_state.templates import (
     WritingStyle,
 )
 from talemate.agents.base import AgentAction, AgentActionConfig
+import talemate.emit.async_signals as async_signals
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -28,6 +29,36 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger("talemate.creator.assistant")
 
+
+# EVENTS
+
+async_signals.register(
+    "agent.creator.contextual_generate.before",
+    "agent.creator.contextual_generate.after",
+    "agent.creator.autocomplete.before",
+    "agent.creator.autocomplete.after",
+)
+
+@dataclasses.dataclass
+class ContextualGenerateEmission:
+    """
+    A context for generating content.
+    """
+
+    content_generation_context: "ContentGenerationContext"
+    response: str | None = None
+    cleaned_response: str | None = None
+
+@dataclasses.dataclass
+class AutocompleteEmission:
+    """
+    A context for generating content.
+    """
+
+    input: str
+    type: str
+    character: "Character | None" = None
+    response: str | None = None
 
 class ContentGenerationContext(pydantic.BaseModel):
     """
@@ -241,6 +272,12 @@ class AssistantMixin:
             f"Contextual generate: {context_typ} - {context_name}",
             generation_context=generation_context,
         )
+        
+        emission = ContextualGenerateEmission(
+            content_generation_context=generation_context,
+        )
+        
+        await async_signals.get("agent.creator.contextual_generate.before").send(emission)
 
         content = await Prompt.request(
             f"creator.contextual-generate",
@@ -264,24 +301,32 @@ class AssistantMixin:
                 "template": generation_context.template,
             },
         )
+        
+        emission.response = content
+        
+        try:
+            if not generation_context.partial:
+                content = util.strip_partial_sentences(content)
 
-        if not generation_context.partial:
-            content = util.strip_partial_sentences(content)
+            if context_typ == "list":
+                try:
+                    content = json.dumps(extract_list(content), indent=2)
+                except Exception as e:
+                    log.warning("Failed to extract list", error=e)
+                    content = "[]"
+            elif context_typ == "character dialogue":
+                if not content.startswith(generation_context.character + ":"):
+                    content = generation_context.character + ": " + content
+                content = util.strip_partial_sentences(content)
+                emission.cleaned_response  = await editor.cleanup_character_message(content, generation_context.character.name)
+                return emission.cleaned_response
+            
+            emission.cleaned_response = content.strip().strip("*").strip()
+            return emission.cleaned_response
+        finally:
+            await async_signals.get("agent.creator.contextual_generate.after").send(emission)
+            
 
-        if context_typ == "list":
-            try:
-                content = json.dumps(extract_list(content), indent=2)
-            except Exception as e:
-                log.warning("Failed to extract list", error=e)
-                content = "[]"
-        elif context_typ == "character dialogue":
-            if not content.startswith(generation_context.character + ":"):
-                content = generation_context.character + ": " + content
-            content = util.strip_partial_sentences(content)
-            content = await editor.cleanup_character_message(content, generation_context.character.name)
-            return content
-
-        return content.strip().strip("*").strip()
 
     @set_processing
     async def generate_character_attribute(
@@ -406,6 +451,14 @@ class AssistantMixin:
             prefix = ' "'
         else:
             prefix = ''
+        
+        emission = AutocompleteEmission(
+            input=input,
+            type="dialogue",
+            character=character,
+        )
+        
+        await async_signals.get("agent.creator.autocomplete.before").send(emission)
 
         response = await Prompt.request(
             f"creator.autocomplete-dialogue",
@@ -429,8 +482,13 @@ class AssistantMixin:
 
         response = response.replace("...", "").lstrip("").rstrip().replace("END-OF-LINE", "")
         
+        
         if prefix:
             response = prefix + response
+        
+        emission.response = response
+        
+        await async_signals.get("agent.creator.autocomplete.after").send(emission)
 
         if not response:
             if emit_signal:
@@ -473,6 +531,13 @@ class AssistantMixin:
             non_anchor=non_anchor,
             input=input
         )
+        
+        emission = AutocompleteEmission(
+            input=input,
+            type="narrative",
+        )
+        
+        await async_signals.get("agent.creator.autocomplete.before").send(emission)
 
         response = await Prompt.request(
             f"creator.autocomplete-narrative",
@@ -494,6 +559,10 @@ class AssistantMixin:
 
         if response.startswith(input):
             response = response[len(input) :]
+
+        emission.response = response
+        
+        await async_signals.get("agent.creator.autocomplete.after").send(emission)
 
         self.scene.log.debug(
             "autocomplete_suggestion", suggestion=response, input=input

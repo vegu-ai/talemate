@@ -662,7 +662,7 @@ class RevisionMixin:
         if character_name_prefix:
             text = text[len(character.name) + 2:]
             
-        issues = await self.collect_issues(text, character)
+        issues = await self.revision_collect_issues(text, character)
         
         if loading_status:
             loading_status.max_steps = 2
@@ -722,6 +722,7 @@ class RevisionMixin:
                 "bad_prose": issues.bad_prose,
                 "dynamic_instructions": emission.dynamic_instructions,
             },
+            dedupe_enabled=False,
         )
         
         emission.response = analysis
@@ -808,7 +809,7 @@ class RevisionMixin:
         if character_name_prefix:
             text = text[len(character.name) + 2:]
         
-        issues = await self.collect_issues(text, character)
+        issues = await self.revision_collect_issues(text, character)
         
         log.debug("revision_unslop: issues", issues=issues)
 
@@ -874,7 +875,7 @@ class RevisionMixin:
             
         return fix
         
-    async def collect_issues(self, text: str, character: "Character | None" = None) -> Issues:
+    async def revision_collect_issues(self, text: str, character: "Character | None" = None) -> Issues:
         """
         Collect issues from the text
         """

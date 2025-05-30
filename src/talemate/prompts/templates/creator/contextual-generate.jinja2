@@ -1,6 +1,12 @@
 {% if context_aware %}{% set rendered_context_content %}
 {% include "extra-context.jinja2" %}
+
+{# character context #}{% if character %}
+{% with skip_characters=[character.name] %}{% include "character-context.jinja2" %}{% endwith %}
+{% else %}
 {% include "character-context.jinja2" %}
+{# /character context #}{% endif %}
+
 {% if context_typ == 'scene phase intent' or context_typ == 'scene type description' or context_typ == 'scene type instructions' -%}
 {% with exclude_phase_intent=True %}{% include "scene-intent.jinja2" %}{% endwith %}
 {% include "scene-types.jinja2" %}

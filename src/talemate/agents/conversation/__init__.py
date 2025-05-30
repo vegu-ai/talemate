@@ -480,7 +480,7 @@ class ConversationAgent(
                 emission
             )
 
-        messages = [CharacterMessage(response, from_choice=instruction)]
+        messages = [CharacterMessage(emission.response, from_choice=instruction)]
         return messages
 
     def allow_repetition_break(

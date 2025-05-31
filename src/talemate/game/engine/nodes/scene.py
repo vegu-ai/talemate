@@ -866,7 +866,7 @@ class WaitForInput(Node):
             wait_for_input_kwargs["sleep_time"] = 1
         
         try:
-            if player_character:
+            if player_character and not state.shared.get("creative_mode"):
                 await async_signals.get("player_turn_start").send(events.PlayerTurnStartEvent(
                     scene=scene,
                     event_type="player_turn_start",

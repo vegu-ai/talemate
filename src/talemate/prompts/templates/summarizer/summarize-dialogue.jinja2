@@ -23,6 +23,8 @@
 {{ generation_options.writing_style.instructions }}
 <|CLOSE_SECTION|>
 {% endif %}
+
+{% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
 Summarize {{ summary_target }} into a {{output_type}}.
 

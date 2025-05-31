@@ -14,6 +14,8 @@ CHUNK {{ loop.index }}:
 {% endfor %}
 {{ section_name.upper() }} END
 <|CLOSE_SECTION|>
+
+{% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
 Provide a compressed, short summary for {{ section_name }}.
 

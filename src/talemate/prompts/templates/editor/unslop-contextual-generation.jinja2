@@ -119,6 +119,26 @@ The ancient crypt reeks of decay. Torchlight flickers across the damp stone wall
 
 ---
 
+<TYPE>World context: magic system</TYPE>
+<REVIEW>
+The Arcane Weave permeates the very fabric of existence like golden threads of pure potentiality, connecting all living things in an intricate tapestry of metaphysical energy. Those blessed with the Sight can perceive these luminescent strands of raw creation dancing through the aether like celestial serpents. To harness this primordial force, a practitioner must undergo the Thirteen Trials of Enlightenment, each more harrowing than the last, before earning the right to manipulate even the smallest mote of magical essence. The consequences of unauthorized usage are catastrophic beyond mortal comprehension - entire civilizations have been reduced to whispers in the void for such hubris.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This magic system description is buried under so many metaphors it's hard to understand how it actually works. "Golden threads," "celestial serpents," "whispers in the void" - just tell us the rules of magic without the poetry slam.
+- Purple prose: SEVERE - "tapestry of metaphysical energy," "luminescent strands of raw creation," "mote of magical essence"
+- Over-description: YES - simple magic rules made unnecessarily complex
+- Fantasy clichés: MANY - mysterious trials, catastrophic consequences, ancient civilizations
+- Length: TOO LONG - core information lost in flowery language
+- Mature content: N/A
+</ANALYSIS>
+
+<FIX>
+The Arcane Weave is a magical energy field that connects all living things. People with the Sight can see and manipulate these energy strands. To use magic legally, practitioners must complete the Thirteen Trials. Unauthorized magic use has severe consequences - past civilizations have been destroyed for breaking this law.
+</FIX>
+
+---
+
 <TYPE>Character attribute: appearance</TYPE>
 <REVIEW>
 Marcus stands tall at 6'2" with the lean build of a swimmer. His dark hair is kept short and practical, often messy from running his hands through it when thinking. A thin scar runs through his left eyebrow - a souvenir from a childhood accident. He typically wears dark jeans and plain t-shirts, preferring function over fashion.
@@ -156,8 +176,7 @@ The text will be marked with a TYPE tag indicating what kind of content it is:
 - Character attribute: Short character trait descriptions (appearance, personality, abilities)
 - Character detail: Longer character descriptions (full description, backstory)
 - Scene introduction: Setting up new scenes or environments
-- Scene intention: Analytical text about the current scene's purpose
-- Story intention: Analytical text about overall story expectations
+- World context: World information, lore, and details
 
 **Rules:**
 {{ li() }}. REDUCE purple prose - Replace flowery metaphors with clear descriptions
@@ -169,7 +188,7 @@ The text will be marked with a TYPE tag indicating what kind of content it is:
 {{ li() }}. PRESERVE mature content - Keep violence, scars, dark themes, suggestive elements exactly as intended
 
 **What to keep vs cut:**
-- KEEP: Distinctive features, important abilities, relevant backstory, key atmosphere, story/scene goals
+- KEEP: Distinctive features, important abilities, relevant backstory, key atmosphere, essential world rules 
 - CUT: Purple metaphors, excessive precision, repetitive descriptions, clichéd phrases, academic jargon
 
 **Common fixes:**
@@ -180,6 +199,7 @@ The text will be marked with a TYPE tag indicating what kind of content it is:
 - "Muscles rippling like coiled serpents" → "Well-muscled"
 - "Labyrinthine depths of moral ambiguity" → "Moral gray areas"
 - "Symphony of impending doom" → "Ominous sounds"
+- "Primordial force beyond mortal comprehension" → "Powerful ancient magic"
 
 Use the examples for a deeper understanding of the task and provide your analysis and fix, with the fix being the final output.
 
@@ -191,6 +211,8 @@ If there are no changes needed use a <NO_FIX_REQUIRED/> tag.
 {% set context_type_description = "Character attribute: "+context_name %}
 {% elif context_type == "character detail" -%}
 {% set context_type_description = "Character detail: "+context_name %}
+{% elif context_type == "world context" -%}
+{% set context_type_description = "World context: "+context_name %}
 {% elif context_type == "scene intro" -%}
 {% set context_type_description = "Scene introduction" %}
 {%- endif -%}

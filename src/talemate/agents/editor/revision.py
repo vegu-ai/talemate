@@ -126,6 +126,7 @@ CONTEXTUAL_GENERATION_TYPES = [
     "character detail",
     #"scene intent",
     #"scene phase intent",
+    "world context",
     "scene intro",
 ]
 

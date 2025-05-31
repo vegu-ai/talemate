@@ -58,6 +58,11 @@ dedupe_condition = AgentActionConditional(
 
 rewrite_condition = AgentActionConditional(
     attribute="revision.config.revision_method",
+    value=["rewrite"],
+)
+
+rewrite_unslop_condition = AgentActionConditional(
+    attribute="revision.config.revision_method",
     value=["rewrite", "unslop"],
 )
 
@@ -208,7 +213,7 @@ class RevisionMixin:
                     choices=[
                         {"label": "Dedupe (Fast and dumb)", "value": "dedupe"},
                         {"label": "Unslop (AI assisted)", "value": "unslop"},
-                        {"label": "Rewrite (AI assisted)", "value": "rewrite"},
+                        {"label": "Targeted Rewrite (AI assisted)", "value": "rewrite"},
                     ],
                     note_on_value={
                         "dedupe": AgentActionNote(
@@ -248,13 +253,13 @@ class RevisionMixin:
                     type="bool",
                     label="Detect unwanted prose",
                     description="Enable / Disable unwanted prose detection. Will use the writing style's phrase detection to determine unwanted phrases. The scene MUST have a writing style selected.",
-                    condition=rewrite_condition,
+                    condition=rewrite_unslop_condition,
                     value=False,
                 ),
                 "detect_bad_prose_threshold": AgentActionConfig(
                     type="number",
                     label="Unwanted prose threshold",
-                    condition=rewrite_condition,
+                    condition=rewrite_unslop_condition,
                     description="The threshold for detecting unwanted prose when using semantic similarity.",
                     value=0.7,
                     min=0.4,

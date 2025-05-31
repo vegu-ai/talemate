@@ -548,6 +548,7 @@ class RunModule(Node):
             
             quaratined_state = GraphState()
             quaratined_state.shared["creative_mode"] = state.shared.get("creative_mode", False)
+            quaratined_state.shared["nested_scene_loop"] = module.base_type == "scene/SceneLoop"
             quaratined_state.stack = state.stack
             
             task = state.shared[task_key] = asyncio.create_task(module.run(quaratined_state))

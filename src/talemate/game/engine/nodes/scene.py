@@ -864,9 +864,15 @@ class WaitForInput(Node):
         # doesn't spam the console
         if state.verbosity == NodeVerbosity.VERBOSE:
             wait_for_input_kwargs["sleep_time"] = 1
+            
+            
+        is_game_loop = (
+            not state.shared.get("creative_mode") or
+            state.shared.get("nested_scene_loop", False)
+        )
         
         try:
-            if player_character and not state.shared.get("creative_mode"):
+            if player_character and is_game_loop:
                 await async_signals.get("player_turn_start").send(events.PlayerTurnStartEvent(
                     scene=scene,
                     event_type="player_turn_start",

@@ -1302,8 +1302,8 @@ LGraphCanvas.prototype.processMouseDown = function(e) {
             this._cloning_multi_drag = {
                 active: true,
                 clones: clonedNodes,
-                lastX: e.canvasX,
-                lastY: e.canvasY
+                lastX: e.clientX,
+                lastY: e.clientY
             };
 
             // Block default handler (which would clone only one node)
@@ -1326,17 +1326,17 @@ LGraphCanvas.prototype.processMouseMove = function(e) {
     if (this._cloning_multi_drag && this._cloning_multi_drag.active) {
         this.adjustMouseEvent(e);
         const info = this._cloning_multi_drag;
-        const dxCanvas = e.canvasX - info.lastX;
-        const dyCanvas = e.canvasY - info.lastY;
-        if (dxCanvas !== 0 || dyCanvas !== 0) {
-            const dxGraph = dxCanvas / this.ds.scale;
-            const dyGraph = dyCanvas / this.ds.scale;
+        const dxClient = e.clientX - info.lastX;
+        const dyClient = e.clientY - info.lastY;
+        if (dxClient !== 0 || dyClient !== 0) {
+            const dxGraph = dxClient / this.ds.scale;
+            const dyGraph = dyClient / this.ds.scale;
             info.clones.forEach(node => {
                 node.pos[0] += dxGraph;
                 node.pos[1] += dyGraph;
             });
-            info.lastX = e.canvasX;
-            info.lastY = e.canvasY;
+            info.lastX = e.clientX;
+            info.lastY = e.clientY;
             this.setDirty(true, true);
         }
         e.preventDefault();

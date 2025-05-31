@@ -18,7 +18,7 @@ Load the `On Scen Init` module that we made in part 2.
 1. Add a `Contextual Generate` node.
 1. `<Switch>.no` :material-transit-connection-horizontal: `<Contextual Generate>.state`
 1. `<Contextual Generate>.text` :material-transit-connection-horizontal: `<Set Introduction>.introduction`
-1. `<Make Text>.text` :material-transit-connection-horizontal: `<Contextual Generate>.instructions`
+1. `<Make Text>.value` :material-transit-connection-horizontal: `<Contextual Generate>.instructions`
 
 Then in the `Contextual Generate` node's properties:
 
@@ -28,11 +28,14 @@ Then in the `Contextual Generate` node's properties:
 
 ![Contextual Generate](./img/3-0001.png)
 
-The result should hopefully a bit more fitting for a story introduction text (or it may not be, AI things!)
+--8<-- "docs/snippets/common.md:save-graph"
+
+In order to test this, because of the state check we added earlier, depending on if you've run the scene already, you may need to either reload the scene or edit the scene state through the debug tools. We will address the awkwardness of this in the next section, so you can also just skip this step for now.
+
+If you do test this, the result should hopefully a bit more fitting for a story introduction text (or it may not be, AI things!)
 
 ![Contextual Generate - Result](./img/3-0002.png)
 
---8<-- "docs/snippets/common.md:save-graph"
 
 ## 3.2 - Make testing this.. not awkward.
 
@@ -75,7 +78,7 @@ Connect the nodes:
 
 1. Shift click the `Stage` node title to auto title it to `Stage 0`
 1. Shift click the `Unset State (Conditional)` node title to auto title it to `UNSET game.intro_generated`
-1. Right click the `Make Bool` node and select `Edit Title` and change it to `RESET`.
+1. Right click the `Make Bool` node and select `Title` and change it to `RESET`.
 
 ![Stage 0](./img/3-0005.png)
 
@@ -89,10 +92,10 @@ Connect the nodes:
 ![Stage 1](./img/3-0003.png)
 ![Stage 1 - Minimized](./img/3-0004.png)
 
-!!! note "Staging out the module execution"
+!!! learn-more "Staging out the module execution"
     A node chain connected to a stage node will be executed in order of the stage number. The node chain at Stage 0 runs before the node chain at Stage 1. This allows control over the flow of the module execution.
 
-    Read more about staging in the [Node Editor Core Concepts - Staging](/talemate/user-guide/node-editor/core-concepts/staging) part of the documentation.
+    - [Stages](/talemate/user-guide/node-editor/core-concepts/staging)
 
 Now when the `RESET` switch is flipped, the `intro_generated` state will be unset, and since that happens before the `Generate Progress Narration` node runs, it will trigger a new introduction to be generated.
 
@@ -110,7 +113,7 @@ The severity of this problem will vary from model to model.
 
 The fix is easy, simply wipe the introduction before generating a new one.
 
-Hold `Alt` and drag the `Set Introduction` node to clone it, then hook it inbetween the `UNSET game.intro_generated` and `Stage 0` nodes.
+Hold `Alt` and drag the `Set Introduction` node to clone it, then hook the clone inbetween the `UNSET game.intro_generated` and `Stage 0` nodes.
 
 Make sure to edit it's `introduction` input to be a blank string.
 
@@ -139,18 +142,19 @@ Add the following nodes:
 
 ---
 
-**Generate Thematic List**
+!!! payload "Generate Thematic List - Properties"
 
-- **instructions**:
-    ```
-    A list of sci-fi topics. Keep each item short (1-3 words).
-    ```
+    - **instructions**
+
+        ```
+        A list of sci-fi topics. Keep each item short (1-3 words).
+        ```
 
 ---
 
-**Random**
+!!! payload "Random - Properties"
 
-- **method**: `choice`
+    - **method**: `choice`
 
 ---
 
@@ -165,18 +169,18 @@ Connect the nodes:
 
 ---
 
-**Dict Set**
+!!! payload "Dict Set - Properties"
 
-- **key**: `theme`
+    - **key**: `theme`
 
 ---
 
-**Make Text**
+!!! payload "Make Text - Properties"
 
-- **value**:
+    - **value**:
     ```
     Generate the introduction to a random exciting scenario 
-    for the crew of the Starlight Nomad.
+    for the crew of the Starlight Nomad, based on the topic: `{theme}`
     ```
 
 ---

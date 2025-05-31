@@ -18,14 +18,19 @@ Then click the **:material-plus: CREATE MODULE** button and select **Module**.
 
 When a group of nodes is selected and you create a new module, the nodes will be copied into the new module. The `Create new module` dialog that appears will state:
 
-> You are creating a new module from a selection of N nodes.
+> You are creating a new module from a selection of 10 nodes.
 
-Fille in the `Name` and `Registry` fields and click **Continue**.
+!!! note "Number of nodes"
+    Make sure its 10 nodes, if you have more or less, your selection is not correct.
+
+Fill in the `Name` and `Registry` fields and click **Continue**.
 
 - Name: `Generate Premise`
 - Registry: `infinity-quest-dynamic/$N`
 
 ![create module](./img/4-0003.png)
+
+Click **Continue** to create the module.
 
 You will be taken to the new module.
 
@@ -42,6 +47,8 @@ It will do its best to label and type those correctly, but we will need to do so
 We lost the group, so select all the nodes (hold `Ctrl` and drag a rectangle around them) then right click the canvas and select **Creater group from selection**.
 
 You may also want to move some of the nodes around to tidy up the group, especially the automatically generated input and output socket nodes may be positioned poorly.
+
+Title the group to `Generate Premise`.
 
 ### Fixing the input sockets
 

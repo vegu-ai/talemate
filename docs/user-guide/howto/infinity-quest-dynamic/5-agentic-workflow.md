@@ -20,12 +20,14 @@ Right now the module has one stage that generated a random theme and then genera
 
 For a multi agent approach this needs to be broken up into two stages, so we can insert the new analyzation stage between them.
 
-!!! tip "Stages instead of long, convoluted node-chains"
+!!! learn-more "Stages instead of long, convoluted node-chains"
     While it may be tempting to just chain up the nodes into a long, convoluted node-chain, it is better to break it up into stages.
 
     Stages make a graph behave similar to function execution, where the stage index determines the order of execution (e.g., top to bottom).
 
     We can use local variable states to cleanly pass data between stages.
+
+    - [Stages](/talemate/user-guide/node-editor/core-concepts/staging)
 
 So we need to:
 
@@ -35,7 +37,7 @@ So we need to:
 
 ## 5.2 - Break out the Theme generation into a new stage. (Stage 1)
 
-Hold `Shift` and click the title of the `Generate Premise` Group to create a similarly sized group right beneath it.
+Hold `Shift` and **click the title** of the `Generate Premise` Group to create a similarly sized group right beneath it.
 
 Retitle the new group to `Generate Theme`.
 
@@ -53,7 +55,7 @@ Then press `Ctrl+C` to copy them.
 
 Then press `Ctrl+V` to paste them.
 
-Immediately drag the new nodes into the `Generate Theme` group.
+Immediately drag the new nodes into the `Generate Theme` group. Hold `Shift` while dragging to drag all of them at once.
 
 ![generate-theme-group](./img/5-0003.png)
 
@@ -67,33 +69,37 @@ Then connect them:
 
 - `<Make Bool>.value` :material-transit-connection-horizontal: `<Generate Thematic List>.state`
 - `<Theme>.value` :material-transit-connection-horizontal: `<Set State>.value`
-- `<Set State>.state` :material-transit-connection-horizontal: `<Stage>.state`
+- `<Set State>.value` :material-transit-connection-horizontal: `<Stage>.state`
 
 ---
 
-**Set State**
+!!! payload "Set State - Properties"
 
-- **name**: `theme`
-- **scope**: `local`
+    - **name**: `theme`
+    - **scope**: `local`
 
-`Shift` click the title to auto title it to `SET local.theme`.
-
----
-
-**Make Bool**
-
-- **value**: `true`
-
-`Shift` click the title to auto title it to `true`.
+    `Shift` click the title to auto title it to `SET local.theme`.
 
 ---
 
-**Stage**
+!!! payload "Make Bool - Properties"
 
-- **stage**: `1`
+    - **value**: `true`
 
-!!! tip "Local scope"
+    `Shift` click the title to auto title it to `true`.
+
+---
+
+!!! payload "Stage - Properties"
+
+    - **stage**: `1`
+
+    `Shift` click the title to auto title it to `Stage 1`.
+
+!!! learn-more "Local scope"
     The local state only exists for the duration of the module execution, so its ideal for passing data between stages.
+
+    - [State Management](/talemate/user-guide/node-editor/core-concepts/states)
 
 ![generate theme group](./img/5-0004.png)
 
@@ -105,7 +111,7 @@ Retitle the new group to `Generate Introduction`.
 
 ![generate-introduction-group](./img/5-0005.png)
 
-Select the three relevant introduction generation nodes (Hold `Ctrl` or `Shift` and click the nodes)
+Select the 4 relevant introduction generation nodes (Hold `Ctrl` or `Shift` and click the nodes)
 
 - `Make Text`
 - `Dict Set`
@@ -114,11 +120,7 @@ Select the three relevant introduction generation nodes (Hold `Ctrl` or `Shift` 
 
 ![select-nodes](./img/5-0006.png)
 
-Then press `Ctrl+C` to copy them.
-
-Then press `Ctrl+V` to paste them.
-
-Immediately drag the new nodes into the `Generate Introduction` group.
+Hold `Alt` and drag to clone all 4 nodes and immediately drag the new nodes into the `Generate Introduction` group.
 
 You can then `Ctrl` click the group title to auto fit the group to the nodes.
 
@@ -140,39 +142,39 @@ Then connect them:
 
 ---
 
-**Get State**
+!!! payload "Get State - Properties"
 
-- **name**: `theme`
-- **scope**: `local`
+    - **name**: `theme`
+    - **scope**: `local`
 
-`Shift` click the title to auto title it to `GET local.theme`.
-
----
-
-**Make Bool**
-
-- **value**: `true`
-
-`Shift` click the title to auto title it to `true`.
+    `Shift` click the title to auto title it to `GET local.theme`.
 
 ---
 
-**Set State**
+!!! payload "Make Bool - Properties"
 
-- **name**: `intro`
-- **scope**: `local`
+    - **value**: `true`
 
-`Shift` click the title to auto title it to `SET local.intro`.
-
----
-
-**Stage**
-
-- **stage**: `3`
+    `Shift` click the title to auto title it to `true`.
 
 ---
 
-**Make Text**
+!!! payload "Set State - Properties"
+
+    - **name**: `intro`
+    - **scope**: `local`
+
+    `Shift` click the title to auto title it to `SET local.intro`.
+
+---
+
+!!! payload "Stage - Properties"
+
+    - **stage**: `3`
+
+    `Shift` click the title to auto title it to `Stage 3`.
+
+---
 
 Retitle the `Make Text` node to `Instruction Template`.
 
@@ -210,26 +212,30 @@ Next add two `Get State` nodes to the `Sockets` group.
 
 ---
 
-**First Get State**
+!!! payload "First Get State - Properties"
 
-- **name**: `theme`
-- **scope**: `local`
+    - **name**: `theme`
+    - **scope**: `local`
+
+    `Shift` click the title to auto title it to `GET local.theme`.
 
 ---
 
-**Second Get State**
+!!! payload "Second Get State - Properties"
 
-- **name**: `intro`
-- **scope**: `local`
+    - **name**: `intro`
+    - **scope**: `local`
+
+    `Shift` click the title to auto title it to `GET local.intro`.
 
 Connect them to their respective output nodes.
 
 ![connected sockets](./img/5-0010.png)
 
-!!! tip "No stage node required"
+!!! learn-more "No stage node required"
     We want sockets to be evaluated at the END of the module execution, so we don't need a stage node.
 
-!!! tip "Why does `IN state` not need to be connected to anything else?"
+!!! learn-more "Why does `IN state` not need to be connected to anything else?"
     Since the `IN state` node is a required input socket, it already fulfills its purpose as serving as an activator for the module execution.
 
     If the node connecting into the state socket is not active then due to the state being required the module execution will be blocked.
@@ -281,7 +287,7 @@ Once the introduction is generated, we now need to manually stop the scene loop 
 
 ## 5.7 - Add a new stage to analyze the theme. (Stage 2)
 
-Hold `Shift` and click the title of the `Generate Premis` Group to create a similarly sized group right beneath it.
+Hold `Shift` and click the title of the `Generate Introduction` Group to create a similarly sized group right beneath it.
 
 Retitle the new group to `Analyze Theme`.
 
@@ -300,7 +306,7 @@ Add the following nodes to the `Analyze Theme` group:
 Then connect them:
 
 - `<Get State>.value` :material-transit-connection-horizontal: `<Dict Set>.value`
-- `<Make Text>.text` :material-transit-connection-horizontal: `<Prompt from Template>.template_text`
+- `<Make Text>.value` :material-transit-connection-horizontal: `<Prompt from Template>.template_text`
 - `<Dict Set>.dict` :material-transit-connection-horizontal: `<Prompt from Template>.variables`
 - `<Prompt from Template>.prompt` :material-transit-connection-horizontal: `<Generate Response>.prompt`
 - `<Make Bool>.value` :material-transit-connection-horizontal: `<Generate Response>.state`
@@ -310,26 +316,26 @@ Then connect them:
 
 ---
 
-**Get State**
+!!! payload "Get State - Properties"
 
-- **name**: `theme`
-- **scope**: `local`
+    - **name**: `theme`
+    - **scope**: `local`
 
-`Shift` click the title to auto title it to `GET local.theme`.
-
----
-
-**Get Agent**
-
-- **agent_name**: `Summarizer`
-
-`Shift` click the title to auto title it to `summarizer`.
+    `Shift` click the title to auto title it to `GET local.theme`.
 
 ---
 
-**Make Text**
+!!! payload "Get Agent - Properties"
 
-- **text**:
+    - **agent_name**: `Summarizer`
+
+    `Shift` click the title to auto title it to `summarizer`.
+
+---
+
+!!! payload "Make Text - Properties"
+
+    - **value**:
     ```
     Analyze the following sci-fi theme:
     {{theme}}
@@ -342,49 +348,50 @@ Then connect them:
     Your analysis will be used to set up the premise for the next storyline in the Infinity Quest series.
     ```
 
+    Retitle the `Make Text` node to `Theme Analysis Template`.
+
 !!! note "Prompt from Template.template_text expects a jinja2 template"
     This means variable names need to be wrapped in `{{}}` to be interpreted as variables.
 
     So `{{ theme }}` instead of `{theme}` like we used before when passing to the string `Format` node.
 
+---
 
-Retitle the `Make Text` node to `Theme Analysis Template`.
+!!! payload "Dict Set - Properties"
+
+    - **key**: `theme`
 
 ---
 
-**Dict Set**
+!!! payload "Make Bool - Properties"
 
-- **key**: `theme`
+    - **value**: `true`
 
----
-
-**Make Bool**
-
-- **value**: `true`
-
-`Shift` click the title to auto title it to `true`.
+    `Shift` click the title to auto title it to `true`.
 
 ---
 
-**Generate Response**
+!!! payload "Generate Response - Properties"
 
-- **response_length**: `768`
-- **action_type**: `analyze`
-
----
-
-**Set State**
-
-- **name**: `theme_analysis`
-- **scope**: `local`
-
-`Shift` click the title to auto title it to `SET local.theme_analysis`.
+    - **response_length**: `768`
+    - **action_type**: `analyze`
 
 ---
 
-**Stage**
+!!! payload "Set State - Properties"
 
-- **stage**: `2`
+    - **name**: `theme_analysis`
+    - **scope**: `local`
+
+    `Shift` click the title to auto title it to `SET local.theme_analysis`.
+
+---
+
+!!! payload "Stage - Properties"
+
+    - **stage**: `2`
+
+    `Shift` click the title to auto title it to `Stage 2`.
 
 ---
 
@@ -441,12 +448,12 @@ Add another `Get State` node to the `Generate Introduction` group.
 
 ---
 
-**Get State**
+!!! payload "Get State - Properties"
 
-- **name**: `theme_analysis`
-- **scope**: `local`
+    - **name**: `theme_analysis`
+    - **scope**: `local`
 
-`Shift` click the title to auto title it to `GET local.theme_analysis`.
+    `Shift` click the title to auto title it to `GET local.theme_analysis`.
 
 ---
 

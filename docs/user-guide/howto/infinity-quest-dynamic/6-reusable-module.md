@@ -50,6 +50,8 @@ An extension of the default Talemate scene loop where we added an instance of th
 
 This module is responsible for generating the a scene introduction based on random sci-fi theme with the help of the Summarizer agent for additional exploration of the concept.
 
+---
+
 ![Premise Generation Module](./img/6-0003.png)
 
 ## 6.2 Plan
@@ -57,7 +59,7 @@ This module is responsible for generating the a scene introduction based on rand
 In order to make our premise generator a standalone module, there are a few things we need to consider:
 
 1. Rename the event module so its less generic as it will be the entry point for the module.
-1. Right now the premise generator has some hardcoded values that make sense for the Infinity Quest project (sci-fi themed, start trek type of story). We need to be able to expose this from the premise module all the way to the scene loop extension as configurable properties.
+1. Right now the premise generator has some hardcoded values that make sense for the Infinity Quest project (sci-fi themed, star trek type of story). We need to be able to expose this from the premise module all the way to the scene loop extension as configurable properties.
 1. A toggle for turning analyzation on and off.
 1. Make the module available as a Talemate module, so it can be plugged into any new scene project.
 
@@ -99,7 +101,7 @@ Then add the `Dynamic Premise` module to the scene loop and set the `event_name`
 
 **:material-movie-play:** Start the scene loop to test that everything's still working.
 
-Then find the old `on-scene-init` module in the library and press the :material-close-circle-outline: button to delete it. Confirm the action.
+Then find the old `on-scene-init` module in the :material-group: Modules library and press the :material-close-circle-outline: button to delete it. Confirm the action.
 
 ![Delete module](./img/6-0007.png)
 
@@ -127,13 +129,15 @@ Connect the nodes as follows:
 - `<Module Property>.value` :material-transit-connection-horizontal: `<Set State>.value`
 - `<Set State>.value` :material-transit-connection-horizontal: `<Stage>.state`
 
-In the `Module Property` node set the following:
+---
 
-- **property_name**: `reset`
-- **property_type**: `bool`
-- **default**: `false`
+!!! payload "Module Property - Properties"
 
-`Shift` click the title to auto-title it to `PROP reset`.
+    - **property_name**: `reset`
+    - **property_type**: `bool`
+    - **default**: `false`
+
+    `Shift` click the title to auto-title it to `PROP reset`.
 
 Leave the `Set State` node as is, but change its title to `SET local.reset`.
 
@@ -157,12 +161,16 @@ Next go back to the `Generate Introduction` group and add the following nodes:
 
 Replace the existing `Make Bool` (titled `RESET`) node with the `Get State` node, connecting it's value output to the `Switch.value` input.
 
-Then in the `Get State` node set the following:
+- `<Get State>.value` :material-transit-connection-horizontal: `<Switch>.value`
 
-- **name**: `reset`
-- **scope**: `local`
+---
 
-`Shift` click the title to auto-title it to `GET local.reset`.
+!!! payload "Get State - Properties"
+
+    - **name**: `reset`
+    - **scope**: `local`
+
+    `Shift` click the title to auto-title it to `GET local.reset`.
 
 ![Properties group and updated reset toggle](./img/6-0010.png)
 
@@ -172,9 +180,13 @@ Then in the `Get State` node set the following:
 
 --8<-- "docs/user-guide/howto/infinity-quest-dynamic/.snippets.md:load-scene-loop"
 
-Confirm that the `Dynamic Premise` node now has a `reset` property that is a boolean on / off switch.
+Confirm that the `Dynamic Premise` node now has a `reset` property that is a boolean on / off switch. 
 
 ![Dynamic Premise node with reset toggle](./img/6-0011.png)
+
+Turn it on since we will want to test the module still while working on it.
+
+--8<-- "docs/snippets/common.md:save-graph"
 
 ## 6.3 Fixing the registry path for the Generate Premise Module
 
@@ -192,7 +204,7 @@ So we need to change it.
 
 Create a copy of the module. (Same as before)
 
-This time in the modal you can leave the **Name** as is, and simply replacde the `infinity-quest-dynamic` portion of the **Registry** with `scene` so it reads `scene/generatePremise`.
+This time in the modal you can leave the **Name** as is, and simply replace the `infinity-quest-dynamic` portion of the **Registry** with `scene` so it reads `scene/generatePremise`.
 
 ![Change registry](./img/6-0013.png)
 
@@ -291,55 +303,53 @@ Create a new group somewhere in the module and call it `Inputs`. Color it `blue`
 
 Add the following nodes to the group:
 
-- `Input` (x2)
+- `Input Socket` (x2)
 - `Set State` (x2)
 - `Stage`
 
 ---
 
-**First `Input`**
+!!! payload "First Input Socket - Properties"
 
-- **input_name**: `topic`
-- **input_type**: `str`
-- **default**: edit to a blank string
+    - **input_type**: `str`
+    - **input_name**: `topic`
 
-`Shift` click the title to auto-title it to `IN topic`.
-
----
-
-**Second `Input`**
-
-- **input_name**: `analysis_instructions`
-- **input_type**: `text`
-- **default**: edit to a blank string
-
-`Shift` click the title to auto-title it to `IN analysis_instructions`.
+    `Shift` click the title to auto-title it to `IN topic`.
 
 ---
 
-**First `Set State`**
+!!! payload "Second Input Socket - Properties"
 
-- **name**: `topic`
-- **scope**: `local`
+    - **input_type**: `str`
+    - **input_name**: `analysis_instructions`
 
-`Shift` click the title to auto-title it to `SET local.topic`.
-
----
-
-**Second `Set State`**
-
-- **name**: `analysis_instructions`
-- **scope**: `local`
-
-`Shift` click the title to auto-title it to `SET local.analysis_instructions`.
+    `Shift` click the title to auto-title it to `IN analysis_instructions`.
 
 ---
 
-**`Stage`**
+!!! payload "First Set State - Properties"
 
-Set title to `Stage -1`.
+    - **name**: `topic`
+    - **scope**: `local`
 
-`Shift` click the title to auto-title it to `Stage -1`.
+    `Shift` click the title to auto-title it to `SET local.topic`.
+
+---
+
+!!! payload "Second Set State - Properties"
+
+    - **name**: `analysis_instructions`
+    - **scope**: `local`
+
+    `Shift` click the title to auto-title it to `SET local.analysis_instructions`.
+
+---
+
+!!! payload "Stage - Properties"
+
+    - **stage**: `-1`
+
+    `Shift` click the title to auto-title it to `Stage -1`.
 
 ---
 
@@ -368,27 +378,27 @@ In the `Generate Theme` group add the following nodes:
 
 ---
 
-**Get State**
+!!! payload "Get State - Properties"
 
-- **name**: `topic`
-- **scope**: `local`
+    - **name**: `topic`
+    - **scope**: `local`
 
-`Shift` click the title to auto-title it to `GET local.topic`.
+    `Shift` click the title to auto-title it to `GET local.topic`.
 
 ---
 
-**Make Text**
+!!! payload "Make Text - Properties"
 
-I am chosing to rewrite the instructions to be a bit more compatible with what a user might type into the `topic` input.
+    I am chosing to rewrite the instructions to be a bit more compatible with what a user might type into the `topic` input.
 
-Its good to keep in mind that a user doesn't know what the entire prompt looks like, so their input may not always be ideal. Of course if you're just using this for yourself, this matters less.
+    Its good to keep in mind that a user doesn't know what the entire prompt looks like, so their input may not always be ideal. Of course if you're just using this for yourself, this matters less.
 
-- **value**
-```
-A list of topics to use for brain storming. The overarching theme is described as "{{ topic }}". Keep each item short (1-3 words). One of these items will be chosen to bootstrap a new story line.
-```
+    - **value**
+    ```
+    A list of topics to use for brain storming. The overarching theme is described as "{{ topic }}". Keep each item short (1-3 words). One of these items will be chosen to bootstrap a new story line.
+    ```
 
-Retitle to `Instructions`
+    Retitle to `Instructions`
 
 ---
 
@@ -402,6 +412,8 @@ Connect the nodes as follows:
 - `<Render Prompt>.rendered` :material-transit-connection-horizontal: `<Generate Thematic List>.instructions`
 
 ![Generate Theme](./img/6-0017.png)
+
+--8<-- "docs/snippets/common.md:save-graph"
 
 ### Adjusting the Analyze Theme stage
 
@@ -417,64 +429,66 @@ In the `Analyze Theme` group add the following nodes:
 
 ---
 
-**First Get State**
+!!! payload "First Get State - Properties"
 
-- **name**: `analysis_instructions`
-- **scope**: `local`
+    - **name**: `analysis_instructions`
+    - **scope**: `local`
 
-`Shift` click the title to auto-title it to `GET local.analysis_instructions`.
-
----
-
-**Second Get State**
-
-- **name**: `topic`
-- **scope**: `local`
-
-`Shift` click the title to auto-title it to `GET local.topic`.
+    `Shift` click the title to auto-title it to `GET local.analysis_instructions`.
 
 ---
 
-**Theme Analysis Template**
+!!! payload "Second Get State - Properties"
 
-Here I want to add the scene `description` and the characters `description` to the template, thinking it will influence the analysis within the context of the story baseline. Knowing the characters will also help the agent come up with potenial storyline suggestions.
+    - **name**: `topic`
+    - **scope**: `local`
 
-Additionally I am deciding to coerce the response to be a bit more concise and to the point. In my testing I found that the agent was getting a bit verbose and even with a 1024 token limit it was getting cut off.
+    `Shift` click the title to auto-title it to `GET local.topic`.
 
-- **value**
-```
-<|SECTION:STORY BASELINE|>
-{{ scene.description }}
+---
 
-<|SECTION:PROTAGONISTS|>
-{% for character in scene.characters %}
-### {{ character.name }}
-{{ character.description }}
-{% endfor %}
+!!! payload "Theme Analysis Template"
 
-<|SECTION:CONTEXT OF YOUR TASK|>
-A topic description of "{{ topic }}" was given and a random theme was picked to bootstrap a new storyline: "{{ theme }}".
+    Here I want to add the scene `description` and the characters `description` to the template, thinking it will influence the analysis within the context of the story baseline. Knowing the characters will also help the agent come up with potenial storyline suggestions.
 
-<|SECTION:TASK|>
-Analyze the theme "{{ theme }}" in the context of the topic "{{ topic }}".
+    Additionally I am deciding to coerce the response to be a bit more concise and to the point. In my testing I found that the agent was getting a bit verbose and even with a 1024 token limit it was getting cut off.
 
-Provide a brief exploration of this theme, including:
-1. Key concepts or ideas involved and how they fit the context
-2. Potential storylines or conflicts
-3. How it might affect the protagonists of the story
+    - **value**
+    ```
+    <|SECTION:STORY BASELINE|>
+    {{ scene.description }}
 
-{% if analysis_instructions %}
-{{ analysis_instructions }}
-{% endif %}
+    <|SECTION:PROTAGONISTS|>
+    {% for character in scene.characters %}
+    ### {{ character.name }}
+    {{ character.description }}
+    {% endfor %}
 
-Keep your analysis concise and to the point.
+    <|SECTION:CONTEXT OF YOUR TASK|>
+    A topic description of "{{ topic }}" was given and a random theme was picked to bootstrap a new storyline: "{{ theme }}".
 
-Your analysis will be used to set up the premise for the next storyline in the `{{ scene.name }}` series.
-```
+    <|SECTION:TASK|>
+    Analyze the theme "{{ theme }}" in the context of the topic "{{ topic }}".
 
-!!! tip "Template variables"
+    Provide a brief exploration of this theme, including:
+    1. Key concepts or ideas involved and how they fit the context
+    2. Potential storylines or conflicts
+    3. How it might affect the protagonists of the story
+
+    {% if analysis_instructions %}
+    {{ analysis_instructions }}
+    {% endif %}
+
+    Keep your analysis concise and to the point.
+
+    Your analysis will be used to set up the premise for the next storyline in the `{{ scene.name }}` series.
+    ```
+
+!!! learn-more "Template variables"
     Its the `Template variables` node that is responsible for adding variables like `scene` to the template
     scope.
+
+    - [Prompt Templating](/talemate/user-guide/node-editor/core-concepts/prompt-templates)
 
 ---
 
@@ -490,7 +504,9 @@ Connect the nodes as follows:
 
 ---
 
-Chain all three `Dict Set` nodes together, with each connecting to the `dict` input of the next and the last one connecting to the `merge_with` input of the `Template variables` node.
+Chain all three `Dict Set` nodes together (the 2 new ones plus the 1 existing one), with each connecting to the `dict` input of the next and the last one connecting to the `merge_with` input of the `Template variables` node.
+
+Then connect the remaining nodes as follows:
 
 ---
 
@@ -532,25 +548,25 @@ It is currently connected to a `Make Bool` node that is set to `true`.
 
 ![Make bool connected to state](./img/6-0019.png)
 
-To build a switch add the following nodes:
+To build a switch add the following nodes to the `Analyze Theme` group:
 
 - `Get State`
 - `Switch`
 
 ---
 
-**Get State**
+!!! payload "Get State - Properties"
 
-- **name**: `analysis_enabled`
-- **scope**: `local`
+    - **name**: `analysis_enabled`
+    - **scope**: `local`
 
-`Shift` click the title to auto-title it to `GET local.analysis_enabled`.
+    `Shift` click the title to auto-title it to `GET local.analysis_enabled`.
 
 ---
 
-**Switch**
+!!! payload "Switch - Properties"
 
-- **pass_through**: `false`
+    - **pass_through**: `false`
 
 ---
 
@@ -561,39 +577,41 @@ Connect the nodes as follows:
 
 ![Switch connected to state](./img/6-0020.png)
 
+Delete the `Make Bool` node that was connected to the `state` input of the `Generate Response` node.
+
 --8<-- "docs/snippets/common.md:save-graph"
 
 Next we need to add an `Input` node to expose this new `analysis_enabled` property.
 
 Add the following nodes to the `Inputs` group:
 
-- `Input`
+- `Input Socket`
 - `As Bool`
 - `Set State`
 
 ---
 
-**Input**
+!!! payload "Input Socket - Properties"
 
-- **input_name**: `analysis_enabled`
-- **input_type**: `bool`
+    - **input_type**: `bool`
+    - **input_name**: `analysis_enabled`
 
-`Shift` click the title to auto-title it to `IN analysis_enabled`.
-
----
-
-**As Bool**
-
-- **default**: `true`
+    `Shift` click the title to auto-title it to `IN analysis_enabled`.
 
 ---
 
-**Set State**
+!!! payload "As Bool - Properties"
 
-- **name**: `analysis_enabled`
-- **scope**: `local`
+    - **default**: `true`
 
-`Shift` click the title to auto-title it to `SET local.analysis_enabled`.
+---
+
+!!! payload "Set State - Properties"
+
+    - **name**: `analysis_enabled`
+    - **scope**: `local`
+
+    `Shift` click the title to auto-title it to `SET local.analysis_enabled`.
 
 ---
 
@@ -654,6 +672,8 @@ Confirm the `Dynamic Premise` node now is exposing:
 Fill in a `topic`.
 
 > sci-fi with eldritch and cosmic horror elements
+
+--8<-- "docs/snippets/common.md:save-graph"
 
 **:material-movie-play:** Start the scene loop to test that everything's still working.
 

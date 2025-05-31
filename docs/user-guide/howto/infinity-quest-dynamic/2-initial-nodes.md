@@ -34,7 +34,12 @@ The node editor will automatically open to the copy.
 
 !!! info "Module colors"
     - Modules owned by the scene are colored purple. 
+    - Modules imported from the templates directory are colored brown.
     - Modules owned by talemate are colored grey.
+
+!!! info "Editor navigation"
+    - Hold mouse and drag to pan the canvas.
+    - Mousewheel to zoom in and out.
 
 !!! info "Locked groups"
     In the node window you will see a bunch of `(Inherited, Locked)` groups. These come from the default talemate loop that was extended and cannot be edited or changed in this copy. 
@@ -57,6 +62,11 @@ We can do this using an event module.
     `Events` are signals sent by talemate during the scene loop. There are many different events and the `Event` module is a node module that can listen to a specific event and do stuff when it happens.
 
     Learn more about events in the [Events](/talemate/user-guide/node-editor/core-concepts/events/) documentation.
+
+!!! warning "Clear selection"
+    If you have any nodes selected from your earlier playing around and familiarizing yourself with the node editor, make sure you deselect them now.
+
+    Just click on an empty space in the canvas to deselect all nodes.
 
 Find the **:material-plus: Create Module** button and select **:material-alpha-e-circle:Event**.
 
@@ -129,7 +139,7 @@ Search for the following nodes and (remember double click for search or right cl
 - `Generate Progress Narration` - This node will be used to generate the introduction text, using the narrator agent.
 - `Make Bool` - We will use this as a basic **ON** state for the generation node.
 - `Make Text` - This will be used for us to provide instructions to the narrator agent.
-- `Set Introduction` - This will store the generated introduction text with the scene's `intro` property.
+- `Set Introduction` - This will store the generated introduction text with the scene and update it in the scene history.
 
 Once you have added all the nodes, hook them up like so:
 
@@ -188,11 +198,29 @@ In order for this to happen only once during the lifetime of the scene, we need 
 
 First lets organize the nodes a bit. Its generally recommended to use groups liberally and as soon as possible, as it keeps the canvas clean and easy to understand.
 
+!!! note "Groups"
+    Groups are a way to organize nodes in the node editor.
+    
+    They are useful for keeping the canvas clean and easy to understand.
+    
+    They can be resized and moved around like any other node, all nodes within a group will be moved together.
+
+    :material-resize: To resize a group, drag its lower right corner.
+    
+    :material-cursor-move: To move a group click on a blank area in it and drag.
+    
+
 Right click the canvas and click `Add Group`.
 
 Resize and move the Group so it encompasses the current nodes.
 
-Then right click the group and select `Edit Group > Title` and title it "Generated Introduction".
+!!! note "Alternatively"
+
+    Hold `ctrl` and drag a rectangle to select all 4 nodes.
+
+    Then right click the canvas and select `Create group from selection`. Deselect the nodes after.
+
+Then right click the group and select `Edit Group > Title` and title it "Generate Introduction".
 
 ![Introduction Group](./img/2-0016.png)
 
@@ -201,9 +229,14 @@ Next remove the `Make Bool` node as we will not be needing it. (Select it and pr
 
 Find and add the following nodes to the canvas:
 
-- `Get State` - We will use this to check if the introduction has been generated.
-- `Set State` - We will use this to set the introduction as generated.
+- `Get State` - We will use this to check if the introduction has been generated. 
+- `Set State` - We will use this to set the introduction as generated. 
 - `Switch` - We will use this to only generate the introduction if it has not been generated yet.
+
+!!! learn-more "Learn more about states and switches"
+
+    - [State Management](/talemate/user-guide/node-editor/core-concepts/states/)
+    - [Switches and conditional routing](/talemate/user-guide/node-editor/core-concepts/switches/)
 
 ### 2.4.1 - Setting the state
 
@@ -234,7 +267,15 @@ With this we're essentially saying if the `Set Introduction` node is executed se
 
 Here we are using the `Switch` node to only route to the `Generate Progress Narration` node if the `intro_generated` state variable is `false` or not set. (or not truthy, for people familiar with this concept)
 
+!!! note "State socket"
+    The state socket is a REQUIRED pass-through socket that can be fed any value.
+
+    Its main purpose is to control the activation of a node. If the node has a state socket and the state socket is not connected or the connection is not active the node will not be executed.
+
 ![Scene Loop - On Scene Init](./img/2-0017.png)
+
+!!! tip "Double check!"
+    Reminder to double check that you have set the `scope` to `game` in both the `Get State` and `Set State` nodes.
 
 --8<-- "docs/snippets/common.md:save-graph"
 

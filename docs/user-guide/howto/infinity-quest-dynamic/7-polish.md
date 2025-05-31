@@ -1,8 +1,8 @@
 # 7 - Polish
 
-Some things I am doing as i am wrapping up this tutorial and the `Dynamic Premise` module to ship with the next `0.30` release.
+Some things I am doing as i am wrapping up this tutorial and the `Dynamic Story` module to ship with the next `0.30` release.
 
-This part is going to be a bit more scattered as i am doing it on the fly as finish the implementation.
+This part is going to be a bit more scattered as i am doing it on the fly as I finish the implementation.
 
 I don't think you need to do all (or even any) of these, but it's going to be beneficial to review the process and understand the concepts.
 
@@ -219,4 +219,4 @@ There could also be a benefit of adding another stage after analysis that picks 
 
 I will likely do this, but since none of this introduces any new concepts it will not be part of the tutorial.
 
-You can always open up the final `Generate Premise` module and see how it is put together in the end.
+You can always open up the final `generate-storyline` module and see how it is put together in the end.

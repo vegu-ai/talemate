@@ -37,7 +37,7 @@ class Plugin:
             emit("status", message=message, status="error")
         
 
-    async def signal_operation_done(self, signal_only: bool = False):
+    async def signal_operation_done(self, signal_only: bool = False, allow_auto_save: bool = True):
         self.websocket_handler.queue_put(
             {"type": self.router, "action": "operation_done", "data": {}}
         )
@@ -45,7 +45,7 @@ class Plugin:
         if signal_only:
             return
 
-        if self.scene.auto_save:
+        if self.scene.auto_save and allow_auto_save:
             await self.scene.save(auto=True)
         else:
             self.scene.saved = False

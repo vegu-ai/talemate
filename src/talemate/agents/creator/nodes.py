@@ -174,7 +174,20 @@ class ContextualGenerate(AgentNode):
             name="context_type",
             description="The type of context to use in generating the text",
             type="str",
-            choices=["character attribute", "character detail", "character dialogue", "scene intro", "scene intent", "scene phase intent", "scene type description", "scene type instructions", "general", "list", "scene"],
+            choices=[
+                "character attribute", 
+                "character detail", 
+                "character dialogue", 
+                "scene intro", 
+                "scene intent", 
+                "scene phase intent", 
+                "scene type description",
+                "scene type instructions", 
+                "general", 
+                "list", 
+                "scene", 
+                "world context",
+            ],
             default="general"
         )
         context_name = PropertyField(

@@ -1041,6 +1041,7 @@ class RevisionMixin:
                 "dynamic_instructions": emission.dynamic_instructions,
                 "context_type": info.context_type,
                 "context_name": info.context_name,
+                "summarization_history": info.summarization_history,
             },
             dedupe_enabled=False,
         )

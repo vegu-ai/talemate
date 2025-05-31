@@ -60,6 +60,7 @@ class SummarizeEmission(AgentTemplateEmission):
     extra_context: str | None = None
     extra_instructions: str | None = None
     generation_options: GenerationOptions | None = None
+    summarization_history: list[str] | None = None
 
 @register()
 class SummarizeAgent(
@@ -475,6 +476,7 @@ class SummarizeAgent(
             extra_instructions=extra_instructions,
             generation_options=generation_options,
             template_vars=template_vars,
+            summarization_history=extra_context or []
         )
         
         await talemate.emit.async_signals.get("agent.summarization.summarize.before").send(emission)
@@ -558,6 +560,7 @@ class SummarizeAgent(
             extra_instructions=extra_instructions,
             generation_options=generation_options,
             template_vars=template_vars,
+            summarization_history=[extra_context] if extra_context else []
         )
         
         await talemate.emit.async_signals.get("agent.summarization.summarize.before").send(emission)

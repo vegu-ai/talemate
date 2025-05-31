@@ -123,6 +123,7 @@ class RevisionInformation(pydantic.BaseModel):
     context_type: str | None = None
     context_name: str | None = None
     loading_status: LoadingStatus | None = pydantic.Field(default_factory=LoadingStatus, exclude=True)
+    summarization_history: list[str] | None = None
     
     class Config:
         arbitrary_types_allowed = True
@@ -426,6 +427,9 @@ class RevisionMixin:
             context_type = getattr(emission, "context_type", None),
             context_name = getattr(emission, "context_name", None),
         )
+        
+        if isinstance(emission, SummarizeEmission):
+            info.summarization_history = emission.summarization_history or []
         
         if isinstance(emission, ContextualGenerateEmission) and info.context_type not in CONTEXTUAL_GENERATION_TYPES:
             return
@@ -1008,6 +1012,8 @@ class RevisionMixin:
         template = "editor.unslop"
         if info.context_type:
             template = f"editor.unslop-contextual-generation"
+        elif info.summarization_history is not None:
+            template = "editor.unslop-summarization"
         
         log.debug("revision_unslop: issues", issues=issues, template=template)
         

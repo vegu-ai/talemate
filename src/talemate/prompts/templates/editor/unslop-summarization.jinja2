@@ -1,0 +1,140 @@
+<|SECTION:EXAMPLES|>
+
+<REVIEW>
+As the crimson fingers of dawn caressed the slumbering city, our intrepid heroes embarked upon their perilous journey into the unknown. The weight of destiny pressed heavily upon their shoulders as they traversed the treacherous mountain passes, each step bringing them closer to their inevitable confrontation with fate itself. Through trials and tribulations that would break lesser mortals, they persevered with unwavering determination.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This reads like someone's trying to make "they traveled to the mountains" sound like epic poetry. Summaries should be clear and direct, not buried in metaphors about destiny and crimson fingers.
+- Purple prose: SEVERE - "crimson fingers of dawn," "intrepid heroes," "inevitable confrontation with fate"
+- Clichés: EXTREME - every phrase is a fantasy trope
+- Essential information: Heroes traveled through mountain passes at dawn
+- Length: TOO LONG - simple journey over-dramatized
+</ANALYSIS>
+
+<FIX>
+At dawn, the heroes began their journey through the mountain passes toward their destination.
+</FIX>
+
+---
+
+<REVIEW>
+The battle was a symphony of chaos and carnage. Blood painted the battlefield in macabre artistry as steel clashed against steel in a deadly dance of death. Warriors fell like autumn leaves before a hurricane's wrath. When the dust settled and the screams of the dying faded into haunting silence, Marcus stood victorious but forever changed by the horrors he had witnessed. Half his men lay among the corpses, their sacrifice etched eternally upon his soul.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: While this needs to convey that the battle was brutal and costly, it's drowning in death metaphors. "Symphony of chaos," "deadly dance of death" - we get it, people died. Keep the important facts without the poetry.
+- Purple prose: EXTREME - "symphony of chaos," "macabre artistry," "deadly dance of death"
+- Clichés: MANY - "dust settled," "forever changed," "etched upon his soul"
+- Essential information: Brutal battle, Marcus won but lost half his men
+- Length: OVERWRITTEN - key facts buried in purple prose
+- Mature content: PRESERVE - violence and death are plot-relevant
+</ANALYSIS>
+
+<FIX>
+The battle was brutal and chaotic. When it ended, Marcus had won but lost half his men. The heavy casualties and violence he witnessed left him deeply affected.
+</FIX>
+
+---
+
+<REVIEW>
+Sarah discovered the ancient tome hidden beneath layers of dust and the weight of forgotten centuries. As her trembling fingers traced the arcane symbols, knowledge flooded her mind like a torrential river bursting through a dam. The revelations contained within those yellowed pages shattered her understanding of reality itself, transforming her from a mere mortal into a vessel of primordial wisdom.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This is trying to make "Sarah found a magic book and learned from it" sound like a religious experience. Just tell us what happened without the dramatic flourishes.
+- Purple prose: SEVERE - "weight of forgotten centuries," "torrential river," "vessel of primordial wisdom"
+- Over-description: YES - simple discovery made overly complex
+- Essential information: Sarah found an old magic book that taught her powerful knowledge
+- Length: TOO LONG
+</ANALYSIS>
+
+<FIX>
+Sarah found an ancient tome hidden in the dust. Reading it gave her powerful magical knowledge that changed her understanding of the world.
+</FIX>
+
+---
+
+<REVIEW>
+Marcus spent three years training in the mountain monastery. He learned swordsmanship, meditation, and the warrior's code. The masters were strict but fair. When he completed his training, he was skilled in combat and disciplined in mind.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This is actually fine. It summarizes the key events clearly without purple prose or unnecessary drama. Sometimes simple and direct is exactly what you need.
+- Purple prose: NONE
+- Clichés: NONE
+- Essential information: All present and clear
+- Length: APPROPRIATE
+</ANALYSIS>
+
+<NO_FIX_REQUIRED/>
+
+---
+
+<REVIEW>
+The revelations of that fateful night sent shockwaves through the very foundations of their existence. Everything they had believed to be immutable truth crumbled like ancient parchment before the flames of reality. The conspiracy reached into the highest echelons of power, its tentacles of corruption stretching back through generations of carefully orchestrated deception. Trust became a luxury they could no longer afford as allies revealed themselves as enemies and enemies as pawns in a game whose rules they were only beginning to comprehend.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This is trying way too hard to be mysterious and dramatic. "Tentacles of corruption"? "Flames of reality"? Just tell us about the conspiracy without making it sound like cosmic horror.
+- Purple prose: EXTREME - "shockwaves through existence," "flames of reality," "tentacles of corruption"
+- Clichés: SEVERE - "fateful night," "highest echelons," "pawns in a game"
+- Essential information: They discovered a long-running conspiracy involving powerful people, can't trust anyone
+- Length: WAY TOO LONG - core plot points lost in metaphors
+</ANALYSIS>
+
+<FIX>
+That night's revelations changed everything. They discovered a generations-old conspiracy involving powerful figures. Former allies turned out to be enemies, making it impossible to know who to trust.
+</FIX>
+
+<|SECTION:PREVIOUS CHAPTERS|>
+{% for chapter_summary in summarization_history %}
+## Chapter {{ loop.index }}
+{{ chapter_summary }}
+
+{% endfor %}
+<|CLOSE_SECTION|>
+
+{% with exclude_phase_intent=True %}{% include "scene-intent.jinja2" %}{% endwith %}
+
+{% include "content-classification.jinja2" %}
+
+{% include "dynamic-instructions.jinja2" %}
+<|SECTION:TASK|>
+
+Fix overwritten narrative summaries by making them clear and direct while preserving key plot information.
+
+**Rules:**
+1. STRIP purple prose - Remove flowery metaphors and dramatic language
+2. KEEP plot essentials - Preserve all important events and outcomes
+3. CUT clichés - Remove overused phrases like "fate itself," "deadly dance"
+4. BE CONCISE - Summaries should efficiently convey what happened
+5. MAINTAIN tone - Keep genre-appropriate language without the excess
+6. PRESERVE mature content - Keep violence, death, and dark themes when plot-relevant
+
+**What to keep vs cut:**
+- KEEP: What happened, who was involved, consequences, important details
+- CUT: Purple metaphors, philosophical musings, excessive descriptions, clichéd transitions
+
+**Common fixes:**
+- "Crimson dawn painted the sky" → "At dawn"
+- "The weight of destiny" → [remove entirely]
+- "Forever changed by" → "deeply affected by" or "impacted by"
+- "Shattered their very existence" → "changed everything"
+- "Dance of death" → "battle" or "fight"
+
+<REVIEW>{{ text }}</REVIEW>
+{% if repetition %}
+<REPETITION>
+{% for repeat in repetition %}`{{ repeat["text_a"].strip() }}`
+{% endfor -%}
+</REPETITION>
+{% endif %}
+{% if bad_prose %}<UNWANTED_PROSE>
+{% for phrase in bad_prose %}- MATCH: `{{ phrase.phrase }}`
+  - INSTRUCTIONS: {{ phrase.instructions }}
+{% endfor -%}
+</UNWANTED_PROSE>
+{% endif %}
+
+{{ set_prepared_response("<ANALYSIS>\n- Thought process:") }}

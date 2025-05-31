@@ -26,6 +26,7 @@ import talemate.emit.async_signals as async_signals
 from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.agents.creator.assistant import ContextualGenerateEmission
+from talemate.agents.summarize import SummarizeEmission
 from talemate.scene_message import CharacterMessage
 from talemate.util.dedupe import (
     dedupe_sentences, 
@@ -201,6 +202,11 @@ class RevisionMixin:
                             "label": "Contextual generation",
                             "value": "contextual_generation",
                             "help": "Automatically revise generated context (character attributes, details, etc).",
+                        },
+                        {
+                            "label": "Summarization",
+                            "value": "summarization",
+                            "help": "Automatically revise summarization.",
                         }
                     ], key=lambda x: x["label"])
                 ),
@@ -377,13 +383,16 @@ class RevisionMixin:
         async_signals.get("agent.creator.contextual_generate.after").connect(
             self.revision_on_generation
         )
+        async_signals.get("agent.summarization.summarize.after").connect(
+            self.revision_on_generation
+        )
         # connect to the super class AFTER so these run first.
         super().connect(scene)
         
         
     async def revision_on_generation(
         self, 
-        emission: ConversationAgentEmission | NarratorAgentEmission | ContextualGenerateEmission,
+        emission: ConversationAgentEmission | NarratorAgentEmission | ContextualGenerateEmission | SummarizeEmission,
     ):
         """
         Called when a conversation or narrator message is generated
@@ -399,6 +408,9 @@ class RevisionMixin:
             return
         
         if isinstance(emission, NarratorAgentEmission) and "narrator" not in self.revision_automatic_targets:
+            return
+        
+        if isinstance(emission, SummarizeEmission) and "summarization" not in self.revision_automatic_targets:
             return
         
         try:

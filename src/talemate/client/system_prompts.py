@@ -119,6 +119,9 @@ class SystemPrompts(pydantic.BaseModel):
         return RENDER_CACHE.copy()
     
     def alias(self, alias:str) -> str:
+        
+        if alias in PROMPT_TEMPLATE_MAP:
+            return alias
 
         if "narrate" in alias:
             return "narrator"

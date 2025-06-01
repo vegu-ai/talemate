@@ -3,7 +3,7 @@
 List of currently supported events.
 
 !!! warning "Events not listed here"
-    There are many other events defined in the talemate codebase that are purposefully not listed here yet. 
+    There are some other events defined in the talemate codebase that are purposefully not listed here yet. 
 
     The reason for this is that there is an ongoing cleanup process and some of them may not stick around in their current form.
 
@@ -51,6 +51,8 @@ List of currently supported events.
 | [`agent.summarization.scene_analysis.before_deep_analysis`](#agentsummarizationscene_analysisbefore_deep_analysis) | Summarization Agent |
 | [`agent.summarization.scene_analysis.after_deep_analysis`](#agentsummarizationscene_analysisafter_deep_analysis) | Summarization Agent |
 | [`agent.summarization.scene_analysis.after`](#agentsummarizationscene_analysisafter) | Summarization Agent |
+| [`agent.summarization.summarize.before`](#agentsummarizationsummarizebefore) | Summarization Agent |
+| [`agent.summarization.summarize.after`](#agentsummarizationsummarizeafter) | Summarization Agent |
 
 ## Game Loop
 
@@ -600,3 +602,38 @@ Emitted after scene analysis is done and stored in scene state. Payload: `SceneA
     | `analysis_type` | `str` | `conversation` or `narration` |
     | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable** |
     | `response` | `str` | The analysis text |
+
+### agent.summarization.summarize.before
+
+Emitted before the summarizer performs a summarize prompt. Handlers can tweak `template_vars` or inject `dynamic_instructions` to influence the summarize.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `SummarizeAgent` | The agent instance |
+    | `text` | `str` | The text to summarize |
+    | `template_vars` | `dict` | **Mutable.** Variables used in the prompt |
+    | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable** |
+    | `extra_instructions` | `str` | **Mutable.** any additional instructions |
+    | `generation_options` | `GenerationOptions` | **Mutable.** Generation options |
+    | `summarization_history` | `list[str]` | **Mutable.** any previous historical summaries |
+
+---
+
+### agent.summarization.summarize.after
+
+Emitted after the summarizer performs a summarize prompt. Handlers can inspect or replace `response`.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `SummarizeAgent` | The agent instance |
+    | `text` | `str` | The text to summarize |
+    | `template_vars` | `dict` | **Mutable.** Variables used in the prompt |
+    | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable** |
+    | `extra_instructions` | `str` | **Mutable.** any additional instructions |
+    | `generation_options` | `GenerationOptions` | **Mutable.** Generation options |
+    | `summarization_history` | `list[str]` | **Mutable.** any previous historical summaries |
+    | `response` | `str` | **Mutable.** The summary text |

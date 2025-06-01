@@ -6,7 +6,7 @@
                 Rate Limit Exceeded</v-card-title>
             <v-card-text class="text-muted">
                 <p>The rate limit <span class="text-primary">({{ rateLimit }} requests / minute)</span> for <span class="text-primary">{{ client }}</span> has been exceeded. You can wait, or you can abort the generation.</p>
-                <p>The rate limit will reset in <span class="text-primary">{{ resetTimeFormatted }}</span> seconds.</p>
+                <p>Next request available in <span class="text-primary">{{ resetTimeFormatted }}</span> seconds.</p>
             </v-card-text>
             <v-card-actions>
                 <v-btn :disabled="aborting" @click="abort" prepend-icon="mdi-cancel" color="delete">Abort Generation</v-btn>

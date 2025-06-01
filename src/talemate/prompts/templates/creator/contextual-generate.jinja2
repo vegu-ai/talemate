@@ -166,6 +166,11 @@ It must contain enough context for the reader to dive right in. Assume that the 
 It must setup an interesting entry point for the reader to participate in the scene and interact with {% if scene.num_npc_characters() %}the other characters and the environment.{% else %}the environment.{% endif %}
 
 Only spoken words should be within ".
+{#- WORLD CONTEXT -#}
+{% elif context_typ == "world context" %}
+{{ action_task }} world context entry for {{ context_name }}.
+
+A world-context entry is a factual piece of information about the world.
 {#- GENERAL CONTEXT -#}
 {% else %}
 {% if context_name.endswith("?") -%}

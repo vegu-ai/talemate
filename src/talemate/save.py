@@ -37,7 +37,7 @@ async def save_node_module(scene:"Scene", graph:"Graph", filename:str = None, se
         
     if isinstance(graph, SceneLoop) and set_as_main:
         scene.nodes_filename = filename or "scene-loop.json"
-        log.warning("saving scene nodes", filename=scene.nodes_filepath)
+        log.debug("saving scene nodes", filename=scene.nodes_filepath)
         await save_graph(graph, scene.nodes_filepath)
         return scene.nodes_filepath
     else:
@@ -49,6 +49,6 @@ async def save_node_module(scene:"Scene", graph:"Graph", filename:str = None, se
         
         save_to_path = combine_paths(scene.nodes_dir, filename)
                 
-        log.warning("saving nodes", filename=save_to_path)
+        log.debug("saving nodes", filename=save_to_path)
         await save_graph(graph, save_to_path)
         return save_to_path

@@ -162,7 +162,7 @@ class Focal:
                 if focal_context:
                     await focal_context.process_hooks(call)
                 
-                log.warning(f"Calling {callback.name}", arguments=call.arguments)
+                log.debug(f"focal.execute - Calling {callback.name}", arguments=call.arguments)
                 result = await callback.fn(**call.arguments)
                 call.result = result
                 call.called = True

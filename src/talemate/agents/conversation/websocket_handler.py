@@ -55,7 +55,6 @@ class ConversationWebsocketHandler(Plugin):
                 return
             
             character = actor.character
-            log.info("handle_request_actor_action: Randomly selected actor", character=character.name)
         
         if payload.instructions_through_director:
             director_message = DirectorMessage(

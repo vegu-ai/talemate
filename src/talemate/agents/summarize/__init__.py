@@ -491,7 +491,7 @@ class SummarizeAgent(
             dedupe_enabled=False
         )
 
-        self.scene.log.info(
+        log.debug(
             "summarize", dialogue_length=len(text), summarized_length=len(response)
         )
         
@@ -578,7 +578,7 @@ class SummarizeAgent(
         response = response.strip()
         response = response.replace('"', "")
         
-        self.scene.log.info(
+        log.debug(
             "layered_history_summarize", original_length=len(text), summarized_length=len(response)
         )
         

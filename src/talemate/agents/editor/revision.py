@@ -437,8 +437,7 @@ class RevisionMixin:
         revised_text = await self.revision_revise(info)
         
         emission.response = revised_text
-        
-        log.info("revise generation", emission=emission)
+        log.info("Revision done", type=type(emission).__name__, revised=revised_text, original=info.text)
 
     # helpers
     

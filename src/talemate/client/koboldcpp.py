@@ -325,7 +325,7 @@ class KoboldCppClient(ClientBase):
         if not sd_model:
             return False
 
-        log.info("automatic1111_setup", sd_model=sd_model)
+        log.info("KoboldCpp AUTOMATIC1111 setup", sd_model=sd_model)
 
         visual_agent.actions["automatic1111"].config["api_url"].value = self.url
         visual_agent.is_enabled = True

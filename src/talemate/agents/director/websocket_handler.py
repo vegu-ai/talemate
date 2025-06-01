@@ -80,7 +80,7 @@ class DirectorWebsocketHandler(Plugin):
             interaction_state = interaction.get()
         except LookupError:
             # no interaction state
-            log.warning("handle_select_choice: no interaction state", payload=payload)
+            log.error("handle_select_choice: no interaction state", payload=payload)
             return
         
         interaction_state.from_choice = payload.choice

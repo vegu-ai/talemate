@@ -622,7 +622,7 @@ class Breakpoint(Node):
         
         if scene.environment != "creative":
             active = False
-            log.warning("Breakpoint disabled in non-creative environment", node=self.id)
+            log.debug("Breakpoint disabled in non-creative environment", node=self.id)
         
         if not active:
             self.set_output_values({"state": incoming_state})

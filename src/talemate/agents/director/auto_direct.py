@@ -294,7 +294,7 @@ class AutoDirectMixin:
         log.debug(f"auto_direct_candidates: {candidates}", most_recent_character=most_recent_character, repeat_count=repeat_count, last_player_turn=last_player_turn, consecutive_auto_turns=consecutive_auto_turns)
         
         if not most_recent_character:
-            log.warning("auto_direct_candidates: No most recent character found.")
+            log.debug("auto_direct_candidates: No most recent character found.")
             return list(scene.characters)
         
         # if player has not spoken in a while then they are favored

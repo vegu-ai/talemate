@@ -641,7 +641,7 @@ class WorldStateAgent(
                 )
                 continue
 
-            log.info("check_pin_conditions", entry_id=entry_id, answer=answer)
+            log.debug("check_pin_conditions", entry_id=entry_id, answer=answer)
             state = answer.get("state")
             if state is True or (
                 isinstance(state, str) and state.lower() in ["true", "yes", "y"]

@@ -293,7 +293,7 @@ class VisualBase(Agent):
         if backend_changed:
             self.backend_ready = False
 
-        log.info(
+        log.debug(
             "apply_config",
             backend=backend,
             backend_changed=backend_changed,
@@ -488,7 +488,7 @@ class VisualBase(Agent):
         fn = f"{backend.lower()}_generate"
 
         log.info(
-            "generate", backend=backend, prompt=prompt, format=format, context=context
+            "visual generate", backend=backend, prompt=prompt, format=format, context=context
         )
 
         if not hasattr(self, fn):

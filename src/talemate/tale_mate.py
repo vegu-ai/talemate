@@ -426,7 +426,7 @@ class Character:
             }
         )
 
-        log.info("commit_single_attribute_to_memory", items=items)
+        log.debug("commit_single_attribute_to_memory", items=items)
 
         await memory_agent.add_many(items)
 
@@ -459,7 +459,7 @@ class Character:
             }
         )
 
-        log.info("commit_single_detail_to_memory", items=items)
+        log.debug("commit_single_detail_to_memory", items=items)
 
         await memory_agent.add_many(items)
 
@@ -1241,7 +1241,7 @@ class Scene(Emitter):
             if _message.id == message_id:
                 self.history[i].message = message
                 emit("message_edited", self.history[i], id=message_id)
-                self.log.info("message_edited", message=message, id=message_id)
+                self.log.info("Message edited", message=message, id=message_id)
                 return
 
     async def add_actor(self, actor: Actor):
@@ -1806,7 +1806,7 @@ class Scene(Emitter):
             if isinstance(message, TimePassageMessage):
                 self.advance_time(message.ts)
 
-        self.log.info("sync_time", ts=self.ts)
+        self.log.debug("sync_time", ts=self.ts)
 
         # TODO: need to adjust archived_history ts as well
         # but removal also probably means the history needs to be regenerated
@@ -1958,7 +1958,7 @@ class Scene(Emitter):
 
         while True:
             try:
-                log.warning(f"Starting scene loop: {self.environment}")
+                log.debug(f"Starting scene loop: {self.environment}")
                 
                 self.world_state.emit()
                 

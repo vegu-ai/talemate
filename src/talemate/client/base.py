@@ -361,7 +361,7 @@ class ClientBase:
                 hasattr(self, "model_name")
                 and self.auto_determine_prompt_template_attempt != self.model_name
             ):
-                log.info("auto_determine_prompt_template", model_name=self.model_name)
+                log.debug("auto_determine_prompt_template", model_name=self.model_name)
                 self.auto_determine_prompt_template_attempt = self.model_name
                 self.determine_prompt_template()
                 prompt_template_example, prompt_template_file = (
@@ -728,8 +728,8 @@ class ClientBase:
 
             self.clean_prompt_parameters(prompt_param)
 
-            self.log.debug(
-                "send_prompt",
+            self.log.info(
+                "Sending prompt",
                 token_length=token_length,
                 max_token_length=self.max_token_length,
                 parameters=prompt_param,

@@ -431,7 +431,7 @@ class NarratorAgent(
         if narrative_direction is None:
             narrative_direction = "Slightly move the current scene forward."
 
-        self.scene.log.info(
+        log.debug(
             "narrative_direction", narrative_direction=narrative_direction
         )
         
@@ -450,7 +450,7 @@ class NarratorAgent(
             },
         )
 
-        self.scene.log.info("progress_story", response=response)
+        log.debug("progress_story", response=response)
 
         response = self.clean_result(response.strip())
         
@@ -529,7 +529,7 @@ class NarratorAgent(
             },
         )
 
-        self.scene.log.info("context_questions", questions=questions)
+        log.debug("context_questions", questions=questions)
 
         questions = [q for q in questions.split("\n") if q.strip()]
 
@@ -550,7 +550,7 @@ class NarratorAgent(
             },
         )
 
-        self.scene.log.info("context_answers", answers=answers)
+        log.debug("context_answers", answers=answers)
 
         answers = [a for a in answers.split("\n") if a.strip()]
 
@@ -581,7 +581,7 @@ class NarratorAgent(
             },
         )
 
-        log.info("narrate_time_passage", response=response)
+        log.debug("narrate_time_passage", response=response)
 
         response = self.clean_result(response.strip())
 
@@ -611,7 +611,7 @@ class NarratorAgent(
             },
         )
 
-        log.info("narrate_after_dialogue", response=response)
+        log.debug("narrate_after_dialogue", response=response)
 
         response = self.clean_result(response.strip())
         return response
@@ -698,7 +698,7 @@ class NarratorAgent(
             },
         )
 
-        log.info("paraphrase", narration=narration, response=response)
+        log.debug("paraphrase", narration=narration, response=response)
 
         response = self.clean_result(response.strip().strip("*"))
 

@@ -69,7 +69,7 @@ class AssistantPlugin:
                     character = self.scene.get_character(data.character)
 
                 log.info(
-                    "Running autocomplete dialogue",
+                    "Running autocomplete for dialogue",
                     partial=data.partial,
                     character=character,
                 )
@@ -78,15 +78,15 @@ class AssistantPlugin:
                 )
                 return
             elif context_type == "narrative":
-                log.info("Running autocomplete narrative", partial=data.partial)
+                log.info("Running autocomplete for narrative", partial=data.partial)
                 await creator.autocomplete_narrative(data.partial, emit_signal=True)
                 return
 
             # force length to 35
             data.length = 35
-            log.info("Running autocomplete context", args=data)
+            log.info("Running autocomplete for contextual generation", args=data)
             completion = await creator.contextual_generate(data)
-            log.info("Autocomplete context complete", completion=completion)
+            log.info("Autocomplete for contextual generation complete", completion=completion)
             completion = (
                 completion.replace(f"{context_name}: {data.partial}", "")
                 .lstrip(".")

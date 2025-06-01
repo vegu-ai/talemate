@@ -65,7 +65,6 @@ class VisualWebsocketHandler(Plugin):
 
             asset = scene.assets.add_asset_from_image_data(payload.base64)
 
-            log.info("setting scene cover image", character_name=context.character_name)
             scene.assets.cover_image = asset.id
 
             log.info(

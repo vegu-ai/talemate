@@ -156,7 +156,6 @@ class MistralAIClient(ClientBase):
         )
 
     def reconfigure(self, **kwargs):
-        log.warning("mistral.ai reconfigure", kwargs=kwargs)
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
         

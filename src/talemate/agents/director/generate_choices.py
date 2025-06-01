@@ -157,8 +157,6 @@ class GenerateChoicesMixin:
         
         emission: GenerateChoicesEmission = GenerateChoicesEmission(agent=self)
 
-        log.info("generate_choices")
-        
         if isinstance(character, str):
             character = self.scene.get_character(character)
             
@@ -197,8 +195,6 @@ class GenerateChoicesMixin:
             log.error("generate_choices failed", error=str(e), response=response)
             return
 
-        log.info("generate_choices done", choices=choices)
-        
         emit(
             "player_choice",
             response,

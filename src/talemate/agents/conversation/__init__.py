@@ -435,7 +435,7 @@ class ConversationAgent(
 
         total_result = util.handle_endofline_special_delimiter(total_result)
 
-        log.info("conversation agent", total_result=total_result)
+        log.debug("conversation agent", total_result=total_result)
 
         if total_result.startswith(":\n") or total_result.startswith(": "):
             total_result = total_result[2:]
@@ -468,7 +468,7 @@ class ConversationAgent(
 
         response = total_result
 
-        log.info("conversation agent", response=response)
+        log.debug("conversation agent", response=response)
         emission = ConversationAgentEmission(
             agent=self, 
             actor=actor, 

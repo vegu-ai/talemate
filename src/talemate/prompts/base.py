@@ -262,7 +262,7 @@ class Prompt:
         try:
             agent_type, prompt_name = uid.split(".")
         except ValueError as exc:
-            log.warning("prompt.get", uid=uid, error=exc)
+            log.debug("prompt.get", uid=uid, error=exc)
             agent_type = ""
             prompt_name = uid
 
@@ -896,10 +896,9 @@ class Prompt:
                     + "{",
                     kind="analyze_long",
                 )
-                log.warning(
-                    "parse_json_response error on first attempt - sending to AI to fix",
-                    response=response,
-                    error=e,
+                log.debug(
+                    "parse_json_response error on first attempt - sent to AI to fix",
+                    fixed_response=fixed_response,
                 )
                 try:
                     fixed_response = "{" + fixed_response
@@ -981,7 +980,7 @@ class Prompt:
                 f"Question: {question}\nAnswer: {answer}",
             )
 
-        log.info("eval_context", **self.eval_context)
+        log.debug("eval_context", **self.eval_context)
 
         return "\n".join(response), self.eval_context.get("counters")
 

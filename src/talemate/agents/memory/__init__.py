@@ -733,7 +733,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         else:
             log.info(
                 "chromadb", 
-                embeddins="SentenceTransformer", 
+                embeddings="SentenceTransformer", 
                 model=model_name,
                 device=device,
                 distance_function=distance_function

@@ -309,7 +309,7 @@ class OpenAIClient(ClientBase):
                 
             # temperature forced to 1
             if "temperature" in parameters:
-                log.warning(f"{self.model_name} do not support temperature, forcing to 1")
+                log.debug(f"{self.model_name} does not support temperature, forcing to 1")
                 parameters["temperature"] = 1
                 
             unsupported_params = [
@@ -319,7 +319,7 @@ class OpenAIClient(ClientBase):
             
             for param in unsupported_params:
                 if param in parameters:
-                    log.warning(f"{self.model_name} does not support {param}, removing")
+                    log.debug(f"{self.model_name} does not support {param}, removing")
                     parameters.pop(param)
                     
         else:

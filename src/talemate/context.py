@@ -97,7 +97,6 @@ class Interaction:
 
     def __exit__(self, *args):
         interaction.reset(self.token)
-        log.warning("OUT OF INTERACTION", state=self.state)
 
 
 def assert_active_scene(scene: object):

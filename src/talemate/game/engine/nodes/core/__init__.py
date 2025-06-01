@@ -152,7 +152,7 @@ def load_extended_components(file_path:str, node_data:dict):
         comment["inherited"] = True
         node_data["comments"].append(comment)
     
-    log.warning("loaded extended components", file_path=file_path)
+    log.debug("loaded extended components", file_path=file_path)
 
 def dynamic_node_import(node_data: dict, registry_name:str, registry_container:dict|None=None) -> "Graph | Loop":
     """
@@ -170,7 +170,7 @@ def dynamic_node_import(node_data: dict, registry_name:str, registry_container:d
         raise ValueError(f"Cannont import node data with base type {node_data.get('base_type')}")
     
     if node_data.get("extends"):
-        log.warning("loading extended components", extends=node_data["extends"])
+        log.debug("loading extended components", extends=node_data["extends"])
         load_extended_components(node_data["extends"], node_data)
     
     @register(registry_name, container=registry_container)

@@ -246,9 +246,7 @@ class NodeEditorPlugin(Plugin):
             if isinstance(graph, SceneLoop):
                 set_as_main = True
                 for scene_node in self.scene._NODE_DEFINITIONS.values():
-                    log.warning("checking base type", base_type=scene_node.base_type)
                     if scene_node.base_type == "scene/SceneLoop":
-                        log.warning("found scene loop", scene_node=scene_node)
                         set_as_main = False
                         break
             

@@ -210,7 +210,8 @@ class MakeCharacter(Node):
             is_player=is_player
         )
         
-        log.warning("Make character", character=character)
+        if state.verbosity >= NodeVerbosity.VERBOSE:
+            log.debug("Make character", character=character)
         
         self.set_output_values({
             "character": character
@@ -915,7 +916,7 @@ class WaitForInput(Node):
             raise LoopBreak()
         
         
-        log.warning("Wait for input", text_message=text_message, interaction_state=interaction_state)
+        log.debug("Wait for input", text_message=text_message, interaction_state=interaction_state)
         
         self.set_output_values({
             "input": text_message,
@@ -1359,7 +1360,7 @@ class SceneLoop(Loop):
         trigger_game_loop = self.get_property("trigger_game_loop")
         
         if state.verbosity >= NodeVerbosity.VERBOSE:
-            log.warning("TRIGGER GAME LOOP", id=self.id, trigger_game_loop=trigger_game_loop, signal_game_loop=state.shared.get("signal_game_loop"), skip_to_player=state.shared.get("skip_to_player"))  
+            log.debug("TRIGGER GAME LOOP", id=self.id, trigger_game_loop=trigger_game_loop, signal_game_loop=state.shared.get("signal_game_loop"), skip_to_player=state.shared.get("skip_to_player"))  
         
         if trigger_game_loop:
             game_loop = events.GameLoopEvent(

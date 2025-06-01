@@ -28,18 +28,18 @@
 {{ character_guidance_content }}
 {% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
-{% set bullet_num=0 -%}
 You are assisting a script editor in writing the next line of dialogue or action for {{ character.name.upper() }} in the current scene.
 
 The editor is writing this line right now and has tasked you to provide a suggestion for the continuation of the DRAFT.
 
 Rules:
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. Never transition to other characters.
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. Spoken word must be contained within " markers.
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. This is centered around the actions of "{{ character.name }}".
+{{ li() }}. Never transition to other characters.
+{{ li() }}. Never transition to a new message.
+{{ li() }}. Spoken word must be contained within " markers.
+{{ li() }}. This is centered around the actions of "{{ character.name }}".
 {% if not can_coerce %}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. Only return the continuation of the DRAFT.
+{{ li() }}. Only return the continuation of the DRAFT.
 {% endif %}
 {% if can_coerce %}
 DRAFT: {{ character.name }}: {{ non_anchor }}{{ bot_token }}{{ anchor }}{{ prefix }}

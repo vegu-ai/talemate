@@ -30,8 +30,6 @@ from talemate.scene.intent import SceneIntent
 
 __all__ = [
     "load_scene",
-    "load_conversation_log",
-    "load_conversation_log_into_scene",
     "load_character_from_image",
     "load_character_from_json",
     "transfer_character",
@@ -404,31 +402,6 @@ async def handle_no_player_character(scene: Scene) -> None:
         return
     
     await scene.add_actor(player)
-
-
-def load_conversation_log(file_path):
-    """
-    Load the conversation log from the given file path.
-    :param file_path: Path to the conversation log file.
-    :return: None
-    """
-    with open(file_path, "r") as f:
-        conversation_log = json.load(f)
-
-    for item in conversation_log:
-        log.info(item)
-
-
-def load_conversation_log_into_scene(file_path, scene):
-    """
-    Load the conversation log from the given file path into the given scene.
-    :param file_path: Path to the conversation log file.
-    :param scene: Scene to load the conversation log into.
-    """
-    with open(file_path, "r") as f:
-        conversation_log = json.load(f)
-
-    scene.history = conversation_log
 
 
 def load_character_from_image(image_path: str, file_format: str) -> Character:

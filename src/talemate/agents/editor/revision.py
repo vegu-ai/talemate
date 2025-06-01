@@ -216,7 +216,7 @@ class RevisionMixin:
                     type="text",
                     label="Revision method",
                     description="The method to use to revise the text",
-                    value="dedupe",
+                    value="unslop",
                     choices=[
                         {"label": "Dedupe (Fast and dumb)", "value": "dedupe"},
                         {"label": "Unslop (AI assisted)", "value": "unslop"},
@@ -261,7 +261,7 @@ class RevisionMixin:
                     label="Detect unwanted prose",
                     description="Enable / Disable unwanted prose detection. Will use the writing style's phrase detection to determine unwanted phrases. The scene MUST have a writing style selected.",
                     condition=rewrite_unslop_condition,
-                    value=False,
+                    value=True,
                 ),
                 "detect_bad_prose_threshold": AgentActionConfig(
                     type="number",

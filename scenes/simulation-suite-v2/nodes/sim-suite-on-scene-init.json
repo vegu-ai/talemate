@@ -405,21 +405,6 @@
       "registry": "data/string/MakeText",
       "base_type": "core/Node"
     },
-    "ad9cd5d1-ec8b-4793-bda6-4737db9ae66d": {
-      "title": "MSG_HELP",
-      "id": "ad9cd5d1-ec8b-4793-bda6-4737db9ae66d",
-      "properties": {
-        "value": "When there is no simulation active all your actions will be a conversation with the simulation suite's main computer.\n\nYou may chat with the computer or you may instruct it to start a simulation. For example \"I want to experience being on a derelict spaceship.\"\n\n\n\nOnce a simulation is active you can issue additional instructions or queries by addressing the computer directly by starting your sentence with \"Computer\" - For example \"Computer, change the environment to a mountain top.\""
-      },
-      "x": 50,
-      "y": 810,
-      "width": 210,
-      "height": 58,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
     "0c7e221d-0367-455b-9eca-b0e0d3df2a37": {
       "title": "Module Style",
       "id": "0c7e221d-0367-455b-9eca-b0e0d3df2a37",
@@ -436,6 +421,21 @@
       "collapsed": false,
       "inherited": false,
       "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "ad9cd5d1-ec8b-4793-bda6-4737db9ae66d": {
+      "title": "MSG_HELP",
+      "id": "ad9cd5d1-ec8b-4793-bda6-4737db9ae66d",
+      "properties": {
+        "value": "When there is no simulation active all your actions will be interactions with the simulation suite's main computer."
+      },
+      "x": 40,
+      "y": 830,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/MakeText",
       "base_type": "core/Node"
     }
   },

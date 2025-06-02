@@ -32,10 +32,12 @@ You are assisting a script editor in writing the next line of dialogue or action
 
 The editor is writing this line right now and has tasked you to provide a suggestion for the continuation of the DRAFT.
 
+This is an auto-completion feature.
+
 Rules:
 
 {{ li() }}. Never transition to other characters.
-{{ li() }}. Never transition to a new message.
+{{ li() }}. Never transition to a new draft. Only generate a completion that finishes the current draft.
 {{ li() }}. Spoken word must be contained within " markers.
 {{ li() }}. This is centered around the actions of "{{ character.name }}".
 {% if not can_coerce %}

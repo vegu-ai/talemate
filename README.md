@@ -2,10 +2,13 @@
 
 Roleplay with AI with a focus on strong narration and consistent world and game state tracking.
 
-|![Screenshot 3](docs/img/ss-1.png)|![Screenshot 3](docs/img/ss-2.png)|
+<div align="center">
+
+|<img src="docs/img/ss-1.png" width="400" height="250" alt="Screenshot 1">|<img src="docs/img/ss-2.png" width="400" height="250" alt="Screenshot 2">|
 |------------------------------------------|------------------------------------------|
-|![Screenshot 4](docs/img/ss-4.png)|![Screenshot 1](docs/img/Screenshot_15.png)|
-|![Screenshot 2](docs/img/Screenshot_16.png)|![Screenshot 3](docs/img/Screenshot_17.png)|
+|<img src="docs/img/ss-3.png" width="400" height="250" alt="Screenshot 3">|<img src="docs/img/ss-4.png" width="400" height="250" alt="Screenshot 4">|
+
+</div>
 
 ## Core Features
 
@@ -14,6 +17,7 @@ Roleplay with AI with a focus on strong narration and consistent world and game 
 - Long-term memory and passage of time tracking
 - Narrative world state management to reinforce character and world truths
 - Creative tools for managing NPCs, AI-assisted character, and scenario creation with template support
+- Node editor for creating complex scenarios and re-usable modules
 - Context management for character details, world information, past events, and pinned information
 - Customizable templates for all prompts using Jinja2
 - Modern, responsive UI

@@ -5,7 +5,7 @@
         <v-progress-circular class="ml-1 mr-3" size="14" v-if="requesting" indeterminate="disable-shrink" color="primary"></v-progress-circular>   
         <v-tooltip v-else  text="Update Worldstate">
             <template v-slot:activator="{ props }">
-                <v-btn :disabled="isInputDisabled()"  size="x-small" icon="mdi-refresh" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh()"></v-btn>
+                <v-btn :disabled="busy"  size="x-small" icon="mdi-refresh" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh()"></v-btn>
             </template>
         </v-tooltip>
 
@@ -232,6 +232,10 @@ export default {
             worldStateMaxHeight: null,
             hasAnyWorldState: false,
         }
+    },
+
+    props: {
+        busy: Boolean,
     },
 
     inject: [

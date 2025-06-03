@@ -27,6 +27,10 @@ Roleplay with AI with a focus on strong narration and consistent world and game 
 - [Installation and Getting started](https://vegu-ai.github.io/talemate/)
 - [User Guide](https://vegu-ai.github.io/talemate/user-guide/interacting/)
 
+## Discord Community
+
+Need help? Join the new [Discord community](https://discord.gg/8bGNRmFxMj)
+
 ## Supported APIs
 
 - [OpenAI](https://platform.openai.com/overview)

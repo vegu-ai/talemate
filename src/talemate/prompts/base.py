@@ -31,6 +31,7 @@ from talemate.util import (
     count_tokens,
     dedupe_string,
     extract_json,
+    extract_list,
     fix_faulty_json,
     remove_extra_linebreaks,
     iso8601_diff_to_human,
@@ -610,7 +611,7 @@ class Prompt:
                 )
             )
 
-    def instruct_text(self, instruction: str, text: str):
+    def instruct_text(self, instruction: str, text: str, as_list:bool=False):
         loop = asyncio.get_event_loop()
         world_state = instance.get_agent("world_state")
         instruction = instruction.format(**self.vars)
@@ -618,9 +619,14 @@ class Prompt:
         if isinstance(text, list):
             text = "\n".join(text)
 
-        return loop.run_until_complete(
+        response = loop.run_until_complete(
             world_state.analyze_and_follow_instruction(text, instruction)
         )
+        
+        if as_list:
+            return extract_list(response)
+        else:
+            return response
 
     def retrieve_memories(self, lines: list[str], goal: str = None):
         loop = asyncio.get_event_loop()

@@ -18,3 +18,4 @@ scenes/
 !scenes/infinity-quest/assets/
 !scenes/infinity-quest/infinity-quest.json
 tts_voice_samples/*.wav
+third-party-docs/

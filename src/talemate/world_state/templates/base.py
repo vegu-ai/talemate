@@ -332,6 +332,17 @@ class Collection(pydantic.BaseModel):
                 templates[uid] = template
 
         return FlatCollection(templates=templates)
+    
+    def flat_by_template_uid_only(self) -> "FlatCollection":
+        """
+        Returns a flat collection of templates by template uid only
+        """
+        templates = {}
+        for group in self.groups:
+            for template_id, template in group.templates.items():
+                templates[template_id] = template
+
+        return FlatCollection(templates=templates)
 
     def typed(self, types: list[str] = None) -> "TypedCollection":
         """
@@ -373,6 +384,18 @@ class Collection(pydantic.BaseModel):
         self.groups.remove(group)
         if save:
             group.delete()
+            
+    def collect_all(self, uids: list[str]) -> dict[str, AnnotatedTemplate]:
+        """
+        Returns a dictionary of all templates in the collection
+        """
+        templates = {}
+        for group in self.groups:
+            for template in group.templates.values():
+                if template.uid in uids:
+                    templates[template.uid] = template
+
+        return templates
 
 
 class FlatCollection(pydantic.BaseModel):
@@ -383,3 +406,10 @@ class TypedCollection(pydantic.BaseModel):
     templates: dict[str, dict[str, AnnotatedTemplate]] = pydantic.Field(
         default_factory=dict
     )
+    
+    def find_by_name(self, name: str) -> AnnotatedTemplate | None:
+        for templates in self.templates.values():
+            for template in templates.values():
+                if template.name == name:
+                    return template
+        return None

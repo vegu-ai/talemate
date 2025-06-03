@@ -1,24 +1,36 @@
-{% block extra_context -%}{% include "extra-context.jinja2" %}{% endblock %}
-{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% set extra_context_content -%}{% include "extra-context.jinja2" %}{% endset %}
+{{ extra_context_content }}
+{% set extra_context_tokens = count_tokens(extra_context_content) %}
+{% set budget=max_tokens-300-extra_context_tokens %}
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) -%}
-``` last line in the scene
+``` current moment
 {{ last_message }}
 ```
-Following the last line in the scene, generate new narration that provides sensory details about the scene.
+During the current moment, generate new narration that provides sensory details about the scene.
 
-Focus solely on describing sensory details about the characters or the environment (like sounds, sights, smells, tactile sensations). You must not any character's internal thoughts, feelings, or dialogue. Your narration should directly response to the last line either by elaborating on the immediate scene or by subtly advancing the plot. If the character is trying to determine some state, truth or situation, try to answer as part of the narration.
+Balance your focus between environmental sensory details (like sounds, sights, smells, textures of the surroundings, weather, ambiance, lighting, and spatial elements) and character sensory experiences. You must not include any character's internal thoughts, feelings, or dialogue. Your narration should directly respond to the last line either by elaborating on the immediate environment, showing how characters physically experience their surroundings, describing sensory interactions between characters, or by subtly advancing the plot through sensory details.
+
+Include:
+- Specific contextual items and objects within the environment that:
+  - Reveal information about the setting (era, purpose, cultural context)
+  - Add authenticity through specific details (signs of use, personal artifacts, functional items)
+  - Create mood through carefully chosen environmental elements
+  - Potentially foreshadow or become relevant to future events
+- Character-environment interactions through sensory perceptions where appropriate, such as:
+  - How characters physically feel, smell, hear, taste or see elements of their surroundings
+  - How the environment affects the characters through their senses
+- Character-to-character sensory interactions such as:
+  - Physical contact between characters and the resulting sensations
+  - Sensory awareness of another character's presence (scent, body heat, sound)
+  - Non-verbal sensory cues exchanged between characters (proximity, tension, subtle movements)
 
 Be creative and generate something new and interesting, but stay true to the setting and context of the story so far.
 
 YOU MUST NOT WRITE DIALOGUE - Your narration may lead into dialogue but must not include it.
 
-Your new narration should be 2 to 3 sentences in length.
-
 {% include "narrative-direction.jinja2" %}
-
-[$REPETITION|Narration is getting repetitive. Try to choose different words to break up the repetitive text.]
 
 {{ extra_instructions }}
 <|CLOSE_SECTION|>

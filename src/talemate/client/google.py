@@ -13,7 +13,7 @@ from vertexai.generative_models import (
     SafetySetting,
 )
 
-from talemate.client.base import ClientBase, ErrorAction, ExtraField, ParameterReroute
+from talemate.client.base import ClientBase, ErrorAction, ExtraField, ParameterReroute, CommonDefaults
 from talemate.client.registry import register
 from talemate.client.remote import RemoteServiceMixin
 from talemate.config import Client as BaseClientConfig
@@ -31,10 +31,12 @@ log = structlog.get_logger("talemate")
 SUPPORTED_MODELS = [
     "gemini-1.0-pro",
     "gemini-1.5-pro-preview-0409",
+    "gemini-2.5-flash-preview-04-17",
+    "gemini-2.5-pro-preview-03-25",
 ]
 
 
-class Defaults(pydantic.BaseModel):
+class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "gemini-1.0-pro"
     disable_safety_settings: bool = False
@@ -186,7 +188,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
         }
-
+        data.update(self._common_status_data()) 
         self.populate_extra_fields(data)
 
         emit(
@@ -255,6 +257,8 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
+            
+        self._reconfigure_common_parameters(**kwargs)
 
     def clean_prompt_parameters(self, parameters: dict):
         super().clean_prompt_parameters(parameters)

@@ -1,0 +1,14 @@
+{% if regeneration_context and regeneration_context.direction -%}
+{% if regeneration_context.method == 'replace' -%}{{ regeneration_context.direction }}
+{%- elif regeneration_context.method == 'edit' and regeneration_context.message -%}
+Edit this draft of the proposed narration: 
+
+``` first draft
+{{ regeneration_context.message }}
+```
+
+{% if narrative_direction %}Original instructions: "{{ narrative_direction }}"
+{% endif -%}
+Editorial instructions: "{{ regeneration_context.direction }}"
+{% endif -%}
+{% endif -%}

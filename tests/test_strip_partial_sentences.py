@@ -1,5 +1,5 @@
 import pytest
-from talemate.util import strip_partial_sentences, strip_partial_sentences_old
+from talemate.util import strip_partial_sentences
 
 
 @pytest.mark.parametrize("input, expected", [
@@ -15,4 +15,3 @@ def test_strip_partial_sentences(input, expected):
         input = input.format(delim=delim)
         expected = expected.format(delim=delim)
         assert strip_partial_sentences(input) == expected
-        assert strip_partial_sentences_old(input) == expected

@@ -61,9 +61,19 @@ export default {
         }
     },
     methods: {
+        setSelection(tab) {
+            this.tab = tab;
+            console.log('setSelection (presets)', tab);
+        },
         inference_config() {
             if(this.$refs.inference) {
                 return this.$refs.inference.config.inference;
+            }
+            return null;
+        },
+        inference_groups_config() {
+            if(this.$refs.inference) {
+                return this.$refs.inference.config.inference_groups;
             }
             return null;
         },

@@ -1,0 +1,9 @@
+Here is a JSON code block with multiple objects:
+
+```json
+{"id": 1, "name": "First Object", "type": "test"}
+{"id": 2, "name": "Second Object", "values": [1, 2, 3]}
+{"id": 3, "name": "Third Object", "active": true, "metadata": {"created": "2023-05-15"}}
+```
+
+That's it! 

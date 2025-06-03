@@ -1,0 +1,18 @@
+Here is some text with invalid JSON.
+
+```json
+{
+  "name": "Invalid Object,
+  "missing": "quote",
+  "unclosed": "bracket"
+}
+```
+
+Another invalid JSON:
+
+```
+{
+  "array": [1, 2, 3,]
+  "trailing": "comma"
+}
+``` 

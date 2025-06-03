@@ -1,4 +1,5 @@
 import pytest
+import isodate
 from talemate.util import (
     iso8601_add,
     iso8601_correct_duration,
@@ -8,7 +9,6 @@ from talemate.util import (
     parse_duration_to_isodate_duration,
     timedelta_to_duration,
     duration_to_timedelta,
-    isodate
 )
 
 

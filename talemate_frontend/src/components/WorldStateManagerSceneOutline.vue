@@ -1,84 +1,90 @@
 <template>
-    <v-form class="mt-4">
-        <v-row>
-            <v-col cols="12" md="8" lg="6" xl="6">
-                <v-text-field
-                    v-model="scene.data.title"
-                    label="Title"
-                    hint="The title of the scene. This will be displayed to the user when they play the scene."
-                    :color="dirty['title'] ? 'dirty' : ''"
-                    :disabled="busy['title']"
-                    :loading="busy['title']"
-                    @update:model-value="setFieldDirty('title')"
-                    @blur="update(true)"
-                    :placeholder="scene.data.title"
-                ></v-text-field>
-            </v-col>
-            <v-col cols="12" md="8" lg="6" xl="6">
-                <v-combobox
-                    v-model="scene.data.context"
-                    @update:model-value="setFieldDirty('context')"
-                    @blur="update(true)"
-                    :color="dirty['context'] ? 'dirty' : ''"
-                    :items="appConfig ? appConfig.creator.content_context: []"
-                    messages="This can strongly influence the type of content that is generated, during narration, dialogue and world building."
-                    label="Content context"
-                ></v-combobox>
-            </v-col>
-        </v-row>
-        <v-row>
-            <!-- scene description -->
-            <v-col cols="12">
-                <v-textarea
-                    class="mt-1"
-                    ref="description"
-                    v-model="scene.data.description"
-                    @update:model-value="setFieldDirty('description')"
-                    @blur="update(true)"
-                    :color="dirty['description'] ? 'dirty' : ''"
-                    :disabled="busy['description']"
-                    :loading="busy['description']"
-                    label="Description"
-                    rows="4"
-                    auto-grow
-                    max-rows="32"
-                    hint="This will not be directly displayed to the user, but can be used to provide additional context to the scene, its goals and general information. This should not be used for lore dumps."
-                ></v-textarea>
-            </v-col>
-        </v-row>
-        <v-row>
-            <v-col cols="12">
-                <ContextualGenerate 
-                    ref="contextualGenerate"
-                    uid="wsm.scene_intro"
-                    context="scene intro:scene intro" 
-                    :original="scene.data.intro"
-                    :templates="templates"
-                    :generation-options="generationOptions"
-                    :history-aware="false"
-                    @generate="content => setIntroAndQueueUpdate(content)"
-                />
-                <v-textarea
-                    class="mt-1"
-                    ref="intro"
-                    v-model="scene.data.intro"
-                    label="Introduction text"
-                    rows="10"
-                    auto-grow
-                    max-rows="32"
+    <v-row>
+        <v-col cols="12" ms="12" xl="8" xxl="6">
+            <v-form class="mt-4">
+                <v-row>
+                    <v-col cols="12" md="8" lg="6" xl="6">
+                        <v-text-field
+                            v-model="scene.data.title"
+                            label="Title"
+                            hint="The title of the scene. This will be displayed to the user when they play the scene."
+                            :color="dirty['title'] ? 'dirty' : ''"
+                            :disabled="busy['title']"
+                            :loading="busy['title']"
+                            @update:model-value="setFieldDirty('title')"
+                            @blur="update(true)"
+                            :placeholder="scene.data.title"
+                        ></v-text-field>
+                    </v-col>
+                    <v-col cols="12" md="8" lg="6" xl="6">
+                        <v-combobox
+                            v-model="scene.data.context"
+                            @update:model-value="setFieldDirty('context')"
+                            @blur="update(true)"
+                            :color="dirty['context'] ? 'dirty' : ''"
+                            :items="appConfig ? appConfig.creator.content_context: []"
+                            messages="This can strongly influence the type of content that is generated, during narration, dialogue and world building."
+                            label="Content context"
+                        ></v-combobox>
+                    </v-col>
+                </v-row>
+                <v-row>
+                    <!-- scene description -->
+                    <v-col cols="12">
+                        <v-textarea
+                            class="mt-1"
+                            ref="description"
+                            v-model="scene.data.description"
+                            @update:model-value="setFieldDirty('description')"
+                            @blur="update(true)"
+                            :color="dirty['description'] ? 'dirty' : ''"
+                            :disabled="busy['description']"
+                            :loading="busy['description']"
+                            label="Description"
+                            rows="4"
+                            auto-grow
+                            max-rows="32"
+                            hint="This will not be directly displayed to the user, but can be used to provide additional context to the scene, its goals and general information. This should not be used for lore dumps."
+                        ></v-textarea>
+                    </v-col>
+                </v-row>
+                <v-row>
+                    <v-col cols="12">
+                        <ContextualGenerate 
+                            ref="contextualGenerate"
+                            uid="wsm.scene_intro"
+                            context="scene intro:scene intro" 
+                            :original="scene.data.intro"
+                            :templates="templates"
+                            :generation-options="generationOptions"
+                            :history-aware="false"
+                            @generate="content => setIntroAndQueueUpdate(content)"
+                        />
+                        <v-textarea
+                            class="mt-1"
+                            ref="intro"
+                            v-model="scene.data.intro"
+                            label="Introduction text"
+                            rows="10"
+                            auto-grow
+                            max-rows="32"
+        
+                            @update:model-value="setFieldDirty('intro')"
+                            @blur="update(true)"
+                            :color="dirty['intro'] ? 'dirty' : ''"
+                            
+                            :disabled="busy['intro']"
+                            :loading="busy['intro']"
+                            :hint="'The introduction to the scene. The first text the user sees as they load the scene. ' +autocompleteInfoMessage(busy['intro'])"
+                            @keyup.ctrl.enter.stop="sendAutocompleteRequestForIntro"
+                        ></v-textarea>
+                    </v-col>
+                </v-row>
+            </v-form>
+        </v-col>
+    </v-row>
 
-                    @update:model-value="setFieldDirty('intro')"
-                    @blur="update(true)"
-                    :color="dirty['intro'] ? 'dirty' : ''"
-                    
-                    :disabled="busy['intro']"
-                    :loading="busy['intro']"
-                    :hint="'The introduction to the scene. The first text the user sees as they load the scene. ' +autocompleteInfoMessage(busy['intro'])"
-                    @keyup.ctrl.enter.stop="sendAutocompleteRequestForIntro"
-                ></v-textarea>
-            </v-col>
-        </v-row>
-    </v-form>
+
 </template>
 
 <script>

@@ -9,10 +9,12 @@ import talemate.emit.async_signals
 import talemate.instance as instance
 from talemate.agents.conversation import ConversationAgentEmission
 from talemate.emit import emit
-from talemate.events import GameLoopActorIterEvent, SceneStateEvent
-from talemate.game.engine import GameInstructionsMixin
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage
+from talemate.util import random_color
+from talemate.character import deactivate_character
+from talemate.status import LoadingStatus
+from talemate.exceptions import GenerationCancelled
 
 from talemate.agents.base import Agent, AgentAction, AgentActionConfig, set_processing
 from talemate.agents.registry import register
@@ -20,10 +22,14 @@ from talemate.agents.memory.rag import MemoryRAGMixin
 
 from .guide import GuideSceneMixin
 from .generate_choices import GenerateChoicesMixin
+from .legacy_scene_instructions import LegacySceneInstructionsMixin
+from .auto_direct import AutoDirectMixin
 from .websocket_handler import DirectorWebsocketHandler
 
+import talemate.agents.director.nodes
+
 if TYPE_CHECKING:
-    from talemate import Character
+    from talemate import Character, Scene
 
 log = structlog.get_logger("talemate.agent.director")
 
@@ -33,45 +39,23 @@ class DirectorAgent(
     GuideSceneMixin,
     MemoryRAGMixin,
     GenerateChoicesMixin,
-    GameInstructionsMixin,
+    AutoDirectMixin,
+    LegacySceneInstructionsMixin,
     Agent
 ):
     agent_type = "director"
     verbose_name = "Director"
     websocket_handler = DirectorWebsocketHandler
 
-    def __init__(self, client, **kwargs):
-        self.is_enabled = True
-        self.client = client
-        self.next_direct_character = {}
-        self.next_direct_scene = 0
-        self.actions = {
+    @classmethod
+    def init_actions(cls) -> dict[str, AgentAction]:
+        actions = {
             "direct": AgentAction(
                 enabled=True,
+                can_be_disabled=False,
                 label="Direct",
-                description="Will attempt to direct the scene. Runs automatically after AI dialogue (n turns).",
+                description="Direction settings",
                 config={
-                    "turns": AgentActionConfig(
-                        type="number",
-                        label="Turns",
-                        description="Number of turns to wait before directing the sceen",
-                        value=5,
-                        min=1,
-                        max=100,
-                        step=1,
-                    ),
-                    "direct_scene": AgentActionConfig(
-                        type="bool",
-                        label="Direct Scene",
-                        description="If enabled, the scene will be directed through narration",
-                        value=True,
-                    ),
-                    "direct_actors": AgentActionConfig(
-                        type="bool",
-                        label="Direct Actors",
-                        description="If enabled, direction will be given to actors based on their goals.",
-                        value=True,
-                    ),
                     "actor_direction_mode": AgentActionConfig(
                         type="text",
                         label="Actor Direction Mode",
@@ -91,10 +75,18 @@ class DirectorAgent(
                 },
             ), 
         }
-        
-        MemoryRAGMixin.add_actions(self)
-        GenerateChoicesMixin.add_actions(self)
-        GuideSceneMixin.add_actions(self)
+        MemoryRAGMixin.add_actions(actions)
+        GenerateChoicesMixin.add_actions(actions)
+        GuideSceneMixin.add_actions(actions)
+        AutoDirectMixin.add_actions(actions)
+        return actions
+
+    def __init__(self, client, **kwargs):
+        self.is_enabled = True
+        self.client = client
+        self.next_direct_character = {}
+        self.next_direct_scene = 0
+        self.actions = DirectorAgent.init_actions()
 
     @property
     def enabled(self):
@@ -109,204 +101,8 @@ class DirectorAgent(
         return True
 
     @property
-    def direct_enabled(self):
-        return self.actions["direct"].enabled
-
-    @property
-    def direct_actors_enabled(self):
-        return self.actions["direct"].config["direct_actors"].value
-
-    @property
-    def direct_scene_enabled(self):
-        return self.actions["direct"].config["direct_scene"].value
-
-    @property
     def actor_direction_mode(self):
         return self.actions["direct"].config["actor_direction_mode"].value
-
-
-    def connect(self, scene):
-        super().connect(scene)
-        talemate.emit.async_signals.get("agent.conversation.before_generate").connect(
-            self.on_conversation_before_generate
-        )
-        talemate.emit.async_signals.get("game_loop_actor_iter").connect(
-            self.on_player_dialog
-        )
-        talemate.emit.async_signals.get("scene_init").connect(self.on_scene_init)
-        talemate.emit.async_signals.get("player_turn_start").connect(self.on_player_turn_start)
-
-    async def on_scene_init(self, event: SceneStateEvent):
-        """
-        If game state instructions specify to be run at the start of the game loop
-        we will run them here.
-        """
-
-        if not self.enabled:
-            if await self.scene_has_instructions(self.scene):
-                self.is_enabled = True
-            else:
-                return
-
-        if not await self.scene_has_instructions(self.scene):
-            return
-
-        if not self.scene.game_state.ops.run_on_start:
-            return
-
-        log.info("on_game_loop_start - running game state instructions")
-        await self.run_gamestate_instructions()
-
-    async def on_conversation_before_generate(self, event: ConversationAgentEmission):
-        log.info("on_conversation_before_generate", director_enabled=self.enabled)
-        if not self.enabled:
-            return
-
-        await self.direct(event.character)
-
-    async def on_player_dialog(self, event: GameLoopActorIterEvent):
-        if not self.enabled:
-            return
-
-        if not await self.scene_has_instructions(self.scene):
-            return
-
-        if not event.actor.character.is_player:
-            return
-
-        if event.game_loop.had_passive_narration:
-            log.debug(
-                "director.on_player_dialog",
-                skip=True,
-                had_passive_narration=event.game_loop.had_passive_narration,
-            )
-            return
-
-        event.game_loop.had_passive_narration = await self.direct(None)
-
-    async def direct(self, character: Character) -> bool:
-        if not self.actions["direct"].enabled:
-            return False
-
-        if character:
-            if not self.actions["direct"].config["direct_actors"].value:
-                log.info(
-                    "direct",
-                    skip=True,
-                    reason="direct_actors disabled",
-                    character=character,
-                )
-                return False
-
-            # character direction, see if there are character goals
-            # defined
-            character_goals = character.get_detail("goals")
-            if not character_goals:
-                log.info("direct", skip=True, reason="no goals", character=character)
-                return False
-
-            next_direct = self.next_direct_character.get(character.name, 0)
-
-            if (
-                next_direct % self.actions["direct"].config["turns"].value != 0
-                or next_direct == 0
-            ):
-                log.info(
-                    "direct", skip=True, next_direct=next_direct, character=character
-                )
-                self.next_direct_character[character.name] = next_direct + 1
-                return False
-
-            self.next_direct_character[character.name] = 0
-            await self.direct_scene(character, character_goals)
-            return True
-        else:
-            if not self.actions["direct"].config["direct_scene"].value:
-                log.info("direct", skip=True, reason="direct_scene disabled")
-                return False
-
-            # no character, see if there are NPC characters at all
-            # if not we always want to direct narration
-            always_direct = (
-                not self.scene.npc_character_names
-                or self.scene.game_state.ops.always_direct
-            )
-
-            next_direct = self.next_direct_scene
-
-            if (
-                next_direct % self.actions["direct"].config["turns"].value != 0
-                or next_direct == 0
-            ):
-                if not always_direct:
-                    log.info("direct", skip=True, next_direct=next_direct)
-                    self.next_direct_scene += 1
-                    return False
-
-            self.next_direct_scene = 0
-            await self.direct_scene(None, None)
-            return True
-
-    @set_processing
-    async def run_gamestate_instructions(self):
-        """
-        Run game state instructions, if they exist.
-        """
-
-        if not await self.scene_has_instructions(self.scene):
-            return
-
-        await self.direct_scene(None, None)
-
-    @set_processing
-    async def direct_scene(self, character: Character, prompt: str):
-        """
-        TODO: character direction through this function has been deprecated
-        and replaced with the guide mixin. 
-        
-        The call to run_scene_instructions should be removed from this and
-        moved to its own mixin or called directly.
-        """
-        
-        if not character and self.scene.game_state.game_won:
-            # we are not directing a character, and the game has been won
-            # so we don't need to direct the scene any further
-            return
-
-        if character:
-            # direct a character
-
-            response = await Prompt.request(
-                "director.direct-character",
-                self.client,
-                "director",
-                vars={
-                    "max_tokens": self.client.max_token_length,
-                    "scene": self.scene,
-                    "prompt": prompt,
-                    "character": character,
-                    "player_character": self.scene.get_player_character(),
-                    "game_state": self.scene.game_state,
-                },
-            )
-
-            if "#" in response:
-                response = response.split("#")[0]
-
-            log.info(
-                "direct_character",
-                character=character,
-                prompt=prompt,
-                response=response,
-            )
-
-            response = response.strip().split("\n")[0].strip()
-            # response += f" (current story goal: {prompt})"
-            message = DirectorMessage(response, source=character.name)
-            emit("director", message, character=character)
-            self.scene.push_history(message)
-        else:
-            await self.run_scene_instructions(self.scene)
 
     @set_processing
     async def persist_characters_from_worldstate(
@@ -337,89 +133,133 @@ class DirectorAgent(
         content: str = None,
         attributes: str = None,
         determine_name: bool = True,
+        templates: list[str] = None,
+        active: bool = True,
+        narrate_entry: bool = False,
+        narrate_entry_direction: str = "",
+        augment_attributes: str = "",
+        generate_attributes: bool = True,
+        description: str = "",
     ) -> Character:
         world_state = instance.get_agent("world_state")
         creator = instance.get_agent("creator")
+        narrator = instance.get_agent("narrator")
+        memory = instance.get_agent("memory")
+        scene: "Scene" = self.scene
+        any_attribute_templates = False
+        
+        loading_status = LoadingStatus(max_steps=None, cancellable=True)
+        
+        # Start of character creation
+        log.debug("persist_character", name=name)
 
-        self.scene.log.debug("persist_character", name=name)
 
+        # Determine the character's name (or clarify if it's already set)
         if determine_name:
-            name = await creator.determine_character_name(name)
-            self.scene.log.debug("persist_character", adjusted_name=name)
+            loading_status("Determining character name")
+            name = await creator.determine_character_name(name, instructions=content)
+            log.debug("persist_character", adjusted_name=name)
 
-        character = self.scene.Character(name=name)
-        character.color = random.choice(
-            [
-                "#F08080",
-                "#FFD700",
-                "#90EE90",
-                "#ADD8E6",
-                "#DDA0DD",
-                "#FFB6C1",
-                "#FAFAD2",
-                "#D3D3D3",
-                "#B0E0E6",
-                "#FFDEAD",
-            ]
-        )
+        # Create the blank character
+        character:Character = self.scene.Character(name=name)
 
-        if not attributes:
-            attributes = await world_state.extract_character_sheet(
-                name=name, text=content
-            )
-        else:
-            attributes = world_state._parse_character_sheet(attributes)
-
-        self.scene.log.debug("persist_character", attributes=attributes)
-
-        character.base_attributes = attributes
-
-        description = await creator.determine_character_description(character)
-
-        character.description = description
-
-        self.scene.log.debug("persist_character", description=description)
-
-        dialogue_instructions = await creator.determine_character_dialogue_instructions(
-            character
-        )
-
-        character.dialogue_instructions = dialogue_instructions
-
-        self.scene.log.debug(
-            "persist_character", dialogue_instructions=dialogue_instructions
-        )
-
+        # Add the character to the scene
+        character.color = random_color()
         actor = self.scene.Actor(
             character=character, agent=instance.get_agent("conversation")
         )
-
         await self.scene.add_actor(actor)
-        self.scene.emit_status()
+        
+        try:
 
-        return character
+            # Apply any character generation templates
+            if templates:
+                loading_status("Applying character generation templates")
+                templates = scene.world_state_manager.template_collection.collect_all(templates)
+                log.debug("persist_character", applying_templates=templates)
+                await scene.world_state_manager.apply_templates(
+                    templates.values(), 
+                    character_name=character.name,
+                    information=content
+                )
+                
+                # if any of the templates are attribute templates, then we no longer need to
+                # generate a character sheet
+                any_attribute_templates = any(template.template_type == "character_attribute" for template in templates.values())
+                log.debug("persist_character", any_attribute_templates=any_attribute_templates)
+                
+                if any_attribute_templates and augment_attributes and generate_attributes:
+                    log.debug("persist_character", augmenting_attributes=augment_attributes)
+                    loading_status("Augmenting character attributes")
+                    additional_attributes = await world_state.extract_character_sheet(
+                        name=name,
+                        text=content,
+                        augmentation_instructions=augment_attributes
+                    )
+                    character.base_attributes.update(additional_attributes)
 
-    @set_processing
-    async def update_content_context(
-        self, content: str = None, extra_choices: list[str] = None
-    ):
-        if not content:
-            content = "\n".join(
-                self.scene.context_history(sections=False, min_dialogue=25, budget=2048)
+            # Generate a character sheet if there are no attribute templates
+            if not any_attribute_templates and generate_attributes:
+                loading_status("Generating character sheet")
+                log.debug("persist_character", extracting_character_sheet=True)
+                if not attributes:
+                    attributes = await world_state.extract_character_sheet(
+                        name=name, text=content
+                    )
+                else:
+                    attributes = world_state._parse_character_sheet(attributes)
+
+                log.debug("persist_character", attributes=attributes)
+                character.base_attributes = attributes
+                
+            # Generate a description for the character
+            if not description:
+                loading_status("Generating character description")
+                description = await creator.determine_character_description(character, information=content)
+                character.description = description
+                log.debug("persist_character", description=description)
+
+            # Generate a dialogue instructions for the character
+            loading_status("Generating acting instructions")
+            dialogue_instructions = await creator.determine_character_dialogue_instructions(
+                character,
+                information=content
             )
-
-        response = await Prompt.request(
-            "world_state.determine-content-context",
-            self.client,
-            "analyze_freeform",
-            vars={
-                "content": content,
-                "extra_choices": extra_choices or [],
-            },
-        )
-
-        self.scene.context = response.strip()
-        self.scene.emit_status()
+            character.dialogue_instructions = dialogue_instructions
+            log.debug(
+                "persist_character", dialogue_instructions=dialogue_instructions
+            )
+            
+            # Narrate the character's entry if the option is selected
+            if active and narrate_entry:
+                loading_status("Narrating character entry")
+                is_present = await world_state.is_character_present(name)
+                if not is_present:
+                    await narrator.action_to_narration(
+                        "narrate_character_entry",
+                        emit_message=True,
+                        character=character,
+                        narrative_direction=narrate_entry_direction
+                    )
+            
+            # Deactivate the character if not active
+            if not active:
+                await deactivate_character(scene, character)
+                
+            # Commit the character's details to long term memory
+            await character.commit_to_memory(memory)
+            self.scene.emit_status()
+            self.scene.world_state.emit()
+            
+            loading_status.done(message=f"{character.name} added to scene", status="success")
+            return character
+        except GenerationCancelled:
+            loading_status.done(message="Character creation cancelled", status="idle")
+            await scene.remove_actor(actor)
+        except Exception as e:
+            loading_status.done(message="Character creation failed", status="error")
+            await scene.remove_actor(actor)
+            log.exception("Error persisting character", error=e)
 
     async def log_action(self, action: str, action_description: str):
         message = DirectorMessage(message=action_description, action=action)
@@ -429,20 +269,10 @@ class DirectorAgent(
     def inject_prompt_paramters(
         self, prompt_param: dict, kind: str, agent_function_name: str
     ):
-        log.debug(
-            "inject_prompt_paramters",
-            prompt_param=prompt_param,
-            kind=kind,
-            agent_function_name=agent_function_name,
-        )
-        character_names = [f"\n{c.name}:" for c in self.scene.get_characters()]
         if prompt_param.get("extra_stopping_strings") is None:
             prompt_param["extra_stopping_strings"] = []
-        prompt_param["extra_stopping_strings"] += character_names + ["#"]
-        if agent_function_name == "update_content_context":
-            prompt_param["extra_stopping_strings"] += ["\n"]
 
     def allow_repetition_break(
         self, kind: str, agent_function_name: str, auto: bool = False
     ):
-        return True
+        return False

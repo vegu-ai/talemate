@@ -3,12 +3,12 @@
 <|CLOSE_SECTION|>
 
 <|SECTION:TASK|>
-You have been given a text that contains natural language and function calls. Function calls are placed in code blocks.
+You have been given a text that contains natural language and function calls. Function calls are placed in {{ focal.state.schema_format }} code blocks.
 
-Identify the function calls and extract them from the text. Respond with the extracted function calls in a json list called `calls`. 
+Identify the function calls and extract them from the text. Respond with the extracted function calls in a {{ focal.state.schema_format }} list called `calls`. 
 
 You must copy the function names and all the arguments as they are.
 
 If there are no function calls to be extracted the list must be empty.
 <|CLOSE_SECTION|>
-{{ set_json_response(dict(calls=[{}]), cutoff=3) }}
+{{ set_data_response(dict(calls=[{}]), cutoff=3) }}

@@ -1,25 +1,32 @@
-{% block rendered_context -%}
+{% set rendered_context_content -%}
 <|SECTION:CONTEXT|>
 {%- with memory_query=scene.snapshot() -%}
     {% include "extra-context.jinja2" %}
 {% endwith %}
 <|CLOSE_SECTION|>
-{% endblock -%}
+{% endset %}
+{{ rendered_context_content }}
+{% set rendered_context_tokens = count_tokens(rendered_context_content) %}
 <|SECTION:SCENE|>
-{% for scene_context in scene.context_history(budget=min(2048, max_tokens-300-count_tokens(self.rendered_context())), min_dialogue=20, sections=False) -%}
+{% for scene_context in scene.context_history(budget=min(2048, max_tokens-300-rendered_context_tokens), min_dialogue=20, sections=False) -%}
 {{ scene_context }}
 {% endfor %}
 <|CLOSE_SECTION|>
+
+{% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
-Continue the unfinished section of the next narrative.
+You are assisting a script editor in writing the next part of the narrative in the current scene.
 
-Your response MUST only be the new parts of the narrative completion, not the entire line. Never add dialogue.
+The editor is writing this narrative right now and has tasked you to provide a suggestion for the continuation.
 
-Continue this text: {{ input }}
-{% if not can_coerce -%}
-Continuation: 
-<|CLOSE_SECTION|>
-{%- else -%}
-<|CLOSE_SECTION|>
-{{ bot_token }}{{ input }}
-{%- endif -%}
+Rules:
+1. Your suggestion should continue naturally from the current narrative.
+2. Maintain the established tone and style of the narrative.
+3. Focus on descriptive prose, actions, or scene-setting.
+{% if not can_coerce %}4. Only return the continuation of the DRAFT.{% endif %}
+
+{% if can_coerce %}
+DRAFT: {{ non_anchor }}{{ bot_token }}{{ anchor }}
+{% else %}
+DRAFT: {{ non_anchor }}{{ anchor }} (... continue the narrative)
+{% endif %}

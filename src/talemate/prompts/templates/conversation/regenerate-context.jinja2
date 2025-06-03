@@ -1,0 +1,16 @@
+{% set character_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=1) -%}
+{% if not direction and character_direction %}{% set direction=character_direction %}{% endif -%}
+{% if regeneration_context and regeneration_context.direction -%}
+{% if regeneration_context.method == 'replace' -%}{{ regeneration_context.direction }}
+{%- elif regeneration_context.method == 'edit' and regeneration_context.message -%}
+Edit this draft of the proposed continuation in the scene: 
+
+``` first draft
+{{ regeneration_context.message }}
+```
+
+{% if direction %}Original instructions: "{{ direction }}"
+{% endif -%}
+Editorial instructions: "{{ regeneration_context.direction }}"
+{% endif -%}
+{% endif -%}

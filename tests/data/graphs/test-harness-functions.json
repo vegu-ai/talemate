@@ -1,0 +1,486 @@
+{
+  "title": "Test Harness Functions",
+  "id": "a5d7bb52-8765-4d2e-ad4b-8bf2fb2c492d",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "test-harness/testHarnessFunctions",
+  "nodes": {
+    "3bfb0f1e-b5d9-49ce-a5cf-ba1874a333f8": {
+      "title": "Argument",
+      "id": "3bfb0f1e-b5d9-49ce-a5cf-ba1874a333f8",
+      "properties": {
+        "name": "a",
+        "typ": "int"
+      },
+      "x": 30,
+      "y": 110,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "a157f1ae-e820-4ec6-b496-a06388b81cb1": {
+      "title": "BasicArithmetic",
+      "id": "a157f1ae-e820-4ec6-b496-a06388b81cb1",
+      "properties": {
+        "operation": "add",
+        "a": 0,
+        "b": "5"
+      },
+      "x": 412,
+      "y": 129,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/BasicArithmetic",
+      "base_type": "core/Node"
+    },
+    "28e93695-f6b4-4eae-aa37-923014d14330": {
+      "title": "Return",
+      "id": "28e93695-f6b4-4eae-aa37-923014d14330",
+      "properties": {},
+      "x": 747,
+      "y": 141,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "a62c5b04-53b8-4292-a8f9-07238c225cb1": {
+      "title": "DEF add",
+      "id": "a62c5b04-53b8-4292-a8f9-07238c225cb1",
+      "properties": {
+        "name": "add"
+      },
+      "x": 960,
+      "y": 140,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "831f4baf-8ab5-4485-a977-73d277cb3be9": {
+      "title": "Make Dict",
+      "id": "831f4baf-8ab5-4485-a977-73d277cb3be9",
+      "properties": {
+        "data": {
+          "a": 1
+        }
+      },
+      "x": 189,
+      "y": 615,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeDict",
+      "base_type": "core/Node"
+    },
+    "9b885e1e-027a-4cef-b5ae-5e190efd727c": {
+      "title": "FN add",
+      "id": "9b885e1e-027a-4cef-b5ae-5e190efd727c",
+      "properties": {
+        "name": "add"
+      },
+      "x": 189,
+      "y": 465,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "be5ad5e3-6d00-47e3-8444-d2ebf83cbb72": {
+      "title": "Call Function",
+      "id": "be5ad5e3-6d00-47e3-8444-d2ebf83cbb72",
+      "properties": {
+        "args": {}
+      },
+      "x": 529,
+      "y": 535,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/CallFunction",
+      "base_type": "core/Node"
+    },
+    "b095b3fe-5141-49a8-b9ab-e76f8ebff167": {
+      "title": "Compare",
+      "id": "b095b3fe-5141-49a8-b9ab-e76f8ebff167",
+      "properties": {
+        "operation": "equals",
+        "tolerance": 0.0001,
+        "a": 0,
+        "b": "6"
+      },
+      "x": 819,
+      "y": 535,
+      "width": 210,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Compare",
+      "base_type": "core/Node"
+    },
+    "fa2c85a2-934b-4f8e-8fd4-dca251adf437": {
+      "title": "true",
+      "id": "fa2c85a2-934b-4f8e-8fd4-dca251adf437",
+      "properties": {
+        "value": true
+      },
+      "x": 455,
+      "y": 963,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "ba9b939d-d482-43ac-ab56-e75be1ad2e24": {
+      "title": "FN add",
+      "id": "ba9b939d-d482-43ac-ab56-e75be1ad2e24",
+      "properties": {
+        "name": "add"
+      },
+      "x": 205,
+      "y": 1023,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "e69df06a-fab7-4924-84e5-020ae7e58999": {
+      "title": "Make Dict",
+      "id": "e69df06a-fab7-4924-84e5-020ae7e58999",
+      "properties": {
+        "data": {
+          "items": [
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      "x": 195,
+      "y": 1223,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeDict",
+      "base_type": "core/Node"
+    },
+    "c3f030c3-a9cc-49e9-8423-d9e007f60a69": {
+      "title": "Dict Get",
+      "id": "c3f030c3-a9cc-49e9-8423-d9e007f60a69",
+      "properties": {
+        "key": "items"
+      },
+      "x": 474,
+      "y": 1222,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictGet",
+      "base_type": "core/Node"
+    },
+    "e266da89-0bf2-41c3-bd67-03c216a1c8f4": {
+      "title": "Items",
+      "id": "e266da89-0bf2-41c3-bd67-03c216a1c8f4",
+      "properties": {},
+      "x": 734,
+      "y": 1223,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "9f01c0d4-5cf7-4c65-87bc-f052828fc57d": {
+      "title": "Call For Each",
+      "id": "9f01c0d4-5cf7-4c65-87bc-f052828fc57d",
+      "properties": {
+        "copy_items": false,
+        "argument_name": "a"
+      },
+      "x": 911,
+      "y": 1019,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/CallForEach",
+      "base_type": "core/Node"
+    },
+    "5b00fb93-ff8b-46d5-8bdb-5d62837f469b": {
+      "title": "SET shared.test_001_001",
+      "id": "5b00fb93-ff8b-46d5-8bdb-5d62837f469b",
+      "properties": {
+        "name": "test_001_001",
+        "scope": "shared"
+      },
+      "x": 1110,
+      "y": 540,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "01b71445-d4f4-4df8-88a6-673931046b25": {
+      "title": "SET shared.test_001_002",
+      "id": "01b71445-d4f4-4df8-88a6-673931046b25",
+      "properties": {
+        "name": "test_001_002",
+        "scope": "shared"
+      },
+      "x": 1200,
+      "y": 1020,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3bff8457-9697-4f92-b48c-7df94f33680a": {
+      "title": "true",
+      "id": "3bff8457-9697-4f92-b48c-7df94f33680a",
+      "properties": {
+        "value": true
+      },
+      "x": 290,
+      "y": 1613,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "21dad6bc-8001-4da0-ac01-d36e2f45362d": {
+      "title": "director",
+      "id": "21dad6bc-8001-4da0-ac01-d36e2f45362d",
+      "properties": {
+        "agent_name": "director"
+      },
+      "x": 260,
+      "y": 1673,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "2a01e156-8f62-4c3a-b28e-792fedff332d": {
+      "title": "Compare",
+      "id": "2a01e156-8f62-4c3a-b28e-792fedff332d",
+      "properties": {
+        "operation": "equals",
+        "tolerance": 0.0001,
+        "a": 0,
+        "b": "7"
+      },
+      "x": 953,
+      "y": 1596,
+      "width": 210,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Compare",
+      "base_type": "core/Node"
+    },
+    "d36671ac-f1cb-4d58-8b89-5140790c238c": {
+      "title": "Make Dict",
+      "id": "d36671ac-f1cb-4d58-8b89-5140790c238c",
+      "properties": {
+        "data": {
+          "a": 1
+        }
+      },
+      "x": 170,
+      "y": 1763,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeDict",
+      "base_type": "core/Node"
+    },
+    "c0dfdfa3-ac90-4de8-a4be-8147d7cb9dd4": {
+      "title": "Scoped API Function",
+      "id": "c0dfdfa3-ac90-4de8-a4be-8147d7cb9dd4",
+      "properties": {
+        "code": "a = arguments.get(\"a\")\nresult[\"value\"] = a + 6"
+      },
+      "x": 443,
+      "y": 1626,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/ScopedAPIFunction",
+      "base_type": "core/Node"
+    },
+    "53de7f3f-8461-4c92-88fb-eaad660a639c": {
+      "title": "Dict Get",
+      "id": "53de7f3f-8461-4c92-88fb-eaad660a639c",
+      "properties": {
+        "key": "value"
+      },
+      "x": 703,
+      "y": 1636,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictGet",
+      "base_type": "core/Node"
+    },
+    "315b5db5-8e0f-428c-8a4c-fbbd6c94badd": {
+      "title": "SET shared.test_001_003",
+      "id": "315b5db5-8e0f-428c-8a4c-fbbd6c94badd",
+      "properties": {
+        "name": "test_001_003",
+        "scope": "shared"
+      },
+      "x": 1230,
+      "y": 1620,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "3bfb0f1e-b5d9-49ce-a5cf-ba1874a333f8.value": [
+      "a157f1ae-e820-4ec6-b496-a06388b81cb1.a"
+    ],
+    "a157f1ae-e820-4ec6-b496-a06388b81cb1.result": [
+      "28e93695-f6b4-4eae-aa37-923014d14330.value"
+    ],
+    "28e93695-f6b4-4eae-aa37-923014d14330.value": [
+      "a62c5b04-53b8-4292-a8f9-07238c225cb1.nodes"
+    ],
+    "831f4baf-8ab5-4485-a977-73d277cb3be9.dict": [
+      "be5ad5e3-6d00-47e3-8444-d2ebf83cbb72.args"
+    ],
+    "9b885e1e-027a-4cef-b5ae-5e190efd727c.fn": [
+      "be5ad5e3-6d00-47e3-8444-d2ebf83cbb72.fn"
+    ],
+    "be5ad5e3-6d00-47e3-8444-d2ebf83cbb72.result": [
+      "b095b3fe-5141-49a8-b9ab-e76f8ebff167.a"
+    ],
+    "b095b3fe-5141-49a8-b9ab-e76f8ebff167.result": [
+      "5b00fb93-ff8b-46d5-8bdb-5d62837f469b.value"
+    ],
+    "fa2c85a2-934b-4f8e-8fd4-dca251adf437.value": [
+      "9f01c0d4-5cf7-4c65-87bc-f052828fc57d.state"
+    ],
+    "ba9b939d-d482-43ac-ab56-e75be1ad2e24.fn": [
+      "9f01c0d4-5cf7-4c65-87bc-f052828fc57d.fn"
+    ],
+    "e69df06a-fab7-4924-84e5-020ae7e58999.dict": [
+      "c3f030c3-a9cc-49e9-8423-d9e007f60a69.dict"
+    ],
+    "c3f030c3-a9cc-49e9-8423-d9e007f60a69.value": [
+      "e266da89-0bf2-41c3-bd67-03c216a1c8f4.value"
+    ],
+    "e266da89-0bf2-41c3-bd67-03c216a1c8f4.value": [
+      "9f01c0d4-5cf7-4c65-87bc-f052828fc57d.items"
+    ],
+    "9f01c0d4-5cf7-4c65-87bc-f052828fc57d.results": [
+      "01b71445-d4f4-4df8-88a6-673931046b25.value"
+    ],
+    "3bff8457-9697-4f92-b48c-7df94f33680a.value": [
+      "c0dfdfa3-ac90-4de8-a4be-8147d7cb9dd4.state"
+    ],
+    "21dad6bc-8001-4da0-ac01-d36e2f45362d.agent": [
+      "c0dfdfa3-ac90-4de8-a4be-8147d7cb9dd4.agent"
+    ],
+    "2a01e156-8f62-4c3a-b28e-792fedff332d.result": [
+      "315b5db5-8e0f-428c-8a4c-fbbd6c94badd.value"
+    ],
+    "d36671ac-f1cb-4d58-8b89-5140790c238c.dict": [
+      "c0dfdfa3-ac90-4de8-a4be-8147d7cb9dd4.arguments"
+    ],
+    "c0dfdfa3-ac90-4de8-a4be-8147d7cb9dd4.result": [
+      "53de7f3f-8461-4c92-88fb-eaad660a639c.dict"
+    ],
+    "53de7f3f-8461-4c92-88fb-eaad660a639c.value": [
+      "2a01e156-8f62-4c3a-b28e-792fedff332d.a"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Test 001",
+      "x": 3,
+      "y": 306,
+      "width": 1690,
+      "height": 511,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Define Function",
+      "x": 3,
+      "y": 3,
+      "width": 1690,
+      "height": 300,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Test 002",
+      "x": 3,
+      "y": 821,
+      "width": 1690,
+      "height": 575,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Test 002",
+      "x": 3,
+      "y": 1399,
+      "width": 1689,
+      "height": 548,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "style": null
+}

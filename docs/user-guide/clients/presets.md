@@ -8,9 +8,9 @@ If you wish to alter the inference parameters sent with the generation requests 
 
 ![open settings](/talemate/img/0.26.0/open-settings.png)
 
-Navigate to the :material-tune: **Presets** tab then select the preset you wish to edit.
+Navigate to the :material-tune: **Presets** tab then select the :material-matrix: **Inference** tab.
 
-![selected preset](/talemate/img/0.26.0/inference-presets-1.png)
+![selected preset](/talemate/img/0.30.0/inference-presets-1.png)
 
 !!! warning
     Not all clients support all parameters, and generally it is assumed that the client implementation handles the parameters in a sane way, especially if values are passed for all of them. All presets are used and will be selected depending on the action the agent is performing. If you don't know what these mean, it is recommended to leave them as they are.
@@ -53,3 +53,27 @@ Used mostly for the director when directing the scene flow. Need to be creative 
 ### Summarization
 
 Used for summarizing the scene progress into narrative text.
+
+
+## Preset Groups
+
+Initially there is a `Default` group in which the presets are edited, but if you want you can create additional groups to create - for example - model / client specific presets.
+
+To add a new group, type the title in to the **New Group Name** field in the upper right and press `Enter`.
+
+![new group](/talemate/img/0.30.0/inference-presets-custom-group-1.png)
+
+
+The new group will be added and automatically selected for editing.
+
+![new group](/talemate/img/0.30.0/inference-presets-custom-group-2.png)
+
+Once you have adjusted the presets to your liking you can save the group by clicking the :material-content-save: **Save** button.
+
+### Setting the group for the client
+
+In the client listing find the :material-tune: selected preset and click it to expand the meny containing the groups.
+
+![select group](/talemate/img/0.30.0/inference-preset-group-apply.png)
+
+![select group](/talemate/img/0.30.0/inference-preset-group-applied.png)

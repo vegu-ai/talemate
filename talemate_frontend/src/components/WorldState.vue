@@ -5,7 +5,7 @@
         <v-progress-circular class="ml-1 mr-3" size="14" v-if="requesting" indeterminate="disable-shrink" color="primary"></v-progress-circular>   
         <v-tooltip v-else  text="Update Worldstate">
             <template v-slot:activator="{ props }">
-                <v-btn :disabled="isInputDisabled()"  size="x-small" icon="mdi-refresh" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh()"></v-btn>
+                <v-btn :disabled="busy"  size="x-small" icon="mdi-refresh" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh()"></v-btn>
             </template>
         </v-tooltip>
 
@@ -234,6 +234,10 @@ export default {
         }
     },
 
+    props: {
+        busy: Boolean,
+    },
+
     inject: [
         'getWebsocket', 
         'registerMessageHandler', 
@@ -289,8 +293,10 @@ export default {
         },
         lookAtCharacter(name) {
             this.getWebsocket().send(JSON.stringify({
-                type: 'interact',
-                text: `!narrate_c:${name}`,
+                type: 'narrator',
+                action: 'look_at_character',
+                character: name,
+                narrative_direction: "",
             }));
         },
         persistCharacter(name) {
@@ -301,8 +307,9 @@ export default {
         },
         lookAtItem(name) {
             this.getWebsocket().send(JSON.stringify({
-                type: 'interact',
-                text: `!narrate_q:describe the apperance of ${name}.:true`,
+                type: 'narrator',
+                action: 'query',
+                query: `describe the appearance of ${name}.`,
             }));
         },
         refresh() {
@@ -380,6 +387,7 @@ export default {
                 this.items = data.data.items;
                 this.location = data.data.location;
                 this.requesting = (data.status==="requested")
+                console.log("WorldState.vue: world_state", data.data);
                 this.reinforce = data.data.reinforce;
 
                 // check if there is any entry in reinforce that doesnt have

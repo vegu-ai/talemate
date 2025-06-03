@@ -1,38 +1,40 @@
 <template>
-    <v-card>
-        <v-form class="mt-4" v-model="formIsValid" ref="form">
-            <v-row>
-                <v-col cols="12" lg="6" xl="3">
-                    <v-select
-                        v-model="format"
-                        :items="formats"
-                        label="Export Format"
-                    ></v-select>
-                </v-col>
-                <v-col cols="12" lg="6" xl="4">
-                    <v-text-field
-                        v-model="exportName"
-                        :rules="[rules.required]"
-                        label="Export Name"
-                        hint="The name of the exported file."
-                    ></v-text-field>
-                </v-col>
-            </v-row>
-            <v-row>
-                <v-col cols="12">
-                    <v-checkbox
-                        v-model="resetProgress"
-                        label="Reset Progress"
-                        messages="If checked, the progress of the scene will be reset. Clearing messages, choices and other stateful data."
-                    ></v-checkbox>
-                </v-col>
-            </v-row>
-        </v-form>
-        <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="primary" prepend-icon="mdi-export" @click="requestExport">Export</v-btn>
-        </v-card-actions>
-    </v-card>
+    <v-row>
+        <v-col cols="12" ms="12" xl="8" xxl="5">
+            <v-form class="mt-4" v-model="formIsValid" ref="form">
+                <v-row>
+                    <v-col cols="12" lg="6" xl="3">
+                        <v-select
+                            v-model="format"
+                            :items="formats"
+                            label="Export Format"
+                        ></v-select>
+                    </v-col>
+                    <v-col cols="12" lg="6" xl="4">
+                        <v-text-field
+                            v-model="exportName"
+                            :rules="[rules.required]"
+                            label="Export Name"
+                            hint="The name of the exported file."
+                        ></v-text-field>
+                    </v-col>
+                </v-row>
+                <v-row>
+                    <v-col cols="12">
+                        <v-checkbox
+                            v-model="resetProgress"
+                            label="Reset Progress"
+                            messages="If checked, the progress of the scene will be reset. Clearing messages, choices and other stateful data."
+                        ></v-checkbox>
+                    </v-col>
+                </v-row>
+            </v-form>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="primary" prepend-icon="mdi-export" @click="requestExport">Export</v-btn>
+            </v-card-actions>
+        </v-col>
+    </v-row>
 
 </template>
 <script>

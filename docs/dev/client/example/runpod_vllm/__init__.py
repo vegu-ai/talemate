@@ -126,5 +126,4 @@ class RunPodVLLMClient(ClientBase):
             self.model_name = kwargs["model"]
         if "runpod_id" in kwargs:
             self.api_auth = kwargs["runpod_id"]
-        log.warning("reconfigure", kwargs=kwargs)
         self.set_client(**kwargs)

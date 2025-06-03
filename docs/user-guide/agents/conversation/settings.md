@@ -2,7 +2,7 @@
 
 ## General
 
-![Conversation agent general settings](/talemate/img/0.29.0/conversation-general-settings.png)
+![Conversation agent general settings](/talemate/img/0.30.0/conversation-general-settings.png)
 
 !!! note "Inference perameters"
     Inference parameters are NOT configured through any individual agent.
@@ -17,17 +17,11 @@ The text-generation client to use for conversation generation.
 
 If checked and talemate detects a repetitive response (based on a threshold), it will automatically re-generate the resposne with increased randomness parameters.
 
-##### Natural Flow
+!!! note "Deprecated"
+    This will soon be removed in favor of the new [Editor Agent Revision Action](/talemate/user-guide/agents/editor/settings#revision)
 
-When there are multiple characters in the scene, this will help the AI to keep the conversation flowing naturally, making sure turns are somewhat evenly distributed, and also checking that the most relevant character gets the next turn, based on the context.
-
-##### Max. Auto turns
-
-Maximum turns the AI gets in succession, before the player gets a turn no matter what.
-
-##### Max. Idle turns
-
-The maximum number of turns a character can go without speaking before the AI will force them to speak.
+!!! note "Natural flow was moved"
+    The natural flow settings have been moved to the [Director Agent](/talemate/user-guide/agents/director) settings as part of the auto direction feature.
 
 ## Generation
 
@@ -63,6 +57,14 @@ General, broad isntructions for ALL actors in the scene. This will be appended t
 ##### Actor Instructions Offset
 
 If > 0 will offset the instructions for the actor (both broad and character specific) into the history by that many turns. Some LLMs struggle to generate coherent continuations if the scene is interrupted by instructions right before the AI is asked to generate dialogue. This allows to shift the instruction backwards.
+
+## :material-script-text: Content
+
+![Conversation agent content settings](/talemate/img/0.30.0/conversation-content-settings.png)
+
+Enable this setting to apply a writing style to the generated content.
+
+Make sure the a writing style is selected in the [Scene Settings](/talemate/user-guide/world-editor/scene/settings) to apply the writing style to the generated content.
 
 ## Long Term Memory
 

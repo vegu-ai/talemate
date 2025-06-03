@@ -22,6 +22,28 @@ DEV_MODE = True
 def empty_function(*args, **kwargs):
     pass
 
+def exec_restricted(code: str, filename:str, **kwargs):
+    compiled_code = compile_restricted(code, filename=filename, mode="exec")
+    
+    # Create a restricted globals dictionary
+    restricted_globals = safe_globals.copy()
+    safe_locals = {}
+    
+    # Add custom variables, functions, or objects to the restricted globals
+    restricted_globals.update(kwargs)
+    restricted_globals["__name__"] = "__main__"
+    restricted_globals["__metaclass__"] = type
+    restricted_globals["_getiter_"] = default_guarded_getiter
+    restricted_globals["_getitem_"] = default_guarded_getitem
+    restricted_globals["_iter_unpack_sequence_"] = guarded_iter_unpack_sequence
+    restricted_globals["getattr"] = safer_getattr
+    restricted_globals["_write_"] = lambda x: x
+    restricted_globals["hasattr"] = hasattr
+    restricted_globals["exceptions"] = api_exceptions
+
+    # Execute the compiled code with the restricted globals
+    return exec(compiled_code, restricted_globals, safe_locals)
+
 def compile_scene_module(module_code: str, **kwargs) -> dict[str, callable]:
     # Compile the module code using RestrictedPython
     compiled_code = compile_restricted(

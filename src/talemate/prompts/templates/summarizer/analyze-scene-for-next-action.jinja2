@@ -1,11 +1,13 @@
-{% block rendered_context -%}
+{% set rendered_context_content -%}
 {% include "character-context.jinja2" -%}
-{% endblock %}
+{% endset %}
+{{ rendered_context_content }}
+{% set rendered_context_tokens = count_tokens(rendered_context_content) %}
 <|SECTION:SCENE|>
 {% block scene_history -%}
 
 {% set scene_context = scene.context_history(
-    budget=max_tokens-300-count_tokens(self.rendered_context()), 
+    budget=max_tokens-300-rendered_context_tokens, 
     min_dialogue=15, 
     sections=False, 
     keep_director=False, 

@@ -6,14 +6,12 @@
 
 #### {{ callback.name }} arguments
 
-```json
-{{ callback.json_usage(argument_usage)}}
-```
+{{ callback.usage(argument_usage)}}
 
 {% if examples %}#### {{ callback.name }} examples
 {% for example in examples %}
-```json
-{{ callback.json_example(example) }}
-```
+{% if example["_comment"]%}{{ example["_comment"] }}
+{% endif -%}
+{{ callback.example(example) }}
 {% endfor %}
 {% endif %}

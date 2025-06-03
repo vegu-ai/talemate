@@ -24,6 +24,7 @@ from talemate.server import (
     devtools,
     quick_settings,
     world_state_manager,
+    node_editor,
 )
 
 __all__ = [
@@ -65,6 +66,7 @@ class WebsocketHandler(Receiver):
                 self
             ),
             devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
+            node_editor.NodeEditorPlugin.router: node_editor.NodeEditorPlugin(self),
         }
 
         # unconveniently named function, this `connect` method is called
@@ -100,6 +102,10 @@ class WebsocketHandler(Receiver):
         memory_agent = instance.get_agent("memory")
         if memory_agent and self.scene:
             memory_agent.close_db(self.scene)
+            
+        for plugin in self.routes.values():
+            if hasattr(plugin, "disconnect"):
+                plugin.disconnect()
 
     async def connect_llm_clients(self):
         client = None
@@ -240,7 +246,7 @@ class WebsocketHandler(Receiver):
 
         self.llm_clients = {}
 
-        log.info("Configuring clients", clients=clients)
+        # log.info("Configuring clients", clients=clients)
 
         for client in clients:
             client.pop("status", None)
@@ -270,6 +276,7 @@ class WebsocketHandler(Receiver):
                 "type": client["type"],
                 "enabled": client.get("enabled", True),
                 "system_prompts": client.get("system_prompts", {}),
+                "preset_group": client.get("preset_group", ""),
             }
             for dfl_key in client_cls.Meta().defaults.dict().keys():
                 client_config[dfl_key] = client.get(
@@ -429,13 +436,7 @@ class WebsocketHandler(Receiver):
         )
 
     def handle_director(self, emission: Emission):
-        if emission.character:
-            character = emission.character.name
-        elif emission.message_object.source:
-            character = emission.message_object.source
-        else:
-            character = ""
-
+        character = emission.message_object.character_name
         director = instance.get_agent("director")
         direction_mode = director.actor_direction_mode
 
@@ -835,15 +836,6 @@ class WebsocketHandler(Receiver):
             )
 
         self.scene.edit_message(message_id, new_text)
-
-    def apply_scene_config(self, scene_config: dict):
-        self.scene.apply_scene_config(scene_config)
-        self.queue_put(
-            {
-                "type": "scene_config",
-                "data": self.scene.scene_config,
-            }
-        )
 
     def handle_character_card_upload(self, image_data_url: str, filename: str) -> str:
         image_type = image_data_url.split(";")[0].split(":")[1]

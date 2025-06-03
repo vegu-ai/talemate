@@ -13,11 +13,11 @@
                         <v-icon size="small" class="mr-1">mdi-script-text</v-icon>
                         Outline
                     </v-tab>
-                    <!--
                     <v-tab value="director">
-                        <v-icon size="small" class="mr-1">mdi-dice-multiple</v-icon>
+                        <v-icon size="small" class="mr-1">mdi-bullhorn</v-icon>
                         Direction
                     </v-tab>
+                    <!--
                     <v-tab value="messages">
                         <v-icon size="small" class="mr-1">mdi-tools</v-icon>
                         Utilities
@@ -43,6 +43,14 @@
                         </WorldStateManagerSceneOutline>
                     </v-window-item>
 
+                    <v-window-item value="director">
+                        <WorldStateManagerSceneDirection 
+                            :is-visible="page === 'director'"
+                            :templates="templates"
+                            :immutableScene="scene">
+                        </WorldStateManagerSceneDirection>
+                    </v-window-item>
+
                     <v-window-item value="settings">
                         <WorldStateManagerSceneSettings 
                             :app-config="appConfig"
@@ -54,7 +62,7 @@
 
                     <v-window-item value="export">
                         <WorldStateManagerSceneExport 
-                            :scene="scene">
+                            :immutableScene="scene">
                         </WorldStateManagerSceneExport>
                     </v-window-item>
                 </v-window> 
@@ -73,6 +81,7 @@
 import WorldStateManagerSceneOutline from './WorldStateManagerSceneOutline.vue';
 import WorldStateManagerSceneSettings from './WorldStateManagerSceneSettings.vue';
 import WorldStateManagerSceneExport from './WorldStateManagerSceneExport.vue';
+import WorldStateManagerSceneDirection from './WorldStateManagerSceneDirection.vue';
 
 export default {
     name: "WorldStateManagerScene",
@@ -80,6 +89,7 @@ export default {
         WorldStateManagerSceneOutline,
         WorldStateManagerSceneSettings,
         WorldStateManagerSceneExport,
+        WorldStateManagerSceneDirection,
     },
     props: {
         scene: Object,
@@ -109,6 +119,9 @@ export default {
         }
     },
     methods:{
+        navigate(page) {
+            this.page = page;
+        },
         handleMessage(message) {
             return message;
         }

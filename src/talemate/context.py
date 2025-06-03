@@ -1,3 +1,4 @@
+from typing import Callable
 from contextvars import ContextVar
 
 import pydantic
@@ -8,11 +9,11 @@ from talemate.exceptions import SceneInactiveError, GenerationCancelled
 __all__ = [
     "assert_active_scene",
     "scene_is_loading",
-    "rerun_context",
+    "regeneration_context",
     "active_scene",
     "interaction",
     "SceneIsLoading",
-    "RerunContext",
+    "RegenerationContext",
     "ActiveScene",
     "Interaction",
     "handle_generation_cancelled",
@@ -26,10 +27,11 @@ class InteractionState(pydantic.BaseModel):
     from_choice: str | None = None
     input: str | None = None
     reset_requested: bool = False
+    reset_side_effect: Callable | None = None
 
 
 scene_is_loading = ContextVar("scene_is_loading", default=None)
-rerun_context = ContextVar("rerun_context", default=None)
+regeneration_context = ContextVar("regeneration_context", default=None)
 active_scene = ContextVar("active_scene", default=None)
 interaction = ContextVar("interaction", default=InteractionState())
 
@@ -64,14 +66,14 @@ class ActiveScene:
         active_scene.reset(self.token)
 
 
-class RerunContext:
+class RegenerationContext:
     def __init__(self, scene, direction=None, method="replace", message: str = None):
         self.scene = scene
         self.direction = direction
         self.method = method
         self.message = message
         log.debug(
-            "RerunContext",
+            "RegenerationContext",
             scene=scene,
             direction=direction,
             method=method,
@@ -79,18 +81,19 @@ class RerunContext:
         )
 
     def __enter__(self):
-        self.token = rerun_context.set(self)
+        self.token = regeneration_context.set(self)
 
     def __exit__(self, *args):
-        rerun_context.reset(self.token)
+        regeneration_context.reset(self.token)
 
 
 class Interaction:
     def __init__(self, **kwargs):
         self.state = InteractionState(**kwargs)
 
-    def __enter__(self):
+    def __enter__(self) -> InteractionState:
         self.token = interaction.set(self.state)
+        return self.state
 
     def __exit__(self, *args):
         interaction.reset(self.token)

@@ -31,11 +31,12 @@ class CharacterProgressionMixin:
     """
 
     @classmethod
-    def add_actions(cls, summarizer):
-        summarizer.actions["character_progression"] = AgentAction(
+    def add_actions(cls, actions: dict[str, AgentAction]):
+        actions["character_progression"] = AgentAction(
             enabled=False,
             container=True,
             can_be_disabled=True,
+            quick_toggle=True,
             experimental=True,
             label="Character Progression",
             icon="mdi-account-switch",

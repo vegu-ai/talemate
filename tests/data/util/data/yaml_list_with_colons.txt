@@ -1,0 +1,5 @@
+```yaml
+instructions_list:
+- Take action: Run to the door and say: "Wait for me!"
+- Look around: Check for exits and say: "Is there another way out?"
+``` 

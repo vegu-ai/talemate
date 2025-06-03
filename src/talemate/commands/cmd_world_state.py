@@ -1,20 +1,14 @@
-import random
-
 import structlog
 
-import talemate.instance as instance
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
 from talemate.emit import emit, wait_for_input
 from talemate.instance import get_agent
-from talemate.scene_message import NarratorMessage
-from talemate.status import LoadingStatus, set_loading
 
 log = structlog.get_logger("talemate.cmd.world_state")
 
 __all__ = [
     "CmdWorldState",
-    "CmdPersistCharacter",
     "CmdAddReinforcement",
     "CmdRemoveReinforcement",
     "CmdUpdateReinforcements",
@@ -36,143 +30,12 @@ class CmdWorldState(TalemateCommand):
     aliases = ["ws"]
 
     async def run(self):
-        inline = self.args[0] == "inline" if self.args else False
         reset = self.args[0] == "reset" if self.args else False
-
-        if inline:
-            await self.scene.world_state.request_update_inline()
-            return True
 
         if reset:
             self.scene.world_state.reset()
 
         await self.scene.world_state.request_update()
-
-
-@register
-class CmdPersistCharacter(TalemateCommand):
-    """
-    Will attempt to create an actual character from a currently non
-    tracked character in the scene, by name.
-
-    Once persisted this character can then participate in the scene.
-    """
-
-    name = "persist_character"
-    description = "Persist a character by name"
-    aliases = ["pc"]
-
-    @set_loading("Generating character...", set_busy=False)
-    async def run(self):
-        from talemate.tale_mate import Actor, Character
-
-        scene = self.scene
-        world_state = instance.get_agent("world_state")
-        creator = instance.get_agent("creator")
-        narrator = instance.get_agent("narrator")
-
-        loading_status = LoadingStatus(3)
-
-        if not len(self.args):
-            characters = await world_state.identify_characters()
-            available_names = [
-                character["name"]
-                for character in characters.get("characters")
-                if not scene.get_character(character["name"])
-            ]
-
-            if not len(available_names):
-                raise ValueError("No characters available to persist.")
-
-            name = await wait_for_input(
-                "Which character would you like to persist?",
-                data={
-                    "input_type": "select",
-                    "choices": available_names,
-                    "multi_select": False,
-                },
-            )
-        else:
-            name = self.args[0]
-
-        extra_instructions = None
-        if name == "prompt":
-            name = await wait_for_input("What is the name of the character?")
-            description = await wait_for_input(
-                f"Brief description for {name} (or leave blank):"
-            )
-            if description.strip():
-                extra_instructions = f"Name: {name}\nBrief Description: {description}"
-
-        never_narrate = len(self.args) > 1 and self.args[1] == "no"
-
-        if not never_narrate:
-            is_present = await world_state.is_character_present(name)
-            log.debug(
-                "persist_character",
-                name=name,
-                is_present=is_present,
-                never_narrate=never_narrate,
-            )
-        else:
-            is_present = False
-            log.debug("persist_character", name=name, never_narrate=never_narrate)
-
-        character = Character(name=name)
-        character.color = random.choice(
-            [
-                "#F08080",
-                "#FFD700",
-                "#90EE90",
-                "#ADD8E6",
-                "#DDA0DD",
-                "#FFB6C1",
-                "#FAFAD2",
-                "#D3D3D3",
-                "#B0E0E6",
-                "#FFDEAD",
-            ]
-        )
-
-        loading_status("Generating character attributes...")
-
-        attributes = await world_state.extract_character_sheet(
-            name=name, text=extra_instructions
-        )
-        scene.log.debug("persist_character", attributes=attributes)
-
-        character.base_attributes = attributes
-
-        loading_status("Generating character description...")
-
-        description = await creator.determine_character_description(character)
-
-        character.description = description
-
-        scene.log.debug("persist_character", description=description)
-
-        actor = Actor(character=character, agent=instance.get_agent("conversation"))
-
-        await scene.add_actor(actor)
-
-        emit(
-            "status", message=f"Added character {name} to the scene.", status="success"
-        )
-
-        # write narrative for the character entering the scene
-        if not is_present and not never_narrate:
-            loading_status("Narrating character entrance...")
-            entry_narration = await narrator.narrate_character_entry(
-                character, narrative_direction=extra_instructions
-            )
-            message = NarratorMessage(
-                entry_narration, source=f"narrate_character_entry:{character.name}"
-            )
-            self.narrator_message(message)
-            self.scene.push_history(message)
-
-        scene.emit_status()
-        scene.world_state.emit()
 
 
 @register

@@ -35,6 +35,14 @@
         <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(styleHandlerFromPart(part))">
           <span>{{ part.text }}</span>
         </span>
+        <!-- continue conversation -->
+         <v-tooltip v-if="!editing && hovered && !continuing && isLastMessage" location="top" text="Generate continuation" class="pre-wrap">
+          <template v-slot:activator="{ props }">
+            <v-btn v-bind="props" :disabled="uxLocked" size="x-small" class="ml-2" color="primary" variant="text" prepend-icon="mdi-fast-forward" @click="continueConversation"></v-btn>
+          </template>
+        </v-tooltip>
+        <v-progress-circular v-else-if="continuing" class="ml-3 mr-3" size="14" indeterminate="disable-shrink"
+        color="primary"></v-progress-circular>       
       </div>
     </div>
     <v-sheet v-if="hovered" rounded="sm" color="transparent">
@@ -49,6 +57,12 @@
         <v-chip size="x-small" label color="success" v-if="!editing && hovered" variant="outlined" @click="createPin(message_id)" :disabled="uxLocked">
           <v-icon class="mr-1">mdi-pin</v-icon>
           Create Pin
+        </v-chip>
+
+        <!-- revision -->
+        <v-chip size="x-small" class="ml-2" label color="dirty" v-if="!editing && hovered && editorRevisionsEnabled && isLastMessage" variant="outlined" @click="reviseMessage(message_id)" :disabled="uxLocked">
+          <v-icon class="mr-1">mdi-typewriter</v-icon>
+          Editor Revision
         </v-chip>
 
         <!-- fork scene -->
@@ -68,8 +82,48 @@
 import { parseText } from '@/utils/textParser';
 
 export default {
-  props: ['character', 'text', 'color', 'message_id', 'uxLocked'],
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'forkSceneInitiate', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle'],
+  //props: ['character', 'text', 'color', 'message_id', 'uxLocked', 'isLastMessage'],
+  props: {
+    character: {
+      type: String,
+      required: true,
+    },
+    text: {
+      type: String,
+      required: true,
+    },
+    color: {
+      type: String,
+      required: true,
+    },
+    message_id: {
+      type: Number,
+      required: true,
+    },
+    uxLocked: {
+      type: Boolean,
+      required: true,
+    },
+    isLastMessage: {
+      type: Boolean,
+      required: true,
+    },
+    editorRevisionsEnabled: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  inject: [
+    'requestDeleteMessage',
+    'getWebsocket', 
+    'createPin', 
+    'forkSceneInitiate', 
+    'fixMessageContinuityErrors', 
+    'autocompleteRequest', 
+    'autocompleteInfoMessage', 
+    'getMessageStyle', 
+    'reviseMessage',
+  ],
   computed: {
     parts() {
       return parseText(this.text);
@@ -79,6 +133,7 @@ export default {
     return {
       editing: false,
       autocompleting: false,
+      continuing: false,
       editing_text: "",
       hovered: false,
     }
@@ -104,6 +159,44 @@ export default {
       } else {
         this.submitEdit();
       }
+    },
+
+    continueConversation() {
+      this.continuing = true;
+      this.autocompleteRequest(
+        {
+          partial: this.text,
+          context: "dialogue:npc",
+          character: this.character,
+        },
+        (completion) => {
+          this.continuing = false;
+
+          // ignore empty completions
+          if (completion.trim() === "") {
+            return;
+          }
+
+          // if text ends with a quote and completion starts with a quote, remove the quotes
+          // and insert a period at the end of the current text
+          if (this.text.endsWith('"') && completion.startsWith('"')) {
+            completion = completion.slice(1);
+            let text = this.text.slice(0, -1);
+
+            // if text does not end with a period, add one
+            if (!text.endsWith('.')) {
+              text += '.';
+            }
+
+            this.editing_text = text + " " + completion;
+          } else {
+            this.editing_text = this.text + " " + completion;
+          }
+
+          this.submitEdit();
+        },
+        this.$refs.textarea
+      )
     },
 
     autocompleteEdit() {

@@ -1,0 +1,27 @@
+Here is some text with faulty but fixable JSON.
+
+```json
+{
+  "name": "Faulty Object"
+  "missing": "comma",
+  "value": 123
+}
+```
+
+Another fixable JSON with trailing comma:
+
+```
+{
+  "array": [1, 2, 3,],
+  "object": {"key": "value",}
+}
+```
+
+JSON with unmatched brackets:
+
+```json
+{
+  "unclosed": "object",
+  "nested": {
+    "level": 1
+} 

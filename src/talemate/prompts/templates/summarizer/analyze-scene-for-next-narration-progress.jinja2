@@ -6,9 +6,9 @@ Your task is to analyze the current moment in the scene to guide natural narrati
 {% endif %}
 
 {% if last_message -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Analyze the meaning of the final line in the scene. What was the meaning?
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Analyze the meaning of the current moment in the scene. What was the meaning?
 
-``` the final line in the scene
+``` the current moment in the scene
 {{ last_message }}
 ```
 {% endif %}
@@ -18,14 +18,10 @@ Your task is to analyze the current moment in the scene to guide natural narrati
 - What sensory details are present but not yet highlighted?
 - What is the current focus of attention?
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly note any subtle elements in the current moment that could be naturally expanded through narration:
-- Environmental details that mirror the mood
-- Unspoken reactions or tensions
-- Immediate physical sensations or atmospheric qualities
-- Brief but meaningful observations about the present situation
-
 {% if context_investigation -%}
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 
 Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
+
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Propose how the scene could progress next based on what has happened so far and may have been established previously.

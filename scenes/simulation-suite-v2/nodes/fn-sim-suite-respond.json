@@ -1,0 +1,244 @@
+{
+  "title": "Fn Sim Suite Respond",
+  "id": "65dee0fc-c091-4185-a7a9-e17017d4b761",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "registry": "sim-suite/fnSimSuiteRespond",
+  "nodes": {
+    "0d895884-38f8-4880-a866-184f1c4a7db9": {
+      "title": "Get State",
+      "id": "0d895884-38f8-4880-a866-184f1c4a7db9",
+      "properties": {
+        "name": "user_message",
+        "scope": "scene loop"
+      },
+      "x": 40,
+      "y": 170,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "9aca26f0-4a8d-48ce-a971-7ef82babc080": {
+      "title": "Get",
+      "id": "9aca26f0-4a8d-48ce-a971-7ef82babc080",
+      "properties": {
+        "attribute": "raw"
+      },
+      "x": 270,
+      "y": 200,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "ca330d27-5fc6-49eb-913e-63db385fae61": {
+      "title": "Stage 0",
+      "id": "ca330d27-5fc6-49eb-913e-63db385fae61",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1679,
+      "y": 179,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "bcfeb0b2-aac2-4954-b393-c9d8eb07c2ec": {
+      "title": "Push History",
+      "id": "bcfeb0b2-aac2-4954-b393-c9d8eb07c2ec",
+      "properties": {
+        "emit_message": true
+      },
+      "x": 1410,
+      "y": 150,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "49d6071c-7dcc-493b-8288-294750c58e34": {
+      "title": "Dict Set",
+      "id": "49d6071c-7dcc-493b-8288-294750c58e34",
+      "properties": {
+        "key": "response"
+      },
+      "x": 760,
+      "y": 360,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "1667ed60-5ca7-4b61-a17a-c34f56e7d545": {
+      "title": "Generate Query Narration",
+      "id": "1667ed60-5ca7-4b61-a17a-c34f56e7d545",
+      "properties": {},
+      "x": 1089,
+      "y": 139,
+      "width": 268,
+      "height": 70,
+      "collapsed": false,
+      "registry": "agents/narrator/GenerateQueryNarration",
+      "base_type": "core/Node"
+    },
+    "124b8902-3703-4e06-bc15-620cc629d517": {
+      "title": "Format",
+      "id": "124b8902-3703-4e06-bc15-620cc629d517",
+      "properties": {},
+      "x": 1020,
+      "y": 290,
+      "width": 140,
+      "height": 46,
+      "collapsed": false,
+      "registry": "data/string/Format",
+      "base_type": "core/Node"
+    },
+    "d1a733b4-8728-4736-863d-d29b166df5b3": {
+      "title": "response",
+      "id": "d1a733b4-8728-4736-863d-d29b166df5b3",
+      "properties": {
+        "name": "response",
+        "typ": "str"
+      },
+      "x": 40,
+      "y": 380,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "44c72ced-93e6-49b8-b3fa-fa5d41d51784": {
+      "title": "Switch",
+      "id": "44c72ced-93e6-49b8-b3fa-fa5d41d51784",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 910,
+      "y": 160,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "c0594837-8a6e-44a9-afff-64c05514af1d": {
+      "title": "Dict Set",
+      "id": "c0594837-8a6e-44a9-afff-64c05514af1d",
+      "properties": {
+        "key": "query"
+      },
+      "x": 510,
+      "y": 260,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "0d3b5702-149a-43db-960e-166203ad1943": {
+      "title": "Make Text",
+      "id": "0d3b5702-149a-43db-960e-166203ad1943",
+      "properties": {
+        "value": "{response}\n\nQuery to the simulation computer: {query}"
+      },
+      "x": 770,
+      "y": 240,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "15e863d8-6664-4231-91d7-0007bb9bc366": {
+      "title": "Instruction",
+      "id": "15e863d8-6664-4231-91d7-0007bb9bc366",
+      "properties": {
+        "value": "Narrate the computer's answer to the user's query. Include some flavor narrative."
+      },
+      "x": 490,
+      "y": 70,
+      "width": 291,
+      "height": 66,
+      "collapsed": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "0d895884-38f8-4880-a866-184f1c4a7db9.value": [
+      "9aca26f0-4a8d-48ce-a971-7ef82babc080.object"
+    ],
+    "9aca26f0-4a8d-48ce-a971-7ef82babc080.value": [
+      "c0594837-8a6e-44a9-afff-64c05514af1d.value"
+    ],
+    "bcfeb0b2-aac2-4954-b393-c9d8eb07c2ec.message": [
+      "ca330d27-5fc6-49eb-913e-63db385fae61.state"
+    ],
+    "49d6071c-7dcc-493b-8288-294750c58e34.dict": [
+      "124b8902-3703-4e06-bc15-620cc629d517.variables"
+    ],
+    "1667ed60-5ca7-4b61-a17a-c34f56e7d545.message": [
+      "bcfeb0b2-aac2-4954-b393-c9d8eb07c2ec.message"
+    ],
+    "124b8902-3703-4e06-bc15-620cc629d517.result": [
+      "1667ed60-5ca7-4b61-a17a-c34f56e7d545.extra_context"
+    ],
+    "d1a733b4-8728-4736-863d-d29b166df5b3.value": [
+      "49d6071c-7dcc-493b-8288-294750c58e34.value",
+      "44c72ced-93e6-49b8-b3fa-fa5d41d51784.value"
+    ],
+    "44c72ced-93e6-49b8-b3fa-fa5d41d51784.yes": [
+      "1667ed60-5ca7-4b61-a17a-c34f56e7d545.state"
+    ],
+    "c0594837-8a6e-44a9-afff-64c05514af1d.dict": [
+      "49d6071c-7dcc-493b-8288-294750c58e34.dict"
+    ],
+    "0d3b5702-149a-43db-960e-166203ad1943.value": [
+      "124b8902-3703-4e06-bc15-620cc629d517.template"
+    ],
+    "15e863d8-6664-4231-91d7-0007bb9bc366.value": [
+      "1667ed60-5ca7-4b61-a17a-c34f56e7d545.query"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Stage 0",
+      "x": 7,
+      "y": 7,
+      "width": 1898,
+      "height": 503,
+      "color": "#3f789e",
+      "font_size": 24
+    }
+  ],
+  "comments": [],
+  "base_type": "core/functions/Function",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "0d620826-e8e2-4794-9ae4-40c15b4d10e1",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    }
+  ],
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null
+  }
+}

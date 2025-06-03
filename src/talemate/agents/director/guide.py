@@ -6,7 +6,8 @@ from talemate.agents.base import (
     set_processing as _set_processing,
     AgentAction,
     AgentActionConfig,
-    AgentEmission,
+    AgentTemplateEmission,
+    DynamicInstruction,
 )
 from talemate.agents.context import active_agent
 from talemate.prompts import Prompt
@@ -16,6 +17,7 @@ from talemate.util import strip_partial_sentences
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
     from talemate.agents.summarize.analyze_scene import SceneAnalysisEmission
+    from talemate.agents.editor.revision import RevisionAnalysisEmission
 
 log = structlog.get_logger()
 
@@ -27,10 +29,8 @@ talemate.emit.async_signals.register(
 
 
 @dataclasses.dataclass
-class DirectorGuidanceEmission(AgentEmission):
-    generation: str = ""
-    dynamic_instructions: list[str] = dataclasses.field(default_factory=list)
-
+class DirectorGuidanceEmission(AgentTemplateEmission):
+    pass
 
 def set_processing(fn):
     """
@@ -50,9 +50,9 @@ def set_processing(fn):
         agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
         
         response = await fn(self, *args, **kwargs)
-        emission.generation = [response]
+        emission.response = response
         await talemate.emit.async_signals.get("agent.director.guide.generated").send(emission)
-        return emission.generation[0]
+        return emission.response
 
     return wrapper
 
@@ -66,11 +66,12 @@ class GuideSceneMixin:
     """
     
     @classmethod
-    def add_actions(cls, director):
-        director.actions["guide_scene"] = AgentAction(
+    def add_actions(cls, actions: dict[str, AgentAction]):
+        actions["guide_scene"] = AgentAction(
             enabled=False,
             container=True,
             can_be_disabled=True,
+            quick_toggle=True,
             experimental=True,
             label="Guide Scene",
             icon="mdi-lightbulb",
@@ -80,13 +81,13 @@ class GuideSceneMixin:
                     type="bool",
                     label="Guide actors",
                     description="Guide the actors in the scene. This happens during every actor turn.",
-                    value=False
+                    value=True
                 ),
                 "guide_narrator": AgentActionConfig(
                     type="bool",
                     label="Guide narrator",
                     description="Guide the narrator during the scene. This happens during the narrator's turn.",
-                    value=False
+                    value=True
                 ),
                 "guidance_length": AgentActionConfig(
                     type="text",
@@ -101,6 +102,13 @@ class GuideSceneMixin:
                         {"label": "Medium Long (768)", "value": "768"},
                         {"label": "Long (1024)", "value": "1024"},
                     ]
+                ),
+                "cache_guidance": AgentActionConfig(
+                    type="bool",
+                    label="Cache guidance",
+                    description="Will not regenerate the guidance until the scene moves forward or the analysis changes.",
+                    value=False,
+                    quick_toggle=True,
                 )
             }
         )
@@ -123,6 +131,10 @@ class GuideSceneMixin:
     def guide_scene_guidance_length(self) -> int:
         return int(self.actions["guide_scene"].config["guidance_length"].value)
     
+    @property
+    def guide_scene_cache_guidance(self) -> bool:
+        return self.actions["guide_scene"].config["cache_guidance"].value
+    
     # signal connect
     
     def connect(self, scene):
@@ -133,6 +145,9 @@ class GuideSceneMixin:
         talemate.emit.async_signals.get("agent.summarization.scene_analysis.cached").connect(
             self.on_summarization_scene_analysis_after
         )
+        talemate.emit.async_signals.get("agent.editor.revision-analysis.before").connect(
+            self.on_editor_revision_analysis_before
+        )
         
     async def on_summarization_scene_analysis_after(self, emission: "SceneAnalysisEmission"):
         
@@ -141,11 +156,17 @@ class GuideSceneMixin:
         
         guidance = None
         
+        cached_guidance = await self.get_cached_guidance(emission.response)
+        
         if emission.analysis_type == "narration" and self.guide_narrator:
-            guidance = await self.guide_narrator_off_of_scene_analysis(
-                emission.response,
-                response_length=self.guide_scene_guidance_length,
-            )
+            
+            if cached_guidance:
+                guidance = cached_guidance
+            else:
+                guidance = await self.guide_narrator_off_of_scene_analysis(
+                    emission.response,
+                    response_length=self.guide_scene_guidance_length,
+                )
             
             if not guidance:
                 log.warning("director.guide_scene.narration: Empty resonse")
@@ -154,18 +175,94 @@ class GuideSceneMixin:
             self.set_context_states(narrator_guidance=guidance)
         
         elif emission.analysis_type == "conversation" and self.guide_actors:   
-            guidance = await self.guide_actor_off_of_scene_analysis(
-                emission.response,
-                emission.template_vars.get("character"),
-                response_length=self.guide_scene_guidance_length,
-            )
+            
+            if cached_guidance:
+                guidance = cached_guidance
+            else:
+                guidance = await self.guide_actor_off_of_scene_analysis(
+                    emission.response,
+                    emission.template_vars.get("character"),
+                    response_length=self.guide_scene_guidance_length,
+                )
             
             if not guidance:
                 log.warning("director.guide_scene.conversation: Empty resonse")
                 return
             
             self.set_context_states(actor_guidance=guidance)
-            
+
+        if guidance:
+            await self.set_cached_guidance(
+                emission.response, 
+                guidance, 
+                emission.analysis_type, 
+                emission.template_vars.get("character")
+            )
+    
+    async def on_editor_revision_analysis_before(self, emission: AgentTemplateEmission):
+        cached_guidance = await self.get_cached_guidance(emission.response)
+        if cached_guidance:
+            emission.dynamic_instructions.append(DynamicInstruction(
+                title="Guidance",
+                content=cached_guidance
+            ))
+        
+    # helpers
+    
+    def _cache_key(self) -> str:
+        return f"cached_guidance"
+    
+    async def get_cached_guidance(self, analysis:str | None = None) -> str | None:
+        """
+        Returns the cached guidance for the given analysis.
+        
+        If analysis is not provided, it will return the cached guidance for the last analysis regardless
+        of the fingerprint.
+        """
+        
+        if not self.guide_scene_cache_guidance:
+            return None
+        
+        key = self._cache_key()
+        cached_guidance = self.get_scene_state(key)
+        
+        if cached_guidance:
+            if not analysis:
+                return cached_guidance.get("guidance")
+            elif cached_guidance.get("fp") == self.context_fingerpint(extra=[analysis]):
+                return cached_guidance.get("guidance")
+        
+        return None
+    
+    async def set_cached_guidance(self, analysis:str, guidance: str, analysis_type: str, character: "Character | None" = None):
+        """
+        Sets the cached guidance for the given analysis.
+        """
+        key = self._cache_key()
+        self.set_scene_states(**{
+            key: {
+                "fp": self.context_fingerpint(extra=[analysis]), 
+                "guidance": guidance,
+                "analysis_type": analysis_type,
+                "character": character.name if character else None,
+            }
+        })
+    
+    async def get_cached_character_guidance(self, character_name: str) -> str | None:
+        """
+        Returns the cached guidance for the given character.
+        """
+        key = self._cache_key()
+        cached_guidance = self.get_scene_state(key)
+        
+        if not cached_guidance:
+            return None
+        
+        if cached_guidance.get("character") == character_name and cached_guidance.get("analysis_type") == "conversation":
+            return cached_guidance.get("guidance")
+        
+        return None
+     
     # methods
     
     @set_processing

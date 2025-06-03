@@ -97,7 +97,6 @@ class WorldStateManager:
         scene = self.scene
         if not hasattr(scene, "_world_state_templates"):
             scene._world_state_templates = world_state_templates.Collection.load()
-            #log.warning("loaded world state templates", templates=scene._world_state_templates)
         return scene._world_state_templates
 
     def __init__(self, scene: "Scene"):
@@ -652,8 +651,8 @@ class WorldStateManager:
     async def apply_templates(
         self,
         templates: list[world_state_templates.AnnotatedTemplate],
-        callback_start: Callable,
-        callback_done: Callable,
+        callback_start: Callable | None = None,
+        callback_done: Callable | None = None,
         **kwargs,
     ):
         """
@@ -803,7 +802,7 @@ class WorldStateManager:
         description: str = "",
         active: bool = False,
         generate_attributes: bool = True,
-        generation_options: world_state_templates.GenerationOptions = None,
+        generation_options: world_state_templates.GenerationOptions | None = None,
     ) -> "Character":
         """
         Creates a new character in the scene.
@@ -829,13 +828,19 @@ class WorldStateManager:
             generation_options = world_state_templates.GenerationOptions()
 
         if not name and generate:
-            name = await creator.contextual_generate_from_args(
-                context="character attribute:name",
-                instructions=f"You are creating: {instructions if instructions else 'A new character'}. Only respond with the character's name.",
-                length=25,
-                uid="wsm.create_character",
-                character="the character",
-            )
+            tries = 2
+            while not name and tries > 0:
+                name = await creator.contextual_generate_from_args(
+                    context="character attribute:name",
+                    instructions=f"You are creating: {instructions if instructions else 'A new character'}. Only respond with the character's name.",
+                    length=25,
+                    uid="wsm.create_character",
+                    character="the character",
+                )
+                tries -= 1
+                
+        if not name:
+            raise ValueError("Failed to generate a name for the character.")
 
         if not description and generate:
             description = await creator.contextual_generate_from_args(
@@ -847,18 +852,11 @@ class WorldStateManager:
                 **generation_options.model_dump(),
             )
 
-        if generate_attributes:
-            base_attributes = await world_state.extract_character_sheet(
-                name=name, text=description
-            )
-        else:
-            base_attributes = {}
-
         # create character instance
-        character = self.scene.Character(
+        character:"Character" = self.scene.Character(
             name=name,
             description=description,
-            base_attributes=base_attributes,
+            base_attributes={},
             is_player=is_player,
         )
 
@@ -873,9 +871,20 @@ class WorldStateManager:
         actor = ActorCls(character, get_agent("conversation"))
 
         await self.scene.add_actor(actor)
+        
+        try:
+            if generate_attributes:
+                base_attributes = await world_state.extract_character_sheet(
+                    name=name, text=description
+                )
+                character.update(base_attributes=base_attributes)
 
-        if not active:
-            await deactivate_character(self.scene, name)
+
+            if not active:
+                await deactivate_character(self.scene, name)
+        except Exception as e:
+            await self.scene.remove_actor(actor)
+            raise e
 
         return character
 

@@ -1,8 +1,8 @@
 <template>
     <v-menu location="top">
         <template v-slot:activator="{ props }">
-            <v-btn class="hotkey mx-3" v-bind="props" :disabled="disabled" color="primary" icon>
-                <v-icon>mdi-dice-multiple</v-icon>
+            <v-btn class="hotkey mx-1" v-bind="props" :disabled="disabled" color="primary" icon variant="text">
+                <v-icon>mdi-bullhorn</v-icon>
             </v-btn>
         </template>
         <v-list>
@@ -16,7 +16,6 @@
                 <v-list-item-title>Generate dynamic actions<v-chip variant="text" color="highlight5" class="ml-1" size="x-small">Ctrl: Provide direction</v-chip></v-list-item-title>
                 <v-list-item-subtitle>{{ getActAsCharacterName() }}</v-list-item-subtitle>
             </v-list-item>
-
         </v-list>
     </v-menu>
 

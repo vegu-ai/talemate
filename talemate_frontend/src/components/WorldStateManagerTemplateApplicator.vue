@@ -88,7 +88,8 @@ export default {
             immediate: true,
             handler(selectedTemplates) {
                 this.$emit('selected', selectedTemplates);
-            }
+            },
+            deep: true,
         }
     },
     computed: {

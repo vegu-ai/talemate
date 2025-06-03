@@ -1,7 +1,7 @@
 <template>
     <div v-if="isConnected()">
-        <v-list v-for="(agent, index) in state.agents" :key="index" density="compact">
-            <v-list-item @click="editAgent(index)">
+        <v-list density="compact">
+            <v-list-item  v-for="(agent, index) in state.agents" :key="index" @click="editAgent(index)">
                 <v-list-item-title>
                     <v-progress-circular v-if="agent.status === 'busy'" indeterminate="disable-shrink" color="primary"
                         size="14"></v-progress-circular>
@@ -19,47 +19,85 @@
                             <v-icon v-bind="props" color="warning" size="14" class="ml-1">mdi-flask-outline</v-icon>
                         </template>
                     </v-tooltip>
+                    <AgentMessages v-if="agentHasMessages[agent.name]" :messages="messages[agent.name] || []" :agent="agent.name" :messageReceiveTime="agentHasMessages[agent.name]" />
+
                 </v-list-item-title>
-                <div v-if="typeof(agent.client) === 'string'">
-                    <v-chip prepend-icon="mdi-network-outline" class="mr-1" size="x-small" color="grey" variant="tonal" label>{{ agent.client }}</v-chip>
-                    <!--
-                    <v-icon color="grey" size="x-small" v-bind="props">mdi-network-outline</v-icon>
-                    <span class="ml-1 text-caption text-bold text-grey-lighten-1">{{ agent.client }}</span>
-                    -->
+                
+                <div class="d-flex flex-wrap align-center chip-container">
+                    <!-- Client chip for string type -->
+                    <v-chip v-if="typeof(agent.client) === 'string'" 
+                        prepend-icon="mdi-network-outline" 
+                        size="x-small" 
+                        color="grey" 
+                        variant="tonal" 
+                        label>
+                        {{ agent.client }}
+                    </v-chip>
 
-                </div>
-                <div v-else-if="typeof(agent.client) === 'object'">
-                    <v-tooltip v-for="(detail, key) in agent.client" :key="key" :text="detail.description" >
-                        <template v-slot:activator="{ props }">
-                            <v-chip 
-                            class="mr-1" 
-                            size="x-small" 
-                            v-bind="props"
-                            :prepend-icon="detail.icon"
-                            label
-                            :color="detail.color || 'grey'"
-                            variant="tonal"
-                            >
-                               {{ detail.value }}
-                           </v-chip>
-                        </template>
-                    </v-tooltip>
-
-                    <!--
-                    <div v-for="(detail, key) in agent.client" :key="key">
-                        <v-tooltip :text="detail.description" v-if="detail.icon != null">
+                    <!-- Client chips for object type -->
+                    <template v-else-if="typeof(agent.client) === 'object'">
+                        <v-tooltip v-for="(detail, key) in agent.client" :key="key" :text="detail.description" >
                             <template v-slot:activator="{ props }">
-                                <v-icon color="grey" size="x-small" v-bind="props">{{ detail.icon }}</v-icon>
+                                <v-chip 
+                                size="x-small" 
+                                v-bind="props"
+                                :prepend-icon="detail.icon"
+                                label
+                                :color="detail.color || 'grey'"
+                                variant="tonal"
+                                >
+                                {{ detail.value }}
+                                </v-chip>
                             </template>
                         </v-tooltip>
-                        <span class="ml-1 text-caption text-bold text-grey-lighten-1">{{ detail.value }}</span>
+                    </template>
+
+                    <div v-if="agentStateNotifications[agent.name]">
+                        <v-tooltip v-for="(state, key) in agentStateNotifications[agent.name]" :key="key" :text="state.value" >
+                            <template v-slot:activator="{ props }">
+                                <v-chip v-bind="props" size="x-small" label variant="tonal" :color="state.color || 'highlight5'" prepend-icon="mdi-bell-outline">
+                                    {{ state.key }}
+                                </v-chip>
+                            </template>
+                        </v-tooltip>
                     </div>
-                    -->
+
+                    <!-- Quick toggle action chips with their sub-config chips -->
+                    <template v-for="(action, action_name) in agent.actions" :key="action_name">
+                        <!-- Action chip (if it has quick_toggle) -->
+                        <template v-if="action.quick_toggle">
+                            <v-chip 
+                                size="x-small" 
+                                label
+                                :color="action.enabled ? 'success' : 'grey'"
+                                variant="tonal"
+                                :prepend-icon="action.icon"
+                                @click.stop="toggleAction(agent, action_name, action)"
+                            >
+                                {{ action.label }}
+                                <v-icon class="ml-1" size="small" v-if="action.enabled">mdi-check-circle-outline</v-icon>
+                                <v-icon class="ml-1" size="small" v-else>mdi-circle-outline</v-icon>
+                            </v-chip>
+                            
+                            <!-- Related sub-config chips (if action is enabled) -->
+                            <template v-if="action.enabled && action.config">
+                                <v-chip 
+                                    v-for="(config, config_name) in getQuickToggleSubConfigs(action)" 
+                                    :key="`${action_name}-${config_name}`"
+                                    size="x-small" 
+                                    label
+                                    :color="config.value ? 'highlight3' : 'grey'"
+                                    variant="tonal"
+                                    @click.stop="toggleSubConfig(agent, action_name, config_name, config)"
+                                >
+                                    {{ config.label }}
+                                    <v-icon class="ml-1" size="x-small" v-if="config.value">mdi-check-circle-outline</v-icon>
+                                    <v-icon class="ml-1" size="x-small" v-else>mdi-circle-outline</v-icon>
+                                </v-chip>
+                            </template>
+                        </template>
+                    </template>
                 </div>
-                <!--
-                <v-chip class="mr-1" v-if="agent.status === 'disabled'" size="x-small">Disabled</v-chip>
-                <v-chip v-if="agent.data.experimental" color="warning" size="x-small">experimental</v-chip>
-                -->
             </v-list-item>
         </v-list>
         <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" @save="saveAgent" @update:dialog="updateDialog" ref="modal"></AgentModal>
@@ -68,10 +106,12 @@
     
 <script>
 import AgentModal from './AgentModal.vue';
+import AgentMessages from './AgentMessages.vue';
 
 export default {
     components: {
-        AgentModal
+        AgentModal,
+        AgentMessages
     },
 
     data() {
@@ -88,7 +128,37 @@ export default {
                     data: {},
                 },
                 formTitle: ''
+            },
+            maxMessagesPerAgent: 25,
+            agentHasMessages: {},
+            messages: {},
+        }
+    },
+    props: {
+        agentState: {
+            type: Object,
+            default: () => ({})
+        }
+    },
+    computed: {
+        agentStateNotifications() {
+            // if key begins with 'notify__' and value is a string, return the key and value
+            // return the notify__(.+) part as the key, and the value as the value
+            // the key will also be title-ized (title and space instead of underscore)
+
+            // this is done per agent, so we need to iterate over the agents and return a dict
+            // with the agent name as the key and the notifications as the value (a list of dicts)
+            let notifications = {};
+            for(let agent in this.agentState) {
+                notifications[agent] = Object.keys(this.agentState[agent]).filter(key => key.startsWith('notify__') && typeof this.agentState[agent][key] === 'string').map(key => {
+                    return {
+                        key: key.replace('notify__', '').replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase()),
+                        value: this.agentState[agent][key]
+                    }
+                });
             }
+            console.log("agentStateNotifications", notifications);
+            return notifications;
         }
     },
     inject: [
@@ -132,6 +202,66 @@ export default {
 
             return false;
         },
+        toggleAction(agent, action_name, action) {
+            // Toggle the action's enabled state
+            action.enabled = !action.enabled;
+            
+            // Update the agent's actions
+            agent.actions[action_name].enabled = action.enabled;
+            
+            // Save the agent to persist the changes
+            this.saveAgent(agent);
+            
+            // Send update to server
+            this.getWebsocket().send(JSON.stringify({
+                type: 'agent_action',
+                agent_name: agent.name,
+                action_name: action_name,
+                enabled: action.enabled
+            }));
+        },
+        toggleSubConfig(agent, action_name, config_name, config) {
+            // Toggle the config value (assuming it's a boolean)
+            config.value = !config.value;
+            
+            // Update the agent's config
+            agent.actions[action_name].config[config_name].value = config.value;
+            
+            // Save the agent to persist the changes
+            this.saveAgent(agent);
+            
+            // Send update to server using the same type as action toggles
+            this.getWebsocket().send(JSON.stringify({
+                type: 'agent_action',
+                agent_name: agent.name,
+                action_name: action_name,
+                config: {
+                    [config_name]: config.value
+                }
+            }));
+        },
+        getQuickToggleActions(agent) {
+            const result = {};
+            if (agent.actions) {
+                for (const action_name in agent.actions) {
+                    if (agent.actions[action_name] && agent.actions[action_name].quick_toggle) {
+                        result[action_name] = agent.actions[action_name];
+                    }
+                }
+            }
+            return result;
+        },
+        getQuickToggleSubConfigs(action) {
+            const result = {};
+            if (action.config) {
+                for (const config_name in action.config) {
+                    if (action.config[config_name] && action.config[config_name].quick_toggle) {
+                        result[config_name] = action.config[config_name];
+                    }
+                }
+            }
+            return result;
+        },
         getActive() {
             return this.state.agents.find(a => a.status === 'busy');
         },
@@ -171,6 +301,13 @@ export default {
             }
         },
         handleMessage(data) {
+
+            // When a new scene is loaded, clear the messages and agentHasMessages
+            if (data.type === "system" && data.id === 'scene.loaded') {
+                this.messages = {};
+                this.agentHasMessages = {};
+            }
+
             // Handle agent_status message type
             if (data.type === 'agent_status') {
                 // Find the client with the given name
@@ -218,6 +355,19 @@ export default {
                 }
                 return;
             }
+
+            if (data.type === 'agent_message') {
+                const agent = data.data.agent;
+                if (!this.messages[agent]) {
+                    this.messages[agent] = [];
+                }
+                this.messages[agent].unshift(data);
+                while (this.messages[agent].length > this.maxMessagesPerAgent) {
+                    this.messages[agent].pop();
+                }
+                // set to current time in milliseconds
+                this.agentHasMessages[agent] = Date.now();
+            }
         }
     },
     created() {
@@ -225,3 +375,17 @@ export default {
     },
 }
 </script>
+
+<style scoped>
+.chip-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    max-width: 100%;
+    margin-top: 4px;
+}
+
+.chip-container {
+    gap: 4px;
+}
+</style>

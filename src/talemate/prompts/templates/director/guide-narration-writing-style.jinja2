@@ -1,0 +1,21 @@
+{% if scene.intent_state.active %}
+{% set writing_style_section_started = True %}
+### Writing Style
+{% with task_instructions="Guide the narrator on wording their info dump in an engaging tone that matches the story's expectations. Consider how a video game narrator would convey this information to the player. Remember this is THE NARRATOR, not a character. Be specific about the tone." -%}
+{% include "scene-intent-inline.jinja2" %}
+{% endwith %}
+{% if not agent_context_state["narrator__writing_style"] %}
+{% set writing_style_specified = True %}
+{# Examples of narration styles for reference #}
+Examples of narration styles:
+- Humorous: "You examine the rubber chicken with a pulley in the middle. Surprisingly, this appears to be the most normal item in your inventory."
+- Serious: "The ancient castle looms before you, its weathered stones bearing silent witness to centuries of royal intrigue and forgotten secrets."
+- Provocative: "The woman glances your way with a look that could melt polyester. Too bad your leisure suit is 100% synthetic."
+{% endif %}
+{% endif %}
+{% if agent_context_state["narrator__writing_style"] and not writing_style_specified and scene.writing_style %}
+{% if not writing_style_section_started %}### Writing Style{% endif %}
+There exists an overall style guide for the narrative, use it to inform your instructions and expand on how to incorporate the writing style into the narration: "{{ scene.writing_style.instructions }}"
+
+{% if response_length > 500 %}Explain your understanding of the style guide, what does it mean and what are the expectations from the reader.{% endif %}
+{% endif %}

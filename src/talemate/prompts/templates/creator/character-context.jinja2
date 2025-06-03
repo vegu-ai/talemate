@@ -1,0 +1,18 @@
+<|SECTION:CHARACTERS|>
+{% for character in scene.characters %}
+{% if not skip_characters or character.name not in skip_characters %}
+### {{ character.name }}
+{% if max_tokens > 6000 -%}
+{{ character.sheet }}
+{% else -%}
+{{ character.filtered_sheet(['age', 'gender']) }}
+{{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
+{% endif %}
+{{ character.description }}
+{% if include_dialogue_instructions and character.dialogue_instructions %}
+### Acting Instructions for {{ character.name }}
+{{ character.dialogue_instructions }}
+{% endif %}
+{% endif %}
+{% endfor %}
+<|CLOSE_SECTION|>

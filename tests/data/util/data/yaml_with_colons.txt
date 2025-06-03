@@ -1,0 +1,7 @@
+```yaml
+calls:
+- name: act
+  arguments:
+    name: Kaira
+    instructions: Take a small step back and spread your hands in a placating gesture. Speak in a calm, soothing tone and say: "I can see you're scared, Elmer, and I'm sorry. I know this is a lot to process. Let's just take a breath, okay? I'm not going to let anything happen to you. We'll figure this out together."
+``` 

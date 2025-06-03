@@ -1,5 +1,10 @@
-handlers = {}
+__all__ = [
+    "register",
+    "get",
+    "handlers",
+]
 
+handlers = {}
 
 class AsyncSignal:
     def __init__(self, name):
@@ -12,8 +17,11 @@ class AsyncSignal:
         self.receivers.append(handler)
 
     def disconnect(self, handler):
-        self.receivers.remove(handler)
-
+        try:
+            self.receivers.remove(handler)
+        except ValueError:
+            pass
+        
     async def send(self, emission):
         for receiver in self.receivers:
             await receiver(emission)

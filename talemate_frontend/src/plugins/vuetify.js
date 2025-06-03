@@ -17,7 +17,7 @@ export default createVuetify({
           secondary: colors.deepOrange.base,
           delete: colors.red.darken2,
           cancel: colors.blueGrey.lighten3,
-          muted: colors.grey.darken1,
+          muted: colors.grey.base,
           mutedheader: colors.grey.lighten1,
           mutedbg: colors.grey.darken4,
           normal: colors.grey.base,
@@ -28,11 +28,22 @@ export default createVuetify({
           highlight3: colors.lightGreen.lighten3,
           highlight4: colors.red.lighten1,
           highlight5: colors.amber.lighten3,
+          highlight6: colors.orange.lighten3,
+          highlight7: colors.blue.lighten3,
           dirty: colors.orange.lighten2,
           instructions: colors.orange.lighten4,
 
           enabled: colors.green.lighten2,
           disabled: colors.red.lighten2,
+
+          // node editor
+          nodeeditorbg: colors.grey.darken2,
+          core_node: colors.blueGrey.lighten1,
+          core_node_selected: colors.blueGrey.lighten1,
+          template_node: colors.brown.lighten2,
+          template_node_selected: colors.brown.lighten2,
+          scene_node: colors.deepPurple.lighten2,
+          scene_node_selected: colors.deepPurple.lighten1,
 
           // messages
           narrator: colors.deepPurple.lighten3,

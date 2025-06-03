@@ -1,0 +1,10 @@
+<|SECTION:SCENE TYPES|>
+{% for scene_type in scene.intent_state.scene_types.values() %}
+### {{ scene_type.name }}
+#### Description
+{{ scene_type.description }}
+
+#### Instructions
+{{ scene_type.instructions }}
+{% endfor %}
+<|CLOSE_SECTION|>

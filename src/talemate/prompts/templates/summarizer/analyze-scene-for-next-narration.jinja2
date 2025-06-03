@@ -1,4 +1,5 @@
 {% include "scene-context.jinja2" %}
+{% include "scene-intent.jinja2" %}
 <|SECTION:TASK|>
 {% set bullet_num=0 %}
 {% set character=agent_context_state["narrator__character"] %}
@@ -14,7 +15,9 @@
     {% include "analyze-scene-for-next-narration-visual-character.jinja2" %}
 {% endwith %}
 {# Visual narration #}{% elif agent_context_state["narrator__visual_narration"] %}
-{% include "analyze-scene-for-next-narration-visual.jinja2" %}
+{% with last_message=last_message -%}
+    {% include "analyze-scene-for-next-narration-visual.jinja2" %}
+{% endwith %}
 {# Progressive narration - Character Entry #}{% elif agent_context_state["narrator__fn_narrate_character_entry"] %}
 {% with character=character -%}
     {% include "analyze-scene-for-next-narration-progress-character-entry.jinja2" %}
@@ -30,5 +33,5 @@
 {% if length <= 256 %}Your analysis should be 1 - 2 paragraphs long.{% elif length <= 512 %}Your analysis should be 2 - 3 paragraphs long.{% endif %}
 
 The information you write will be given to the story editors to write the next narrative segment.
-Use natural and easy to read language and formatting in your response.
+{% if length <= 512 %}Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.{% endif %}
 <|CLOSE_SECTION|>

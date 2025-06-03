@@ -207,6 +207,23 @@ class KoboldCppClient(ClientBase):
             tokencount = len(response.json().get("ids", []))
             return tokencount
 
+
+    async def abort_generation(self):
+        """
+        Trigger the stop generation endpoint
+        """
+        if self.is_openai:
+            # openai api endpoint doesn't support abort
+            return
+        
+        parts = urlparse(self.api_url)
+        url_abort = f"{parts.scheme}://{parts.netloc}/api/extra/abort"
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                url_abort,
+                headers=self.request_headers,
+            )
+
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
@@ -308,7 +325,7 @@ class KoboldCppClient(ClientBase):
         if not sd_model:
             return False
 
-        log.info("automatic1111_setup", sd_model=sd_model)
+        log.info("KoboldCpp AUTOMATIC1111 setup", sd_model=sd_model)
 
         visual_agent.actions["automatic1111"].config["api_url"].value = self.url
         visual_agent.is_enabled = True

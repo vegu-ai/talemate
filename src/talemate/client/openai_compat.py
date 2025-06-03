@@ -22,6 +22,7 @@ class Defaults(pydantic.BaseModel):
     model: str = ""
     api_handles_prompt_template: bool = False
     double_coercion: str = None
+    rate_limit: int | None = None
 
 
 class ClientConfig(BaseClientConfig):
@@ -129,7 +130,7 @@ class OpenAICompatibleClient(ClientBase):
                 )
                 human_message = {"role": "user", "content": prompt.strip()}
                 response = await self.client.chat.completions.create(
-                    model=self.model_name, messages=[human_message], **parameters
+                    model=self.model_name, messages=[human_message], stream=False, **parameters
                 )
                 response = response.choices[0].message.content
                 return self.process_response_for_indirect_coercion(prompt, response)
@@ -143,7 +144,7 @@ class OpenAICompatibleClient(ClientBase):
                 )
                 parameters["prompt"] = prompt
                 response = await self.client.completions.create(
-                    model=self.model_name, **parameters
+                    model=self.model_name, stream=False, **parameters
                 )
                 return response.choices[0].text
         except PermissionDeniedError as e:
@@ -176,6 +177,9 @@ class OpenAICompatibleClient(ClientBase):
 
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
+            
+        if "rate_limit" in kwargs:
+            self.rate_limit = kwargs["rate_limit"]
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])

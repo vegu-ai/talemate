@@ -10,7 +10,7 @@
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -38,32 +38,32 @@
             </v-alert>
             <div v-else-if="message.type === 'status'" :class="`message ${message.type}`">
                 <div class="narrator-message">
-                    <StatusMessage :text="message.text" :status="message.status" />
+                    <StatusMessage :text="message.text" :status="message.status" :isLastMessage="index === messages.length - 1" />
                 </div>
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`">
-                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" />
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="director-message"  :id="`message-${message.id}`">
-                    <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action" :uxLocked="uxLocked"/>
+                    <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1"/>
                 </div>
             </div>
             <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
                 <div class="time-message"  :id="`message-${message.id}`">
-                    <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :uxLocked="uxLocked" />
+                    <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" />
                 </div>
             </div>
             <div v-else-if="message.type === 'player_choice'" :class="`message ${message.type}`">
                 <div class="player-choice-message"  :id="`message-player-choice`">
-                    <PlayerChoiceMessage :choices="message.data.choices" :character="message.data.character" @close="closePlayerChoice" :uxLocked="uxLocked" />
+                    <PlayerChoiceMessage :choices="message.data.choices" :character="message.data.character" @close="closePlayerChoice" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" />
                 </div>
             </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="context-investigation-message"  :id="`message-${message.id}`">
-                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" />
+                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" />
                 </div>
             </div>
 
@@ -99,6 +99,9 @@ export default {
             type: Boolean,
             default: false,
         },
+        agentStatus: {
+            type: Object,
+        }
     },
     components: {
         CharacterMessage,
@@ -122,6 +125,11 @@ export default {
             },
         }
     },
+    computed: {
+        editorRevisionsEnabled() {
+            return this.agentStatus && this.agentStatus.editor && this.agentStatus.editor.actions && this.agentStatus.editor.actions["revision"] && this.agentStatus.editor.actions["revision"].enabled;
+        }
+    },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput'],
     provide() {
         return {
@@ -131,6 +139,7 @@ export default {
             forkSceneInitiate: this.forkSceneInitiate,
             getMessageColor: this.getMessageColor,
             getMessageStyle: this.getMessageStyle,
+            reviseMessage: this.reviseMessage,
         }
     },
     methods: {
@@ -233,9 +242,12 @@ export default {
             return ![ 
                 'request_input', 
                 'client_status', 
-                'agent_status', 
+                'agent_status',
+                'agent_message',
                 'status', 
-                'autocomplete_suggestion' 
+                'autocomplete_suggestion',
+                'rate_limited',
+                'rate_limit_reset',
             ].includes(type);
         },
 
@@ -261,6 +273,14 @@ export default {
                 action: 'fork_new_scene',
                 message_id: message_id,
                 save_name: save_name,
+            }));
+        },
+
+        reviseMessage(message_id) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'editor',
+                action: 'request_revision',
+                message_id: message_id,
             }));
         },
 
@@ -400,6 +420,7 @@ export default {
                          ts: data.ts
                     });
                 }
+                
             }
 
 

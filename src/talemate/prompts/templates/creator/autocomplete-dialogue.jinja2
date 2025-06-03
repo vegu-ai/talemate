@@ -1,35 +1,50 @@
-{% block rendered_context -%}
+{% set rendered_context_content -%}
 <|SECTION:CONTEXT|>
 {%- with memory_query=scene.snapshot() -%}
     {% include "extra-context.jinja2" %}
 {% endwith %}
 <|CLOSE_SECTION|>
-{% endblock -%}
+{% endset %}
+{% set character_guidance_content -%}
+{%- with character=character -%}
+    {% include "character-guidance.jinja2" %}
+{% endwith %}
+{% endset %}
+{{ rendered_context_content }}
+{% set rendered_context_tokens = count_tokens(rendered_context_content) -%}
+{% set rendered_character_guidance_tokens = count_tokens(character_guidance_content) -%}
+{% set budget = max_tokens-300-rendered_context_tokens-rendered_character_guidance_tokens -%}
 <|SECTION:SCENE|>
-{% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context()), min_dialogue=20, sections=False) -%}
+{% if continuing_message -%}
+{% for scene_context in scene.context_history(budget=budget, min_dialogue=20, sections=False)[:-1] -%}
 {{ scene_context }}
 {% endfor %}
+{% else %}
+{% for scene_context in scene.context_history(budget=budget, min_dialogue=20, sections=False) -%}
+{{ scene_context }}
+{% endfor %}
+{% endif %}
 <|CLOSE_SECTION|>
+{{ character_guidance_content }}
+{% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
-{% if not can_coerce -%}
-Continue {{ character.name }}'s unfinished line in this screenplay.
-{%- else -%}
-Write {{ character.name }}'s next line in this screenplay.
-{%- endif %}
+You are assisting a script editor in writing the next line of dialogue or action for {{ character.name.upper() }} in the current scene.
 
-Your response MUST only be the new parts of {{ character.name }}'s dialogue, not the entire line.
-Your response MUST be short. (10 - 15 words)
-Your response MUST NOT include the provided text, only the new parts.
+The editor is writing this line right now and has tasked you to provide a suggestion for the continuation of the DRAFT.
 
-All actions and prose must be contained within * markers.
-All spoken word must be contained within " markers.
+This is an auto-completion feature.
 
-{% if not can_coerce -%}
-Continue this text: {{ character.name }}: {{ input }}
-Continuation: 
-<|CLOSE_SECTION|>
-{%- else -%}
-<|CLOSE_SECTION|>
-{{ bot_token }}{{ character.name.upper() }}
-{{ input }}
-{%- endif -%}
+Rules:
+
+{{ li() }}. Never transition to other characters.
+{{ li() }}. Never transition to a new draft. Only generate a completion that finishes the current draft.
+{{ li() }}. Spoken word must be contained within " markers.
+{{ li() }}. This is centered around the actions of "{{ character.name }}".
+{% if not can_coerce %}
+{{ li() }}. Only return the continuation of the DRAFT.
+{% endif %}
+{% if can_coerce %}
+DRAFT: {{ character.name }}: {{ non_anchor }}{{ bot_token }}{{ anchor }}{{ prefix }}
+{% else %}
+DRAFT: {{ character.name }}: {{ non_anchor }}{{ anchor }}{{ prefix }} (... continue the dialogue)
+{% endif%}

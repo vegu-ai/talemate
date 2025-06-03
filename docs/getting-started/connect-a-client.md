@@ -19,7 +19,7 @@ On the right hand side click the **:material-plus-box: ADD CLIENT** button.
 
 The client configuration window will appear. Here you can choose the type of client you want to add.
 
-![connect a client add client modal](/talemate/img/0.26.0/connect-a-client-add-client-modal.png)
+![connect a client add client modal](/talemate/img/0.30.0/connect-a-client-add-client-modal.png)
 
 ## Choose an API / Client Type
 
@@ -55,7 +55,7 @@ Select the API you want to use and click through to follow the instructions to c
 
 Whenever you add your first client, Talemate will automatically assign it to all agents. Once the client is configured and assigned, all agents should have a green dot next to them. (Or grey if the agent is currently disabled)
 
-![Connect a client assigned](/talemate/img/0.26.0/connect-a-client-ready.png)
+![Connect a client assigned](/talemate/img/0.30.0/connect-a-client-ready.png)
 
 You can tell the client is assigned to the agent by checking the tag beneath the agent name, which will contain the client name if it is assigned.
 

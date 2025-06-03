@@ -1,0 +1,1814 @@
+{
+  "title": "Create Character",
+  "id": "20dc206a-c643-4645-938d-c6843483a649",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/creator/CreateCharacter",
+  "nodes": {
+    "40cf8da9-cc1c-4ab4-9577-102ec0f242a8": {
+      "title": "IN description",
+      "id": "40cf8da9-cc1c-4ab4-9577-102ec0f242a8",
+      "properties": {
+        "input_type": "str",
+        "input_name": "description",
+        "input_optional": true,
+        "input_group": "",
+        "num": 3
+      },
+      "x": 39,
+      "y": 507,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "60e9a2da-a222-4f1c-b1b3-1577fa09aa3f": {
+      "title": "IN instructions",
+      "id": "60e9a2da-a222-4f1c-b1b3-1577fa09aa3f",
+      "properties": {
+        "input_type": "str",
+        "input_name": "instructions",
+        "input_optional": false,
+        "input_group": "",
+        "num": 1
+      },
+      "x": 38,
+      "y": 107,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "d102c9e6-8683-488c-9a26-b9b7f52d55cf": {
+      "title": "IN state",
+      "id": "d102c9e6-8683-488c-9a26-b9b7f52d55cf",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 38,
+      "y": -93,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "4ed86135-55c9-4ad1-8ef0-025e2e5eb2e6": {
+      "title": "OUT state",
+      "id": "4ed86135-55c9-4ad1-8ef0-025e2e5eb2e6",
+      "properties": {
+        "output_type": "",
+        "output_name": "state",
+        "num": 0
+      },
+      "x": 288,
+      "y": -63,
+      "width": 210,
+      "height": 106,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "553125be-2c2b-4404-98b5-d6333a4f9655": {
+      "title": "description",
+      "id": "553125be-2c2b-4404-98b5-d6333a4f9655",
+      "properties": {},
+      "x": 348,
+      "y": 507,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "207e357e-5e83-4d40-a331-d0041b9dfa49": {
+      "title": "character_name",
+      "id": "207e357e-5e83-4d40-a331-d0041b9dfa49",
+      "properties": {},
+      "x": 348,
+      "y": 307,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "bad7d2ed-f6fa-452b-8b47-d753ae7a45e0": {
+      "title": "instructions",
+      "id": "bad7d2ed-f6fa-452b-8b47-d753ae7a45e0",
+      "properties": {},
+      "x": 348,
+      "y": 107,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "24d3f741-2cbf-44c6-88f0-6dab3338d354": {
+      "title": "SET local.instructions",
+      "id": "24d3f741-2cbf-44c6-88f0-6dab3338d354",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 598,
+      "y": 107,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "8d47fa0e-8649-4476-b985-f7f98a7306bf": {
+      "title": "SET local.character_name",
+      "id": "8d47fa0e-8649-4476-b985-f7f98a7306bf",
+      "properties": {
+        "name": "character_name",
+        "scope": "local"
+      },
+      "x": 598,
+      "y": 307,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "d30ed5eb-12d0-435b-901a-e39ca9ba9112": {
+      "title": "SET local.description",
+      "id": "d30ed5eb-12d0-435b-901a-e39ca9ba9112",
+      "properties": {
+        "name": "description",
+        "scope": "local"
+      },
+      "x": 598,
+      "y": 507,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "1765a51c-82ac-4d96-9c60-d0adc7faaa68": {
+      "title": "generate_attributes",
+      "id": "1765a51c-82ac-4d96-9c60-d0adc7faaa68",
+      "properties": {},
+      "x": 498,
+      "y": 707,
+      "width": 171,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "59fa33c1-bcd1-45e8-83b7-55d57aae8a0d": {
+      "title": "SET local.generate_attributes",
+      "id": "59fa33c1-bcd1-45e8-83b7-55d57aae8a0d",
+      "properties": {
+        "name": "generate_attributes",
+        "scope": "local"
+      },
+      "x": 798,
+      "y": 706,
+      "width": 244,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "f3dc37df-1748-4235-b575-60e55b8bec73": {
+      "title": "is_active",
+      "id": "f3dc37df-1748-4235-b575-60e55b8bec73",
+      "properties": {},
+      "x": 498,
+      "y": 906,
+      "width": 171,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "5ba91672-79e0-48b7-84e3-b966b2901576": {
+      "title": "Stage 0",
+      "id": "5ba91672-79e0-48b7-84e3-b966b2901576",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1208,
+      "y": 366,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "ea32824d-501d-4aaa-ba17-093d2c79003b": {
+      "title": "Module Style",
+      "id": "ea32824d-501d-4aaa-ba17-093d2c79003b",
+      "properties": {
+        "node_color": "#392c34",
+        "title_color": "#572e44",
+        "auto_title": null,
+        "icon": "F1719"
+      },
+      "x": 1178,
+      "y": -144,
+      "width": 210,
+      "height": 130,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "d7f99152-807e-4670-9acb-a2b93db4648d": {
+      "title": "As Bool",
+      "id": "d7f99152-807e-4670-9acb-a2b93db4648d",
+      "properties": {
+        "default": true
+      },
+      "x": 298,
+      "y": 736,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "4bea833c-4ae6-4437-bfd1-bfebc0075256": {
+      "title": "As Bool",
+      "id": "4bea833c-4ae6-4437-bfd1-bfebc0075256",
+      "properties": {
+        "default": false
+      },
+      "x": 298,
+      "y": 936,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "dfde588d-364c-44cb-b390-0e9608600601": {
+      "title": "IN character_name",
+      "id": "dfde588d-364c-44cb-b390-0e9608600601",
+      "properties": {
+        "input_type": "str",
+        "input_name": "character_name",
+        "input_optional": true,
+        "input_group": "",
+        "num": 2
+      },
+      "x": 38,
+      "y": 306,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "2e2d2293-100e-404f-a4cd-97d225a22ee5": {
+      "title": "SET local.is_active",
+      "id": "2e2d2293-100e-404f-a4cd-97d225a22ee5",
+      "properties": {
+        "name": "is_active",
+        "scope": "local"
+      },
+      "x": 798,
+      "y": 906,
+      "width": 244,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "11d72894-fcb2-4265-b51f-a2d6295358a4": {
+      "title": "IN generate_attributes",
+      "id": "11d72894-fcb2-4265-b51f-a2d6295358a4",
+      "properties": {
+        "input_type": "bool",
+        "input_name": "generate_attributes",
+        "input_optional": true,
+        "input_group": "",
+        "num": 5
+      },
+      "x": 38,
+      "y": 706,
+      "width": 237,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "0d7d1898-f122-4803-8a87-5be7a6bd7b56": {
+      "title": "IN is_active",
+      "id": "0d7d1898-f122-4803-8a87-5be7a6bd7b56",
+      "properties": {
+        "input_type": "bool",
+        "input_name": "is_active",
+        "input_optional": true,
+        "input_group": "",
+        "num": 7
+      },
+      "x": 38,
+      "y": 906,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "b8adab3f-3cd1-4406-ad3f-db4c80a910f7": {
+      "title": "IN generate",
+      "id": "b8adab3f-3cd1-4406-ad3f-db4c80a910f7",
+      "properties": {
+        "input_type": "bool",
+        "input_name": "generate",
+        "input_optional": true,
+        "input_group": "",
+        "num": 4
+      },
+      "x": 48,
+      "y": 1326,
+      "width": 237,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "9b2aeb2e-ca56-4594-a84f-48448ce568e5": {
+      "title": "As Bool",
+      "id": "9b2aeb2e-ca56-4594-a84f-48448ce568e5",
+      "properties": {
+        "default": true
+      },
+      "x": 318,
+      "y": 1356,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "6d387c67-6b32-4435-b984-4760f0f1f8d2": {
+      "title": "generate",
+      "id": "6d387c67-6b32-4435-b984-4760f0f1f8d2",
+      "properties": {},
+      "x": 498,
+      "y": 1336,
+      "width": 171,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "60c39467-103b-460b-a517-ac3167500bcf": {
+      "title": "SET local.generate",
+      "id": "60c39467-103b-460b-a517-ac3167500bcf",
+      "properties": {
+        "name": "generate",
+        "scope": "local"
+      },
+      "x": 798,
+      "y": 1316,
+      "width": 244,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "03582921-ac67-45fd-8299-685dfacdfa95": {
+      "title": "GET local.generate",
+      "id": "03582921-ac67-45fd-8299-685dfacdfa95",
+      "properties": {
+        "name": "generate",
+        "scope": "local"
+      },
+      "x": 39,
+      "y": 1829,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "4ef21cb0-a50d-41c7-b1a0-f627a5accc3d": {
+      "title": "GET local.character_name",
+      "id": "4ef21cb0-a50d-41c7-b1a0-f627a5accc3d",
+      "properties": {
+        "name": "character_name",
+        "scope": "local"
+      },
+      "x": 39,
+      "y": 2009,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "6cbc9260-f13b-42a4-baa6-f9b2506ea9e7": {
+      "title": "IN generation_options",
+      "id": "6cbc9260-f13b-42a4-baa6-f9b2506ea9e7",
+      "properties": {
+        "input_type": "generation_options",
+        "input_name": "generation_options",
+        "input_optional": true,
+        "input_group": "",
+        "num": 6
+      },
+      "x": 38,
+      "y": 1106,
+      "width": 252,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "3cb38945-4f46-4200-b1ff-db2a69d66e07": {
+      "title": "Apply Default",
+      "id": "3cb38945-4f46-4200-b1ff-db2a69d66e07",
+      "properties": {
+        "apply_on_none": true,
+        "apply_on_unresolved": true
+      },
+      "x": 518,
+      "y": 1136,
+      "width": 210,
+      "height": 102,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/ApplyDefault",
+      "base_type": "core/Node"
+    },
+    "c16ff9e6-efc1-4eb1-a998-df70e8dd488d": {
+      "title": "GET local.character_name",
+      "id": "c16ff9e6-efc1-4eb1-a998-df70e8dd488d",
+      "properties": {
+        "name": "character_name",
+        "scope": "local"
+      },
+      "x": 31,
+      "y": 2461,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "9d9d9bf9-6c1f-4732-a1f6-7f0eb8362981": {
+      "title": "NOT",
+      "id": "9d9d9bf9-6c1f-4732-a1f6-7f0eb8362981",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 330,
+      "y": 2060,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "1b5f89f6-4e8f-4a23-91a0-3cacc9120b7d": {
+      "title": "NOT",
+      "id": "1b5f89f6-4e8f-4a23-91a0-3cacc9120b7d",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 330,
+      "y": 1880,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "73dedcf0-dcba-447a-a0ac-159739a389a9": {
+      "title": "Input Value Error",
+      "id": "73dedcf0-dcba-447a-a0ac-159739a389a9",
+      "properties": {
+        "message": "You need to specify a name for the character, or enable `generate`.",
+        "field": "character_name"
+      },
+      "x": 760,
+      "y": 1920,
+      "width": 287,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/InputValueError",
+      "base_type": "core/Node"
+    },
+    "18759191-ed28-4794-bd01-59b3f15ac249": {
+      "title": "AND Router",
+      "id": "18759191-ed28-4794-bd01-59b3f15ac249",
+      "properties": {},
+      "x": 570,
+      "y": 1970,
+      "width": 140,
+      "height": 106,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
+    },
+    "5c482249-9a89-4844-b541-d04204327ef1": {
+      "title": "GET local.generate",
+      "id": "5c482249-9a89-4844-b541-d04204327ef1",
+      "properties": {
+        "name": "generate",
+        "scope": "local"
+      },
+      "x": 31,
+      "y": 2261,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "ba559ec0-59ba-4f0f-b20b-2f184b8fa98a": {
+      "title": "NOT",
+      "id": "ba559ec0-59ba-4f0f-b20b-2f184b8fa98a",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 291,
+      "y": 2471,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "cdab077e-6e60-4d56-a603-e579e37afefc": {
+      "title": "Switch",
+      "id": "cdab077e-6e60-4d56-a603-e579e37afefc",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 291,
+      "y": 2311,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "12e6c82e-f36b-4a34-86ba-e7e6bda33925": {
+      "title": "AND Router",
+      "id": "12e6c82e-f36b-4a34-86ba-e7e6bda33925",
+      "properties": {},
+      "x": 581,
+      "y": 2391,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
+    },
+    "4c66411b-eca7-4d94-9157-1a1c034ee850": {
+      "title": "GET local.instructions",
+      "id": "4c66411b-eca7-4d94-9157-1a1c034ee850",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 31,
+      "y": 2661,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "e9988ef9-4286-470e-8bdc-1559b37cb92d": {
+      "title": "Dict Set",
+      "id": "e9988ef9-4286-470e-8bdc-1559b37cb92d",
+      "properties": {
+        "key": "instructions"
+      },
+      "x": 341,
+      "y": 2781,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "391f49ed-ade2-4bb3-8e34-8ed4bc850f6c": {
+      "title": "Make Text",
+      "id": "391f49ed-ade2-4bb3-8e34-8ed4bc850f6c",
+      "properties": {
+        "value": "You are creating: {instructions}. Only respond with the character's name."
+      },
+      "x": 301,
+      "y": 2621,
+      "width": 273,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "9abc678f-9b1b-4a79-ab05-e6fa068c7b8f": {
+      "title": "Format",
+      "id": "9abc678f-9b1b-4a79-ab05-e6fa068c7b8f",
+      "properties": {},
+      "x": 711,
+      "y": 2611,
+      "width": 140,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Format",
+      "base_type": "core/Node"
+    },
+    "6343ba50-0ac4-4eff-8769-4a34199f225b": {
+      "title": "SET local.character_name",
+      "id": "6343ba50-0ac4-4eff-8769-4a34199f225b",
+      "properties": {
+        "name": "character_name",
+        "scope": "local"
+      },
+      "x": 1371,
+      "y": 2481,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "977e9dd8-c8ab-483e-806b-ab1a71dedaff": {
+      "title": "Generated character_name",
+      "id": "977e9dd8-c8ab-483e-806b-ab1a71dedaff",
+      "properties": {},
+      "x": 1631,
+      "y": 2501,
+      "width": 222,
+      "height": 29,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "80ede2a4-b505-4a55-9b32-a874f770f547": {
+      "title": "Contextual Generate",
+      "id": "80ede2a4-b505-4a55-9b32-a874f770f547",
+      "properties": {
+        "context_type": "character attribute",
+        "context_name": "name",
+        "instructions": null,
+        "length": 25,
+        "character": "the character",
+        "uid": null,
+        "context_aware": true,
+        "history_aware": true
+      },
+      "x": 1021,
+      "y": 2451,
+      "width": 304,
+      "height": 406,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
+    },
+    "1146d1cf-5ef1-4868-9804-77e7fa27c64f": {
+      "title": "NOT",
+      "id": "1146d1cf-5ef1-4868-9804-77e7fa27c64f",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 298,
+      "y": 3235,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "7e5fa4f6-0d43-400d-b45a-e79d4b639b2a": {
+      "title": "Switch",
+      "id": "7e5fa4f6-0d43-400d-b45a-e79d4b639b2a",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 299,
+      "y": 3071,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "38daf429-e97e-469b-9639-1bc5f71adfab": {
+      "title": "GET local.generate",
+      "id": "38daf429-e97e-469b-9639-1bc5f71adfab",
+      "properties": {
+        "name": "generate",
+        "scope": "local"
+      },
+      "x": 38,
+      "y": 3025,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "8b0dc913-54c9-4d80-a6f9-a0838a32bdd5": {
+      "title": "GET local.description",
+      "id": "8b0dc913-54c9-4d80-a6f9-a0838a32bdd5",
+      "properties": {
+        "name": "description",
+        "scope": "local"
+      },
+      "x": 39,
+      "y": 3231,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "94c0ff89-d383-422a-a9be-56d7d3dfeb6e": {
+      "title": "Generated description",
+      "id": "94c0ff89-d383-422a-a9be-56d7d3dfeb6e",
+      "properties": {},
+      "x": 1617,
+      "y": 3303,
+      "width": 222,
+      "height": 29,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "d41f0d98-14d5-49dd-8e57-7812fb9fee94": {
+      "title": "SET local.description",
+      "id": "d41f0d98-14d5-49dd-8e57-7812fb9fee94",
+      "properties": {
+        "name": "description",
+        "scope": "local"
+      },
+      "x": 1357,
+      "y": 3283,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "18aebea3-92e2-40c6-a369-9d75d6c2f8ad": {
+      "title": "AND Router",
+      "id": "18aebea3-92e2-40c6-a369-9d75d6c2f8ad",
+      "properties": {},
+      "x": 620,
+      "y": 3100,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
+    },
+    "f7744a7b-ab5b-42e2-842c-6dde999cf9cc": {
+      "title": "GET local.instructions",
+      "id": "f7744a7b-ab5b-42e2-842c-6dde999cf9cc",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 620,
+      "y": 3250,
+      "width": 249,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "2b3f32d4-b0cc-4920-b48d-884b0a0043a0": {
+      "title": "GET local.character_name",
+      "id": "2b3f32d4-b0cc-4920-b48d-884b0a0043a0",
+      "properties": {
+        "name": "character_name",
+        "scope": "local"
+      },
+      "x": 620,
+      "y": 3420,
+      "width": 253,
+      "height": 123,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "7b0ebe89-2d3f-4193-9088-957f72da9dd0": {
+      "title": "GET local.generation_options",
+      "id": "7b0ebe89-2d3f-4193-9088-957f72da9dd0",
+      "properties": {
+        "name": "generation_options",
+        "scope": "local"
+      },
+      "x": 620,
+      "y": 3590,
+      "width": 251,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "8107b586-82d6-4e5f-af7c-d9c67d0a69f8": {
+      "title": "GET local.generation_options",
+      "id": "8107b586-82d6-4e5f-af7c-d9c67d0a69f8",
+      "properties": {
+        "name": "generation_options",
+        "scope": "local"
+      },
+      "x": 700,
+      "y": 2730,
+      "width": 251,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "c665fe70-5c5e-42d7-aabe-4a1ff439991d": {
+      "title": "GET local.generate",
+      "id": "c665fe70-5c5e-42d7-aabe-4a1ff439991d",
+      "properties": {
+        "name": "generate",
+        "scope": "local"
+      },
+      "x": 50,
+      "y": 3880,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "b3209093-d6cd-43b8-8b63-9f3266793dd6": {
+      "title": "GET local.generate",
+      "id": "b3209093-d6cd-43b8-8b63-9f3266793dd6",
+      "properties": {
+        "name": "generate_attributes",
+        "scope": "local"
+      },
+      "x": 50,
+      "y": 4060,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "84c3e51f-a5ee-4712-8a5e-6e7862209720": {
+      "title": "Switch",
+      "id": "84c3e51f-a5ee-4712-8a5e-6e7862209720",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 310,
+      "y": 3910,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "4b9ad3a5-a48a-4bb0-ab1d-821662657ee9": {
+      "title": "Switch",
+      "id": "4b9ad3a5-a48a-4bb0-ab1d-821662657ee9",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 310,
+      "y": 4080,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "7a8cf3ed-64f3-4529-825c-991afd135df2": {
+      "title": "AND Router",
+      "id": "7a8cf3ed-64f3-4529-825c-991afd135df2",
+      "properties": {},
+      "x": 620,
+      "y": 3980,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
+    },
+    "49baf79b-9489-46ae-8304-c51e446efd2a": {
+      "title": "GET local.character_name",
+      "id": "49baf79b-9489-46ae-8304-c51e446efd2a",
+      "properties": {
+        "name": "character_name",
+        "scope": "local"
+      },
+      "x": 50,
+      "y": 4240,
+      "width": 253,
+      "height": 123,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "799953d7-a321-4873-a19d-62a803c91b68": {
+      "title": "GET local.description",
+      "id": "799953d7-a321-4873-a19d-62a803c91b68",
+      "properties": {
+        "name": "description",
+        "scope": "local"
+      },
+      "x": 50,
+      "y": 4420,
+      "width": 240,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "5f355c6f-8b73-4a56-98fe-804584ca021d": {
+      "title": "Extract Character Sheet",
+      "id": "5f355c6f-8b73-4a56-98fe-804584ca021d",
+      "properties": {},
+      "x": 840,
+      "y": 4080,
+      "width": 329,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/world_state/ExtractCharacterSheet",
+      "base_type": "core/Node"
+    },
+    "fc9c01c5-16dc-4e37-ae5a-2e7c49d717b8": {
+      "title": "SET local.base_attributes",
+      "id": "fc9c01c5-16dc-4e37-ae5a-2e7c49d717b8",
+      "properties": {
+        "name": "base_attributes",
+        "scope": "local"
+      },
+      "x": 1200,
+      "y": 4060,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "7c86e49a-a745-4de7-86f8-ecdfe686e594": {
+      "title": "GET local.character_name",
+      "id": "7c86e49a-a745-4de7-86f8-ecdfe686e594",
+      "properties": {
+        "name": "character_name",
+        "scope": "local"
+      },
+      "x": 41,
+      "y": 4678,
+      "width": 253,
+      "height": 123,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "cc488333-9ec3-473e-b663-b4510376baec": {
+      "title": "GET local.description",
+      "id": "cc488333-9ec3-473e-b663-b4510376baec",
+      "properties": {
+        "name": "description",
+        "scope": "local"
+      },
+      "x": 41,
+      "y": 4858,
+      "width": 240,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "4bddb047-9381-46f4-a178-18435f4dcee8": {
+      "title": "Make Dict",
+      "id": "4bddb047-9381-46f4-a178-18435f4dcee8",
+      "properties": {
+        "data": {}
+      },
+      "x": 39,
+      "y": 5038,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/MakeDict",
+      "base_type": "core/Node"
+    },
+    "34139ec6-8089-4a29-a42f-3d06a9387f8e": {
+      "title": "GET local.base_attributes",
+      "id": "34139ec6-8089-4a29-a42f-3d06a9387f8e",
+      "properties": {
+        "name": "base_attributes",
+        "scope": "local"
+      },
+      "x": 37,
+      "y": 5068,
+      "width": 240,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "0b2f17c9-6182-425c-a26f-fdbc78ed3b1d": {
+      "title": "IN is_player",
+      "id": "0b2f17c9-6182-425c-a26f-fdbc78ed3b1d",
+      "properties": {
+        "input_type": "bool",
+        "input_name": "is_player",
+        "input_optional": true,
+        "input_group": "",
+        "num": 8
+      },
+      "x": 49,
+      "y": 1546,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "aa3c1a11-bdff-44a0-bc7b-a2a04eebccc4": {
+      "title": "As Bool",
+      "id": "aa3c1a11-bdff-44a0-bc7b-a2a04eebccc4",
+      "properties": {
+        "default": false
+      },
+      "x": 329,
+      "y": 1586,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "8acfe789-fbb5-4e29-8fd8-2217b987c086": {
+      "title": "is_player",
+      "id": "8acfe789-fbb5-4e29-8fd8-2217b987c086",
+      "properties": {},
+      "x": 499,
+      "y": 1566,
+      "width": 171,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "90b00ba2-8347-42c4-be28-c849d7b957dd": {
+      "title": "SET local.is_player",
+      "id": "90b00ba2-8347-42c4-be28-c849d7b957dd",
+      "properties": {
+        "name": "is_player",
+        "scope": "local"
+      },
+      "x": 799,
+      "y": 1526,
+      "width": 244,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "1bf829ea-95ab-4b0f-b328-3567a07c26a5": {
+      "title": "GET local.is_player",
+      "id": "1bf829ea-95ab-4b0f-b328-3567a07c26a5",
+      "properties": {
+        "name": "is_player",
+        "scope": "local"
+      },
+      "x": 36,
+      "y": 5249,
+      "width": 240,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "ac4b5946-79c2-44c8-9a67-d3b47f51325a": {
+      "title": "GET local.is_active",
+      "id": "ac4b5946-79c2-44c8-9a67-d3b47f51325a",
+      "properties": {
+        "name": "is_active",
+        "scope": "local"
+      },
+      "x": 36,
+      "y": 5439,
+      "width": 240,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "b068a4d8-1295-462b-b798-78414becb57a": {
+      "title": "TRUE",
+      "id": "b068a4d8-1295-462b-b798-78414becb57a",
+      "properties": {
+        "value": true
+      },
+      "x": 415,
+      "y": 5299,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "6bed1dc2-9753-4850-a7e4-33893b20593d": {
+      "title": "Make Character",
+      "id": "6bed1dc2-9753-4850-a7e4-33893b20593d",
+      "properties": {
+        "name": null,
+        "description": "",
+        "color": null,
+        "base_attributes": null,
+        "is_player": false,
+        "add_to_scene": true,
+        "is_active": true
+      },
+      "x": 705,
+      "y": 5089,
+      "width": 212,
+      "height": 322,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/MakeCharacter",
+      "base_type": "core/Node"
+    },
+    "836f1ff3-d017-437f-9eff-a28214d3b7e2": {
+      "title": "SET local.character",
+      "id": "836f1ff3-d017-437f-9eff-a28214d3b7e2",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 1025,
+      "y": 4989,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "902a31db-63f8-494f-97a8-9910407f2e97": {
+      "title": "Generated character",
+      "id": "902a31db-63f8-494f-97a8-9910407f2e97",
+      "properties": {},
+      "x": 1285,
+      "y": 5009,
+      "width": 184,
+      "height": 30,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "e6e3d0a6-ef51-49d5-bb92-9e8aabd706f1": {
+      "title": "OUT character",
+      "id": "e6e3d0a6-ef51-49d5-bb92-9e8aabd706f1",
+      "properties": {
+        "output_type": "character",
+        "output_name": "character",
+        "num": 0
+      },
+      "x": 331,
+      "y": 5739,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "82b1288f-7804-4cf9-aeb3-804848f2f31a": {
+      "title": "GET local.character",
+      "id": "82b1288f-7804-4cf9-aeb3-804848f2f31a",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 51,
+      "y": 5729,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "585497af-a2fb-4434-bdfa-6d4b07401766": {
+      "title": "OUT actor",
+      "id": "585497af-a2fb-4434-bdfa-6d4b07401766",
+      "properties": {
+        "output_type": "actor",
+        "output_name": "actor",
+        "num": 0
+      },
+      "x": 331,
+      "y": 5949,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "f0ad80eb-9f48-4201-ae84-915bbfa8e5cc": {
+      "title": "GET local.actor",
+      "id": "f0ad80eb-9f48-4201-ae84-915bbfa8e5cc",
+      "properties": {
+        "name": "actor",
+        "scope": "local"
+      },
+      "x": 51,
+      "y": 5949,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "bb46d79e-debb-4300-82b1-8158e22f9a14": {
+      "title": "Stage 0",
+      "id": "bb46d79e-debb-4300-82b1-8158e22f9a14",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1320,
+      "y": 1160,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "70e96f8f-702f-4adc-b218-b5efd5c1ed4d": {
+      "title": "Stage 1",
+      "id": "70e96f8f-702f-4adc-b218-b5efd5c1ed4d",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1110,
+      "y": 1950,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "1409e867-ad0b-4e79-95d8-d69aaaac7a78": {
+      "title": "Stage 2",
+      "id": "1409e867-ad0b-4e79-95d8-d69aaaac7a78",
+      "properties": {
+        "stage": 2
+      },
+      "x": 1900,
+      "y": 2530,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "1b180fa5-5d97-4d46-bdd3-eaf19084177d": {
+      "title": "Stage 3",
+      "id": "1b180fa5-5d97-4d46-bdd3-eaf19084177d",
+      "properties": {
+        "stage": 3
+      },
+      "x": 1900,
+      "y": 3330,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "f298b3a5-0ef6-4034-832c-658a2beabdf4": {
+      "title": "Stage 4",
+      "id": "f298b3a5-0ef6-4034-832c-658a2beabdf4",
+      "properties": {
+        "stage": 4
+      },
+      "x": 1440,
+      "y": 4110,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "f779b15c-6114-4afb-822e-d5dd696cbe4e": {
+      "title": "Stage 5",
+      "id": "f779b15c-6114-4afb-822e-d5dd696cbe4e",
+      "properties": {
+        "stage": 5
+      },
+      "x": 1560,
+      "y": 5130,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "3fd2d8b0-7d68-44fd-93c3-483c55777cca": {
+      "title": "Generation Options",
+      "id": "3fd2d8b0-7d68-44fd-93c3-483c55777cca",
+      "properties": {
+        "spice_level": 0,
+        "writing_style": null
+      },
+      "x": 320,
+      "y": 1200,
+      "width": 270,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "scene/worldstate/templates/GenerationOptions",
+      "base_type": "core/Node"
+    },
+    "3b178a92-4c44-4568-851f-9466f39cee8e": {
+      "title": "SET local.generation_options",
+      "id": "3b178a92-4c44-4568-851f-9466f39cee8e",
+      "properties": {
+        "name": "generation_options",
+        "scope": "local"
+      },
+      "x": 790,
+      "y": 1110,
+      "width": 244,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "9f875159-9e90-41cc-84fe-d1b10061a885": {
+      "title": "SET local.actor",
+      "id": "9f875159-9e90-41cc-84fe-d1b10061a885",
+      "properties": {
+        "name": "actor",
+        "scope": "local"
+      },
+      "x": 1030,
+      "y": 5190,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053": {
+      "title": "Contextual Generate",
+      "id": "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053",
+      "properties": {
+        "context_type": "character detail",
+        "context_name": "description",
+        "instructions": null,
+        "length": 372,
+        "character": "the character",
+        "uid": null,
+        "context_aware": true,
+        "history_aware": true
+      },
+      "x": 1019,
+      "y": 3241,
+      "width": 304,
+      "height": 406,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "40cf8da9-cc1c-4ab4-9577-102ec0f242a8.value": [
+      "553125be-2c2b-4404-98b5-d6333a4f9655.value"
+    ],
+    "60e9a2da-a222-4f1c-b1b3-1577fa09aa3f.value": [
+      "bad7d2ed-f6fa-452b-8b47-d753ae7a45e0.value"
+    ],
+    "d102c9e6-8683-488c-9a26-b9b7f52d55cf.value": [
+      "4ed86135-55c9-4ad1-8ef0-025e2e5eb2e6.value"
+    ],
+    "553125be-2c2b-4404-98b5-d6333a4f9655.value": [
+      "d30ed5eb-12d0-435b-901a-e39ca9ba9112.value"
+    ],
+    "207e357e-5e83-4d40-a331-d0041b9dfa49.value": [
+      "8d47fa0e-8649-4476-b985-f7f98a7306bf.value"
+    ],
+    "bad7d2ed-f6fa-452b-8b47-d753ae7a45e0.value": [
+      "24d3f741-2cbf-44c6-88f0-6dab3338d354.value"
+    ],
+    "24d3f741-2cbf-44c6-88f0-6dab3338d354.value": [
+      "5ba91672-79e0-48b7-84e3-b966b2901576.state"
+    ],
+    "8d47fa0e-8649-4476-b985-f7f98a7306bf.value": [
+      "5ba91672-79e0-48b7-84e3-b966b2901576.state_b"
+    ],
+    "d30ed5eb-12d0-435b-901a-e39ca9ba9112.value": [
+      "5ba91672-79e0-48b7-84e3-b966b2901576.state_c"
+    ],
+    "1765a51c-82ac-4d96-9c60-d0adc7faaa68.value": [
+      "59fa33c1-bcd1-45e8-83b7-55d57aae8a0d.value"
+    ],
+    "59fa33c1-bcd1-45e8-83b7-55d57aae8a0d.value": [
+      "5ba91672-79e0-48b7-84e3-b966b2901576.state_d"
+    ],
+    "f3dc37df-1748-4235-b575-60e55b8bec73.value": [
+      "2e2d2293-100e-404f-a4cd-97d225a22ee5.value"
+    ],
+    "d7f99152-807e-4670-9acb-a2b93db4648d.value": [
+      "1765a51c-82ac-4d96-9c60-d0adc7faaa68.value"
+    ],
+    "4bea833c-4ae6-4437-bfd1-bfebc0075256.value": [
+      "f3dc37df-1748-4235-b575-60e55b8bec73.value"
+    ],
+    "dfde588d-364c-44cb-b390-0e9608600601.value": [
+      "207e357e-5e83-4d40-a331-d0041b9dfa49.value"
+    ],
+    "2e2d2293-100e-404f-a4cd-97d225a22ee5.value": [
+      "bb46d79e-debb-4300-82b1-8158e22f9a14.state"
+    ],
+    "11d72894-fcb2-4265-b51f-a2d6295358a4.value": [
+      "d7f99152-807e-4670-9acb-a2b93db4648d.value"
+    ],
+    "0d7d1898-f122-4803-8a87-5be7a6bd7b56.value": [
+      "4bea833c-4ae6-4437-bfd1-bfebc0075256.value"
+    ],
+    "b8adab3f-3cd1-4406-ad3f-db4c80a910f7.value": [
+      "9b2aeb2e-ca56-4594-a84f-48448ce568e5.value"
+    ],
+    "9b2aeb2e-ca56-4594-a84f-48448ce568e5.value": [
+      "6d387c67-6b32-4435-b984-4760f0f1f8d2.value"
+    ],
+    "6d387c67-6b32-4435-b984-4760f0f1f8d2.value": [
+      "60c39467-103b-460b-a517-ac3167500bcf.value"
+    ],
+    "60c39467-103b-460b-a517-ac3167500bcf.value": [
+      "bb46d79e-debb-4300-82b1-8158e22f9a14.state_c"
+    ],
+    "03582921-ac67-45fd-8299-685dfacdfa95.value": [
+      "1b5f89f6-4e8f-4a23-91a0-3cacc9120b7d.value"
+    ],
+    "4ef21cb0-a50d-41c7-b1a0-f627a5accc3d.value": [
+      "9d9d9bf9-6c1f-4732-a1f6-7f0eb8362981.value"
+    ],
+    "6cbc9260-f13b-42a4-baa6-f9b2506ea9e7.value": [
+      "3cb38945-4f46-4200-b1ff-db2a69d66e07.value"
+    ],
+    "3cb38945-4f46-4200-b1ff-db2a69d66e07.value": [
+      "3b178a92-4c44-4568-851f-9466f39cee8e.value"
+    ],
+    "c16ff9e6-efc1-4eb1-a998-df70e8dd488d.value": [
+      "ba559ec0-59ba-4f0f-b20b-2f184b8fa98a.value"
+    ],
+    "9d9d9bf9-6c1f-4732-a1f6-7f0eb8362981.no": [
+      "18759191-ed28-4794-bd01-59b3f15ac249.b"
+    ],
+    "1b5f89f6-4e8f-4a23-91a0-3cacc9120b7d.no": [
+      "18759191-ed28-4794-bd01-59b3f15ac249.a"
+    ],
+    "73dedcf0-dcba-447a-a0ac-159739a389a9.state": [
+      "70e96f8f-702f-4adc-b218-b5efd5c1ed4d.state"
+    ],
+    "18759191-ed28-4794-bd01-59b3f15ac249.yes": [
+      "73dedcf0-dcba-447a-a0ac-159739a389a9.state"
+    ],
+    "5c482249-9a89-4844-b541-d04204327ef1.value": [
+      "cdab077e-6e60-4d56-a603-e579e37afefc.value"
+    ],
+    "ba559ec0-59ba-4f0f-b20b-2f184b8fa98a.no": [
+      "12e6c82e-f36b-4a34-86ba-e7e6bda33925.b"
+    ],
+    "cdab077e-6e60-4d56-a603-e579e37afefc.yes": [
+      "12e6c82e-f36b-4a34-86ba-e7e6bda33925.a"
+    ],
+    "12e6c82e-f36b-4a34-86ba-e7e6bda33925.yes": [
+      "80ede2a4-b505-4a55-9b32-a874f770f547.state"
+    ],
+    "4c66411b-eca7-4d94-9157-1a1c034ee850.value": [
+      "e9988ef9-4286-470e-8bdc-1559b37cb92d.value"
+    ],
+    "e9988ef9-4286-470e-8bdc-1559b37cb92d.dict": [
+      "9abc678f-9b1b-4a79-ab05-e6fa068c7b8f.variables"
+    ],
+    "391f49ed-ade2-4bb3-8e34-8ed4bc850f6c.value": [
+      "9abc678f-9b1b-4a79-ab05-e6fa068c7b8f.template"
+    ],
+    "9abc678f-9b1b-4a79-ab05-e6fa068c7b8f.result": [
+      "80ede2a4-b505-4a55-9b32-a874f770f547.instructions"
+    ],
+    "6343ba50-0ac4-4eff-8769-4a34199f225b.value": [
+      "977e9dd8-c8ab-483e-806b-ab1a71dedaff.value"
+    ],
+    "977e9dd8-c8ab-483e-806b-ab1a71dedaff.value": [
+      "1409e867-ad0b-4e79-95d8-d69aaaac7a78.state"
+    ],
+    "80ede2a4-b505-4a55-9b32-a874f770f547.text": [
+      "6343ba50-0ac4-4eff-8769-4a34199f225b.value"
+    ],
+    "1146d1cf-5ef1-4868-9804-77e7fa27c64f.no": [
+      "18aebea3-92e2-40c6-a369-9d75d6c2f8ad.b"
+    ],
+    "7e5fa4f6-0d43-400d-b45a-e79d4b639b2a.yes": [
+      "18aebea3-92e2-40c6-a369-9d75d6c2f8ad.a"
+    ],
+    "38daf429-e97e-469b-9639-1bc5f71adfab.value": [
+      "7e5fa4f6-0d43-400d-b45a-e79d4b639b2a.value"
+    ],
+    "8b0dc913-54c9-4d80-a6f9-a0838a32bdd5.value": [
+      "1146d1cf-5ef1-4868-9804-77e7fa27c64f.value"
+    ],
+    "94c0ff89-d383-422a-a9be-56d7d3dfeb6e.value": [
+      "1b180fa5-5d97-4d46-bdd3-eaf19084177d.state"
+    ],
+    "d41f0d98-14d5-49dd-8e57-7812fb9fee94.value": [
+      "94c0ff89-d383-422a-a9be-56d7d3dfeb6e.value"
+    ],
+    "18aebea3-92e2-40c6-a369-9d75d6c2f8ad.yes": [
+      "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053.state"
+    ],
+    "f7744a7b-ab5b-42e2-842c-6dde999cf9cc.value": [
+      "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053.instructions"
+    ],
+    "2b3f32d4-b0cc-4920-b48d-884b0a0043a0.value": [
+      "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053.character"
+    ],
+    "7b0ebe89-2d3f-4193-9088-957f72da9dd0.value": [
+      "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053.generation_options"
+    ],
+    "8107b586-82d6-4e5f-af7c-d9c67d0a69f8.value": [
+      "80ede2a4-b505-4a55-9b32-a874f770f547.generation_options"
+    ],
+    "c665fe70-5c5e-42d7-aabe-4a1ff439991d.value": [
+      "84c3e51f-a5ee-4712-8a5e-6e7862209720.value"
+    ],
+    "b3209093-d6cd-43b8-8b63-9f3266793dd6.value": [
+      "4b9ad3a5-a48a-4bb0-ab1d-821662657ee9.value"
+    ],
+    "84c3e51f-a5ee-4712-8a5e-6e7862209720.yes": [
+      "7a8cf3ed-64f3-4529-825c-991afd135df2.a"
+    ],
+    "4b9ad3a5-a48a-4bb0-ab1d-821662657ee9.yes": [
+      "7a8cf3ed-64f3-4529-825c-991afd135df2.b"
+    ],
+    "7a8cf3ed-64f3-4529-825c-991afd135df2.yes": [
+      "5f355c6f-8b73-4a56-98fe-804584ca021d.state"
+    ],
+    "49baf79b-9489-46ae-8304-c51e446efd2a.value": [
+      "5f355c6f-8b73-4a56-98fe-804584ca021d.character_name"
+    ],
+    "799953d7-a321-4873-a19d-62a803c91b68.value": [
+      "5f355c6f-8b73-4a56-98fe-804584ca021d.context"
+    ],
+    "5f355c6f-8b73-4a56-98fe-804584ca021d.character_sheet": [
+      "fc9c01c5-16dc-4e37-ae5a-2e7c49d717b8.value"
+    ],
+    "fc9c01c5-16dc-4e37-ae5a-2e7c49d717b8.value": [
+      "f298b3a5-0ef6-4034-832c-658a2beabdf4.state"
+    ],
+    "7c86e49a-a745-4de7-86f8-ecdfe686e594.value": [
+      "6bed1dc2-9753-4850-a7e4-33893b20593d.name"
+    ],
+    "cc488333-9ec3-473e-b663-b4510376baec.value": [
+      "6bed1dc2-9753-4850-a7e4-33893b20593d.description"
+    ],
+    "4bddb047-9381-46f4-a178-18435f4dcee8.dict": [
+      "34139ec6-8089-4a29-a42f-3d06a9387f8e.default"
+    ],
+    "34139ec6-8089-4a29-a42f-3d06a9387f8e.value": [
+      "6bed1dc2-9753-4850-a7e4-33893b20593d.base_attributes"
+    ],
+    "0b2f17c9-6182-425c-a26f-fdbc78ed3b1d.value": [
+      "aa3c1a11-bdff-44a0-bc7b-a2a04eebccc4.value"
+    ],
+    "aa3c1a11-bdff-44a0-bc7b-a2a04eebccc4.value": [
+      "8acfe789-fbb5-4e29-8fd8-2217b987c086.value"
+    ],
+    "8acfe789-fbb5-4e29-8fd8-2217b987c086.value": [
+      "90b00ba2-8347-42c4-be28-c849d7b957dd.value"
+    ],
+    "90b00ba2-8347-42c4-be28-c849d7b957dd.value": [
+      "bb46d79e-debb-4300-82b1-8158e22f9a14.state_d"
+    ],
+    "1bf829ea-95ab-4b0f-b328-3567a07c26a5.value": [
+      "6bed1dc2-9753-4850-a7e4-33893b20593d.is_player"
+    ],
+    "ac4b5946-79c2-44c8-9a67-d3b47f51325a.value": [
+      "6bed1dc2-9753-4850-a7e4-33893b20593d.is_active"
+    ],
+    "b068a4d8-1295-462b-b798-78414becb57a.value": [
+      "6bed1dc2-9753-4850-a7e4-33893b20593d.add_to_scene"
+    ],
+    "6bed1dc2-9753-4850-a7e4-33893b20593d.character": [
+      "836f1ff3-d017-437f-9eff-a28214d3b7e2.value"
+    ],
+    "6bed1dc2-9753-4850-a7e4-33893b20593d.actor": [
+      "9f875159-9e90-41cc-84fe-d1b10061a885.value"
+    ],
+    "836f1ff3-d017-437f-9eff-a28214d3b7e2.value": [
+      "902a31db-63f8-494f-97a8-9910407f2e97.value"
+    ],
+    "902a31db-63f8-494f-97a8-9910407f2e97.value": [
+      "f779b15c-6114-4afb-822e-d5dd696cbe4e.state"
+    ],
+    "82b1288f-7804-4cf9-aeb3-804848f2f31a.value": [
+      "e6e3d0a6-ef51-49d5-bb92-9e8aabd706f1.value"
+    ],
+    "f0ad80eb-9f48-4201-ae84-915bbfa8e5cc.value": [
+      "585497af-a2fb-4434-bdfa-6d4b07401766.value"
+    ],
+    "3fd2d8b0-7d68-44fd-93c3-483c55777cca.generation_options": [
+      "3cb38945-4f46-4200-b1ff-db2a69d66e07.default"
+    ],
+    "3b178a92-4c44-4568-851f-9466f39cee8e.value": [
+      "bb46d79e-debb-4300-82b1-8158e22f9a14.state_b"
+    ],
+    "9f875159-9e90-41cc-84fe-d1b10061a885.value": [
+      "f779b15c-6114-4afb-822e-d5dd696cbe4e.state_b"
+    ],
+    "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053.text": [
+      "d41f0d98-14d5-49dd-8e57-7812fb9fee94.value"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Process Arguments - Stage 0",
+      "x": 1,
+      "y": -218,
+      "width": 1446,
+      "height": 1948,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Validation - Stage 1",
+      "x": 2,
+      "y": 1734,
+      "width": 1443,
+      "height": 434,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Generate character name - Stage 2",
+      "x": 2,
+      "y": 2173,
+      "width": 2039,
+      "height": 741,
+      "color": "#8AA",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Generate description - Stage 3",
+      "x": 1,
+      "y": 2918,
+      "width": 2040,
+      "height": 829,
+      "color": "#8AA",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Generate attributes - Stage 4",
+      "x": 1,
+      "y": 3752,
+      "width": 1583,
+      "height": 817,
+      "color": "#8AA",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Make Character - Stage 5",
+      "x": 0,
+      "y": 4576,
+      "width": 1691,
+      "height": 1061,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Outputs",
+      "x": 0,
+      "y": 5642,
+      "width": 595,
+      "height": 472,
+      "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "style": {
+    "title_color": "#572e44",
+    "node_color": "#392c34",
+    "icon": "F1719",
+    "auto_title": null
+  }
+}

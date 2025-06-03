@@ -1,5 +1,4 @@
-
-{% block rendered_context -%}
+{% set rendered_context_content -%}
 <|SECTION:CONTEXT|>
 {%- with memory_query=scene.snapshot() -%}
     {% include "extra-context.jinja2" %}
@@ -10,9 +9,11 @@
 
 {{ text }}
 <|CLOSE_SECTION|>
-{% endblock -%}
+{% endset %}
+{{ rendered_context_content }}
+{% set rendered_context_tokens = count_tokens(rendered_context_content) -%}
 <|SECTION:SCENE|>
-{% set scene_history = scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), keep_context_investigation=False) -%}
+{% set scene_history = scene.context_history(budget=max_tokens-200-rendered_context_tokens, keep_context_investigation=False) -%}
 {% set last_message = scene_history[-1] %}
 {% set last_message_is_reinforcement = ("internal notes" in last_message.lower() and question in last_message)%}
 {% if not last_message_is_reinforcement %}{% set final_line_number=len(scene_history) %}{% else %}{% set final_line_number=len(scene_history)-1 %}{% endif %}

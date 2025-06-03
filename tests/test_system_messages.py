@@ -23,11 +23,11 @@ def test_system_message(kind):
     
     assert client.get_system_message(kind) is not None
     
-    assert "crude" in client.get_system_message(kind)
+    assert "explicit" in client.get_system_message(kind)
     
     client.decensor_enabled = False
     
     assert client.get_system_message(kind) is not None
     
-    assert "crude" not in client.get_system_message(kind)
+    assert "explicit" not in client.get_system_message(kind)
     

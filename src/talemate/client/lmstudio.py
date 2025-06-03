@@ -1,11 +1,11 @@
 import pydantic
 from openai import AsyncOpenAI
 
-from talemate.client.base import ClientBase, ParameterReroute
+from talemate.client.base import ClientBase, ParameterReroute, CommonDefaults
 from talemate.client.registry import register
 
 
-class Defaults(pydantic.BaseModel):
+class Defaults(CommonDefaults, pydantic.BaseModel):
     api_url: str = "http://localhost:1234"
     max_token_length: int = 8192
 

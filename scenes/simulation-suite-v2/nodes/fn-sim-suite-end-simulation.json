@@ -1,0 +1,509 @@
+{
+  "title": "Fn Sim Suite End Simulation",
+  "id": "ac66bf02-fb6a-47c1-8bcb-08af0cad1904",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "registry": "sim-suite/fnSimSuiteEndSimulation",
+  "nodes": {
+    "327c34bd-ed00-4137-8029-6f1d38ae784e": {
+      "title": "GET scene loop.user_message",
+      "id": "327c34bd-ed00-4137-8029-6f1d38ae784e",
+      "properties": {
+        "name": "user_message",
+        "scope": "scene loop"
+      },
+      "x": 25,
+      "y": 80,
+      "width": 242,
+      "height": 135,
+      "collapsed": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "bec3785c-95bc-4406-bcc5-603107f41b97": {
+      "title": "Get",
+      "id": "bec3785c-95bc-4406-bcc5-603107f41b97",
+      "properties": {
+        "attribute": "raw"
+      },
+      "x": 305,
+      "y": 120,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "f7796641-aef4-4360-b835-e3b95d501ff5": {
+      "title": "Evaluate Query",
+      "id": "f7796641-aef4-4360-b835-e3b95d501ff5",
+      "properties": {
+        "query": "has the player explicitly asked to end the simulation?"
+      },
+      "x": 561,
+      "y": 121,
+      "width": 259,
+      "height": 98,
+      "collapsed": false,
+      "registry": "agents/world_state/EvaluateQuery",
+      "base_type": "core/Node"
+    },
+    "bad6c2b1-f213-4760-960e-106bc8c08c28": {
+      "title": "Stop",
+      "id": "bad6c2b1-f213-4760-960e-106bc8c08c28",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 1121,
+      "y": 221,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "registry": "raise/Stop",
+      "base_type": "core/Node"
+    },
+    "3f3431b2-7d38-473d-a6a6-45d46dfa653b": {
+      "title": "Stage 0",
+      "id": "3f3431b2-7d38-473d-a6a6-45d46dfa653b",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1121,
+      "y": 141,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "a292cdee-3084-4330-bba1-ab5914a28eb9": {
+      "title": "Switch",
+      "id": "a292cdee-3084-4330-bba1-ab5914a28eb9",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 860,
+      "y": 140,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "1945deea-b7b9-4cd1-8ff7-df57c2ecdef0": {
+      "title": "Dict Set",
+      "id": "1945deea-b7b9-4cd1-8ff7-df57c2ecdef0",
+      "properties": {
+        "key": "player_character"
+      },
+      "x": 266,
+      "y": 761,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "8673ebf6-eb39-4859-a5a5-9bd3bba6ba3b": {
+      "title": "Get Player Character",
+      "id": "8673ebf6-eb39-4859-a5a5-9bd3bba6ba3b",
+      "properties": {},
+      "x": 26,
+      "y": 681,
+      "width": 186,
+      "height": 35,
+      "collapsed": false,
+      "registry": "scene/GetPlayerCharacter",
+      "base_type": "core/Node"
+    },
+    "3a9d4555-0a2e-41e7-b765-578d0bef0bd7": {
+      "title": "Make Text",
+      "id": "3a9d4555-0a2e-41e7-b765-578d0bef0bd7",
+      "properties": {
+        "value": "Narrate the computer ending the simulation, dissolving the environment and all artificial characters, erasing all memory of it and finally returning the user to the inactive simulation suite. The user is also transformed back to their normal, non-descript persona as the form of {player_character.name} ceases to exist."
+      },
+      "x": 256,
+      "y": 651,
+      "width": 264,
+      "height": 58,
+      "collapsed": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "5ed0efbd-bd9a-4bc8-b451-35172dabac60": {
+      "title": "Format",
+      "id": "5ed0efbd-bd9a-4bc8-b451-35172dabac60",
+      "properties": {},
+      "x": 576,
+      "y": 691,
+      "width": 140,
+      "height": 46,
+      "collapsed": false,
+      "registry": "data/string/Format",
+      "base_type": "core/Node"
+    },
+    "3fdce25e-dce2-42f6-b8e0-9cfb72ae3558": {
+      "title": "Push History",
+      "id": "3fdce25e-dce2-42f6-b8e0-9cfb72ae3558",
+      "properties": {
+        "emit_message": true
+      },
+      "x": 1046,
+      "y": 691,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "fa73b1a2-bc8e-4d5f-89ef-601187a3ec6c": {
+      "title": "Stage 2",
+      "id": "fa73b1a2-bc8e-4d5f-89ef-601187a3ec6c",
+      "properties": {
+        "stage": 2
+      },
+      "x": 1300,
+      "y": 718,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "4cdcfd88-91aa-4840-b00a-9bf7e079d882": {
+      "title": "Generate Progress Narration",
+      "id": "4cdcfd88-91aa-4840-b00a-9bf7e079d882",
+      "properties": {},
+      "x": 770,
+      "y": 688,
+      "width": 245,
+      "height": 46,
+      "collapsed": false,
+      "registry": "agents/narrator/GenerateProgress",
+      "base_type": "core/Node"
+    },
+    "ce3d5beb-c9d9-4768-96d3-12f9489aef93": {
+      "title": "Emit Status",
+      "id": "ce3d5beb-c9d9-4768-96d3-12f9489aef93",
+      "properties": {
+        "message": "Simulation ended",
+        "status": "success",
+        "as_scene_message": true
+      },
+      "x": 43,
+      "y": 979,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "registry": "event/EmitStatus",
+      "base_type": "core/Node"
+    },
+    "2a06bc25-1371-464d-b40a-e714f8523ef4": {
+      "title": "Push History",
+      "id": "2a06bc25-1371-464d-b40a-e714f8523ef4",
+      "properties": {
+        "emit_message": true
+      },
+      "x": 940,
+      "y": 430,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "8b39e912-10ef-4249-b028-d901520a30c3": {
+      "title": "Emit Status",
+      "id": "8b39e912-10ef-4249-b028-d901520a30c3",
+      "properties": {
+        "message": "Simulation suite ending current simulation.",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 30,
+      "y": 340,
+      "width": 278,
+      "height": 149,
+      "collapsed": false,
+      "registry": "event/EmitStatus",
+      "base_type": "core/Node"
+    },
+    "1e642cc1-d9af-4997-806a-547d8101e082": {
+      "title": "Make String",
+      "id": "1e642cc1-d9af-4997-806a-547d8101e082",
+      "properties": {
+        "value": "The computer ends the simulation."
+      },
+      "x": 340,
+      "y": 440,
+      "width": 275,
+      "height": 62,
+      "collapsed": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "80c1911b-1e34-4984-8c23-d8519cd8f734": {
+      "title": "Director Message",
+      "id": "80c1911b-1e34-4984-8c23-d8519cd8f734",
+      "properties": {
+        "source": "ai",
+        "action": "Shutting down."
+      },
+      "x": 690,
+      "y": 370,
+      "width": 210,
+      "height": 162,
+      "collapsed": false,
+      "registry": "scene/message/DirectorMessage",
+      "base_type": "core/Node"
+    },
+    "cf138185-ac5d-4930-be4b-9750c20b43ba": {
+      "title": "Stage 1",
+      "id": "cf138185-ac5d-4930-be4b-9750c20b43ba",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1120,
+      "y": 320,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "23e4ac98-9acd-43b6-b77b-e963507bf712": {
+      "title": "Stage 3",
+      "id": "23e4ac98-9acd-43b6-b77b-e963507bf712",
+      "properties": {
+        "stage": 3
+      },
+      "x": 1163,
+      "y": 949,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "f712e4c2-1600-4e51-904c-1d33cd8b2932": {
+      "title": "Coallesce",
+      "id": "f712e4c2-1600-4e51-904c-1d33cd8b2932",
+      "properties": {},
+      "x": 863,
+      "y": 1209,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "b1a7e0d0-e9e2-4e3d-b2ba-9d34b9f03c00": {
+      "title": "UNSET game.has_issued_instructions",
+      "id": "b1a7e0d0-e9e2-4e3d-b2ba-9d34b9f03c00",
+      "properties": {
+        "name": "has_issued_instructions",
+        "scope": "game"
+      },
+      "x": 373,
+      "y": 1579,
+      "width": 286,
+      "height": 126,
+      "collapsed": false,
+      "registry": "state/UnsetState",
+      "base_type": "core/Node"
+    },
+    "ee2b0f3f-2b15-4846-96a8-12fc535e9c52": {
+      "title": "UNSET game.simulation_started",
+      "id": "ee2b0f3f-2b15-4846-96a8-12fc535e9c52",
+      "properties": {
+        "name": "simulation_started",
+        "scope": "game"
+      },
+      "x": 373,
+      "y": 1399,
+      "width": 283,
+      "height": 122,
+      "collapsed": false,
+      "registry": "state/UnsetState",
+      "base_type": "core/Node"
+    },
+    "37d171a2-ce3b-47c3-8459-5df4754f0d2f": {
+      "title": "UNSET game.last_processed_call",
+      "id": "37d171a2-ce3b-47c3-8459-5df4754f0d2f",
+      "properties": {
+        "name": "last_processed_call",
+        "scope": "game"
+      },
+      "x": 373,
+      "y": 1219,
+      "width": 283,
+      "height": 124,
+      "collapsed": false,
+      "registry": "state/UnsetState",
+      "base_type": "core/Node"
+    },
+    "9cafe586-fb38-4268-a073-62940ec7ee43": {
+      "title": "Restore Scene",
+      "id": "9cafe586-fb38-4268-a073-62940ec7ee43",
+      "properties": {},
+      "x": 800,
+      "y": 1030,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "registry": "scene/Restore",
+      "base_type": "core/Node"
+    },
+    "e89ebd9c-2f78-4545-926a-65980d4e2714": {
+      "title": "TRUE",
+      "id": "e89ebd9c-2f78-4545-926a-65980d4e2714",
+      "properties": {
+        "value": true
+      },
+      "x": 680,
+      "y": 1060,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "327c34bd-ed00-4137-8029-6f1d38ae784e.value": [
+      "bec3785c-95bc-4406-bcc5-603107f41b97.object"
+    ],
+    "bec3785c-95bc-4406-bcc5-603107f41b97.value": [
+      "f7796641-aef4-4360-b835-e3b95d501ff5.state",
+      "f7796641-aef4-4360-b835-e3b95d501ff5.context"
+    ],
+    "f7796641-aef4-4360-b835-e3b95d501ff5.result": [
+      "a292cdee-3084-4330-bba1-ab5914a28eb9.value"
+    ],
+    "a292cdee-3084-4330-bba1-ab5914a28eb9.yes": [
+      "3f3431b2-7d38-473d-a6a6-45d46dfa653b.state"
+    ],
+    "a292cdee-3084-4330-bba1-ab5914a28eb9.no": [
+      "bad6c2b1-f213-4760-960e-106bc8c08c28.state"
+    ],
+    "1945deea-b7b9-4cd1-8ff7-df57c2ecdef0.dict": [
+      "5ed0efbd-bd9a-4bc8-b451-35172dabac60.variables"
+    ],
+    "8673ebf6-eb39-4859-a5a5-9bd3bba6ba3b.character": [
+      "1945deea-b7b9-4cd1-8ff7-df57c2ecdef0.value"
+    ],
+    "3a9d4555-0a2e-41e7-b765-578d0bef0bd7.value": [
+      "5ed0efbd-bd9a-4bc8-b451-35172dabac60.template"
+    ],
+    "5ed0efbd-bd9a-4bc8-b451-35172dabac60.result": [
+      "4cdcfd88-91aa-4840-b00a-9bf7e079d882.state",
+      "4cdcfd88-91aa-4840-b00a-9bf7e079d882.narrative_direction"
+    ],
+    "3fdce25e-dce2-42f6-b8e0-9cfb72ae3558.message": [
+      "fa73b1a2-bc8e-4d5f-89ef-601187a3ec6c.state"
+    ],
+    "4cdcfd88-91aa-4840-b00a-9bf7e079d882.message": [
+      "3fdce25e-dce2-42f6-b8e0-9cfb72ae3558.message"
+    ],
+    "ce3d5beb-c9d9-4768-96d3-12f9489aef93.emitted": [
+      "23e4ac98-9acd-43b6-b77b-e963507bf712.state"
+    ],
+    "2a06bc25-1371-464d-b40a-e714f8523ef4.message": [
+      "cf138185-ac5d-4930-be4b-9750c20b43ba.state_b"
+    ],
+    "8b39e912-10ef-4249-b028-d901520a30c3.emitted": [
+      "cf138185-ac5d-4930-be4b-9750c20b43ba.state"
+    ],
+    "1e642cc1-d9af-4997-806a-547d8101e082.value": [
+      "80c1911b-1e34-4984-8c23-d8519cd8f734.message"
+    ],
+    "80c1911b-1e34-4984-8c23-d8519cd8f734.message": [
+      "2a06bc25-1371-464d-b40a-e714f8523ef4.message"
+    ],
+    "f712e4c2-1600-4e51-904c-1d33cd8b2932.value": [
+      "23e4ac98-9acd-43b6-b77b-e963507bf712.state_c"
+    ],
+    "b1a7e0d0-e9e2-4e3d-b2ba-9d34b9f03c00.value": [
+      "f712e4c2-1600-4e51-904c-1d33cd8b2932.c"
+    ],
+    "ee2b0f3f-2b15-4846-96a8-12fc535e9c52.value": [
+      "f712e4c2-1600-4e51-904c-1d33cd8b2932.b"
+    ],
+    "37d171a2-ce3b-47c3-8459-5df4754f0d2f.value": [
+      "f712e4c2-1600-4e51-904c-1d33cd8b2932.a"
+    ],
+    "9cafe586-fb38-4268-a073-62940ec7ee43.state": [
+      "23e4ac98-9acd-43b6-b77b-e963507bf712.state_b"
+    ],
+    "e89ebd9c-2f78-4545-926a-65980d4e2714.value": [
+      "9cafe586-fb38-4268-a073-62940ec7ee43.state"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Stage 0",
+      "x": 7,
+      "y": 5,
+      "width": 1242,
+      "height": 256,
+      "color": "#b58b2a",
+      "font_size": 24
+    },
+    {
+      "title": "Stage 2",
+      "x": 8,
+      "y": 575,
+      "width": 1419,
+      "height": 315,
+      "color": "#3f789e",
+      "font_size": 24
+    },
+    {
+      "title": "Stage 1",
+      "x": 7,
+      "y": 269,
+      "width": 1246,
+      "height": 298,
+      "color": "#3f789e",
+      "font_size": 24
+    },
+    {
+      "title": "Stage 3",
+      "x": 11,
+      "y": 897,
+      "width": 1440,
+      "height": 855,
+      "color": "#3f789e",
+      "font_size": 24
+    }
+  ],
+  "comments": [
+    {
+      "text": "We only end the simulation if the user has explicitly asked the sim suite computer to do so.",
+      "x": 310,
+      "y": 20,
+      "width": 559
+    }
+  ],
+  "base_type": "core/functions/Function",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "2e728eff-57fa-40b6-b0ec-ad564af4ba25",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    }
+  ],
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null
+  }
+}

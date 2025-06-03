@@ -46,14 +46,6 @@ export default {
         }
     },
     watch: {
-        asset_id: {
-            immediate: true,
-            handler(value) {
-                if(value) {
-                    console.trace("CoverImage asset_id", value);
-                }
-            }
-        },
         target: {
             immediate: true,
             handler(value) {

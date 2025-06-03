@@ -21,6 +21,9 @@ theme:
       bug: octicons/bug-16
       example: octicons/beaker-16
       quote: octicons/quote-16
+      load: material/open-in-new
+      payload: material/list-box
+      learn-more: material/book-open-variant-outline
 markdown_extensions:
   - attr_list
   - pymdownx.emoji:
@@ -35,3 +38,5 @@ markdown_extensions:
 plugins:
   - awesome-pages
   - glightbox
+extra_css:
+  - style.css

@@ -33,9 +33,9 @@ class LayeredHistoryMixin:
     """
     
     @classmethod
-    def add_actions(cls, summarizer):
+    def add_actions(cls, actions: dict[str, AgentAction]):
         
-        summarizer.actions["layered_history"] = AgentAction(
+        actions["layered_history"] = AgentAction(
             enabled=True,
             container=True,
             icon="mdi-layers",

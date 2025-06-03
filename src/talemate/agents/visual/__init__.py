@@ -15,6 +15,7 @@ from talemate.agents.base import (
     set_processing,
 )
 from talemate.agents.registry import register
+from talemate.agents.editor.revision import RevisionDisabled
 from talemate.client.base import ClientBase
 from talemate.config import load_config
 from talemate.emit import emit
@@ -27,6 +28,8 @@ from .handlers import HANDLERS
 from .schema import RESOLUTION_MAP, RenderSettings
 from .style import MAJOR_STYLES, STYLE_MAP, Style, combine_styles
 from .websocket_handler import VisualWebsocketHandler
+
+import talemate.agents.visual.nodes
 
 __all__ = [
     "VisualAgent",
@@ -52,13 +55,9 @@ class VisualBase(Agent):
 
     ACTIONS = {}
 
-    def __init__(self, client: ClientBase, *kwargs):
-        self.client = client
-        self.is_enabled = False
-        self.backend_ready = False
-        self.initialized = False
-        self.config = load_config()
-        self.actions = {
+    @classmethod
+    def init_actions(cls) -> dict[str, AgentAction]:
+        actions = {
             "_config": AgentAction(
                 enabled=True,
                 label="Configure",
@@ -91,16 +90,19 @@ class VisualBase(Agent):
             ),
             "automatic_setup": AgentAction(
                 enabled=True,
+                can_be_disabled=True,
                 label="Automatic Setup",
                 description="Automatically setup the visual agent if the selected client has an implementation of the selected backend. (Like the KoboldCpp Automatic1111 api)",
             ),
             "automatic_generation": AgentAction(
                 enabled=False,
+                can_be_disabled=True,
                 label="Automatic Generation",
                 description="Allow automatic generation of visual content",
             ),
             "process_in_background": AgentAction(
                 enabled=True,
+                can_be_disabled=True,
                 label="Process in Background",
                 description="Process renders in the background",
             ),
@@ -140,8 +142,18 @@ class VisualBase(Agent):
             ),
         }
 
-        for action_name, action in self.ACTIONS.items():
-            self.actions[action_name] = action
+        for action_name, action in cls.ACTIONS.items():
+            actions[action_name] = action
+
+        return actions
+
+    def __init__(self, client: ClientBase, *kwargs):
+        self.client = client
+        self.is_enabled = False
+        self.backend_ready = False
+        self.initialized = False
+        self.config = load_config()
+        self.actions = VisualBase.init_actions()
 
         signal_handlers["config_saved"].connect(self.on_config_saved)
 
@@ -281,7 +293,7 @@ class VisualBase(Agent):
         if backend_changed:
             self.backend_ready = False
 
-        log.info(
+        log.debug(
             "apply_config",
             backend=backend,
             backend_changed=backend_changed,
@@ -476,7 +488,7 @@ class VisualBase(Agent):
         fn = f"{backend.lower()}_generate"
 
         log.info(
-            "generate", backend=backend, prompt=prompt, format=format, context=context
+            "visual generate", backend=backend, prompt=prompt, format=format, context=context
         )
 
         if not hasattr(self, fn):
@@ -493,15 +505,16 @@ class VisualBase(Agent):
     @set_processing
     async def generate_environment_prompt(self, instructions: str = None):
 
-        response = await Prompt.request(
-            "visual.generate-environment-prompt",
-            self.client,
-            "visualize",
-            {
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-            },
-        )
+        with RevisionDisabled():
+            response = await Prompt.request(
+                "visual.generate-environment-prompt",
+                self.client,
+                "visualize",
+                {
+                    "scene": self.scene,
+                    "max_tokens": self.client.max_token_length,
+                },
+            )
 
         return response.strip()
 
@@ -512,18 +525,19 @@ class VisualBase(Agent):
 
         character = self.scene.get_character(character_name)
 
-        response = await Prompt.request(
-            "visual.generate-character-prompt",
-            self.client,
-            "visualize",
-            {
-                "scene": self.scene,
-                "character_name": character_name,
-                "character": character,
-                "max_tokens": self.client.max_token_length,
-                "instructions": instructions or "",
-            },
-        )
+        with RevisionDisabled():
+            response = await Prompt.request(
+                "visual.generate-character-prompt",
+                self.client,
+                "visualize",
+                {
+                    "scene": self.scene,
+                    "character_name": character_name,
+                    "character": character,
+                    "max_tokens": self.client.max_token_length,
+                    "instructions": instructions or "",
+                },
+            )
 
         return response.strip()
 

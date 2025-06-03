@@ -1,0 +1,25 @@
+<|SECTION:DRAFT TEXT|>
+{{ text }}
+<|CLOSE_SECTION|>
+<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
+{{ focal.render_instructions() }}
+
+{{
+    focal.callbacks.rewrite_text.render(
+        "Rewrite the draft text to fix it according to the provided analysis. Double quotes \" should be maintained (escape if you have to)",
+        text="The revision of the ENTIRE draft text.",
+        examples=[
+            { "text": "... rewrite the text here ..." },
+        ],
+        
+    )
+}}
+<|SECTION:DRAFT TEXT|>
+{{ text }}
+<|CLOSE_SECTION|>
+<|SECTION:ANALYSIS|>
+{{ analysis }}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Call the `rewrite_text` function with the exact new revision of the draft text.
+<|CLOSE_SECTION|>

@@ -66,6 +66,11 @@
                     <v-col cols="4">
                       <v-text-field v-model="client.max_token_length" v-if="requiresAPIUrl(client)" type="number"
                         label="Context Length" :rules="[rules.required]"></v-text-field>
+
+                      <v-select label="Inference Presets" :items="availablePresets" v-model="client.preset_group">
+                      </v-select>
+
+                      <v-select label="Structured Data Format" :items="dataManageFormatChoices" v-model="client.data_format" messages="Which formatting to use for data structure communication such as function calling or general data management."></v-select>
                     </v-col>
                     <v-col cols="8"
                       v-if="!typeEditable() && client.data && client.data.prompt_template_example !== null && client.model_name && clientMeta().requires_prompt_template && !client.data.api_handles_prompt_template">
@@ -86,6 +91,12 @@
                         </v-card-actions>
                       </v-card>
 
+                    </v-col>
+                  </v-row>
+                  <!-- RATE LIMIT -->
+                  <v-row>
+                    <v-col cols="12">
+                      <v-slider v-model="client.rate_limit" label="Rate Limit" :min="0" :max="100" :step="1" :persistent-hint="true" hint="Requests per minute. (0 = no limit)" thumb-label="always"></v-slider>
                     </v-col>
                   </v-row>
                 </v-window-item>
@@ -145,6 +156,7 @@ export default {
     dialog: Boolean,
     formTitle: String,
     immutableConfig: Object,
+    availablePresets: Array,
   },
   components: {
     AppConfigPresetsSystemPrompts,
@@ -170,6 +182,11 @@ export default {
         v => !!v || 'Context length is required',
       ],
       tab: 'general',
+      dataManageFormatChoices: [
+        { title: 'Talemate decides', value: null},
+        { title: 'JSON', value: 'json' },
+        { title: 'YAML', value: 'yaml' },
+      ],
       tabs: {
         general: {
           title: 'General',
@@ -195,7 +212,7 @@ export default {
   computed: {
     availableTabs() {
       return Object.values(this.tabs).filter(tab => !tab.condition || tab.condition());
-    }
+    },
   },
   watch: {
     'state.dialog': {
@@ -229,6 +246,9 @@ export default {
         this.client.api_url = defaults.api_url || '';
         this.client.max_token_length = defaults.max_token_length || 8192;
         this.client.double_coercion = defaults.double_coercion || null;
+        this.client.rate_limit = defaults.rate_limit || null;
+        this.client.data_format = defaults.data_format || null;
+        this.client.preset_group = defaults.preset_group || '';
         // loop and build name from prefix, checking against current clients
         let name = this.clientTypes[this.client.type].name_prefix;
         let i = 2;
@@ -268,7 +288,6 @@ export default {
       if (this.clientMeta().manual_model && !this.clientMeta().manual_model_choices) {
         this.client.model = this.client.model_name;
       }
-
       this.$emit('save', this.client); // Emit save event with client object
       this.close();
     },

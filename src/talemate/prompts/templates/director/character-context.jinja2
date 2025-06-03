@@ -8,5 +8,9 @@
 {{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
 {% endif %}
 {{ character.description }}
+{% if include_dialogue_instructions and character.dialogue_instructions %}
+### Acting Instructions for {{ character.name }}
+{{ character.dialogue_instructions }}
+{% endif %}
 {% endfor %}
 <|CLOSE_SECTION|>

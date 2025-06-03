@@ -1,6 +1,6 @@
 {% set query = agent_context_state["narrator__query"] -%}
 {% set is_question = query.strip().endswith("?") %}
-{% if is_question %}Help the narrator answer the following question: "{{ query }}". Do this by gathering information and identifying where additional information may be found. 
+{% if is_question %}Help the narrator answer the following question: "{{ query }}". Do this by gathering information and identifying where additional information may be found. The narrator will be answering within the context of this fictional world and your instructions must help him do this.
 {% else %}Help the narrator with the task: "{{ query }}".{% endif %}
 
 The information and instructions you write must help complete this task.

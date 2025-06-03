@@ -1,5 +1,5 @@
 # Overview
 
-The conversation agent drives the AI generated dialogue.
+Also known as the **Actor** agent it is responsible for generating character driven dialogue and actions.
 
-It rquires a text-generation client to be configured and assigned.
+It requires a text-generation client to be configured and assigned.

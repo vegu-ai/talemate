@@ -1,10 +1,10 @@
 import pydantic
 import structlog
-from mistralai.async_client import MistralAsyncClient
-from mistralai.exceptions import MistralAPIStatusException
-from mistralai.models.chat_completion import ChatMessage
+from typing import Literal
+from mistralai import Mistral
+from mistralai.models.sdkerror import SDKError
 
-from talemate.client.base import ClientBase, ErrorAction, ParameterReroute
+from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
@@ -35,9 +35,10 @@ JSON_OBJECT_RESPONSE_MODELS = [
 ]
 
 
-class Defaults(pydantic.BaseModel):
+class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "open-mixtral-8x22b"
+
 
 
 @register()
@@ -65,7 +66,6 @@ class MistralAIClient(ClientBase):
         self.api_key_status = None
         self.config = load_config()
         super().__init__(**kwargs)
-
         handlers["config_saved"].connect(self.on_config_saved)
 
     @property
@@ -106,23 +106,24 @@ class MistralAIClient(ClientBase):
             model_name = "No model loaded"
 
         self.current_status = status
-
+        data={
+            "error_action": error_action.model_dump() if error_action else None,
+            "meta": self.Meta().model_dump(),
+            "enabled": self.enabled,
+        }
+        data.update(self._common_status_data())
         emit(
             "client_status",
             message=self.client_type,
             id=self.name,
             details=model_name,
             status=status if self.enabled else "disabled",
-            data={
-                "error_action": error_action.model_dump() if error_action else None,
-                "meta": self.Meta().model_dump(),
-                "enabled": self.enabled,
-            },
+            data=data,
         )
 
     def set_client(self, max_token_length: int = None):
         if not self.mistralai_api_key:
-            self.client = MistralAsyncClient(api_key="sk-1111")
+            self.client = Mistral(api_key="sk-1111")
             log.error("No mistral.ai API key set")
             if self.api_key_status:
                 self.api_key_status = False
@@ -138,7 +139,7 @@ class MistralAIClient(ClientBase):
 
         model = self.model_name
 
-        self.client = MistralAsyncClient(api_key=self.mistralai_api_key)
+        self.client = Mistral(api_key=self.mistralai_api_key)
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -157,6 +158,8 @@ class MistralAIClient(ClientBase):
     def reconfigure(self, **kwargs):
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
+        
+        self._reconfigure_common_parameters(**kwargs)
 
         if kwargs.get("model"):
             self.model_name = kwargs["model"]
@@ -215,8 +218,8 @@ class MistralAIClient(ClientBase):
         system_message = self.get_system_message(kind)
 
         messages = [
-            ChatMessage(role="system", content=system_message),
-            ChatMessage(role="user", content=prompt.strip()),
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": prompt.strip()},
         ]
 
         self.log.debug(
@@ -227,7 +230,7 @@ class MistralAIClient(ClientBase):
         )
 
         try:
-            response = await self.client.chat(
+            response = await self.client.chat.complete_async(
                 model=self.model_name,
                 messages=messages,
                 **parameters,
@@ -253,9 +256,9 @@ class MistralAIClient(ClientBase):
                 response = response[len(right) :].strip()
 
             return response
-        except MistralAPIStatusException as e:
+        except SDKError as e:
             self.log.error("generate error", e=e)
-            if e.http_status in [403, 401]:
+            if hasattr(e, 'status_code') and e.status_code in [403, 401]:
                 emit(
                     "status",
                     message="mistral.ai API: Permission Denied",

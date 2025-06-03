@@ -1,0 +1,79 @@
+{% set extra_context_content -%}
+{% include "extra-context.jinja2" %}
+{% endset %}
+{{ extra_context_content }}
+{% set extra_context_tokens = count_tokens(extra_context_content) %}
+{% set budget=max_tokens-300-extra_context_tokens %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
+{% include "scene-intent.jinja2" %}
+{% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
+<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
+{{ focal.render_instructions() }}
+
+{% if focal.callbacks.act -%}
+{{
+    focal.callbacks.act.render(
+        "Instruct the actor portraying the character to take the next action. IMPORTANT: Only the following characters are eligible to take action: "+candidate_names+".",
+        name="Character Name - this must be one of the following characters: "+candidate_names+".",
+        instructions="The acting instructions for the actor portraying the character. Provide a brief, concise direction (1-2 short sentences) including key emotional state and actions. This argument is optional, if you want the actor to continue their course of action from the previous message, you can omit it. You MUST NOT write direct speech. Formulate this as an actionable instruction such as \"Do this..\", \"You should..\", \"In order to..\", etc.",
+        examples=[
+            {"name": "John", "instructions": "Open the door cautiously and call out hesitantly. You should show visible fear as you descend the basement stairs."},
+            {"name": "Jane", "instructions": "Pick up the phone with trembling hands and dial. I want you to pace nervously while waiting for someone to answer."},
+            {"name": "Alice", "_comment": "Alice is already doing a great job, so we'll let her continue her current action."},
+        ]
+    )
+}}
+{% endif %}
+{% if focal.callbacks.narrate_scene %}
+{{
+    focal.callbacks.narrate_scene.render(
+        "Instruct the narrator to narrate the current moment in this scene. Use this when you want to provide a description of the scene or the characters' actions without direct dialogue or actually moving the story forward.",
+        instructions="The narrative instructions for the narrator. Keep it brief but descriptive (1 concise sentence).",
+        examples=[
+            {"instructions": "Jim presses down on Joseph's arm, gaining the upper hand in the match."},
+            {"instructions": "The camera pans to reveal the room and the other characters' reactions."},
+            {"instructions": "Fresh bread aroma fills the air, drawing everyone's attention."},
+        ]
+    )
+}}
+{% endif %}
+{% if focal.callbacks.progress_story %}
+{{
+    focal.callbacks.progress_story.render(
+        "Instruct the narrator to progress the story. Use this when you want to move the sequence of events forward.",
+        instructions="The narrative instructions for the narrator to progress the story. Keep it brief but descriptive (1 concise sentence).",
+        examples=[
+            {"instructions": "The doorbell suddenly rings, interrupting their conversation."},
+            {"instructions": "They drive towards the city as the sun sets in the distance."},
+            {"instructions": "Lights flicker and the room is plunged into darkness."},
+        ]
+    )
+}}
+{% endif %}
+
+<|SECTION:TASK|>
+
+{{ analysis }}
+
+<|SECTION:FUNCTION SELECTION|>
+Briefly analyze the explicit instruction to the editor (Item 5) and what function call makes sense to accomplish it.
+{% set bullet_num=0 -%}
+Based on the analysis, call the ONE appropriate function to direct the scene:
+
+{% if focal.callbacks.act and candidates %}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. If the decision is to have a character act, call act() with the character name and instructions. Remember to compress the direction into a SHORT and SIMPLE actionable instruction for the actor ("I want you to..", "You should..", "In order to..", etc.)
+{% endif %}
+
+{% if focal.callbacks.narrate_scene %}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. If the decision is to narrate the scene, call narrate_scene() with the narrative instructions.
+{% endif %}
+
+{% if focal.callbacks.progress_story %}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}. If the decision is to progress the story, call progress_story() with the narrative instructions.
+{% endif %}
+
+YOU MUST ONLY CALL ONE (1) FUNCTION.
+
+Keep the instructions concise and direct. For characters, use 1-2 short sentences. For narration, use 1 concise sentence.
+<|CLOSE_SECTION|>
+{{ bot_token}}### Analysis

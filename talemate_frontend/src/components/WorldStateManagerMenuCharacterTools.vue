@@ -39,7 +39,7 @@
                     :variant="selected === character.name ? 'flat' : 'tonal'" color="info" elevation="7">Player</v-chip>
                     <v-chip v-else-if="character.is_player === false" label size="x-small"
                         :variant="selected === character.name ? 'flat' : 'tonal'" color="warning" elevation="7">AI</v-chip>
-                    <v-chip v-if="character.active === true && character.is_player === false"
+                    <v-chip v-if="character.active === true"
                         label size="x-small" :variant="selected === character.name ? 'flat' : 'tonal'" color="success"
                         class="ml-1" elevation="7">Active</v-chip>
                 </div>

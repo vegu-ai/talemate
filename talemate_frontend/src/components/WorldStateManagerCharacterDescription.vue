@@ -8,6 +8,7 @@
         :character="character.name"
         :generationOptions="generationOptions"
         :templates="templates"
+        :specifyLength="true"
         @generate="content => setAndUpdate(content)"
     />
 

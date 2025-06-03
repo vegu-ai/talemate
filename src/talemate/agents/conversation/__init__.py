@@ -28,12 +28,16 @@ from talemate.agents.base import (
     AgentActionConfig,
     AgentDetail,
     AgentEmission,
+    DynamicInstruction,
     set_processing,
     store_context_state,
 )
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.agents.context import active_agent
+
+from .websocket_handler import ConversationWebsocketHandler
+import talemate.agents.conversation.nodes
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Actor, Character
@@ -45,8 +49,8 @@ log = structlog.get_logger("talemate.agents.conversation")
 class ConversationAgentEmission(AgentEmission):
     actor: Actor
     character: Character
-    generation: list[str]
-    dynamic_instructions: list[str] = dataclasses.field(default_factory=list)
+    response: str
+    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(default_factory=list)
 
 
 talemate.emit.async_signals.register(
@@ -58,7 +62,7 @@ talemate.emit.async_signals.register(
 
 @register()
 class ConversationAgent(
-    MemoryRAGMixin, 
+    MemoryRAGMixin,
     Agent
 ):
     """
@@ -71,26 +75,11 @@ class ConversationAgent(
     verbose_name = "Conversation"
 
     min_dialogue_length = 75
+    websocket_handler = ConversationWebsocketHandler
 
-    def __init__(
-        self,
-        client: client.TaleMateClient,
-        kind: Optional[str] = "pygmalion",
-        logging_enabled: Optional[bool] = True,
-        **kwargs,
-    ):
-        self.client = client
-        self.kind = kind
-        self.logging_enabled = logging_enabled
-        self.logging_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-        # several agents extend this class, but we only want to initialize
-        # these actions for the conversation agent
-
-        if self.agent_type != "conversation":
-            return
-
-        self.actions = {
+    @classmethod
+    def init_actions(cls) -> dict[str, AgentAction]:
+        actions = {
             "generation_override": AgentAction(
                 enabled=True,
                 container=True,
@@ -128,7 +117,7 @@ class ConversationAgent(
                     "instructions": AgentActionConfig(
                         type="blob",
                         label="Task Instructions",
-                        value="Write 1-3 sentences. Never wax poetic.",
+                        value="",
                         description="Allows to extend the task instructions - placed above the context history.",
                     ),
                     "actor_instructions": AgentActionConfig(
@@ -152,37 +141,49 @@ class ConversationAgent(
             ),
             "auto_break_repetition": AgentAction(
                 enabled=True,
+                can_be_disabled=True,
                 label="Auto Break Repetition",
                 description="Will attempt to automatically break AI repetition.",
             ),
-            "natural_flow": AgentAction(
+            "content": AgentAction(
                 enabled=True,
-                label="Natural Flow",
-                description="Will attempt to generate a more natural flow of conversation between multiple characters.",
+                can_be_disabled=False,
+                container=True,
+                label="Content",
+                icon="mdi-script-text",
+                description="Content control settings",
                 config={
-                    "max_auto_turns": AgentActionConfig(
-                        type="number",
-                        label="Max. Auto Turns",
-                        description="The maximum number of turns the AI is allowed to generate before it stops and waits for the player to respond.",
-                        value=4,
-                        min=1,
-                        max=100,
-                        step=1,
+                    "use_writing_style": AgentActionConfig(
+                        type="bool",
+                        label="Use Writing Style",
+                        description="Use the writing style selected in the scene settings",
+                        value=True,
                     ),
-                    "max_idle_turns": AgentActionConfig(
-                        type="number",
-                        label="Max. Idle Turns",
-                        description="The maximum number of turns a character can go without speaking before they are considered overdue to speak.",
-                        value=8,
-                        min=1,
-                        max=100,
-                        step=1,
-                    ),
-                },
+                }
             ),
         }
-        
-        MemoryRAGMixin.add_actions(self)
+        MemoryRAGMixin.add_actions(actions)
+        return actions
+
+    def __init__(
+        self,
+        client: client.TaleMateClient,
+        kind: Optional[str] = "pygmalion",
+        logging_enabled: Optional[bool] = True,
+        **kwargs,
+    ):
+        self.client = client
+        self.kind = kind
+        self.logging_enabled = logging_enabled
+        self.logging_date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+        # several agents extend this class, but we only want to initialize
+        # these actions for the conversation agent
+
+        if self.agent_type != "conversation":
+            return
+
+        self.actions = ConversationAgent.init_actions()
 
     @property
     def conversation_format(self):
@@ -232,215 +233,12 @@ class ConversationAgent(
     def generation_settings_actor_instructions_offset(self):
         return self.actions["generation_override"].config["actor_instructions_offset"].value
 
+    @property
+    def content_use_writing_style(self) -> bool:
+        return self.actions["content"].config["use_writing_style"].value
+
     def connect(self, scene):
         super().connect(scene)
-        talemate.emit.async_signals.get("game_loop").connect(self.on_game_loop)
-
-    def last_spoken(self):
-        """
-        Returns the last time each character spoke
-        """
-
-        last_turn = {}
-        turns = 0
-        character_names = self.scene.character_names
-        max_idle_turns = self.actions["natural_flow"].config["max_idle_turns"].value
-
-        for idx in range(len(self.scene.history) - 1, -1, -1):
-            if isinstance(self.scene.history[idx], CharacterMessage):
-                if turns >= max_idle_turns:
-                    break
-
-                character = self.scene.history[idx].character_name
-
-                if character in character_names:
-                    last_turn[character] = turns
-                    character_names.remove(character)
-
-                if not character_names:
-                    break
-
-                turns += 1
-
-        if character_names and turns >= max_idle_turns:
-            for character in character_names:
-                last_turn[character] = max_idle_turns
-
-        return last_turn
-
-    def repeated_speaker(self):
-        """
-        Counts the amount of times the most recent speaker has spoken in a row
-        """
-        character_name = None
-        count = 0
-        for idx in range(len(self.scene.history) - 1, -1, -1):
-            if isinstance(self.scene.history[idx], CharacterMessage):
-                if character_name is None:
-                    character_name = self.scene.history[idx].character_name
-                if self.scene.history[idx].character_name == character_name:
-                    count += 1
-                else:
-                    break
-        return count
-
-    async def on_game_loop(self, event: GameLoopEvent):
-        await self.apply_natural_flow()
-
-    async def apply_natural_flow(self, force: bool = False, npcs_only: bool = False):
-        """
-        If the natural flow action is enabled, this will attempt to determine
-        the ideal character to talk next.
-
-        This will let the AI pick a character to talk to, but if the AI can't figure
-        it out it will apply rules based on max_idle_turns and max_auto_turns.
-
-        If all fails it will just pick a random character.
-
-        Repetition is also taken into account, so if a character has spoken twice in a row
-        they will not be picked again until someone else has spoken.
-        """
-
-        scene = self.scene
-
-        if not scene.auto_progress and not force:
-            # we only apply natural flow if auto_progress is enabled
-            return
-
-        if self.actions["natural_flow"].enabled and len(scene.character_names) > 2:
-            # last time each character spoke (turns ago)
-            max_idle_turns = self.actions["natural_flow"].config["max_idle_turns"].value
-            max_auto_turns = self.actions["natural_flow"].config["max_auto_turns"].value
-            last_turn = self.last_spoken()
-            player_name = scene.get_player_character().name
-            last_turn_player = last_turn.get(player_name, 0)
-
-            if last_turn_player >= max_auto_turns and not npcs_only:
-                self.scene.next_actor = scene.get_player_character().name
-                log.debug(
-                    "conversation_agent.natural_flow",
-                    next_actor="player",
-                    overdue=True,
-                    player_character=scene.get_player_character().name,
-                )
-                return
-
-            log.debug("conversation_agent.natural_flow", last_turn=last_turn)
-
-            # determine random character to talk, this will be the fallback in case
-            # the AI can't figure out who should talk next
-
-            if scene.prev_actor:
-                # we dont want to talk to the same person twice in a row
-                character_names = scene.character_names
-                character_names.remove(scene.prev_actor)
-
-                if npcs_only:
-                    character_names = [c for c in character_names if c != player_name]
-
-                random_character_name = random.choice(character_names)
-            else:
-                character_names = scene.character_names
-                # no one has talked yet, so we just pick a random character
-
-                if npcs_only:
-                    character_names = [c for c in character_names if c != player_name]
-
-                random_character_name = random.choice(scene.character_names)
-
-            overdue_characters = [
-                character
-                for character, turn in last_turn.items()
-                if turn >= max_idle_turns
-            ]
-
-            if npcs_only:
-                overdue_characters = [c for c in overdue_characters if c != player_name]
-
-            if overdue_characters and self.scene.history:
-                # Pick a random character from the overdue characters
-                scene.next_actor = random.choice(overdue_characters)
-            elif scene.history:
-                scene.next_actor = None
-
-                # AI will attempt to figure out who should talk next
-                next_actor = await self.select_talking_actor(character_names)
-                next_actor = next_actor.split("\n")[0].strip().strip('"').strip(".")
-
-                for character_name in scene.character_names:
-                    if (
-                        next_actor.lower() in character_name.lower()
-                        or character_name.lower() in next_actor.lower()
-                    ):
-                        scene.next_actor = character_name
-                        break
-
-                if not scene.next_actor:
-                    # AI couldn't figure out who should talk next, so we just pick a random character
-                    log.debug(
-                        "conversation_agent.natural_flow",
-                        next_actor="random",
-                        random_character_name=random_character_name,
-                    )
-                    scene.next_actor = random_character_name
-                else:
-                    log.debug(
-                        "conversation_agent.natural_flow",
-                        next_actor="picked",
-                        ai_next_actor=scene.next_actor,
-                    )
-            else:
-                # always start with main character (TODO: configurable?)
-                player_character = scene.get_player_character()
-                log.debug(
-                    "conversation_agent.natural_flow",
-                    next_actor="main_character",
-                    main_character=player_character,
-                )
-                scene.next_actor = (
-                    player_character.name if player_character else random_character_name
-                )
-
-            scene.log.debug(
-                "conversation_agent.natural_flow", next_actor=scene.next_actor
-            )
-
-            # same character cannot go thrice in a row, if this is happening, pick a random character that
-            # isnt the same as the last character
-
-            if (
-                self.repeated_speaker() >= 2
-                and self.scene.prev_actor == self.scene.next_actor
-            ):
-                scene.next_actor = random.choice(
-                    [c for c in scene.character_names if c != scene.prev_actor]
-                )
-                scene.log.debug(
-                    "conversation_agent.natural_flow",
-                    next_actor="random (repeated safeguard)",
-                    random_character_name=scene.next_actor,
-                )
-
-        else:
-            scene.next_actor = None
-
-    @set_processing
-    async def select_talking_actor(self, character_names: list[str] = None):
-        result = await Prompt.request(
-            "conversation.select-talking-actor",
-            self.client,
-            "conversation_select_talking_actor",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "character_names": character_names or self.scene.character_names,
-                "character_names_formatted": ", ".join(
-                    character_names or self.scene.character_names
-                ),
-            },
-        )
-
-        return result
 
     async def build_prompt_default(
         self,
@@ -467,7 +265,13 @@ class ConversationAgent(
 
         main_character = scene.main_character.character
 
-        character_names = [c.name for c in scene.characters if not c.is_player]
+        character_names = [c.name for c in scene.characters]
+        
+        if main_character:
+            try:
+                character_names.remove(main_character.name)
+            except ValueError:
+                pass
 
         if len(character_names) > 1:
             formatted_names = (
@@ -486,7 +290,7 @@ class ConversationAgent(
         
         inject_instructions_emission = ConversationAgentEmission(
             agent=self,
-            generation="", 
+            response="", 
             actor=None, 
             character=character, 
         )
@@ -562,7 +366,12 @@ class ConversationAgent(
 
     @set_processing
     @store_context_state('instruction')
-    async def converse(self, actor, only_generate:bool = False, instruction:str = None) -> list[str] | list[CharacterMessage]:
+    async def converse(
+        self, 
+        actor,
+        instruction:str = None,
+        emit_signals:bool = True,
+    ) -> list[CharacterMessage]:
         """
         Have a conversation with the AI
         """
@@ -570,7 +379,7 @@ class ConversationAgent(
         character = actor.character
 
         emission = ConversationAgentEmission(
-            agent=self, generation="", actor=actor, character=character
+            agent=self, response="", actor=actor, character=character
         )
         await talemate.emit.async_signals.get(
             "agent.conversation.before_generate"
@@ -626,7 +435,7 @@ class ConversationAgent(
 
         total_result = util.handle_endofline_special_delimiter(total_result)
 
-        log.info("conversation agent", total_result=total_result)
+        log.debug("conversation agent", total_result=total_result)
 
         if total_result.startswith(":\n") or total_result.startswith(": "):
             total_result = total_result[2:]
@@ -652,32 +461,26 @@ class ConversationAgent(
         if total_result == "" or total_result == f"{character.name}:":
             log.warn("conversation agent", result="Empty result")
 
-        # replace any white space betwen {self.charactrer.name}: and the first word with a single space
+        # replace any white space betwen {charactrer.name}: and the first word with a single space
         total_result = re.sub(
             rf"{character.name}:\s+", f"{character.name}: ", total_result
         )
 
-        response_message = util.parse_messages_from_str(total_result, [character.name])
+        response = total_result
 
-        log.info("conversation agent", result=response_message)
-        
-        if only_generate:
-            return response_message
-
+        log.debug("conversation agent", response=response)
         emission = ConversationAgentEmission(
-            agent=self, generation=response_message, actor=actor, character=character
-        )
-        await talemate.emit.async_signals.get("agent.conversation.generated").send(
-            emission
-        )
+            agent=self, 
+            actor=actor, 
+            character=character, 
+            response=response,
+        )        
+        if emit_signals:
+            await talemate.emit.async_signals.get("agent.conversation.generated").send(
+                emission
+            )
 
-        # log.info("conversation agent", generation=emission.generation)
-
-        messages = [CharacterMessage(message) for message in emission.generation]
-
-        # Add message and response to conversation history
-        actor.scene.push_history(messages)
-
+        messages = [CharacterMessage(emission.response, from_choice=instruction)]
         return messages
 
     def allow_repetition_break(

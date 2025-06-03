@@ -12,7 +12,9 @@
                 :original="entry.text"
                 :requires-instructions="true"
                 :generation-options="generationOptions"
-                @generate="content => { entry.text=content; queueSave(500); }"
+                :specify-length="true"
+                :length="512"
+                @generate="content => { entry.text=content; queueSave(500); dirty = true; }"
             />
             <v-textarea 
                 v-model="entry.text"
@@ -37,7 +39,7 @@
 
         <v-card-actions v-if="isNewEntry">
             <v-spacer></v-spacer>
-            <v-btn @click="save" color="primary" prepend-icon="mdi-text-box-plus">Create</v-btn>
+            <v-btn @click="save()" color="primary" prepend-icon="mdi-text-box-plus">Create</v-btn>
         </v-card-actions>
         <v-card-actions v-else>
             <ConfirmActionInline @confirm="remove" action-label="Remove Entry" confirm-label="Confirm removal" />

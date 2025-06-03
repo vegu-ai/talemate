@@ -1,13 +1,13 @@
 {% if narrative_direction -%}
-{% if rerun_context and rerun_context.direction -%}
-{% include "rerun-context.jinja2" -%}
+{% if regeneration_context and regeneration_context.direction -%}
+{% include "regenerate-context.jinja2" -%}
 {% else -%}
 Directions for new narration: {{ narrative_direction }}
 
 These are directions and the events described have not happened yet, you are writing new narration based on the
 directions.
 {% endif -%}
-{% else %}{% include "rerun-context.jinja2" -%}
+{% else %}{% include "regenerate-context.jinja2" -%}
 {% endif %}
 {# writing style and guidance START #}{% if agent_context_state["director__narrator_guidance"] -%}
 {{ agent_context_state["director__narrator_guidance"] }}
@@ -20,4 +20,4 @@ Maintain an informal, conversational tone similar to 90s adventure games.
 ground your narration.{% endif %}
 {# context investigation exists #}{% if agent_context_state["summarizer__context_investigation"] %}Use the historical
 context to help ground your narration.{% endif %}
-{# rerun-context #}
+{# regenerate-context #}

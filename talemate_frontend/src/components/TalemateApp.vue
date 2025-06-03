@@ -65,7 +65,10 @@
   
       <v-spacer></v-spacer>
 
+      <DirectorConsoleWidget :scene-active="sceneActive" @open-director-console="toggleNavigation('directorConsole')" />
+
       <VisualQueue ref="visualQueue" />
+
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
       <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="!ready"
@@ -95,7 +98,7 @@
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
             <CoverImage v-if="sceneActive" ref="coverImage" />
-            <WorldState v-if="sceneActive" ref="worldState" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
+            <WorldState v-if="sceneActive" ref="worldState" :busy="busy" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
             <WorldStateManagerMenu v-if="sceneActive"
@@ -120,8 +123,16 @@
           <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" :immutable-config="appConfig"></AIClient>
           <v-divider></v-divider>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
-          <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents"></AIAgent>
+          <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents" :agentState="agentState"></AIAgent>
           <!-- More sections can be added here -->
+        </v-list>
+      </v-navigation-drawer>
+
+      <!-- director console navigation drawer -->
+      <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" :width="directorConsoleWidth" disable-resize-watcher>
+        <v-list>
+          <v-list-subheader class="text-uppercase"><v-icon>mdi-bullhorn</v-icon> Director Console</v-list-subheader>
+          <DirectorConsole :scene="scene" v-if="sceneActive" :open="directorConsoleDrawer" />
         </v-list>
       </v-navigation-drawer>
 
@@ -132,7 +143,6 @@
           <DebugTools ref="debugTools"></DebugTools>
         </v-list>
       </v-navigation-drawer>
-
 
       <v-container :class="(sceneActive ? '' : 'backdrop')" fluid style="height: 100%;">
 
@@ -149,56 +159,92 @@
           </v-tabs-window-item>
           <!-- SCENE -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main" style="height: 100%;">
-            <div style="display: flex; flex-direction: column; height: 100%">
+            <v-row no-gutters class="position-relative">
+              <v-col ref="nodeEditorContainer" v-resize="onNodeEditorContainerResize" :xl="creativeMode ? 8 : 0" :cols="creativeMode ? 6 : 0" v-if="creativeMode" class="position-relative">
+                  <NodeEditor
+                    :scene="scene"
+                    :busy="busy"
+                    :app-config="appConfig"
+                    :templates="worldStateTemplates"
+                    :is-visible="true"
+                    ref="nodeEditor"
+                  >
+                  </NodeEditor>  
+              </v-col>
+              <v-col :cols="creativeMode ? 6 : 12"  :xl="creativeMode ? 4 : 12" class="pl-2">
+                <div style="display: flex; flex-direction: column; height: 100%">
 
-              <div v-if="sceneActive && scene.environment === 'creative' && !scene.data.intro">
-                <v-alert color="muted" class="mb-2" variant="text">
-                  <v-alert-title>New Scene</v-alert-title>
-                  You're editing a new scene. Select the <v-btn @click="onOpenWorldStateManager('scene')" variant="text" size="small" color="primary" prepend-icon="mdi-earth-box">World Editor</v-btn> to add characters and scene details. You are currently operating in the creative environment. Once you have added at least one player character you may switch back and forth between creative and gameplay mode at any point using the <v-icon color="primary" size="small">mdi-gamepad-square</v-icon> button at the bottom.
-                  <p class="mt-4">
-                    You can still use the world editor while in gameplay mode as well.
-                  </p>
-                </v-alert>
-              </div>
+                  <div class="scene-container">
 
-              <SceneMessages ref="sceneMessages" :appearance-config="appConfig ? appConfig.appearance : {}" :ux-locked="uxLocked" />
-              <div style="flex-shrink: 0;">
-      
-                <SceneTools 
-                  @open-world-state-manager="onOpenWorldStateManager"
-                  :messageInput="messageInput"
-                  :agent-status="agentStatus"
-                  :app-busy="busy"
-                  :worldStateTemplates="worldStateTemplates"
-                  :playerCharacterName="getPlayerCharacterName()"
-                  :passiveCharacters="passiveCharacters"
-                  :inactiveCharacters="inactiveCharacters"
-                  :activeCharacters="activeCharacters" />
-                <CharacterSheet ref="characterSheet" />
-                <SceneHistory ref="sceneHistory" />
-                <v-textarea
-                  v-model="messageInput" 
-                  :label="messageInputHint()" 
-                  rows="1"
-                  auto-grow
-                  outlined 
-                  ref="messageInput" 
-                  @keydown.enter.prevent="sendMessage"
-                  @keydown.tab.prevent="cycleActAs"
-                  :hint="messageInputLongHint()"
-                  :disabled="busy"
-                  :loading="autocompleting"
-                  :prepend-inner-icon="messageInputIcon()"
-                  :color="messageInputColor()">
-                  <template v-slot:append>
-                    <v-btn @click="sendMessage" color="primary" icon>
-                      <v-icon v-if="messageInput">mdi-send</v-icon>
-                      <v-icon v-else>mdi-skip-next</v-icon>
-                    </v-btn>
-                  </template>
-                </v-textarea>
-              </div>
-            </div>
+                    <div v-if="sceneActive && scene.environment === 'creative' && !scene.data.intro">
+                      <v-alert color="muted" class="mb-2" variant="text">
+                        <v-alert-title>New Scene</v-alert-title>
+                        You're editing a new scene. Select the <v-btn @click="onOpenWorldStateManager('scene')" variant="text" size="small" color="primary" prepend-icon="mdi-earth-box">World Editor</v-btn> to add characters and scene details. You are currently operating in the creative environment. Once you have added at least one player character you may switch back and forth between creative and gameplay mode at any point using the <v-icon color="primary" size="small">mdi-gamepad-square</v-icon> button at the bottom.
+                        <p class="mt-4">
+                          You can still use the world editor while in gameplay mode as well.
+                        </p>
+                      </v-alert>
+                    </div>
+
+                    <SceneMessages 
+                    ref="sceneMessages" 
+                    :appearance-config="appConfig ? appConfig.appearance : {}" 
+                    :ux-locked="uxLocked" 
+                    :agent-status="agentStatus"
+                    />
+
+                    <div ref="sceneToolsContainer">
+                      <SceneTools 
+                        @open-world-state-manager="onOpenWorldStateManager"
+                        :messageInput="messageInput"
+                        :agent-status="agentStatus"
+                        :app-busy="busy"
+                        :worldStateTemplates="worldStateTemplates"
+                        :playerCharacterName="getPlayerCharacterName()"
+                        :passiveCharacters="passiveCharacters"
+                        :inactiveCharacters="inactiveCharacters"
+                        :scene="scene"
+                        :activeCharacters="activeCharacters" />
+                      <CharacterSheet ref="characterSheet" />
+                      <v-textarea
+                        v-model="messageInput" 
+                        :label="messageInputHint()" 
+                        rows="1"
+                        auto-grow
+                        outlined 
+                        ref="messageInput" 
+                        @keydown.enter.prevent="sendMessage"
+                        @keydown.tab.prevent="cycleActAs"
+                        :hint="messageInputLongHint()"
+                        :disabled="busy"
+                        :loading="autocompleting"
+                        :prepend-inner-icon="messageInputIcon()"
+                        :color="messageInputColor()">
+                        <template v-slot:prepend v-if="sceneActive && scene.environment !== 'creative'">
+                          <!-- auto-complete button -->
+                          <v-btn @click="autocomplete" color="primary" icon variant="tonal" :disabled="!messageInput">
+                            <v-icon>mdi-auto-fix</v-icon>
+                          </v-btn>
+                        </template>
+                        <template v-slot:append>
+                          <!-- send message button -->
+                          <v-btn @click="sendMessage" color="primary" icon variant="tonal">
+                            <v-icon v-if="messageInput">mdi-send</v-icon>
+                            <v-icon v-else>mdi-skip-next</v-icon>
+                          </v-btn>
+                        </template>
+                      </v-textarea>
+                    </div>
+                  </div>
+
+                </div>
+    
+                
+              </v-col>
+            </v-row>
+
+
+
 
           </v-tabs-window-item>
           <!-- WORLD -->
@@ -225,6 +271,7 @@
     </v-snackbar>
   </v-app>
   <StatusNotification />
+  <RateLimitAlert ref="rateLimitAlert" />
 </template>
   
 <script>
@@ -234,18 +281,22 @@ import LoadScene from './LoadScene.vue';
 import SceneTools from './SceneTools.vue';
 import SceneMessages from './SceneMessages.vue';
 import WorldState from './WorldState.vue';
-//import GameOptions from './GameOptions.vue';
 import CoverImage from './CoverImage.vue';
 import CharacterSheet from './CharacterSheet.vue';
-import SceneHistory from './SceneHistory.vue';
 import AppConfig from './AppConfig.vue';
 import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
+import RateLimitAlert from './RateLimitAlert.vue';
 import VisualQueue from './VisualQueue.vue';
 import WorldStateManager from './WorldStateManager.vue';
 import WorldStateManagerMenu from './WorldStateManagerMenu.vue';
 import IntroView from './IntroView.vue';
+import NodeEditor from './NodeEditor.vue';
+import DirectorConsole from './DirectorConsole.vue';
+import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
+// import debounce
+import { debounce } from 'lodash';
 
 export default {
   components: {
@@ -255,10 +306,8 @@ export default {
     SceneTools,
     SceneMessages,
     WorldState,
-    //GameOptions,
     CoverImage,
     CharacterSheet,
-    SceneHistory,
     AppConfig,
     DebugTools,
     AudioQueue,
@@ -267,6 +316,10 @@ export default {
     VisualQueue,
     WorldStateManager,
     WorldStateManagerMenu,
+    NodeEditor,
+    DirectorConsole,
+    RateLimitAlert,
+    DirectorConsoleWidget,
   },
   name: 'TalemateApp',
   data() {
@@ -318,6 +371,7 @@ export default {
       drawer: false,
       sceneDrawer: true,
       debugDrawer: false,
+      directorConsoleDrawer: false,
       websocket: null,
       inputDisabled: false,
       waitingForInput: false,
@@ -344,7 +398,10 @@ export default {
       autocompleteCallback: null,
       autocompleteFocusElement: null,
       worldStateTemplates: {},
+      // busy status of agents
       agentStatus: {},
+      // scene state of agents
+      agentState: {},
       clientStatus: {},
       // timestamps for last agent and client updates
       // received from the backend
@@ -362,6 +419,36 @@ export default {
         this.tab = tabs[0].value;
       }
     },
+    tab: {
+      handler(newTab) {
+        if(newTab === 'main') {
+          this.$nextTick(() => {
+            debounce(this.onNodeEditorContainerResize, 250)();
+          });
+        }
+      }
+    },
+    sceneDrawer() {
+      // debounce onNodeEditorContainerResize
+      // to prevent resizing the node editor
+      // too often
+      debounce(this.onNodeEditorContainerResize, 250)();
+    },
+    directorConsoleDrawer() {
+      // debounce onNodeEditorContainerResize
+      // to prevent resizing the node editor
+      // too often
+      debounce(this.onNodeEditorContainerResize, 250)();
+    },
+    drawer() {
+      // debounce onNodeEditorContainerResize
+      // to prevent resizing the node editor
+      // too often
+      debounce(this.onNodeEditorContainerResize, 250)();
+    },
+    debugDrawer() {
+      debounce(this.onNodeEditorContainerResize, 250)();
+    },
     agentStatus: {
       // check if any of the agent's is busy in a blocking manner
       // this means agentStatus[agent].busy is true and agentStatus[agent].busy_bg is false
@@ -378,6 +465,9 @@ export default {
     },
   },
   computed: {
+    creativeMode() {
+      return this.tab === 'main' && this.sceneActive && this.scene.environment === 'creative';
+    },
     availableTabs() {
       return this.tabs.filter(tab => tab.condition());
     },
@@ -411,6 +501,17 @@ export default {
 
       return false;
 
+    },
+    directorConsoleWidth() {
+      // based on the screen width, set the width of the director console
+      const screenWidth = window.innerWidth;
+      if(screenWidth <= 1920) {
+        return 400;
+      } else if(screenWidth <= 2560) {
+        return 600;
+      } else {
+        return 800;
+      }
     }
   },
   mounted() {
@@ -443,6 +544,8 @@ export default {
       openCharacterSheet: (characterName) => this.openCharacterSheet(characterName),
       characterSheet: () => this.$refs.characterSheet,
       creativeEditor: () => this.$refs.creativeEditor,
+      setEnvCreative: () => this.setEnvCreative(),
+      setEnvScene: () => this.setEnvScene(),
       requestAppConfig: () => this.requestAppConfig(),
       appConfig: () => this.appConfig,
       openAppConfig: this.openAppConfig,
@@ -459,6 +562,18 @@ export default {
     };
   },
   methods: {
+
+    onNodeEditorContainerResize() {
+      this.$nextTick(() => {
+        if(!this.$refs.nodeEditorContainer) {
+          return;
+        }
+        let width = this.$refs.nodeEditorContainer.$el.clientWidth;
+        if(this.$refs.nodeEditor) {
+          this.$refs.nodeEditor.resize(width);
+        }
+      });
+    },
 
     connect() {
 
@@ -522,6 +637,7 @@ export default {
           this.requestWorldStateTemplates();
           this.$nextTick(() => {
             this.tab = 'main';
+            debounce(this.onNodeEditorContainerResize, 500)();
           });
         }
         if(data.status == 'error') {
@@ -542,6 +658,16 @@ export default {
         this.setClientStatus(data);
       }
 
+      if(data.type === 'rate_limited') {
+        this.$refs.rateLimitAlert.open(data.data.client, data.data.reset_time, data.data.rate_limit);
+        return;
+      }
+
+      if(data.type === 'rate_limit_reset') {
+        this.$refs.rateLimitAlert.close();
+        return;
+      }
+
       if (data.type == "scene_status") {
         this.scene = {
           name: data.name,
@@ -557,6 +683,8 @@ export default {
         // data.data.characters is a list of all active characters in the scene
         // collect character.name into list of active characters
         this.activeCharacters = data.data.characters.map((character) => character.name);
+        this.agentState = data.data.agent_state;
+        this.syncActAs();
         return;
       }
 
@@ -570,7 +698,6 @@ export default {
 
       if (data.type === 'app_config') {
         this.appConfig = data.data;
-        console.log("App Config", this.appConfig);
         if(data.version)
           this.version = data.version;
         return;
@@ -679,6 +806,7 @@ export default {
         // active - has the agent been active in the last 5 seconds?
         recentlyActive: recentlyActive,
         details: data.client,
+        actions: data.data.actions,
       }
 
       if(recentlyActive && !busy) {
@@ -749,48 +877,56 @@ export default {
       return this.waitingForInput && this.inputRequestInfo && this.inputRequestInfo.reason === "talk";
     },
 
+    autocomplete() {
+      if(!this.isWaitingForDialogInput()) {
+        return;
+      }
+
+      this.autocompleting = true
+      this.inputDisabled = true;
+
+      let context = "dialogue:player";
+
+      if(this.actAs) {
+        if(this.actAs === "$narrator") {
+          context = `narrative:`;
+        } else {
+          context = `dialogue:${this.actAs}`;
+        }
+      }
+
+      this.autocompleteRequest(
+        {
+          partial: this.messageInput,
+          context: context,
+          character: this.actAs,
+        }, 
+        (completion) => {
+          this.inputDisabled = false
+          this.autocompleting = false
+          this.messageInput += completion;
+        },
+        this.$refs.messageInput,
+        100,
+      );
+    },
+
     sendMessage(event) {
 
       // if ctrl+enter is pressed, request autocomplete
       if (event.ctrlKey && event.key === 'Enter') {
-
-        if(!this.isWaitingForDialogInput()) {
-          return;
-        }
-
-        this.autocompleting = true
-        this.inputDisabled = true;
-
-        let context = "dialogue:player";
-
-        if(this.actAs) {
-          if(this.actAs === "$narrator") {
-            context = `narrative:`;
-          } else {
-            context = `dialogue:${this.actAs}`;
-          }
-        }
-
-        this.autocompleteRequest(
-          {
-            partial: this.messageInput,
-            context: context,
-            character: this.actAs,
-          }, 
-          (completion) => {
-            this.inputDisabled = false
-            this.autocompleting = false
-            this.messageInput += completion;
-          },
-          this.$refs.messageInput,
-          100,
-        );
-        return;
+        return this.autocomplete();
       }
 
-      // if shift+enter is pressed, add a newline
+      // if shift+enter is pressed, add a newline at the current cursor position
       if (event.shiftKey && event.key === 'Enter') {
-        this.messageInput += "\n";
+        const textarea = this.$refs.messageInput.$el.querySelector('textarea');
+        const cursorPos = textarea.selectionStart;
+        this.messageInput = this.messageInput.slice(0, cursorPos) + "\n" + this.messageInput.slice(cursorPos);
+        // Set cursor position after the inserted newline
+        this.$nextTick(() => {
+          textarea.selectionStart = textarea.selectionEnd = cursorPos + 1;
+        });
         return;
       }
 
@@ -826,6 +962,29 @@ export default {
       this.websocket.send(JSON.stringify(param_copy));
     },
 
+    syncActAs() {
+      // sets the appropriate actAs
+
+
+      // acting as narrator, narrator is always valid, do nothing
+      if(this.actAs == "$narrator") {
+        return;
+      }
+
+      // acting as a character, check if the character is still valid
+      if(this.actAs && this.activeCharacters.includes(this.actAs)) {
+        return;
+      }
+
+      // if actAs is null and we have characters, just leave it as null (which will default it to the player character)
+      if(!this.actAs && this.activeCharacters.length > 0) {
+        return;
+      }
+
+      // at this point we need a change of actAs so cycle to next option
+      this.cycleActAs();
+    },
+
     cycleActAs() {
 
       // will cycle through activeCharacters, which is a dict of character names
@@ -834,6 +993,12 @@ export default {
       // if actAs is null it means the player is acting as themselves
 
       const playerCharacterName = this.getPlayerCharacterName();
+
+      // if there are no characters, set actAs to $narrator
+      if(!this.activeCharacters || this.activeCharacters.length === 0) {
+        this.actAs = "$narrator";
+        return;
+      }
 
       // if current actAs is $narrator, set actAs to the first character in the list
       if(this.actAs === "$narrator") {
@@ -886,7 +1051,6 @@ export default {
       this.websocket.send(JSON.stringify({ type: 'configure_clients', clients: clients }));
     },
     saveAgents(agents) {
-      console.log({ type: 'configure_agents', agents: agents })
       this.websocket.send(JSON.stringify({ type: 'configure_agents', agents: agents }));
     },
     requestSceneAssets(asset_ids) {
@@ -908,6 +1072,8 @@ export default {
         this.drawer = !this.drawer;
       else if (navigation == "debug")
         this.debugDrawer = !this.debugDrawer;
+      else if (navigation == "directorConsole")
+        this.directorConsoleDrawer = !this.directorConsoleDrawer;
     },
     returnToStartScreen() {
       this.tab = 'home';
@@ -959,33 +1125,26 @@ export default {
     openCharacterSheet(characterName) {
       this.$refs.characterSheet.openForCharacterName(characterName);
     },
-    openSceneHistory() {
-      this.$refs.sceneHistory.open();
-    },
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
       this.tab = 'world';
-      console.log("onOpenWorldStateManager", {tab, sub1, sub2, sub3})
-      console.trace("onOpenWorldStateManager", {tab, sub1, sub2, sub3})
       this.$nextTick(() => {
         this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
       });
     },
     onWorldStateManagerNavigateR(tab, meta) {
-      console.trace("onWorldStateManagerNavigateR", {tab, meta})
       this.$nextTick(() => {
         if(this.$refs.worldStateManagerMenu)
           this.$refs.worldStateManagerMenu.update(tab, meta);
       });
     },
     onWorldStateManagerSelectedCharacter(character) {
-      console.trace("onWorldStateManagerSelectedCharacter", character)
       this.$nextTick(() => {
         if(this.$refs.worldStateManagerMenu)
           this.$refs.worldStateManagerMenu.setCharacter(character)
       });
     },
-    openAppConfig(tab, page) {
-      this.$refs.appConfig.show(tab, page);
+    openAppConfig(tab, page, item=null) {
+      this.$refs.appConfig.show(tab, page, item);
     },
     uxErrorHandler(error) {
       this.errorNotification = true;
@@ -1103,6 +1262,14 @@ export default {
         return value.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     },
 
+    setEnvCreative() {
+      this.websocket.send(JSON.stringify({ type: 'interact', text: "!setenv_creative" }));
+    },
+
+    setEnvScene() {
+      this.websocket.send(JSON.stringify({ type: 'interact', text: "!setenv_scene" }));
+    },
+
   }
 }
 </script>
@@ -1131,4 +1298,11 @@ export default {
   background-color: transparent;
 }
 
+.scene-container {
+  flex-shrink: 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+  overflow-x: auto;
+}
 </style>

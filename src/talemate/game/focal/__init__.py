@@ -7,13 +7,17 @@ This does NOT use API specific function calling (like openai or anthropic), but 
 """
 
 import structlog
+import traceback
 from typing import Callable
 from contextvars import ContextVar
 
 from talemate.client.base import ClientBase
 from talemate.prompts.base import Prompt
+from talemate.util.data import (
+    extract_data,
+)
 
-from .schema import Argument, Call, Callback, State
+from .schema import Argument, Call, Callback, State, ExampleCallbackArguments
 
 __all__ = [
     "Argument",
@@ -48,17 +52,22 @@ class FocalContext:
 
 class Focal:
     
+    schema_formats: list[str] = ["json", "yaml"]
+    
     def __init__(
         self, 
         client: ClientBase,
         callbacks: list[Callback],
         max_calls: int = 5,
+        retries: int = 0,
+        schema_format: str = "json",
         **kwargs
     ):
         self.client = client
         self.context = kwargs
         self.max_calls = max_calls
-        self.state = State()
+        self.retries = retries
+        self.state = State(schema_format=schema_format)
         self.callbacks = {
             callback.name: callback
             for callback in callbacks
@@ -81,9 +90,14 @@ class Focal:
     async def request(
         self,
         template_name: str,
+        retry_state: dict | None = None,
     ) -> str:
         
         log.debug("focal.request", template_name=template_name, callbacks=self.callbacks)
+        
+        # client preference for schema format
+        if self.client.data_format:
+            self.state.schema_format = self.client.data_format
         
         response = await Prompt.request(
             template_name,
@@ -98,13 +112,24 @@ class Focal:
             dedupe_enabled=False,
         )
         
-        if not response.strip():
+        response = response.strip()
+        
+        if not retry_state:
+            retry_state = {"retries": self.retries}
+        
+        if not response:
             log.warning("focal.request.empty_response")
-            return response
         
-        log.debug("focal.request", template_name=template_name, context=self.context, response=response)
+        log.debug("focal.request", template_name=template_name, response=response)
         
-        await self._execute(response, State())
+        if response:
+            await self._execute(response, State())
+        
+        # if no calls were made and we still have retries, try again
+        if not self.state.calls and retry_state["retries"] > 0:
+            log.warning("focal.request - NO CALLS MADE - retrying", retries=retry_state["retries"])
+            retry_state["retries"] -= 1
+            return await self.request(template_name, retry_state)
         
         return response
     
@@ -137,6 +162,7 @@ class Focal:
                 if focal_context:
                     await focal_context.process_hooks(call)
                 
+                log.debug(f"focal.execute - Calling {callback.name}", arguments=call.arguments)
                 result = await callback.fn(**call.arguments)
                 call.result = result
                 call.called = True
@@ -150,12 +176,28 @@ class Focal:
                 log.error(
                     "focal.execute.callback_error",
                     callback=call.name,
-                    error=str(e)
+                    error=traceback.format_exc(),
                 )
                 
             self.state.calls.append(call)
     
     async def _extract(self, response:str) -> list[Call]:
+        
+        # first try to extract data from the response using tooling
+        try:
+            data = extract_data(response, self.state.schema_format)
+            return [Call(**call) for call in data]
+        except Exception as e:
+            log.warning("focal.extract.data FAILED - attempting to use AI to extract calls", error=str(e))
+        
+        # if there is no JSON structure in the response, there are no calls to extract
+        # so we return an empty list
+        if f"```{self.state.schema_format}" not in response:
+            log.warning("focal.extract.no_json_structure")
+            return []
+                
+        log.debug("focal.extract", response=response)
+        
         _, calls_json = await Prompt.request(
             "focal.extract_calls",
             self.client,

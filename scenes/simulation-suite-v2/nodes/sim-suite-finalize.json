@@ -1,0 +1,149 @@
+{
+  "title": "Sim Suite Finalize",
+  "id": "dbe70860-8732-43aa-b63f-89cf3cacb37c",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "sim-suite/simSuiteFinalize",
+  "nodes": {
+    "d02b597e-124b-4459-a60f-4f2ccc770123": {
+      "title": "Request World State",
+      "id": "d02b597e-124b-4459-a60f-4f2ccc770123",
+      "properties": {},
+      "x": 580,
+      "y": 130,
+      "width": 235,
+      "height": 57,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/world_state/RequestWorldState",
+      "base_type": "core/Node"
+    },
+    "225b154e-5875-4282-b3a7-c794d9d46a16": {
+      "title": "Stage 0",
+      "id": "225b154e-5875-4282-b3a7-c794d9d46a16",
+      "properties": {
+        "stage": 0
+      },
+      "x": 860,
+      "y": 160,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "c32ed3d5-9065-4f36-ba2a-322038e82474": {
+      "title": "Get State",
+      "id": "c32ed3d5-9065-4f36-ba2a-322038e82474",
+      "properties": {
+        "name": "simulation_calls",
+        "scope": "scene loop"
+      },
+      "x": 30,
+      "y": 80,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "ffdf6de2-1902-4e6a-a099-78bb85632c96": {
+      "title": "Switch",
+      "id": "ffdf6de2-1902-4e6a-a099-78bb85632c96",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 300,
+      "y": 110,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "4e2f8393-6dcf-4fe4-987f-00a9afbcf18a": {
+      "title": "Input Socket",
+      "id": "4e2f8393-6dcf-4fe4-987f-00a9afbcf18a",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 0,
+      "y": -170,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "67ef7864-d075-4536-b28a-43ef5f6236b3": {
+      "title": "Output Socket",
+      "id": "67ef7864-d075-4536-b28a-43ef5f6236b3",
+      "properties": {
+        "output_type": "any",
+        "output_name": "state",
+        "num": 0
+      },
+      "x": 770,
+      "y": -170,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "d02b597e-124b-4459-a60f-4f2ccc770123.state": [
+      "225b154e-5875-4282-b3a7-c794d9d46a16.state"
+    ],
+    "c32ed3d5-9065-4f36-ba2a-322038e82474.value": [
+      "ffdf6de2-1902-4e6a-a099-78bb85632c96.value"
+    ],
+    "ffdf6de2-1902-4e6a-a099-78bb85632c96.yes": [
+      "d02b597e-124b-4459-a60f-4f2ccc770123.state"
+    ],
+    "4e2f8393-6dcf-4fe4-987f-00a9afbcf18a.value": [
+      "67ef7864-d075-4536-b28a-43ef5f6236b3.value"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Stage 0",
+      "x": 3,
+      "y": 2,
+      "width": 981,
+      "height": 222,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [
+    {
+      "text": "If there were any simulation calls processed, request a world state update.",
+      "x": 570,
+      "y": 20,
+      "width": 383,
+      "inherited": false
+    }
+  ],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "style": null
+}

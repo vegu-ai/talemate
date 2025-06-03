@@ -1,10 +1,12 @@
-{% block rendered_context -%}
+{% set rendered_context_content -%}
 <|SECTION:CONTEXT|>
 {% include "extra-context.jinja2" %}
 <|CLOSE_SECTION|>
-{% endblock -%}
+{% endset %}
+{{ rendered_context_content }}
+{% set rendered_context_tokens = count_tokens(rendered_context_content) %}
 <|SECTION:SCENE|>
-{% for scene_context in scene.context_history(budget=max_tokens-300-count_tokens(self.rendered_context())) -%}
+{% for scene_context in scene.context_history(budget=max_tokens-300-rendered_context_tokens) -%}
 {{ scene_context }}
 {% endfor %}
 <|CLOSE_SECTION|>
@@ -16,5 +18,5 @@ Text to paraphrase:
 "{{ text }}"
 
 {{ extra_instructions }}
-{% include "rerun-context.jinja2" -%}
+{% include "regenerate-context.jinja2" -%}
 <|CLOSE_SECTION|>

@@ -10,6 +10,7 @@
 {% endif %}
 <|SECTION:CHARACTER|>
 {{ character.sheet }}
+{% include "task-information.jinja2" %}
 <|SECTION:TASK|>
 Extract and summarize a character description for {{ character.name }} from the content
 {{ set_prepared_response(character.name) }}

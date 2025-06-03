@@ -1,5 +1,7 @@
 import random
 
+from talemate.util.colors import COLORS
+
 __all__ = ["ThematicGenerator"]
 
 # ABSTRACT ARTISTIC
@@ -846,19 +848,7 @@ scifi_tropes = [
 
 # ACTOR NAME COLOR
 
-actor_name_colors = [
-    "#F08080",
-    "#FFD700",
-    "#90EE90",
-    "#ADD8E6",
-    "#DDA0DD",
-    "#FFB6C1",
-    "#FAFAD2",
-    "#D3D3D3",
-    "#B0E0E6",
-    "#FFDEAD",
-]
-
+actor_name_colors = COLORS.copy()
 
 class ThematicGenerator:
     def __init__(self, seed: int = None):

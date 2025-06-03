@@ -104,7 +104,7 @@ class ConfigPlugin:
         )
 
     async def handle_request_std_llm_templates(self, data):
-        log.info("Requesting std llm templates")
+        log.info("Requesting standard LLM templates")
 
         self.websocket_handler.queue_put(
             {

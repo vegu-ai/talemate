@@ -1,0 +1,55 @@
+{% set extra_context_content -%}
+{% include "extra-context.jinja2" %}
+{# scene analysis exists #}{% if scene.agent_state.summarizer and scene.agent_state.summarizer.scene_analysis %}{{ scene.agent_state.summarizer.scene_analysis }} {% endif %}
+{% endset %}
+{{ extra_context_content }}
+{% set extra_context_tokens = count_tokens(extra_context_content) %}
+{% set budget=max_tokens-300-extra_context_tokens %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
+{% include "scene-intent.jinja2" %}
+{% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
+<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
+{{ focal.render_instructions() }}
+
+{{
+    focal.callbacks.set_scene_intention.render(
+        "Use this if the scene shifts significantly in location, time or context. Depending on the story there may be different context types available that will classify the scene in a certain way. For example in a DnD type experience you might have a combat scene, a social scene or a passive narrative scene.",
+        type="The type classification of the scene. Here are the available types: "+scene_type_ids+".",
+        intention="The intention of the scene. This should be a brief description of what the scene is meant to achieve in the context of the story.",
+        examples=[
+            {"type": "social", "intention": "The party approaches the merchant guild to negotiate for information about the stolen artifacts, building alliances that may prove crucial later."},
+            {"type": "combat", "intention": "The adventurers face the goblin ambush in the forest clearing, testing their combat abilities and forcing them to work together as a team."},
+            {"type": "passive_narration", "intention": "The group travels through the mountain pass, experiencing the harsh landscape and feeling the growing tension as they approach enemy territory."}
+        ]
+    )
+}}
+
+{{
+    focal.callbacks.do_nothing.render(
+        "Indicate that no action is needed.",
+        examples=[{}]
+    )
+}}
+<|SECTION:SCENE TYPES|>
+{% for scene_type in scene.intent_state.scene_types.values() -%}
+- `{{ scene_type.id }}`: {{ scene_type.description }}
+{% endfor %}
+<|SECTION:TASK|>
+{% if not require %}
+Determine whether or not a new scene intention is needed. If so, provide the type classification and intention of the new scene. If not, do nothing.
+{% else %}
+Determine the type classification and intention of the new scene.
+{% endif %}
+
+{% include "scene-intent-technical.jinja2" %}
+
+{% if last_message -%}
+Base your decision on the moment in the current scene and the overall story intent:
+```
+{{ last_message }}
+```
+{% endif %}
+
+First analyze your understanding of the scene and the current moment. Then, determine if the scene intention needs to be updated. {% include "scene-intent-inline.jinja2" %}
+
+Call the `set_scene_intention` function to update the scene intention if necessary.

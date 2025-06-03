@@ -75,3 +75,20 @@ class UnknownDataSpec(TalemateError):
     """
 
     pass
+
+class ActedAsCharacter(Exception):
+    """
+    Raised when the user acts as another character
+    than the main player character
+    """
+
+    def __init__(self, character_name:str):
+        self.character_name = character_name
+        super().__init__(f"Acted as character: {character_name}")
+        
+        
+class AbortCommand(IOError):
+    pass
+
+class AbortWaitForInput(IOError):
+    pass

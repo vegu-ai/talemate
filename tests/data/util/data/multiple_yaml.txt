@@ -1,0 +1,53 @@
+Here is a text with multiple YAML objects including duplicates.
+
+```yaml
+id: 1
+name: First Object
+tags:
+  - one
+  - first
+  - primary
+```
+
+Text between code blocks.
+
+```
+id: 2
+name: Second Object
+tags:
+  - two
+  - second
+```
+
+Another identical object to the first one:
+
+```yaml
+id: 1
+name: First Object
+tags:
+  - one
+  - first
+  - primary
+```
+
+Different order of properties but same data (should be detected as duplicate):
+
+```yaml
+tags:
+  - one
+  - first
+  - primary
+name: First Object
+id: 1
+```
+
+Unique object with nested structure:
+
+```yaml
+id: 3
+name: Third Object
+metadata:
+  created: 2023-01-01
+  version: 1.0
+active: true
+``` 

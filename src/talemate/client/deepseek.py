@@ -5,7 +5,7 @@ import structlog
 import tiktoken
 from openai import AsyncOpenAI, PermissionDeniedError
 
-from talemate.client.base import ClientBase, ErrorAction
+from talemate.client.base import ClientBase, ErrorAction, CommonDefaults
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
@@ -30,7 +30,7 @@ JSON_OBJECT_RESPONSE_MODELS = [
 ]
 
 
-class Defaults(pydantic.BaseModel):
+class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "deepseek-chat"
 
@@ -103,17 +103,19 @@ class DeepSeekClient(ClientBase):
 
         self.current_status = status
 
+        data={
+            "error_action": error_action.model_dump() if error_action else None,
+            "meta": self.Meta().model_dump(),
+            "enabled": self.enabled,
+        }
+        data.update(self._common_status_data()) 
         emit(
             "client_status",
             message=self.client_type,
             id=self.name,
             details=model_name,
             status=status if self.enabled else "disabled",
-            data={
-                "error_action": error_action.model_dump() if error_action else None,
-                "meta": self.Meta().model_dump(),
-                "enabled": self.enabled,
-            },
+            data=data,
         )
 
     def set_client(self, max_token_length: int = None):
@@ -157,6 +159,8 @@ class DeepSeekClient(ClientBase):
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
+
+        self._reconfigure_common_parameters(**kwargs)
 
     def on_config_saved(self, event):
         config = event.data

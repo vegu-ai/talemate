@@ -1,0 +1,67 @@
+{
+  "title": "Scene Loop",
+  "id": "4b15390b-e007-4bfb-b360-fd316008cf23",
+  "properties": {
+    "trigger_game_loop": true
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "scene/SceneLoop",
+  "nodes": {
+    "657d5211-b66c-4dba-bb11-406663a9b7ca": {
+      "title": "Sim Suite On Scene Init",
+      "id": "657d5211-b66c-4dba-bb11-406663a9b7ca",
+      "properties": {
+        "event_name": "scene_loop_init"
+      },
+      "x": 18,
+      "y": -141,
+      "width": 241,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "sim-suite/event/simSuiteOnSceneInit",
+      "base_type": "core/Event"
+    },
+    "071c5382-3f15-461d-bd2e-48473697c318": {
+      "title": "Sim Suite On User Input",
+      "id": "071c5382-3f15-461d-bd2e-48473697c318",
+      "properties": {
+        "event_name": "game_loop_player_character_iter"
+      },
+      "x": 288,
+      "y": -141,
+      "width": 310,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "sim-suite/event/simSuiteOnUserInput",
+      "base_type": "core/Event"
+    }
+  },
+  "edges": {},
+  "groups": [
+    {
+      "title": "Simulation Suite Events",
+      "x": -1,
+      "y": -214,
+      "width": 629,
+      "height": 163,
+      "color": "#a1309b",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": "src/talemate/game/engine/nodes/modules/scene/scene-loop.json",
+  "sleep": 0.001,
+  "base_type": "scene/SceneLoop",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": null
+}

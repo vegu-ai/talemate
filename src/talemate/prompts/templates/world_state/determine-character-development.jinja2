@@ -1,4 +1,4 @@
-{% block rendered_context -%}
+{% set rendered_context_content -%}
 <|SECTION:CHARACTER|>
 ### Attributes
 {{ character.sheet }}
@@ -10,8 +10,10 @@
 ### Description Text
 {{ character.description }}
 <|CLOSE_SECTION|>
-{% endblock %}
-{% set scene_history = scene.context_history(budget=max_tokens-512-count_tokens(self.rendered_context()), keep_context_investigation=False) -%}
+{% endset %}
+{{ rendered_context_content }}
+{% set rendered_context_tokens = count_tokens(rendered_context_content) -%}
+{% set scene_history = scene.context_history(budget=max_tokens-512-rendered_context_tokens, keep_context_investigation=False) -%}
 <|SECTION:STORY|>
 {% for scene_context in scene_history -%}
 {{ scene_context }}

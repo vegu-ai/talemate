@@ -1,0 +1,382 @@
+{
+  "title": "Test Harness Prompt",
+  "id": "f466d916-cc22-49f9-855b-958fb8e7e53d",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "test-harness/testHarnessPrompt",
+  "nodes": {
+    "b7c72503-1d1b-4f37-8cbd-1c6c0c6b5195": {
+      "title": "true",
+      "id": "b7c72503-1d1b-4f37-8cbd-1c6c0c6b5195",
+      "properties": {
+        "value": true
+      },
+      "x": 669,
+      "y": 290,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "fd4a1dec-d2b6-436c-84d4-ff01a0b71106": {
+      "title": "director",
+      "id": "fd4a1dec-d2b6-436c-84d4-ff01a0b71106",
+      "properties": {
+        "agent_name": "director"
+      },
+      "x": 649,
+      "y": 340,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "3d832333-74a9-4efc-9f1e-24b75d675545": {
+      "title": "Make Text",
+      "id": "3d832333-74a9-4efc-9f1e-24b75d675545",
+      "properties": {
+        "value": "What is {{a}} + {{b}} ?"
+      },
+      "x": 169,
+      "y": 270,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "3b455b71-22cf-46e2-9f16-2ca95c4b33a0": {
+      "title": "Make Dict",
+      "id": "3b455b71-22cf-46e2-9f16-2ca95c4b33a0",
+      "properties": {
+        "data": {
+          "a": 1,
+          "b": 5
+        }
+      },
+      "x": 159,
+      "y": 440,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeDict",
+      "base_type": "core/Node"
+    },
+    "44948e15-241e-49b7-8346-aeebc931d2ba": {
+      "title": "Generate Response",
+      "id": "44948e15-241e-49b7-8346-aeebc931d2ba",
+      "properties": {
+        "data_output": false,
+        "response_length": 20,
+        "action_type": "scene_direction",
+        "attempts": 1,
+        "json_output": false
+      },
+      "x": 879,
+      "y": 290,
+      "width": 265,
+      "height": 190,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "3c810c95-4e19-42f5-a6c8-398fcc08574d": {
+      "title": "SET shared.test_001_001",
+      "id": "3c810c95-4e19-42f5-a6c8-398fcc08574d",
+      "properties": {
+        "name": "test_001_001",
+        "scope": "shared"
+      },
+      "x": 1199,
+      "y": 290,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "e4d2d0a0-9acf-434d-9973-4971699e1d9e": {
+      "title": "true",
+      "id": "e4d2d0a0-9acf-434d-9973-4971699e1d9e",
+      "properties": {
+        "value": true
+      },
+      "x": 637,
+      "y": 889,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "8b701e0f-3469-4cc1-9d81-e51600feab7d": {
+      "title": "director",
+      "id": "8b701e0f-3469-4cc1-9d81-e51600feab7d",
+      "properties": {
+        "agent_name": "director"
+      },
+      "x": 617,
+      "y": 939,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "24d90346-c086-4e1c-a686-d03e417762c6": {
+      "title": "Make Dict",
+      "id": "24d90346-c086-4e1c-a686-d03e417762c6",
+      "properties": {
+        "data": {
+          "a": 1,
+          "b": 5
+        }
+      },
+      "x": 127,
+      "y": 1039,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeDict",
+      "base_type": "core/Node"
+    },
+    "58b505c1-6265-4787-915a-93ed184a99a1": {
+      "title": "Make Text",
+      "id": "58b505c1-6265-4787-915a-93ed184a99a1",
+      "properties": {
+        "value": "What is {{a}} + {{b}} ?\n\nProvide your response inside a \"result\" value in a data object\n\n{{ set_data_response({\"result\":0}) }}"
+      },
+      "x": 137,
+      "y": 869,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "5e6f7858-9e81-42c7-94d8-b2bb449c64c0": {
+      "title": "Prompt From Template",
+      "id": "5e6f7858-9e81-42c7-94d8-b2bb449c64c0",
+      "properties": {
+        "scope": "scene",
+        "template_file": "",
+        "template_text": ""
+      },
+      "x": 459,
+      "y": 390,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/PromptFromTemplate",
+      "base_type": "core/Node"
+    },
+    "06bcd246-4d44-4c86-bd51-885e5e2c4233": {
+      "title": "Render Prompt",
+      "id": "06bcd246-4d44-4c86-bd51-885e5e2c4233",
+      "properties": {},
+      "x": 879,
+      "y": 620,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/RenderPrompt",
+      "base_type": "core/Node"
+    },
+    "de1bfd80-183e-4283-91b7-59cd5babec72": {
+      "title": "SET shared.test_001_002",
+      "id": "de1bfd80-183e-4283-91b7-59cd5babec72",
+      "properties": {
+        "name": "test_001_002",
+        "scope": "shared"
+      },
+      "x": 1119,
+      "y": 610,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "fc805f77-2081-4977-8fff-2444c5ddcbb6": {
+      "title": "Render Prompt",
+      "id": "fc805f77-2081-4977-8fff-2444c5ddcbb6",
+      "properties": {},
+      "x": 875,
+      "y": 1231,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/RenderPrompt",
+      "base_type": "core/Node"
+    },
+    "a6bb3648-1fd7-4dfe-b5ea-680e1c0b6ecb": {
+      "title": "Prompt From Template",
+      "id": "a6bb3648-1fd7-4dfe-b5ea-680e1c0b6ecb",
+      "properties": {
+        "scope": "scene",
+        "template_file": "",
+        "template_text": ""
+      },
+      "x": 428,
+      "y": 987,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/PromptFromTemplate",
+      "base_type": "core/Node"
+    },
+    "11873331-ff5c-4ef9-a253-da1be6b0bca9": {
+      "title": "SET shared.test_001_004",
+      "id": "11873331-ff5c-4ef9-a253-da1be6b0bca9",
+      "properties": {
+        "name": "test_001_004",
+        "scope": "shared"
+      },
+      "x": 1119,
+      "y": 1220,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "a4bb0ce9-a9a0-45c0-a923-8d04c24e04c4": {
+      "title": "SET shared.test_001_003",
+      "id": "a4bb0ce9-a9a0-45c0-a923-8d04c24e04c4",
+      "properties": {
+        "name": "test_001_003",
+        "scope": "shared"
+      },
+      "x": 1169,
+      "y": 970,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "7bb17b48-f4f5-4693-b009-cc4d3860e066": {
+      "title": "Generate Response",
+      "id": "7bb17b48-f4f5-4693-b009-cc4d3860e066",
+      "properties": {
+        "data_output": true,
+        "response_length": 75,
+        "action_type": "scene_direction",
+        "attempts": 1,
+        "json_output": false
+      },
+      "x": 849,
+      "y": 890,
+      "width": 265,
+      "height": 190,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "7403068d-37d5-4740-8ec4-74f84c103392": {
+      "title": "Watch",
+      "id": "7403068d-37d5-4740-8ec4-74f84c103392",
+      "properties": {},
+      "x": 1190,
+      "y": 850,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "b7c72503-1d1b-4f37-8cbd-1c6c0c6b5195.value": [
+      "44948e15-241e-49b7-8346-aeebc931d2ba.state"
+    ],
+    "fd4a1dec-d2b6-436c-84d4-ff01a0b71106.agent": [
+      "44948e15-241e-49b7-8346-aeebc931d2ba.agent"
+    ],
+    "3d832333-74a9-4efc-9f1e-24b75d675545.value": [
+      "5e6f7858-9e81-42c7-94d8-b2bb449c64c0.template_text"
+    ],
+    "3b455b71-22cf-46e2-9f16-2ca95c4b33a0.dict": [
+      "5e6f7858-9e81-42c7-94d8-b2bb449c64c0.variables"
+    ],
+    "44948e15-241e-49b7-8346-aeebc931d2ba.response": [
+      "3c810c95-4e19-42f5-a6c8-398fcc08574d.value"
+    ],
+    "e4d2d0a0-9acf-434d-9973-4971699e1d9e.value": [
+      "7bb17b48-f4f5-4693-b009-cc4d3860e066.state"
+    ],
+    "8b701e0f-3469-4cc1-9d81-e51600feab7d.agent": [
+      "7bb17b48-f4f5-4693-b009-cc4d3860e066.agent"
+    ],
+    "24d90346-c086-4e1c-a686-d03e417762c6.dict": [
+      "a6bb3648-1fd7-4dfe-b5ea-680e1c0b6ecb.variables"
+    ],
+    "58b505c1-6265-4787-915a-93ed184a99a1.value": [
+      "a6bb3648-1fd7-4dfe-b5ea-680e1c0b6ecb.template_text"
+    ],
+    "5e6f7858-9e81-42c7-94d8-b2bb449c64c0.prompt": [
+      "44948e15-241e-49b7-8346-aeebc931d2ba.prompt",
+      "06bcd246-4d44-4c86-bd51-885e5e2c4233.prompt"
+    ],
+    "06bcd246-4d44-4c86-bd51-885e5e2c4233.rendered": [
+      "de1bfd80-183e-4283-91b7-59cd5babec72.value"
+    ],
+    "fc805f77-2081-4977-8fff-2444c5ddcbb6.rendered": [
+      "11873331-ff5c-4ef9-a253-da1be6b0bca9.value"
+    ],
+    "a6bb3648-1fd7-4dfe-b5ea-680e1c0b6ecb.prompt": [
+      "7bb17b48-f4f5-4693-b009-cc4d3860e066.prompt",
+      "fc805f77-2081-4977-8fff-2444c5ddcbb6.prompt"
+    ],
+    "7bb17b48-f4f5-4693-b009-cc4d3860e066.response": [
+      "7403068d-37d5-4740-8ec4-74f84c103392.value"
+    ],
+    "7bb17b48-f4f5-4693-b009-cc4d3860e066.data_obj": [
+      "a4bb0ce9-a9a0-45c0-a923-8d04c24e04c4.value"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Group",
+      "x": 4,
+      "y": 0,
+      "width": 2052,
+      "height": 1491,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "style": null
+}

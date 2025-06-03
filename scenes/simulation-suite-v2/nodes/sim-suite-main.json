@@ -1,0 +1,147 @@
+{
+  "title": "Sim Suite Main",
+  "id": "57299efd-afc6-4d6b-b4ce-d9c9597fd7d5",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "sim-suite/simSuiteMain",
+  "nodes": {
+    "194b0633-6bce-48cd-b86b-35789d7d6b59": {
+      "title": "Sim Suite Simulation",
+      "id": "194b0633-6bce-48cd-b86b-35789d7d6b59",
+      "properties": {},
+      "x": 562,
+      "y": 171,
+      "width": 189,
+      "height": 41,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "sim-suite/simSuiteSimulation",
+      "base_type": "core/Graph"
+    },
+    "a18acdf2-84b5-48b6-bb67-fa43c9634170": {
+      "title": "Coallesce",
+      "id": "a18acdf2-84b5-48b6-bb67-fa43c9634170",
+      "properties": {},
+      "x": 832,
+      "y": 54,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "05cf2c73-88e0-42f8-80de-18006682ab3c": {
+      "title": "Sim Suite Finalize",
+      "id": "05cf2c73-88e0-42f8-80de-18006682ab3c",
+      "properties": {},
+      "x": 1024,
+      "y": 56,
+      "width": 178,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "sim-suite/simSuiteFinalize",
+      "base_type": "core/Graph"
+    },
+    "c1fc6662-dcb5-484d-8e5e-a4f4bc70da26": {
+      "title": "GET game.simulation_stopped",
+      "id": "c1fc6662-dcb5-484d-8e5e-a4f4bc70da26",
+      "properties": {
+        "name": "simulation_stopped",
+        "scope": "game"
+      },
+      "x": 20,
+      "y": 60,
+      "width": 245,
+      "height": 128,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "8be7a4ad-f131-41ce-aa67-c34fb4ed0273": {
+      "title": "Switch",
+      "id": "8be7a4ad-f131-41ce-aa67-c34fb4ed0273",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 296,
+      "y": 52,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "7f17bf6d-088c-432f-9e57-cc7b757c53c2": {
+      "title": "Input Socket",
+      "id": "7f17bf6d-088c-432f-9e57-cc7b757c53c2",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": null,
+        "num": 0
+      },
+      "x": 10,
+      "y": -170,
+      "width": 211,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "ec3baf3e-4402-4080-b09e-93a8fb12cfad": {
+      "title": "Output Socket",
+      "id": "ec3baf3e-4402-4080-b09e-93a8fb12cfad",
+      "properties": {
+        "output_type": "any",
+        "output_name": "state",
+        "num": 0
+      },
+      "x": 990,
+      "y": -170,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "194b0633-6bce-48cd-b86b-35789d7d6b59.state": [
+      "a18acdf2-84b5-48b6-bb67-fa43c9634170.b"
+    ],
+    "a18acdf2-84b5-48b6-bb67-fa43c9634170.value": [
+      "05cf2c73-88e0-42f8-80de-18006682ab3c.state"
+    ],
+    "c1fc6662-dcb5-484d-8e5e-a4f4bc70da26.value": [
+      "8be7a4ad-f131-41ce-aa67-c34fb4ed0273.value"
+    ],
+    "8be7a4ad-f131-41ce-aa67-c34fb4ed0273.yes": [
+      "a18acdf2-84b5-48b6-bb67-fa43c9634170.a"
+    ],
+    "8be7a4ad-f131-41ce-aa67-c34fb4ed0273.no": [
+      "194b0633-6bce-48cd-b86b-35789d7d6b59.state"
+    ],
+    "7f17bf6d-088c-432f-9e57-cc7b757c53c2.value": [
+      "ec3baf3e-4402-4080-b09e-93a8fb12cfad.value"
+    ]
+  },
+  "groups": [],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "style": null
+}

@@ -24,7 +24,15 @@ from talemate.exceptions import GenerationCancelled
 import talemate.game.focal as focal
 import talemate.emit.async_signals
 
-from talemate.agents.base import Agent, AgentAction, AgentActionConfig, set_processing, AgentEmission
+from talemate.agents.base import (
+    Agent, 
+    AgentAction, 
+    AgentActionConfig, 
+    set_processing, 
+    AgentEmission,
+    AgentTemplateEmission,
+    RagBuildSubInstructionEmission,
+)
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
 
@@ -37,11 +45,22 @@ log = structlog.get_logger("talemate.agents.summarize")
 talemate.emit.async_signals.register(
     "agent.summarization.before_build_archive",
     "agent.summarization.after_build_archive",
+    "agent.summarization.rag_build_sub_instruction",
+    "agent.summarization.summarize.before",
+    "agent.summarization.summarize.after",
 )
 
 @dataclasses.dataclass
 class BuildArchiveEmission(AgentEmission):
     generation_options: GenerationOptions | None = None
+    
+@dataclasses.dataclass
+class SummarizeEmission(AgentTemplateEmission):
+    text: str = ""
+    extra_context: str | None = None
+    extra_instructions: str | None = None
+    generation_options: GenerationOptions | None = None
+    summarization_history: list[str] | None = None
 
 @register()
 class SummarizeAgent(
@@ -59,11 +78,10 @@ class SummarizeAgent(
     agent_type = "summarizer"
     verbose_name = "Summarizer"
     auto_squish = False
-
-    def __init__(self, client, **kwargs):
-        self.client = client
-
-        self.actions = {
+    
+    @classmethod
+    def init_actions(cls) -> dict[str, AgentAction]:
+        actions = {
             "archive": AgentAction(
                 enabled=True,
                 label="Summarize to long-term memory archive",
@@ -103,11 +121,16 @@ class SummarizeAgent(
                 },
             ),
         }
-        
-        LayeredHistoryMixin.add_actions(self)
-        MemoryRAGMixin.add_actions(self)
-        SceneAnalyzationMixin.add_actions(self)
-        ContextInvestigationMixin.add_actions(self)
+        LayeredHistoryMixin.add_actions(actions)
+        MemoryRAGMixin.add_actions(actions)
+        SceneAnalyzationMixin.add_actions(actions)
+        ContextInvestigationMixin.add_actions(actions)
+        return actions
+
+    def __init__(self, client, **kwargs):
+        self.client = client
+
+        self.actions = SummarizeAgent.init_actions()
 
     @property
     def threshold(self):
@@ -150,6 +173,21 @@ class SummarizeAgent(
         result = result.strip()
 
         return result
+
+    # RAG HELPERS
+    
+    async def rag_build_sub_instruction(self):
+        # Fire event to get the sub instruction from mixins
+        emission = RagBuildSubInstructionEmission(
+            agent=self,
+        )
+        await talemate.emit.async_signals.get(
+            "agent.summarization.rag_build_sub_instruction"
+        ).send(emission)
+        
+        return emission.sub_instruction
+
+    # SUMMARIZE
 
     @set_processing
     async def build_archive(
@@ -414,30 +452,46 @@ class SummarizeAgent(
         
         response_length = 1024
         
+        template_vars = {
+            "dialogue": text,
+            "scene": self.scene,
+            "max_tokens": self.client.max_token_length,
+            "summarization_method": (
+                self.actions["archive"].config["method"].value
+                if method is None
+                else method
+            ),
+            "extra_context": extra_context or "",
+            "num_extra_context": len(extra_context) if extra_context else 0,
+            "extra_instructions": extra_instructions or "",
+            "generation_options": generation_options,
+            "analyze_chunks": self.layered_history_analyze_chunks,
+            "response_length": response_length,
+        }
+        
+        emission = SummarizeEmission(
+            agent=self,
+            text=text,
+            extra_context=extra_context,
+            extra_instructions=extra_instructions,
+            generation_options=generation_options,
+            template_vars=template_vars,
+            summarization_history=extra_context or []
+        )
+        
+        await talemate.emit.async_signals.get("agent.summarization.summarize.before").send(emission)
+        
+        template_vars["dynamic_instructions"] = emission.dynamic_instructions
+        
         response = await Prompt.request(
             f"summarizer.summarize-dialogue",
             self.client,
             f"summarize_{response_length}",
-            vars={
-                "dialogue": text,
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "summarization_method": (
-                    self.actions["archive"].config["method"].value
-                    if method is None
-                    else method
-                ),
-                "extra_context": extra_context or "",
-                "num_extra_context": len(extra_context) if extra_context else 0,
-                "extra_instructions": extra_instructions or "",
-                "generation_options": generation_options,
-                "analyze_chunks": self.layered_history_analyze_chunks,
-                "response_length": response_length,
-            },
+            vars=template_vars,
             dedupe_enabled=False
         )
 
-        self.scene.log.info(
+        log.debug(
             "summarize", dialogue_length=len(text), summarized_length=len(response)
         )
         
@@ -452,6 +506,12 @@ class SummarizeAgent(
             summary = summary[0].upper() + summary[1:]
         except IndexError:
             pass
+        
+        emission.response = self.clean_result(summary)
+        
+        await talemate.emit.async_signals.get("agent.summarization.summarize.after").send(emission)
+        
+        summary = emission.response
         
         return self.clean_result(summary)
     
@@ -479,30 +539,46 @@ class SummarizeAgent(
             exclude_active=True
         )
         
+        template_vars = {
+            "dialogue": text,
+            "scene": self.scene,
+            "max_tokens": self.client.max_token_length,
+            "extra_context": extra_context,
+            "num_extra_context": len(extra_context),
+            "extra_instructions": extra_instructions or "",
+            "generation_options": generation_options,
+            "analyze_chunks": analyze_chunks,
+            "chunk_size": chunk_size,
+            "response_length": response_length,
+            "mentioned_characters": mentioned_characters,
+        }
+        
+        emission = SummarizeEmission(
+            agent=self,
+            text=text,
+            extra_context=extra_context,
+            extra_instructions=extra_instructions,
+            generation_options=generation_options,
+            template_vars=template_vars,
+            summarization_history=[extra_context] if extra_context else []
+        )
+        
+        await talemate.emit.async_signals.get("agent.summarization.summarize.before").send(emission)
+        
+        template_vars["dynamic_instructions"] = emission.dynamic_instructions
+        
         response = await Prompt.request(
             f"summarizer.summarize-events",
             self.client,
             f"summarize_{response_length}",
-            vars={
-                "dialogue": text,
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "extra_context": extra_context,
-                "num_extra_context": len(extra_context),
-                "extra_instructions": extra_instructions or "",
-                "generation_options": generation_options,
-                "analyze_chunks": analyze_chunks,
-                "chunk_size": chunk_size,
-                "response_length": response_length,
-                "mentioned_characters": mentioned_characters,
-            },
+            vars=template_vars,
             dedupe_enabled=False
         )
         
         response = response.strip()
         response = response.replace('"', "")
         
-        self.scene.log.info(
+        log.debug(
             "layered_history_summarize", original_length=len(text), summarized_length=len(response)
         )
         
@@ -519,6 +595,12 @@ class SummarizeAgent(
             response = response[0].upper() + response[1:]
         except IndexError:
             pass
+        
+        emission.response = self.clean_result(response)
+        
+        await talemate.emit.async_signals.get("agent.summarization.summarize.after").send(emission)
+        
+        response = emission.response
         
         log.debug("summarize_events", original_length=len(text), summarized_length=len(response))
         

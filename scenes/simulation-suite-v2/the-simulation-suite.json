@@ -1,0 +1,64 @@
+{
+  "description": "The user has entered the simulation suite. Within they can command a powerful computer to simulate any reality that they wish.",
+  "intro": "You have entered the simulation suite. No simulation is currently active and you are in a non-descript space with paneled walls surrounding you. The control panel next to you is pulsating with a green light, indicating readiness to receive a prompt to start the simulation.",
+  "name": "Simulation Suite V2",
+  "title": "The Simulation Suite",
+  "history": [],
+  "environment": "scene",
+  "archived_history": [],
+  "layered_history": [],
+  "characters": [
+    {
+        "name": "User",
+        "gender": "unknown",
+        "color": "cornflowerblue",
+        "base_attributes": {},
+        "is_player": true
+    }
+  ],
+  "inactive_characters": {},
+  "context": "a holodeck like experience",
+  "world_state": {
+    "characters": {},
+    "items": {},
+    "location": null,
+    "reinforce": [],
+    "pins": {},
+    "manual_context": {},
+    "character_name_mappings": {},
+    "suggestions": []
+  },
+  "game_state": {
+    "ops": {
+      "run_on_start": false,
+      "always_direct": false
+    },
+    "variables": {},
+    "goals": [],
+    "instructions": {
+      "character": {}
+    }
+  },
+  "agent_state": {},
+  "assets": {
+    "cover_image": "7c6ae3e9cb58a9226513d5ce1e335b524c6c59e54793c94f707bdb8b25053c4f",
+    "assets": {
+      "7c6ae3e9cb58a9226513d5ce1e335b524c6c59e54793c94f707bdb8b25053c4f": {
+        "id": "7c6ae3e9cb58a9226513d5ce1e335b524c6c59e54793c94f707bdb8b25053c4f",
+        "file_type": "png",
+        "media_type": "image/png"
+      }
+    }
+  },
+  "memory_id": "1da544ea-c",
+  "memory_session_id": "01daf0ad-4",
+  "saved_memory_session_id": "34ccc116-d",
+  "immutable_save": true,
+  "ts": "PT0S",
+  "experimental": true,
+  "help": "While there is not simulation active you can chat with the computer normally.\n\nOnce a simulation is active, address the computer by starting your statements with 'Computer, ' followed by an instruction.\n\nExamples:\n'Computer, i would like to experience an adventure on a derelict space station'\n'Computer, add an alien creature to the environment.'",
+  "writing_style_template": "",
+  "restore_from": "the-simulation-suite.json",
+  "nodes_filename": "",
+  "creative_nodes_filename": ""
+}

@@ -1,0 +1,66 @@
+{% set extra_context_content -%}
+{% include "extra-context.jinja2" %}
+{% with include_dialogue_instructions=True -%}
+{% include "character-context.jinja2" %}
+{% endwith %}
+{% endset %}
+{{ extra_context_content }}
+{% set extra_context_tokens = count_tokens(extra_context_content) %}
+{% set bullet_num=0 -%}
+{% set budget=max_tokens-300-extra_context_tokens %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
+{% include "scene-intent.jinja2" %}
+{% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
+
+<|SECTION:TASK|>
+You are a NARRATIVE PLANNER who analyzes scenes and decides what should happen next. Your task is to analyze the current scene moment and provide clear instructions to the WRITER who will create the next part based on your guidance. Do NOT write the actual content.
+
+{% if last_message -%}
+``` last action in the scene
+{{ last_message }}
+```
+{% if last_message.typ == "character" and last_message.character_name not in candidate_names %}NOTE: {{ last_message.character_name }} is NOT eligible for any further actions currently.{% endif %}
+{% else %}
+Evaluate how to begin this scene.
+{% endif %}
+
+{% include "scene-intent-inline.jinja2" %}
+
+### Available Direction Types
+Choose ONE type of direction to give to the writer:
+
+{% if candidates -%}
+- CHARACTER ACTION: Instruct which character (available choices {{ candidate_names }}) should act next and what they should do.
+  Note: Character actions focus on what a character does, NOT their exact dialogue. Focus on ONE character doing ONE thing.
+{% endif %}
+{% if narrator_available %}
+- SCENE NARRATION: Instruct the writer to describe the current moment in more detail.
+- STORY PROGRESSION: Instruct the writer to move the story forward to the next moment.
+{% endif %}
+
+{% if '"You"' in candidate_names %}The "You" character refers to the player in this interactive story.{% endif %}
+
+Provide a neatly formatted, EASY TO READ, plain text analysis (Items 1 a-b, 2 a-c, 3 a-c and 4) and your instructions (Item 5):
+
+1. Your understanding of what instructions you can give.
+  a. What actions are available to you?
+{% if candidates %}
+  b. What characters are available to act?{% endif %}
+
+2. Your detailed understanding of the current moment
+  a. What characters are present and where are they? (list names and locations)
+  b. What are they doing right now? (briefly describe the action)
+  c. What is the context of the last action in the scene (as pinned by the code block above)
+
+3. Your detailed understanding of the scene's intention, goal and pacing
+  a. How does it compare to what's currently happening?
+  b. What are the scene's goals and where are we in the scene's lifecycle?
+  c. Maintaining sensible pacing is VITAL. Let us know how to keep the pacing consistent.
+
+4. Consider your analysis of the last action in the scene (2) and the overal scene intention and goals (3). Its important to move the scene towards its goal, BUT we also don't want to leave the last action unresolved. For example if a question was asked or something was done that requires an immediate followup, then THAT always takes precedence over moving the scene towards the goal.
+
+5. Instuctions to the editor - Give your instructions on a personal level, directly to the editor. EXPLICITLY state the action type and then provide your instructions (1-2 sentences) - REMEMBER to be careful about pacing, do one thing, not five.
+
+Be concise, clear and explicit about your choice, as it will be given to the writer who will be writing the next moment based on your instructions. Use terse, direct language. Be blunt and brief like scribbles on a notepad.
+<|CLOSE_SECTION|>
+{{ bot_token }}## 1. Understanding of Direction Choices

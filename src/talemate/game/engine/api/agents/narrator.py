@@ -55,11 +55,11 @@ def create(scene: "Scene") -> "ScopedAPI":
                 raise UnknownAgentAction("narrator", action_name)
 
             narration = fn(**kwargs)
-            source = narrator.action_to_source(
+            meta = narrator.action_to_meta(
                 action_name, {k: str(v) for k, v in kwargs.items()}
             )
 
-            narrator_message = NarratorMessage(narration, source=source)
+            narrator_message = NarratorMessage(narration, meta=meta)
             scene.push_history(narrator_message)
 
             if emit_message:

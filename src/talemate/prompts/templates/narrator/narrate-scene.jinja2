@@ -1,24 +1,27 @@
-{% block extra_context -%}{% include "extra-context.jinja2" %}{% endblock %}
-{% set budget=max_tokens-300-count_tokens(self.extra_context()) %}
+{% set extra_context_content -%}{% include "extra-context.jinja2" %}{% endset %}
+{{ extra_context_content }}
+{% set extra_context_tokens = count_tokens(extra_context_content) %}
+{% set budget=max_tokens-300-extra_context_tokens %}
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
+Following the current moment, generate new narration that describes the current actions and movements taking place.
+
 {% if last_message %}
-``` the final line in the scene
+``` the current moment in the scene
 {{ last_message }}
 ```
 {% endif -%}
-Following the last line in the scene, generate new narration that describes the current actions and movements taking place.
 
 Focus on describing the environment and what characters are physically doing, their gestures, expressions, and movements. You must not include any character's internal thoughts, feelings, or dialogue. 
 
-Your narration should elaborate on the immediate actions happening in response to the last line, without moving the scene forward in time.
+Your narration should elaborate on the immediate actions happening during the current moment, without moving the scene forward in time.
 
 Be precise and specific about the actions being performed, but stay true to the setting and context of the story so far.
 
-Be sure to pepper in visual details (e.g., "[character] is wearing [detailed clothing description]" or "The marble floor reflected the flickering candlelight" or "The old office chair had seen better days, it's bladk leather padding cracked and peeling").
+Be sure to pepper in visual details (e.g., "[character] is wearing [detailed clothing description]" or "The marble floor reflected the flickering candlelight" or "The old office chair had seen better days, it's black leather padding cracked and peeling").
 
-Your new narration should be 2 to 3 sentences in length and provide visual details that enhance the reader's understanding of the scene.
+Your new narration must provide new and interesting visual details that enhance the reader's understanding of the scene.
 
 {% include "narrative-direction.jinja2" %}
 

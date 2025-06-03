@@ -53,7 +53,7 @@ export default {
       }
     }
   },
-  props: ['text', 'message_id', 'character', 'direction_mode', 'action', 'uxLocked'],
+  props: ['text', 'message_id', 'character', 'direction_mode', 'action', 'uxLocked', 'isLastMessage'],
   inject: ['requestDeleteMessage', 'getMessageStyle', 'getMessageColor'],
   methods: {
     toggle() {

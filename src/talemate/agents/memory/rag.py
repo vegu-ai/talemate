@@ -17,9 +17,9 @@ log = structlog.get_logger()
 class MemoryRAGMixin:
     
     @classmethod
-    def add_actions(cls, agent):
+    def add_actions(cls, actions: dict[str, AgentAction]):
         
-        agent.actions["use_long_term_memory"] = AgentAction(
+        actions["use_long_term_memory"] = AgentAction(
             enabled=True,
             container=True,
             can_be_disabled=True,
@@ -69,10 +69,10 @@ class MemoryRAGMixin:
                 ),
                 "cache": AgentActionConfig(
                     type="bool",
-                    label="Cache",
+                    label="Cache RAG results",
                     description="Cache the long term memory for faster retrieval.",
                     note="This is a cross-agent cache, assuming they use the same options.",
-                    value=True
+                    value=True,
                 )
             },
         )
@@ -143,7 +143,7 @@ class MemoryRAGMixin:
             
     async def rag_build(
         self, 
-        character: "Character" = None, 
+        character: "Character | None" = None, 
         prompt: str = "",
         sub_instruction: str = "",
     ) -> list[str]:
@@ -166,8 +166,11 @@ class MemoryRAGMixin:
         if not sub_instruction:
             if character:
                 sub_instruction = f"continue the scene as {character.name}"
-            else:
-                sub_instruction = "continue the scene"
+            elif hasattr(self, "rag_build_sub_instruction"):
+                sub_instruction = await self.rag_build_sub_instruction()
+        
+        if not sub_instruction:
+            sub_instruction = "continue the scene"
             
         if retrieval_method != "direct":
             world_state = instance.get_agent("world_state")

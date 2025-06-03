@@ -20,6 +20,7 @@ export default {
     props: {
         text: String,
         status: String,
+        isLastMessage: Boolean,
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput'],
     methods: {

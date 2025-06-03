@@ -1,12 +1,12 @@
 import random
 import urllib
-
+from typing import Literal
 import aiohttp
 import pydantic
 import structlog
 from openai import AsyncOpenAI, NotFoundError, PermissionDeniedError
 
-from talemate.client.base import ClientBase, ExtraField
+from talemate.client.base import ClientBase, ExtraField, CommonDefaults
 from talemate.client.registry import register
 from talemate.client.utils import urljoin
 from talemate.config import Client as BaseClientConfig
@@ -72,7 +72,7 @@ class CustomAPIClient:
                 return await response.json()
 
 
-class Defaults(pydantic.BaseModel):
+class Defaults(CommonDefaults, pydantic.BaseModel):
     api_url: str = "http://localhost:5000/v1"
     api_key: str = ""
     max_token_length: int = 8192
@@ -241,6 +241,8 @@ class TabbyAPIClient(ClientBase):
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
 
+        self._reconfigure_common_parameters(**kwargs)
+        
         self.set_client(**kwargs)
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:

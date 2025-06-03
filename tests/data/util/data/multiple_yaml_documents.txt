@@ -1,0 +1,23 @@
+Here is a YAML code block with multiple documents:
+
+```yaml
+name: First Document
+id: 1
+tags:
+  - first
+  - primary
+---
+name: Second Document
+id: 2
+tags:
+  - second
+  - secondary
+---
+name: Third Document
+id: 3
+active: true
+metadata:
+  created: 2023-05-15
+```
+
+That's it! 

@@ -7,7 +7,7 @@ import logging
 import random
 import time
 import asyncio
-from typing import Callable, Union
+from typing import Callable, Union, Literal
 
 import pydantic
 import structlog
@@ -20,6 +20,7 @@ import talemate.util as util
 from talemate.agents.context import active_agent
 from talemate.client.context import client_context_attribute
 from talemate.client.model_prompts import model_prompt
+from talemate.client.ratelimit import CounterRateLimiter
 from talemate.context import active_scene
 from talemate.emit import emit
 from talemate.exceptions import SceneInactiveError, GenerationCancelled
@@ -33,6 +34,8 @@ log = structlog.get_logger("client.base")
 
 STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 
+# disable smart quotes until text rendering is refactored
+REPLACE_SMART_QUOTES = True
 
 class ClientDisabledError(OSError):
     def __init__(self, client: "ClientBase"):
@@ -53,6 +56,7 @@ class PromptData(pydantic.BaseModel):
     agent_stack: list[str] = pydantic.Field(default_factory=list)
     generation_parameters: dict = pydantic.Field(default_factory=dict)
     inference_preset: str = None
+    preset_group: str | None = None
 
 
 class ErrorAction(pydantic.BaseModel):
@@ -62,7 +66,12 @@ class ErrorAction(pydantic.BaseModel):
     arguments: list = []
 
 
-class Defaults(pydantic.BaseModel):
+class CommonDefaults(pydantic.BaseModel):
+    rate_limit: int | None = None
+    data_format: Literal["yaml", "json"] | None = None
+    preset_group: str | None = None
+
+class Defaults(CommonDefaults, pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
     max_token_length: int = 8192
     double_coercion: str = None
@@ -108,11 +117,16 @@ class ClientBase:
     auto_determine_prompt_template: bool = False
     finalizers: list[str] = []
     double_coercion: Union[str, None] = None
+    data_format: Literal["yaml", "json"] | None = None
+    rate_limit: int | None = None
     client_type = "base"
     
     status_request_timeout:int = 2
     
-    system_prompts = SystemPrompts()
+    system_prompts:SystemPrompts = SystemPrompts()
+    preset_group: str | None = ""
+
+    rate_limit_counter: CounterRateLimiter = None
 
     class Meta(pydantic.BaseModel):
         experimental: Union[None, str] = None
@@ -133,6 +147,7 @@ class ClientBase:
         self.auto_determine_prompt_template_attempt = None
         self.log = structlog.get_logger(f"client.{self.client_type}")
         self.double_coercion = kwargs.get("double_coercion", None)
+        self._reconfigure_common_parameters(**kwargs)
         self.enabled = kwargs.get("enabled", True)
         if "max_token_length" in kwargs:
             self.max_token_length = (
@@ -229,6 +244,25 @@ class ClientBase:
 
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
+            
+        self._reconfigure_common_parameters(**kwargs)
+
+    def _reconfigure_common_parameters(self, **kwargs):
+        if "rate_limit" in kwargs:
+            self.rate_limit = kwargs["rate_limit"]
+            if self.rate_limit:
+                if not self.rate_limit_counter:
+                    self.rate_limit_counter = CounterRateLimiter(rate_per_minute=self.rate_limit)
+                else:
+                    self.rate_limit_counter.update_rate_limit(self.rate_limit)
+            else:
+                self.rate_limit_counter = None
+            
+        if "data_format" in kwargs:
+            self.data_format = kwargs["data_format"]
+
+        if "preset_group" in kwargs:
+            self.preset_group = kwargs["preset_group"]
 
     def host_is_remote(self, url: str) -> bool:
         """
@@ -327,7 +361,7 @@ class ClientBase:
                 hasattr(self, "model_name")
                 and self.auto_determine_prompt_template_attempt != self.model_name
             ):
-                log.info("auto_determine_prompt_template", model_name=self.model_name)
+                log.debug("auto_determine_prompt_template", model_name=self.model_name)
                 self.auto_determine_prompt_template_attempt = self.model_name
                 self.determine_prompt_template()
                 prompt_template_example, prompt_template_file = (
@@ -349,6 +383,8 @@ class ClientBase:
             "system_prompts": self.system_prompts.model_dump(),
         }
 
+        data.update(self._common_status_data())
+
         for field_name in getattr(self.Meta(), "extra_fields", {}).keys():
             data[field_name] = getattr(self, field_name, None)
 
@@ -363,6 +399,13 @@ class ClientBase:
 
         if status_change:
             instance.emit_agent_status_by_client(self)
+
+    def _common_status_data(self):
+        return {
+            "preset_group": self.preset_group or "",
+            "rate_limit": self.rate_limit,
+            "data_format": self.data_format,
+        }
 
     def populate_extra_fields(self, data: dict):
         """
@@ -566,6 +609,16 @@ class ClientBase:
         # return the result of the completed task
         return done.pop().result()
         
+    async def abort_generation(self):
+        """
+        This function can be overwritten to trigger an abortion at the other
+        side of the client.
+        
+        So a generation is cancelled here, this can be used to cancel a generation
+        at the other side of the client.
+        """
+        pass
+
 
     async def send_prompt(
         self,
@@ -579,6 +632,66 @@ class ClientBase:
         :param prompt: The text prompt to send.
         :return: The AI's response text.
         """
+        
+        try:
+            return await self._send_prompt(prompt, kind, finalize, retries)
+        except GenerationCancelled:
+            await self.abort_generation()
+            raise
+        
+    async def _send_prompt(
+        self,
+        prompt: str,
+        kind: str = "conversation",
+        finalize: Callable = lambda x: x,
+        retries: int = 2,
+    ) -> str:
+        """
+        Send a prompt to the AI and return its response.
+        :param prompt: The text prompt to send.
+        :return: The AI's response text.
+        """
+        
+        try:
+            if self.rate_limit_counter:
+                aborted:bool = False
+                while not self.rate_limit_counter.increment():
+                    log.warn("Rate limit exceeded", client=self.name)
+                    emit(
+                        "rate_limited",
+                        message="Rate limit exceeded", 
+                        status="error", 
+                        websocket_passthrough=True,
+                        data={
+                            "client": self.name,
+                            "rate_limit": self.rate_limit,
+                            "reset_time": self.rate_limit_counter.reset_time(),
+                        }
+                    )
+                    
+                    scene = active_scene.get()
+                    if not scene or not scene.active or scene.cancel_requested:
+                        log.info("Rate limit exceeded, generation cancelled", client=self.name)
+                        aborted = True
+                        break
+                    
+                    await asyncio.sleep(1)
+                
+                emit(
+                    "rate_limit_reset",
+                    message="Rate limit reset",
+                    status="info",
+                    websocket_passthrough=True,
+                    data={"client": self.name}
+                )
+                
+                if aborted:
+                    raise GenerationCancelled("Generation cancelled")
+        except GenerationCancelled:
+            raise
+        except Exception as e:
+            log.exception("Error during rate limit check", e=e)
+        
 
         if not active_scene.get():
             log.error("SceneInactiveError", scene=active_scene.get())
@@ -615,8 +728,8 @@ class ClientBase:
 
             self.clean_prompt_parameters(prompt_param)
 
-            self.log.debug(
-                "send_prompt",
+            self.log.info(
+                "Sending prompt",
                 token_length=token_length,
                 max_token_length=self.max_token_length,
                 parameters=prompt_param,
@@ -634,6 +747,9 @@ class ClientBase:
             response, finalized_prompt = await self.auto_break_repetition(
                 finalized_prompt, prompt_param, response, kind, retries
             )
+            
+            if REPLACE_SMART_QUOTES:
+                response = response.replace('“', '"').replace('”', '"')
 
             time_end = time.time()
 
@@ -662,6 +778,7 @@ class ClientBase:
                     time=time_end - time_start,
                     generation_parameters=prompt_param,
                     inference_preset=client_context_attribute("inference_preset"),
+                    preset_group=self.preset_group,
                 ).model_dump(),
             )
 
@@ -678,6 +795,9 @@ class ClientBase:
             self.emit_status(processing=False)
             self._returned_prompt_tokens = None
             self._returned_response_tokens = None
+            
+            if self.rate_limit_counter:
+                self.rate_limit_counter.increment()
 
     async def auto_break_repetition(
         self,

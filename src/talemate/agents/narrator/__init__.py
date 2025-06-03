@@ -15,7 +15,14 @@ from talemate.client.context import (
 )
 import talemate.emit.async_signals
 import talemate.util as util
-from talemate.agents.base import Agent, AgentAction, AgentActionConfig, AgentEmission, store_context_state
+from talemate.agents.base import (
+    Agent,
+    AgentAction,
+    AgentActionConfig,
+    AgentEmission,
+    DynamicInstruction,
+    store_context_state,
+)
 from talemate.agents.base import set_processing as _set_processing
 from talemate.agents.context import active_agent
 from talemate.agents.world_state import TimePassageEmission
@@ -31,6 +38,8 @@ from talemate.agents.registry import register
 
 from .websocket_handler import NarratorWebsocketHandler
 
+import talemate.agents.narrator.nodes
+
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
 
@@ -40,7 +49,8 @@ log = structlog.get_logger("talemate.agents.narrator")
 @dataclasses.dataclass
 class NarratorAgentEmission(AgentEmission):
     generation: list[str] = dataclasses.field(default_factory=list)
-    dynamic_instructions: list[str] = dataclasses.field(default_factory=list)
+    response: str = dataclasses.field(default="")
+    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(default_factory=list)
 
 
 talemate.emit.async_signals.register(
@@ -70,9 +80,9 @@ def set_processing(fn):
         agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
         
         response = await fn(self, *args, **kwargs)
-        emission.generation = [response]
+        emission.response = response
         await talemate.emit.async_signals.get("agent.narrator.generated").send(emission)
-        return emission.generation[0]
+        return emission.response
 
     return narration_wrapper
 
@@ -88,19 +98,13 @@ class NarratorAgent(
 
     agent_type = "narrator"
     verbose_name = "Narrator"
+    set_processing = set_processing
     
     websocket_handler = NarratorWebsocketHandler
 
-    def __init__(
-        self,
-        client: client.TaleMateClient,
-        **kwargs,
-    ):
-        self.client = client
-
-        # agent actions
-
-        self.actions = {
+    @classmethod
+    def init_actions(cls) -> dict[str, AgentAction]:
+        actions = {
             "generation_override": AgentAction(
                 enabled=True,
                 label="Generation Settings",
@@ -117,7 +121,7 @@ class NarratorAgent(
                     "instructions": AgentActionConfig(
                         type="text",
                         label="Instructions",
-                        value="Never wax poetic.",
+                        value="",
                         description="Extra instructions to give to the AI for narrative generation.",
                     ),
                     "jiggle": AgentActionConfig(
@@ -198,7 +202,18 @@ class NarratorAgent(
             ),
         }
         
-        MemoryRAGMixin.add_actions(self)
+        MemoryRAGMixin.add_actions(actions)
+        return actions
+
+    def __init__(
+        self,
+        client: client.TaleMateClient,
+        **kwargs,
+    ):
+        self.client = client
+
+        # agent actions
+        self.actions = NarratorAgent.init_actions()
 
     @property
     def extra_instructions(self) -> str:
@@ -245,18 +260,22 @@ class NarratorAgent(
 
         result = result.strip().strip(":").strip()
 
-        if "#" in result:
-            result = result.split("#")[0]
-
         character_names = [c.name for c in self.scene.get_characters()]
 
         cleaned = []
         for line in result.split("\n"):
+            
+            # skip lines that start with a #
+            if line.startswith("#"):
+                continue
+            
             log.debug("clean_result", line=line)
             
             character_dialogue_detected = False
             
             for character_name in character_names:
+                if not character_name:
+                    continue
                 if line.lower().startswith(f"{character_name}:"):
                     character_dialogue_detected = True
                 elif line.startswith(f"{character_name.upper()}"):
@@ -305,7 +324,16 @@ class NarratorAgent(
             event.duration, event.human_duration, event.narrative
         )
         narrator_message = NarratorMessage(
-            response, source=f"narrate_time_passage:{event.duration};{event.narrative}"
+            response, 
+            meta = {
+                "agent": "narrator",
+                "function": "narrate_time_passage",
+                "arguments": {
+                    "duration": event.duration,
+                    "time_passed": event.human_duration,
+                    "narrative_direction": event.narrative,
+                }
+            }
         )
         emit("narrator", narrator_message)
         self.scene.push_history(narrator_message)
@@ -347,7 +375,14 @@ class NarratorAgent(
 
         response = await self.narrate_after_dialogue(event.actor.character)
         narrator_message = NarratorMessage(
-            response, source=f"narrate_dialogue:{event.actor.character.name}"
+            response, 
+            meta={
+                "agent": "narrator",
+                "function": "narrate_after_dialogue",
+                "arguments": {
+                    "character": event.actor.character.name,
+                }
+            }
         )
         emit("narrator", narrator_message)
         self.scene.push_history(narrator_message)
@@ -396,7 +431,7 @@ class NarratorAgent(
         if narrative_direction is None:
             narrative_direction = "Slightly move the current scene forward."
 
-        self.scene.log.info(
+        log.debug(
             "narrative_direction", narrative_direction=narrative_direction
         )
         
@@ -415,7 +450,7 @@ class NarratorAgent(
             },
         )
 
-        self.scene.log.info("progress_story", response=response)
+        log.debug("progress_story", response=response)
 
         response = self.clean_result(response.strip())
         
@@ -424,7 +459,7 @@ class NarratorAgent(
     @set_processing
     @store_context_state('query', query_narration=True)
     async def narrate_query(
-        self, query: str, at_the_end: bool = False, as_narrative: bool = True
+        self, query: str, at_the_end: bool = False, as_narrative: bool = True, extra_context: str = None
     ):
         """
         Narrate a specific query
@@ -440,6 +475,7 @@ class NarratorAgent(
                 "at_the_end": at_the_end,
                 "as_narrative": as_narrative,
                 "extra_instructions": self.extra_instructions,
+                "extra_context": extra_context,
             },
         )
         response = self.clean_result(
@@ -493,7 +529,7 @@ class NarratorAgent(
             },
         )
 
-        self.scene.log.info("context_questions", questions=questions)
+        log.debug("context_questions", questions=questions)
 
         questions = [q for q in questions.split("\n") if q.strip()]
 
@@ -514,7 +550,7 @@ class NarratorAgent(
             },
         )
 
-        self.scene.log.info("context_answers", answers=answers)
+        log.debug("context_answers", answers=answers)
 
         answers = [a for a in answers.split("\n") if a.strip()]
 
@@ -545,7 +581,7 @@ class NarratorAgent(
             },
         )
 
-        log.info("narrate_time_passage", response=response)
+        log.debug("narrate_time_passage", response=response)
 
         response = self.clean_result(response.strip())
 
@@ -575,7 +611,7 @@ class NarratorAgent(
             },
         )
 
-        log.info("narrate_after_dialogue", response=response)
+        log.debug("narrate_after_dialogue", response=response)
 
         response = self.clean_result(response.strip())
         return response
@@ -662,7 +698,7 @@ class NarratorAgent(
             },
         )
 
-        log.info("paraphrase", narration=narration, response=response)
+        log.debug("paraphrase", narration=narration, response=response)
 
         response = self.clean_result(response.strip().strip("*"))
 
@@ -677,11 +713,11 @@ class NarratorAgent(
             narration = editor.fix_exposition_in_text(narration)
         return narration
 
-    def action_to_source(
+    def action_to_meta(
         self,
         action_name: str,
         parameters: dict,
-    ) -> str:
+    ) -> dict:
         """
         Generate a source string for a given action and parameters
 
@@ -689,33 +725,16 @@ class NarratorAgent(
         and will also help regenerate the action and parameters from the source string
         later on
         """
+        args = parameters.copy()
+        
+        if args.get("character") and isinstance(args["character"], self.scene.Character):
+            args["character"] = args["character"].name
 
-        args = []
-
-        if action_name == "paraphrase":
-            args.append(parameters.get("narration"))
-        elif action_name == "narrate_character_entry":
-            args.append(parameters.get("character").name)
-            # args.append(parameters.get("direction"))
-        elif action_name == "narrate_character_exit":
-            args.append(parameters.get("character").name)
-            # args.append(parameters.get("direction"))
-        elif action_name == "narrate_character":
-            args.append(parameters.get("character").name)
-        elif action_name == "narrate_query":
-            args.append(parameters.get("query"))
-        elif action_name == "narrate_time_passage":
-            args.append(parameters.get("duration"))
-            args.append(parameters.get("time_passed"))
-            args.append(parameters.get("narrative"))
-        elif action_name == "progress_story":
-            args.append(parameters.get("narrative_direction"))
-        elif action_name == "narrate_after_dialogue":
-            args.append(parameters.get("character"))
-
-        arg_str = ";".join(args) if args else ""
-
-        return f"{action_name}:{arg_str}".rstrip(":")
+        return {
+            "agent": "narrator",
+            "function": action_name,
+            "arguments": args,
+        }
 
     async def action_to_narration(
         self,
@@ -728,9 +747,8 @@ class NarratorAgent(
 
         fn = getattr(self, action_name)
         narration = await fn(**kwargs)
-        source = self.action_to_source(action_name, kwargs)
 
-        narrator_message = NarratorMessage(narration, source=source)
+        narrator_message = NarratorMessage(narration, meta=self.action_to_meta(action_name, kwargs))
         self.scene.push_history(narrator_message)
 
         if emit_message:

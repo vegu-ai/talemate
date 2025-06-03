@@ -178,7 +178,7 @@ class ModelPrompt:
     def query_hf_for_prompt_template_suggestion(self, model_name: str):
         api = huggingface_hub.HfApi()
 
-        log.info("query_hf_for_prompt_template_suggestion", model_name=model_name)
+        log.debug("query_hf_for_prompt_template_suggestion", model_name=model_name)
 
         # if file ends with .gguf, split - and remove the last part
         if model_name.endswith(".gguf"):
@@ -187,7 +187,7 @@ class ModelPrompt:
         else:
             model_name_alt = None
 
-        log.info("query_hf_for_prompt_template_suggestion", model_name=model_name)
+        log.debug("query_hf_for_prompt_template_suggestion", model_name=model_name)
 
         branch_name = "main"
 
@@ -251,6 +251,14 @@ model_prompt = ModelPrompt()
 class TemplateIdentifier:
     def __call__(self, content: str):
         return False
+
+
+@register_template_identifier
+class Mistralv7TekkenIdentifier(TemplateIdentifier):
+    template_str = "MistralV7Tekken"
+
+    def __call__(self, content: str):
+        return "[SYSTEM_PROMPT]" in content and "[INST]" in content and "[/INST]" in content
 
 
 @register_template_identifier

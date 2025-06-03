@@ -94,7 +94,7 @@ class GameInstructionScope:
 
     def __call__(self):
         try:
-            self.module_function(self)
+            return self.module_function(self)
         except GenerationCancelled as exc:
             if callable(self.on_generation_cancelled):
                 self.on_generation_cancelled(self, exc)

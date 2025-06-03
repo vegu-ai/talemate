@@ -12,10 +12,12 @@ from talemate import VERSION
 from talemate.config import load_config
 from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.server.websocket_server import WebsocketHandler
+from talemate.util.data import JSONEncoder
+from talemate.context import ActiveScene, Interaction
+from talemate.game.engine.nodes.registry import import_initial_node_definitions
+
 
 log = structlog.get_logger("talemate")
-from talemate.context import ActiveScene, Interaction
-
 
 async def websocket_endpoint(websocket, path):
     # Create a queue for outgoing messages
@@ -24,6 +26,8 @@ async def websocket_endpoint(websocket, path):
     scene_task = None
 
     log.info("frontend connected")
+    
+    import_initial_node_definitions()
 
     async def frontend_disconnect(exc):
         nonlocal scene_task
@@ -50,7 +54,7 @@ async def websocket_endpoint(websocket, path):
                 continue
 
             message = await message_queue.get()
-            await websocket.send(json.dumps(message))
+            await websocket.send(json.dumps(message, cls=JSONEncoder))
 
 
     # Create a task to send regular client status updates
@@ -113,7 +117,6 @@ async def websocket_endpoint(websocket, path):
                         await message_queue.put(
                             {
                                 "type": "system",
-                                "message": "Loading scene file ...",
                                 "id": "scene.loading",
                                 "status": "loading",
                             }
@@ -123,7 +126,6 @@ async def websocket_endpoint(websocket, path):
                             await message_queue.put(
                                 {
                                     "type": "system",
-                                    "message": "Scene file loaded ...",
                                     "id": "scene.loaded",
                                     "status": "success",
                                     "data": {
@@ -165,9 +167,6 @@ async def websocket_endpoint(websocket, path):
                         await handler.request_client_status()
                     elif action_type == "delete_message":
                         handler.delete_message(data.get("id"))
-                    elif action_type == "scene_config":
-                        log.info("scene_config", data=data)
-                        handler.apply_scene_config(data.get("scene_config"))
                     elif action_type == "request_scene_assets":
                         log.info("request_scene_assets", data=data)
                         handler.request_scene_assets(data.get("asset_ids"))

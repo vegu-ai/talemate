@@ -4,6 +4,7 @@ import asyncio
 import functools
 import hashlib
 import uuid
+import numpy as np
 from typing import Callable
 
 import structlog
@@ -63,16 +64,13 @@ class MemoryAgent(Agent):
     agent_type = "memory"
     verbose_name = "Memory"
 
-    def __init__(self, scene, **kwargs):
-        self.db = None
-        self.scene = scene
-        self.memory_tracker = {}
-        self.config = load_config()
-        self._ready_to_add = False
-
-        handlers["config_saved"].connect(self.on_config_saved)
+    @classmethod
+    def init_actions(cls, presets: list[dict] | None = None) -> dict[str, AgentAction]:
         
-        self.actions = {
+        if presets is None:
+            presets = []
+        
+        actions = {
             "_config": AgentAction(
                 enabled=True,
                 label="Configure",
@@ -82,7 +80,7 @@ class MemoryAgent(Agent):
                         type="text",
                         value="default",
                         label="Embeddings",
-                        choices=self.get_presets,
+                        choices=presets,
                         description="Which embeddings to use",
                     ),
                     "device": AgentActionConfig(
@@ -99,6 +97,18 @@ class MemoryAgent(Agent):
                 },
             ),
         }
+        return actions
+    
+    def __init__(self, scene, **kwargs):
+        self.db = None
+        self.scene = scene
+        self.memory_tracker = {}
+        self.config = load_config()
+        self._ready_to_add = False
+
+        handlers["config_saved"].connect(self.on_config_saved)
+        
+        self.actions = MemoryAgent.init_actions(presets=self.get_presets)
 
     @property
     def readonly(self):
@@ -468,7 +478,103 @@ class MemoryAgent(Agent):
                 break
         return memory_context
 
+    @property
+    def embedding_function(self) -> Callable:
+        raise NotImplementedError()
 
+    async def compare_strings(self, string1: str, string2: str) -> dict:
+        """
+        Compare two strings using the current embedding function without touching the database.
+
+        Returns a dictionary with 'cosine_similarity' and 'euclidean_distance'.
+        """
+        
+        embed_fn = self.embedding_function
+        
+        # Embed the two strings
+        vec1 = np.array(embed_fn([string1])[0])
+        vec2 = np.array(embed_fn([string2])[0])
+
+        # Compute cosine similarity
+        cosine_sim = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
+
+        # Compute Euclidean distance
+        euclidean_dist = np.linalg.norm(vec1 - vec2)
+
+        return {
+            "cosine_similarity": cosine_sim,
+            "euclidean_distance": euclidean_dist
+        }
+
+    async def compare_string_lists(
+        self,
+        list_a: list[str],
+        list_b: list[str],
+        similarity_threshold: float = None,
+        distance_threshold: float = None
+    ) -> dict:
+        """
+        Compare two lists of strings using the current embedding function without touching the database.
+
+        Returns a dictionary with:
+            - 'cosine_similarity_matrix': np.ndarray of shape (len(list_a), len(list_b))
+            - 'euclidean_distance_matrix': np.ndarray of shape (len(list_a), len(list_b))
+            - 'similarity_matches': list of (i, j, score) (filtered if threshold set, otherwise all)
+            - 'distance_matches': list of (i, j, distance) (filtered if threshold set, otherwise all)
+        """
+        if not self.db or not hasattr(self.db, "_embedding_function") or self.db._embedding_function is None:
+            raise RuntimeError("Embedding function is not initialized. Make sure the database is set.")
+
+        if not list_a or not list_b:
+            return {
+                "cosine_similarity_matrix": np.array([]),
+                "euclidean_distance_matrix": np.array([]),
+                "similarity_matches": [],
+                "distance_matches": []
+            }
+
+        embed_fn = self.db._embedding_function
+
+        # Batch embed all strings
+        embeddings_a = embed_fn(list_a)
+        embeddings_b = embed_fn(list_b)
+
+        vecs_a = np.array(embeddings_a)  # shape: (len(list_a), embedding_dim)
+        vecs_b = np.array(embeddings_b)  # shape: (len(list_b), embedding_dim)
+
+        # Normalize for cosine similarity
+        vecs_a_norm = vecs_a / np.linalg.norm(vecs_a, axis=1, keepdims=True)
+        vecs_b_norm = vecs_b / np.linalg.norm(vecs_b, axis=1, keepdims=True)
+
+        # Cosine similarity matrix
+        cosine_similarity_matrix = np.dot(vecs_a_norm, vecs_b_norm.T)
+
+        # Euclidean distance matrix
+        a_squared = np.sum(vecs_a ** 2, axis=1).reshape(-1, 1)
+        b_squared = np.sum(vecs_b ** 2, axis=1).reshape(1, -1)
+        euclidean_distance_matrix = np.sqrt(a_squared + b_squared - 2 * np.dot(vecs_a, vecs_b.T))
+
+        # Prepare matches
+        similarity_matches = []
+        distance_matches = []
+
+        # Populate similarity matches
+        sim_indices = np.argwhere(cosine_similarity_matrix >= (similarity_threshold if similarity_threshold is not None else -np.inf))
+        for i, j in sim_indices:
+            similarity_matches.append((i, j, cosine_similarity_matrix[i, j]))
+
+        # Populate distance matches
+        dist_indices = np.argwhere(euclidean_distance_matrix <= (distance_threshold if distance_threshold is not None else np.inf))
+        for i, j in dist_indices:
+            distance_matches.append((i, j, euclidean_distance_matrix[i, j]))
+
+        return {
+            "cosine_similarity_matrix": cosine_similarity_matrix,
+            "euclidean_distance_matrix": euclidean_distance_matrix,
+            "similarity_matches": similarity_matches,
+            "distance_matches": distance_matches
+        }
+        
 @register(condition=lambda: chromadb is not None)
 class ChromaDBMemoryAgent(MemoryAgent):
     requires_llm_client = False
@@ -538,6 +644,14 @@ class ChromaDBMemoryAgent(MemoryAgent):
     @property
     def openai_api_key(self):
         return self.config.get("openai", {}).get("api_key")
+
+    @property
+    def embedding_function(self) -> Callable:
+        if not self.db or not hasattr(self.db, "_embedding_function") or self.db._embedding_function is None:
+            raise RuntimeError("Embedding function is not initialized. Make sure the database is set.")
+
+        embed_fn = self.db._embedding_function
+        return embed_fn
 
     def make_collection_name(self, scene) -> str:
         # generate plain text collection name
@@ -619,7 +733,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         else:
             log.info(
                 "chromadb", 
-                embeddins="SentenceTransformer", 
+                embeddings="SentenceTransformer", 
                 model=model_name,
                 device=device,
                 distance_function=distance_function
@@ -744,8 +858,16 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         if not objects:
             return
+        
+        # track seen documents by id
+        seen_ids = set()
 
         for obj in objects:
+            if obj["id"] in seen_ids:
+                log.warning("chromadb agent", status="duplicate id discarded", id=obj["id"])
+                continue
+            seen_ids.add(obj["id"])
+            
             documents.append(obj["text"])
             meta = obj.get("meta", {})
             source = meta.get("source", "talemate")
@@ -758,6 +880,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             metadatas.append(meta)
             uid = obj.get("id", f"{character}-{self.memory_tracker[character]}")
             ids.append(uid)
+        
         self.db.upsert(documents=documents, metadatas=metadatas, ids=ids)
 
     def _delete(self, meta: dict):
@@ -767,6 +890,11 @@ class ChromaDBMemoryAgent(MemoryAgent):
             return
 
         where = {"$and": [{k: v} for k, v in meta.items()]}
+        
+        # if there is only one item in $and reduce it to the key value pair
+        if len(where["$and"]) == 1:
+            where = where["$and"][0]
+        
         self.db.delete(where=where)
         log.debug("chromadb agent delete", meta=meta, where=where)
 
@@ -797,7 +925,11 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         log.debug("crhomadb agent get", text=text, where=where)
 
-        _results = self.db.query(query_texts=[text], where=where, n_results=limit)
+        try:
+            _results = self.db.query(query_texts=[text], where=where, n_results=limit)
+        except Exception as e:
+            log.error("chromadb agent", error="failed to query", details=e)
+            return []
 
         #import json
         #print(json.dumps(_results["ids"], indent=2))

@@ -1,6 +1,6 @@
 <template>
 
-    <v-sheet color="transparent" v-if="isEnvironment('scene')" class="mb-2">
+    <v-sheet color="transparent" class="mb-2">
         <v-spacer></v-spacer>
         <!-- quick settings as v-chips -->
         <v-chip size="x-small" v-for="(option, index) in quickSettings" :key="index" @click="toggleQuickSetting(option.value)"
@@ -41,14 +41,14 @@
     <div class="hotbuttons-section">
 
 
-        <!-- Section 0: Loading indicator and rerun tool -->
+        <!-- Section 0: Loading indicator and regenerate tool -->
 
         <v-card class="hotbuttons-section-1">
             <v-card-actions>
-                <v-progress-circular class="ml-1 mr-3" size="24" v-if="appBusy" indeterminate="disable-shrink"
+                <v-progress-circular class="ml-3 mr-3" size="24" v-if="appBusy" indeterminate="disable-shrink"
                     color="primary"></v-progress-circular>                
-                <v-icon class="ml-1 mr-3" v-else-if="isWaitingForInput()">mdi-keyboard</v-icon>
-                <v-icon class="ml-1 mr-3" v-else>mdi-circle-outline</v-icon>
+                <v-icon class="ml-3 mr-3" v-else-if="isWaitingForInput()">mdi-keyboard</v-icon>
+                <v-icon class="ml-3 mr-3" v-else>mdi-circle-outline</v-icon>
 
                 <v-tooltip v-if="appBusy" location="top"
                     text="Interrupt the current generation(s)"
@@ -65,25 +65,25 @@
                 <v-divider vertical></v-divider>
 
 
-                <v-tooltip v-if="isEnvironment('scene')" :disabled="appBusy" location="top"
+                <v-tooltip :disabled="appBusy" location="top"
                     :text="'Redo most recent AI message.\n[Ctrl: Provide instructions, +Alt: Rewrite]'"
                     class="pre-wrap"
                     max-width="300px">
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey" v-bind="props" :disabled="appBusy"
-                            @click="rerun" color="primary" icon>
+                            @click="regenerate" color="primary" icon>
                             <v-icon>mdi-refresh</v-icon>
                         </v-btn>
                     </template>
                 </v-tooltip>
 
-                <v-tooltip v-if="isEnvironment('scene')" :disabled="appBusy" location="top"
+                <v-tooltip :disabled="appBusy" location="top"
                     :text="'Redo most recent AI message (Nuke Option - use this to attempt to break out of repetition) \n[Ctrl: Provide instructions, +Alt: Rewrite]'"
                     class="pre-wrap"
                     max-width="300px">
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey" v-bind="props" :disabled="appBusy"
-                            @click="rerunNuke" color="primary" icon>
+                            @click="regenerateNuke" color="primary" icon>
                             <v-icon>mdi-nuke</v-icon>
                         </v-btn>
                     </template>
@@ -93,49 +93,26 @@
                 <v-tooltip v-if="commandActive" location="top"
                     text="Abort / end action.">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mr-3" v-bind="props" :disabled="!isWaitingForInput()"
+                        <v-btn class="hotkey mr-1" v-bind="props" :disabled="!isWaitingForInput()"
                             @click="sendHotButtonMessage('!abort')" color="primary" icon>
                             <v-icon>mdi-cancel</v-icon>
                             
                         </v-btn>
-                        <span class="mr-3 ml-3 text-caption text-muted">{{ commandName }}</span>
+                        <span class="mr-1 ml-3 text-caption text-muted">{{ commandName }}</span>
                     </template>
                 </v-tooltip>
             </v-card-actions>
         </v-card>
 
 
-        <!-- Section 1: Game Interaction -->
-        <v-card class="hotbuttons-section-1" v-if="isEnvironment('scene')">
-            <v-card-actions>
+        <!-- Section 2: Game Actions & Tools -->
+        <v-card class="hotbuttons-section-2">
+            <v-card-text class="pa-2">
+                <div class="d-flex flex-wrap align-center" style="gap: 4px;">
 
                 <!-- actor actions -->
 
-                <v-menu>
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy || npc_characters.length === 0" color="primary" icon>
-                            <v-icon>mdi-account-voice</v-icon>
-                        </v-btn>
-                    </template>
-                    <v-list>
-                        <v-list-subheader>Actor Actions</v-list-subheader>
-                        <v-list-item density="compact" v-for="npc_name in npc_characters" :key="npc_name"
-                            @click="sendHotButtonMessage('!ai_dialogue_directed:' + npc_name)" prepend-icon="mdi-bullhorn">
-                            <v-list-item-title>Talk with Direction ({{ npc_name }})</v-list-item-title>
-                            <v-list-item-subtitle>Generate dialogue ({{ npc_name }}) with prompt guide</v-list-item-subtitle>
-                        </v-list-item>
-                        <v-list-item density="compact" v-for="npc_name in npc_characters" :key="npc_name"
-                            @click="sendHotButtonMessage('!ai_dialogue_selective:' + npc_name)" prepend-icon="mdi-comment-account-outline">
-                            <v-list-item-title>Talk ({{ npc_name }})</v-list-item-title>
-                            <v-list-item-subtitle>Generate dialogue ({{ npc_name }})</v-list-item-subtitle>
-                        </v-list-item>
-                        <v-list-item density="compact" v-for="(option, index) in actorActions" :key="index"
-                            @click="sendHotButtonMessage('!' + option.value)" :prepend-icon="option.icon">
-                            <v-list-item-title>{{ option.title }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
+                <SceneToolsActor :disabled="appBusy" :npc-characters="npc_characters" />
 
                 <!-- narrator actions -->
 
@@ -149,7 +126,7 @@
 
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy" color="primary" icon>
+                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon variant="text">
                             <v-icon>mdi-clock</v-icon>
                         </v-btn>
                     </template>
@@ -162,19 +139,11 @@
                     </v-list>
                 </v-menu>
 
-            </v-card-actions>
-        </v-card>
-
-        <!-- Section 2: Tools -->
-        <v-card class="hotbuttons-section-2">
-            <v-card-actions>
-
-
                 <!-- world tools -->
 
-                <v-menu max-width="500px" v-if="isEnvironment('scene')">
+                <v-menu max-width="500px">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy" color="primary" icon>
+                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon variant="text">
                             <v-icon>mdi-earth</v-icon>
                         </v-btn>
                     </template>
@@ -246,74 +215,24 @@
                 </v-menu>
                 
 
-
-                <!-- creative / game mode toggle -->
-
-                <v-menu v-if="isEnvironment('scene')">
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy" color="primary" icon>
-                            <v-icon>mdi-puzzle-edit</v-icon>
-                            <v-icon v-if="potentialNewCharactersExist()" class="btn-notification" color="warning">mdi-human-greeting</v-icon>
-                        </v-btn>
-                    </template>
-                    <v-list>
-                        <v-list-subheader>Creative Tools</v-list-subheader>
-
-                        <!-- deactivate active characters -->
-                        <v-list-item v-for="(character, index) in deactivatableCharacters" :key="index"
-                            @click="deactivateCharacter($event, character)">
-                            <template v-slot:prepend>
-                                <v-icon color="secondary">mdi-exit-run</v-icon>
-                            </template>
-                            <v-list-item-title>Take out of scene: {{ character }}<v-chip variant="text" color="info" class="ml-1" size="x-small">Ctrl: no narration</v-chip></v-list-item-title>
-                            <v-list-item-subtitle>Make {{ character }} a passive character.</v-list-item-subtitle>
-                        </v-list-item>
-
-                        <!-- reactivate inactive characters -->
-                        <v-list-item v-for="(character, index) in inactiveCharacters" :key="index"
-                            @click="activateCharacter($event, character)">
-                            <template v-slot:prepend>
-                                <v-icon color="secondary">mdi-human-greeting</v-icon>
-                            </template>
-                            <v-list-item-title>Call into scene: {{ character }}<v-chip variant="text" color="info" class="ml-1" size="x-small">Ctrl: no narration</v-chip></v-list-item-title>
-                            <v-list-item-subtitle>Make {{ character }} an active character.</v-list-item-subtitle>
-                        </v-list-item>
-
-                        <!-- persist passive characters -->
-                        <v-list-item v-for="(character, index) in potentialNewCharacters()" :key="index"
-                            @click="introduceCharacter($event, character)">
-                            <template v-slot:prepend>
-                                <v-icon color="warning">mdi-human-greeting</v-icon>
-                            </template>
-                            <v-list-item-title>Introduce {{ character }}<v-chip variant="text" color="info" class="ml-1" size="x-small">Ctrl: no narration</v-chip></v-list-item-title>
-                            <v-list-item-subtitle>Make {{ character }} an active character.</v-list-item-subtitle>
-                        </v-list-item>
-
-                        <!-- static tools -->
-                        <v-list-item v-for="(option, index) in creativeGameMenu" :key="index"
-                            @click="sendHotButtonMessage('!' + option.value)"
-                            :prepend-icon="option.icon">
-                            <v-list-item-title>{{ option.title }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
-                <v-tooltip v-else-if="isEnvironment('creative')" :disabled="appBusy" location="top" text="Switch to game mode">
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy"
-                            @click="sendHotButtonMessage('!setenv_scene')" color="primary" icon>
-                            <v-icon>mdi-gamepad-square</v-icon>
-                        </v-btn>
-                    </template>
-                </v-tooltip>
-
+                <!-- creative tools -->
+                
+                <SceneToolsCreative 
+                    :disabled="appBusy"
+                    :active-characters="activeCharacters"
+                    :inactive-characters="inactiveCharacters"
+                    :passive-characters="passiveCharacters"
+                    :player-character-name="playerCharacterName"
+                    :scene="scene"
+                    :world-state-templates="worldStateTemplates"
+                />
                 <!-- visualizer actions -->
              
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-progress-circular class="ml-1 mr-3" size="24" v-if="agentStatus.visual && agentStatus.visual.busy" indeterminate="disable-shrink"
+                        <v-progress-circular class="ml-1 mr-1" size="24" v-if="agentStatus.visual && agentStatus.visual.busy" indeterminate="disable-shrink"
                         color="secondary"></v-progress-circular>   
-                        <v-btn v-else class="hotkey mx-3" v-bind="props" :disabled="appBusy || !visualAgentReady" color="primary" icon>
+                        <v-btn v-else class="hotkey mx-1" v-bind="props" :disabled="appBusy || !visualAgentReady" color="primary" icon variant="text">
                             <v-icon>mdi-image-frame</v-icon>
                         </v-btn>
                     </template>
@@ -337,7 +256,7 @@
 
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-3" v-bind="props" :disabled="appBusy" color="primary" icon>
+                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon variant="text">
                             <v-icon>mdi-content-save</v-icon>
                         </v-btn>
                     </template>
@@ -352,8 +271,11 @@
                     </v-list>
                 </v-menu>
 
-            </v-card-actions>
+                </div>
+            </v-card-text>
         </v-card>
+
+
 
     </div>
 </template>
@@ -362,13 +284,16 @@
 <script>
 import SceneToolsDirector from './SceneToolsDirector.vue';
 import SceneToolsNarrator from './SceneToolsNarrator.vue';
-
+import SceneToolsActor from './SceneToolsActor.vue';
+import SceneToolsCreative from './SceneToolsCreative.vue';
 export default {
 
     name: 'SceneTools',
     components: {
         SceneToolsDirector,
         SceneToolsNarrator,
+        SceneToolsActor,
+        SceneToolsCreative,
     },
     props: {
         appBusy: Boolean,
@@ -379,6 +304,7 @@ export default {
         messageInput: String,
         worldStateTemplates: Object,
         agentStatus: Object,
+        scene: Object,
     },
     computed: {
         deactivatableCharacters() {
@@ -401,6 +327,15 @@ export default {
             }
             return templates;
         },
+        creativeGameMenuFiltered() {
+            return this.creativeGameMenu.filter(option => {
+                if (option.condition) {
+                    return option.condition();
+                } else {
+                    return true;
+                }
+            });
+        }
     },
     data() {
         return {
@@ -423,15 +358,6 @@ export default {
             saveMenu: [
                 {"value": "save_as", "title": "Save As", "icon": "mdi-content-save-all", "description": "Save the current scene as a new scene"},
                 {"value": "save", "title": "Save", "icon": "mdi-content-save", "description": "Save the current scene"},
-            ],
-
-            actorActions: [
-                {"value": "ai_dialogue", "title": "Talk", "icon": "mdi-comment-text-outline", "description": "Generate dialogue"},
-            ],
-
-            creativeGameMenu: [
-                {"value": "pc:prompt", "title": "Introduce new character (Directed)", "icon": "mdi-account-plus", "description": "Generate a new active character, based on prompt."},
-                {"value": "setenv_creative", "title": "Creative Mode", "icon": "mdi-puzzle-edit", "description": "Switch to creative mode (very early experimental version)"},
             ],
 
             advanceTimeOptions: [
@@ -464,7 +390,6 @@ export default {
         'registerMessageHandler',
         'setInputDisabled',
         'isWaitingForInput',
-        'scene',
         'creativeEditor',
         'appConfig',
         'getTrackedCharacterState',
@@ -477,61 +402,6 @@ export default {
         'open-world-state-manager',
     ],
     methods: {
-
-        potentialNewCharacters() {
-            // return all entries in passiveCharacters that dont exist in
-            // inactiveCharacters
-            let newCharacters = [];
-            for (let character of this.passiveCharacters) {
-                if (!this.inactiveCharacters.includes(character)) {
-                    newCharacters.push(character);
-                }
-            }
-            return newCharacters;
-        },
-
-        activateCharacter(ev, name) {
-            let modifyNoNarration = ev.ctrlKey;
-            if(!modifyNoNarration) {
-                this.sendHotButtonMessage('!char_a:' + name);
-            } else {
-                this.sendHotButtonMessage('!char_a:' + name + ':no');
-            }
-        },
-
-        deactivateCharacter(ev, name) {
-            let modifyNoNarration = ev.ctrlKey;
-            if(!modifyNoNarration) {
-                this.sendHotButtonMessage('!char_d:' + name);
-            } else {
-                this.sendHotButtonMessage('!char_d:' + name + ':no');
-            }
-        },
-
-        introduceCharacter(ev, name) {
-            let modifyNoNarration = ev.ctrlKey;
-            if(!modifyNoNarration) {
-                this.sendHotButtonMessage('!persist_character:' + name);
-            } else {
-                this.sendHotButtonMessage('!persist_character:' + name + ':no');
-            }
-        },
-
-        potentialNewCharactersExist() {
-            return this.potentialNewCharacters().length > 0;
-        },
-
-        passiveCharactersExist() {
-            return this.passiveCharacters.length > 0;
-        },
-        
-        passiveCharacterExists(name) {
-            return this.passiveCharacters.includes(name);
-        },
-
-        isEnvironment(typ) {
-            return this.scene().environment == typ;
-        },
 
         sendHotButtonMessage(message) {
             if (message == "!abort" || !this.appBusy) {
@@ -645,11 +515,11 @@ export default {
             this.getWebsocket().send(JSON.stringify({ type: 'interact', text: '!ws' }));
         },
 
-        rerun(event) {
-            // if ctrl is pressed use directed rerun
+        regenerate(event) {
+            // if ctrl is pressed use directed regenerate
             let withDirection = event.ctrlKey;
             let method = event.altKey || event.metaKey ? "edit" : "replace";
-            let command = "!rerun";
+            let command = "!regenerate";
 
             if(withDirection)
                 command += "_directed";
@@ -661,11 +531,11 @@ export default {
             this.sendHotButtonMessage(command)
         },
 
-        rerunNuke(event) {
-            // if ctrl is pressed use directed rerun
+        regenerateNuke(event) {
+            // if ctrl is pressed use directed regenerate
             let withDirection = event.ctrlKey;
             let method = event.altKey || event.metaKey ? "edit" : "replace";
-            let command = "!rerun";
+            let command = "!regenerate";
 
             if(withDirection)
                 command += "_directed";
@@ -737,6 +607,8 @@ export default {
     display: flex;
     justify-content: flex-start;
     margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 5px;
 }
 
 .hotbuttons-section-1,
@@ -744,7 +616,88 @@ export default {
 .hotbuttons-section-3 {
     display: flex;
     align-items: center;
-    margin-right: 20px;
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+/* Make card content responsive */
+.hotbuttons-section-2 .v-card-text {
+    padding: 8px !important;
+}
+
+.hotbuttons-section-2 .d-flex {
+    min-height: 40px;
+}
+
+/* Consistent button styling for all sections */
+.hotbuttons-section .v-btn,
+.hotbuttons-section-1 .v-btn,
+.hotbuttons-section-2 .v-btn {
+    min-width: 40px !important;
+    width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    margin: 2px !important;
+}
+
+.hotbuttons-section .v-btn.v-btn--icon,
+.hotbuttons-section-1 .v-btn.v-btn--icon,
+.hotbuttons-section-2 .v-btn.v-btn--icon {
+    border-radius: 50% !important;
+}
+
+.hotbuttons-section .v-progress-circular,
+.hotbuttons-section-1 .v-progress-circular,
+.hotbuttons-section-2 .v-progress-circular {
+    margin: 2px 4px;
+}
+
+/* Ensure proper spacing for child components */
+.hotbuttons-section-2 > div > * {
+    margin: 2px;
+}
+
+/* Ensure v-card-actions maintains compact styling */
+.hotbuttons-section-1 .v-card-actions {
+    padding: 8px !important;
+    min-height: 40px;
+}
+
+@media (max-width: 768px) {
+    .hotbuttons-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .hotbuttons-section-1,
+    .hotbuttons-section-2,
+    .hotbuttons-section-3 {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    
+    .hotbuttons-section-2 .d-flex {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .hotbuttons-section {
+        gap: 3px;
+    }
+    
+    .hotbuttons-section-2 .d-flex {
+        gap: 2px !important;
+    }
+    
+    .hotbuttons-section .v-btn,
+    .hotbuttons-section-1 .v-btn,
+    .hotbuttons-section-2 .v-btn {
+        min-width: 36px !important;
+        width: 36px !important;
+        height: 36px !important;
+        margin: 1px !important;
+    }
 }
 
 .pre-wrap {
@@ -762,5 +715,12 @@ export default {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.hotbuttons-section .v-btn.v-btn--variant-elevated,
+.hotbuttons-section-1 .v-btn.v-btn--variant-elevated,
+.hotbuttons-section-2 .v-btn.v-btn--variant-elevated {
+    background-color: transparent !important;
+    box-shadow: none !important;
 }
 </style>

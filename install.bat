@@ -2,7 +2,7 @@
 
 REM Check for Python version and use a supported version if available
 SET PYTHON=python
-python -c "import sys; sys.exit(0 if sys.version_info[:2] in [(3, 10), (3, 11)] else 1)" 2>nul
+python -c "import sys; sys.exit(0 if sys.version_info[:2] in [(3, 10), (3, 11), (3, 12), (3, 13)] else 1)" 2>nul
 IF NOT ERRORLEVEL 1 (
     echo Selected Python version: %PYTHON%
     GOTO EndVersionCheck
@@ -14,7 +14,7 @@ FOR /F "tokens=*" %%i IN ('py --list') DO (
     echo %%i | findstr /C:"-V:3.10 " >nul && SET PYTHON=py -3.10 && GOTO EndPythonCheck
 )
 :EndPythonCheck
-%PYTHON% -c "import sys; sys.exit(0 if sys.version_info[:2] in [(3, 10), (3, 11)] else 1)" 2>nul
+%PYTHON% -c "import sys; sys.exit(0 if sys.version_info[:2] in [(3, 10), (3, 11), (3, 12), (3, 13)] else 1)" 2>nul
 IF ERRORLEVEL 1 (
     echo Unsupported Python version. Please install Python 3.10 or 3.11.
     exit /b 1
@@ -41,29 +41,11 @@ call talemate_env\Scripts\activate
 REM upgrade pip and setuptools
 python -m pip install --upgrade pip setuptools
 
-
 REM install poetry
 python -m pip install "poetry==1.7.1" "rapidfuzz>=3" -U
 
 REM use poetry to install dependencies
 python -m poetry install
-
-REM installing torch
-echo Installiing PyTorch... 
-echo Checking for CUDA availability...
-
-REM we use nvcc to check for CUDA availability
-REM if cuda exists: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-nvcc --version >nul 2>&1
-
-IF ERRORLEVEL 1 (
-    echo CUDA not found. Keeping PyTorch installation without CUDA support...
-) ELSE (
-    echo CUDA found. Installing PyTorch with CUDA support...
-    REM uninstalling existing torch, torchvision, torchaudio
-    python -m pip uninstall torch torchaudio -y
-    python -m pip install torch~=2.4.1 torchaudio~=2.4.1 --index-url https://download.pytorch.org/whl/cu121
-)
 
 REM copy config.example.yaml to config.yaml only if config.yaml doesn't exist
 IF NOT EXIST config.yaml copy config.example.yaml config.yaml

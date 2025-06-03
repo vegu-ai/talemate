@@ -429,6 +429,12 @@ export default {
                         this.$refs.suggestions.selectSuggestionViaMenu(sub1)
                     }
                 });
+            } else if (tab == 'scene') {
+                if(sub1) {
+                    this.$nextTick(() => {
+                        this.$refs.scene.navigate(sub1, sub2, sub3);
+                    });
+                }
             }
 
             this.$nextTick(() => {
@@ -603,7 +609,7 @@ export default {
             else if (message.action == 'templates') {
                 this.templates = message.data;
                 this.$nextTick(() => {
-                    if(this.loadWritingStyleTemplate) {
+                    if(this.loadWritingStyleTemplate && this.scene.data && this.scene.data.writing_style_template) {
                         this.$refs.generationOptions.loadWritingStyle(this.scene.data.writing_style_template);
                         this.loadWritingStyleTemplate = false;
                     }

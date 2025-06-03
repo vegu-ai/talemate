@@ -36,7 +36,7 @@ class Manager(Emitter):
                     aliases[alias] = name.replace("cmd_", "")
         return aliases
 
-    async def execute(self, cmd):
+    async def execute(self, cmd, emit_on_unknown:bool = True, state:dict = None):
         # commands start with ! and are followed by a command name
         cmd = cmd.strip()
         cmd_args = ""
@@ -68,6 +68,7 @@ class Manager(Emitter):
                     await command.run()
                     if command.sets_scene_unsaved:
                         self.scene.saved = False
+
                 except AbortCommand:
                     log.debug("Command aborted")
                 except Exception:
@@ -75,9 +76,12 @@ class Manager(Emitter):
                 finally:
                     command.command_end()
                     self.processing_command = False
+                    if state is not None:
+                        state["_commands_executed"] = True
                 return True
 
-        self.system_message(f"Unknown command: {cmd_name}")
+        if emit_on_unknown:
+            self.system_message(f"Unknown command: {cmd_name}")
 
         return True
 

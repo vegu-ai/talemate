@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 import structlog
 
 from talemate.context import interaction
 from talemate.scene_message import SceneMessage
-from talemate.exceptions import RestartSceneLoop
+from talemate.exceptions import RestartSceneLoop, AbortCommand, AbortWaitForInput
 
 from .signals import handlers
 
@@ -23,10 +23,6 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.emit.base")
-
-
-class AbortCommand(IOError):
-    pass
 
 
 @dataclasses.dataclass
@@ -92,6 +88,8 @@ async def wait_for_input(
     scene: Scene = None,
     data: dict = None,
     return_struct: bool = False,
+    abort_condition: Callable = None,
+    sleep_time: float = 0.1,
 ) -> str | dict:
     """
     Wait for input from the user.
@@ -124,9 +122,12 @@ async def wait_for_input(
     )
 
     while input_received["message"] is None:
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(sleep_time)
         
         interaction_state = interaction.get()
+        
+        if abort_condition and (await abort_condition()):
+            raise AbortWaitForInput()
         
         if interaction_state.reset_requested:
             interaction_state.reset_requested = False

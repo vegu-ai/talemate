@@ -1,5 +1,18 @@
-{% if context_aware %}{% block rendered_context %}
+{% if context_aware %}{% set rendered_context_content %}
 {% include "extra-context.jinja2" %}
+
+{# character context #}{% if character %}
+{% with skip_characters=[character.name] %}{% include "character-context.jinja2" %}{% endwith %}
+{% else %}
+{% include "character-context.jinja2" %}
+{# /character context #}{% endif %}
+
+{% if context_typ == 'scene phase intent' or context_typ == 'scene type description' or context_typ == 'scene type instructions' -%}
+{% with exclude_phase_intent=True %}{% include "scene-intent.jinja2" %}{% endwith %}
+{% include "scene-types.jinja2" %}
+{% else %}
+{% include "scene-intent.jinja2" %}
+{% endif %}
 {% if context_typ == 'character attribute' or context_typ == 'character detail' or context_typ == 'scene intro' -%}
   {% for other_character in scene.get_characters() -%}
     {% if other_character.name != character_name %}
@@ -13,10 +26,12 @@
 {{ scene.description }}
 <|CLOSE_SECTION|>
 {% endif %}
-{% endblock %}
+{% endset %}
+{{ rendered_context_content }}
+{% set rendered_context_tokens = count_tokens(rendered_context_content) %}
 {% if history_aware %}
 <|SECTION:SCENE|>
-{% for scene_context in scene.context_history(budget=max_tokens-1024-count_tokens(self.rendered_context())) -%}
+{% for scene_context in scene.context_history(budget=max_tokens-1024-rendered_context_tokens) -%}
 {{ scene_context }}
 {% endfor %}
 <|CLOSE_SECTION|>
@@ -38,6 +53,8 @@
 {{ generation_context.original }}
 <|CLOSE_SECTION|>
 {% endif %}
+{# DYNAMIC INSTRUCTIONS #}{% include "dynamic-instructions.jinja2" %}{# END DYNAMIC INSTRUCTIONS #}
+{# INFORMATION -#}{% with information=generation_context.information %}{% include "task-information.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 {#- SET TASK ACTION -#}
 {% if not generation_context.original %}
@@ -49,7 +66,7 @@
 {% if context_typ == "list" -%}
 {% if generation_context.original and generation_context.instructions -%}
   {# determine whether user wants to replace or add to the list -#}
-  {% if query_text_eval("Does the user want to add to the existing list", generation_context.instructions) -%}
+  {% if generation_context.get_state('extend') or query_text_eval("Does the user want to add to the existing list", generation_context.instructions) -%}
   {% set action_task = "Add to the existing" -%}
   {% set _ = generation_context.set_state('extend', true) %}
   {% endif -%}
@@ -71,6 +88,53 @@ YOUR RESPONSE MUST ONLY CONTAIN THE ANSWER.
 
 YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE DETAIL TEXT.
 {% endif -%}
+{#- SCENE INTENT -#}
+{% elif context_typ == "scene intent" %}
+{{ action_task }} overall story intention. This should clearly state the purpose and direction of the story / experience, along with any broad special rules or constraints. It should layout expectations for the experience.
+
+The story will be told from {{ scene.get_player_character().name or "the reader's" }} perspective.
+
+YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE STORY INTENTION TEXT.
+{#- SCENE PHASE INTENT -#}
+{% elif context_typ == "scene phase intent" %}
+{% set context_name = "New scene intention"%}
+{{ action_task }} scene intentintion for the currently active "{{ context_name }}" phase. 
+
+The purpose of the scene intention is to clearly and concisely state:
+
+1. Where we are as the scene starts (1 line)
+2. What is the new intention
+3. What goals / objectives need to be fulfilled for the scene to be complete (1 line per goal)
+4. Brief important notes for the execution of the scene (1-3 lines)
+
+You must provide information for all three points.
+
+Examples:
+
+1. We are in the kitchen, where Joseph and Melinda are cooking pancakes. Its a moment of bonding as they get to know each other.
+2. Create a comedic moment where Joseph drops a carton of eggs on Melinda's foot, resulting in a food fight.
+3. Goals
+  a. A food fight ensues and both of them are covered in ingredients.
+4. No important notes.
+
+{#- SCENE TYPE DESCRIPTION -#}
+{% elif context_typ == "scene type description" %}
+{{ action_task }} description for a "{{ context_name }}" scene type. The description should explain what this type of scene is about and its general characteristics.
+
+This must be generalized and broad and match the tone and style of the overall story intention and existing scene descriptions can be used as a reference on what is expected.
+
+YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE SCENE TYPE DESCRIPTION.
+{#- SCENE TYPE INSTRUCTIONS -#}
+{% elif context_typ == "scene type instructions" %}
+{{ action_task }} set of instructions for a writing a "{{ context_name }}" scene as part of a fictual novel. These instructions should guide how the story writer should write this kind of scene. 
+
+What is the purpose of a scene like this?
+What are the reader's expectations for this scene, and how does the writer meet those expectations?
+What is the tone and style of this scene?
+
+YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE SCENE TYPE INSTRUCTIONS.
+
+{% if generation_context.length < 256 %}Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.{% endif %}
 {#- CHARACTER EXAMPLE DIALOGUE -#}
 {% elif context_typ == "character dialogue" %}
 Generate a new line of example dialogue for {{ character_name }}.
@@ -85,7 +149,6 @@ Generate a new line of example dialogue for {{ character_name }}.
 
 ### Rules for generating dialogue:
 You must only respond with the generated dialogue example.
-Always contain actions in asterisks. For example, *{{ character_name}} smiles*.
 Always contain dialogue in quotation marks. For example, {{ character_name}}: "Hello!"
 You must only generate one line of example dialogue for {{ character_name }}.
 
@@ -102,6 +165,12 @@ It must contain enough context for the reader to dive right in. Assume that the 
 
 It must setup an interesting entry point for the reader to participate in the scene and interact with {% if scene.num_npc_characters() %}the other characters and the environment.{% else %}the environment.{% endif %}
 
+Only spoken words should be within ".
+{#- WORLD CONTEXT -#}
+{% elif context_typ == "world context" %}
+{{ action_task }} world context entry for {{ context_name }}.
+
+A world-context entry is a factual piece of information about the world.
 {#- GENERAL CONTEXT -#}
 {% else %}
 {% if context_name.endswith("?") -%}
@@ -130,6 +199,8 @@ It must setup an interesting entry point for the reader to participate in the sc
 {{ character_name }}'s {{ context_name }}:{{ generation_context.partial }}
 {%- elif context_typ == 'character dialogue' -%}
 {{ character_name }}:{{ generation_context.partial }}
+{%- elif context_typ == 'scene intro' -%}
+Scene introduction:{{ generation_context.partial }}
 {%- else -%}
 {{ context_name }}:{{ generation_context.partial }}
 {%- endif -%}
@@ -145,6 +216,7 @@ Continue this text: {{ generation_context.partial }}
 {{ character_name }}'s {{ context_name }}:
 {%- elif context_typ == 'character dialogue' -%}
 {{ character_name }}:
+{%- elif context_typ == 'scene type description' or context_typ == 'scene type instructions' -%}
 {%- else -%}
 {{ context_name }}:
 {%- endif -%}

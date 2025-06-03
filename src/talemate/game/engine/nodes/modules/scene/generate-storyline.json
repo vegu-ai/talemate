@@ -1,0 +1,2093 @@
+{
+  "title": "Generate Storyline",
+  "id": "b9c310ea-90e2-4a93-bc76-e2ca255e65a6",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "scene/generateStoryline",
+  "nodes": {
+    "94603a9b-e6a5-4944-a621-558dd9395818": {
+      "title": "Stage 1",
+      "id": "94603a9b-e6a5-4944-a621-558dd9395818",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1812,
+      "y": -383,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "40d341e5-affa-4f3c-acae-7cebb556c1c6": {
+      "title": "Random",
+      "id": "40d341e5-affa-4f3c-acae-7cebb556c1c6",
+      "properties": {
+        "method": "choice",
+        "min": 0,
+        "max": 1,
+        "mean": 0,
+        "std_dev": 1
+      },
+      "x": 1132,
+      "y": -483,
+      "width": 210,
+      "height": 234,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Random",
+      "base_type": "core/Node"
+    },
+    "208eccc3-9eb8-4938-b182-ee9fa4626677": {
+      "title": "Theme",
+      "id": "208eccc3-9eb8-4938-b182-ee9fa4626677",
+      "properties": {},
+      "x": 1402,
+      "y": -413,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "8fbb2ad2-2c28-44cb-bc40-f2a02bfa4e16": {
+      "title": "Prompt From Template",
+      "id": "8fbb2ad2-2c28-44cb-bc40-f2a02bfa4e16",
+      "properties": {
+        "scope": "scene",
+        "template_file": "",
+        "template_text": ""
+      },
+      "x": 289,
+      "y": -419,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/PromptFromTemplate",
+      "base_type": "core/Node"
+    },
+    "7422c62a-7655-454e-b6a4-2ed726cd8870": {
+      "title": "Generate Thematic List",
+      "id": "7422c62a-7655-454e-b6a4-2ed726cd8870",
+      "properties": {
+        "instructions": "",
+        "iterations": 1
+      },
+      "x": 762,
+      "y": -493,
+      "width": 321,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/GenerateThematicList",
+      "base_type": "core/Node"
+    },
+    "4693f9aa-6489-4a36-a74c-8f9262baee5a": {
+      "title": "Render Prompt",
+      "id": "4693f9aa-6489-4a36-a74c-8f9262baee5a",
+      "properties": {},
+      "x": 549,
+      "y": -349,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/RenderPrompt",
+      "base_type": "core/Node"
+    },
+    "de75cf1f-f2e6-4f88-ad8e-77ca2d35ea74": {
+      "title": "SET local.theme",
+      "id": "de75cf1f-f2e6-4f88-ad8e-77ca2d35ea74",
+      "properties": {
+        "name": "theme",
+        "scope": "local"
+      },
+      "x": 1567,
+      "y": -399,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "8841e87b-e372-482f-b58f-e0a892e1b7b9": {
+      "title": "Prompt From Template",
+      "id": "8841e87b-e372-482f-b58f-e0a892e1b7b9",
+      "properties": {
+        "scope": "scene",
+        "template_file": "",
+        "template_text": ""
+      },
+      "x": 1087,
+      "y": 347,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/PromptFromTemplate",
+      "base_type": "core/Node"
+    },
+    "b0f1ff55-d727-4055-8e2d-cd3a267f8164": {
+      "title": "summarizer",
+      "id": "b0f1ff55-d727-4055-8e2d-cd3a267f8164",
+      "properties": {
+        "agent_name": "summarizer"
+      },
+      "x": 522,
+      "y": 172,
+      "width": 230,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "0f4128ac-8840-463a-8348-4f003fe0b6fe": {
+      "title": "Dict Set",
+      "id": "0f4128ac-8840-463a-8348-4f003fe0b6fe",
+      "properties": {
+        "key": ""
+      },
+      "x": 277,
+      "y": 127,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "cd5dda3f-42d6-41ff-abb7-91c4b97de6af": {
+      "title": "Dict Set",
+      "id": "cd5dda3f-42d6-41ff-abb7-91c4b97de6af",
+      "properties": {
+        "key": ""
+      },
+      "x": 27,
+      "y": -53,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "7ab85266-2ce1-4434-8a32-e76710b97a88": {
+      "title": "GET local.analysis_instructions",
+      "id": "7ab85266-2ce1-4434-8a32-e76710b97a88",
+      "properties": {
+        "name": "analysis_instructions",
+        "scope": "local"
+      },
+      "x": -218,
+      "y": 142,
+      "width": 260,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "2d8aab05-4563-4ac6-8242-2171be615b16": {
+      "title": "GET local.topic",
+      "id": "2d8aab05-4563-4ac6-8242-2171be615b16",
+      "properties": {
+        "name": "topic",
+        "scope": "local"
+      },
+      "x": -222,
+      "y": 320,
+      "width": 260,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "d83755ec-46f4-4d0d-9f03-45e4c9f0baf6": {
+      "title": "GET local.intro",
+      "id": "d83755ec-46f4-4d0d-9f03-45e4c9f0baf6",
+      "properties": {
+        "name": "intro",
+        "scope": "local"
+      },
+      "x": -765,
+      "y": 1275,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "eb68c23f-72be-4115-95ca-1f7b212b16f5": {
+      "title": "OUT state",
+      "id": "eb68c23f-72be-4115-95ca-1f7b212b16f5",
+      "properties": {
+        "output_type": "any",
+        "output_name": "state",
+        "num": 0
+      },
+      "x": -495,
+      "y": 1035,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "16f6c12f-22ca-4ff5-86f1-6f605cdb98a7": {
+      "title": "OUT text",
+      "id": "16f6c12f-22ca-4ff5-86f1-6f605cdb98a7",
+      "properties": {
+        "output_type": "str",
+        "output_name": "text",
+        "num": 1
+      },
+      "x": -495,
+      "y": 1275,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "6bed1f60-8b79-41c0-a8e7-bb8a157c0f32": {
+      "title": "OUT theme",
+      "id": "6bed1f60-8b79-41c0-a8e7-bb8a157c0f32",
+      "properties": {
+        "output_type": "str",
+        "output_name": "theme",
+        "num": 2
+      },
+      "x": -485,
+      "y": 1495,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "8627e3dc-6ad8-42ed-84fc-8d793fbfd85c": {
+      "title": "IN topic",
+      "id": "8627e3dc-6ad8-42ed-84fc-8d793fbfd85c",
+      "properties": {
+        "input_type": "str",
+        "input_name": "topic",
+        "input_optional": false,
+        "input_group": "",
+        "num": 1
+      },
+      "x": -1680,
+      "y": -748,
+      "width": 252,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "08e99d86-5908-4959-8b37-c6f64344ab45": {
+      "title": "SET local.topic",
+      "id": "08e99d86-5908-4959-8b37-c6f64344ab45",
+      "properties": {
+        "name": "topic",
+        "scope": "local"
+      },
+      "x": -1370,
+      "y": -738,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "c365a4a9-fcdb-4c43-8fa5-4502674663e4": {
+      "title": "IN analysis_instructions",
+      "id": "c365a4a9-fcdb-4c43-8fa5-4502674663e4",
+      "properties": {
+        "input_type": "str",
+        "input_name": "analysis_instructions",
+        "input_optional": true,
+        "input_group": "",
+        "num": 1
+      },
+      "x": -1680,
+      "y": -508,
+      "width": 252,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "e2340346-3737-4f94-927f-4cef3f517647": {
+      "title": "SET local.analysis_instructions",
+      "id": "e2340346-3737-4f94-927f-4cef3f517647",
+      "properties": {
+        "name": "analysis_instructions",
+        "scope": "local"
+      },
+      "x": -1390,
+      "y": -508,
+      "width": 260,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "17bccdda-7546-4a60-9492-c95bcc8cf9cf": {
+      "title": "IN analysis_enabled",
+      "id": "17bccdda-7546-4a60-9492-c95bcc8cf9cf",
+      "properties": {
+        "input_type": "bool",
+        "input_name": "analysis_enabled",
+        "input_optional": true,
+        "input_group": "",
+        "num": 1
+      },
+      "x": -1679,
+      "y": -267,
+      "width": 252,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "931767d1-0a60-48a0-b754-7189573dcfe8": {
+      "title": "SET local.analysis_enabled",
+      "id": "931767d1-0a60-48a0-b754-7189573dcfe8",
+      "properties": {
+        "name": "analysis_enabled",
+        "scope": "local"
+      },
+      "x": -1134,
+      "y": -268,
+      "width": 260,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "2629c91a-74d2-4c25-962d-f1b74163147b": {
+      "title": "As Bool",
+      "id": "2629c91a-74d2-4c25-962d-f1b74163147b",
+      "properties": {
+        "default": true
+      },
+      "x": -1374,
+      "y": -248,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "ece4f875-661f-4aea-8392-3c12c920bfe1": {
+      "title": "Module Style",
+      "id": "ece4f875-661f-4aea-8392-3c12c920bfe1",
+      "properties": {
+        "node_color": "#392c34",
+        "title_color": "#572e44",
+        "auto_title": null,
+        "icon": "F1719"
+      },
+      "x": -223,
+      "y": -749,
+      "width": 210,
+      "height": 130,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "69332967-7ac9-4940-b7f4-7a77d2333f05": {
+      "title": "Stage 0",
+      "id": "69332967-7ac9-4940-b7f4-7a77d2333f05",
+      "properties": {
+        "stage": 0
+      },
+      "x": 320,
+      "y": -750,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "08e3d297-9342-40e6-9ddc-f86283d8728a": {
+      "title": "Dict Set",
+      "id": "08e3d297-9342-40e6-9ddc-f86283d8728a",
+      "properties": {
+        "key": null
+      },
+      "x": 49,
+      "y": -339,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "44bf83e8-c6b9-4c45-8dd6-e22aedff879b": {
+      "title": "Set Scene Intent",
+      "id": "44bf83e8-c6b9-4c45-8dd6-e22aedff879b",
+      "properties": {
+        "intent": ""
+      },
+      "x": 937,
+      "y": 1172,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/intention/SetSceneIntent",
+      "base_type": "core/Node"
+    },
+    "55979f0a-d3c9-4a76-960f-7ac0f3fcd76a": {
+      "title": "Prompt From Template",
+      "id": "55979f0a-d3c9-4a76-960f-7ac0f3fcd76a",
+      "properties": {
+        "scope": "scene",
+        "template_file": "",
+        "template_text": ""
+      },
+      "x": 44,
+      "y": 1247,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/PromptFromTemplate",
+      "base_type": "core/Node"
+    },
+    "ea9bf575-80e1-4296-9f52-c3e0d79a6335": {
+      "title": "Render Prompt",
+      "id": "ea9bf575-80e1-4296-9f52-c3e0d79a6335",
+      "properties": {},
+      "x": 284,
+      "y": 1247,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/RenderPrompt",
+      "base_type": "core/Node"
+    },
+    "b2b78f64-c308-470a-a492-9f8e605208a9": {
+      "title": "GET local.template_variables",
+      "id": "b2b78f64-c308-470a-a492-9f8e605208a9",
+      "properties": {
+        "name": "template_variables",
+        "scope": "local"
+      },
+      "x": -222,
+      "y": 1357,
+      "width": 235,
+      "height": 125,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "83655997-bb35-4f8b-a5ff-eca5b78acfbe": {
+      "title": "SET local.intro",
+      "id": "83655997-bb35-4f8b-a5ff-eca5b78acfbe",
+      "properties": {
+        "name": "intro",
+        "scope": "local"
+      },
+      "x": 939,
+      "y": 1687,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "bd8fa024-ef74-45be-9ba4-fc3b99790772": {
+      "title": "Template Variables",
+      "id": "bd8fa024-ef74-45be-9ba4-fc3b99790772",
+      "properties": {},
+      "x": 851,
+      "y": 258,
+      "width": 170,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/TemplateVariables",
+      "base_type": "core/Node"
+    },
+    "277e5de6-e128-4675-b80b-a212149e3fd0": {
+      "title": "Dict Set",
+      "id": "277e5de6-e128-4675-b80b-a212149e3fd0",
+      "properties": {
+        "key": ""
+      },
+      "x": 517,
+      "y": 297,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "2ad9c727-c61b-402b-a11c-e7d7f1f4b322": {
+      "title": "GET local.analysis_enabled",
+      "id": "2ad9c727-c61b-402b-a11c-e7d7f1f4b322",
+      "properties": {
+        "name": "analysis_enabled",
+        "scope": "local"
+      },
+      "x": 861,
+      "y": 78,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "7d00d4cb-553c-4fb5-ad77-478198bd08e0": {
+      "title": "Template Variables",
+      "id": "7d00d4cb-553c-4fb5-ad77-478198bd08e0",
+      "properties": {},
+      "x": 93,
+      "y": 795,
+      "width": 170,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/TemplateVariables",
+      "base_type": "core/Node"
+    },
+    "95e1204b-b62f-47b2-ad7b-01e11288ecce": {
+      "title": "GET local.analysis_enabled",
+      "id": "95e1204b-b62f-47b2-ad7b-01e11288ecce",
+      "properties": {
+        "name": "analysis_enabled",
+        "scope": "local"
+      },
+      "x": 341,
+      "y": 645,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "dd9ea0f4-c777-426c-8124-601db7f92668": {
+      "title": "Prompt From Template",
+      "id": "dd9ea0f4-c777-426c-8124-601db7f92668",
+      "properties": {
+        "scope": "scene",
+        "template_file": "",
+        "template_text": ""
+      },
+      "x": 453,
+      "y": 915,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/PromptFromTemplate",
+      "base_type": "core/Node"
+    },
+    "b3a2a89e-d3ef-4921-aac1-e464451f5347": {
+      "title": "SET local.theme_analysis",
+      "id": "b3a2a89e-d3ef-4921-aac1-e464451f5347",
+      "properties": {
+        "name": "theme_analysis",
+        "scope": "local"
+      },
+      "x": 1888,
+      "y": 213,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "8995d417-0c41-480e-a300-07c57260e1c7": {
+      "title": "Dict Set",
+      "id": "8995d417-0c41-480e-a300-07c57260e1c7",
+      "properties": {
+        "key": ""
+      },
+      "x": 2133,
+      "y": 164,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "c12346ff-7182-4513-b045-94ccb8217d5a": {
+      "title": "director",
+      "id": "c12346ff-7182-4513-b045-94ccb8217d5a",
+      "properties": {
+        "agent_name": "director"
+      },
+      "x": -192,
+      "y": 668,
+      "width": 230,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "d6e69490-3be8-4307-9aa3-85589edf905b": {
+      "title": "GET local.template_variables",
+      "id": "d6e69490-3be8-4307-9aa3-85589edf905b",
+      "properties": {
+        "name": "template_variables",
+        "scope": "local"
+      },
+      "x": -222,
+      "y": 818,
+      "width": 235,
+      "height": 125,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "ac0a4a5f-c440-41d7-9af1-2a0bdce0b8df": {
+      "title": "SET local.template_variables",
+      "id": "ac0a4a5f-c440-41d7-9af1-2a0bdce0b8df",
+      "properties": {
+        "name": "template_variables",
+        "scope": "local"
+      },
+      "x": 862,
+      "y": -92,
+      "width": 235,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "a3de6cce-c44f-4cd7-b4c2-511baf2e0dbf": {
+      "title": "Theme Analysis Template",
+      "id": "a3de6cce-c44f-4cd7-b4c2-511baf2e0dbf",
+      "properties": {
+        "value": "<|SECTION:STORY BASELINE|>\n{{ scene.description }}\n\n<|SECTION:PROTAGONISTS|>\n{% for character in scene.characters %}\n### {{ character.name }}\n{{ character.description }}\n{% endfor %}\n\n<|SECTION:CONTEXT OF YOUR TASK|>\nA topic description of \"{{ topic }}\" was given and a random theme was picked to bootstrap a new storyline: \"{{ theme }}\".\n\n<|SECTION:TASK|>\nAnalyze the theme \"{{ theme }}\" in the context of the topic \"{{ topic }}\".\n\nProvide a brief exploration of this theme, including:\n1. Key concepts or ideas involved and how they fit the context\n2. Potential storylines or conflicts\n3. How it might affect the protagonists of the story\n\n{% if analysis_instructions %}\n{{ analysis_instructions }}\n{% endif %}\n\nKeep your analysis concise and to the point.\n\nYour analysis will be used to set up the premise for the next storyline in the `{{ scene.name }}` series."
+      },
+      "x": 511,
+      "y": 459,
+      "width": 300,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "b99d35b6-46be-4268-98e7-19dd0d0155c6": {
+      "title": "GET local.template_variables",
+      "id": "b99d35b6-46be-4268-98e7-19dd0d0155c6",
+      "properties": {
+        "name": "template_variables",
+        "scope": "local"
+      },
+      "x": 1424,
+      "y": 625,
+      "width": 235,
+      "height": 125,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "c5d05d7b-6b85-4b76-9a40-fee92b540a2f": {
+      "title": "SET local.story_choice",
+      "id": "c5d05d7b-6b85-4b76-9a40-fee92b540a2f",
+      "properties": {
+        "name": "story_choice",
+        "scope": "local"
+      },
+      "x": 1445,
+      "y": 814,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "bdc931fb-873f-4b34-96e0-67f0458430e8": {
+      "title": "Dict Set",
+      "id": "bdc931fb-873f-4b34-96e0-67f0458430e8",
+      "properties": {
+        "key": null
+      },
+      "x": 1704,
+      "y": 805,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "532c7aba-0a3f-497a-a70e-50105592f76f": {
+      "title": "Render Prompt",
+      "id": "532c7aba-0a3f-497a-a70e-50105592f76f",
+      "properties": {},
+      "x": 505,
+      "y": 1897,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/RenderPrompt",
+      "base_type": "core/Node"
+    },
+    "3aebfba2-4d7f-4ca5-b60b-f8b6acb5e2f0": {
+      "title": "GET local.template_variables",
+      "id": "3aebfba2-4d7f-4ca5-b60b-f8b6acb5e2f0",
+      "properties": {
+        "name": "template_variables",
+        "scope": "local"
+      },
+      "x": -222,
+      "y": 1956,
+      "width": 235,
+      "height": 125,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "5c2b46e1-e788-4726-8644-5a4f1510023c": {
+      "title": "Template Variables",
+      "id": "5c2b46e1-e788-4726-8644-5a4f1510023c",
+      "properties": {},
+      "x": 48,
+      "y": 1896,
+      "width": 170,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/TemplateVariables",
+      "base_type": "core/Node"
+    },
+    "e341e070-355f-4203-a577-c9cc131bfe9c": {
+      "title": "Prompt From Template",
+      "id": "e341e070-355f-4203-a577-c9cc131bfe9c",
+      "properties": {
+        "scope": "scene",
+        "template_file": "",
+        "template_text": ""
+      },
+      "x": 268,
+      "y": 1856,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/PromptFromTemplate",
+      "base_type": "core/Node"
+    },
+    "c91d620a-1cec-40d6-b23a-e2c19d8e766f": {
+      "title": "director",
+      "id": "c91d620a-1cec-40d6-b23a-e2c19d8e766f",
+      "properties": {
+        "agent_name": "creator"
+      },
+      "x": -212,
+      "y": 1826,
+      "width": 230,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "085729eb-fefb-4490-9e39-1aafca07289f": {
+      "title": "Generate Response",
+      "id": "085729eb-fefb-4490-9e39-1aafca07289f",
+      "properties": {
+        "data_output": false,
+        "response_length": 1024,
+        "action_type": "scene_direction",
+        "attempts": 1
+      },
+      "x": 1612,
+      "y": 202,
+      "width": 251,
+      "height": 190,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "fc181553-db26-4666-a679-afd5edfd4ab5": {
+      "title": "Stage 5",
+      "id": "fc181553-db26-4666-a679-afd5edfd4ab5",
+      "properties": {
+        "stage": 5
+      },
+      "x": 1188,
+      "y": 1716,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "6ab6598b-151d-44ef-920f-0810f6da88b5": {
+      "title": "Contextual Generate",
+      "id": "6ab6598b-151d-44ef-920f-0810f6da88b5",
+      "properties": {
+        "context_type": "scene intent",
+        "context_name": "story expectations",
+        "instructions": null,
+        "length": 512,
+        "character": null,
+        "uid": null,
+        "context_aware": true,
+        "history_aware": true
+      },
+      "x": 647,
+      "y": 1172,
+      "width": 237,
+      "height": 406,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
+    },
+    "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0": {
+      "title": "Contextual Generate",
+      "id": "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0",
+      "properties": {
+        "context_type": "scene intro",
+        "context_name": "general",
+        "instructions": null,
+        "length": 512,
+        "character": null,
+        "uid": null,
+        "context_aware": true,
+        "history_aware": true
+      },
+      "x": 686,
+      "y": 1691,
+      "width": 237,
+      "height": 406,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
+    },
+    "1937cd37-346a-4c39-be5c-5033bbf9e09e": {
+      "title": "Instruction Template",
+      "id": "1937cd37-346a-4c39-be5c-5033bbf9e09e",
+      "properties": {
+        "value": "{% if story_choice %}Generate the introduction for this new \"{{ scene_title }}\" story: \n\n{{ story_choice }}\n\n{% else %}\nGenerate the introduction to a new \"{{ scene_title }}\" story based on the topic \"{{ topic }}\" and the theme \"{{ theme }}\".\n{% endif %}"
+      },
+      "x": -132,
+      "y": 1686,
+      "width": 272,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "a9e0118c-f630-4723-9a09-af0c45b42b53": {
+      "title": "Make Text",
+      "id": "a9e0118c-f630-4723-9a09-af0c45b42b53",
+      "properties": {
+        "value": "Generate a story intent based on the the following premise, make sure to include broad strokes of the overall story:\n\n{{ story_choice }}"
+      },
+      "x": -214,
+      "y": 1187,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "8f405443-0bd3-419d-8122-66225592e716": {
+      "title": "Emit Status",
+      "id": "8f405443-0bd3-419d-8122-66225592e716",
+      "properties": {
+        "message": "Generating a new story line",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 9,
+      "y": -749,
+      "width": 282,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitStatus",
+      "base_type": "core/Node"
+    },
+    "53be9345-9126-4012-916a-014eb0004101": {
+      "title": "true",
+      "id": "53be9345-9126-4012-916a-014eb0004101",
+      "properties": {
+        "value": true
+      },
+      "x": 380,
+      "y": -490,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "b13e3c4b-7df7-450e-b7b5-a96d7b4bd0dd": {
+      "title": "Stage 2",
+      "id": "b13e3c4b-7df7-450e-b7b5-a96d7b4bd0dd",
+      "properties": {
+        "stage": 2
+      },
+      "x": 2371,
+      "y": 169,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "37ecc888-c9e2-4138-9d33-fe06e52d05cb": {
+      "title": "Emit Status (Conditional)",
+      "id": "37ecc888-c9e2-4138-9d33-fe06e52d05cb",
+      "properties": {
+        "message": "Generating a new story line - Selecting theme",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 520,
+      "y": -490,
+      "width": 210,
+      "height": 166,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "17ac652c-fb77-43ec-9184-2ad84cd4ae1e": {
+      "title": "Switch",
+      "id": "17ac652c-fb77-43ec-9184-2ad84cd4ae1e",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 1101,
+      "y": 107,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "ba261322-afc9-4d6d-be45-b071446d8f0e": {
+      "title": "IN state",
+      "id": "ba261322-afc9-4d6d-be45-b071446d8f0e",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": "",
+        "num": 1
+      },
+      "x": -761,
+      "y": 1036,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "e50adef8-badf-4c69-ad16-10abf540f21b": {
+      "title": "GET local.theme",
+      "id": "e50adef8-badf-4c69-ad16-10abf540f21b",
+      "properties": {
+        "name": "theme",
+        "scope": "local"
+      },
+      "x": -761,
+      "y": 1510,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "f31cd7cc-169b-461f-88c7-5ad5bfabc6d5": {
+      "title": "Emit Status (Conditional)",
+      "id": "f31cd7cc-169b-461f-88c7-5ad5bfabc6d5",
+      "properties": {
+        "message": "Generating a new story line - Analyzing theme",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 1362,
+      "y": 203,
+      "width": 210,
+      "height": 166,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "9cab6c50-f98d-48f5-a34c-6dd6b3d0cafa": {
+      "title": "Stage 3",
+      "id": "9cab6c50-f98d-48f5-a34c-6dd6b3d0cafa",
+      "properties": {
+        "stage": 3
+      },
+      "x": 1971,
+      "y": 815,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322": {
+      "title": "Switch",
+      "id": "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 581,
+      "y": 685,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "d65d29ca-55e7-43af-b5d6-847eac15bfa7": {
+      "title": "Emit Status (Conditional)",
+      "id": "d65d29ca-55e7-43af-b5d6-847eac15bfa7",
+      "properties": {
+        "message": "Generating a new story line - Selecting story idea.",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 881,
+      "y": 745,
+      "width": 210,
+      "height": 166,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "fd2c09be-8994-49a3-98b8-d7d3e2304aa2": {
+      "title": "Stage 4",
+      "id": "fd2c09be-8994-49a3-98b8-d7d3e2304aa2",
+      "properties": {
+        "stage": 4
+      },
+      "x": 1191,
+      "y": 1170,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "5093769d-17b3-4a02-9180-aaf4cdf844a0": {
+      "title": "Emit Status (Conditional)",
+      "id": "5093769d-17b3-4a02-9180-aaf4cdf844a0",
+      "properties": {
+        "message": "Generating a new story line - Generating story intention.",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 420,
+      "y": 1190,
+      "width": 210,
+      "height": 166,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "d4017f75-26f2-4220-ab5a-c0bf769063f0": {
+      "title": "true",
+      "id": "d4017f75-26f2-4220-ab5a-c0bf769063f0",
+      "properties": {
+        "value": true
+      },
+      "x": 280,
+      "y": 1190,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "90484246-29a6-4dca-96a1-c8803376400d": {
+      "title": "true",
+      "id": "90484246-29a6-4dca-96a1-c8803376400d",
+      "properties": {
+        "value": true
+      },
+      "x": 340,
+      "y": 1702,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "0d4607c9-2dbb-44a0-b5fb-4878f8401a5f": {
+      "title": "Solidify Choice Template",
+      "id": "0d4607c9-2dbb-44a0-b5fb-4878f8401a5f",
+      "properties": {
+        "value": "<|SECTION:STORY BASELINE|>\n{{ scene_title }}\n\n{{ scene.description }}\n\n<|SECTION:PROTAGONISTS|>\n{% for character in scene.characters %}\n### {{ character.name }}\n{{ character.description }}\n{% endfor %}\n\n<|SECTION:CONTEXT OF YOUR TASK|>\nA topic description of \"{{ topic }}\" was given and a random theme was picked to bootstrap a new storyline: \"{{ theme }}\".\n\nThe topic and theme were considered and the following analysis was generated:\n\n<|SECTION:THEME ANALYSIS|>\n{{ theme_analysis }}\n\n<|SECTION:TASK|>\nThe analysis contains multiple proposals for potential story lines. \n\nYour task is to pick the most interesting one and then briefly explain how this story line makes sense within the context of  {{ scene_title }}.\n\nInclude broad strokes about what the story line could be.\n\n\nYour choice and explanation will be given to the story editor to write the introduction to this new story line.\n\nBe concise and to the point."
+      },
+      "x": 63,
+      "y": 995,
+      "width": 300,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "1f84a0b8-e007-4d44-a831-cb85d1cc7155": {
+      "title": "Generate Response",
+      "id": "1f84a0b8-e007-4d44-a831-cb85d1cc7155",
+      "properties": {
+        "data_output": false,
+        "response_length": 512,
+        "action_type": "scene_direction",
+        "attempts": 1
+      },
+      "x": 1147,
+      "y": 804,
+      "width": 251,
+      "height": 190,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "e3d42215-165c-44d1-907f-a39f71a1209f": {
+      "title": "Input Value Error",
+      "id": "e3d42215-165c-44d1-907f-a39f71a1209f",
+      "properties": {
+        "message": "Topic needs to be specified",
+        "field": "topic"
+      },
+      "x": -775,
+      "y": 273,
+      "width": 262,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/InputValueError",
+      "base_type": "core/Node"
+    },
+    "531c3abf-1827-4db2-a6d8-1daba3f05bbd": {
+      "title": "GET local.topic",
+      "id": "531c3abf-1827-4db2-a6d8-1daba3f05bbd",
+      "properties": {
+        "name": "topic",
+        "scope": "local"
+      },
+      "x": -220,
+      "y": -330,
+      "width": 245,
+      "height": 125,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "42227ab2-9ef4-4760-9486-fc23c06a50e3": {
+      "title": "GET local.theme",
+      "id": "42227ab2-9ef4-4760-9486-fc23c06a50e3",
+      "properties": {
+        "name": "theme",
+        "scope": "local"
+      },
+      "x": -210,
+      "y": -50,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "55ef5134-53b4-4615-b5ba-74114f57904c": {
+      "title": "As Bool",
+      "id": "55ef5134-53b4-4615-b5ba-74114f57904c",
+      "properties": {
+        "default": false
+      },
+      "x": -1270,
+      "y": 260,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "61afec01-eaa5-4640-8c4a-702439fc5a81": {
+      "title": "Switch",
+      "id": "61afec01-eaa5-4640-8c4a-702439fc5a81",
+      "properties": {
+        "pass_through": false
+      },
+      "x": -1020,
+      "y": 260,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "9cd1916d-99cc-4670-8b1c-8271bbe37f4d": {
+      "title": "GET local.topic",
+      "id": "9cd1916d-99cc-4670-8b1c-8271bbe37f4d",
+      "properties": {
+        "name": "topic",
+        "scope": "local"
+      },
+      "x": -1550,
+      "y": 260,
+      "width": 245,
+      "height": 125,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "3ae8ef74-bca9-48b7-9a9c-051a785723af": {
+      "title": "exc",
+      "id": "3ae8ef74-bca9-48b7-9a9c-051a785723af",
+      "properties": {
+        "name": "exc",
+        "typ": "str"
+      },
+      "x": -2133,
+      "y": 582,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "f7b9fa16-c3ed-4c8c-8624-1b79a5bdf1d1": {
+      "title": "FN error_handler",
+      "id": "f7b9fa16-c3ed-4c8c-8624-1b79a5bdf1d1",
+      "properties": {
+        "name": "error_handler"
+      },
+      "x": -687,
+      "y": 504,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "c796a34f-2549-42a8-ba94-541c407edac8": {
+      "title": "Return",
+      "id": "c796a34f-2549-42a8-ba94-541c407edac8",
+      "properties": {},
+      "x": -692,
+      "y": 676,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "83233713-efc3-46f3-b37b-6c131afa562d": {
+      "title": "Coallesce",
+      "id": "83233713-efc3-46f3-b37b-6c131afa562d",
+      "properties": {},
+      "x": -889,
+      "y": 686,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "576abda7-297d-4386-8cba-b6db5b6995c0": {
+      "title": "Emit Status (Conditional)",
+      "id": "576abda7-297d-4386-8cba-b6db5b6995c0",
+      "properties": {
+        "message": "Something went wrong",
+        "status": "error",
+        "as_scene_message": true
+      },
+      "x": -1269,
+      "y": 756,
+      "width": 267,
+      "height": 168,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "396c90e5-9aee-4edd-b952-a26505362aff": {
+      "title": "Error Handler",
+      "id": "396c90e5-9aee-4edd-b952-a26505362aff",
+      "properties": {},
+      "x": -445,
+      "y": 522,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ErrorHandler",
+      "base_type": "core/Node"
+    },
+    "ef940748-c669-4b3e-a819-034a7fb4c3ce": {
+      "title": "Unpack Exception",
+      "id": "ef940748-c669-4b3e-a819-034a7fb4c3ce",
+      "properties": {},
+      "x": -1873,
+      "y": 582,
+      "width": 170,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/UnpackException",
+      "base_type": "core/Node"
+    },
+    "db09225b-d9ef-4c3c-b4ab-61c4a034d345": {
+      "title": "DEF error_handler",
+      "id": "db09225b-d9ef-4c3c-b4ab-61c4a034d345",
+      "properties": {
+        "name": "error_handler"
+      },
+      "x": -487,
+      "y": 671,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "fdccd4f8-3b0b-43d8-83d8-513d875f9c08": {
+      "title": "Case",
+      "id": "fdccd4f8-3b0b-43d8-83d8-513d875f9c08",
+      "properties": {
+        "attribute_name": "",
+        "case_a": "GenerationCancelled",
+        "case_b": "",
+        "case_c": "",
+        "case_d": ""
+      },
+      "x": -1639,
+      "y": 586,
+      "width": 277,
+      "height": 235,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Case",
+      "base_type": "core/Node"
+    },
+    "dc8fe5d6-baa6-4741-89a5-227df7bc559f": {
+      "title": "Emit Status (Conditional)",
+      "id": "dc8fe5d6-baa6-4741-89a5-227df7bc559f",
+      "properties": {
+        "message": "Generation cancelled.",
+        "status": "warning",
+        "as_scene_message": true
+      },
+      "x": -1269,
+      "y": 529,
+      "width": 267,
+      "height": 168,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "290d821f-6be9-4130-9965-4f0823342725": {
+      "title": "Instructions",
+      "id": "290d821f-6be9-4130-9965-4f0823342725",
+      "properties": {
+        "value": "A list of topics to use for brain storming. The overarching theme is described as \"{{ topic }}\". Keep each item short (1-3 words). One of these items will be chosen to bootstrap a new story line."
+      },
+      "x": -224,
+      "y": -461,
+      "width": 237,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "8ac96580-b955-4cab-b612-1e6409f51430": {
+      "title": "IN intro_length",
+      "id": "8ac96580-b955-4cab-b612-1e6409f51430",
+      "properties": {
+        "input_type": "int",
+        "input_name": "intro_length",
+        "input_optional": true,
+        "input_group": "",
+        "num": 2
+      },
+      "x": -1680,
+      "y": -18,
+      "width": 252,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "4ade4a72-cd70-4217-a7f9-7eb858009903": {
+      "title": "RSwitch",
+      "id": "4ade4a72-cd70-4217-a7f9-7eb858009903",
+      "properties": {},
+      "x": -1150,
+      "y": -17,
+      "width": 140,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
+    },
+    "87845ffc-8a5a-4bd5-bb96-17d4b881de6a": {
+      "title": "SET local.intro_length",
+      "id": "87845ffc-8a5a-4bd5-bb96-17d4b881de6a",
+      "properties": {
+        "name": "intro_length",
+        "scope": "local"
+      },
+      "x": -960,
+      "y": -17,
+      "width": 260,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "6c50e530-c90a-4c31-83bb-ce6dacc459b8": {
+      "title": "Stage -2",
+      "id": "6c50e530-c90a-4c31-83bb-ce6dacc459b8",
+      "properties": {
+        "stage": -2
+      },
+      "x": -486,
+      "y": -377,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "a87aa8ff-384e-422d-8dd4-1c96768dddbf": {
+      "title": "Emit Status (Conditional)",
+      "id": "a87aa8ff-384e-422d-8dd4-1c96768dddbf",
+      "properties": {
+        "message": "Generating a new story line - Generating narration",
+        "status": "busy",
+        "as_scene_message": true
+      },
+      "x": 460,
+      "y": 1710,
+      "width": 210,
+      "height": 166,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "event/EmitStatusConditional",
+      "base_type": "core/Node"
+    },
+    "12894421-c57a-4d7c-8580-de334830f7e2": {
+      "title": "GET local.intro_length",
+      "id": "12894421-c57a-4d7c-8580-de334830f7e2",
+      "properties": {
+        "name": "intro_length",
+        "scope": "local"
+      },
+      "x": 430,
+      "y": 1800,
+      "width": 348,
+      "height": 126,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "7b7c9437-78b8-41b2-be3c-1a8adc5b5c22": {
+      "title": "MakeNumber",
+      "id": "7b7c9437-78b8-41b2-be3c-1a8adc5b5c22",
+      "properties": {
+        "value": 512,
+        "number_type": "int"
+      },
+      "x": -1398,
+      "y": 74,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Make",
+      "base_type": "core/Node"
+    },
+    "058f5b1d-6de3-43eb-9311-d3b5d92bafe0": {
+      "title": "Stage -1",
+      "id": "058f5b1d-6de3-43eb-9311-d3b5d92bafe0",
+      "properties": {
+        "stage": -1
+      },
+      "x": -483,
+      "y": 273,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "40d341e5-affa-4f3c-acae-7cebb556c1c6.result": [
+      "208eccc3-9eb8-4938-b182-ee9fa4626677.value"
+    ],
+    "208eccc3-9eb8-4938-b182-ee9fa4626677.value": [
+      "de75cf1f-f2e6-4f88-ad8e-77ca2d35ea74.value"
+    ],
+    "8fbb2ad2-2c28-44cb-bc40-f2a02bfa4e16.prompt": [
+      "4693f9aa-6489-4a36-a74c-8f9262baee5a.prompt"
+    ],
+    "7422c62a-7655-454e-b6a4-2ed726cd8870.list": [
+      "40d341e5-affa-4f3c-acae-7cebb556c1c6.choices"
+    ],
+    "4693f9aa-6489-4a36-a74c-8f9262baee5a.rendered": [
+      "7422c62a-7655-454e-b6a4-2ed726cd8870.instructions"
+    ],
+    "de75cf1f-f2e6-4f88-ad8e-77ca2d35ea74.value": [
+      "94603a9b-e6a5-4944-a621-558dd9395818.state"
+    ],
+    "8841e87b-e372-482f-b58f-e0a892e1b7b9.prompt": [
+      "085729eb-fefb-4490-9e39-1aafca07289f.prompt"
+    ],
+    "b0f1ff55-d727-4055-8e2d-cd3a267f8164.agent": [
+      "bd8fa024-ef74-45be-9ba4-fc3b99790772.agent"
+    ],
+    "0f4128ac-8840-463a-8348-4f003fe0b6fe.dict": [
+      "277e5de6-e128-4675-b80b-a212149e3fd0.dict"
+    ],
+    "cd5dda3f-42d6-41ff-abb7-91c4b97de6af.dict": [
+      "0f4128ac-8840-463a-8348-4f003fe0b6fe.dict"
+    ],
+    "7ab85266-2ce1-4434-8a32-e76710b97a88.name": [
+      "0f4128ac-8840-463a-8348-4f003fe0b6fe.key"
+    ],
+    "7ab85266-2ce1-4434-8a32-e76710b97a88.value": [
+      "0f4128ac-8840-463a-8348-4f003fe0b6fe.value"
+    ],
+    "2d8aab05-4563-4ac6-8242-2171be615b16.name": [
+      "277e5de6-e128-4675-b80b-a212149e3fd0.key"
+    ],
+    "2d8aab05-4563-4ac6-8242-2171be615b16.value": [
+      "277e5de6-e128-4675-b80b-a212149e3fd0.value"
+    ],
+    "d83755ec-46f4-4d0d-9f03-45e4c9f0baf6.value": [
+      "16f6c12f-22ca-4ff5-86f1-6f605cdb98a7.value"
+    ],
+    "8627e3dc-6ad8-42ed-84fc-8d793fbfd85c.value": [
+      "08e99d86-5908-4959-8b37-c6f64344ab45.value"
+    ],
+    "08e99d86-5908-4959-8b37-c6f64344ab45.value": [
+      "6c50e530-c90a-4c31-83bb-ce6dacc459b8.state"
+    ],
+    "c365a4a9-fcdb-4c43-8fa5-4502674663e4.value": [
+      "e2340346-3737-4f94-927f-4cef3f517647.value"
+    ],
+    "e2340346-3737-4f94-927f-4cef3f517647.value": [
+      "6c50e530-c90a-4c31-83bb-ce6dacc459b8.state_b"
+    ],
+    "17bccdda-7546-4a60-9492-c95bcc8cf9cf.value": [
+      "2629c91a-74d2-4c25-962d-f1b74163147b.value"
+    ],
+    "931767d1-0a60-48a0-b754-7189573dcfe8.value": [
+      "6c50e530-c90a-4c31-83bb-ce6dacc459b8.state_c"
+    ],
+    "2629c91a-74d2-4c25-962d-f1b74163147b.value": [
+      "931767d1-0a60-48a0-b754-7189573dcfe8.value"
+    ],
+    "08e3d297-9342-40e6-9ddc-f86283d8728a.dict": [
+      "8fbb2ad2-2c28-44cb-bc40-f2a02bfa4e16.variables"
+    ],
+    "44bf83e8-c6b9-4c45-8dd6-e22aedff879b.state": [
+      "fd2c09be-8994-49a3-98b8-d7d3e2304aa2.state"
+    ],
+    "55979f0a-d3c9-4a76-960f-7ac0f3fcd76a.prompt": [
+      "ea9bf575-80e1-4296-9f52-c3e0d79a6335.prompt"
+    ],
+    "ea9bf575-80e1-4296-9f52-c3e0d79a6335.rendered": [
+      "6ab6598b-151d-44ef-920f-0810f6da88b5.instructions"
+    ],
+    "b2b78f64-c308-470a-a492-9f8e605208a9.value": [
+      "55979f0a-d3c9-4a76-960f-7ac0f3fcd76a.variables"
+    ],
+    "83655997-bb35-4f8b-a5ff-eca5b78acfbe.value": [
+      "fc181553-db26-4666-a679-afd5edfd4ab5.state"
+    ],
+    "bd8fa024-ef74-45be-9ba4-fc3b99790772.variables": [
+      "8841e87b-e372-482f-b58f-e0a892e1b7b9.variables"
+    ],
+    "bd8fa024-ef74-45be-9ba4-fc3b99790772.agent": [
+      "085729eb-fefb-4490-9e39-1aafca07289f.agent"
+    ],
+    "277e5de6-e128-4675-b80b-a212149e3fd0.dict": [
+      "bd8fa024-ef74-45be-9ba4-fc3b99790772.merge_with",
+      "ac0a4a5f-c440-41d7-9af1-2a0bdce0b8df.value"
+    ],
+    "2ad9c727-c61b-402b-a11c-e7d7f1f4b322.value": [
+      "17ac652c-fb77-43ec-9184-2ad84cd4ae1e.value"
+    ],
+    "7d00d4cb-553c-4fb5-ad77-478198bd08e0.variables": [
+      "dd9ea0f4-c777-426c-8124-601db7f92668.variables"
+    ],
+    "7d00d4cb-553c-4fb5-ad77-478198bd08e0.agent": [
+      "1f84a0b8-e007-4d44-a831-cb85d1cc7155.agent"
+    ],
+    "95e1204b-b62f-47b2-ad7b-01e11288ecce.value": [
+      "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322.value"
+    ],
+    "dd9ea0f4-c777-426c-8124-601db7f92668.prompt": [
+      "1f84a0b8-e007-4d44-a831-cb85d1cc7155.prompt"
+    ],
+    "b3a2a89e-d3ef-4921-aac1-e464451f5347.name": [
+      "8995d417-0c41-480e-a300-07c57260e1c7.key"
+    ],
+    "b3a2a89e-d3ef-4921-aac1-e464451f5347.value": [
+      "8995d417-0c41-480e-a300-07c57260e1c7.value"
+    ],
+    "8995d417-0c41-480e-a300-07c57260e1c7.value": [
+      "b13e3c4b-7df7-450e-b7b5-a96d7b4bd0dd.state"
+    ],
+    "c12346ff-7182-4513-b045-94ccb8217d5a.agent": [
+      "7d00d4cb-553c-4fb5-ad77-478198bd08e0.agent"
+    ],
+    "d6e69490-3be8-4307-9aa3-85589edf905b.value": [
+      "7d00d4cb-553c-4fb5-ad77-478198bd08e0.merge_with"
+    ],
+    "ac0a4a5f-c440-41d7-9af1-2a0bdce0b8df.value": [
+      "8995d417-0c41-480e-a300-07c57260e1c7.dict"
+    ],
+    "a3de6cce-c44f-4cd7-b4c2-511baf2e0dbf.value": [
+      "8841e87b-e372-482f-b58f-e0a892e1b7b9.template_text"
+    ],
+    "b99d35b6-46be-4268-98e7-19dd0d0155c6.value": [
+      "bdc931fb-873f-4b34-96e0-67f0458430e8.dict"
+    ],
+    "c5d05d7b-6b85-4b76-9a40-fee92b540a2f.name": [
+      "bdc931fb-873f-4b34-96e0-67f0458430e8.key"
+    ],
+    "c5d05d7b-6b85-4b76-9a40-fee92b540a2f.value": [
+      "bdc931fb-873f-4b34-96e0-67f0458430e8.value"
+    ],
+    "bdc931fb-873f-4b34-96e0-67f0458430e8.value": [
+      "9cab6c50-f98d-48f5-a34c-6dd6b3d0cafa.state"
+    ],
+    "532c7aba-0a3f-497a-a70e-50105592f76f.rendered": [
+      "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.instructions"
+    ],
+    "3aebfba2-4d7f-4ca5-b60b-f8b6acb5e2f0.value": [
+      "5c2b46e1-e788-4726-8644-5a4f1510023c.merge_with"
+    ],
+    "5c2b46e1-e788-4726-8644-5a4f1510023c.variables": [
+      "e341e070-355f-4203-a577-c9cc131bfe9c.variables"
+    ],
+    "e341e070-355f-4203-a577-c9cc131bfe9c.prompt": [
+      "532c7aba-0a3f-497a-a70e-50105592f76f.prompt"
+    ],
+    "c91d620a-1cec-40d6-b23a-e2c19d8e766f.agent": [
+      "5c2b46e1-e788-4726-8644-5a4f1510023c.agent"
+    ],
+    "085729eb-fefb-4490-9e39-1aafca07289f.response": [
+      "b3a2a89e-d3ef-4921-aac1-e464451f5347.value"
+    ],
+    "6ab6598b-151d-44ef-920f-0810f6da88b5.state": [
+      "44bf83e8-c6b9-4c45-8dd6-e22aedff879b.state"
+    ],
+    "6ab6598b-151d-44ef-920f-0810f6da88b5.text": [
+      "44bf83e8-c6b9-4c45-8dd6-e22aedff879b.intent"
+    ],
+    "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.text": [
+      "83655997-bb35-4f8b-a5ff-eca5b78acfbe.value"
+    ],
+    "1937cd37-346a-4c39-be5c-5033bbf9e09e.value": [
+      "e341e070-355f-4203-a577-c9cc131bfe9c.template_text"
+    ],
+    "a9e0118c-f630-4723-9a09-af0c45b42b53.value": [
+      "55979f0a-d3c9-4a76-960f-7ac0f3fcd76a.template_text"
+    ],
+    "8f405443-0bd3-419d-8122-66225592e716.emitted": [
+      "69332967-7ac9-4940-b7f4-7a77d2333f05.state_b"
+    ],
+    "53be9345-9126-4012-916a-014eb0004101.value": [
+      "37ecc888-c9e2-4138-9d33-fe06e52d05cb.state"
+    ],
+    "37ecc888-c9e2-4138-9d33-fe06e52d05cb.state": [
+      "7422c62a-7655-454e-b6a4-2ed726cd8870.state"
+    ],
+    "17ac652c-fb77-43ec-9184-2ad84cd4ae1e.yes": [
+      "f31cd7cc-169b-461f-88c7-5ad5bfabc6d5.state"
+    ],
+    "ba261322-afc9-4d6d-be45-b071446d8f0e.value": [
+      "eb68c23f-72be-4115-95ca-1f7b212b16f5.value"
+    ],
+    "e50adef8-badf-4c69-ad16-10abf540f21b.value": [
+      "6bed1f60-8b79-41c0-a8e7-bb8a157c0f32.value"
+    ],
+    "f31cd7cc-169b-461f-88c7-5ad5bfabc6d5.state": [
+      "085729eb-fefb-4490-9e39-1aafca07289f.state"
+    ],
+    "3fce18c2-4e98-4ddc-9ff2-b541f8e7f322.yes": [
+      "d65d29ca-55e7-43af-b5d6-847eac15bfa7.state"
+    ],
+    "d65d29ca-55e7-43af-b5d6-847eac15bfa7.state": [
+      "1f84a0b8-e007-4d44-a831-cb85d1cc7155.state"
+    ],
+    "5093769d-17b3-4a02-9180-aaf4cdf844a0.state": [
+      "6ab6598b-151d-44ef-920f-0810f6da88b5.state"
+    ],
+    "d4017f75-26f2-4220-ab5a-c0bf769063f0.value": [
+      "5093769d-17b3-4a02-9180-aaf4cdf844a0.state"
+    ],
+    "90484246-29a6-4dca-96a1-c8803376400d.value": [
+      "a87aa8ff-384e-422d-8dd4-1c96768dddbf.state"
+    ],
+    "0d4607c9-2dbb-44a0-b5fb-4878f8401a5f.value": [
+      "dd9ea0f4-c777-426c-8124-601db7f92668.template_text"
+    ],
+    "1f84a0b8-e007-4d44-a831-cb85d1cc7155.response": [
+      "c5d05d7b-6b85-4b76-9a40-fee92b540a2f.value"
+    ],
+    "e3d42215-165c-44d1-907f-a39f71a1209f.state": [
+      "058f5b1d-6de3-43eb-9311-d3b5d92bafe0.state"
+    ],
+    "531c3abf-1827-4db2-a6d8-1daba3f05bbd.name": [
+      "08e3d297-9342-40e6-9ddc-f86283d8728a.key"
+    ],
+    "531c3abf-1827-4db2-a6d8-1daba3f05bbd.value": [
+      "08e3d297-9342-40e6-9ddc-f86283d8728a.value"
+    ],
+    "42227ab2-9ef4-4760-9486-fc23c06a50e3.name": [
+      "cd5dda3f-42d6-41ff-abb7-91c4b97de6af.key"
+    ],
+    "42227ab2-9ef4-4760-9486-fc23c06a50e3.value": [
+      "cd5dda3f-42d6-41ff-abb7-91c4b97de6af.value"
+    ],
+    "55ef5134-53b4-4615-b5ba-74114f57904c.value": [
+      "61afec01-eaa5-4640-8c4a-702439fc5a81.value"
+    ],
+    "61afec01-eaa5-4640-8c4a-702439fc5a81.no": [
+      "e3d42215-165c-44d1-907f-a39f71a1209f.state"
+    ],
+    "9cd1916d-99cc-4670-8b1c-8271bbe37f4d.value": [
+      "55ef5134-53b4-4615-b5ba-74114f57904c.value"
+    ],
+    "3ae8ef74-bca9-48b7-9a9c-051a785723af.value": [
+      "ef940748-c669-4b3e-a819-034a7fb4c3ce.exc"
+    ],
+    "f7b9fa16-c3ed-4c8c-8624-1b79a5bdf1d1.fn": [
+      "396c90e5-9aee-4edd-b952-a26505362aff.fn"
+    ],
+    "c796a34f-2549-42a8-ba94-541c407edac8.value": [
+      "db09225b-d9ef-4c3c-b4ab-61c4a034d345.nodes"
+    ],
+    "83233713-efc3-46f3-b37b-6c131afa562d.value": [
+      "c796a34f-2549-42a8-ba94-541c407edac8.value"
+    ],
+    "576abda7-297d-4386-8cba-b6db5b6995c0.state": [
+      "83233713-efc3-46f3-b37b-6c131afa562d.b"
+    ],
+    "ef940748-c669-4b3e-a819-034a7fb4c3ce.name": [
+      "fdccd4f8-3b0b-43d8-83d8-513d875f9c08.value"
+    ],
+    "fdccd4f8-3b0b-43d8-83d8-513d875f9c08.a": [
+      "dc8fe5d6-baa6-4741-89a5-227df7bc559f.state"
+    ],
+    "fdccd4f8-3b0b-43d8-83d8-513d875f9c08.none": [
+      "576abda7-297d-4386-8cba-b6db5b6995c0.state"
+    ],
+    "dc8fe5d6-baa6-4741-89a5-227df7bc559f.state": [
+      "83233713-efc3-46f3-b37b-6c131afa562d.a"
+    ],
+    "290d821f-6be9-4130-9965-4f0823342725.value": [
+      "8fbb2ad2-2c28-44cb-bc40-f2a02bfa4e16.template_text"
+    ],
+    "8ac96580-b955-4cab-b612-1e6409f51430.value": [
+      "4ade4a72-cd70-4217-a7f9-7eb858009903.check",
+      "4ade4a72-cd70-4217-a7f9-7eb858009903.yes"
+    ],
+    "4ade4a72-cd70-4217-a7f9-7eb858009903.value": [
+      "87845ffc-8a5a-4bd5-bb96-17d4b881de6a.value"
+    ],
+    "87845ffc-8a5a-4bd5-bb96-17d4b881de6a.value": [
+      "6c50e530-c90a-4c31-83bb-ce6dacc459b8.state_d"
+    ],
+    "a87aa8ff-384e-422d-8dd4-1c96768dddbf.state": [
+      "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.state"
+    ],
+    "12894421-c57a-4d7c-8580-de334830f7e2.value": [
+      "f2c5d29a-2309-4498-97bb-aa5fc8abe7c0.length"
+    ],
+    "7b7c9437-78b8-41b2-be3c-1a8adc5b5c22.value": [
+      "4ade4a72-cd70-4217-a7f9-7eb858009903.no"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Generate Theme - Stage 1",
+      "x": -247,
+      "y": -573,
+      "width": 2382,
+      "height": 398,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Generate Introduction - Stage 5",
+      "x": -247,
+      "y": 1606,
+      "width": 1670,
+      "height": 516,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Outputs",
+      "x": -797,
+      "y": 954,
+      "width": 545,
+      "height": 720,
+      "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Analyze Theme - Stage 2",
+      "x": -247,
+      "y": -172,
+      "width": 2853,
+      "height": 714,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Inputs",
+      "x": -1705,
+      "y": -828,
+      "width": 1454,
+      "height": 1007,
+      "color": "#88A",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Init - Stage 0",
+      "x": -248,
+      "y": -829,
+      "width": 802,
+      "height": 251,
+      "color": "#8AA",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Error Handler",
+      "x": -2158,
+      "y": 423,
+      "width": 1906,
+      "height": 525,
+      "color": "#A88",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Generate Story Intention - Stage 4",
+      "x": -247,
+      "y": 1089,
+      "width": 1673,
+      "height": 513,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Choose Theme and Solidify Story Choice - Stage 3",
+      "x": -247,
+      "y": 545,
+      "width": 2453,
+      "height": 541,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Input Validation",
+      "x": -1571,
+      "y": 183,
+      "width": 1320,
+      "height": 237,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [
+    {
+      "text": "Generates a list of short relevant themes to use to bootstrap a new story line.  Will consider the overarching topic.",
+      "x": 770,
+      "y": -360,
+      "width": 303,
+      "inherited": false
+    },
+    {
+      "text": "Takes the selected theme from Stage 1 and the analysis of it from Stage 2 and uses it to generate a new introductory text for the scene, starting a new storyline.",
+      "x": 943,
+      "y": 1860,
+      "width": 354,
+      "inherited": false
+    },
+    {
+      "text": "Responsible for analyzing the selected theme and proposing potential story lines in the context of the encompassing story baseline.",
+      "x": 1623,
+      "y": 424,
+      "width": 411,
+      "inherited": false
+    },
+    {
+      "text": "If topic is a \"\" turn it into False.",
+      "x": -1270,
+      "y": 340,
+      "width": 235,
+      "inherited": false
+    }
+  ],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [
+    {
+      "id": "f5a5e72c-976c-404c-9928-391fcb6cdb15",
+      "name": "topic",
+      "optional": false,
+      "group": "",
+      "socket_type": "str"
+    },
+    {
+      "id": "17d0063e-8471-4939-8171-d6b55ad9471d",
+      "name": "analysis_instructions",
+      "optional": true,
+      "group": "",
+      "socket_type": "str"
+    },
+    {
+      "id": "06baf1c2-33ae-4b58-90ac-46f8eab9c749",
+      "name": "analysis_enabled",
+      "optional": true,
+      "group": "",
+      "socket_type": "bool"
+    },
+    {
+      "id": "14a5a901-3a21-4e08-ada8-6f3ddc4bff4a",
+      "name": "state",
+      "optional": false,
+      "group": "",
+      "socket_type": "any"
+    },
+    {
+      "id": "3bc1beeb-000b-46d9-92bd-ec4c5dceb639",
+      "name": "intro_length",
+      "optional": true,
+      "group": "",
+      "socket_type": "int"
+    }
+  ],
+  "outputs": [
+    {
+      "id": "02f061fd-d4d0-404d-ba99-20171b206944",
+      "name": "state",
+      "optional": false,
+      "group": null,
+      "socket_type": "any"
+    },
+    {
+      "id": "34a79217-9452-4b1b-b715-5c994a29731b",
+      "name": "text",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "f1a881c2-afb7-4667-8234-980aea236a4d",
+      "name": "theme",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    }
+  ],
+  "module_properties": {},
+  "style": {
+    "title_color": "#572e44",
+    "node_color": "#392c34",
+    "icon": "F1719",
+    "auto_title": null
+  }
+}

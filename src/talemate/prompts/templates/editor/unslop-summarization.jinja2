@@ -1,0 +1,173 @@
+<|SECTION:EXAMPLES|>
+
+<REVIEW>
+As the crimson fingers of dawn caressed the slumbering city, our intrepid heroes embarked upon their perilous journey into the unknown. The weight of destiny pressed heavily upon their shoulders as they traversed the treacherous mountain passes, each step bringing them closer to their inevitable confrontation with fate itself. Through trials and tribulations that would break lesser mortals, they persevered with unwavering determination.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This reads like someone's trying to make "they traveled to the mountains" sound like epic poetry. Summaries should be clear and direct, not buried in metaphors about destiny and crimson fingers.
+- Purple prose: SEVERE - "crimson fingers of dawn," "intrepid heroes," "inevitable confrontation with fate"
+- Dialogue present: NO
+- Clichés: EXTREME - every phrase is a fantasy trope
+- Essential information: Heroes traveled through mountain passes at dawn
+- Length: TOO LONG - simple journey over-dramatized
+</ANALYSIS>
+
+<FIX>
+At dawn, the heroes began their journey through the mountain passes toward their destination.
+</FIX>
+
+---
+
+<REVIEW>
+The battle was a symphony of chaos and carnage that raged for three days across the muddy plains of Westmarch. Blood painted the battlefield in macabre artistry as steel clashed against steel in a deadly dance of death. The enemy's cavalry charges shattered against Marcus's spear formations like waves upon rocks, while their archers rained death from the eastern ridge. Warriors fell like autumn leaves before a hurricane's wrath. On the second night, the enemy general attempted a flanking maneuver through the Darkwood, but Marcus's scouts spotted the movement and alerted the reserves. When the dust settled and the screams of the dying faded into haunting silence, Marcus stood victorious but forever changed by the horrors he had witnessed. Half his men lay among the corpses, their sacrifice etched eternally upon his soul. The enemy army retreated north, leaving behind their siege engines and supply wagons.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This has important tactical details buried under purple prose. The three-day duration, location, specific battle tactics, and aftermath details all matter for the plot. Strip the poetry but keep the military information.
+- Purple prose: EXTREME - "symphony of chaos," "macabre artistry," "deadly dance of death," "etched upon his soul"
+- Clichés: MANY - "dust settled," "forever changed," "autumn leaves"
+- Dialogue present: NO
+- Essential information: Three-day battle at Westmarch plains, enemy tactics (cavalry, archers, flanking), Marcus's counter-tactics, victory with 50% casualties, enemy retreat north leaving supplies
+- Length: OVERWRITTEN - but contains substantial plot details
+- Mature content: PRESERVE - violence and death are plot-relevant
+</ANALYSIS>
+
+<FIX>
+The battle at Westmarch plains lasted three days. The enemy used cavalry charges and archer support from the eastern ridge, but Marcus's spear formations held. On the second night, his scouts detected an enemy flanking attempt through Darkwood, allowing the reserves to respond. Marcus won the battle but lost half his men in the brutal fighting. The violence and heavy casualties deeply affected him. The defeated enemy army retreated north, abandoning their siege engines and supply wagons.
+</FIX>
+
+---
+
+<REVIEW>
+Sarah discovered the ancient tome hidden beneath layers of dust and the weight of forgotten centuries. As her trembling fingers traced the arcane symbols, knowledge flooded her mind like a torrential river bursting through a dam. The revelations contained within those yellowed pages shattered her understanding of reality itself, transforming her from a mere mortal into a vessel of primordial wisdom.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This is trying to make "Sarah found a magic book and learned from it" sound like a religious experience. Just tell us what happened without the dramatic flourishes.
+- Purple prose: SEVERE - "weight of forgotten centuries," "torrential river," "vessel of primordial wisdom"
+- Dialogue present: NO
+- Over-description: YES - simple discovery made overly complex
+- Essential information: Sarah found an old magic book that taught her powerful knowledge
+- Length: TOO LONG
+</ANALYSIS>
+
+<FIX>
+Sarah found an ancient tome hidden in the dust. Reading it gave her powerful magical knowledge that changed her understanding of the world.
+</FIX>
+
+---
+
+<REVIEW>
+The confrontation reached its crescendo when Marcus finally cornered the traitor in the abandoned warehouse. "You were like a brother to me!" he roared, his voice echoing with the pain of betrayal. The traitor's laugh was cold as winter frost. "Brotherhood is a luxury I could never afford, old friend. The Council pays better than loyalty ever did." With those words hanging in the air like a death sentence, their final battle commenced.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This has both purple prose AND dialogue that needs to be converted to summary narration. Keep the key information (confrontation, betrayal for money) but lose the dramatic quotes and metaphors.
+- Purple prose: MODERATE - "crescendo," "cold as winter frost," "death sentence"
+- Dialogue present: YES - needs to be converted to narration
+- Essential information: Marcus confronted the traitor who betrayed him for money, then they fought
+- Length: OVERWRITTEN
+</ANALYSIS>
+
+<FIX>
+Marcus confronted the traitor in an abandoned warehouse. The traitor admitted he had betrayed their friendship for money from the Council. They then fought.
+</FIX>
+
+---
+
+<REVIEW>
+Marcus spent three years training in the mountain monastery. He learned swordsmanship, meditation, and the warrior's code. The masters were strict but fair. When he completed his training, he was skilled in combat and disciplined in mind.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This is actually fine. It summarizes the key events clearly without purple prose or unnecessary drama. Sometimes simple and direct is exactly what you need.
+- Purple prose: NONE
+- Dialogue present: NO
+- Clichés: NONE
+- Essential information: All present and clear
+- Length: APPROPRIATE
+</ANALYSIS>
+
+<NO_FIX_REQUIRED/>
+
+---
+
+<REVIEW>
+The revelations of that fateful night sent shockwaves through the very foundations of their existence. Everything they had believed to be immutable truth crumbled like ancient parchment before the flames of reality. The conspiracy reached into the highest echelons of power, its tentacles of corruption stretching back through generations of carefully orchestrated deception. Trust became a luxury they could no longer afford as allies revealed themselves as enemies and enemies as pawns in a game whose rules they were only beginning to comprehend.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This is trying way too hard to be mysterious and dramatic. "Tentacles of corruption"? "Flames of reality"? Just tell us about the conspiracy without making it sound like cosmic horror.
+- Purple prose: EXTREME - "shockwaves through existence," "flames of reality," "tentacles of corruption"
+- Clichés: SEVERE - "fateful night," "highest echelons," "pawns in a game"
+- Essential information: They discovered a long-running conspiracy involving powerful people, can't trust anyone
+- Length: WAY TOO LONG - core plot points lost in metaphors
+</ANALYSIS>
+
+<FIX>
+That night's revelations changed everything. They discovered a generations-old conspiracy involving powerful figures. Former allies turned out to be enemies, making it impossible to know who to trust.
+</FIX>
+
+<|SECTION:PREVIOUS CHAPTERS|>
+{% for chapter_summary in summarization_history %}
+## Chapter {{ loop.index }}
+{{ chapter_summary }}
+
+{% endfor %}
+<|CLOSE_SECTION|>
+
+{% with exclude_phase_intent=True %}{% include "scene-intent.jinja2" %}{% endwith %}
+
+{% include "content-classification.jinja2" %}
+
+{% include "writing-style-instructions.jinja2" %}
+
+{% include "dynamic-instructions.jinja2" %}
+<|SECTION:TASK|>
+
+Fix overwritten narrative summaries by making them clear and direct while preserving key plot information.
+
+**Rules:**
+{{ li() }}. STRIP purple prose - Remove flowery metaphors and dramatic language
+{{ li() }}. KEEP plot essentials - Preserve all important events and outcomes
+{{ li() }}. CUT clichés - Remove overused phrases like "fate itself," "deadly dance"
+{{ li() }}. BE CONCISE - Summaries should efficiently convey what happened
+{{ li() }}. MAINTAIN tone - Keep genre-appropriate language without the excess
+{{ li() }}. PRESERVE mature content - Keep swear words, slang, and raw language exactly as written
+{{ li() }}. REMOVE dialogue - Convert any dialogue into narrative description of what was communicated
+
+**What to keep vs cut:**
+- KEEP: What happened, who was involved, consequences, important details
+- CUT: Purple metaphors, philosophical musings, excessive descriptions, clichéd transitions, all dialogue
+
+**Common fixes:**
+- "Crimson dawn painted the sky" → "At dawn"
+- "The weight of destiny" → [remove entirely]
+- "Forever changed by" → "deeply affected by" or "impacted by"
+- "Shattered their very existence" → "changed everything"
+- "Dance of death" → "battle" or "fight"
+- "You betrayed me!" he cried → "He accused them of betrayal"
+- "I had no choice," she whispered → "She claimed she had no choice"
+
+Use the examples for a deeper understanding of the task and provide your analysis and fix, with the fix being the final output.
+
+Any changes you propose MUST respect the vision and intention of the story.
+
+If there are no changes needed use a <NO_FIX_REQUIRED/> tag.
+
+<REVIEW>{{ text }}</REVIEW>
+{% if repetition %}
+<REPETITION>
+{% for repeat in repetition %}`{{ repeat["text_a"].strip() }}`
+{% endfor -%}
+</REPETITION>
+{% endif %}
+{% if bad_prose %}<UNWANTED_PROSE>
+{% for phrase in bad_prose %}- MATCH: `{{ phrase.phrase }}`
+  - INSTRUCTIONS: {{ phrase.instructions }}
+{% endfor -%}
+</UNWANTED_PROSE>
+{% endif %}
+
+{{ set_prepared_response("<ANALYSIS>\n- Thought process:") }}

@@ -1,8 +1,8 @@
-import asyncio
 import json
 import random
 import uuid
-from typing import TYPE_CHECKING, Tuple, Union
+from typing import TYPE_CHECKING, Tuple
+import dataclasses
 
 import pydantic
 import structlog
@@ -13,12 +13,15 @@ from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.prompts import Prompt
 from talemate.util.response import extract_list
+from talemate.scene_message import CharacterMessage
 from talemate.world_state.templates import (
     AnnotatedTemplate,
     GenerationOptions,
     Spices,
     WritingStyle,
 )
+from talemate.agents.base import AgentAction, AgentActionConfig, AgentTemplateEmission
+import talemate.emit.async_signals as async_signals
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -26,6 +29,42 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger("talemate.creator.assistant")
 
+
+# EVENTS
+
+async_signals.register(
+    "agent.creator.contextual_generate.before",
+    "agent.creator.contextual_generate.after",
+    "agent.creator.autocomplete.before",
+    "agent.creator.autocomplete.after",
+)
+
+@dataclasses.dataclass
+class ContextualGenerateEmission(AgentTemplateEmission):
+    """
+    A context for generating content.
+    """
+
+    content_generation_context: "ContentGenerationContext | None" = None
+    character: "Character | None" = None
+    
+    @property
+    def context_type(self) -> str:
+        return self.content_generation_context.computed_context[0]
+    
+    @property
+    def context_name(self) -> str:
+        return self.content_generation_context.computed_context[1]
+
+@dataclasses.dataclass
+class AutocompleteEmission(AgentTemplateEmission):
+    """
+    A context for generating content.
+    """
+
+    input: str = ""
+    type: str = ""
+    character: "Character | None" = None
 
 class ContentGenerationContext(pydantic.BaseModel):
     """
@@ -38,6 +77,7 @@ class ContentGenerationContext(pydantic.BaseModel):
     # scene intro:
     context: str
     instructions: str = ""
+    information: str = ""
     length: int = 100
     character: str | None = None
     original: str | None = None
@@ -121,11 +161,56 @@ class ContentGenerationContext(pydantic.BaseModel):
     def set_state(self, key: str, value: str | int | float | bool):
         self.state[key] = value
 
+    def get_state(self, key: str) -> str | int | float | bool | None:
+        return self.state.get(key)
 
 class AssistantMixin:
     """
     Creator mixin that allows quick contextual generation of content.
     """
+    
+    @classmethod
+    def add_actions(cls, actions: dict[str, AgentAction]):
+        actions["autocomplete"] = AgentAction(
+            enabled=True,
+            container=True,
+            can_be_disabled=False,
+            label="Autocomplete",
+            icon="mdi-auto-fix",
+            description="Controls settings for autocomplete suggestions.",
+            config={
+                "dialogue_suggestion_length": AgentActionConfig(
+                    type="number",
+                    label="Dialogue Suggestion Length",
+                    description="Length of the generated suggestion when using autocomplete for dialogue.",
+                    value=64,
+                    min=32,
+                    max=256,
+                    step=16,
+                ),
+                "narrative_suggestion_length": AgentActionConfig(
+                    type="number",
+                    label="Narrative Suggestion Length",
+                    description="Length of the generated suggestion when using autocomplete for narrative.",
+                    value=96,
+                    min=32,
+                    max=256,
+                    step=16,
+                ),
+            }
+        )
+        
+    # property helpers
+    
+    @property
+    def autocomplete_dialogue_suggestion_length(self):
+        return self.actions["autocomplete"].config["dialogue_suggestion_length"].value
+    
+    @property
+    def autocomplete_narrative_suggestion_length(self):
+        return self.actions["autocomplete"].config["narrative_suggestion_length"].value
+
+    # actions
 
     async def contextual_generate_from_args(
         self,
@@ -142,6 +227,8 @@ class AssistantMixin:
         template: AnnotatedTemplate | None = None,
         context_aware: bool = True,
         history_aware: bool = True,
+        information: str = "",
+        **kwargs,
     ):
         """
         Request content from the assistant.
@@ -165,7 +252,11 @@ class AssistantMixin:
             template=template,
             context_aware=context_aware,
             history_aware=history_aware,
+            information=information,
         )
+        
+        for key, value in kwargs.items():
+            generation_context.set_state(key, value)
 
         return await self.contextual_generate(generation_context)
 
@@ -181,41 +272,49 @@ class AssistantMixin:
         context_typ, context_name = generation_context.computed_context
         editor = get_agent("editor")
 
-        if generation_context.length < 100:
-            kind = "create_short"
-        elif generation_context.length < 500:
-            kind = "create_concise"
-        else:
-            kind = "create"
+        kind = f"create_{generation_context.length}"
 
         log.debug(
             f"Contextual generate: {context_typ} - {context_name}",
             generation_context=generation_context,
         )
+        
+        character = self.scene.get_character(generation_context.character) if generation_context.character else None
+        
+        template_vars = {
+            "scene": self.scene,
+            "max_tokens": self.client.max_token_length,
+            "generation_context": generation_context,
+            "context_typ": context_typ,
+            "context_name": context_name,
+            "can_coerce": self.client.can_be_coerced,
+            "character_name": generation_context.character,
+            "context_aware": generation_context.context_aware,
+            "history_aware": generation_context.history_aware,
+            "character": character,
+            "template": generation_context.template,
+        }
+    
+        emission = ContextualGenerateEmission(
+            agent=self,
+            content_generation_context=generation_context,
+            character=character,
+            template_vars=template_vars,
+        )
+        
+        await async_signals.get("agent.creator.contextual_generate.before").send(emission)
+
+        template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
         content = await Prompt.request(
             f"creator.contextual-generate",
             self.client,
             kind,
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "generation_context": generation_context,
-                "context_typ": context_typ,
-                "context_name": context_name,
-                "can_coerce": self.client.can_be_coerced,
-                "character_name": generation_context.character,
-                "context_aware": generation_context.context_aware,
-                "history_aware": generation_context.history_aware,
-                "character": (
-                    self.scene.get_character(generation_context.character)
-                    if generation_context.character
-                    else None
-                ),
-                "template": generation_context.template,
-            },
+            vars=template_vars,
         )
-
+        
+        emission.response = content
+        
         if not generation_context.partial:
             content = util.strip_partial_sentences(content)
 
@@ -229,10 +328,15 @@ class AssistantMixin:
             if not content.startswith(generation_context.character + ":"):
                 content = generation_context.character + ": " + content
             content = util.strip_partial_sentences(content)
-            content = await editor.cleanup_character_message(content, generation_context.character.name)
-            return content
+            emission.response  = await editor.cleanup_character_message(content, generation_context.character.name)
+            await async_signals.get("agent.creator.contextual_generate.after").send(emission)
+            return emission.response
+        
+        emission.response = content.strip().strip("*").strip()
+        
+        await async_signals.get("agent.creator.contextual_generate.after").send(emission)
+        return emission.response
 
-        return content.strip().strip("*").strip()
 
     @set_processing
     async def generate_character_attribute(
@@ -245,8 +349,7 @@ class AssistantMixin:
     ) -> str:
         """
         Wrapper for contextual_generate that generates a character attribute.
-        """
-        
+        """        
         if not generation_options:
             generation_options = GenerationOptions()
         
@@ -283,6 +386,41 @@ class AssistantMixin:
             length=length,
             **generation_options.model_dump(),
         )
+        
+    @set_processing
+    async def generate_thematic_list(
+        self,
+        instructions: str,
+        iterations: int = 1,
+        length: int = 256,
+        generation_options: GenerationOptions = None,
+    ) -> list[str]:
+        """
+        Wrapper for contextual_generate that generates a list of items.
+        """
+        if not generation_options:
+            generation_options = GenerationOptions()
+        
+        i = 0
+        
+        result = []
+        
+        while i < iterations:
+            i += 1
+            _result = await self.contextual_generate_from_args(
+                context="list:",
+                instructions=instructions,
+                length=length,
+                original="\n".join(result) if result else None,
+                extend=i>1,
+                **generation_options.model_dump(),
+            )
+            
+            _result = json.loads(_result)
+            
+            result = list(set(result + _result))
+            
+        return result
 
     @set_processing
     async def autocomplete_dialogue(
@@ -290,38 +428,90 @@ class AssistantMixin:
         input: str,
         character: "Character",
         emit_signal: bool = True,
+        response_length: int | None = None,
     ) -> str:
         """
         Autocomplete dialogue.
         """
+        if not response_length:
+            response_length = self.autocomplete_dialogue_suggestion_length
+        
+        # continuing recent character message
+        non_anchor, anchor = util.split_anchor_text(input, 10)
+        
+        self.scene.log.debug(
+            "autocomplete_anchor", 
+            anchor=anchor,
+            non_anchor=non_anchor,
+            input=input
+        )
+
+        continuing_message = False
+        
+        try:
+            message = self.scene.history[-1]
+            if isinstance(message, CharacterMessage) and message.character_name == character.name:
+                continuing_message = input.strip() == message.without_name.strip()
+        except IndexError:
+            pass
+
+        if input.strip().endswith('"'):
+            prefix = ' *'
+        elif input.strip().endswith('*'):
+            prefix = ' "'
+        else:
+            prefix = ''
+        
+        template_vars = {
+            "scene": self.scene,
+            "max_tokens": self.client.max_token_length,
+            "input": input.strip(),
+            "character": character,
+            "can_coerce": self.client.can_be_coerced,
+            "response_length": response_length,
+            "continuing_message": continuing_message,
+            "anchor": anchor,
+            "non_anchor": non_anchor,
+            "prefix": prefix,
+        }
+        
+        emission = AutocompleteEmission(
+            agent=self,
+            input=input,
+            type="dialogue",
+            character=character,
+            template_vars=template_vars,
+        )
+        
+        await async_signals.get("agent.creator.autocomplete.before").send(emission)
+
+        template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
         response = await Prompt.request(
             f"creator.autocomplete-dialogue",
             self.client,
-            "create_short",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "input": input.strip(),
-                "character": character,
-                "can_coerce": self.client.can_be_coerced,
-            },
+            f"create_{response_length}",
+            vars=template_vars,
             pad_prepended_response=False,
             dedupe_enabled=False,
         )
 
-        response = util.clean_dialogue(response, character.name)[
-            len(character.name + ":") :
-        ].strip()
-
-        # remove ellipsis
-
-        response = response.replace("...", "").strip()
-
-        # if sentence starts and ends with quotes, remove them
+        response = response.replace("...", "").lstrip("").rstrip().replace("END-OF-LINE", "")
         
-        if response.startswith('"') and response.endswith('"') and not "*" in response:
-            response = response[1:-1]
+        
+        if prefix:
+            response = prefix + response
+        
+        emission.response = response
+        
+        await async_signals.get("agent.creator.autocomplete.after").send(emission)
+
+        if not response:
+            if emit_signal:
+                emit("autocomplete_suggestion", "")
+            return ""
+        
+        response = util.strip_partial_sentences(response).replace("*", "")
 
         if response.startswith(input):
             response = response[len(input) :]
@@ -340,21 +530,50 @@ class AssistantMixin:
         self,
         input: str,
         emit_signal: bool = True,
+        response_length: int | None = None,
     ) -> str:
         """
         Autocomplete narrative.
         """
+        if not response_length:
+            response_length = self.autocomplete_narrative_suggestion_length
+
+        # Split the input text into non-anchor and anchor parts
+        non_anchor, anchor = util.split_anchor_text(input, 10)
+        
+        self.scene.log.debug(
+            "autocomplete_narrative_anchor", 
+            anchor=anchor,
+            non_anchor=non_anchor,
+            input=input
+        )
+        
+        template_vars = {
+            "scene": self.scene,
+            "max_tokens": self.client.max_token_length,
+            "input": input.strip(),
+            "can_coerce": self.client.can_be_coerced,
+            "response_length": response_length,
+            "anchor": anchor,
+            "non_anchor": non_anchor,
+        }
+        
+        emission = AutocompleteEmission(
+            agent=self,
+            input=input,
+            type="narrative",
+            template_vars=template_vars,
+        )
+        
+        await async_signals.get("agent.creator.autocomplete.before").send(emission)
+
+        template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
         response = await Prompt.request(
             f"creator.autocomplete-narrative",
             self.client,
-            "create_short",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "input": input.strip(),
-                "can_coerce": self.client.can_be_coerced,
-            },
+            f"create_{response_length}",
+            vars=template_vars,
             pad_prepended_response=False,
             dedupe_enabled=False,
         )
@@ -362,6 +581,10 @@ class AssistantMixin:
 
         if response.startswith(input):
             response = response[len(input) :]
+
+        emission.response = response
+        
+        await async_signals.get("agent.creator.autocomplete.after").send(emission)
 
         self.scene.log.debug(
             "autocomplete_suggestion", suggestion=response, input=input

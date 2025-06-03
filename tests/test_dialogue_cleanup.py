@@ -1,6 +1,27 @@
 import pytest
 from talemate.util import ensure_dialog_format, clean_dialogue, remove_trailing_markers
 
+MULTILINE_TEST_A_INPUT = """
+\"The first line.
+
+The second line.
+
+- list item
+- list item
+
+The third line.\"
+"""
+MULTILINE_TEST_A_EXPECTED = """
+\"The first line.
+
+The second line.
+
+- list item
+- list item
+
+The third line.\"
+"""
+
 @pytest.mark.parametrize("input, expected", [
     ('Hello how are you?', 'Hello how are you?'),
     ('"Hello how are you?"', '"Hello how are you?"'),
@@ -23,6 +44,7 @@ from talemate.util import ensure_dialog_format, clean_dialogue, remove_trailing_
     ('*Some narration with a "quoted" string in it.* Then some unquoted dialogue.\n\n*More narration.*', '*Some narration with a* "quoted" *string in it.* "Then some unquoted dialogue."\n\n*More narration.*'),
     ('*Some narration* Some dialogue but not in quotes. *', '*Some narration* "Some dialogue but not in quotes."'),
     ('*First line\nSecond line\nThird line*', '*First line\nSecond line\nThird line*'),
+    (MULTILINE_TEST_A_INPUT, MULTILINE_TEST_A_EXPECTED),
 ])
 def test_dialogue_cleanup(input, expected):
     assert ensure_dialog_format(input) == expected
@@ -64,3 +86,22 @@ def test_clean_dialogue(input, expected, main_name):
 ])
 def test_remove_trailing_markers(input, expected):
     assert remove_trailing_markers(input) == expected
+
+
+@pytest.mark.parametrize("input, anchor_length, expected_non_anchor, expected_anchor", [
+    ("", 10, "", ""),
+    ("Hello", 10, "", "Hello"),
+    ("This is a short example", 10, "This is", "a short example"),
+    ("One two three four", 4, "One two", "three four"),
+    ("This is a longer example with more than ten words to test the anchor functionality", 10, 
+     "This is a longer example", "with more than ten words to test the anchor functionality"),
+    ("One two three four five six seven eight nine ten", 10, 
+     "One two three four five", "six seven eight nine ten"),
+    ("Two words", 10, "Two", "words"),
+    ("One Two Three", 3, "One", "Two Three"),
+])
+def test_split_anchor_text(input, anchor_length, expected_non_anchor, expected_anchor):
+    from talemate.util.dialogue import split_anchor_text
+    non_anchor, anchor = split_anchor_text(input, anchor_length)
+    assert non_anchor == expected_non_anchor
+    assert anchor == expected_anchor

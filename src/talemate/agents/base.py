@@ -7,7 +7,7 @@ import re
 from abc import ABC
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
-
+import uuid
 import pydantic
 import structlog
 from blinker import signal
@@ -38,12 +38,20 @@ __all__ = [
 
 log = structlog.get_logger("talemate.agents.base")
 
+class AgentActionConditional(pydantic.BaseModel):
+    attribute: str
+    value: int | float | str | bool | list[int | float | str | bool] | None = None
+
+
+class AgentActionNote(pydantic.BaseModel):
+    type: str
+    text: str
 
 class AgentActionConfig(pydantic.BaseModel):
     type: str
     label: str
     description: str = ""
-    value: Union[int, float, str, bool, None] = None
+    value: Union[int, float, str, bool, list, None] = None
     default_value: Union[int, float, str, bool] = None
     max: Union[int, float, None] = None
     min: Union[int, float, None] = None
@@ -52,14 +60,15 @@ class AgentActionConfig(pydantic.BaseModel):
     choices: Union[list[dict[str, str]], None] = None
     note: Union[str, None] = None
     expensive: bool = False
+    quick_toggle: bool = False
+    condition: Union[AgentActionConditional, None] = None
+    title: Union[str, None] = None
+    value_migration: Union[Callable, None] = pydantic.Field(default=None, exclude=True)
+    
+    note_on_value: dict[str, AgentActionNote] = pydantic.Field(default_factory=dict)
 
     class Config:
         arbitrary_types_allowed = True
-
-
-class AgentActionConditional(pydantic.BaseModel):
-    attribute: str
-    value: Union[int, float, str, bool, None] = None
 
 
 class AgentAction(pydantic.BaseModel):
@@ -72,14 +81,28 @@ class AgentAction(pydantic.BaseModel):
     container: bool = False
     icon: Union[str, None] = None
     can_be_disabled: bool = False
+    quick_toggle: bool = False
     experimental: bool = False
-
 
 class AgentDetail(pydantic.BaseModel):
     value: Union[str, None] = None
     description: Union[str, None] = None
     icon: Union[str, None] = None
     color: str = "grey"
+
+class DynamicInstruction(pydantic.BaseModel):
+    title: str
+    content: str
+    
+    def __str__(self) -> str:
+        return "\n".join(
+            [
+                f"<|SECTION:{self.title}|>",
+                self.content,
+                "<|CLOSE_SECTION|>"
+            ]
+        )
+        
 
 def args_and_kwargs_to_dict(fn, args: list, kwargs: dict, filter:list[str] = None) -> dict:
     """
@@ -191,7 +214,14 @@ class Agent(ABC):
     websocket_handler = None
     essential = True
     ready_check_error = None
-
+    
+    @classmethod
+    def init_actions(cls, actions: dict[str, AgentAction] | None = None) -> dict[str, AgentAction]:
+        if actions is None:
+            actions = {}
+        
+        return actions
+    
     @property
     def agent_details(self):
         if hasattr(self, "client"):
@@ -286,6 +316,24 @@ class Agent(ABC):
         return {k: v.model_dump() for k, v in self.actions.items()}
     
     # scene state
+    
+    
+    def context_fingerpint(self, extra: list[str] = []) -> str | None:
+        active_agent_context = active_agent.get()
+        
+        if not active_agent_context:
+            return None
+        
+        if self.scene.history:
+            fingerprint = f"{self.scene.history[-1].fingerprint}-{active_agent_context.first.fingerprint}"
+        else:
+            fingerprint = f"START-{active_agent_context.first.fingerprint}"
+            
+        for extra_key in extra:
+            fingerprint += f"-{hash(extra_key)}"
+        
+        return fingerprint
+    
     
     def get_scene_state(self, key:str, default=None):
         agent_state = self.scene.agent_state.get(self.agent_type, {})
@@ -385,6 +433,8 @@ class Agent(ABC):
                         .get(config_key, {})
                         .get("value", config.value)
                     )
+                    if config.value_migration and callable(config.value_migration):
+                        config.value = config.value_migration(config.value)
                 except AttributeError:
                     pass
 
@@ -550,6 +600,36 @@ class Agent(ABC):
         return False
 
 
+    @set_processing
+    async def delegate(self, fn: Callable, *args, **kwargs):
+        """
+        Wraps a function as an agent action, allowing it to be called
+        by the agent.
+        """
+        return await fn(*args, **kwargs)
+        
+    async def emit_message(self, header:str, message:str | list[dict], meta: dict = None, **data):
+        if not data:
+            data = {}
+            
+        if not meta:
+            meta = {}
+        
+        if "uuid" not in data:
+            data["uuid"] = str(uuid.uuid4())
+            
+        if "agent" not in data:
+            data["agent"] = self.agent_type
+        
+        data["header"] = header
+        emit(
+            "agent_message",
+            message=message,
+            data=data,
+            meta=meta,
+            websocket_passthrough=True,
+        )
+        
 @dataclasses.dataclass
 class AgentEmission:
     agent: Agent
@@ -558,3 +638,8 @@ class AgentEmission:
 class AgentTemplateEmission(AgentEmission):
     template_vars: dict = dataclasses.field(default_factory=dict)
     response: str = None
+    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(default_factory=list)
+    
+@dataclasses.dataclass
+class RagBuildSubInstructionEmission(AgentEmission):
+    sub_instruction: str | None = None

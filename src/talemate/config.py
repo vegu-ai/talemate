@@ -1,7 +1,7 @@
 import copy
 import datetime
 import os
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union, Literal
 
 import pydantic
 import structlog
@@ -40,9 +40,12 @@ class Client(BaseModel):
     api_key: Union[str, None] = None
     max_token_length: int = 8192
     double_coercion: Union[str, None] = None
+    rate_limit: Union[int, None] = None
+    data_format: Literal["json", "yaml"] | None = None
     enabled: bool = True
     
     system_prompts: SystemPrompts = SystemPrompts()
+    preset_group: str | None = None
 
     class Config:
         extra = "ignore"
@@ -52,7 +55,7 @@ ClientType = TypeVar("ClientType", bound=Client)
 
 
 class AgentActionConfig(BaseModel):
-    value: Union[int, float, str, bool, None] = None
+    value: Union[int, float, str, bool, list[bool | str | int | float], None] = None
 
 
 class AgentAction(BaseModel):
@@ -316,13 +319,19 @@ class InferencePresets(BaseModel):
         presence_penalty=0.0,
     )
 
+class InferencePresetGroup(BaseModel):
+    name: str
+    presets: InferencePresets
 
 class Presets(BaseModel):
     inference_defaults: InferencePresets = InferencePresets()
     inference: InferencePresets = InferencePresets()
     
+    inference_groups: dict[str, InferencePresetGroup] = pydantic.Field(default_factory=dict)
+    
     embeddings_defaults: dict[str, EmbeddingFunctionPreset] = pydantic.Field(default_factory=generate_chromadb_presets)
     embeddings: dict[str, EmbeddingFunctionPreset] = pydantic.Field(default_factory=generate_chromadb_presets)
+
 
 
 def gnerate_intro_scenes():
@@ -332,14 +341,14 @@ def gnerate_intro_scenes():
 
     scenes = [
         RecentScene(
-            name="Simulation Suite",
+            name="Simulation Suite V2",
             path=os.path.join(
-                scenes_dir(), "simulation-suite", "simulation-suite.json"
+                scenes_dir(), "simulation-suite-v2", "the-simulation-suite.json"
             ),
-            filename="simulation-suite.json",
+            filename="the-simulation-suite.json",
             date=datetime.datetime.now().isoformat(),
             cover_image=Asset(
-                id="4b157dccac2ba71adb078a9d591f9900d6d62f3e86168a5e0e5e1e9faf6dc103",
+                id="7c6ae3e9cb58a9226513d5ce1e335b524c6c59e54793c94f707bdb8b25053c4f",
                 file_type="png",
                 media_type="image/png",
             ),
@@ -356,9 +365,9 @@ def gnerate_intro_scenes():
             ),
         ),
         RecentScene(
-            name="Infinity Quest Dynamic Scenario",
+            name="Infinity Quest Dynamic Story",
             path=os.path.join(
-                scenes_dir(), "infinity-quest-dynamic-scenario", "infinity-quest.json"
+                scenes_dir(), "infinity-quest-dynamic-story-v2", "infinity-quest.json"
             ),
             filename="infinity-quest.json",
             date=datetime.datetime.now().isoformat(),
@@ -526,10 +535,6 @@ class Config(BaseModel):
         save_config(self, file_path)
 
 
-class SceneConfig(BaseModel):
-    automated_actions: dict[str, bool]
-
-
 class SceneAssetUpload(BaseModel):
     scene_cover_image: bool
     character_cover_image: str | None = None
@@ -593,14 +598,31 @@ def save_config(config, file_path: str = "./config.yaml"):
     for preset_name, preset in list(config["presets"]["inference"].items()):
         if not preset.get("changed"):
             config["presets"]["inference"].pop(preset_name)
+    
+    # in inference groups also only keep if changed
+    for group_name, group in list(config["presets"]["inference_groups"].items()):
+        for preset_name, preset in list(group["presets"].items()):
+            if not preset.get("changed"):
+                group["presets"].pop(preset_name)
 
     # if presets is empty, remove it
     if not config["presets"]["inference"]:
-        config.pop("presets")
+        config["presets"].pop("inference")
         
     # if system_prompts is empty, remove it
     if not config["system_prompts"]:
         config.pop("system_prompts")
+
+    # set any client preset_group to "" if it references an
+    # entry that no longer exists in inference_groups
+    for client in config["clients"].values():
+        
+        if not client.get("preset_group"):
+            continue
+        
+        if client["preset_group"] not in config["presets"].get("inference_groups", {}):
+            log.warning(f"Client {client['name']} references non-existent preset group {client['preset_group']}, setting to default")
+            client["preset_group"] = ""
 
     with open(file_path, "w") as file:
         yaml.dump(config, file)

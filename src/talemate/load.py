@@ -7,6 +7,7 @@ import structlog
 import talemate.events as events
 import talemate.instance as instance
 from talemate import Actor, Character, Player, Scene
+from talemate.instance import get_agent
 from talemate.character import deactivate_character
 from talemate.config import load_config
 from talemate.context import SceneIsLoading
@@ -17,17 +18,18 @@ from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
     NarratorMessage,
+    ReinforcementMessage,
     SceneMessage,
     reset_message_id,
 )
 from talemate.status import LoadingStatus, set_loading
 from talemate.util import extract_metadata
 from talemate.world_state import WorldState
+from talemate.game.engine.nodes.registry import import_scene_node_definitions
+from talemate.scene.intent import SceneIntent
 
 __all__ = [
     "load_scene",
-    "load_conversation_log",
-    "load_conversation_log_into_scene",
     "load_character_from_image",
     "load_character_from_json",
     "transfer_character",
@@ -97,15 +99,21 @@ async def load_scene_from_character_card(scene, file_path):
     """
     Load a character card (tavern etc.) from the given file path.
     """
+    
+    director = get_agent("director")
+    LOADING_STEPS = 5
+    if director.auto_direct_enabled:
+        LOADING_STEPS += 3
 
-    loading_status = LoadingStatus(5)
+    loading_status = LoadingStatus(LOADING_STEPS)
     loading_status("Loading character card...")
 
     file_ext = os.path.splitext(file_path)[1].lower()
     image_format = file_ext.lstrip(".")
     image = False
-    if not scene.get_player_character():
-        await scene.add_actor(default_player_character())
+        
+    await handle_no_player_character(scene)
+        
     # If a json file is found, use Character.load_from_json instead
     if file_ext == ".json":
         character = load_character_from_json(file_path)
@@ -183,6 +191,28 @@ async def load_scene_from_character_card(scene, file_path):
         scene.assets.set_cover_image_from_file_path(file_path)
         character.cover_image = scene.assets.cover_image
 
+    # if auto direct is enabled, generate a story intent
+    # and then set the scene intent
+    try:
+        if director.auto_direct_enabled:
+            loading_status("Generating story intent...")
+            creator = get_agent("creator")
+            story_intent = await creator.contextual_generate_from_args(
+                context="story intent:overall",
+                length=256,
+            )
+            scene.intent_state.intent = story_intent
+            loading_status("Generating scene types...")
+            await director.auto_direct_generate_scene_types(
+                instructions=story_intent,
+                max_scene_types=2,
+            )
+            loading_status("Setting scene intent...")
+            await director.auto_direct_set_scene_intent(require=True)
+    except Exception as e:
+        log.error("generate story intent", error=e)
+
+    # update world state
     try:
         loading_status("Update world state ...")
         await scene.world_state.request_update(initial_only=True)
@@ -193,6 +223,8 @@ async def load_scene_from_character_card(scene, file_path):
 
     await scene.save_restore("initial.json")
     scene.restore_from = "initial.json"
+
+    import_scene_node_definitions(scene)
 
     return scene
 
@@ -208,6 +240,7 @@ async def load_scene_from_data(
     loading_status = LoadingStatus(1)
     reset_message_id()
 
+
     memory = scene.get_helper("memory").agent
 
     scene.description = scene_data.get("description", "")
@@ -221,8 +254,10 @@ async def load_scene_from_data(
     scene.restore_from = scene_data.get("restore_from", "")
     scene.title = scene_data.get("title", "")
     scene.writing_style_template = scene_data.get("writing_style_template", "")
-
-    # reset = True
+    scene.nodes_filename = scene_data.get("nodes_filename", "")
+    scene.creative_nodes_filename = scene_data.get("creative_nodes_filename", "")
+    
+    import_scene_node_definitions(scene)
 
     if not reset:
         scene.memory_id = scene_data.get("memory_id", scene.memory_id)
@@ -234,6 +269,7 @@ async def load_scene_from_data(
         scene.world_state = WorldState(**scene_data.get("world_state", {}))
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.agent_state = scene_data.get("agent_state", {})
+        scene.intent_state = SceneIntent(**scene_data.get("intent_state", {}))
         scene.context = scene_data.get("context", "")
         scene.filename = os.path.basename(
             name or scene.name.lower().replace(" ", "_") + ".json"
@@ -287,9 +323,7 @@ async def load_scene_from_data(
         await scene.add_actor(actor)
 
     # if there is nio player character, add the default player character
-
-    if not scene.get_player_character() and not empty:
-        await scene.add_actor(default_player_character())
+    await handle_no_player_character(scene)
 
     # the scene has been saved before (since we just loaded it), so we set the saved flag to True
     # as long as the scene has a memory_id.
@@ -349,29 +383,25 @@ async def transfer_character(scene, scene_json_path, character_name):
     return scene
 
 
-def load_conversation_log(file_path):
+async def handle_no_player_character(scene: Scene) -> None:
     """
-    Load the conversation log from the given file path.
-    :param file_path: Path to the conversation log file.
-    :return: None
+    Handle the case where there is no player character in the scene.
     """
-    with open(file_path, "r") as f:
-        conversation_log = json.load(f)
-
-    for item in conversation_log:
-        log.info(item)
-
-
-def load_conversation_log_into_scene(file_path, scene):
-    """
-    Load the conversation log from the given file path into the given scene.
-    :param file_path: Path to the conversation log file.
-    :param scene: Scene to load the conversation log into.
-    """
-    with open(file_path, "r") as f:
-        conversation_log = json.load(f)
-
-    scene.history = conversation_log
+    
+    existing_player = scene.get_player_character()
+    
+    if existing_player:
+        return
+    
+    player = default_player_character()
+    
+    if not player:
+        # force scene into creative mode
+        scene.environment = "creative"
+        log.warning("No player character found, forcing scene into creative mode")
+        return
+    
+    await scene.add_actor(player)
 
 
 def load_character_from_image(image_path: str, file_format: str) -> Character:
@@ -470,7 +500,7 @@ def load_from_image_metadata(image_path: str, file_format: str):
     return character_from_chara_data(metadata)
 
 
-def default_player_character():
+def default_player_character() -> Player | None:
     """
     Return a default player character.
     :return: Default player character.
@@ -479,6 +509,11 @@ def default_player_character():
         load_config().get("game", {}).get("default_player_character", {})
     )
     name = default_player_character.get("name")
+    
+    if not name:
+        # We don't have a valid default player character, so we return None
+        return None
+    
     color = default_player_character.get("color", "cyan")
     description = default_player_character.get("description", "")
 
@@ -506,6 +541,7 @@ def _load_history(history):
     return _history
 
 
+
 def _prepare_history(entry):
     typ = entry.pop("typ", "scene_message")
     entry.pop("id", None)
@@ -515,7 +551,14 @@ def _prepare_history(entry):
 
     cls = MESSAGES.get(typ, SceneMessage)
 
-    return cls(**entry)
+    msg = cls(**entry)
+    
+    if isinstance(msg, (NarratorMessage, ReinforcementMessage)):
+        msg = msg.migrate_source_to_meta()
+    elif isinstance(msg, DirectorMessage):
+        msg = msg.migrate_message_to_meta()
+    
+    return msg
 
 
 def _prepare_legacy_history(entry):

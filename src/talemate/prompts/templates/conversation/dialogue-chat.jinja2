@@ -1,4 +1,4 @@
-{% block rendered_context -%}
+{% set rendered_context_content -%}
 <|SECTION:CHARACTERS|>
 {% for character in characters %}
 ### {{ character.name }}
@@ -56,10 +56,12 @@ Internal notes may be given to you to help you with consistency when writing.
 
 They may be instructions on how the character should act or simply add some context that may inform the character's next dialogue.
 <|CLOSE_SECTION|>
-{# EXTRA CONTEXT #}{% block extra_context -%}{% include "extra-context.jinja2" %}{% endblock %}
-{% endblock -%}
+{# EXTRA CONTEXT #}{% include "extra-context.jinja2" %}
+{% endset -%}
+{{ rendered_context_content }}
+{% set rendered_context_tokens = count_tokens(rendered_context_content) -%}
 {% set director_guidance = agent_context_state["director__actor_guidance"] -%}
-{% set scene_history = scene.context_history(budget=max_tokens-200-count_tokens(self.rendered_context()), min_dialogue=15, sections=False, keep_director=talking_character.name) -%}
+{% set scene_history = scene.context_history(budget=max_tokens-200-rendered_context_tokens, min_dialogue=15, sections=False, keep_director=talking_character.name) -%}
 {# RAG CONTEXT #}{% with memory_prompt = scene_history %}{% include "memory-context.jinja2" %}{% endwith %}
 {# SCENE HISTORY #}<|SECTION:SCENE|>
 {% block scene_history_block -%}
@@ -83,7 +85,7 @@ They may be instructions on how the character should act or simply add some cont
 {% endif -%}
 {% endif -%}
 
-{% with direct=direct_instruction, character=talking_character %}{% include "rerun-context.jinja2" %}{% endwith %}
+{% with direct=direct_instruction, character=talking_character %}{% include "regenerate-context.jinja2" %}{% endwith %}
 
 {% if director_guidance %}# {{ talking_character.name }}'s next action: {{ director_guidance|condensed }}{% endif %}
 {% if direct_instruction -%}# {{ talking_character.name }}'s next action: {{ direct_instruction|condensed }}. You must not add additional actions.{% endif -%}

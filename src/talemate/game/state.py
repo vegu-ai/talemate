@@ -4,12 +4,12 @@ from typing import TYPE_CHECKING, Any
 import pydantic
 import structlog
 
-from talemate.agents.director import DirectorAgent
 from talemate.agents.memory import MemoryAgent
 from talemate.instance import get_agent
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
+    from talemate.agents.director import DirectorAgent
 
 log = structlog.get_logger("game_state")
 
@@ -36,7 +36,7 @@ class GameState(pydantic.BaseModel):
     instructions: Instructions = pydantic.Field(default_factory=Instructions)
 
     @property
-    def director(self) -> DirectorAgent:
+    def director(self) -> "DirectorAgent":
         return get_agent("director")
 
     @property
@@ -50,10 +50,27 @@ class GameState(pydantic.BaseModel):
     @property
     def game_won(self) -> bool:
         return self.variables.get("__game_won__") == True
-
-    def init(self, scene: "Scene") -> "GameState":
-        return self
-
+    
+    def __getitem__(self, key: str) -> Any:
+        return self.get_var(key)
+    
+    def __setitem__(self, key: str, value: Any):
+        self.set_var(key, value)
+        
+    def __delitem__(self, key: str):
+        return self.unset_var(key)
+    
+    def __contains__(self, key: str) -> bool:
+        return self.has_var(key)
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.get_var(key, default=default)
+    
+    def pop(self, key: str, default: Any = None) -> Any:
+        value = self.get_var(key, default=default)
+        self.unset_var(key)
+        return value
+    
     def set_var(self, key: str, value: Any, commit: bool = False):
         self.variables[key] = value
         if commit:

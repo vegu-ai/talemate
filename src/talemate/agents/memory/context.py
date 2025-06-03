@@ -37,11 +37,19 @@ class MemoryRequestState(pydantic.BaseModel):
     max_distance: float | None = None
     
     def add_result(self, doc:str, distance:float, meta:dict):
+        
+        if doc is None:
+            return
+        
         self.results.append(MemoryRequestResult(doc=doc, distance=distance, meta=meta))
         self.closest_distance = min(self.closest_distance, distance) if self.closest_distance is not None else distance
         self.furthest_distance = max(self.furthest_distance, distance) if self.furthest_distance is not None else distance
         
     def accept_result(self, doc:str, distance:float, meta:dict):
+        
+        if doc is None:
+            return
+        
         self.accepted_results.append(MemoryRequestResult(doc=doc, distance=distance, meta=meta))
         
     @property

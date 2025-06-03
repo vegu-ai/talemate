@@ -1,10 +1,13 @@
+import os
+
+import logging
+import structlog
+
 import argparse
 import asyncio
-import os
 import signal
 import sys
 
-import structlog
 import websockets
 import re
 
@@ -12,8 +15,15 @@ import talemate.config
 from talemate.server.api import websocket_endpoint
 from talemate.version import VERSION
 
-log = structlog.get_logger("talemate.server.run")
+TALEMATE_DEBUG = os.environ.get("TALEMATE_DEBUG", "0")
+log_level = logging.DEBUG if TALEMATE_DEBUG == "1" else logging.INFO
 
+structlog.configure(
+    wrapper_class=structlog.make_filtering_bound_logger(log_level),
+)
+
+
+log = structlog.get_logger("talemate.server.run")
 
 STARTUP_TEXT = f"""
 
@@ -97,10 +107,15 @@ def run_server(args):
 
     import talemate.agents.custom
     import talemate.client.custom
+    import talemate.agents
     from talemate.agents.registry import get_agent_types
     from talemate.world_state.templates import Collection
     from talemate.prompts.overrides import get_template_overrides
     import talemate.client.system_prompts as system_prompts
+    
+    # import node libraries
+    import talemate.game.engine.nodes.load_definitions
+
 
     config = talemate.config.cleanup()
 

@@ -1,0 +1,145 @@
+{
+  "title": "Creative Loop",
+  "id": "3cebcd71-fcbe-4cd1-81e4-58cb2b7e0247",
+  "properties": {
+    "trigger_game_loop": false
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "registry": "scene/CreativeLoop",
+  "base_type": "scene/SceneLoop",
+  "nodes": {
+    "996c4655-25be-4cd0-9ea8-a733ccfd66aa": {
+      "title": "Switch",
+      "id": "996c4655-25be-4cd0-9ea8-a733ccfd66aa",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 496,
+      "y": 327,
+      "width": 210,
+      "height": 78,
+      "registry": "core/Switch"
+    },
+    "948d539d-ccde-41f0-a1b4-9bbebcb2387e": {
+      "title": "Get Input",
+      "id": "948d539d-ccde-41f0-a1b4-9bbebcb2387e",
+      "properties": {
+        "reason": "command",
+        "prefix": "Enter command:",
+        "allow_commands": true,
+        "trigger_actor_iter": true
+      },
+      "x": 786,
+      "y": 410,
+      "width": 287,
+      "height": 210,
+      "registry": "input/WaitForInput"
+    },
+    "203c75c5-9518-486d-aa23-051be4dbaede": {
+      "title": "Get Scene Loop State",
+      "id": "203c75c5-9518-486d-aa23-051be4dbaede",
+      "properties": {},
+      "x": 4,
+      "y": 329,
+      "width": 184,
+      "height": 71,
+      "registry": "scene/GetSceneLoopState"
+    },
+    "4a24fbf8-524c-465e-826d-729630f64786": {
+      "title": "Dict Get",
+      "id": "4a24fbf8-524c-465e-826d-729630f64786",
+      "properties": {
+        "key": "__test_module"
+      },
+      "x": 233,
+      "y": 326,
+      "width": 210,
+      "height": 78,
+      "registry": "data/DictGet"
+    },
+    "576e9595-5efd-454c-829c-9a271e9f9b4d": {
+      "title": "Dict Pop",
+      "id": "576e9595-5efd-454c-829c-9a271e9f9b4d",
+      "properties": {
+        "key": null
+      },
+      "x": 1272,
+      "y": 334,
+      "width": 210,
+      "height": 98,
+      "registry": "data/DictPop"
+    },
+    "14a3c92a-5bd4-4735-8247-75155da384c1": {
+      "title": "Coallesce",
+      "id": "14a3c92a-5bd4-4735-8247-75155da384c1",
+      "properties": {},
+      "x": 923,
+      "y": 195,
+      "width": 140,
+      "height": 86,
+      "registry": "core/Coallesce"
+    },
+    "1dfeb994-f3d9-4166-acfe-f8d7faf7696f": {
+      "title": "RSwitch",
+      "id": "1dfeb994-f3d9-4166-acfe-f8d7faf7696f",
+      "properties": {},
+      "x": 1094,
+      "y": 264,
+      "width": 140,
+      "height": 66,
+      "registry": "core/RSwitch"
+    },
+    "f22153e4-5596-45c7-81ce-8cf2b2e08bf6": {
+      "title": "Run Module",
+      "id": "f22153e4-5596-45c7-81ce-8cf2b2e08bf6",
+      "properties": {},
+      "x": 723,
+      "y": 194,
+      "width": 167,
+      "height": 66,
+      "registry": "core/RunModule"
+    }
+  },
+  "edges": {
+    "996c4655-25be-4cd0-9ea8-a733ccfd66aa.yes": [
+      "948d539d-ccde-41f0-a1b4-9bbebcb2387e.abort_condition",
+      "f22153e4-5596-45c7-81ce-8cf2b2e08bf6.module"
+    ],
+    "996c4655-25be-4cd0-9ea8-a733ccfd66aa.no": [
+      "948d539d-ccde-41f0-a1b4-9bbebcb2387e.state"
+    ],
+    "203c75c5-9518-486d-aa23-051be4dbaede.shared": [
+      "4a24fbf8-524c-465e-826d-729630f64786.dict",
+      "1dfeb994-f3d9-4166-acfe-f8d7faf7696f.yes"
+    ],
+    "4a24fbf8-524c-465e-826d-729630f64786.value": [
+      "996c4655-25be-4cd0-9ea8-a733ccfd66aa.value"
+    ],
+    "4a24fbf8-524c-465e-826d-729630f64786.key": [
+      "576e9595-5efd-454c-829c-9a271e9f9b4d.key"
+    ],
+    "14a3c92a-5bd4-4735-8247-75155da384c1.value": [
+      "1dfeb994-f3d9-4166-acfe-f8d7faf7696f.check"
+    ],
+    "1dfeb994-f3d9-4166-acfe-f8d7faf7696f.value": [
+      "576e9595-5efd-454c-829c-9a271e9f9b4d.dict"
+    ],
+    "f22153e4-5596-45c7-81ce-8cf2b2e08bf6.done": [
+      "14a3c92a-5bd4-4735-8247-75155da384c1.a"
+    ],
+    "f22153e4-5596-45c7-81ce-8cf2b2e08bf6.failed": [
+      "14a3c92a-5bd4-4735-8247-75155da384c1.b"
+    ],
+    "f22153e4-5596-45c7-81ce-8cf2b2e08bf6.cancelled": [
+      "14a3c92a-5bd4-4735-8247-75155da384c1.c"
+    ]
+  },
+  "error_handlers": [],
+  "callbacks": [],
+  "sleep": 0.001,
+  "inputs": [],
+  "outputs": []
+}

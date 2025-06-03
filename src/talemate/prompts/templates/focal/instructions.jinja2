@@ -1,10 +1,12 @@
 Call the following functions to execute your tasks. Each function is explained by documentation and some examples. Understand the schema and then use the examples to execute your tasks.
 
-{% if max_calls %}You are allowed to make up to {{ max_calls }} function calls. It is recommended to use fewer calls.{% endif %}
+{% if max_calls %}You are allowed to make up to {{ max_calls }} function calls.{% if max_calls > 1 %}It is recommended to use fewer calls.{% endif %}{% endif %}
 
-Functions must be called using json code blocks.
+Functions must be called using {{ state.schema_format }} code blocks.
 
 BEFORE calling ANY functions, briefly explain which functions you will call and your understanding of the schema.
 
 YOU ARE NOT ALLOWED TO MAKE MORE THAN {{ max_calls }} FUNCTION CALL, TOTAL.
+
+HOW TO CALL A FUNCTION: For each function call define it in a {{ state.schema_format }} code block as part of THIS response. Do this for each function call you make. You must not split the code block across multiple responses.
 <|SECTION:FUNCTIONS|>

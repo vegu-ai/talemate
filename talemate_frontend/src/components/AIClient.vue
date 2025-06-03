@@ -32,10 +32,31 @@
             <v-list-item-subtitle class="text-caption">
               {{ client.model_name }}
             </v-list-item-subtitle>
-            <v-list-item-subtitle class="text-caption">
-              {{ client.type }} 
-              <v-chip label size="x-small" variant="outlined" class="ml-1">ctx {{ client.max_token_length }}</v-chip>
-            </v-list-item-subtitle>
+            <v-list-item-title class="text-caption">
+              <div class="d-flex flex-wrap align-center">
+                <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-server-outline">{{ client.type }}</v-chip>
+                <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
+                <v-chip v-if="client.rate_limit" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-speedometer">{{ client.rate_limit }}/min</v-chip>
+                <v-menu density="compact">
+                  <template v-slot:activator="{ props }">
+                    <v-chip v-bind="props" label size="x-small" color="highlight1" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-tune">{{ client.preset_group || "Default" }}</v-chip>
+                  </template>
+
+                  <v-list density="compact">
+                    <v-list-item prepend-icon="mdi-pencil" @click="openAppConfig('presets', 'inference', client.preset_group)">
+                      <v-list-item-title>Edit {{ client.preset_group || "Default" }} Parameters</v-list-item-title>
+                    </v-list-item>
+                    <v-list-item prepend-icon="mdi-tune" v-for="preset in availablePresets" :key="preset.value" @click="client.preset_group = preset.value; saveClientDelayed(client)">
+                      <v-list-item-title>{{ preset.title }}</v-list-item-title>
+                      <v-list-item-subtitle>Assign this preset</v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </v-menu>
+
+                <!-- data format -->
+                <v-chip v-if="client.data_format" label size="x-small" color="grey" variant="tonal" class="mb-1" prepend-icon="mdi-code-json">{{ client.data_format.toUpperCase() }}</v-chip>
+              </div>
+            </v-list-item-title>
             <div density="compact">
               <v-slider
                 hide-details
@@ -51,7 +72,7 @@
             <v-list-item-subtitle class="text-center">
   
               <!-- LLM prompt template warning -->
-              <v-tooltip text="No LLM prompt template for this model. Using default. Templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template" max-width="200">
+              <v-tooltip text="Could not determine LLM prompt template for this model. Using default. You can pick a template manually in the client options and new templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template" max-width="200">
                 <template v-slot:activator="{ props }">
                   <v-icon x-size="14" class="mr-1" v-bind="props" color="orange">mdi-alert</v-icon>
                 </template>
@@ -103,6 +124,7 @@
       :dialog="state.dialog" 
       :formTitle="state.formTitle" 
       :immutable-config="immutableConfig"
+      :available-presets="availablePresets"
       @save="saveClient" 
       @error="propagateError" 
       @update:dialog="updateDialog">
@@ -138,6 +160,8 @@ export default {
           model_name: '',
           max_token_length: 8192,
           double_coercion: null,
+          rate_limit: null,
+          data_format: null,
           data: {
             has_prompt_template: false,
           }
@@ -147,6 +171,28 @@ export default {
     }
   },
   computed: {
+    availablePresets() {
+      let items = [{ title: 'Default', value: '' }]
+      if(!this.immutableConfig || !this.immutableConfig.presets) {
+        return items;
+      }
+      const inferenceGroups = this.immutableConfig.presets.inference_groups;
+      if(!inferenceGroups || !Object.keys(inferenceGroups).length) {
+        return items;
+      }
+      
+      for (const [key, value] of Object.entries(inferenceGroups)) {
+        items.push({
+          title: value.name,
+          value: key,
+        });
+      }
+
+      // sort by name
+      items.sort((a, b) => a.title.localeCompare(b.title));
+
+      return items;
+    },
     visibleClients: function() {
       return this.state.clients.filter(client => !this.hideDisabled || client.status !== 'disabled');
     },
@@ -159,6 +205,7 @@ export default {
     'registerMessageHandler',
     'isConnected',
     'getAgents',
+    'openAppConfig',
   ],
   provide() {
     return {
@@ -233,7 +280,6 @@ export default {
       } else {
         this.state.clients[index] = client;
       }
-      console.log("Saving client", client)
       this.state.dialog = false; // Close the dialog after saving the client
       this.$emit('clients-updated', this.state.clients);
     },
@@ -303,9 +349,12 @@ export default {
           client.api_url = data.api_url;
           client.api_key = data.api_key;
           client.double_coercion = data.data.double_coercion;
+          client.rate_limit = data.data.rate_limit;
+          client.data_format = data.data.data_format;
           client.data = data.data;
           client.enabled = data.data.enabled;
           client.system_prompts = data.data.system_prompts;
+          client.preset_group = data.data.preset_group;
           for (let key in client.data.meta.extra_fields) {
             if (client.data[key] === null || client.data[key] === undefined) {
               client.data[key] = client.data.meta.defaults[key];
@@ -326,9 +375,12 @@ export default {
             api_url: data.api_url,
             api_key: data.api_key,
             double_coercion: data.data.double_coercion,
+            rate_limit: data.data.rate_limit,
+            data_format: data.data.data_format,
             data: data.data,
             enabled: data.data.enabled,
             system_prompts: data.data.system_prompts,
+            preset_group: data.data.preset_group,
           });
 
           // apply extra field defaults

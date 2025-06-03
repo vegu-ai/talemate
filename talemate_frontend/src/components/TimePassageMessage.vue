@@ -23,7 +23,7 @@ export default {
       minimized: true
     }
   },
-  props: ['text', 'message_id', 'ts', 'uxLocked'],
+  props: ['text', 'message_id', 'ts', 'uxLocked', 'isLastMessage'],
   inject: ['requestDeleteMessage', 'getMessageStyle', 'getMessageColor'],
   methods: {
     toggle() {

@@ -40,6 +40,8 @@ export default {
     props: {
         choices: Array,
         character: String,
+        uxLocked: Boolean,
+        isLastMessage: Boolean,
     },
     data() {
         return {

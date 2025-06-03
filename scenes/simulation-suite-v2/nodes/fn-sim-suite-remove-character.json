@@ -1,0 +1,365 @@
+{
+  "title": "Fn Sim Suite Remove Character",
+  "id": "007eba23-ee7a-49c7-8bcd-7268f3410cb8",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "color": null,
+  "registry": "sim-suite/fnSimSuiteRemoveCharacter",
+  "nodes": {
+    "eb4377c1-2ee2-4602-8248-b0887c84c6ba": {
+      "title": "Make String",
+      "id": "eb4377c1-2ee2-4602-8248-b0887c84c6ba",
+      "properties": {
+        "value": "The computer adds {character.name} to the simulation."
+      },
+      "x": 30,
+      "y": 380,
+      "width": 268,
+      "height": 64,
+      "collapsed": false,
+      "color": null,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "2f928855-1381-462b-b53d-9f1ed0daa6d0": {
+      "title": "Make Dict",
+      "id": "2f928855-1381-462b-b53d-9f1ed0daa6d0",
+      "properties": {
+        "data": {}
+      },
+      "x": 190,
+      "y": 520,
+      "width": 210,
+      "height": 93,
+      "collapsed": true,
+      "color": null,
+      "registry": "data/MakeDict",
+      "base_type": "core/Node"
+    },
+    "73e655d0-9b16-4406-9111-63691c2766c6": {
+      "title": "Get State",
+      "id": "73e655d0-9b16-4406-9111-63691c2766c6",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 30,
+      "y": 600,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "color": null,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "e64fd4fc-1f0c-4a05-9e58-b9c10e9d6808": {
+      "title": "Format",
+      "id": "e64fd4fc-1f0c-4a05-9e58-b9c10e9d6808",
+      "properties": {},
+      "x": 660,
+      "y": 380,
+      "width": 140,
+      "height": 46,
+      "collapsed": false,
+      "color": null,
+      "registry": "data/string/Format",
+      "base_type": "core/Node"
+    },
+    "5ef2598d-b79e-4f98-bf92-602c81cf5ea3": {
+      "title": "Dict Set",
+      "id": "5ef2598d-b79e-4f98-bf92-602c81cf5ea3",
+      "properties": {
+        "key": "character"
+      },
+      "x": 380,
+      "y": 540,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "color": null,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "6b8fffdf-58b9-4caa-b02d-e723642b73c8": {
+      "title": "Director Message",
+      "id": "6b8fffdf-58b9-4caa-b02d-e723642b73c8",
+      "properties": {
+        "source": "ai",
+        "action": "actor_instruction"
+      },
+      "x": 860,
+      "y": 380,
+      "width": 210,
+      "height": 162,
+      "collapsed": false,
+      "color": null,
+      "registry": "scene/message/DirectorMessage",
+      "base_type": "core/Node"
+    },
+    "0e0df102-fe85-4ff2-93c3-a6022c0c038b": {
+      "title": "Argument",
+      "id": "0e0df102-fe85-4ff2-93c3-a6022c0c038b",
+      "properties": {
+        "name": "instructions",
+        "typ": "str"
+      },
+      "x": 40,
+      "y": 820,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "color": null,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "99396df2-f1b2-47a6-b790-3516f8160fa5": {
+      "title": "Push History",
+      "id": "99396df2-f1b2-47a6-b790-3516f8160fa5",
+      "properties": {
+        "emit_message": false
+      },
+      "x": 1128,
+      "y": 422,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "color": null,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "0ac576e1-3bb4-46d5-9483-384a0c7d69d9": {
+      "title": "Stage 1",
+      "id": "0ac576e1-3bb4-46d5-9483-384a0c7d69d9",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1420,
+      "y": 450,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "color": null,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "b3772d5a-d75b-45e0-a8dc-4e172b1da34d": {
+      "title": "Argument",
+      "id": "b3772d5a-d75b-45e0-a8dc-4e172b1da34d",
+      "properties": {
+        "name": "character_name",
+        "typ": "str"
+      },
+      "x": 20,
+      "y": 80,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "color": null,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "33a1903f-d582-4ffe-ad74-697dd769391f": {
+      "title": "Switch",
+      "id": "33a1903f-d582-4ffe-ad74-697dd769391f",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 290,
+      "y": 90,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "color": null,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "a6c9a514-fb78-4048-be8d-c4c02bef6715": {
+      "title": "Get Character",
+      "id": "a6c9a514-fb78-4048-be8d-c4c02bef6715",
+      "properties": {},
+      "x": 570,
+      "y": 90,
+      "width": 203,
+      "height": 26,
+      "collapsed": false,
+      "color": null,
+      "registry": "scene/GetCharacter",
+      "base_type": "core/Node"
+    },
+    "dab5f502-af3e-4cc1-90aa-ef6926f6115d": {
+      "title": "Switch",
+      "id": "dab5f502-af3e-4cc1-90aa-ef6926f6115d",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 890,
+      "y": 70,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "color": null,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "12beb3f8-5b44-4f2c-b454-c43c545ab701": {
+      "title": "Deactivate Character",
+      "id": "12beb3f8-5b44-4f2c-b454-c43c545ab701",
+      "properties": {},
+      "x": 1290,
+      "y": 60,
+      "width": 253,
+      "height": 52,
+      "collapsed": false,
+      "color": null,
+      "registry": "agents/world_state/DeactivateCharacter",
+      "base_type": "core/Node"
+    },
+    "c31bab78-8297-409d-82cb-501a54819688": {
+      "title": "SET character",
+      "id": "c31bab78-8297-409d-82cb-501a54819688",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 1400,
+      "y": 180,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "color": null,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "2e08a51f-720e-4a35-bc7f-94621911abb1": {
+      "title": "Stage 0",
+      "id": "2e08a51f-720e-4a35-bc7f-94621911abb1",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1580,
+      "y": 80,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "color": null,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "7c934011-e194-490f-bce4-d0194c9ed272": {
+      "title": "Coallesce",
+      "id": "7c934011-e194-490f-bce4-d0194c9ed272",
+      "properties": {},
+      "x": 1150,
+      "y": 190,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "color": null,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "59debd0c-f08d-4183-b24f-412eca155fb1": {
+      "title": "Stop",
+      "id": "59debd0c-f08d-4183-b24f-412eca155fb1",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 1430,
+      "y": 260,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "color": null,
+      "registry": "raise/Stop",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "eb4377c1-2ee2-4602-8248-b0887c84c6ba.value": [
+      "e64fd4fc-1f0c-4a05-9e58-b9c10e9d6808.template"
+    ],
+    "2f928855-1381-462b-b53d-9f1ed0daa6d0.dict": [
+      "5ef2598d-b79e-4f98-bf92-602c81cf5ea3.dict"
+    ],
+    "73e655d0-9b16-4406-9111-63691c2766c6.value": [
+      "5ef2598d-b79e-4f98-bf92-602c81cf5ea3.value"
+    ],
+    "e64fd4fc-1f0c-4a05-9e58-b9c10e9d6808.result": [
+      "6b8fffdf-58b9-4caa-b02d-e723642b73c8.message"
+    ],
+    "5ef2598d-b79e-4f98-bf92-602c81cf5ea3.dict": [
+      "e64fd4fc-1f0c-4a05-9e58-b9c10e9d6808.variables"
+    ],
+    "6b8fffdf-58b9-4caa-b02d-e723642b73c8.message": [
+      "99396df2-f1b2-47a6-b790-3516f8160fa5.message"
+    ],
+    "0e0df102-fe85-4ff2-93c3-a6022c0c038b.value": [
+      "6b8fffdf-58b9-4caa-b02d-e723642b73c8.action"
+    ],
+    "99396df2-f1b2-47a6-b790-3516f8160fa5.message": [
+      "0ac576e1-3bb4-46d5-9483-384a0c7d69d9.state"
+    ],
+    "b3772d5a-d75b-45e0-a8dc-4e172b1da34d.value": [
+      "33a1903f-d582-4ffe-ad74-697dd769391f.value"
+    ],
+    "33a1903f-d582-4ffe-ad74-697dd769391f.yes": [
+      "a6c9a514-fb78-4048-be8d-c4c02bef6715.character_name"
+    ],
+    "33a1903f-d582-4ffe-ad74-697dd769391f.no": [
+      "7c934011-e194-490f-bce4-d0194c9ed272.a"
+    ],
+    "a6c9a514-fb78-4048-be8d-c4c02bef6715.character": [
+      "dab5f502-af3e-4cc1-90aa-ef6926f6115d.value"
+    ],
+    "dab5f502-af3e-4cc1-90aa-ef6926f6115d.yes": [
+      "12beb3f8-5b44-4f2c-b454-c43c545ab701.state",
+      "12beb3f8-5b44-4f2c-b454-c43c545ab701.character",
+      "c31bab78-8297-409d-82cb-501a54819688.value"
+    ],
+    "dab5f502-af3e-4cc1-90aa-ef6926f6115d.no": [
+      "7c934011-e194-490f-bce4-d0194c9ed272.b"
+    ],
+    "12beb3f8-5b44-4f2c-b454-c43c545ab701.state": [
+      "2e08a51f-720e-4a35-bc7f-94621911abb1.state"
+    ],
+    "7c934011-e194-490f-bce4-d0194c9ed272.value": [
+      "59debd0c-f08d-4183-b24f-412eca155fb1.state"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Stage 0",
+      "x": 2,
+      "y": 2,
+      "width": 1732,
+      "height": 296,
+      "color": "#3f789e",
+      "font_size": 24
+    },
+    {
+      "title": "Stage 1",
+      "x": 3,
+      "y": 308,
+      "width": 1540,
+      "height": 633,
+      "color": "#3f789e",
+      "font_size": 24
+    }
+  ],
+  "comments": [],
+  "base_type": "core/functions/Function",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "9ac82c87-fe80-49c5-9df2-a6e1fbe57427",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    }
+  ]
+}

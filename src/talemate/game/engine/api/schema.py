@@ -251,6 +251,7 @@ class ReinforcementMessageSchema(pydantic.BaseModel):
             raw=message.raw,
             id=message.id,
             source=message.source,
+            meta=message.meta,
             hidden=message.hidden,
         )
 

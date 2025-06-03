@@ -1,0 +1,341 @@
+{
+  "title": "Fn Sim Suite Set Environment",
+  "id": "108e4b8e-394e-4c64-8aef-2f7cddfceb3d",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "registry": "sim-suite/fnSimSuiteSetEnvironment",
+  "nodes": {
+    "aff414ae-ccb8-480d-afbc-48c68b21a210": {
+      "title": "Dict Set",
+      "id": "aff414ae-ccb8-480d-afbc-48c68b21a210",
+      "properties": {
+        "key": "instructions"
+      },
+      "x": 351,
+      "y": 216,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "registry": "data/DictSet",
+      "base_type": "core/Node"
+    },
+    "9bc3c774-6b59-4152-91e0-a25adcaa6399": {
+      "title": "List Append",
+      "id": "9bc3c774-6b59-4152-91e0-a25adcaa6399",
+      "properties": {},
+      "x": 1098,
+      "y": 234,
+      "width": 140,
+      "height": 46,
+      "collapsed": false,
+      "registry": "data/ListAppend",
+      "base_type": "core/Node"
+    },
+    "e6466f30-9b20-44bf-ac47-5711c0c99467": {
+      "title": "Stage 1",
+      "id": "e6466f30-9b20-44bf-ac47-5711c0c99467",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1338,
+      "y": 264,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "de5b79a2-aa11-4ba9-a888-48b0482733df": {
+      "title": "result",
+      "id": "de5b79a2-aa11-4ba9-a888-48b0482733df",
+      "properties": {},
+      "x": 878,
+      "y": 264,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "de767133-746a-41c4-ab12-c8177bc86909": {
+      "title": "Format",
+      "id": "de767133-746a-41c4-ab12-c8177bc86909",
+      "properties": {},
+      "x": 668,
+      "y": 244,
+      "width": 140,
+      "height": 46,
+      "collapsed": false,
+      "registry": "data/string/Format",
+      "base_type": "core/Node"
+    },
+    "dd437af4-9dfe-47fb-8b59-bfbbb9cad86d": {
+      "title": "Push History",
+      "id": "dd437af4-9dfe-47fb-8b59-bfbbb9cad86d",
+      "properties": {
+        "emit_message": true
+      },
+      "x": 1230,
+      "y": 360,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "29c40d7e-0f96-4bcd-b7af-3180905add6e": {
+      "title": "Director Message",
+      "id": "29c40d7e-0f96-4bcd-b7af-3180905add6e",
+      "properties": {
+        "source": "ai",
+        "action": ""
+      },
+      "x": 860,
+      "y": 370,
+      "width": 298,
+      "height": 162,
+      "collapsed": false,
+      "registry": "scene/message/DirectorMessage",
+      "base_type": "core/Node"
+    },
+    "f5ef242f-ffcf-4422-b785-f081499e5a8b": {
+      "title": "Make Text",
+      "id": "f5ef242f-ffcf-4422-b785-f081499e5a8b",
+      "properties": {
+        "value": "The computer changes the environment of the simulation: \"{instructions}\""
+      },
+      "x": 326,
+      "y": 84,
+      "width": 271,
+      "height": 58,
+      "collapsed": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "f492dac1-fe2a-418a-8cac-f1484013ddfd": {
+      "title": "Make Text",
+      "id": "f492dac1-fe2a-418a-8cac-f1484013ddfd",
+      "properties": {
+        "value": "The computer changes the environment of the simulation"
+      },
+      "x": 330,
+      "y": 460,
+      "width": 294,
+      "height": 59,
+      "collapsed": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "bf72ae3e-ad0f-49f3-b7b4-7bfaed3db2b7": {
+      "title": "Make Dict",
+      "id": "bf72ae3e-ad0f-49f3-b7b4-7bfaed3db2b7",
+      "properties": {
+        "data": {}
+      },
+      "x": 60,
+      "y": 150,
+      "width": 210,
+      "height": 92,
+      "collapsed": true,
+      "registry": "data/MakeDict",
+      "base_type": "core/Node"
+    },
+    "177ccd1c-f1ca-4418-a6ab-50847eafcfd0": {
+      "title": "Switch",
+      "id": "177ccd1c-f1ca-4418-a6ab-50847eafcfd0",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 300,
+      "y": 746,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "03902874-4da8-4f18-9400-06b4bcbaf469": {
+      "title": "Get Agent",
+      "id": "03902874-4da8-4f18-9400-06b4bcbaf469",
+      "properties": {
+        "agent_name": "director"
+      },
+      "x": 300,
+      "y": 890,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "de9aa200-5106-4795-9896-f5a1d08133bc": {
+      "title": "Deactivate all NPCs",
+      "id": "de9aa200-5106-4795-9896-f5a1d08133bc",
+      "properties": {
+        "code": "for npc in TM.scene.npc_characters:\n    TM.agents.world_state.deactivate_character(\n        npc.name\n    )\nresult[\"value\"] = True"
+      },
+      "x": 630,
+      "y": 810,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "registry": "core/functions/ScopedAPIFunction",
+      "base_type": "core/Node"
+    },
+    "970bb0dd-4010-4ae0-833b-81e9a1f558b8": {
+      "title": "Stage 2",
+      "id": "970bb0dd-4010-4ae0-833b-81e9a1f558b8",
+      "properties": {
+        "stage": 2
+      },
+      "x": 890,
+      "y": 840,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "f7fd581c-a5c9-43ac-8e4b-42608c638f2f": {
+      "title": "GET scene loop.simulation_calls",
+      "id": "f7fd581c-a5c9-43ac-8e4b-42608c638f2f",
+      "properties": {
+        "name": "simulation_calls",
+        "scope": "scene loop"
+      },
+      "x": 790,
+      "y": 80,
+      "width": 260,
+      "height": 122,
+      "collapsed": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "f150f60a-eb97-49a1-b294-3ac6052000aa": {
+      "title": "instructions",
+      "id": "f150f60a-eb97-49a1-b294-3ac6052000aa",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "type": "core/functions/Argument"
+      },
+      "x": 50,
+      "y": 300,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "a3e99ca5-6c05-42af-8666-63b9ea831026": {
+      "title": "reset",
+      "id": "a3e99ca5-6c05-42af-8666-63b9ea831026",
+      "properties": {
+        "name": "reset",
+        "typ": "bool",
+        "type": "core/functions/Argument"
+      },
+      "x": 50,
+      "y": 740,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "aff414ae-ccb8-480d-afbc-48c68b21a210.dict": [
+      "de767133-746a-41c4-ab12-c8177bc86909.variables"
+    ],
+    "9bc3c774-6b59-4152-91e0-a25adcaa6399.list": [
+      "e6466f30-9b20-44bf-ac47-5711c0c99467.state"
+    ],
+    "de5b79a2-aa11-4ba9-a888-48b0482733df.value": [
+      "9bc3c774-6b59-4152-91e0-a25adcaa6399.item"
+    ],
+    "de767133-746a-41c4-ab12-c8177bc86909.result": [
+      "de5b79a2-aa11-4ba9-a888-48b0482733df.value"
+    ],
+    "29c40d7e-0f96-4bcd-b7af-3180905add6e.message": [
+      "dd437af4-9dfe-47fb-8b59-bfbbb9cad86d.message"
+    ],
+    "f5ef242f-ffcf-4422-b785-f081499e5a8b.value": [
+      "de767133-746a-41c4-ab12-c8177bc86909.template"
+    ],
+    "f492dac1-fe2a-418a-8cac-f1484013ddfd.value": [
+      "29c40d7e-0f96-4bcd-b7af-3180905add6e.message"
+    ],
+    "bf72ae3e-ad0f-49f3-b7b4-7bfaed3db2b7.dict": [
+      "aff414ae-ccb8-480d-afbc-48c68b21a210.dict"
+    ],
+    "177ccd1c-f1ca-4418-a6ab-50847eafcfd0.yes": [
+      "de9aa200-5106-4795-9896-f5a1d08133bc.state"
+    ],
+    "03902874-4da8-4f18-9400-06b4bcbaf469.agent": [
+      "de9aa200-5106-4795-9896-f5a1d08133bc.agent"
+    ],
+    "de9aa200-5106-4795-9896-f5a1d08133bc.result": [
+      "970bb0dd-4010-4ae0-833b-81e9a1f558b8.state"
+    ],
+    "f7fd581c-a5c9-43ac-8e4b-42608c638f2f.value": [
+      "9bc3c774-6b59-4152-91e0-a25adcaa6399.list"
+    ],
+    "f150f60a-eb97-49a1-b294-3ac6052000aa.value": [
+      "aff414ae-ccb8-480d-afbc-48c68b21a210.value",
+      "29c40d7e-0f96-4bcd-b7af-3180905add6e.action"
+    ],
+    "a3e99ca5-6c05-42af-8666-63b9ea831026.value": [
+      "177ccd1c-f1ca-4418-a6ab-50847eafcfd0.value"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Stage 1 - Push onto simulation calls",
+      "x": 9,
+      "y": 7,
+      "width": 1443,
+      "height": 588,
+      "color": "#88A",
+      "font_size": 24
+    },
+    {
+      "title": "Stage 2 - Reset",
+      "x": 8,
+      "y": 600,
+      "width": 1026,
+      "height": 398,
+      "color": "#3f789e",
+      "font_size": 24
+    }
+  ],
+  "comments": [
+    {
+      "text": "There is nothing to generate here. We simply push the action onto the simulation calls stack.\n\nThe entire simulation calls stack for this round will be turned into narration at the end of the round if necessary.",
+      "x": 1098,
+      "y": 34,
+      "width": 350
+    }
+  ],
+  "base_type": "core/functions/Function",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "dc3ad8ec-47d2-48c7-80e4-13f3796956f0",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    }
+  ],
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null
+  }
+}

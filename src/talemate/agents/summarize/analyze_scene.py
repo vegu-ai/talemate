@@ -7,6 +7,7 @@ from talemate.agents.base import (
     AgentActionConfig,
     AgentEmission,
     AgentTemplateEmission,
+    DynamicInstruction,
 )
 from talemate.prompts import Prompt
 from talemate.util import strip_partial_sentences
@@ -14,6 +15,7 @@ import talemate.emit.async_signals
 from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.agents.context import active_agent
+from talemate.agents.base import RagBuildSubInstructionEmission
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -40,6 +42,7 @@ class SceneAnalysisDeepAnalysisEmission(AgentEmission):
     analysis_sub_type: str | None = None
     max_content_investigations: int = 1
     character: "Character" = None
+    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(default_factory=list)
 
 
 class SceneAnalyzationMixin:
@@ -49,12 +52,13 @@ class SceneAnalyzationMixin:
     """
     
     @classmethod
-    def add_actions(cls, summarizer):
-        summarizer.actions["analyze_scene"] = AgentAction(
+    def add_actions(cls, actions: dict[str, AgentAction]):
+        actions["analyze_scene"] = AgentAction(
             enabled=False,
             container=True,
             can_be_disabled=True,
             experimental=True,
+            quick_toggle=True,
             label="Scene Analysis",
             icon="mdi-lightbulb",
             description="Analyzes the scene, providing extra understanding and context to the other agents.",
@@ -102,7 +106,8 @@ class SceneAnalyzationMixin:
                     type="bool",
                     label="Cache analysis",
                     description="Cache the analysis results for the scene. This means analysis will not be regenerated when regenerating the actor or narrator's output.",
-                    value=True
+                    value=True,
+                    quick_toggle=True,
                 ),
             }
         )
@@ -147,6 +152,12 @@ class SceneAnalyzationMixin:
         talemate.emit.async_signals.get("agent.narrator.inject_instructions").connect(
             self.on_inject_instructions
         )
+        talemate.emit.async_signals.get("agent.summarization.rag_build_sub_instruction").connect(
+            self.on_rag_build_sub_instruction
+        )
+        talemate.emit.async_signals.get("agent.editor.revision-analysis.before").connect(
+            self.on_editor_revision_analysis_before
+        )
         
     async def on_inject_instructions(
         self, 
@@ -180,9 +191,15 @@ class SceneAnalyzationMixin:
             analysis = await self.get_cached_analysis(emission_type)
             if analysis:
                 await talemate.emit.async_signals.get("agent.summarization.scene_analysis.cached").send(
-                    SceneAnalysisEmission(agent=self, analysis_type=emission_type, response=analysis, template_vars={
-                        "character": emission.character if hasattr(emission, "character") else None,
-                    })
+                    SceneAnalysisEmission(
+                        agent=self, 
+                        analysis_type=emission_type, 
+                        response=analysis, 
+                        template_vars={
+                            "character": emission.character if hasattr(emission, "character") else None,
+                        },
+                        dynamic_instructions=emission.dynamic_instructions
+                    )
                 )
         
         if not analysis and self.analyze_scene:
@@ -197,13 +214,29 @@ class SceneAnalyzationMixin:
             
         if not analysis:
             return
-        emission.dynamic_instructions.append("\n".join(
-            [
-                "<|SECTION:SCENE ANALYSIS|>",
-                analysis,
-                "<|CLOSE_SECTION|>"
-            ]
-        ))
+        emission.dynamic_instructions.append(
+            DynamicInstruction(
+                title="Scene Analysis",
+                content=analysis
+            )
+        )
+    
+    async def on_rag_build_sub_instruction(self, emission:"RagBuildSubInstructionEmission"):
+        """
+        Injects the sub instruction into the analysis.
+        """
+        sub_instruction = await self.analyze_scene_rag_build_sub_instruction()
+        
+        if sub_instruction:
+            emission.sub_instruction = sub_instruction
+    
+    async def on_editor_revision_analysis_before(self, emission: AgentTemplateEmission):
+        last_analysis = self.get_scene_state("scene_analysis")
+        if last_analysis:
+            emission.dynamic_instructions.append(DynamicInstruction(
+                title="Scene Analysis",
+                content=last_analysis
+            ))
     
     # helpers
     
@@ -217,13 +250,7 @@ class SceneAnalyzationMixin:
         if not cached_analysis:
             return None
         
-        active_agent_context = active_agent.get()
-        
-        if self.scene.history:
-            fingerprint = f"{self.scene.history[-1].fingerprint}-{active_agent_context.first.fingerprint}"
-        else:
-            fingerprint = f"START-{active_agent_context.first.fingerprint}"
-        
+        fingerprint = self.context_fingerpint()
         
         if cached_analysis.get("fp") == fingerprint:
             return cached_analysis["guidance"]
@@ -235,12 +262,7 @@ class SceneAnalyzationMixin:
         Sets the cached analysis for the given type.
         """
         
-        active_agent_context = active_agent.get()
-        
-        if self.scene.history:
-            fingerprint = f"{self.scene.history[-1].fingerprint}-{active_agent_context.first.fingerprint}"
-        else:
-            fingerprint = f"START-{active_agent_context.first.fingerprint}"
+        fingerprint = self.context_fingerpint()
         
         self.set_scene_states(
             **{f"cached_analysis_{typ}": {
@@ -293,7 +315,46 @@ class SceneAnalyzationMixin:
         
         return "progress"
         
-    
+    async def analyze_scene_rag_build_sub_instruction(self):
+        """
+        Analyzes the active agent context to figure out the appropriate sub type
+        for rag build sub instruction.
+        """
+        
+        active_agent_context = active_agent.get()
+        
+        if not active_agent_context:
+            return ""
+        
+        state = active_agent_context.state
+        
+        if state.get("narrator__query_narration"):
+            query = state["narrator__query"]
+            if query.endswith("?"):
+                return "Answer the following question: " + query
+            else:
+                return query
+        
+        narrative_direction = state.get("narrator__narrative_direction")
+        
+        if state.get("narrator__sensory_narration") and narrative_direction:
+            return "Collect information that aids in describing the following sensory experience: " + narrative_direction
+        
+        if state.get("narrator__visual_narration") and narrative_direction:
+            return "Collect information that aids in describing the following visual experience: " + narrative_direction
+        
+        if state.get("narrator__fn_narrate_character_entry") and narrative_direction:
+            return "Collect information that aids in describing the following character entry: " + narrative_direction
+        
+        if state.get("narrator__fn_narrate_character_exit") and narrative_direction:
+            return "Collect information that aids in describing the following character exit: " + narrative_direction
+        
+        if state.get("narrator__fn_narrate_progress"):
+            return "Collect information that aids in progressing the story: " + narrative_direction
+        
+        return ""
+        
+
     # actions
 
     @set_processing
@@ -321,9 +382,13 @@ class SceneAnalyzationMixin:
             "analysis_sub_type": analysis_sub_type,
         }
         
+        emission = SceneAnalysisEmission(agent=self, template_vars=template_vars, analysis_type=typ)
+        
         await talemate.emit.async_signals.get("agent.summarization.scene_analysis.before").send(
-            SceneAnalysisEmission(agent=self, template_vars=template_vars, analysis_type=typ)
+            emission
         )
+        
+        template_vars["dynamic_instructions"] = emission.dynamic_instructions
         
         response = await Prompt.request(
             f"summarizer.analyze-scene-for-next-{typ}",
@@ -358,9 +423,16 @@ class SceneAnalyzationMixin:
         
         
         await talemate.emit.async_signals.get("agent.summarization.scene_analysis.after").send(
-            SceneAnalysisEmission(agent=self, template_vars=template_vars, response=response, analysis_type=typ)
+            SceneAnalysisEmission(
+                agent=self, 
+                template_vars=template_vars, 
+                response=response, 
+                analysis_type=typ,
+                dynamic_instructions=emission.dynamic_instructions
+            )
         )
         
         self.set_context_states(scene_analysis=response)
+        self.set_scene_states(scene_analysis=response)
         
         return response

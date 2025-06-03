@@ -27,7 +27,7 @@
                     :disabled="loading" 
                     prepend-icon="" 
                     v-model="sceneFile" 
-                    @change="loadScene('file')" 
+                    @update:modelValue="loadScene('file')" 
                     label="Drag and Drop file."
                     outlined accept="image/*" 
                     variant="solo-filled" 
@@ -128,7 +128,6 @@ export default {
         },
 
         loadScene(inputMethod) {
-
             if(this.sceneSaved === false) {
                 if(!confirm("The current scene is not saved. Are you sure you want to load a new scene?")) {
                     return;
@@ -143,10 +142,12 @@ export default {
 
             console.log("Loading scene", this.inputMethod, this.sceneFile, this.sceneInput)
 
-            if (this.inputMethod === 'file' && this.sceneFile.length > 0) { // Check if the input method is "file" and there is at least one file
-            
+            if (this.inputMethod === 'file' && this.sceneFile) { // Just check if sceneFile exists
+                // File is now a direct File object, not an array
+                const file = this.sceneFile;
+                
                 // if file is image check if default character is set
-                if(this.sceneFile[0].type.startsWith("image/")) {
+                if(file.type.startsWith("image/")) {
                     if(!this.appConfig.game.default_player_character.name) {
                         this.showDefaultCharacterModal();
                         return;
@@ -154,27 +155,24 @@ export default {
                 }
 
                 this.loading = true;
-            
+                
                 // Convert the uploaded file to base64
                 const reader = new FileReader();
-                reader.readAsDataURL(this.sceneFile[0]); // Access the first file in the array
+                reader.readAsDataURL(file);
 
                 console.log("Loading scene from file")
 
                 reader.onload = () => {
-                    //const base64File = reader.result.split(',')[1];
                     this.$emit("loading", true)
                     this.getWebsocket().send(JSON.stringify({ 
                         type: 'load_scene', 
                         scene_data: reader.result, 
-                        filename: this.sceneFile[0].name,
+                        filename: file.name,
                     }));
-                    this.sceneFile = [];
+                    this.sceneFile = null; // Reset with null instead of empty array
                 };
-            } else if (this.inputMethod === 'path' && this.sceneInput) { // Check if the input method is "path" and the scene input is not empty
-                
+            } else if (this.inputMethod === 'path' && this.sceneInput) {
                 // if path ends with .png/jpg/webp check if default character is set
-
                 if(this.sceneInput.endsWith(".png") || this.sceneInput.endsWith(".jpg") || this.sceneInput.endsWith(".webp")) {
                     if(!this.appConfig.game.default_player_character.name) {
                         this.showDefaultCharacterModal();

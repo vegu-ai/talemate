@@ -1,0 +1,41 @@
+{% include "scene-context.jinja2" %}
+<|SECTION:DRAFT TEXT|>
+{{ text }}
+<|CLOSE_SECTION|>
+{% set issues = 0 %}
+{# repetition #}{% if repetition %}
+{% set issues = issues + 1 %}
+<|SECTION:ISSUE {{ issues }}: REPEATED TEXT|>
+These sentences have been classified as repetition and must either be substantially rewritten or removed. When removing a sentence, substitute something else, that's meaningful to the story and context.
+
+{% for repeat in repetition %}- MATCH: `{{ repeat["text_a"].strip() }}`
+{% endfor %}
+<|CLOSE_SECTION|>
+{# end repetition #}{% endif %}
+{# unwanted prose #}{% if bad_prose %}
+{% set issues = issues + 1 %}
+<|SECTION:ISSUE {{ issues }}: UNWANTED PROSE|>
+These phrases or words have been identified by the director as bad, and MUST be changed accordingly.
+Important: These are semantic matches based on meaning, not literal text. Focus on the underlying concept or idea that triggered the match, rather than expecting exact phrase matches. 
+
+You must state your greater understanding of why these issues were flagged in the first place so you do not replace them with something equally bad or worse.
+
+{% for phrase in bad_prose %}- MATCH: `{{ phrase.phrase }}`
+  - INSTRUCTIONS: {{ phrase.instructions }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{# end unwanted prose #}{% endif %}
+
+{% include "dynamic-instructions.jinja2" %}
+<|SECTION:TASK|>
+1. Analyze each issue separately, taking into account the instructions and guidelines for it.
+2. Specifically compare against previous messages, instead of rewriting the same information often it is better to just drop the repetitive sentence entirely. Its no use to convey the SAME information again just with different words. Repeat back your understanding of this concept.
+3. Tell us your confident plan for fixing the issues.
+4. Rewrite the text to fix the issues, the best you can, according to the plan you made.
+  - Keep your changes minimal, don't get carried away.
+    - YOU MUST NOT MAKE IT LONGER.
+    - YOU MUST NOT REWRITE PARTS THAT WEREN'T EXPLICITLY FLAGGED.
+  - Make one revision in total - so analyze issues first, then fix them all at once!
+
+Repeat back your understanding of the task, then work and report each step 1 - 4, sequentially.
+<|CLOSE_SECTION|>

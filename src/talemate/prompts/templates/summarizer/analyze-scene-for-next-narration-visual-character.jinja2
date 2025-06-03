@@ -7,6 +7,10 @@ Your task is to analyze the current moment in the scene to guide the story edito
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors emphasize visual details that fulfill the direction.
 {% endif %}
 
+{% with task_instructions="What is the reader expecting from the visual character description of " + character.name + " at this moment? Convey at least one NEW, UNKNOWN and INTERESTING detail that fits those expectations!" -%}
+{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) {% include "scene-intent-inline.jinja2" %}
+{% endwith %}
+
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe {{ character.name }}'s immediate visual state:
 - What actions or movements are they making?
 - What is notable about their current appearance and expression?

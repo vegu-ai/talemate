@@ -1,6 +1,9 @@
 import random
 import re
-
+import json
+import sseclient
+import requests
+import asyncio
 import httpx
 import structlog
 from openai import AsyncOpenAI
@@ -155,22 +158,46 @@ class TextGeneratorWebuiClient(ClientBase):
 
         return model_name
 
+    async def abort_generation(self):
+        """
+        Trigger the stop generation endpoint
+        """
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"{self.api_url}/v1/internal/stop-generation",
+                headers=self.request_headers,
+            )
+
     async def generate(self, prompt: str, parameters: dict, kind: str):
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self._generate, prompt, parameters, kind)
+
+    def _generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
         """
-
         parameters["prompt"] = prompt.strip(" ")
+        
+        response = ""
+        parameters["stream"] = True
+        stream_response = requests.post(
+            f"{self.api_url}/v1/completions",
+            json=parameters,
+            timeout=None,
+            headers=self.request_headers,
+            stream=True,
+        )
+        stream_response.raise_for_status()
+        
+        sse = sseclient.SSEClient(stream_response)
+        
+        for event in sse.events():
+            payload = json.loads(event.data)
+            chunk = payload['choices'][0]['text']
+            response += chunk
+            
+        return response
 
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.api_url}/v1/completions",
-                json=parameters,
-                timeout=None,
-                headers=self.request_headers,
-            )
-            response_data = response.json()
-            return response_data["choices"][0]["text"]
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

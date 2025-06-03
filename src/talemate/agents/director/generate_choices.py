@@ -4,10 +4,11 @@ import structlog
 from functools import wraps
 import dataclasses
 from talemate.agents.base import (
-    set_processing as _set_processing,
+    set_processing,
     AgentAction,
     AgentActionConfig,
-    AgentEmission,
+    AgentTemplateEmission,
+    DynamicInstruction,
 )
 from talemate.events import GameLoopStartEvent
 from talemate.scene_message import NarratorMessage, CharacterMessage
@@ -32,31 +33,9 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Character
 
 @dataclasses.dataclass
-class GenerateChoicesEmission(AgentEmission):
-    generation: str = ""
-
-def set_processing(fn):
-    """
-    Custom decorator that emits the agent status as processing while the function
-    is running and then emits the result of the function as a GenerateChoicesEmission
-    """
-
-    @_set_processing
-    @wraps(fn)
-    async def wrapper(self, *args, **kwargs):
-        emission: GenerateChoicesEmission = GenerateChoicesEmission(agent=self)
-        
-        await talemate.emit.async_signals.get("agent.director.generate_choices.before_generate").send(emission)
-        await talemate.emit.async_signals.get("agent.director.generate_choices.inject_instructions").send(emission)
-        
-        response = await fn(self, *args, **kwargs)
-        emission.generation = [response]
-        
-        await talemate.emit.async_signals.get("agent.director.generate_choices.generated").send(emission)
-        return emission.generation[0]
-
-    return wrapper
-
+class GenerateChoicesEmission(AgentTemplateEmission):
+    character: "Character | None" = None
+    choices: list[str] = dataclasses.field(default_factory=list)
 
 class GenerateChoicesMixin:
     
@@ -66,11 +45,12 @@ class GenerateChoicesMixin:
     """
     
     @classmethod
-    def add_actions(cls, director):
-        director.actions["_generate_choices"] = AgentAction(
+    def add_actions(cls, actions: dict[str, AgentAction]):
+        actions["_generate_choices"] = AgentAction(
             enabled=True,
             container=True,
             can_be_disabled=True,
+            quick_toggle=True,
             experimental=True,
             label="Dynamic Actions",
             icon="mdi-tournament",
@@ -175,13 +155,18 @@ class GenerateChoicesMixin:
         character: "Character | str | None" = None,
     ):
         
-        log.info("generate_choices")
-        
+        emission: GenerateChoicesEmission = GenerateChoicesEmission(agent=self)
+
         if isinstance(character, str):
             character = self.scene.get_character(character)
             
         if not character:
             character = self.scene.get_player_character()
+            
+        emission.character = character
+        
+        await talemate.emit.async_signals.get("agent.director.generate_choices.before_generate").send(emission)
+        await talemate.emit.async_signals.get("agent.director.generate_choices.inject_instructions").send(emission)
         
         response = await Prompt.request(
             "director.generate-choices",
@@ -193,6 +178,7 @@ class GenerateChoicesMixin:
                 "character": character,
                 "num_choices": self.generate_choices_num_choices,
                 "instructions": instructions or self.generate_choices_instructions,
+                "dynamic_instructions": emission.dynamic_instructions if emission else None,
             },
         )
 
@@ -209,8 +195,6 @@ class GenerateChoicesMixin:
             log.error("generate_choices failed", error=str(e), response=response)
             return
 
-        log.info("generate_choices done", choices=choices)
-        
         emit(
             "player_choice",
             response,
@@ -220,3 +204,9 @@ class GenerateChoicesMixin:
             },
             websocket_passthrough=True
         )
+        
+        emission.response = response
+        emission.choices = choices
+        await talemate.emit.async_signals.get("agent.director.generate_choices.generated").send(emission)
+        
+        return emission.response

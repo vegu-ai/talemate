@@ -17,6 +17,7 @@ from talemate.scene_message import (
     ReinforcementMessage,
     TimePassageMessage,
 )
+from talemate.util.response import extract_list
 
 
 from talemate.agents.base import Agent, AgentAction, AgentActionConfig, AgentEmission, set_processing
@@ -302,7 +303,7 @@ class WorldStateAgent(
             },
         )
 
-        queries = response.split("\n")
+        queries = extract_list(response)
 
         memory_agent = get_agent("memory")
 

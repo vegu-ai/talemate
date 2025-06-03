@@ -8,13 +8,6 @@
 
 {% endfor %}
 {# END GENERAL REINFORCEMENTS #}
-{# CHARACTER SPECIFIC CONVERSATION REINFORCEMENTS #}
-{% set char_reinforcements = scene.world_state.filter_reinforcements(character=talking_character.name, insert=["conversation-context"]) -%}
-{%- for reinforce in char_reinforcements %}
-{{ reinforce.as_context_line|condensed }}
-
-{% endfor %}
-{# END CHARACTER SPECIFIC CONVERSATION REINFORCEMENTS #}
 {# ACTIVE PINS #}
 {%- for pin in scene.active_pins %}
 {{ pin.time_aware_text|condensed }}
@@ -22,8 +15,4 @@
 {% endfor %}
 {# END ACTIVE PINS #}
 {% endblock %}
-
-{# DYNAMIC INSTRUCTIONS #}
-{% include "dynamic-instructions.jinja2" %}
-{# END DYNAMIC INSTRUCTIONS #}
 <|CLOSE_SECTION|>

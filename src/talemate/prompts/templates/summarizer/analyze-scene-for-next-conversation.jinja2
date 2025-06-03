@@ -6,42 +6,53 @@
 {% if agent_context_state["conversation__instruction"] -%}
 {% set character_direction=agent_context_state["conversation__instruction"] -%}
 {% endif -%}
-{% set bullet_num=0 -%}
 Your task is to analyze the scene progression so far and how it informs what {{ character.name }}'s next line or action in the scene will be.
 
 The information you write will be given to the other story editors to write {{ character.name }}'s next action in the scene.
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly make statements about context, meaning and facts established relevant to the current moment in the scene. Facts are sourced from the existing story, don't assume, only state things that are explicitly true.
+{{ li() }}. Briefly make statements about context, meaning and facts established relevant to the current moment in the scene. Facts are sourced from the existing story, don't assume, only state things that are explicitly true.
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Brielfy list who the characters in the scene are to each other. (Active or referenced)
+{{ li() }}. Brielfy list who the characters in the scene are to each other. (Active or referenced)
 
-{% if character_direction %}{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) The story editors were given the following direction: "{{ character_direction }}". Briefly analyse the direction, what does it mean for {{ character.name }}'s next action? Are they already following the direction or do they need to change course?
+{% if character_direction %}{{ li() }}. The story editors were given the following direction: "{{ character_direction }}". Briefly analyse the direction, what does it mean for {{ character.name }}'s next action? Are they already following the direction or do they need to change course?
 
 {% endif %}
 {% if last_message -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly explain the meaning of the current moment in the scene. What was the meaning of their dialogue and actions? 
+{{ li() }}. Briefly explain the meaning of the current moment in the scene.
+  - Where are we?
+  - What are we doing?
+  - What is the meaning of the current moment and what was the meaning of their dialogue and actions? 
 
 ``` current moment in the scene
 {{ last_message }}
 ```
+
+{{ li() }}. What specific problems do the characters have to solve in the immediate future. The immediate future means within the next 30 minutes. This isn't about grand unspecified problems like "They need to survive" but instead should be specific tangible problems.
+
 {% if scene.intent_state.active %}
 {% with task_instructions="How does the scene intention inform the meaning of this moment and what could it mean for "+character.name+"'s next action?" -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) {% include "scene-intent-inline.jinja2" %}
+{{ li() }}. {% include "scene-intent-inline.jinja2" %}
 {% endwith %}
 {% endif %}
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Is {{ character.name }} aware of the current moment? This is IMPORTANT - It cannot affect their next action if they are not aware. You must be very explicit about this and either say Yes or No.
+{{ li() }}. Is {{ character.name }} aware of the current moment? This is IMPORTANT - It cannot affect their next action if they are not aware. You must be very explicit about this and either say Yes or No.
 {% endif %}
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) What is the cadence and nature of the current dialogue? Is it ongoing or is a new dialogue starting? Who is talking to who?
+{{ li() }}. What is the cadence and nature of the current dialogue? Is it ongoing or is a new dialogue starting? Who is talking to who?
 
 {% if context_investigation -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+{{ li() }}. Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 
 Note that the 'Potentially relevant information' sectitryon has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
 
+{% if length >= 1024 %}{{ li() }}. Carefully plan {{ character.name }}'s next action, taking your analysis into account. This must be a short list of instructions and considerations, not narrative text. (Aim for 2 - 3 items){% endif %}
+
 {% if length <= 256 %}Your analysis should be 1 - 2 paragraphs long.{% elif length <= 512 %}Your analysis should be 2 - 3 paragraphs long.{% endif %}
 
 {% if length <= 512 %}Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.{% endif %}
+
+{% if length > 512 %}Address all points 1 to {{ li()-1 }} in the order they are listed.{% endif %}
+
+No markdown formatting, provide simple plain text.
 <|CLOSE_SECTION|>

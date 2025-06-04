@@ -9,6 +9,10 @@ If your installation errors with a notification to upgrade "Microsoft Visual C++
 -  During installation make sure you select the C++ development package (upper left corner)
 -  Run `reinstall.bat` inside talemate directory
 
+### Frontend fails with errors
+
+- ensure none of the directories have special characters in them, this can cause issues with the frontend. so no `(1)` in the directory name.
+
 ## Docker
 
 ### Docker has created `config.yaml` directory

@@ -2,6 +2,7 @@
 
 1. Download and install Python 3.10 - 3.13 from the [official Python website](https://www.python.org/downloads/windows/).
     - [Click here for direct link to python 3.11.9 download](https://www.python.org/downloads/release/python-3119/)
+    - June 2025: people have reported issues with python 3.13 still, due to some dependencies not being available yet, if you run into issues during installation try downgrading.
 1. Download and install Node.js from the [official Node.js website](https://nodejs.org/en/download/prebuilt-installer). This will also install npm.
 1. Download the Talemate project to your local machine. Download from [the Releases page](https://github.com/vegu-ai/talemate/releases).
 1. Unpack the download and run `install.bat` by double clicking it. This will set up the project on your local machine.

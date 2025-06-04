@@ -453,29 +453,72 @@ class MemoryAgent(Agent):
         Get the character memory context for a given character
         """
 
-        memory_context = []
+        # First, collect results for each individual query (respecting the
+        # per-query `iterate` limit) so that we have them available before we
+        # start filling the final context. This prevents early queries from
+        # monopolising the token budget.
+
+        per_query_results: list[list[str]] = []
+
         for query in queries:
+            # Skip empty queries so that we keep indexing consistent for the
+            # round-robin step that follows.
             if not query:
+                per_query_results.append([])
                 continue
 
-            i = 0
-            for memory in await self.get(formatter(query), limit=limit, **where):
-                if memory in memory_context:
-                    continue
+            # Fetch potential memories for this query.
+            raw_results = await self.get(
+                formatter(query), limit=limit, **where
+            )
 
+            # Apply filter and respect the `iterate` limit for this query.
+            accepted: list[str] = []
+            for memory in raw_results:
                 if filter and not filter(memory):
                     continue
 
+                accepted.append(memory)
+                if len(accepted) >= iterate:
+                    break
+
+            per_query_results.append(accepted)
+
+        # Now interleave the results in a round-robin fashion so that each
+        # query gets a fair chance to contribute, until we hit the token
+        # budget.
+
+        memory_context: list[str] = []
+        idx = 0
+        while True:
+            added_any = False
+
+            for result_list in per_query_results:
+                if idx >= len(result_list):
+                    # No more items remaining for this query at this depth.
+                    continue
+
+                memory = result_list[idx]
+
+                # Avoid duplicates in the final context.
+                if memory in memory_context:
+                    continue
+
                 memory_context.append(memory)
+                added_any = True
 
-                i += 1
-                if i >= iterate:
-                    break
-
+                # Check token budget after each addition.
                 if util.count_tokens(memory_context) >= max_tokens:
-                    break
-            if util.count_tokens(memory_context) >= max_tokens:
+                    return memory_context
+
+            if not added_any:
+                # We iterated over all query result lists without adding
+                # anything. That means we have exhausted all available
+                # memories.
                 break
+
+            idx += 1
+
         return memory_context
 
     @property

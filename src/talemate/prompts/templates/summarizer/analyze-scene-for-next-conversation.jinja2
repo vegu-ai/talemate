@@ -43,7 +43,7 @@ The information you write will be given to the other story editors to write {{ c
 {% if context_investigation -%}
 {{ li() }}. Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 
-Note that the 'Potentially relevant information' sectitryon has been filled in from a previous prompt and may not be relevant at all.
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
 
 {% if length >= 1024 %}{{ li() }}. Carefully plan {{ character.name }}'s next action, taking your analysis into account. This must be a short list of instructions and considerations, not narrative text. (Aim for 2 - 3 items){% endif %}

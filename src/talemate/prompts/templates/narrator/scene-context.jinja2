@@ -3,9 +3,15 @@
     min_dialogue=20, 
     sections=False) 
 %}
-{% with memory_prompt = history %}{% include "memory-context.jinja2" %}{% endwith %}
-<|SECTION:SCENE|>
+
+{% set scene_context_text %}
 {% for scene_context in history -%}
 {{ scene_context }}
 {% endfor %}
+{% endset %}
+{% if "(Internal note" in scene_context_text %}{% include "internal-note-help.jinja2" %}
+{% endif %}
+{% with memory_prompt = history %}{% include "memory-context.jinja2" %}{% endwith %}
+<|SECTION:SCENE|>
+{{ scene_context_text }}
 <|CLOSE_SECTION|>

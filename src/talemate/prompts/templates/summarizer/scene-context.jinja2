@@ -10,7 +10,6 @@
 {% endset %}
 {{ rendered_context }}
 {% include "content-classification.jinja2" %}
-{% block scene_history -%}
 {% set scene_context = scene.context_history(
     budget=max_tokens-300-count_tokens(rendered_context), 
     min_dialogue=15, 
@@ -29,4 +28,3 @@
 {{ scene_context_text }}
 <|CLOSE_SECTION|>
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
-{% endblock -%}

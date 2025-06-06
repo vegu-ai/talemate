@@ -18,8 +18,8 @@
             </v-card-title>
             <v-card-text>
                 <v-row>
-                    <v-col :cols="details ? 2 : 0" v-if="details" style="max-height:660px; overflow-y:auto;">
-                        <v-list density="compact">
+                    <v-col :cols="details ? 2 : 0" v-if="details">
+                        <v-list density="compact" style="overflow-y:auto; max-height: calc(90vh - 200px);">
                             <v-list-subheader><v-icon>mdi-transit-connection-variant</v-icon> Agent Stack</v-list-subheader>
                             <v-list-item v-for="(agent, index) in prompt.agent_stack" :key="index">
                                 <v-list-item-subtitle class="text-grey-lighten-3">{{ agentParts(agent).name }}</v-list-item-subtitle>

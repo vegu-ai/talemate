@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="dialog" max-width="2048px">
+    <v-dialog v-model="dialog" max-width="2048px" max-height="90vh" ref="dialog">
 
         <v-card>
             <v-card-title>
@@ -17,7 +17,7 @@
                 <v-chip color="primary" @click.stop="toggleDetails" variant="text" prepend-icon="mdi-list-box">{{ toggleDetailsLabel() }} ({{ prompt.agent_stack.length }})</v-chip>
             </v-card-title>
             <v-card-text>
-                <v-row no-gutters>
+                <v-row>
                     <v-col :cols="details ? 2 : 0" v-if="details" style="max-height:660px; overflow-y:auto;">
                         <v-list density="compact">
                             <v-list-subheader><v-icon>mdi-transit-connection-variant</v-icon> Agent Stack</v-list-subheader>
@@ -41,14 +41,11 @@
                         </v-list>
                     </v-col>
                     <v-col :cols="details ? 6 : 7">
-                        <v-card flat>
+                        <v-card flat style="overflow-y:auto; max-height: calc(90vh - 200px);">
                             <v-card-title>Prompt
                                 <v-btn size="x-small" variant="text" v-if="promptHasDirtyPrompt" color="orange" @click.stop="resetPrompt" prepend-icon="mdi-restore">Reset</v-btn>
                             </v-card-title>
-                            <v-card-text>
-                                <!--
-                                <v-textarea :disabled="busy" density="compact" v-model="prompt.prompt" rows="10" auto-grow max-rows="22"></v-textarea>
-                                -->
+                            <v-card-text ref="codeMirrorContainer">
                                 <Codemirror
                                     v-model="prompt.prompt"
                                     :extensions="extensions"
@@ -248,7 +245,6 @@ export default {
         ];
 
         const promptEditorStyle = {
-            maxHeight: "600px"
         }
 
         return {

@@ -55,13 +55,13 @@
                         </v-card>
                     </v-col>
                     <v-col :cols="details ? 4 : 5">
-                        <v-card elevation="10" color="grey-darken-3">
+                        <v-card elevation="10" color="grey-darken-3" style="overflow-y:auto; max-height: calc(90vh - 200px);">
                             <v-card-title>Response
                                 <v-progress-circular class="ml-1 mr-3" size="20" v-if="busy" indeterminate="disable-shrink"
                                 color="primary"></v-progress-circular>
                                 <v-btn size="x-small" variant="text" v-else-if="promptHasDirtyResponse" color="orange" @click.stop="resetResponse" prepend-icon="mdi-restore">Reset</v-btn> 
                             </v-card-title>
-                            <v-card-text style="max-height:600px; overflow-y:auto;" :class="busy ? 'text-grey' : 'text-white'">
+                            <v-card-text :class="busy ? 'text-grey' : 'text-white'">
                                 <div class="prompt-view">{{  prompt.response }}</div>
                             </v-card-text>
                         </v-card>

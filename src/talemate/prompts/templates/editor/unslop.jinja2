@@ -321,6 +321,8 @@ Sarah poured him a coffee. "Want to talk through it?"
 
 ---
 
+{# SCENE CONTEXT #}
+{% set scene_context_text %}
 {% set history = scene.context_history(
     budget=1024, 
     min_dialogue=20, 
@@ -331,12 +333,24 @@ Sarah poured him a coffee. "Want to talk through it?"
 {{ scene_context }}
 {% endfor %}
 <|CLOSE_SECTION|>
+{% endset %}
+{# END SCENE CONTEXT #}
 
+{# SCENE ANALYSIS #}
+{% set scene_analysis_text %}
 {% if scene_analysis %}
 <|SECTION:SCENE ANALYSIS|>
 {{ scene_analysis }}
 <|CLOSE_SECTION|>
 {% endif %}
+{% endset %}
+{# END SCENE ANALYSIS #}
+
+{{ scene_context_text }}
+
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
+
+{{ scene_analysis_text }}
 
 {% include "character-guidance.jinja2" %}
 

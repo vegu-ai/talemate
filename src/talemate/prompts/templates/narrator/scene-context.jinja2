@@ -9,7 +9,7 @@
 {{ scene_context }}
 {% endfor %}
 {% endset %}
-{% if "(Internal note" in scene_context_text %}{% include "internal-note-help.jinja2" %}
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 {% endif %}
 {% with memory_prompt = history %}{% include "memory-context.jinja2" %}{% endwith %}
 <|SECTION:SCENE|>

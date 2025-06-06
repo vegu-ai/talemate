@@ -1048,7 +1048,7 @@ class RevisionMixin:
         # extract <FIX>...</FIX>
         
         if "<FIX>" not in response:
-            log.error("revision_unslop: no <FIX> found in response", response=response)
+            log.debug("revision_unslop: no <FIX> found in response", response=response)
             return original_text
 
         fix = response.split("<FIX>", 1)[1]

@@ -84,7 +84,8 @@
 
 <script>
 import { Codemirror } from 'vue-codemirror'
-import { markdown } from '@codemirror/lang-markdown'
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { languages } from "@codemirror/language-data";
 import { oneDark } from '@codemirror/theme-one-dark'
 import { EditorView } from '@codemirror/view'
 
@@ -239,17 +240,16 @@ export default {
     setup() {
 
         const extensions = [
-            markdown(),
+            markdown({
+                base: markdownLanguage,
+                codeLanguages: languages,
+            }),
             oneDark,
             EditorView.lineWrapping
         ];
 
-        const promptEditorStyle = {
-        }
-
         return {
             extensions,
-            promptEditorStyle,
         }
     }
 }

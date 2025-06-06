@@ -10,7 +10,6 @@
 {% endset %}
 {{ rendered_context }}
 {% include "content-classification.jinja2" %}
-<|SECTION:SCENE|>
 {% block scene_history -%}
 {% set scene_context = scene.context_history(
     budget=max_tokens-300-count_tokens(rendered_context), 
@@ -20,9 +19,14 @@
     chapter_labels=True
     ) 
 -%}
+{% set scene_context_text %}
 {% for scene_line in scene_context -%}
 {{ scene_line }}
 
 {% endfor %}
+{% endset %}
+<|SECTION:SCENE|>
+{{ scene_context_text }}
 <|CLOSE_SECTION|>
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 {% endblock -%}

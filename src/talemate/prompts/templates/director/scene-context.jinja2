@@ -5,6 +5,7 @@
     keep_director=True,
     sections=False) 
 %}
+{% include "internal-note-help.jinja2" %}
 {% with memory_prompt = history %}{% include "memory-context.jinja2" %}{% endwith %}
 <|SECTION:SCENE|>
 {% for scene_context in history -%}

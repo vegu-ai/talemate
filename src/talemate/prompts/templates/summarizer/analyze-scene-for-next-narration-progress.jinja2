@@ -1,27 +1,36 @@
 Your task is to analyze the current moment in the scene to guide natural narrative progression.
 {% set narrative_direction = agent_context_state.get("narrator__narrative_direction") or "Slightly move the current scene forward." %}
 {% if narrative_direction %}The story editors were given the following direction: "{{ narrative_direction }}".
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean?
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors to write the next narrative segment that fulfills the direction.
+{{ li() }}. Briefly analyse the direction, what does it mean?
+{{ li() }}. Briefly describe how you will help the editors to write the next narrative segment that fulfills the direction.
 {% endif %}
 
+{{ li() }}. Brielfy list who the characters in the scene are to each other. (Active or referenced)
+
 {% if last_message -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Analyze the meaning of the current moment in the scene. What was the meaning?
+{{ li() }}. Briefly explain the meaning of the current moment in the scene.
+  - Where are we?
+  - What are we doing?
+  - What is the meaning of the current moment and what was the meaning of their dialogue and actions? 
 
 ``` the current moment in the scene
 {{ last_message }}
 ```
+
+{{ li() }}. What specific problems do the characters have to solve in the immediate future. The immediate future means within the next 30 minutes. This isn't about grand unspecified problems like "They need to survive" but instead should be specific tangible problems.
 {% endif %}
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the immediate state of the scene:
-- What physical actions or movements are in progress?
-- What sensory details are present but not yet highlighted?
-- What is the current focus of attention?
+{% if scene.intent_state.active %}
+{% with task_instructions="How does the scene intention inform the meaning of this moment and what could it mean for natural story progression?" -%}
+{{ li() }}. {% include "scene-intent-inline.jinja2" %}
+{% endwith %}
+{% endif %}
+
 
 {% if context_investigation -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+{{ li() }}. Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 
 Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Propose how the scene could progress next based on what has happened so far and may have been established previously. This must be a short list of instructions and considerations, not narrative text. (Aim for 2 - 3 items)
+{% if length >= 1024 %}{{ li() }}. Carefully plan how the scene could progress next, taking your analysis into account. This must be a short list of instructions and considerations to the story editors, not narrative text. (Aim for 1-3 items){% endif %}

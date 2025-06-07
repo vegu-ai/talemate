@@ -209,6 +209,23 @@
                                         </v-row>
                                     </div>
 
+                                    <!-- OPENROUTER API -->
+                                    <div v-if="applicationPageSelected === 'openrouter_api'">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
+                                            <v-alert-title>OpenRouter</v-alert-title>
+                                            <div class="text-grey">
+                                                Configure your OpenRouter API key here. You can get one from <a href="https://openrouter.ai/api-keys" target="_blank">https://openrouter.ai/settings/keys</a> 
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-text-field type="password" v-model="app_config.openrouter.api_key"
+                                                    label="OpenRouter API Key"></v-text-field>
+                                            </v-col>
+                                        </v-row>
+                                    </div>
+
                                     <!-- GROQ API -->
                                     <div v-if="applicationPageSelected === 'groq_api'">
                                         <v-alert color="white" variant="text" icon="mdi-api" density="compact">
@@ -403,6 +420,7 @@ export default {
                     {title: 'mistral.ai', icon: 'mdi-api', value: 'mistralai_api'},
                     {title: 'Anthropic', icon: 'mdi-api', value: 'anthropic_api'},
                     {title: 'Cohere', icon: 'mdi-api', value: 'cohere_api'},
+                    {title: 'OpenRouter', icon: 'mdi-api', value: 'openrouter_api'},
                     {title: 'groq', icon: 'mdi-api', value: 'groq_api'},
                     {title: 'DeepSeek', icon: 'mdi-api', value: 'deepseek_api'},
                     {title: 'Google Cloud', icon: 'mdi-google-cloud', value: 'google_api'},

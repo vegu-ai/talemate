@@ -108,6 +108,20 @@ class PackageManagerPlugin(Plugin):
         
         scene = self.scene
         
-        await update_package_properties(scene, request.package_registry, request.package_properties)
+        package = await update_package_properties(scene, request.package_registry, request.package_properties)
+        
+        if not package:
+            await self.signal_operation_failed(f"Package with registry {request.package_registry} not found")
+            return
+
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "updated_package",
+                "data": {
+                    "package": package.model_dump(),
+                },
+            }
+        )
 
         await self.handle_request_package_list(data)

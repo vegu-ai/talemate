@@ -49,7 +49,6 @@
                                 <Codemirror
                                     v-model="prompt.prompt"
                                     :extensions="extensions"
-                                    :style="promptEditorStyle"
                                 ></Codemirror>
                             </v-card-text>
                         </v-card>

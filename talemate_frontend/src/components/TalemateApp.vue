@@ -590,6 +590,13 @@ export default {
   },
   methods: {
 
+    setBusy() {
+      this.busy = true;
+    },
+    setIdle() {
+      this.busy = false;
+    },
+
     onNodeEditorContainerResize() {
       this.$nextTick(() => {
         if(!this.$refs.nodeEditorContainer) {

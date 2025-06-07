@@ -51,6 +51,17 @@ export default {
             }
 
             this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: this.scene.data.path }));
+            this.requireRestart = false;
+        },
+
+        checkRequireRestart(pkg) {
+            if(!pkg.restart_scene_loop) {
+                return false;
+            }
+            if(!pkg.configured) {
+                return false;
+            }
+            return true;
         },
 
         handleMessage(data) {
@@ -59,10 +70,12 @@ export default {
 
             if(data.action === 'package_list') {
                 this.packageList = data.data;
-            } else if(data.action === 'installed_package' && data.data.package.restart_scene_loop) {
-                this.requireRestart = true;
-            } else if(data.action === 'uninstalled_package' && data.data.package.restart_scene_loop) {
-                this.requireRestart = true;
+            } else if(data.action === 'installed_package') {
+                this.requireRestart = this.checkRequireRestart(data.data.package);
+            } else if(data.action === 'uninstalled_package') {
+                this.requireRestart = data.data.package.restart_scene_loop;
+            } else if(data.action === 'updated_package') {
+                this.requireRestart = this.checkRequireRestart(data.data.package);
             }
         }
     },

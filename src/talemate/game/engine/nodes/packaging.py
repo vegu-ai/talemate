@@ -67,6 +67,7 @@ class PackageProperty(pydantic.BaseModel):
     type: str
     default: str | int | float | bool | list[str] | None
     value: str | int | float | bool | list[str] | None = None
+    required: bool = pydantic.Field(default=False)
     choices: list[str] | None = None
 
 class PackageData(pydantic.BaseModel):
@@ -77,9 +78,20 @@ class PackageData(pydantic.BaseModel):
     registry: str
     status: Literal["installed", "not_installed"] = "not_installed"
     
+    errors: list[str] = pydantic.Field(default_factory=list)
+    
     package_properties: dict[str, PackageProperty] = pydantic.Field(default_factory=dict)
-    install_nodes: list[str] = pydantic.Field(default_factory=list)     
+    install_nodes: list[str] = pydantic.Field(default_factory=list)
+    installed_nodes: list[str] = pydantic.Field(default_factory=list)
     restart_scene_loop: bool = pydantic.Field(default=False)
+    
+    @pydantic.computed_field(description="Whether the package is configured")
+    @property
+    def configured(self) -> bool:
+        """
+        Whether the package is configured.
+        """
+        return all(prop.value is not None for prop in self.package_properties.values() if prop.required)
     
     def properties_for_node(self, node_registry: str) -> dict[str, Any]:
         """
@@ -89,6 +101,7 @@ class PackageData(pydantic.BaseModel):
         return {
             prop.name: prop.value for prop in self.package_properties.values() if prop.module == node_registry
         }
+    
     
 class ScenePackageInfo(pydantic.BaseModel):
     packages: list[PackageData]
@@ -182,8 +195,11 @@ async def list_packages() -> list[PackageData]:
         if not package_module.get_property("installable"):
             continue
         
+        errors = []
+        
         install_node_modules = await package_module.get_nodes(lambda node: node.registry == "util/packaging/InstallNodeModule")
         promoted_properties = await package_module.get_nodes(lambda node: node.registry == "util/packaging/PromoteConfig")
+        install_nodes = []
 
         module_properties = {}
         for install_node_module in install_node_modules:
@@ -191,32 +207,34 @@ async def list_packages() -> list[PackageData]:
             node_module_cls = get_node(node_registry)
             node_module: "Graph" = node_module_cls()
             module_properties[node_module.registry] = node_module.module_properties
-
+            install_nodes.append(node_module.registry)
 
         log.debug("package_module", package_module=package_module, module_properties=module_properties, promoted_properties=promoted_properties)        
         package_properties = {}
-        install_nodes = []
         
         for promoted_property in promoted_properties:
             property_name = promoted_property.properties["property_name"]
             exposed_property_name = promoted_property.properties["exposed_property_name"]
             target_node_registry = promoted_property.properties["node_registry"]
             
-            log.debug("promoted_property", exposed_property_name=exposed_property_name, target_node_registry=target_node_registry, property_name=property_name)
-            
-            module_property = module_properties[target_node_registry][property_name]
+            try:
+                module_property = module_properties[target_node_registry][property_name]
+            except KeyError:
+                log.warning("module property not found", target_node_registry=target_node_registry, property_name=property_name, module_properties=module_properties)
+                errors.append(f"Module property {property_name} not found in {target_node_registry}")
+                continue
             
             package_property = PackageProperty(
                 module=target_node_registry,
                 name=property_name,
-                label=promoted_property.properties["label"],
+                label=promoted_property.properties.get("label", ""),
                 type=module_property.type,
                 default=module_property.default,
                 description=module_property.description,
                 choices=module_property.choices,
+                required=promoted_property.properties.get("required", False),
             )
             package_properties[exposed_property_name] = package_property
-            install_nodes.append(target_node_registry)
         
         package_data = PackageData(
             name=package_module.properties["package_name"],
@@ -227,6 +245,7 @@ async def list_packages() -> list[PackageData]:
             package_properties=package_properties,
             install_nodes=install_nodes,
             restart_scene_loop=package_module.properties["restart_scene_loop"],
+            errors=errors,
         )
         
         package_datas.append(package_data)
@@ -257,7 +276,7 @@ async def save_scene_package_info(scene: "Scene", scene_package_info: ScenePacka
     with open(os.path.join(scene.info_dir, SCENE_PACKAGE_INFO_FILENAME), "w") as f:
         json.dump(scene_package_info.model_dump(), f, indent=4)
 
-async def install_package(scene: "Scene", package_data: PackageData):
+async def install_package(scene: "Scene", package_data: PackageData) -> PackageData:
     """
     Install a package to the scene.
     
@@ -270,7 +289,7 @@ async def install_package(scene: "Scene", package_data: PackageData):
     
     if scene_package_info.has_package(package_data.registry):
         # already installed
-        return
+        return package_data
     
     package_data.status = "installed"
     
@@ -278,12 +297,9 @@ async def install_package(scene: "Scene", package_data: PackageData):
     
     await save_scene_package_info(scene, scene_package_info)
     
-    scene_loop:SceneLoop | None = scene.active_node_graph
-    if scene_loop:
-        await initialize_package(scene, scene_loop, package_data)
+    return package_data
 
-
-async def update_package_properties(scene: "Scene", package_registry: str, package_properties: dict[str, PackageProperty]):
+async def update_package_properties(scene: "Scene", package_registry: str, package_properties: dict[str, PackageProperty]) -> PackageData | None:
     """
     Update the properties of a package.
     """
@@ -299,6 +315,8 @@ async def update_package_properties(scene: "Scene", package_registry: str, packa
         package_data.package_properties[property_name].value = property_data.value
         
     await save_scene_package_info(scene, scene_package_info)
+    
+    return package_data
 
 async def uninstall_package(scene: "Scene", package_registry: str):
     """
@@ -315,7 +333,16 @@ async def uninstall_package(scene: "Scene", package_registry: str):
         # not installed
         return
     
+    package_data = scene_package_info.get_package(package_registry)
+    
     scene_package_info.packages = [p for p in scene_package_info.packages if p.registry != package_registry]
+    
+    scene_loop:SceneLoop | None = scene.active_node_graph
+    if scene_loop:
+        for node_id in package_data.installed_nodes:
+            scene_loop.nodes.pop(node_id, None)
+    
+    package_data.installed_nodes = []
     
     await save_scene_package_info(scene, scene_package_info)
 
@@ -327,6 +354,15 @@ async def initialize_packages(scene: "Scene", scene_loop: SceneLoop):
     try:
         scene_package_info = await get_scene_package_info(scene)
         for package_data in scene_package_info.packages:
+            
+            if not package_data.configured:
+                log.warning("package is not configured", package=package_data.name)
+                continue
+            
+            if package_data.errors:
+                log.warning("package information has errors", package=package_data.name)
+                continue
+            
             await initialize_package(scene, scene_loop, package_data)
             
     except Exception as e:
@@ -488,6 +524,13 @@ class PromoteConfig(Node):
             default="",
         )
         
+        required = PropertyField(
+            name="required",
+            description="Whether the property is required",
+            type="bool",
+            default=False,
+        )
+        
     @pydantic.computed_field(description="Node style")
     @property
     def style(self) -> NodeStyle:
@@ -502,4 +545,5 @@ class PromoteConfig(Node):
         self.set_property("node_registry", UNRESOLVED)
         self.set_property("property_name", UNRESOLVED)
         self.set_property("exposed_property_name", UNRESOLVED)
+        self.set_property("required", False)
         self.set_property("label", "")

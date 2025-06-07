@@ -160,9 +160,7 @@ export default {
             // activeCharacters without playerCharacterName
             let characters = [];
             for (let character of this.activeCharacters) {
-                if (character !== this.playerCharacterName) {
-                    characters.push(character);
-                }
+                characters.push(character);
             }
             return characters;
         },

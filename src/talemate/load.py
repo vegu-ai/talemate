@@ -212,13 +212,6 @@ async def load_scene_from_character_card(scene, file_path):
     except Exception as e:
         log.error("generate story intent", error=e)
 
-    # update world state
-    try:
-        loading_status("Update world state ...")
-        await scene.world_state.request_update(initial_only=True)
-    except Exception as e:
-        log.error("world_state.request_update", error=e)
-
     scene.saved = False
 
     await scene.save_restore("initial.json")

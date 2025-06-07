@@ -778,6 +778,10 @@ class Scene(Emitter):
     @property
     def nodes_dir(self):
         return os.path.join(self.save_dir, "nodes")
+    
+    @property
+    def info_dir(self):
+        return os.path.join(self.save_dir, "info")
         
     @property
     def auto_save(self):

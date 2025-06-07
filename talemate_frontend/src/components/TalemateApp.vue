@@ -259,6 +259,10 @@
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />
           </v-tabs-window-item>
+          <!-- MODULES -->
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="package_manager">
+            <PackageManager :visible="tab === 'package_manager'" :scene="scene" />
+          </v-tabs-window-item>
 
         </v-tabs-window>
 
@@ -295,6 +299,7 @@ import IntroView from './IntroView.vue';
 import NodeEditor from './NodeEditor.vue';
 import DirectorConsole from './DirectorConsole.vue';
 import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
+import PackageManager from './PackageManager.vue';
 // import debounce
 import { debounce } from 'lodash';
 
@@ -320,6 +325,7 @@ export default {
     DirectorConsole,
     RateLimitAlert,
     DirectorConsoleWidget,
+    PackageManager,
   },
   name: 'TalemateApp',
   data() {
@@ -350,6 +356,17 @@ export default {
             });
           },
           value: 'world' 
+        },
+        {
+          title: () => { return 'Modules' },
+          condition: () => { return this.sceneActive },
+          icon: () => { return 'mdi-package-variant' },
+          click: () => {
+            this.$nextTick(() => {
+              this.onOpenPackageManager();
+            });
+          },
+          value: 'package_manager'
         },
         {
           title: () => { return 'Home' },
@@ -1130,6 +1147,9 @@ export default {
       this.$nextTick(() => {
         this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
       });
+    },
+    onOpenPackageManager() {
+      this.tab = 'package_manager';
     },
     onWorldStateManagerNavigateR(tab, meta) {
       this.$nextTick(() => {

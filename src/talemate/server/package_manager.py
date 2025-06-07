@@ -70,6 +70,16 @@ class PackageManagerPlugin(Plugin):
         
         await install_package(scene, package)
         
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "installed_package",
+                "data": {
+                    "package": package.model_dump(),
+                },
+            }
+        )
+        
         await self.handle_request_package_list(data)
         
     async def handle_uninstall_package(self, data: dict):
@@ -77,7 +87,19 @@ class PackageManagerPlugin(Plugin):
         
         scene = self.scene
         
+        package = await get_package_by_registry(request.package_registry)
+        
         await uninstall_package(scene, request.package_registry)
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "uninstalled_package",
+                "data": {
+                    "package": package.model_dump(),
+                },
+            }
+        )
         
         await self.handle_request_package_list(data)
         

@@ -112,6 +112,7 @@ export default {
             packageList: [],
             editPackagePropertiesDialog: false,
             selectedPackage: null,
+            requireRestart: false,
         }
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler'],
@@ -158,10 +159,8 @@ export default {
         handleMessage(data) {
             if(data.type !== 'package_manager')
                 return;
-
             if(data.action === 'package_list') {
                 this.packageList = data.data;
-                console.log(this.packageList);
             }
         }
     },

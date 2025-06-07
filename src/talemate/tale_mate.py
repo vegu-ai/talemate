@@ -2002,7 +2002,6 @@ class Scene(Emitter):
         if init:
             await self._game_startup()
             await self.emit_history()
-            await self.world_state.request_update(initial_only=True)
         
         self.nodegraph_state = state = GraphState()
         state.data["continue_scene"] = True

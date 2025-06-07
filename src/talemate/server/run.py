@@ -112,6 +112,7 @@ def run_server(args):
     from talemate.world_state.templates import Collection
     from talemate.prompts.overrides import get_template_overrides
     import talemate.client.system_prompts as system_prompts
+    from talemate.emit.base import emit
     
     # import node libraries
     import talemate.game.engine.nodes.load_definitions
@@ -154,6 +155,8 @@ def run_server(args):
         frontend_task = None
 
     log.info("talemate backend started", host=args.host, port=args.port)
+    emit("talemate_started", data=config.model_dump())
+    
     try:
         loop.run_forever()
     except KeyboardInterrupt:

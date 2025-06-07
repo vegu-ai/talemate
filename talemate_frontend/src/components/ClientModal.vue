@@ -46,9 +46,9 @@
                             label="API Key"></v-text-field>
                         </v-col>
                       </v-row>
-                      <v-select v-model="client.model"
+                      <v-combobox v-model="client.model"
                         v-if="clientMeta().manual_model && clientMeta().manual_model_choices"
-                        :items="clientMeta().manual_model_choices" label="Model"></v-select>
+                        :items="clientMeta().manual_model_choices" label="Model"></v-combobox>
                       <v-text-field v-model="client.model_name" v-else-if="clientMeta().manual_model"
                         label="Manually specify model name"
                         hint="It looks like we're unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you're locally serving a model."></v-text-field>

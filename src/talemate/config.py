@@ -161,6 +161,9 @@ class DeepSeekConfig(BaseModel):
     api_key: Union[str, None] = None
 
 
+class OpenRouterConfig(BaseModel):
+    api_key: Union[str, None] = None
+
 class RunPodConfig(BaseModel):
     api_key: Union[str, None] = None
 
@@ -505,6 +508,8 @@ class Config(BaseModel):
     mistralai: MistralAIConfig = MistralAIConfig()
 
     anthropic: AnthropicConfig = AnthropicConfig()
+
+    openrouter: OpenRouterConfig = OpenRouterConfig()
 
     cohere: CohereConfig = CohereConfig()
 

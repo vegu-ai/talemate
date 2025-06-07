@@ -22,7 +22,9 @@
                         <td>{{ pkg.name }}</td>
                         <td>{{ pkg.author }}</td>
                         <td>
-                            <v-chip v-if="pkg.status === 'installed'" color="success" variant="outlined" size="small" label>Installed</v-chip>
+                            <v-chip v-if="pkg.errors.length > 0" color="error" variant="outlined" size="small" label>Errors {{ pkg.errors.length }}</v-chip>
+                            <v-chip v-else-if="pkg.status === 'installed' && pkg.configured" color="success" variant="outlined" size="small" label>Installed</v-chip>
+                            <v-chip v-else-if="pkg.status === 'installed' && !pkg.configured" color="warning" variant="outlined" size="small" label>Installed (Not Configured)</v-chip>
                             <v-chip v-else color="muted" variant="outlined" size="small" label>Not Installed</v-chip>
                         </td>
                         <td>
@@ -36,6 +38,8 @@
                                         "installable": true,
                                         "registry": "package/talemate/DynamicStoryline",
                                         "status": "installed",
+                                        "configured": false,
+                                        "errors": [],
                                         "package_properties": {
                                             "topic": {
                                                 "module": "package/talemate/DynamicStoryline",
@@ -55,7 +59,14 @@
                             <v-btn :disabled="appBusy" v-else color="primary" variant="text" @click="installPackage(pkg.registry)" prepend-icon="mdi-tray-arrow-down">Install</v-btn>
                             <v-btn :disabled="appBusy" v-if="pkg.status === 'installed'" color="primary" variant="text" @click="editPackageProperties(pkg)" prepend-icon="mdi-cog">Configure</v-btn>
                         </td>
-                        <td class="text-muted">{{ pkg.description }}</td>
+                        <td class="text-muted">
+                            <div>{{ pkg.description }}</div>
+                            <div v-if="pkg.errors.length > 0">
+                                <div v-for="error in pkg.errors" :key="error" class="text-error">
+                                    <v-icon>mdi-alert-circle-outline</v-icon> {{ error }}
+                                </div>
+                            </div>
+                        </td>
                     </tr>
                 </tbody>
             </v-table>
@@ -66,15 +77,14 @@
         <v-card>
             <v-card-title>Edit <span class="text-primary">{{ selectedPackage.name }}</span> Properties</v-card-title>
             <v-card-text>
-                <v-form>
-                    <div v-for="(prop, propName) in selectedPackage.package_properties" :key="propName">
-                        <v-text-field v-model="prop.value" :label="prop.label" v-if="prop.type === 'str'" />
-                        <v-text-field v-model="prop.value" :label="prop.label" v-if="prop.type === 'int'" type="number" />
-                        <v-text-field v-model="prop.value" :label="prop.label" v-if="prop.type === 'float'" type="number" />
-                        <v-checkbox v-model="prop.value" :label="prop.label" v-if="prop.type === 'bool'" />
-                        <v-select v-model="prop.value" :label="prop.label" v-if="prop.type === 'list[str]'" :items="prop.choices" />
-                    </div>
-                </v-form>
+                <div v-for="(prop, propName) in selectedPackage.package_properties" :key="propName">
+                    <v-text-field v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'str'" :hint="prop.description" :required="prop.required" />
+                    <v-text-field v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'int'" type="number" :hint="prop.description" :required="prop.required" />
+                    <v-text-field v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'float'" type="number" :hint="prop.description" :required="prop.required" />
+                    <v-textarea v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'text'" :hint="prop.description" :required="prop.required" auto-grow rows="4" />
+                    <v-checkbox v-model="prop.value" :label="prop.label" v-if="prop.type === 'bool'" :hint="prop.description" />
+                    <v-select v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'list[str]'" :items="prop.choices" :hint="prop.description" :required="prop.required" />
+                </div>
             </v-card-text>
             <v-card-actions>
                 <v-btn color="primary" @click="savePackageProperties">Save</v-btn>
@@ -128,6 +138,13 @@ export default {
 
         editPackageProperties(pkg) {
             this.selectedPackage = {...pkg};
+            // Initialize null values with their defaults
+            for (const propName in this.selectedPackage.package_properties) {
+                const prop = this.selectedPackage.package_properties[propName];
+                if (prop.value === null) {
+                    prop.value = prop.default;
+                }
+            }
             this.editPackagePropertiesDialog = true;
         },
 

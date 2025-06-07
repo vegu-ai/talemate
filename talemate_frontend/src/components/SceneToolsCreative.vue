@@ -157,7 +157,6 @@ export default {
             return this.newIntroduction.templates.length;
         },
         deactivatableCharacters() {
-            // activeCharacters without playerCharacterName
             let characters = [];
             for (let character of this.activeCharacters) {
                 characters.push(character);

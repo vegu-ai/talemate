@@ -1059,6 +1059,13 @@ class ModuleProperty(Node):
             type="str",
             default="",
         )
+        num = PropertyField(
+            name="num",
+            description="Number",
+            type="int",
+            default=0,
+            min=0,
+        )
         
         
     @pydantic.computed_field(description="Node style")
@@ -1090,6 +1097,7 @@ class ModuleProperty(Node):
         self.set_property("default", UNRESOLVED)
         self.set_property("choices", UNRESOLVED)
         self.set_property("description", "")
+        self.set_property("num", 0)
         self.add_output("name")
         self.add_output("value")
 
@@ -1367,7 +1375,12 @@ class Graph(NodeBase):
     
     @property
     def module_property_nodes(self) -> list[ModuleProperty]:
-        return [node for node in self.nodes.values() if isinstance(node, ModuleProperty)]
+        nodes = [node for node in self.nodes.values() if isinstance(node, ModuleProperty)]
+
+        # sort by num property
+        nodes.sort(key=lambda x: x.get_property("num"))
+        
+        return nodes
 
     @pydantic.computed_field(description="Inputs")
     @property

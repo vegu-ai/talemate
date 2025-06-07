@@ -19,8 +19,8 @@
         "name": "intro_generated",
         "scope": "game"
       },
-      "x": 555,
-      "y": 856,
+      "x": 733,
+      "y": 1031,
       "width": 254,
       "height": 146,
       "collapsed": false,
@@ -99,8 +99,8 @@
         "name": "topic",
         "scope": "local"
       },
-      "x": 26,
-      "y": 1321,
+      "x": 27,
+      "y": 1577,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -219,8 +219,8 @@
         "introduction": null,
         "emit_history": true
       },
-      "x": 1048,
-      "y": 1208,
+      "x": 1049,
+      "y": 1464,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -232,8 +232,8 @@
       "title": "Theme",
       "id": "7438bc9b-4b38-4c5c-a9a8-df5ebf098691",
       "properties": {},
-      "x": 1108,
-      "y": 1448,
+      "x": 1109,
+      "y": 1704,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -247,29 +247,13 @@
       "properties": {
         "pass_through": false
       },
-      "x": 278,
-      "y": 1178,
+      "x": 279,
+      "y": 1434,
       "width": 210,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "85be1eb8-f1ca-47c4-b30f-539a1c10dae3": {
-      "title": "Set Introduction",
-      "id": "85be1eb8-f1ca-47c4-b30f-539a1c10dae3",
-      "properties": {
-        "introduction": "",
-        "emit_history": true
-      },
-      "x": 839,
-      "y": 869,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/SetIntroduction",
       "base_type": "core/Node"
     },
     "08309808-d1f1-4a94-9027-363eceed41d1": {
@@ -294,8 +278,8 @@
         "name": "intro_generated",
         "scope": "game"
       },
-      "x": 518,
-      "y": 1258,
+      "x": 519,
+      "y": 1514,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -310,44 +294,13 @@
         "name": "intro_generated",
         "scope": "game"
       },
-      "x": 26,
-      "y": 1131,
+      "x": 27,
+      "y": 1387,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "a593c81a-25af-4199-abe6-884962c3492d": {
-      "title": "GET local.reset",
-      "id": "a593c81a-25af-4199-abe6-884962c3492d",
-      "properties": {
-        "name": "reset",
-        "scope": "local"
-      },
-      "x": 25,
-      "y": 857,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "e4eee8cc-10dc-4a04-9a77-d9598b202924": {
-      "title": "Switch",
-      "id": "e4eee8cc-10dc-4a04-9a77-d9598b202924",
-      "properties": {
-        "pass_through": true
-      },
-      "x": 295,
-      "y": 856,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Switch",
       "base_type": "core/Node"
     },
     "be9bdeff-2232-4e00-894c-6476c4efdbc7": {
@@ -363,21 +316,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "ca241a90-daa3-40e4-9b7a-b857c334cd39": {
-      "title": "Stage 4",
-      "id": "ca241a90-daa3-40e4-9b7a-b857c334cd39",
-      "properties": {
-        "stage": 4
-      },
-      "x": 1323,
-      "y": 1185,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "912201d4-2678-45d4-a032-12707836c723": {
@@ -549,21 +487,6 @@
       "registry": "data/string/MakeText",
       "base_type": "core/Node"
     },
-    "e601163e-fc37-4bd4-bffa-866f2ec6457e": {
-      "title": "Stage 3",
-      "id": "e601163e-fc37-4bd4-bffa-866f2ec6457e",
-      "properties": {
-        "stage": 3
-      },
-      "x": 1090,
-      "y": 868,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "07c15b6d-a275-4156-8f98-1759db36e4d0": {
       "title": "Stage 1",
       "id": "07c15b6d-a275-4156-8f98-1759db36e4d0",
@@ -650,8 +573,8 @@
         "name": "analysis_instructions",
         "scope": "local"
       },
-      "x": 30,
-      "y": 1501,
+      "x": 31,
+      "y": 1757,
       "width": 260,
       "height": 122,
       "collapsed": false,
@@ -666,8 +589,8 @@
         "name": "analysis_enabled",
         "scope": "local"
       },
-      "x": 30,
-      "y": 1681,
+      "x": 31,
+      "y": 1937,
       "width": 250,
       "height": 122,
       "collapsed": false,
@@ -682,8 +605,8 @@
         "name": "intro_length",
         "scope": "local"
       },
-      "x": 30,
-      "y": 1861,
+      "x": 31,
+      "y": 2117,
       "width": 250,
       "height": 122,
       "collapsed": false,
@@ -745,14 +668,135 @@
       "title": "Generate Storyline",
       "id": "958c9db5-6df8-4d04-919d-c0a4b42fe3f8",
       "properties": {},
-      "x": 770,
-      "y": 1420,
+      "x": 771,
+      "y": 1676,
       "width": 228,
       "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "scene/generateStoryline",
       "base_type": "core/Graph"
+    },
+    "ca241a90-daa3-40e4-9b7a-b857c334cd39": {
+      "title": "Stage 4",
+      "id": "ca241a90-daa3-40e4-9b7a-b857c334cd39",
+      "properties": {
+        "stage": 4
+      },
+      "x": 1311,
+      "y": 1446,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "85be1eb8-f1ca-47c4-b30f-539a1c10dae3": {
+      "title": "Set Introduction",
+      "id": "85be1eb8-f1ca-47c4-b30f-539a1c10dae3",
+      "properties": {
+        "introduction": "",
+        "emit_history": true
+      },
+      "x": 1019,
+      "y": 1046,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/SetIntroduction",
+      "base_type": "core/Node"
+    },
+    "2e3c7602-8673-47c3-9686-b92efb33aff4": {
+      "title": "Switch",
+      "id": "2e3c7602-8673-47c3-9686-b92efb33aff4",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 266,
+      "y": 1133,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "21050f79-592b-4213-be45-76261955994f": {
+      "title": "GET game.intro_generated",
+      "id": "21050f79-592b-4213-be45-76261955994f",
+      "properties": {
+        "name": "intro_generated",
+        "scope": "game"
+      },
+      "x": 26,
+      "y": 1133,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "a593c81a-25af-4199-abe6-884962c3492d": {
+      "title": "GET local.reset",
+      "id": "a593c81a-25af-4199-abe6-884962c3492d",
+      "properties": {
+        "name": "reset",
+        "scope": "local"
+      },
+      "x": 26,
+      "y": 913,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "e4eee8cc-10dc-4a04-9a77-d9598b202924": {
+      "title": "Switch",
+      "id": "e4eee8cc-10dc-4a04-9a77-d9598b202924",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 276,
+      "y": 933,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "0c73a403-ada1-45fa-ac3d-9a4890f4c9d0": {
+      "title": "OR Router",
+      "id": "0c73a403-ada1-45fa-ac3d-9a4890f4c9d0",
+      "properties": {},
+      "x": 546,
+      "y": 1033,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ORRouter",
+      "base_type": "core/Node"
+    },
+    "e601163e-fc37-4bd4-bffa-866f2ec6457e": {
+      "title": "Stage 3",
+      "id": "e601163e-fc37-4bd4-bffa-866f2ec6457e",
+      "properties": {
+        "stage": 3
+      },
+      "x": 1266,
+      "y": 1043,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -811,20 +855,11 @@
       "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.state",
       "4e9136e5-4557-4ef6-9124-9468d9e39815.value"
     ],
-    "85be1eb8-f1ca-47c4-b30f-539a1c10dae3.state": [
-      "e601163e-fc37-4bd4-bffa-866f2ec6457e.state"
-    ],
     "4e9136e5-4557-4ef6-9124-9468d9e39815.value": [
       "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.state"
     ],
     "37313611-7de1-478b-8840-e5ea7ba856fe.value": [
       "11965433-d217-47d1-bc37-8808426798ce.value"
-    ],
-    "a593c81a-25af-4199-abe6-884962c3492d.value": [
-      "e4eee8cc-10dc-4a04-9a77-d9598b202924.value"
-    ],
-    "e4eee8cc-10dc-4a04-9a77-d9598b202924.yes": [
-      "7c8b1e17-c5a4-4eb3-a1dc-d9b5ea782e6b.state"
     ],
     "be9bdeff-2232-4e00-894c-6476c4efdbc7.yes": [
       "626e25be-9d1f-460a-9611-7adc1a1fb28f.state"
@@ -892,13 +927,31 @@
     ],
     "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.theme": [
       "7438bc9b-4b38-4c5c-a9a8-df5ebf098691.value"
+    ],
+    "85be1eb8-f1ca-47c4-b30f-539a1c10dae3.state": [
+      "e601163e-fc37-4bd4-bffa-866f2ec6457e.state"
+    ],
+    "2e3c7602-8673-47c3-9686-b92efb33aff4.no": [
+      "0c73a403-ada1-45fa-ac3d-9a4890f4c9d0.b"
+    ],
+    "21050f79-592b-4213-be45-76261955994f.value": [
+      "2e3c7602-8673-47c3-9686-b92efb33aff4.value"
+    ],
+    "a593c81a-25af-4199-abe6-884962c3492d.value": [
+      "e4eee8cc-10dc-4a04-9a77-d9598b202924.value"
+    ],
+    "e4eee8cc-10dc-4a04-9a77-d9598b202924.yes": [
+      "0c73a403-ada1-45fa-ac3d-9a4890f4c9d0.a"
+    ],
+    "0c73a403-ada1-45fa-ac3d-9a4890f4c9d0.yes": [
+      "7c8b1e17-c5a4-4eb3-a1dc-d9b5ea782e6b.state"
     ]
   },
   "groups": [
     {
       "title": "Generate Premise - Stage 4",
       "x": 1,
-      "y": 1028,
+      "y": 1283,
       "width": 1557,
       "height": 980,
       "color": "#3f789e",
@@ -928,9 +981,9 @@
     {
       "title": "Reset - Stage 3",
       "x": 1,
-      "y": 774,
-      "width": 1314,
-      "height": 251,
+      "y": 773,
+      "width": 1500,
+      "height": 507,
       "color": "#88A",
       "font_size": 24,
       "inherited": false
@@ -949,8 +1002,8 @@
   "comments": [
     {
       "text": "SetState here so we don't infinitely try to generate premise if something goes wrong.",
-      "x": 518,
-      "y": 1108,
+      "x": 519,
+      "y": 1364,
       "width": 200,
       "inherited": false
     },
@@ -994,6 +1047,13 @@
       "x": 120,
       "y": 300,
       "width": 408,
+      "inherited": false
+    },
+    {
+      "text": "When we are generating the first introduction OR when we are resetting the process: Remove the current introductory text.",
+      "x": 546,
+      "y": 853,
+      "width": 200,
       "inherited": false
     }
   ],

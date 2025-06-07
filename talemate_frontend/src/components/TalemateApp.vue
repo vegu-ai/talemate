@@ -358,7 +358,7 @@ export default {
           value: 'world' 
         },
         {
-          title: () => { return 'Modules' },
+          title: () => { return 'Mods' },
           condition: () => { return this.sceneActive },
           icon: () => { return 'mdi-package-variant' },
           click: () => {

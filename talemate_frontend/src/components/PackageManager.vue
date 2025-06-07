@@ -10,18 +10,17 @@
             <v-table>
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Author</th>
-                        <th>Description</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th width="300">Name</th>
+                        <th width="200">Author</th>
+                        <th width="100">Status</th>
+                        <th width="400">Actions</th>
+                        <th width="*">Description</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr v-for="pkg in packageList" :key="pkg.registry">
                         <td>{{ pkg.name }}</td>
                         <td>{{ pkg.author }}</td>
-                        <td class="text-muted">{{ pkg.description }}</td>
                         <td>
                             <v-chip v-if="pkg.status === 'installed'" color="success" variant="outlined" size="small" label>Installed</v-chip>
                             <v-chip v-else color="muted" variant="outlined" size="small" label>Not Installed</v-chip>
@@ -56,6 +55,7 @@
                             <v-btn v-else color="primary" variant="text" @click="installPackage(pkg.registry)" prepend-icon="mdi-tray-arrow-down">Install</v-btn>
                             <v-btn v-if="pkg.status === 'installed'" color="primary" variant="text" @click="editPackageProperties(pkg)" prepend-icon="mdi-cog">Configure</v-btn>
                         </td>
+                        <td class="text-muted">{{ pkg.description }}</td>
                     </tr>
                 </tbody>
             </v-table>
@@ -67,7 +67,7 @@
             <v-card-title>Edit <span class="text-primary">{{ selectedPackage.name }}</span> Properties</v-card-title>
             <v-card-text>
                 <v-form>
-                    <div v-for="prop in selectedPackage.package_properties" :key="prop.name">
+                    <div v-for="(prop, propName) in selectedPackage.package_properties" :key="propName">
                         <v-text-field v-model="prop.value" :label="prop.label" v-if="prop.type === 'str'" />
                         <v-text-field v-model="prop.value" :label="prop.label" v-if="prop.type === 'int'" type="number" />
                         <v-text-field v-model="prop.value" :label="prop.label" v-if="prop.type === 'float'" type="number" />

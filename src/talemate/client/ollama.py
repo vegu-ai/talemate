@@ -15,9 +15,11 @@ class OllamaClientDefaults(CommonDefaults):
     api_url: str = "http://localhost:11434"  # Default Ollama URL
     model: str = ""  # Allow empty default, will fetch from Ollama
     api_handles_prompt_template: bool = False
+    allow_thinking: bool = False
 
 class ClientConfig(BaseClientConfig):
     api_handles_prompt_template: bool = False
+    allow_thinking: bool = False
 
 @register()
 class OllamaClient(ClientBase):
@@ -35,7 +37,7 @@ class OllamaClient(ClientBase):
         title: str = "Ollama"
         enable_api_auth: bool = False
         manual_model: bool = True
-        manual_model_choices: list[str] = []  # Will be populated dynamically
+        manual_model_choices: list[str] = []  # Will be overridden by finalize_status
         defaults: OllamaClientDefaults = OllamaClientDefaults()
         extra_fields: dict[str, ExtraField] = {
             "api_handles_prompt_template": ExtraField(
@@ -44,6 +46,13 @@ class OllamaClient(ClientBase):
                 label="API handles prompt template",
                 required=False,
                 description="Let Ollama handle the prompt template. Only do this if you don't know which prompt template to use. Letting talemate handle the prompt template will generally lead to improved responses.",
+            ),
+            "allow_thinking": ExtraField(
+                name="allow_thinking",
+                type="bool",
+                label="Allow thinking",
+                required=False,
+                description="Allow the model to think before responding. Talemate does not have a good way to deal with this yet, so it's recommended to leave this off.",
             )
         }
     
@@ -79,12 +88,20 @@ class OllamaClient(ClientBase):
         """
         return not self.api_handles_prompt_template
 
-    def __init__(self, model=None, api_handles_prompt_template=False, **kwargs):
+    @property
+    def can_think(self) -> bool:
+        """
+        Allow reasoning models to think before responding.
+        """
+        return self.allow_thinking
+
+    def __init__(self, model=None, api_handles_prompt_template=False, allow_thinking=False, **kwargs):
         self.model_name = model
         self.api_handles_prompt_template = api_handles_prompt_template
-        super().__init__(**kwargs)
-        self.client = None
+        self.allow_thinking = allow_thinking
         self._available_models = []
+        self.client = None
+        super().__init__(**kwargs)
 
     def set_client(self, **kwargs):
         """
@@ -100,8 +117,16 @@ class OllamaClient(ClientBase):
         self.api_handles_prompt_template = kwargs.get(
             "api_handles_prompt_template", self.api_handles_prompt_template
         )   
+        self.allow_thinking = kwargs.get(
+            "allow_thinking", self.allow_thinking
+        )
         log.info(f"Ollama client initialized with URL: {self.api_url}")
-
+        
+        # Reset available models when client is re-initialized
+        # They will be fetched again on next status() call
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.fetch_available_models())
+        
     async def fetch_available_models(self):
         """
         Fetch list of available models from Ollama.
@@ -109,37 +134,25 @@ class OllamaClient(ClientBase):
         try:
             response = await self.client.list()
             models = response.get("models", [])
-            
-            # Extract model names (without tags)
-            model_names = []
-            for model in models:
-                name = model.get("name", "")
-                # Remove tag if present (e.g., "llama3.2:latest" -> "llama3.2")
-                base_name = name.split(":")[0] if ":" in name else name
-                if base_name and base_name not in model_names:
-                    model_names.append(base_name)
-            
+            model_names = [model.model for model in models]
             self._available_models = sorted(model_names)
-            # Update the Meta class with available models
-            self.Meta.manual_model_choices = self._available_models
-            
-            log.info(f"Fetched {len(self._available_models)} models from Ollama")
+            log.warning("Ollama models", models=self._available_models)
             return self._available_models
-            
         except Exception as e:
-            log.error("Failed to fetch models from Ollama", error=str(e))
+            log.exception("Failed to fetch models from Ollama", error=str(e))
             return []
+
+    def finalize_status(self, data: dict):
+        """
+        Finalizes the status data for the client.
+        """
+        data["manual_model_choices"] = self._available_models
+        return data
 
     async def get_model_name(self):
         return self.model_name
     
     def prompt_template(self, system_message: str, prompt: str):
-
-        log.debug(
-            "IS API HANDLING PROMPT TEMPLATE",
-            api_handles_prompt_template=self.api_handles_prompt_template,
-        )
-
         if not self.api_handles_prompt_template:
             return super().prompt_template(system_message, prompt)
 
@@ -151,13 +164,6 @@ class OllamaClient(ClientBase):
                 prompt = prompt.replace("<|BOT|>", "")
 
         return prompt
-    
-    async def status(self):
-        """
-        Send status and fetch available models if needed.
-        """
-        # Call parent status method
-        await super().status()
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         """
@@ -202,25 +208,9 @@ class OllamaClient(ClientBase):
                 raise Exception("No model specified or available in Ollama")
         
         # Prepare options for Ollama
-        options = {}
+        options = parameters
         
-        # Map parameters to Ollama's option names
-        param_mapping = {
-            "temperature": "temperature",
-            "top_p": "top_p",
-            "top_k": "top_k", 
-            "min_p": "min_p",
-            "frequency_penalty": "frequency_penalty",
-            "presence_penalty": "presence_penalty",
-            "repetition_penalty": "repeat_penalty",
-            "repetition_penalty_range": "repeat_last_n",
-            "num_predict": "num_predict",
-            "stop": "stop",
-        }
-        
-        for param_key, ollama_key in param_mapping.items():
-            if param_key in parameters:
-                options[ollama_key] = parameters[param_key]
+        log.debug("Ollama generate", model=self.model_name, options=options, can_be_coerced=self.can_be_coerced, can_think=self.can_think)
         
         try:
             # Use generate endpoint for completion
@@ -230,6 +220,7 @@ class OllamaClient(ClientBase):
                 stream=False,
                 options=options,
                 raw=self.can_be_coerced,
+                think=self.can_think,
             )
             
             # Extract the response text

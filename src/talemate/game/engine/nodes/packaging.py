@@ -26,6 +26,7 @@ from .registry import get_node, get_nodes_by_base_type
 from .scene import SceneLoop
 
 from .base_types import base_node_type
+from talemate.context import interaction
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -78,6 +79,7 @@ class PackageData(pydantic.BaseModel):
     
     package_properties: dict[str, PackageProperty] = pydantic.Field(default_factory=dict)
     install_nodes: list[str] = pydantic.Field(default_factory=list)     
+    restart_scene_loop: bool = pydantic.Field(default=False)
     
     def properties_for_node(self, node_registry: str) -> dict[str, Any]:
         """
@@ -224,6 +226,7 @@ async def list_packages() -> list[PackageData]:
             registry=package_module.registry,
             package_properties=package_properties,
             install_nodes=install_nodes,
+            restart_scene_loop=package_module.properties["restart_scene_loop"],
         )
         
         package_datas.append(package_data)
@@ -274,6 +277,10 @@ async def install_package(scene: "Scene", package_data: PackageData):
     scene_package_info.packages.append(package_data)
     
     await save_scene_package_info(scene, scene_package_info)
+    
+    scene_loop:SceneLoop | None = scene.active_node_graph
+    if scene_loop:
+        await initialize_package(scene, scene_loop, package_data, allow_restart=True)
 
 
 async def update_package_properties(scene: "Scene", package_registry: str, package_properties: dict[str, PackageProperty]):
@@ -312,21 +319,36 @@ async def uninstall_package(scene: "Scene", package_registry: str):
     
     await save_scene_package_info(scene, scene_package_info)
 
-async def initialize_packages(scene: "Scene", scene_loop: SceneLoop):
+async def initialize_packages(scene: "Scene", scene_loop: SceneLoop, allow_restart: bool = False):
     """
     Initialize all installed packages into the scene loop.
     """
+    
+    restart_scene_loop = False
     try:
     
         scene_package_info = await get_scene_package_info(scene)
         
         for package_data in scene_package_info.packages:
-            await initialize_package(scene, scene_loop, package_data)
+            await initialize_package(scene, scene_loop, package_data, False)
+            
+            if package_data.restart_scene_loop:
+                restart_scene_loop = True
+                
+        if restart_scene_loop and allow_restart:
+            interaction_state = interaction.get()
+            interaction_state.reset_requested = True
+            
     except Exception as e:
         log.exception("initialize_packages failed", error=e)
     
 
-async def initialize_package(scene: "Scene", scene_loop: SceneLoop, package_data: PackageData):
+async def initialize_package(
+    scene: "Scene", 
+    scene_loop: SceneLoop, 
+    package_data: PackageData,
+    allow_restart: bool = False
+):
     """
     Initialize an installed package into the scene loop.
     
@@ -350,7 +372,11 @@ async def initialize_package(scene: "Scene", scene_loop: SceneLoop, package_data
                 field = node.get_property_field(property_name)
                 field.default = property_value
                 node.properties[property_name] = property_value
-            
+                
+            if package_data.restart_scene_loop and allow_restart:
+                interaction_state = interaction.get()
+                interaction_state.reset_requested = True
+                
             log.debug("installed node", registry=registry, properties=package_data.properties_for_node(registry))
     except Exception as e:
         log.exception("initialize_package failed", error=e, package_data=package_data)
@@ -398,6 +424,13 @@ class Package(Graph):
             default=True
         )
         
+        restart_scene_loop = PropertyField(
+            name="restart_scene_loop",
+            description="Whether the scene loop should be restarted after the package is installed",
+            type="bool",
+            default=False
+        )
+        
     def __init__(self, title="Package", **kwargs):
         super().__init__(title=title, **kwargs)
         
@@ -406,6 +439,7 @@ class Package(Graph):
         self.set_property("author", "")
         self.set_property("description", "")
         self.set_property("installable", True)
+        self.set_property("restart_scene_loop", False)
 
     
 @register("util/packaging/InstallNodeModule")

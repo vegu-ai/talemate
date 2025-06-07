@@ -850,6 +850,10 @@ class Scene(Emitter):
             "name": self.intent_state.current_scene_type.name,
             "intent": phase.intent,
         }
+        
+    @property
+    def active_node_graph(self):
+        return getattr(self, "node_graph", getattr(self, "creative_node_graph", None))
     
     def set_description(self, description: str):
         self.description = description

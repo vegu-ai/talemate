@@ -51,6 +51,7 @@ pyyaml = ">=6.0"
 limits = ">=5.0"
 diff-match-patch = ">=20241021"
 sseclient-py = "^1.8.0"
+ollama = "^0.5.1"
 
 # ChromaDB
 chromadb = ">=0.4.17,<1"

@@ -1,0 +1,120 @@
+{
+  "title": "Dynamic Storyline Package",
+  "id": "6462db8b-ee33-42f8-95ef-5192f28a0cc0",
+  "properties": {
+    "package_name": "Dynamic Storyline",
+    "author": "Talemate",
+    "description": "Generate a random story premise at the beginning of the scene.",
+    "installable": true,
+    "restart_scene_loop": true
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "package/talemate/DynamicStoryline",
+  "nodes": {
+    "6468ba4a-6139-4817-a7b7-e0f86b965b94": {
+      "title": "Install Node Module",
+      "id": "6468ba4a-6139-4817-a7b7-e0f86b965b94",
+      "properties": {
+        "node_registry": "scene/dynamicStoryline"
+      },
+      "x": 20,
+      "y": 40,
+      "width": 276,
+      "height": 60,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/packaging/InstallNodeModule",
+      "base_type": "core/Node"
+    },
+    "da87362e-8a38-4bb5-b124-e80a351d9427": {
+      "title": "Promote Config",
+      "id": "da87362e-8a38-4bb5-b124-e80a351d9427",
+      "properties": {
+        "node_registry": "scene/dynamicStoryline",
+        "property_name": "topic",
+        "exposed_property_name": "topic",
+        "required": true,
+        "label": "Topic"
+      },
+      "x": 20,
+      "y": 150,
+      "width": 399,
+      "height": 131,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/packaging/PromoteConfig",
+      "base_type": "core/Node"
+    },
+    "7c219734-d42a-427e-8662-dee6420dae85": {
+      "title": "Promote Config",
+      "id": "7c219734-d42a-427e-8662-dee6420dae85",
+      "properties": {
+        "node_registry": "scene/dynamicStoryline",
+        "property_name": "intro_length",
+        "exposed_property_name": "intro_length",
+        "required": true,
+        "label": "Max. intro text length (tokens)"
+      },
+      "x": 20,
+      "y": 750,
+      "width": 399,
+      "height": 131,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/packaging/PromoteConfig",
+      "base_type": "core/Node"
+    },
+    "667d1f3f-797b-4be9-a322-7a013bde96a1": {
+      "title": "Promote Config",
+      "id": "667d1f3f-797b-4be9-a322-7a013bde96a1",
+      "properties": {
+        "node_registry": "scene/dynamicStoryline",
+        "property_name": "analysis_instructions",
+        "exposed_property_name": "analysis_instructions",
+        "required": false,
+        "label": "Additional instructions for topic analysis task"
+      },
+      "x": 20,
+      "y": 340,
+      "width": 399,
+      "height": 131,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/packaging/PromoteConfig",
+      "base_type": "core/Node"
+    },
+    "ad88affa-a275-413f-b1f2-d8376fecec7e": {
+      "title": "Promote Config",
+      "id": "ad88affa-a275-413f-b1f2-d8376fecec7e",
+      "properties": {
+        "node_registry": "scene/dynamicStoryline",
+        "property_name": "analysis_enabled",
+        "exposed_property_name": "analysis_enabled",
+        "required": false,
+        "label": "Enable topic analysis"
+      },
+      "x": 20,
+      "y": 540,
+      "width": 399,
+      "height": 131,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/packaging/PromoteConfig",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {},
+  "groups": [],
+  "comments": [],
+  "extends": null,
+  "base_type": "util/packaging/Package",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": null
+}

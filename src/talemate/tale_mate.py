@@ -52,6 +52,7 @@ from talemate.world_state import WorldState
 from talemate.world_state.manager import WorldStateManager
 from talemate.game.engine.nodes.core import GraphState
 from talemate.game.engine.nodes.layout import load_graph
+from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
         
 __all__ = [
@@ -1968,9 +1969,11 @@ class Scene(Emitter):
                 
                 if self.environment == "creative":
                     self.creative_node_graph, _ = load_graph(self.creative_nodes_filename, [self.save_dir])
+                    await initialize_packages(self, self.creative_node_graph)
                     await self._run_creative_loop(init=first_loop)
                 else:
                     self.node_graph, _ = load_graph(self.nodes_filename, [self.save_dir])
+                    await initialize_packages(self, self.node_graph)
                     await self._run_game_loop(init=first_loop)
             except ExitScene:
                 break

@@ -4,7 +4,7 @@ Nodes that help managing node module packaging setup for easy scene installation
 
 import json
 import os
-from typing import ClassVar, TYPE_CHECKING, Literal
+from typing import ClassVar, TYPE_CHECKING, Literal, Any
 import pydantic
 import structlog
 
@@ -42,6 +42,7 @@ __all__ = [
     "update_package_properties",
     "uninstall_package",
     "initialize_package",
+    "initialize_packages",
 ]
 
 
@@ -51,7 +52,7 @@ TYPE_CHOICES.extend([
     "node_module",
 ])
 
-SCENE_PACKAGE_INFO_FILENAME = "packages.json"
+SCENE_PACKAGE_INFO_FILENAME = "modules.json"
 
 # ------------------------------------------------------------------------------------------------
 # MODELS
@@ -75,7 +76,17 @@ class PackageData(pydantic.BaseModel):
     registry: str
     status: Literal["installed", "not_installed"] = "not_installed"
     
-    package_properties: dict[str, PackageProperty]
+    package_properties: dict[str, PackageProperty] = pydantic.Field(default_factory=dict)
+    install_nodes: list[str] = pydantic.Field(default_factory=list)     
+    
+    def properties_for_node(self, node_registry: str) -> dict[str, Any]:
+        """
+        Get the properties for a node.
+        """
+        
+        return {
+            prop.name: prop.value for prop in self.package_properties.values() if prop.module == node_registry
+        }
     
 class ScenePackageInfo(pydantic.BaseModel):
     packages: list[PackageData]
@@ -182,6 +193,7 @@ async def list_packages() -> list[PackageData]:
 
         log.debug("package_module", package_module=package_module, module_properties=module_properties, promoted_properties=promoted_properties)        
         package_properties = {}
+        install_nodes = []
         
         for promoted_property in promoted_properties:
             property_name = promoted_property.properties["property_name"]
@@ -193,8 +205,8 @@ async def list_packages() -> list[PackageData]:
             module_property = module_properties[target_node_registry][property_name]
             
             package_property = PackageProperty(
-                module=package_module.registry,
-                name=exposed_property_name,
+                module=target_node_registry,
+                name=property_name,
                 label=promoted_property.properties["label"],
                 type=module_property.type,
                 default=module_property.default,
@@ -202,7 +214,7 @@ async def list_packages() -> list[PackageData]:
                 choices=module_property.choices,
             )
             package_properties[exposed_property_name] = package_property
-        
+            install_nodes.append(target_node_registry)
         
         package_data = PackageData(
             name=package_module.properties["package_name"],
@@ -210,7 +222,8 @@ async def list_packages() -> list[PackageData]:
             description=package_module.properties["description"],
             installable=package_module.properties["installable"],
             registry=package_module.registry,
-            package_properties=package_properties
+            package_properties=package_properties,
+            install_nodes=install_nodes,
         )
         
         package_datas.append(package_data)
@@ -299,6 +312,20 @@ async def uninstall_package(scene: "Scene", package_registry: str):
     
     await save_scene_package_info(scene, scene_package_info)
 
+async def initialize_packages(scene: "Scene", scene_loop: SceneLoop):
+    """
+    Initialize all installed packages into the scene loop.
+    """
+    try:
+    
+        scene_package_info = await get_scene_package_info(scene)
+        
+        for package_data in scene_package_info.packages:
+            await initialize_package(scene, scene_loop, package_data)
+    except Exception as e:
+        log.exception("initialize_packages failed", error=e)
+    
+
 async def initialize_package(scene: "Scene", scene_loop: SceneLoop, package_data: PackageData):
     """
     Initialize an installed package into the scene loop.
@@ -311,16 +338,22 @@ async def initialize_package(scene: "Scene", scene_loop: SceneLoop, package_data
         scene_loop (SceneLoop): The scene loop to install the package to.
         package_data (PackageData): The package data to install.
     """
-    package_module_cls = await get_node(package_data.registry)
     
-    package_module:Graph = package_module_cls()
-    
-    if not package_module.get_property("installable"):
-        log.warning("Package is not installable", package_registry_path=package_data.registry)
-        return
-    
-    #for module_install_node in package_module.get_nodes(lambda node: node.registry == "util/packaging/InstallNodeModule"):
-    #    await module_install_node.run(scene_loop.state)
+    try:
+        for registry in package_data.install_nodes:
+            install_node_cls = get_node(registry)
+            
+            node:Node = install_node_cls()
+            scene_loop.add_node(node)
+            
+            for property_name, property_value in package_data.properties_for_node(registry).items():
+                field = node.get_property_field(property_name)
+                field.default = property_value
+                node.properties[property_name] = property_value
+            
+            log.debug("installed node", registry=registry, properties=package_data.properties_for_node(registry))
+    except Exception as e:
+        log.exception("initialize_package failed", error=e, package_data=package_data)
 
 
 # ------------------------------------------------------------------------------------------------

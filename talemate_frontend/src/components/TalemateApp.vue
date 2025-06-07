@@ -108,7 +108,15 @@
             @world-state-manager-navigate="onOpenWorldStateManager" 
             />
           </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="package_manager">
+            <PackageManagerMenu v-if="sceneActive"
+            ref="packageManagerMenu" 
+            :scene="scene"
+            :app-busy="busy"
+            />
+          </v-tabs-window-item>
         </v-tabs-window>
+
       </v-navigation-drawer>
       <!-- right side navigation drawer -->
       <v-navigation-drawer v-model="drawer" app location="right" width="300" disable-resize-watcher>
@@ -261,7 +269,7 @@
           </v-tabs-window-item>
           <!-- MODULES -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="package_manager">
-            <PackageManager :visible="tab === 'package_manager'" :scene="scene" />
+            <PackageManager :visible="tab === 'package_manager'" :scene="scene" :app-busy="busy" />
           </v-tabs-window-item>
 
         </v-tabs-window>
@@ -300,6 +308,7 @@ import NodeEditor from './NodeEditor.vue';
 import DirectorConsole from './DirectorConsole.vue';
 import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
 import PackageManager from './PackageManager.vue';
+import PackageManagerMenu from './PackageManagerMenu.vue';
 // import debounce
 import { debounce } from 'lodash';
 
@@ -326,6 +335,7 @@ export default {
     RateLimitAlert,
     DirectorConsoleWidget,
     PackageManager,
+    PackageManagerMenu,
   },
   name: 'TalemateApp',
   data() {

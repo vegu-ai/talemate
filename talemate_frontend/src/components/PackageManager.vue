@@ -51,9 +51,9 @@
                                 ]
                             }
                             -->
-                            <v-btn v-if="pkg.status === 'installed'" color="delete" variant="text" @click="uninstallPackage(pkg.registry)" prepend-icon="mdi-close-circle-outline">Uninstall</v-btn>
-                            <v-btn v-else color="primary" variant="text" @click="installPackage(pkg.registry)" prepend-icon="mdi-tray-arrow-down">Install</v-btn>
-                            <v-btn v-if="pkg.status === 'installed'" color="primary" variant="text" @click="editPackageProperties(pkg)" prepend-icon="mdi-cog">Configure</v-btn>
+                            <v-btn :disabled="appBusy" v-if="pkg.status === 'installed'" color="delete" variant="text" @click="uninstallPackage(pkg.registry)" prepend-icon="mdi-close-circle-outline">Uninstall</v-btn>
+                            <v-btn :disabled="appBusy" v-else color="primary" variant="text" @click="installPackage(pkg.registry)" prepend-icon="mdi-tray-arrow-down">Install</v-btn>
+                            <v-btn :disabled="appBusy" v-if="pkg.status === 'installed'" color="primary" variant="text" @click="editPackageProperties(pkg)" prepend-icon="mdi-cog">Configure</v-btn>
                         </td>
                         <td class="text-muted">{{ pkg.description }}</td>
                     </tr>
@@ -94,6 +94,10 @@ export default {
         scene: {
             type: Object,
             required: true,
+        },
+        appBusy: {
+            type: Boolean,
+            default: false,
         },
     },
     watch: {

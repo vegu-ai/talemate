@@ -35,56 +35,8 @@
         "name": null,
         "scope": "local"
       },
-      "x": 323,
-      "y": -1210,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "c327b0c4-900e-4d27-a0b9-0d47e8479732": {
-      "title": "SET local.analysis_instructions",
-      "id": "c327b0c4-900e-4d27-a0b9-0d47e8479732",
-      "properties": {
-        "name": null,
-        "scope": "local"
-      },
-      "x": 323,
-      "y": -970,
-      "width": 260,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb": {
-      "title": "SET local.analysis_enabled",
-      "id": "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb",
-      "properties": {
-        "name": null,
-        "scope": "local"
-      },
-      "x": 323,
-      "y": -710,
-      "width": 218,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b": {
-      "title": "SET local.topic",
-      "id": "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b",
-      "properties": {
-        "name": null,
-        "scope": "local"
-      },
-      "x": 323,
-      "y": -480,
+      "x": 326,
+      "y": -1299,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -106,82 +58,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "3f749c9f-71b0-4e9c-b99d-859e53f20569": {
-      "title": "PROP analysis_instructions",
-      "id": "3f749c9f-71b0-4e9c-b99d-859e53f20569",
-      "properties": {
-        "property_name": "analysis_instructions",
-        "property_type": "text",
-        "default": "",
-        "choices": [],
-        "description": "Instructions for the analysis"
-      },
-      "x": 23,
-      "y": -970,
-      "width": 262,
-      "height": 174,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
-      "base_type": "core/Node"
-    },
-    "43013315-b65d-4c51-bdab-fdffe051224f": {
-      "title": "PROP reset",
-      "id": "43013315-b65d-4c51-bdab-fdffe051224f",
-      "properties": {
-        "property_name": "reset",
-        "property_type": "bool",
-        "default": "false",
-        "choices": [],
-        "description": "Reset the introduction"
-      },
-      "x": 23,
-      "y": -1210,
-      "width": 271,
-      "height": 181,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
-      "base_type": "core/Node"
-    },
-    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff": {
-      "title": "PROP topic",
-      "id": "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff",
-      "properties": {
-        "property_name": "topic",
-        "property_type": "str",
-        "default": "",
-        "choices": [],
-        "description": "The overarching topic"
-      },
-      "x": 26,
-      "y": -466,
-      "width": 256,
-      "height": 174,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
-      "base_type": "core/Node"
-    },
-    "86df3111-98d7-46a1-aa1d-93e6c53e282b": {
-      "title": "PROP analysis_enabled",
-      "id": "86df3111-98d7-46a1-aa1d-93e6c53e282b",
-      "properties": {
-        "property_name": "analysis_enabled",
-        "property_type": "bool",
-        "default": "true",
-        "choices": [],
-        "description": "Theme analysis"
-      },
-      "x": 23,
-      "y": -710,
-      "width": 260,
-      "height": 174,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
       "base_type": "core/Node"
     },
     "db171bea-e4a0-48b9-9a98-a7cd354d8fcf": {
@@ -254,21 +130,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "08309808-d1f1-4a94-9027-363eceed41d1": {
-      "title": "Stage 0",
-      "id": "08309808-d1f1-4a94-9027-363eceed41d1",
-      "properties": {
-        "stage": 0
-      },
-      "x": 727,
-      "y": -865,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "4e9136e5-4557-4ef6-9124-9468d9e39815": {
@@ -614,56 +475,6 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "def10ae9-f0f7-45a2-9fd6-42e58dc353ed": {
-      "title": "SET local.intro_length",
-      "id": "def10ae9-f0f7-45a2-9fd6-42e58dc353ed",
-      "properties": {
-        "name": null,
-        "scope": "local"
-      },
-      "x": 350,
-      "y": -210,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "880b6010-cdca-42d0-9dcb-58abecd31599": {
-      "title": "Stage 0",
-      "id": "880b6010-cdca-42d0-9dcb-58abecd31599",
-      "properties": {
-        "stage": 0
-      },
-      "x": 660,
-      "y": -210,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "bb66531f-71dc-4ab5-820e-8b9d6059f450": {
-      "title": "PROP intro_length",
-      "id": "bb66531f-71dc-4ab5-820e-8b9d6059f450",
-      "properties": {
-        "property_name": "intro_length",
-        "property_type": "int",
-        "default": "512",
-        "choices": [],
-        "description": "Length of the introduction"
-      },
-      "x": 30,
-      "y": -210,
-      "width": 256,
-      "height": 174,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
-      "base_type": "core/Node"
-    },
     "958c9db5-6df8-4d04-919d-c0a4b42fe3f8": {
       "title": "Generate Storyline",
       "id": "958c9db5-6df8-4d04-919d-c0a4b42fe3f8",
@@ -797,6 +608,200 @@
       "inherited": false,
       "registry": "core/Stage",
       "base_type": "core/Node"
+    },
+    "c327b0c4-900e-4d27-a0b9-0d47e8479732": {
+      "title": "SET local.analysis_instructions",
+      "id": "c327b0c4-900e-4d27-a0b9-0d47e8479732",
+      "properties": {
+        "name": null,
+        "scope": "local"
+      },
+      "x": 329,
+      "y": -1040,
+      "width": 260,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb": {
+      "title": "SET local.analysis_enabled",
+      "id": "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb",
+      "properties": {
+        "name": null,
+        "scope": "local"
+      },
+      "x": 329,
+      "y": -780,
+      "width": 218,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff": {
+      "title": "PROP topic",
+      "id": "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff",
+      "properties": {
+        "property_name": "topic",
+        "property_type": "str",
+        "default": "",
+        "choices": [],
+        "description": "The overarching topic",
+        "num": 0
+      },
+      "x": 29,
+      "y": -520,
+      "width": 255,
+      "height": 198,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b": {
+      "title": "SET local.topic",
+      "id": "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b",
+      "properties": {
+        "name": null,
+        "scope": "local"
+      },
+      "x": 329,
+      "y": -520,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "08309808-d1f1-4a94-9027-363eceed41d1": {
+      "title": "Stage 0",
+      "id": "08309808-d1f1-4a94-9027-363eceed41d1",
+      "properties": {
+        "stage": 0
+      },
+      "x": 739,
+      "y": -890,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "def10ae9-f0f7-45a2-9fd6-42e58dc353ed": {
+      "title": "SET local.intro_length",
+      "id": "def10ae9-f0f7-45a2-9fd6-42e58dc353ed",
+      "properties": {
+        "name": null,
+        "scope": "local"
+      },
+      "x": 359,
+      "y": -250,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "880b6010-cdca-42d0-9dcb-58abecd31599": {
+      "title": "Stage 0",
+      "id": "880b6010-cdca-42d0-9dcb-58abecd31599",
+      "properties": {
+        "stage": 0
+      },
+      "x": 709,
+      "y": -230,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "bb66531f-71dc-4ab5-820e-8b9d6059f450": {
+      "title": "PROP intro_length",
+      "id": "bb66531f-71dc-4ab5-820e-8b9d6059f450",
+      "properties": {
+        "property_name": "intro_length",
+        "property_type": "int",
+        "default": "512",
+        "choices": [],
+        "description": "Length of the introduction",
+        "num": 1
+      },
+      "x": 39,
+      "y": -250,
+      "width": 252,
+      "height": 198,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "86df3111-98d7-46a1-aa1d-93e6c53e282b": {
+      "title": "PROP analysis_enabled",
+      "id": "86df3111-98d7-46a1-aa1d-93e6c53e282b",
+      "properties": {
+        "property_name": "analysis_enabled",
+        "property_type": "bool",
+        "default": "true",
+        "choices": [],
+        "description": "Theme analysis",
+        "num": 2
+      },
+      "x": 29,
+      "y": -780,
+      "width": 258,
+      "height": 198,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569": {
+      "title": "PROP analysis_instructions",
+      "id": "3f749c9f-71b0-4e9c-b99d-859e53f20569",
+      "properties": {
+        "property_name": "analysis_instructions",
+        "property_type": "text",
+        "default": "",
+        "choices": [],
+        "description": "Instructions for the analysis",
+        "num": 3
+      },
+      "x": 29,
+      "y": -1040,
+      "width": 259,
+      "height": 198,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "43013315-b65d-4c51-bdab-fdffe051224f": {
+      "title": "PROP reset",
+      "id": "43013315-b65d-4c51-bdab-fdffe051224f",
+      "properties": {
+        "property_name": "reset",
+        "property_type": "bool",
+        "default": "false",
+        "choices": [],
+        "description": "Reset the introduction",
+        "num": 4
+      },
+      "x": 26,
+      "y": -1299,
+      "width": 268,
+      "height": 198,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -806,41 +811,8 @@
     "efc1c906-d725-4941-acab-a369366411d4.value": [
       "08309808-d1f1-4a94-9027-363eceed41d1.state"
     ],
-    "c327b0c4-900e-4d27-a0b9-0d47e8479732.value": [
-      "08309808-d1f1-4a94-9027-363eceed41d1.state_b"
-    ],
-    "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value": [
-      "08309808-d1f1-4a94-9027-363eceed41d1.state_c"
-    ],
-    "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value": [
-      "08309808-d1f1-4a94-9027-363eceed41d1.state_d"
-    ],
     "2a4e0aed-e85a-4fba-ae30-630c71f91db9.value": [
       "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.topic"
-    ],
-    "3f749c9f-71b0-4e9c-b99d-859e53f20569.name": [
-      "c327b0c4-900e-4d27-a0b9-0d47e8479732.name"
-    ],
-    "3f749c9f-71b0-4e9c-b99d-859e53f20569.value": [
-      "c327b0c4-900e-4d27-a0b9-0d47e8479732.value"
-    ],
-    "43013315-b65d-4c51-bdab-fdffe051224f.name": [
-      "efc1c906-d725-4941-acab-a369366411d4.name"
-    ],
-    "43013315-b65d-4c51-bdab-fdffe051224f.value": [
-      "efc1c906-d725-4941-acab-a369366411d4.value"
-    ],
-    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.name": [
-      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.name"
-    ],
-    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.value": [
-      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value"
-    ],
-    "86df3111-98d7-46a1-aa1d-93e6c53e282b.name": [
-      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.name"
-    ],
-    "86df3111-98d7-46a1-aa1d-93e6c53e282b.value": [
-      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value"
     ],
     "db171bea-e4a0-48b9-9a98-a7cd354d8fcf.scene": [
       "97204757-5fb9-4d81-ac90-20825b9a1b32.object"
@@ -913,15 +885,6 @@
     "a99989f1-d426-4195-9918-ac659bf24510.value": [
       "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.intro_length"
     ],
-    "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.value": [
-      "880b6010-cdca-42d0-9dcb-58abecd31599.state"
-    ],
-    "bb66531f-71dc-4ab5-820e-8b9d6059f450.name": [
-      "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.name"
-    ],
-    "bb66531f-71dc-4ab5-820e-8b9d6059f450.value": [
-      "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.value"
-    ],
     "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.text": [
       "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.introduction"
     ],
@@ -945,6 +908,48 @@
     ],
     "0c73a403-ada1-45fa-ac3d-9a4890f4c9d0.yes": [
       "7c8b1e17-c5a4-4eb3-a1dc-d9b5ea782e6b.state"
+    ],
+    "c327b0c4-900e-4d27-a0b9-0d47e8479732.value": [
+      "08309808-d1f1-4a94-9027-363eceed41d1.state_b"
+    ],
+    "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value": [
+      "08309808-d1f1-4a94-9027-363eceed41d1.state_c"
+    ],
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.name": [
+      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.name"
+    ],
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.value": [
+      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value"
+    ],
+    "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value": [
+      "08309808-d1f1-4a94-9027-363eceed41d1.state_d"
+    ],
+    "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.value": [
+      "880b6010-cdca-42d0-9dcb-58abecd31599.state"
+    ],
+    "bb66531f-71dc-4ab5-820e-8b9d6059f450.name": [
+      "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.name"
+    ],
+    "bb66531f-71dc-4ab5-820e-8b9d6059f450.value": [
+      "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.value"
+    ],
+    "86df3111-98d7-46a1-aa1d-93e6c53e282b.name": [
+      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.name"
+    ],
+    "86df3111-98d7-46a1-aa1d-93e6c53e282b.value": [
+      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value"
+    ],
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569.name": [
+      "c327b0c4-900e-4d27-a0b9-0d47e8479732.name"
+    ],
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569.value": [
+      "c327b0c4-900e-4d27-a0b9-0d47e8479732.value"
+    ],
+    "43013315-b65d-4c51-bdab-fdffe051224f.name": [
+      "efc1c906-d725-4941-acab-a369366411d4.name"
+    ],
+    "43013315-b65d-4c51-bdab-fdffe051224f.value": [
+      "efc1c906-d725-4941-acab-a369366411d4.value"
     ]
   },
   "groups": [
@@ -960,10 +965,10 @@
     },
     {
       "title": "Properties - Stage 0",
-      "x": -2,
-      "y": -1290,
-      "width": 964,
-      "height": 1279,
+      "x": 1,
+      "y": -1379,
+      "width": 972,
+      "height": 1352,
       "color": "#8AA",
       "font_size": 24,
       "inherited": false
@@ -1062,35 +1067,23 @@
   "inputs": [],
   "outputs": [],
   "module_properties": {
-    "analysis_instructions": {
-      "name": "analysis_instructions",
-      "description": "Instructions for the analysis",
-      "type": "text",
-      "default": "",
-      "choices": [],
-      "readonly": false,
-      "step": null,
-      "min": null,
-      "max": null,
-      "ephemeral": false
-    },
-    "reset": {
-      "name": "reset",
-      "description": "Reset the introduction",
-      "type": "bool",
-      "default": false,
-      "choices": [],
-      "readonly": false,
-      "step": null,
-      "min": null,
-      "max": null,
-      "ephemeral": false
-    },
     "topic": {
       "name": "topic",
       "description": "The overarching topic",
       "type": "str",
       "default": "",
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "intro_length": {
+      "name": "intro_length",
+      "description": "Length of the introduction",
+      "type": "int",
+      "default": 512,
       "choices": [],
       "readonly": false,
       "step": null,
@@ -1110,11 +1103,23 @@
       "max": null,
       "ephemeral": false
     },
-    "intro_length": {
-      "name": "intro_length",
-      "description": "Length of the introduction",
-      "type": "int",
-      "default": 512,
+    "analysis_instructions": {
+      "name": "analysis_instructions",
+      "description": "Instructions for the analysis",
+      "type": "text",
+      "default": "",
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "reset": {
+      "name": "reset",
+      "description": "Reset the introduction",
+      "type": "bool",
+      "default": false,
       "choices": [],
       "readonly": false,
       "step": null,

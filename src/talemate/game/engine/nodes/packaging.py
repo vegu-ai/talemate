@@ -280,7 +280,7 @@ async def install_package(scene: "Scene", package_data: PackageData):
     
     scene_loop:SceneLoop | None = scene.active_node_graph
     if scene_loop:
-        await initialize_package(scene, scene_loop, package_data, allow_restart=True)
+        await initialize_package(scene, scene_loop, package_data)
 
 
 async def update_package_properties(scene: "Scene", package_registry: str, package_properties: dict[str, PackageProperty]):
@@ -319,25 +319,15 @@ async def uninstall_package(scene: "Scene", package_registry: str):
     
     await save_scene_package_info(scene, scene_package_info)
 
-async def initialize_packages(scene: "Scene", scene_loop: SceneLoop, allow_restart: bool = False):
+async def initialize_packages(scene: "Scene", scene_loop: SceneLoop):
     """
     Initialize all installed packages into the scene loop.
     """
     
-    restart_scene_loop = False
     try:
-    
         scene_package_info = await get_scene_package_info(scene)
-        
         for package_data in scene_package_info.packages:
-            await initialize_package(scene, scene_loop, package_data, False)
-            
-            if package_data.restart_scene_loop:
-                restart_scene_loop = True
-                
-        if restart_scene_loop and allow_restart:
-            interaction_state = interaction.get()
-            interaction_state.reset_requested = True
+            await initialize_package(scene, scene_loop, package_data)
             
     except Exception as e:
         log.exception("initialize_packages failed", error=e)
@@ -347,7 +337,6 @@ async def initialize_package(
     scene: "Scene", 
     scene_loop: SceneLoop, 
     package_data: PackageData,
-    allow_restart: bool = False
 ):
     """
     Initialize an installed package into the scene loop.
@@ -372,11 +361,6 @@ async def initialize_package(
                 field = node.get_property_field(property_name)
                 field.default = property_value
                 node.properties[property_name] = property_value
-                
-            if package_data.restart_scene_loop and allow_restart:
-                interaction_state = interaction.get()
-                interaction_state.reset_requested = True
-                
             log.debug("installed node", registry=registry, properties=package_data.properties_for_node(registry))
     except Exception as e:
         log.exception("initialize_package failed", error=e, package_data=package_data)

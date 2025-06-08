@@ -2,6 +2,7 @@ import asyncio
 import structlog
 import httpx
 import ollama
+import time
 from typing import Union
 
 from talemate.client.base import STOPPING_STRINGS, ClientBase, CommonDefaults, ErrorAction, ParameterReroute, ExtraField
@@ -10,6 +11,8 @@ from talemate.config import Client as BaseClientConfig
 
 log = structlog.get_logger("talemate.client.ollama")
 
+
+FETCH_MODELS_INTERVAL = 15
 
 class OllamaClientDefaults(CommonDefaults):
     api_url: str = "http://localhost:11434"  # Default Ollama URL
@@ -100,6 +103,7 @@ class OllamaClient(ClientBase):
         self.api_handles_prompt_template = api_handles_prompt_template
         self.allow_thinking = allow_thinking
         self._available_models = []
+        self._models_last_fetched = 0
         self.client = None
         super().__init__(**kwargs)
 
@@ -120,27 +124,53 @@ class OllamaClient(ClientBase):
         self.allow_thinking = kwargs.get(
             "allow_thinking", self.allow_thinking
         )
-        log.info(f"Ollama client initialized with URL: {self.api_url}")
+
+    async def status(self):
+        """
+        Send a request to the API to retrieve the loaded AI model name.
+        Raises an error if no model name is returned.
+        :return: None
+        """
         
-        # Reset available models when client is re-initialized
-        # They will be fetched again on next status() call
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.fetch_available_models())
+        if self.processing:
+            return
+
+        if not self.enabled:
+            self.connected = False
+            self.emit_status()
+            return
         
+        try:
+            # instead of using the client (which apparently cannot set a timeout per endpoint)
+            # we use httpx to check {api_url}/api/version to see if the server is running
+            # use a timeout of 2 seconds
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.api_url}/api/version", timeout=2)
+                response.raise_for_status()
+                
+            # if the server is running, fetch the available models
+            await self.fetch_available_models()
+        except Exception as e:
+            log.error("Failed to fetch models from Ollama", error=str(e))
+            self.connected = False
+            self.emit_status()
+            return
+        
+        await super().status()
+
     async def fetch_available_models(self):
         """
         Fetch list of available models from Ollama.
         """
-        try:
-            response = await self.client.list()
-            models = response.get("models", [])
-            model_names = [model.model for model in models]
-            self._available_models = sorted(model_names)
-            log.warning("Ollama models", models=self._available_models)
+        if time.time() - self._models_last_fetched < FETCH_MODELS_INTERVAL:
             return self._available_models
-        except Exception as e:
-            log.exception("Failed to fetch models from Ollama", error=str(e))
-            return []
+        
+        response = await self.client.list()
+        models = response.get("models", [])
+        model_names = [model.model for model in models]
+        self._available_models = sorted(model_names)
+        self._models_last_fetched = time.time()
+        return self._available_models
 
     def finalize_status(self, data: dict):
         """
@@ -211,8 +241,6 @@ class OllamaClient(ClientBase):
         options = parameters
         
         options["num_ctx"] = self.max_token_length
-        
-        log.debug("Ollama generate", model=self.model_name, options=options, can_be_coerced=self.can_be_coerced, can_think=self.can_think)
         
         try:
             # Use generate endpoint for completion

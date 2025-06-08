@@ -93,6 +93,7 @@ class General(BaseModel):
     auto_save: bool = True
     auto_progress: bool = True
     max_backscroll: int = 512
+    add_default_character: bool = True
 
 
 class StateReinforcementTemplate(BaseModel):

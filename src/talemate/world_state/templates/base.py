@@ -125,8 +125,71 @@ class Group(pydantic.BaseModel):
     def load(cls, path: str) -> "Group":
         with open(path, "r") as f:
             data = yaml.safe_load(f)
-            data.pop("path", None)
+            data = cls.sanitize_data(data)
             return cls(path=path, **data)
+        
+    @classmethod
+    def sanitize_data(cls, data: dict) -> dict:
+        """
+        Sanitizes the data for the group.
+        """
+        
+        data.pop("path", None)
+        
+        # ensure uid is set
+        if not data.get("uid"):
+            data["uid"] = str(uuid.uuid4())
+        
+        # if group name is null, set it to the group uid
+        if not data.get("name"):
+            uid = data.get("uid")
+            log.warning("Group has no name", group_uid=uid)
+            data["name"] = uid[:8]
+            
+        # if description or author are null, set them to blank strings
+        if data.get("description") is None: 
+            data["description"] = ""
+        if data.get("author") is None:
+            data["author"] = ""
+        
+        # 1 remove null templates
+        for template_id, template in list(data["templates"].items()):
+            if not template:
+                log.warning("Template is null", template_id=template_id)
+                del data["templates"][template_id]
+                
+        # for templates with a null name, set it to the template_id
+        for template_id, template in data["templates"].items():
+            if template.get("group") != data["uid"]:
+                template["group"] = data["uid"]
+            
+            if not template.get("uid"):
+                template["uid"] = template_id
+            
+            if not template.get("name"):
+                log.warning("Template has no name", template_id=template_id)
+                template["name"] = template_id[:8]
+                
+            # try to int priority, on failure set to 1
+            try:
+                template["priority"] = int(template.get("priority", 1))
+            except (ValueError, TypeError):
+                template["priority"] = 1
+
+                
+        # ensure template_type exists and drop any that are invalid
+        for template_id, template in list(data["templates"].items()):
+            template_type = template.get("template_type")
+            if not template_type:
+                log.warning("Template has no template_type", template_id=template_id)
+                del data["templates"][template_id]
+            
+            if template_type not in MODELS:
+                log.warning("Template has invalid template_type", template_id=template_id, template_type=template_type)
+                del data["templates"][template_id]
+
+        return data
+        
 
     @property
     def filename(self):

@@ -239,7 +239,7 @@ class MemoryAgent(Agent):
         except EmbeddingsModelLoadError:
             raise
         except Exception as e:
-            log.error("memory agent", error="failed to set db", details=e)
+            log.exception("memory agent", error="failed to set db", details=e)
             
             if "torchvision::nms does not exist" in str(e):
                 raise SetDBError("The embeddings you are trying to use require the `torchvision` package to be installed")
@@ -765,7 +765,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             )
 
             ef = embedding_functions.InstructorEmbeddingFunction(
-                model_name=model_name, device=device
+                model_name=model_name, device=device, instruction="Represent the document for retrieval:"
             )
 
             log.info("chromadb", status="embedding function ready")

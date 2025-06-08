@@ -55,7 +55,7 @@ ollama = "^0.5.1"
 
 # ChromaDB
 chromadb = ">=0.4.17,<1"
-InstructorEmbedding = "^1.0.1"
+InstructorEmbedding = {git = "https://github.com/vegu-ai/instructor-embedding.git", branch = "202506-fixes"}
 torch = "^2.7.0"
 torchaudio = "^2.7.0"
 # locked for instructor embeddings

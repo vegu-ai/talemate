@@ -248,7 +248,6 @@ class WorldStateManagerPlugin(SceneIntentMixin, Plugin):
         )
 
     async def handle_get_templates(self, data):
-        log.debug("get_templates", data=data)
         templates = await self.world_state_manager.get_templates()
         self.websocket_handler.queue_put(
             {

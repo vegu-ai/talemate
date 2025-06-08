@@ -511,53 +511,6 @@ class NarratorAgent(
         return response
 
     @set_processing
-    async def augment_context(self):
-        """
-        Takes a context history generated via scene.context_history() and augments it with additional information
-        by asking and answering questions with help from the long term memory.
-        """
-        memory = self.scene.get_helper("memory").agent
-
-        questions = await Prompt.request(
-            "narrator.context-questions",
-            self.client,
-            "narrate",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "extra_instructions": self.extra_instructions,
-            },
-        )
-
-        log.debug("context_questions", questions=questions)
-
-        questions = [q for q in questions.split("\n") if q.strip()]
-
-        memory_context = await memory.multi_query(
-            questions, iterate=2, max_tokens=self.client.max_token_length - 1000
-        )
-
-        answers = await Prompt.request(
-            "narrator.context-answers",
-            self.client,
-            "narrate",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "memory": memory_context,
-                "questions": questions,
-                "extra_instructions": self.extra_instructions,
-            },
-        )
-
-        log.debug("context_answers", answers=answers)
-
-        answers = [a for a in answers.split("\n") if a.strip()]
-
-        # return questions and answers
-        return list(zip(questions, answers))
-
-    @set_processing
     @store_context_state('narrative_direction', time_narration=True)
     async def narrate_time_passage(
         self, duration: str, time_passed: str, narrative_direction: str

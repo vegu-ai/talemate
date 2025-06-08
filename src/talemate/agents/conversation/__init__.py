@@ -232,10 +232,20 @@ class ConversationAgent(
     @property
     def generation_settings_actor_instructions_offset(self):
         return self.actions["generation_override"].config["actor_instructions_offset"].value
-
+    
+    @property
+    def generation_settings_response_length(self):
+        return self.actions["generation_override"].config["length"].value
+    
+    @property
+    def generation_settings_override_enabled(self):
+        return self.actions["generation_override"].enabled
+    
     @property
     def content_use_writing_style(self) -> bool:
         return self.actions["content"].config["use_writing_style"].value
+
+
 
     def connect(self, scene):
         super().connect(scene)
@@ -322,6 +332,7 @@ class ConversationAgent(
                 "actor_instructions_offset": self.generation_settings_actor_instructions_offset,
                 "direct_instruction": instruction,
                 "decensor": self.client.decensor_enabled,
+                "response_length": self.generation_settings_response_length if self.generation_settings_override_enabled else None,
             },
         )
 

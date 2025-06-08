@@ -9,7 +9,7 @@
             <v-list-item-subtitle class="text-caption">Create a new template group.</v-list-item-subtitle>
         </v-list-item>
     </v-list>
-    <v-list v-for="(group, index) in worldStateTemplates.managed.groups" :key="index" density="compact" slim color="primary" selectable  @update:selected="onSelectGroup" :selected="selectedGroups">
+    <v-list v-for="(group, index) in safeGroups" :key="index" density="compact" slim color="primary" selectable  @update:selected="onSelectGroup" :selected="selectedGroups">
         <v-list-subheader color="grey" v-if="index === 0">
             <v-icon color="primary" class="mr-1">mdi-cube-scan</v-icon>
             Templates
@@ -72,7 +72,8 @@ export default {
             immediate: true,
             handler(worldStateTemplates) {
                 if(this.deferredSelectGroup) {
-                    let index = worldStateTemplates.managed.groups.findIndex(group => group.uid == this.deferredSelectGroup);
+                    const groups = worldStateTemplates?.managed?.groups || [];
+                    let index = groups.findIndex(group => group.uid == this.deferredSelectGroup);
                     if(index != -1) {
                         this.selectedGroups = [index];
                         this.deferredSelectGroup = null;
@@ -94,7 +95,7 @@ export default {
                     return;
                 }
                 let index = selectedGroups[0];
-                let group = this.worldStateTemplates.managed.groups[index];
+                let group = this.safeGroups[index];
                 if(!oldSelectedGroups.length || oldSelectedGroups[0] != index) {
                     this.$emit('world-state-manager-navigate', 'templates', group.uid);
                 }
@@ -109,7 +110,9 @@ export default {
         'unregisterMessageHandler',
     ],
     computed: {
-
+        safeGroups() {
+            return this.worldStateTemplates?.managed?.groups || [];
+        }
     },
     data() {
         return {
@@ -152,7 +155,10 @@ export default {
             this.selected = value;
         },
         deleteGroup(index) {
-            let group = this.worldStateTemplates.managed.groups[index];
+            let group = this.safeGroups[index];
+            if(!group) {
+                return;
+            }
             let confirmed = confirm(`Are you sure you want to delete the group "${group.name}"?`);
             if (!confirmed) {
                 return;
@@ -165,7 +171,7 @@ export default {
             }  else if (message.action == 'template_saved') {
                 let uid = message.data.template.uid;
                 let group = message.data.template.group;
-                this.selectedGroups = [this.worldStateTemplates.managed.groups.findIndex(group => group.uid == message.data.template.group)]
+                this.selectedGroups = [this.safeGroups.findIndex(group => group.uid == message.data.template.group)]
                 this.selected = [`${group}__${uid}`]
             } else if (message.action == 'template_deleted') {
                 if (this.selected == message.data.template.uid) {
@@ -173,7 +179,7 @@ export default {
                 }
             } else if (message.action == 'template_group_saved') {
                 let uid = message.data.group.uid;
-                let index = this.worldStateTemplates.managed.groups.findIndex(group => group.uid == uid);
+                let index = this.safeGroups.findIndex(group => group.uid == uid);
                 if(index == -1) {
                     this.deferredSelectGroup = uid;
                 } else {

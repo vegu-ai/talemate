@@ -210,6 +210,8 @@ class OllamaClient(ClientBase):
         # Prepare options for Ollama
         options = parameters
         
+        options["num_ctx"] = self.max_token_length
+        
         log.debug("Ollama generate", model=self.model_name, options=options, can_be_coerced=self.can_be_coerced, can_think=self.can_think)
         
         try:

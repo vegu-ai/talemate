@@ -9,7 +9,7 @@
     {% endif -%}
 {% endif -%}
 {% set rendered_context_content -%}
-{% include "character-context.jinja2" -%}
+{% with include_dialogue_instructions=True %}{% include "character-context.jinja2" %}{% endwith %}
 {% include "memory-context.jinja2" -%}
 {% endset %}
 {{ rendered_context_content }}

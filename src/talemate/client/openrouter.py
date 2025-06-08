@@ -35,8 +35,6 @@ async def fetch_available_models(api_key: str = None):
     if AVAILABLE_MODELS and not api_key:
         return AVAILABLE_MODELS
     
-    log.info("openrouter - fetching available models", api_key=api_key)
-        
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -51,7 +49,7 @@ async def fetch_available_models(api_key: str = None):
                     if model_id:
                         models.append(model_id)
                 AVAILABLE_MODELS = sorted(models)
-                log.info(f"Fetched {len(AVAILABLE_MODELS)} models from OpenRouter")
+                log.debug(f"Fetched {len(AVAILABLE_MODELS)} models from OpenRouter")
             else:
                 log.warning(f"Failed to fetch models from OpenRouter: {response.status_code}")
     except Exception as e:

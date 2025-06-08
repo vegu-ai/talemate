@@ -61,8 +61,9 @@ async def fetch_available_models(api_key: str = None):
 
 
 def fetch_models_sync(event):
+    api_key = event.data.get("openrouter", {}).get("api_key")
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(fetch_available_models(event.data["openrouter"]["api_key"]))
+    loop.run_until_complete(fetch_available_models(api_key))
 
 handlers["config_saved"].connect(fetch_models_sync)
 handlers["talemate_started"].connect(fetch_models_sync)

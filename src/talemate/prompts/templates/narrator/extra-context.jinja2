@@ -1,8 +1,9 @@
 {% include "content-classification.jinja2" %}
 <|SECTION:CONTEXT|>
 {% block rendered_context_static %}
-Scenario Premise:
+{% if scene.description.strip() -%}
 {{ scene.description }}
+{% endif %}
 
 {# GENERAL REINFORCEMENTS #}
 {% set general_reinforcements = scene.world_state.filter_reinforcements(insert=['all-context']) %}
@@ -23,3 +24,9 @@ Scenario Premise:
 {% include "dynamic-instructions.jinja2" %}
 {# END DYNAMIC INSTRUCTIONS #}
 <|CLOSE_SECTION|>
+
+{# CHARACTER CONTEXT #}
+{% with include_dialogue_instructions=True, skip_characters=skip_characters %}
+    {% include "character-context.jinja2" %}
+{% endwith %}
+{# END CHARACTER CONTEXT #}

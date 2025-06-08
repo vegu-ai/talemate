@@ -1,5 +1,7 @@
 {% set extra_context_content -%}
-{% include "extra-context.jinja2" %}
+{% with skip_characters = [character.name] %}
+    {% include "extra-context.jinja2" %}
+{% endwith %}
 <|SECTION:{{ character.name|upper }}|>
 {{ character.sheet }}
 

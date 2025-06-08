@@ -1,11 +1,5 @@
 {% set extra_context_content -%}
-{% if related_character -%}
-<|SECTION:{{ related_character.name|upper }}|>
-{{ related_character.sheet}}
-<|CLOSE_SECTION|>
-{% endif %}
 {% include "extra-context.jinja2" %}
-{% set related_character = scene.parse_character_from_line(query) -%}
 {% endset %}
 {{ extra_context_content }}
 {% set extra_context_tokens = count_tokens(extra_context_content) %}

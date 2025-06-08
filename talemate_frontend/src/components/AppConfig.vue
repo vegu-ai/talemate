@@ -52,8 +52,8 @@
                                         <v-divider class="mb-2"></v-divider>
                                         <v-row>
                                             <v-col cols="12">
-                                                <v-checkbox v-model="app_config.game.general.auto_save" label="Auto save" messages="Automatically save after each game-loop"></v-checkbox>
-                                                <v-checkbox v-model="app_config.game.general.auto_progress" label="Auto progress" messages="AI automatically progresses after player turn."></v-checkbox>
+                                                <v-checkbox color="primary" v-model="app_config.game.general.auto_save" label="Auto save" messages="Automatically save after each game-loop"></v-checkbox>
+                                                <v-checkbox color="primary" v-model="app_config.game.general.auto_progress" label="Auto progress" messages="AI automatically progresses after player turn."></v-checkbox>
                                             </v-col>
                                         </v-row>
                                         <v-row>
@@ -66,8 +66,7 @@
                                         <v-alert color="white" variant="text" icon="mdi-human-edit" density="compact">
                                             <v-alert-title>Default player character</v-alert-title>
                                             <div class="text-grey">
-                                                This will be default player character that will be added to a game if the game does not come with a defined player character. Essentially this is relevant for when you load character-cards that aren't in the talemate scene format.                     
-
+                                                This will be default player character that will be added to a scene if the scene does not come with a defined player character. Mostly relevant when you load character-cards that aren't in the talemate scene format.                 
                                             </div>
                                         </v-alert>
                                         <v-divider class="mb-2"></v-divider>
@@ -85,6 +84,11 @@
                                             <v-col cols="12">
                                                 <v-textarea v-model="app_config.game.default_player_character.description"
                                                     auto-grow label="Description"></v-textarea>
+                                            </v-col>
+                                        </v-row>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-checkbox color="primary" v-model="app_config.game.general.add_default_character" label="Add default character to blank talemate scenes" messages="When creating a new scene, add the default player character to the scene."></v-checkbox>
                                             </v-col>
                                         </v-row>
                                     </div>

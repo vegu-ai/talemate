@@ -316,7 +316,7 @@ async def load_scene_from_data(
         await scene.add_actor(actor)
 
     # if there is nio player character, add the default player character
-    await handle_no_player_character(scene)
+    await handle_no_player_character(scene, add_default_character=scene.config.get("game", {}).get("general", {}).get("add_default_character", True))
 
     # the scene has been saved before (since we just loaded it), so we set the saved flag to True
     # as long as the scene has a memory_id.
@@ -376,7 +376,7 @@ async def transfer_character(scene, scene_json_path, character_name):
     return scene
 
 
-async def handle_no_player_character(scene: Scene) -> None:
+async def handle_no_player_character(scene: Scene, add_default_character: bool = True) -> None:
     """
     Handle the case where there is no player character in the scene.
     """
@@ -386,7 +386,10 @@ async def handle_no_player_character(scene: Scene) -> None:
     if existing_player:
         return
     
-    player = default_player_character()
+    if add_default_character:
+        player = default_player_character()
+    else:
+        player = None
     
     if not player:
         # force scene into creative mode

@@ -188,8 +188,55 @@ class Character:
                 sheet_list.append(f"{key}: {value}")
 
         return "\n".join(sheet_list)
+    
+    def random_dialogue_examples(self, scene:"Scene", num: int = 3, strip_name: bool = False, max_backlog: int = 250) -> list[str]:
+        """
+        Get multiple random example dialogue lines for this character.
+        
+        Will return up to `num` examples and not have any duplicates.
+        """
+        
+        history_examples = self._random_dialogue_examples_from_history(scene, num, max_backlog)
+        log.debug("random_dialogue_examples", history_examples=history_examples)
+        
+        if len(history_examples) >= num:
+            return history_examples
+        
+        random_examples = self._random_dialogue_examples(num - len(history_examples), strip_name)
+        
+        for example in random_examples:
+            history_examples.append(example)
+                
+        log.debug("random_dialogue_examples", history_examples=history_examples, random_examples=random_examples)
+        return history_examples
+        
+    def _random_dialogue_examples_from_history(self, scene:"Scene", num: int = 3, max_backlog: int = 250) -> list[str]:
+        """
+        Get multiple random example dialogue lines for this character from the scene's history.
+        
+        Will checks the last `max_backlog` messages in the scene's history and returns up to `num` examples.
+        """
+        
+        history = scene.history[-max_backlog:]
+        
+        examples = []
+        
+        for message in history:
+            if not isinstance(message, CharacterMessage):
+                continue
+            
+            if message.character_name != self.name:
+                continue
+            
+            examples.append(message.without_name.strip())
+                
+        if not examples:
+            return []
+        
+        return random.sample(examples, min(num, len(examples)))
+        
 
-    def random_dialogue_examples(self, num: int = 3):
+    def _random_dialogue_examples(self, num: int = 3, strip_name: bool = False) -> list[str]:
         """
         Get multiple random example dialogue lines for this character.
 
@@ -208,6 +255,9 @@ class Character:
         random.shuffle(examples)
 
         # now pop examples until we have `num` examples or we run out of examples
+        
+        if strip_name:
+            examples = [example.split(":", 1)[1].strip() for example in examples]
 
         return [examples.pop() for _ in range(min(num, len(examples)))]
 

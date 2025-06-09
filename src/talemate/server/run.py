@@ -1,3 +1,5 @@
+print("Talemate starting.")
+print("Startup may take a moment to download some dependencies, please be patient ...")
 import os
 
 import logging

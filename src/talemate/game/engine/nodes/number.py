@@ -9,9 +9,12 @@ log = structlog.get_logger("talemate.game.engine.nodes.number")
 
 class NumberNode(Node):
     
-    def require_number_input(self, name:str, types:tuple=(int, float)):
+    def normalized_number_input(self, name:str, types:tuple=(int, float)):
         
-        value = self.require_input(name)
+        value = self.get_input_value(name)
+        
+        if value is UNRESOLVED:
+            return UNRESOLVED
         
         try:
             if float in types:
@@ -69,7 +72,7 @@ class MakeNumber(NumberNode):
         else:
             types = (float,)
         
-        value = self.require_number_input("value", types)
+        value = self.normalized_number_input("value", types)
         self.set_output_values({"value": value})
 
 @register("data/number/AsNumber")
@@ -108,7 +111,7 @@ class AsNumber(NumberNode):
         else:
             valid_types = (float,)
         
-        value = self.require_number_input("value", valid_types)
+        value = self.normalized_number_input("value", valid_types)
         self.set_output_values({"value": value})
 
 @register("data/number/BasicArithmetic")
@@ -165,8 +168,12 @@ class BasicArithmetic(NumberNode):
         self.set_property("b", 0)
         
     async def run(self, state: GraphState):
-        a = self.require_number_input("a")
-        b = self.require_number_input("b")
+        a = self.normalized_number_input("a")
+        b = self.normalized_number_input("b")
+        
+        if a is UNRESOLVED or b is UNRESOLVED:
+            return
+        
         operation = self.get_property("operation")
         
         try:
@@ -253,10 +260,13 @@ class Compare(NumberNode):
         self.set_property("b", 0)
         
     async def run(self, state: GraphState):
-        a = self.require_number_input("a")
-        b = self.require_number_input("b")
+        a = self.normalized_number_input("a")
+        b = self.normalized_number_input("b")
         operation = self.get_property("operation")
         tolerance = self.get_property("tolerance")
+        
+        if a is UNRESOLVED or b is UNRESOLVED:
+            return
         
         if operation == "equals":
             result = abs(a - b) <= tolerance
@@ -505,18 +515,29 @@ class Random(NumberNode):
         method = self.get_property("method")
         
         if method == "uniform":
-            min_val = self.require_number_input("min")
-            max_val = self.require_number_input("max")
+            min_val = self.normalized_number_input("min")
+            max_val = self.normalized_number_input("max")
+            
+            if min_val is UNRESOLVED or max_val is UNRESOLVED:
+                return
+            
             result = random.uniform(min_val, max_val)
             
         elif method == "integer":
-            min_val = int(self.require_number_input("min"))
-            max_val = int(self.require_number_input("max"))
+            min_val = int(self.normalized_number_input("min"))
+            max_val = int(self.normalized_number_input("max"))
+            
+            if min_val is UNRESOLVED or max_val is UNRESOLVED:
+                return
+            
             result = random.randint(min_val, max_val)
             
         elif method == "normal":
-            mean = self.require_number_input("mean")
-            std_dev = self.require_number_input("std_dev")
+            mean = self.normalized_number_input("mean")
+            std_dev = self.normalized_number_input("std_dev")
+            
+            if mean is UNRESOLVED or std_dev is UNRESOLVED:
+                return
             
             if std_dev <= 0:
                 raise InputValueError(self, "std_dev", "Standard deviation must be positive")
@@ -583,9 +604,12 @@ class Clamp(NumberNode):
         self.set_property("max", 1)
         
     async def run(self, state: GraphState):
-        value = self.require_number_input("value")
-        min_val = self.require_number_input("min")
-        max_val = self.require_number_input("max")
+        value = self.normalized_number_input("value")
+        min_val = self.normalized_number_input("min")
+        max_val = self.normalized_number_input("max")
+        
+        if value is UNRESOLVED or min_val is UNRESOLVED or max_val is UNRESOLVED:
+            return
         
         if min_val > max_val:
             raise InputValueError(self, "min", "Minimum value cannot be greater than maximum")

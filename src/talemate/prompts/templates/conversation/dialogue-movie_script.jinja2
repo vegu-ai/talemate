@@ -16,9 +16,11 @@ Based on {{ talking_character.name}}'s existing dialogue, create a continuation 
 
 {% set dialogue_examples -%}
 {% for example in talking_character.random_dialogue_examples(scene, num=3, strip_name=True) -%}
+``` example
 {{ talking_character.name.upper() }}
 {{ example }}
 END-OF-LINE
+```
 
 {% endfor -%}
 {% endset %}
@@ -28,9 +30,7 @@ You may chose to have {{ talking_character.name}} respond to the conversation, o
 The format is a screenplay, so you MUST write the character's name in all caps followed by a line break and then the character's dialogue and actions. Speech must be enclosed in double quotes. For example:
 
 {% if dialogue_examples.strip() %}
-``` examples
 {{ dialogue_examples.strip() }}
-```
 {% else %}
 
 ``` example

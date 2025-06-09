@@ -52,20 +52,8 @@
 {% endset -%}
 {# END BUILD SCENE HISTORY #}
 
-
-{# RENDER PROMPT #}
-{{ rendered_context_text }}
-
-{{ rag_context_text }}
-
-{{ task_main_text }}
-
-{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
-
-{{ scene_context_text }}
-{# END RENDER PROMPT #}
-
 {# FINAL ACTING INSTRUCTIONS #}
+{% set acting_instructions -%}
 {% if scene.count_messages() < actor_instructions_offset or actor_instructions_offset == 0 %}
 {% if not director_guidance -%}
 {% if not talking_character.dialogue_instructions %}({% if actor_instructions %} {{ actor_instructions }}{% else %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is informal, conversational, natural, and spontaneous, with a sense of immediacy.{% endif -%}){% else %}(Internal acting instructions for {{ talking_character.name }}: {{ talking_character.dialogue_instructions }}{% if actor_instructions %} {{ actor_instructions }}{% endif %}){% endif -%}
@@ -80,6 +68,21 @@
 
 You must not add additional actions. Dialogue generated should be natural sounding and realistic. Less is more.
 {% endif -%}
+{% endset %}
 {# END FINAL ACTING INSTRUCTIONS #}
+
+{# RENDER PROMPT #}
+{{ rendered_context_text }}
+
+{{ rag_context_text }}
+
+{{ task_main_text }}
+
+{{ acting_instructions }}
+
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
+
+{{ scene_context_text }}
+{# END RENDER PROMPT #}
 
 {% block response_scaffolding %}{% endblock -%}

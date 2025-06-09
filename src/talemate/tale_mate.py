@@ -189,7 +189,7 @@ class Character:
 
         return "\n".join(sheet_list)
     
-    def random_dialogue_examples(self, scene:"Scene", num: int = 3, strip_name: bool = False, max_backlog: int = 250) -> list[str]:
+    def random_dialogue_examples(self, scene:"Scene", num: int = 3, strip_name: bool = False, max_backlog: int = 250, max_length: int = 192) -> list[str]:
         """
         Get multiple random example dialogue lines for this character.
         
@@ -197,17 +197,21 @@ class Character:
         """
         
         history_examples = self._random_dialogue_examples_from_history(scene, num, max_backlog)
-        log.debug("random_dialogue_examples", history_examples=history_examples)
         
-        if len(history_examples) >= num:
-            return history_examples
-        
-        random_examples = self._random_dialogue_examples(num - len(history_examples), strip_name)
-        
-        for example in random_examples:
-            history_examples.append(example)
+        if len(history_examples) < num:
+            random_examples = self._random_dialogue_examples(num - len(history_examples), strip_name)
+            
+            for example in random_examples:
+                history_examples.append(example)
                 
-        log.debug("random_dialogue_examples", history_examples=history_examples, random_examples=random_examples)
+        # ensure sane example lengths
+        
+        history_examples = [
+            util.strip_partial_sentences(example[:max_length])
+            for example in history_examples
+        ]
+                
+        log.debug("random_dialogue_examples", history_examples=history_examples)
         return history_examples
         
     def _random_dialogue_examples_from_history(self, scene:"Scene", num: int = 3, max_backlog: int = 250) -> list[str]:

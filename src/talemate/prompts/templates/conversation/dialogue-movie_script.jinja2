@@ -15,7 +15,7 @@ Based on {{ talking_character.name}}'s existing dialogue, create a continuation 
 {%- endif %}
 
 {% set dialogue_examples -%}
-{% for example in talking_character.random_dialogue_examples(scene, num=3, strip_name=True) -%}
+{% for example in talking_character.random_dialogue_examples(scene, num=2, strip_name=True) -%}
 ``` example
 {{ talking_character.name.upper() }}
 {{ example }}

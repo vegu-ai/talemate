@@ -872,8 +872,14 @@ class RevisionMixin:
         
         if loading_status:
             loading_status("Editor - Issues identified, analyzing text...")
-           
-        template_vars = {
+
+        emission = RevisionEmission(
+            agent=self, 
+            info=info, 
+            issues=issues,
+        )
+
+        emission.template_vars = {
             "text": text,
             "character": character,
             "scene": self.scene,
@@ -881,14 +887,11 @@ class RevisionMixin:
             "max_tokens": self.client.max_token_length,
             "repetition": issues.repetition,
             "bad_prose": issues.bad_prose,
+            "dynamic_instructions": emission.dynamic_instructions,
+            "context_type": info.context_type,
+            "context_name": info.context_name,
         }
         
-        emission = RevisionEmission(
-            agent=self, 
-            template_vars=template_vars, 
-            info=info, 
-            issues=issues,
-        )
         
         await async_signals.get("agent.editor.revision-revise.before").send(
             emission
@@ -899,18 +902,7 @@ class RevisionMixin:
             "editor.revision-analysis",
             self.client,
             f"edit_768",
-            vars={
-                "text": text,
-                "character": character,
-                "scene": self.scene,
-                "response_length": token_count,
-                "max_tokens": self.client.max_token_length,
-                "repetition": issues.repetition,
-                "bad_prose": issues.bad_prose,
-                "dynamic_instructions": emission.dynamic_instructions,
-                "context_type": info.context_type,
-                "context_name": info.context_name,
-            },
+            vars=emission.template_vars,
             dedupe_enabled=False,
         )
         
@@ -1017,11 +1009,28 @@ class RevisionMixin:
         
         log.debug("revision_unslop: issues", issues=issues, template=template)
         
+
+        
         emission = RevisionEmission(
             agent=self,
             info=info,
             issues=issues,
         )
+        
+        emission.template_vars = {
+            "text": text,
+            "scene_analysis": scene_analysis,
+            "character": character,
+            "scene": self.scene,
+            "response_length": response_length,
+            "max_tokens": self.client.max_token_length,
+            "repetition": issues.repetition,
+            "bad_prose": issues.bad_prose,
+            "dynamic_instructions": emission.dynamic_instructions,
+            "context_type": info.context_type,
+            "context_name": info.context_name,
+            "summarization_history": info.summarization_history,
+        }
         
         await async_signals.get("agent.editor.revision-revise.before").send(emission)
         
@@ -1029,20 +1038,7 @@ class RevisionMixin:
             template,
             self.client,
             "edit_768",
-            vars={
-                "text": text,
-                "scene_analysis": scene_analysis,
-                "character": character,
-                "scene": self.scene,
-                "response_length": response_length,
-                "max_tokens": self.client.max_token_length,
-                "repetition": issues.repetition,
-                "bad_prose": issues.bad_prose,
-                "dynamic_instructions": emission.dynamic_instructions,
-                "context_type": info.context_type,
-                "context_name": info.context_name,
-                "summarization_history": info.summarization_history,
-            },
+            vars=emission.template_vars,
             dedupe_enabled=False,
         )
         

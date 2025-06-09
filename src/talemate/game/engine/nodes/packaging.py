@@ -7,6 +7,7 @@ import os
 from typing import ClassVar, TYPE_CHECKING, Literal, Any
 import pydantic
 import structlog
+import traceback
 
 from .core import (
     Node,
@@ -366,7 +367,7 @@ async def initialize_packages(scene: "Scene", scene_loop: SceneLoop):
             await initialize_package(scene, scene_loop, package_data)
             
     except Exception as e:
-        log.exception("initialize_packages failed", error=e)
+        log.error("initialize_packages failed", error=traceback.format_exc())
     
 
 async def initialize_package(
@@ -399,7 +400,7 @@ async def initialize_package(
                 node.properties[property_name] = property_value
             log.debug("installed node", registry=registry, properties=package_data.properties_for_node(registry))
     except Exception as e:
-        log.exception("initialize_package failed", error=e, package_data=package_data)
+        log.error("initialize_package failed", error=traceback.format_exc(), package_data=package_data)
 
 
 # ------------------------------------------------------------------------------------------------

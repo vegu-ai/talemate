@@ -1688,7 +1688,7 @@ class Graph(NodeBase):
             try:
                 await handler(state, exc)
             except Exception as exc:
-                log.exception("Error in error handler", exc=exc)
+                log.error("Error in error handler", exc=traceback.format_exc())
 
     async def clone(self) -> "Graph":
         """

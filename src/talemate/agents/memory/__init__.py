@@ -4,6 +4,7 @@ import asyncio
 import functools
 import hashlib
 import uuid
+import traceback
 import numpy as np
 from typing import Callable
 
@@ -239,7 +240,7 @@ class MemoryAgent(Agent):
         except EmbeddingsModelLoadError:
             raise
         except Exception as e:
-            log.exception("memory agent", error="failed to set db", details=e)
+            log.error("memory agent", error="failed to set db", details=traceback.format_exc())
             
             if "torchvision::nms does not exist" in str(e):
                 raise SetDBError("The embeddings you are trying to use require the `torchvision` package to be installed")

@@ -6,6 +6,7 @@ import ipaddress
 import logging
 import random
 import time
+import traceback
 import asyncio
 from typing import Callable, Union, Literal
 
@@ -706,7 +707,7 @@ class ClientBase:
         except GenerationCancelled:
             raise
         except Exception as e:
-            log.exception("Error during rate limit check", e=e)
+            log.error("Error during rate limit check", e=traceback.format_exc())
         
 
         if not active_scene.get():
@@ -802,7 +803,7 @@ class ClientBase:
         except GenerationCancelled as e:
             raise
         except Exception as e:
-            self.log.exception("send_prompt error", e=e)
+            self.log.error("send_prompt error", e=traceback.format_exc())
             emit(
                 "status", message="Error during generation (check logs)", status="error"
             )

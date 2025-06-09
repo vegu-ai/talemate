@@ -3,6 +3,7 @@ import random
 import uuid
 from typing import TYPE_CHECKING, Tuple
 import dataclasses
+import traceback
 
 import pydantic
 import structlog
@@ -682,7 +683,7 @@ class AssistantMixin:
             
             emit("status", f"Scene forked", status="success")            
         except Exception as e:
-            log.exception("Scene fork failed", exc=e)
+            log.error("Scene fork failed", exc=traceback.format_exc())
             emit("status", "Scene fork failed", status="error")
         
         

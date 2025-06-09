@@ -1,7 +1,7 @@
 {% extends "dialogue.jinja2" %}
 {% block task_main_text %}
 {% set dialogue_examples -%}
-{% for example in talking_character.random_dialogue_examples(scene, num=3, strip_name=True) -%}
+{% for example in talking_character.random_dialogue_examples(scene, num=2, strip_name=True) -%}
 ``` example
 {{ talking_character.name }}: {{ example }}
 ```

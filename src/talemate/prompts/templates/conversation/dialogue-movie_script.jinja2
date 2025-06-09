@@ -14,15 +14,33 @@ Portray the character exactly as defined without holding back. You are the creat
 Based on {{ talking_character.name}}'s existing dialogue, create a continuation of the scene that stays true to {{ talking_character.name}}'s character and the scene progression.
 {%- endif %}
 
+{% set dialogue_examples -%}
+{% for example in talking_character.random_dialogue_examples(scene, num=3, strip_name=True) -%}
+{{ talking_character.name.upper() }}
+{{ example }}
+END-OF-LINE
+
+{% endfor -%}
+{% endset %}
+
 You may chose to have {{ talking_character.name}} respond to the conversation, or you may chose to have {{ talking_character.name}} perform a new action that is in line with {{ talking_character.name}}'s character.
 
 The format is a screenplay, so you MUST write the character's name in all caps followed by a line break and then the character's dialogue and actions. Speech must be enclosed in double quotes. For example:
 
-    {{ talking_character.name.upper() }}
-    narrative ".. spoken dialogue.." more narrative...
+{% if dialogue_examples.strip() %}
+``` examples
+{{ dialogue_examples.strip() }}
+```
+{% else %}
 
-    ".. spoken dialogue.." more narrative...
-    END-OF-LINE
+``` example
+{{ talking_character.name.upper() }}
+narrative ".. spoken dialogue.." more narrative...
+
+".. spoken dialogue.." more narrative...
+END-OF-LINE
+```
+{% endif %}
 
 {{ task_instructions }}
 

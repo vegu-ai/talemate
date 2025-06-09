@@ -8,13 +8,6 @@
 {{ character.description }}
 {% endfor %}
 <|CLOSE_SECTION|>
-{% if talking_character.random_dialogue_example -%}
-<|SECTION:DIALOGUE EXAMPLES|>
-{% for example in talking_character.random_dialogue_examples(num=3) -%}
-{{ example }}
-{% endfor %}
-<|CLOSE_SECTION|>
-{% endif %}
 {% if scene.description %}
 <|SECTION:SCENE DESCRIPTION|>
 {{ scene.description }}

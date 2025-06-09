@@ -1,5 +1,13 @@
 {% extends "dialogue.jinja2" %}
 {% block task_main_text %}
+{% set dialogue_examples -%}
+{% for example in talking_character.random_dialogue_examples(scene, num=3, strip_name=True) -%}
+``` example
+{{ talking_character.name }}: {{ example }}
+```
+
+{% endfor -%}
+{% endset %}
 <|SECTION:TASK|>
 This is a roleplaying session between {{main_character.name}} and {{formatted_names}}.
 
@@ -16,13 +24,15 @@ Based on {{ talking_character.name}}'s example dialogue style, create a continua
 
 You may chose to have {{ talking_character.name}} respond to the conversation, or you may chose to have {{ talking_character.name}} perform a new action that is in line with {{ talking_character.name}}'s character.
 
-Start your response with the character's name followed by a colon indicating the character's turn. Then write the character's dialogue and actions.
+Start your response with the character's name followed by a colon indicating the character's turn. Then write the character's dialogue and actions. Spoken words MUST be enclosed in quotation marks. For example:
 
-Spoken words MUST be enclosed in quotation marks.
-
-For example:
-
+{% if dialogue_examples.strip() %}
+{{ dialogue_examples.strip() }}
+{% else %}
+``` example
 {{ talking_character.name }}: "... spoken dialogue ..." ... some narrative ... "... more dialogue ..."
+```
+{% endif %}
 
 {{ task_instructions }}
 

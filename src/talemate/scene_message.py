@@ -341,6 +341,10 @@ class DirectorMessage(SceneMessage):
         return self.as_format("chat")
 
     def as_format(self, format: str, **kwargs) -> str:
+        
+        if not self.instructions.strip():
+            return ""
+        
         mode = kwargs.get("mode", "direction")
         if format == "movie_script":
             if mode == "internal_monologue":

@@ -465,7 +465,7 @@ class DynamicInstruction(Node):
         
     def setup(self):
         self.add_input("header", socket_type="str", optional=True)
-        self.add_input("content", socket_type="text", optional=True)
+        self.add_input("content", socket_type="str", optional=True)
         
         self.set_property("header", UNRESOLVED)
         self.set_property("content", UNRESOLVED)

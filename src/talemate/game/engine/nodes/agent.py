@@ -473,8 +473,11 @@ class DynamicInstruction(Node):
         self.add_output("dynamic_instruction", socket_type="dynamic_instruction")
         
     async def run(self, state: GraphState):
-        header = self.require_input("header")
-        content = self.require_input("content")
+        header = self.normalized_input_value("header")
+        content = self.normalized_input_value("content")
+        
+        if not header or not content:
+            return
         
         self.set_output_values({
             "dynamic_instruction": DynamicInstructionType(title=header, content=content)

@@ -736,6 +736,8 @@ class WebsocketHandler(Receiver):
         try:
             for asset_id in asset_ids:
                 asset = scene_assets.get_asset_bytes_as_base64(asset_id)
+                if not asset:
+                    continue
 
                 self.queue_put(
                     {

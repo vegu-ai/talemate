@@ -489,7 +489,8 @@ class RevisionMixin:
             log.warning("revision_revise: generation cancelled", text=info.text)
             return info.text
         except Exception as e:
-            log.exception("revision_revise: error", error=e)
+            import traceback
+            log.error("revision_revise: error", error=traceback.format_exc())
             return info.text
         finally:
             info.loading_status.done()

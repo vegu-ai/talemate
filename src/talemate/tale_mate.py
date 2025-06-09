@@ -1890,7 +1890,7 @@ class Scene(Emitter):
             ts = self.ts
             self._fix_time()
         except Exception as e:
-            log.exception("fix_time", exc=e)
+            log.error("fix_time", exc=traceback.format_exc())
             self.ts = ts
         
     def _fix_time(self):

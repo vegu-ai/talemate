@@ -9,6 +9,7 @@ import asyncio
 import dataclasses
 import fnmatch
 import json
+import traceback
 import yaml
 import os
 import random
@@ -453,7 +454,7 @@ class Prompt:
             else:
                 self.prompt = sectioning_handler(self)
         except jinja2.exceptions.TemplateError as e:
-            log.exception("prompt.render", prompt=self.name, error=e)
+            log.error("prompt.render", prompt=self.name, error=traceback.format_exc())
             emit(
                 "system",
                 status="error",

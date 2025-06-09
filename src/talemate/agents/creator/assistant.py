@@ -328,7 +328,14 @@ class AssistantMixin:
             if not content.startswith(generation_context.character + ":"):
                 content = generation_context.character + ": " + content
             content = util.strip_partial_sentences(content)
-            emission.response  = await editor.cleanup_character_message(content, generation_context.character.name)
+            
+            character = self.scene.get_character(generation_context.character)
+            
+            if not character:
+                log.warning("Character not found", character=generation_context.character)
+                return content
+            
+            emission.response  = await editor.cleanup_character_message(content, character)
             await async_signals.get("agent.creator.contextual_generate.after").send(emission)
             return emission.response
         

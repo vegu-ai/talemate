@@ -16,19 +16,13 @@ Based on {{ talking_character.name}}'s existing dialogue, create a continuation 
 
 You may chose to have {{ talking_character.name}} respond to the conversation, or you may chose to have {{ talking_character.name}} perform a new action that is in line with {{ talking_character.name}}'s character.
 
-The format is a screenplay, so you MUST write the character's name in all caps followed by a line break and then the character's dialogue and actions. For example:
+The format is a screenplay, so you MUST write the character's name in all caps followed by a line break and then the character's dialogue and actions. Speech must be enclosed in double quotes. For example:
 
-{{ talking_character.name.upper() }}
-".. spoken dialogue.."
-END-OF-LINE
+    {{ talking_character.name.upper() }}
+    narrative ".. spoken dialogue.." more narrative...
 
-Speech must be enclosed in double quotes. For example:
-
-{{ talking_character.name.upper() }}
-narrative ".. spoken dialogue.." more narrative...
-
-".. spoken dialogue.." more narrative...
-END-OF-LINE
+    ".. spoken dialogue.." more narrative...
+    END-OF-LINE
 
 {{ task_instructions }}
 

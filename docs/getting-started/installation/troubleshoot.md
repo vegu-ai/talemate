@@ -2,12 +2,16 @@
 
 ## Windows
 
-### Installation fails with "Microsoft Visual C++" error
+### Installation fails with "Microsoft Visual C++" or "ValueError: The onnxruntime python package is not installed." errors
     
-If your installation errors with a notification to upgrade "Microsoft Visual C++" go to https://visualstudio.microsoft.com/visual-cpp-build-tools/ and click "Download Build Tools" and run it.
+If your installation errors with a notification to upgrade "Microsoft Visual C++" go to [https://visualstudio.microsoft.com/visual-cpp-build-tools/](https://visualstudio.microsoft.com/visual-cpp-build-tools/) and click "Download Build Tools" and run it.
 
 -  During installation make sure you select the C++ development package (upper left corner)
 -  Run `reinstall.bat` inside talemate directory
+
+### Frontend fails with errors
+
+- ensure none of the directories have special characters in them, this can cause issues with the frontend. so no `(1)` in the directory name.
 
 ## Docker
 

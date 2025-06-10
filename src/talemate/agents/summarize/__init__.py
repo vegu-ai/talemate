@@ -4,7 +4,7 @@ import re
 import dataclasses
 
 import structlog
-
+from typing import TYPE_CHECKING
 import talemate.data_objects as data_objects
 import talemate.emit.async_signals
 import talemate.util as util
@@ -18,7 +18,6 @@ from talemate.scene_message import (
     ReinforcementMessage,
 )
 from talemate.world_state.templates import GenerationOptions
-from talemate.tale_mate import Character
 from talemate.instance import get_agent
 from talemate.exceptions import GenerationCancelled
 import talemate.game.focal as focal
@@ -39,6 +38,9 @@ from talemate.agents.memory.rag import MemoryRAGMixin
 from .analyze_scene import SceneAnalyzationMixin
 from .context_investigation import ContextInvestigationMixin
 from .layered_history import LayeredHistoryMixin
+
+if TYPE_CHECKING:
+    from talemate.tale_mate import Character
 
 log = structlog.get_logger("talemate.agents.summarize")
 
@@ -534,7 +536,7 @@ class SummarizeAgent(
         if not extra_context:
             extra_context = ""
             
-        mentioned_characters: list[Character] = self.scene.parse_characters_from_text(
+        mentioned_characters: list["Character"] = self.scene.parse_characters_from_text(
             text + extra_context,
             exclude_active=True
         )

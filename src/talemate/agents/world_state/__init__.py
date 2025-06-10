@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import time
+from typing import TYPE_CHECKING
 
 import isodate
 import structlog
@@ -25,7 +26,9 @@ from talemate.agents.registry import register
 
 from .character_progression import CharacterProgressionMixin
 import talemate.agents.world_state.nodes
-from talemate.tale_mate import Character
+
+if TYPE_CHECKING:
+    from talemate.tale_mate import Character
 
 log = structlog.get_logger("talemate.agents.world_state")
 
@@ -506,13 +509,13 @@ class WorldStateAgent(
 
     @set_processing
     async def update_reinforcement(
-        self, question: str, character: str | Character = None, reset: bool = False
+        self, question: str, character: "str | Character" = None, reset: bool = False
     ) -> str:
         """
         Queries a single re-inforcement
         """
         
-        if isinstance(character, Character):
+        if isinstance(character, self.scene.Character):
             character = character.name
         
         message = None

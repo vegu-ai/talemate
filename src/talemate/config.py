@@ -213,6 +213,7 @@ class EmbeddingFunctionPreset(BaseModel):
     gpu_recommendation: bool = False
     local: bool = True
     custom: bool = False
+    client: str | None = None
 
 
 

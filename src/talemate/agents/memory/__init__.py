@@ -13,6 +13,8 @@ from chromadb.config import Settings
 
 import talemate.events as events
 import talemate.util as util
+from talemate.client import ClientBase
+import talemate.instance as instance
 from talemate.agents.base import (
     Agent,
     AgentAction,
@@ -127,7 +129,7 @@ class MemoryAgent(Agent):
     @property
     def get_presets(self):
         return [
-            {"value": k, "label": f"{v['embeddings']}: {v['model']}"} for k,v in self.config.get("presets", {}).get("embeddings", {}).items()
+            {"value": k, "label": f"{v['embeddings']}: {v['model'] or v['client']}"} for k,v in self.config.get("presets", {}).get("embeddings", {}).items()
         ]
         
     @property
@@ -152,12 +154,21 @@ class MemoryAgent(Agent):
         return self.embeddings == "default" or self.embeddings == "sentence-transformer"
     
     @property
+    def using_client_api_embeddings(self):
+        return self.embeddings == "client-api"
+    
+    @property
     def using_local_embeddings(self):
         return self.embeddings in [
             "instructor",
             "sentence-transformer",
             "default"
         ]
+    
+    
+    @property
+    def embeddings_client(self):
+        return self.embeddings_config.get("client")
     
     @property
     def max_distance(self) -> float:
@@ -217,6 +228,9 @@ class MemoryAgent(Agent):
             await scene.save(auto=True)
         emit("status", "Context database re-imported", status="success")
 
+    def sync_presets(self):
+        self.actions["_config"].config["embeddings"].choices = self.get_presets
+
     def on_config_saved(self, event):
         loop = asyncio.get_running_loop()
         openai_key = self.openai_api_key
@@ -224,7 +238,7 @@ class MemoryAgent(Agent):
         fingerprint = self.fingerprint
         
         self.config = load_config()
-            
+        self.sync_presets()
         if fingerprint != self.fingerprint:
             log.warning("memory agent", status="embedding function changed", old=fingerprint, new=self.fingerprint)
             loop.run_until_complete(self.handle_embeddings_change())
@@ -631,9 +645,32 @@ class ChromaDBMemoryAgent(MemoryAgent):
         if getattr(self, "db_client", None):
             return True
         return False
+    
+    @property
+    def client_api_ready(self) -> bool:
+        if self.using_client_api_embeddings:
+            embeddings_client:ClientBase | None = instance.get_client(self.embeddings_client)
+            if not embeddings_client:
+                return False
+            
+            if not embeddings_client.supports_embeddings:
+                return False
+            
+            if not embeddings_client.embeddings_status:
+                return False
+            
+            if embeddings_client.current_status not in ["idle", "busy"]:
+                return False
+            
+            return True
+        
+        return False
 
     @property
     def status(self):
+        if self.using_client_api_embeddings and not self.client_api_ready:
+            return "error"
+        
         if self.ready:
             return "active" if not getattr(self, "processing", False) else "busy"
 
@@ -656,12 +693,22 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 value=self.embeddings,
                 description="The embeddings type.",
             ).model_dump(),
-            "model": AgentDetail(
+
+        }
+        
+        if self.model:
+            details["model"] = AgentDetail(
                 icon="mdi-brain",
                 value=self.model,
                 description="The embeddings model.",
-            ).model_dump(),
-        }
+            ).model_dump()
+            
+        if self.embeddings_client:
+            details["client"] = AgentDetail(
+                icon="mdi-server-outline",
+                value=self.embeddings_client,
+                description="The client to use for embeddings.",
+            ).model_dump()
         
         if self.using_local_embeddings:
             details["device"] = AgentDetail(
@@ -678,6 +725,27 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 "description": "You must provide an OpenAI API key to use OpenAI embeddings",
                 "color": "error",
             }
+            
+        if self.using_client_api_embeddings:
+            embeddings_client:ClientBase | None = instance.get_client(self.embeddings_client)
+            client_name = embeddings_client.name
+            
+            if not embeddings_client.supports_embeddings:
+                error_message = f"{client_name} does not support embeddings"
+            elif embeddings_client.current_status not in ["idle", "busy"]:
+                error_message = f"{client_name} is not ready"
+            elif not embeddings_client.embeddings_status:
+                error_message = f"{client_name} has no embeddings model loaded"
+            else:
+                error_message = None
+                
+            if error_message:
+                details["error"] = {
+                    "icon": "mdi-alert",
+                    "value": error_message,
+                    "description": error_message,
+                    "color": "error",
+                }
 
         return details
 
@@ -757,6 +825,26 @@ class ChromaDBMemoryAgent(MemoryAgent):
             self.db = self.db_client.get_or_create_collection(
                 collection_name, embedding_function=openai_ef, metadata=collection_metadata
             )
+        elif self.using_client_api_embeddings:
+            log.info(
+                "chromadb",
+                embeddings="Client API",
+                client=self.embeddings_client,
+            )
+            
+            embeddings_client:ClientBase | None = instance.get_client(self.embeddings_client)
+            if not embeddings_client:
+                raise ValueError(f"Client API embeddings client {self.embeddings_client} not found")
+            
+            if not embeddings_client.supports_embeddings:
+                raise ValueError(f"Client API embeddings client {self.embeddings_client} does not support embeddings")
+            
+            ef = embeddings_client.embeddings_function
+            
+            self.db = self.db_client.get_or_create_collection(
+                collection_name, embedding_function=ef, metadata=collection_metadata
+            )
+            
         elif self.using_instructor_embeddings:
             log.info(
                 "chromadb",

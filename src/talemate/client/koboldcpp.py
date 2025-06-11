@@ -231,7 +231,6 @@ class KoboldCppClient(ClientBase):
             response = await client.get(url_version, timeout=2)
             response_data = response.json()
             self._embeddings_status = response_data.get("embeddings", False)
-            log.warning("koboldcpp embeddings status", status=self._embeddings_status)
 
         return model_name
 

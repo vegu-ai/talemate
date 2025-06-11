@@ -64,9 +64,7 @@
 
 {% if director_guidance %}({{ talking_character.name }}'s next action: {{ director_guidance }}){% endif %}
 {% if direct_instruction -%}
-{{ talking_character.name }}'s next action: {{ direct_instruction }}
-
-You must not add additional actions. Dialogue generated should be natural sounding and realistic. Less is more.
+({{ talking_character.name }}'s next action: {{ direct_instruction }})
 {% endif -%}
 {% endset %}
 {# END FINAL ACTING INSTRUCTIONS #}
@@ -78,11 +76,11 @@ You must not add additional actions. Dialogue generated should be natural soundi
 
 {{ task_main_text }}
 
-{{ acting_instructions }}
-
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 
 {{ scene_context_text }}
+
+{{ acting_instructions }}
 {# END RENDER PROMPT #}
 
 {% block response_scaffolding %}{% endblock -%}

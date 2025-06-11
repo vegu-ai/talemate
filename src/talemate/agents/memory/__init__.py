@@ -228,8 +228,9 @@ class MemoryAgent(Agent):
             await scene.save(auto=True)
         emit("status", "Context database re-imported", status="success")
 
-    def sync_presets(self):
+    def sync_presets(self) -> list[dict]:
         self.actions["_config"].config["embeddings"].choices = self.get_presets
+        return self.actions["_config"].config["embeddings"].choices
 
     def on_config_saved(self, event):
         loop = asyncio.get_running_loop()
@@ -237,13 +238,23 @@ class MemoryAgent(Agent):
         
         fingerprint = self.fingerprint
         
+        old_presets = self.actions["_config"].config["embeddings"].choices.copy()
+        
         self.config = load_config()
-        self.sync_presets()
+        new_presets = self.sync_presets()
         if fingerprint != self.fingerprint:
             log.warning("memory agent", status="embedding function changed", old=fingerprint, new=self.fingerprint)
             loop.run_until_complete(self.handle_embeddings_change())
-            
+        
+        emit_status = False
+        
         if openai_key != self.openai_api_key:
+            emit_status = True
+            
+        if old_presets != new_presets:
+            emit_status = True
+            
+        if emit_status:
             loop.run_until_complete(self.emit_status())
 
     @set_processing

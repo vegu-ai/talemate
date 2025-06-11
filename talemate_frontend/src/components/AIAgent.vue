@@ -176,8 +176,15 @@ export default {
         configurationRequired() {
             let clients = this.getClients();
 
+            const agentErrors = [];
+
             for(let i = 0; i < this.state.agents.length; i++) {
                 let agent = this.state.agents[i];
+
+                // any agent erroring should be explicitly returned
+                if(agent.status === 'error') {
+                    return true;
+                }
 
                 if(!agent.data.requires_llm_client || agent.meta.essential === false)
                     continue

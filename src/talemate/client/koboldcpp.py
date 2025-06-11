@@ -1,6 +1,8 @@
 import random
 import re
 from typing import TYPE_CHECKING
+import requests
+from chromadb.api.types import EmbeddingFunction, Documents, Embeddings
 
 # import urljoin
 from urllib.parse import urljoin, urlparse
@@ -28,6 +30,34 @@ class KoboldCppClientDefaults(Defaults):
     api_key: str = ""
 
 
+class KoboldEmbeddingFunction(EmbeddingFunction):
+    def __init__(self, api_url: str, model_name: str = None):
+        """
+        Initialize the embedding function with the KoboldCPP API endpoint.
+        """
+        self.api_url = api_url
+        self.model_name = model_name
+
+    def __call__(self, texts: Documents) -> Embeddings:
+        """
+        Embed a list of input texts using the KoboldCPP embeddings endpoint.
+        """
+        # Prepare the request payload for KoboldCPP. Include model name if required.
+        payload = {"input": texts}
+        if self.model_name is not None:
+            payload["model"] = self.model_name  # e.g. the model's name/ID if needed
+
+        # Send POST request to the local KoboldCPP embeddings endpoint
+        response = requests.post(self.api_url, json=payload)
+        response.raise_for_status()  # Throw an error if the request failed (e.g., connection issue)
+
+        # Parse the JSON response to extract embedding vectors
+        data = response.json()
+        # The 'data' field contains a list of embeddings (one per input)
+        embedding_results = data.get("data", [])
+        embeddings = [item["embedding"] for item in embedding_results]
+
+        return embeddings
 @register()
 class KoboldCppClient(ClientBase):
     auto_determine_prompt_template: bool = True
@@ -132,6 +162,26 @@ class KoboldCppClient(ClientBase):
                 "temperature",
             ]
 
+    @property
+    def supports_embeddings(self) -> bool:
+        return True
+    
+    @property
+    def embeddings_function(self):
+        if self.is_openai:
+            # join /embeddings to url
+            base_url = urljoin(self.api_url, "embeddings")
+        else:
+            # join /api/extra/embeddings to url
+            base_url = urljoin(self.api_url, "api/extra/embeddings")
+        
+        return KoboldEmbeddingFunction(base_url)
+    
+    @property
+    def embeddings_status(self):
+        return getattr(self, "_embeddings_status", False)
+
+
     def api_endpoint_specified(self, url: str) -> bool:
         return "/v1" in self.api_url
 
@@ -175,6 +225,13 @@ class KoboldCppClient(ClientBase):
         # split by "/" and take last
         if model_name:
             model_name = model_name.split("/")[-1]
+        
+        url_version = urljoin(self.api_url, "api/extra/version")
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url_version, timeout=2)
+            response_data = response.json()
+            self._embeddings_status = response_data.get("embeddings", False)
+            log.warning("koboldcpp embeddings status", status=self._embeddings_status)
 
         return model_name
 

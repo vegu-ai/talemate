@@ -190,6 +190,18 @@ class ClientBase:
             "temperature",
             "max_tokens",
         ]
+        
+    @property
+    def supports_embeddings(self) -> bool:
+        return False
+    
+    @property
+    def embeddings_function(self):
+        return None
+    
+    @property
+    def embeddings_status(self):
+        return False
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
@@ -422,8 +434,10 @@ class ClientBase:
             "rate_limit": self.rate_limit,
             "data_format": self.data_format,
             "manual_model_choices": getattr(self.Meta(), "manual_model_choices", []),
+            "supports_embeddings": self.supports_embeddings,
+            "embeddings_status": self.embeddings_status,
         }
-
+        
     def populate_extra_fields(self, data: dict):
         """
         Updates data with the extra fields from the client's Meta

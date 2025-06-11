@@ -327,6 +327,7 @@
                     :immutable-config="app_config" 
                     :agentStatus="agentStatus"
                     :sceneActive="sceneActive"
+                    :clientStatus="clientStatus"
                     ></AppConfigPresets>
                 </v-window-item>
 
@@ -404,6 +405,7 @@ export default {
     props: {
         agentStatus: Object,
         sceneActive: Boolean,
+        clientStatus: Object,
     },
     data() {
         return {

@@ -1,5 +1,6 @@
 import pydantic
 import structlog
+import traceback
 
 from talemate.agents.creator.assistant import ContentGenerationContext
 from talemate.emit import emit
@@ -95,7 +96,7 @@ class AssistantPlugin:
 
             emit("autocomplete_suggestion", completion)
         except Exception as e:
-            log.exception("Error running autocomplete", error=str(e))
+            log.error("Error running autocomplete", error=traceback.format_exc())
             emit("autocomplete_suggestion", "")
 
 

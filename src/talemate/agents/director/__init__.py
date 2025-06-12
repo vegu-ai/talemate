@@ -4,6 +4,7 @@ import random
 from typing import TYPE_CHECKING, List
 
 import structlog
+import traceback
 
 import talemate.emit.async_signals
 import talemate.instance as instance
@@ -259,7 +260,7 @@ class DirectorAgent(
         except Exception as e:
             loading_status.done(message="Character creation failed", status="error")
             await scene.remove_actor(actor)
-            log.exception("Error persisting character", error=e)
+            log.error("Error persisting character", error=traceback.format_exc())
 
     async def log_action(self, action: str, action_description: str):
         message = DirectorMessage(message=action_description, action=action)

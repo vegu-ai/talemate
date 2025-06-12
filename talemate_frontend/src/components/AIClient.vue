@@ -349,6 +349,7 @@ export default {
           client.api_url = data.api_url;
           client.api_key = data.api_key;
           client.double_coercion = data.data.double_coercion;
+          client.manual_model_choices = data.data.manual_model_choices;
           client.rate_limit = data.data.rate_limit;
           client.data_format = data.data.data_format;
           client.data = data.data;
@@ -375,6 +376,7 @@ export default {
             api_url: data.api_url,
             api_key: data.api_key,
             double_coercion: data.data.double_coercion,
+            manual_model_choices: data.data.manual_model_choices,
             rate_limit: data.data.rate_limit,
             data_format: data.data.data_format,
             data: data.data,

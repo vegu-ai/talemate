@@ -5,9 +5,15 @@
     keep_director=True,
     sections=False) 
 %}
-{% with memory_prompt = history %}{% include "memory-context.jinja2" %}{% endwith %}
-<|SECTION:SCENE|>
+
+{% set scene_context_text %}
 {% for scene_context in history -%}
 {{ scene_context }}
 {% endfor %}
+{% endset %}
+{% endif %}
+{% with memory_prompt = history %}{% include "memory-context.jinja2" %}{% endwith %}
+<|SECTION:SCENE|>
+{{ scene_context_text }}
 <|CLOSE_SECTION|>
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}

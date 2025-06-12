@@ -9,6 +9,7 @@ import asyncio
 from typing import TYPE_CHECKING, Callable
 
 import structlog
+import traceback
 
 from talemate.emit import emit
 from talemate.instance import get_agent
@@ -153,7 +154,7 @@ async def rebuild_history(
         handle_generation_cancelled(e)
         return
     except Exception as e:
-        log.exception("Error rebuilding historical archive", error=e)
+        log.error("Error rebuilding historical archive", error=traceback.format_exc())
         emit("status", message="Error rebuilding historical archive", status="error")
         return
 

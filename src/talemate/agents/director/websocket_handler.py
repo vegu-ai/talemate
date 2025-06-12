@@ -1,6 +1,7 @@
 import pydantic
 import asyncio
 import structlog
+import traceback
 from typing import TYPE_CHECKING
 
 from talemate.instance import get_agent
@@ -98,7 +99,7 @@ class DirectorWebsocketHandler(Plugin):
         task = asyncio.create_task(self.director.persist_character(**payload.model_dump()))
         async def handle_task_done(task):
             if task.exception():
-                log.exception("Error persisting character", error=task.exception())
+                log.error("Error persisting character", error=task.exception())
                 await self.signal_operation_failed("Error persisting character")
             else:
                 self.websocket_handler.queue_put(

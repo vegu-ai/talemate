@@ -52,8 +52,8 @@
                                         <v-divider class="mb-2"></v-divider>
                                         <v-row>
                                             <v-col cols="12">
-                                                <v-checkbox v-model="app_config.game.general.auto_save" label="Auto save" messages="Automatically save after each game-loop"></v-checkbox>
-                                                <v-checkbox v-model="app_config.game.general.auto_progress" label="Auto progress" messages="AI automatically progresses after player turn."></v-checkbox>
+                                                <v-checkbox color="primary" v-model="app_config.game.general.auto_save" label="Auto save" messages="Automatically save after each game-loop"></v-checkbox>
+                                                <v-checkbox color="primary" v-model="app_config.game.general.auto_progress" label="Auto progress" messages="AI automatically progresses after player turn."></v-checkbox>
                                             </v-col>
                                         </v-row>
                                         <v-row>
@@ -66,8 +66,7 @@
                                         <v-alert color="white" variant="text" icon="mdi-human-edit" density="compact">
                                             <v-alert-title>Default player character</v-alert-title>
                                             <div class="text-grey">
-                                                This will be default player character that will be added to a game if the game does not come with a defined player character. Essentially this is relevant for when you load character-cards that aren't in the talemate scene format.                     
-
+                                                This will be default player character that will be added to a scene if the scene does not come with a defined player character. Mostly relevant when you load character-cards that aren't in the talemate scene format.                 
                                             </div>
                                         </v-alert>
                                         <v-divider class="mb-2"></v-divider>
@@ -85,6 +84,11 @@
                                             <v-col cols="12">
                                                 <v-textarea v-model="app_config.game.default_player_character.description"
                                                     auto-grow label="Description"></v-textarea>
+                                            </v-col>
+                                        </v-row>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-checkbox color="primary" v-model="app_config.game.general.add_default_character" label="Add default character to blank talemate scenes" messages="When creating a new scene, add the default player character to the scene."></v-checkbox>
                                             </v-col>
                                         </v-row>
                                     </div>
@@ -209,6 +213,23 @@
                                         </v-row>
                                     </div>
 
+                                    <!-- OPENROUTER API -->
+                                    <div v-if="applicationPageSelected === 'openrouter_api'">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
+                                            <v-alert-title>OpenRouter</v-alert-title>
+                                            <div class="text-grey">
+                                                Configure your OpenRouter API key here. You can get one from <a href="https://openrouter.ai/api-keys" target="_blank">https://openrouter.ai/settings/keys</a> 
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-text-field type="password" v-model="app_config.openrouter.api_key"
+                                                    label="OpenRouter API Key"></v-text-field>
+                                            </v-col>
+                                        </v-row>
+                                    </div>
+
                                     <!-- GROQ API -->
                                     <div v-if="applicationPageSelected === 'groq_api'">
                                         <v-alert color="white" variant="text" icon="mdi-api" density="compact">
@@ -306,6 +327,7 @@
                     :immutable-config="app_config" 
                     :agentStatus="agentStatus"
                     :sceneActive="sceneActive"
+                    :clientStatus="clientStatus"
                     ></AppConfigPresets>
                 </v-window-item>
 
@@ -383,6 +405,7 @@ export default {
     props: {
         agentStatus: Object,
         sceneActive: Boolean,
+        clientStatus: Object,
     },
     data() {
         return {
@@ -403,6 +426,7 @@ export default {
                     {title: 'mistral.ai', icon: 'mdi-api', value: 'mistralai_api'},
                     {title: 'Anthropic', icon: 'mdi-api', value: 'anthropic_api'},
                     {title: 'Cohere', icon: 'mdi-api', value: 'cohere_api'},
+                    {title: 'OpenRouter', icon: 'mdi-api', value: 'openrouter_api'},
                     {title: 'groq', icon: 'mdi-api', value: 'groq_api'},
                     {title: 'DeepSeek', icon: 'mdi-api', value: 'deepseek_api'},
                     {title: 'Google Cloud', icon: 'mdi-google-cloud', value: 'google_api'},

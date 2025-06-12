@@ -1,18 +1,22 @@
 Your task is to analyze the current moment in the scene to guide the story editors to generate visual details about the scene.
 
 {% if agent_context_state["narrator__narrative_direction"] %}The story editors were given the following direction: "{{ agent_context_state["narrator__narrative_direction"] }}".
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly analyse the direction, what does it mean for the visual elements?
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe how you will help the editors emphasize visual details that fulfill the direction.
+{{ li() }}. Briefly analyse the direction, what does it mean for the visual elements?
+{{ li() }}. Briefly describe how you will help the editors emphasize visual details that fulfill the direction.
 {% endif %}
 
+{{ li() }}. Brielfy list who the characters in the scene are to each other. (Active or referenced)
+
 {% if last_message -%}
+{{ li() }}. Briefly explain the meaning of the current moment in the scene.
+
 Following this moment:
 ```
 {{ last_message }}
 ```
 {% endif %}
 
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly describe the immediate visual state of the scene:
+{{ li() }}. Briefly describe the immediate visual state of the scene:
 - What actions or movements can be seen?
 - What is the state of the environment?
 - What specific details about character appearances are noteworthy?
@@ -20,12 +24,12 @@ Following this moment:
 
 {% if scene.intent_state.active %}
 {% with task_instructions="Given the overall story and current scene intention, what visual details would the reader expect to have vividly described in the next narrative segment? Remember, you are not supposed to progress the story, but enhance the description of the current moment." -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) {% include "scene-intent-inline.jinja2" %}
+{{ li() }}. {% include "scene-intent-inline.jinja2" %}
 {% endwith %}
 {% endif %}
 
 {% if context_investigation -%}
-{% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+{{ li() }}. Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 
 - Established visual elements from earlier in the scene
 - Previously described features of the environment
@@ -35,3 +39,5 @@ Following this moment:
 
 Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}
+
+{% if length >= 1024 %}Carefully plan what visual information the story editors should include in their visual description of the current moment.{% endif %}

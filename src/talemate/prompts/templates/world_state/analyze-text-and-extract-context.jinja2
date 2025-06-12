@@ -13,8 +13,8 @@
 5. Phrase queries as direct requests for information from the world database.
 6. For unfamiliar elements, ask straightforward questions to clarify their nature or significance.
 
-Your response must be the "+label_questions+" only. Do not include any additional text or explanations.", self.character_context() + "\n\n" + text) %}
-{%- with memory_query=questions -%}
+Your response must be a brief analysis of the scene followed by your "+to_str(num_queries)+" important "+label_questions+" (use a numbered list).", self.character_context() + "\n\n" + text, as_list=True) %}
+{%- with memory_query=join(questions, "\n") -%}
     {% include "extra-context.jinja2" %}
 {% endwith %}
 {{ text }}

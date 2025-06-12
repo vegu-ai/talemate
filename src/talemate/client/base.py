@@ -6,6 +6,7 @@ import ipaddress
 import logging
 import random
 import time
+import traceback
 import asyncio
 from typing import Callable, Union, Literal
 
@@ -172,6 +173,13 @@ class ClientBase:
         return self.Meta().requires_prompt_template
 
     @property
+    def can_think(self) -> bool:
+        """
+        Allow reasoning models to think before responding.
+        """
+        return False
+
+    @property
     def max_tokens_param_name(self):
         return "max_tokens"
 
@@ -182,6 +190,18 @@ class ClientBase:
             "temperature",
             "max_tokens",
         ]
+        
+    @property
+    def supports_embeddings(self) -> bool:
+        return False
+    
+    @property
+    def embeddings_function(self):
+        return None
+    
+    @property
+    def embeddings_status(self):
+        return False
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
@@ -388,6 +408,8 @@ class ClientBase:
         for field_name in getattr(self.Meta(), "extra_fields", {}).keys():
             data[field_name] = getattr(self, field_name, None)
 
+        data = self.finalize_status(data)
+
         emit(
             "client_status",
             message=self.client_type,
@@ -400,13 +422,22 @@ class ClientBase:
         if status_change:
             instance.emit_agent_status_by_client(self)
 
+    def finalize_status(self, data: dict):
+        """
+        Finalizes the status data for the client.
+        """
+        return data
+
     def _common_status_data(self):
         return {
             "preset_group": self.preset_group or "",
             "rate_limit": self.rate_limit,
             "data_format": self.data_format,
+            "manual_model_choices": getattr(self.Meta(), "manual_model_choices", []),
+            "supports_embeddings": self.supports_embeddings,
+            "embeddings_status": self.embeddings_status,
         }
-
+        
     def populate_extra_fields(self, data: dict):
         """
         Updates data with the extra fields from the client's Meta
@@ -690,7 +721,7 @@ class ClientBase:
         except GenerationCancelled:
             raise
         except Exception as e:
-            log.exception("Error during rate limit check", e=e)
+            log.error("Error during rate limit check", e=traceback.format_exc())
         
 
         if not active_scene.get():
@@ -786,7 +817,7 @@ class ClientBase:
         except GenerationCancelled as e:
             raise
         except Exception as e:
-            self.log.exception("send_prompt error", e=e)
+            self.log.error("send_prompt error", e=traceback.format_exc())
             emit(
                 "status", message="Error during generation (check logs)", status="error"
             )

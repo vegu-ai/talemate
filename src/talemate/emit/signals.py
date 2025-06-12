@@ -49,6 +49,8 @@ SpiceApplied = signal("spice_applied")
 
 WorldSateManager = signal("world_state_manager")
 
+TalemateStarted = signal("talemate_started")
+
 handlers = {
     "system": SystemMessage,
     "narrator": NarratorMessage,
@@ -86,4 +88,5 @@ handlers = {
     "memory_request": MemoryRequest,
     "player_choice": PlayerChoiceMessage,
     "world_state_manager": WorldSateManager,
+    "talemate_started": TalemateStarted,
 }

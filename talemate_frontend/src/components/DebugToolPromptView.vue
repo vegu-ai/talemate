@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="dialog" max-width="2048px">
+    <v-dialog v-model="dialog" max-width="2048px" max-height="90vh" ref="dialog">
 
         <v-card>
             <v-card-title>
@@ -17,9 +17,9 @@
                 <v-chip color="primary" @click.stop="toggleDetails" variant="text" prepend-icon="mdi-list-box">{{ toggleDetailsLabel() }} ({{ prompt.agent_stack.length }})</v-chip>
             </v-card-title>
             <v-card-text>
-                <v-row no-gutters>
-                    <v-col :cols="details ? 2 : 0" v-if="details" style="max-height:660px; overflow-y:auto;">
-                        <v-list density="compact">
+                <v-row>
+                    <v-col :cols="details ? 2 : 0" v-if="details">
+                        <v-list density="compact" style="overflow-y:auto; max-height: calc(90vh - 200px);">
                             <v-list-subheader><v-icon>mdi-transit-connection-variant</v-icon> Agent Stack</v-list-subheader>
                             <v-list-item v-for="(agent, index) in prompt.agent_stack" :key="index">
                                 <v-list-item-subtitle class="text-grey-lighten-3">{{ agentParts(agent).name }}</v-list-item-subtitle>
@@ -41,30 +41,26 @@
                         </v-list>
                     </v-col>
                     <v-col :cols="details ? 6 : 7">
-                        <v-card flat>
+                        <v-card flat style="overflow-y:auto; max-height: calc(90vh - 200px);">
                             <v-card-title>Prompt
                                 <v-btn size="x-small" variant="text" v-if="promptHasDirtyPrompt" color="orange" @click.stop="resetPrompt" prepend-icon="mdi-restore">Reset</v-btn>
                             </v-card-title>
-                            <v-card-text>
-                                <!--
-                                <v-textarea :disabled="busy" density="compact" v-model="prompt.prompt" rows="10" auto-grow max-rows="22"></v-textarea>
-                                -->
+                            <v-card-text ref="codeMirrorContainer">
                                 <Codemirror
                                     v-model="prompt.prompt"
                                     :extensions="extensions"
-                                    :style="promptEditorStyle"
                                 ></Codemirror>
                             </v-card-text>
                         </v-card>
                     </v-col>
                     <v-col :cols="details ? 4 : 5">
-                        <v-card elevation="10" color="grey-darken-3">
+                        <v-card elevation="10" color="grey-darken-3" style="overflow-y:auto; max-height: calc(90vh - 200px);">
                             <v-card-title>Response
                                 <v-progress-circular class="ml-1 mr-3" size="20" v-if="busy" indeterminate="disable-shrink"
                                 color="primary"></v-progress-circular>
                                 <v-btn size="x-small" variant="text" v-else-if="promptHasDirtyResponse" color="orange" @click.stop="resetResponse" prepend-icon="mdi-restore">Reset</v-btn> 
                             </v-card-title>
-                            <v-card-text style="max-height:600px; overflow-y:auto;" :class="busy ? 'text-grey' : 'text-white'">
+                            <v-card-text :class="busy ? 'text-grey' : 'text-white'">
                                 <div class="prompt-view">{{  prompt.response }}</div>
                             </v-card-text>
                         </v-card>
@@ -87,7 +83,8 @@
 
 <script>
 import { Codemirror } from 'vue-codemirror'
-import { markdown } from '@codemirror/lang-markdown'
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { languages } from "@codemirror/language-data";
 import { oneDark } from '@codemirror/theme-one-dark'
 import { EditorView } from '@codemirror/view'
 
@@ -242,18 +239,16 @@ export default {
     setup() {
 
         const extensions = [
-            markdown(),
+            markdown({
+                base: markdownLanguage,
+                codeLanguages: languages,
+            }),
             oneDark,
             EditorView.lineWrapping
         ];
 
-        const promptEditorStyle = {
-            maxHeight: "600px"
-        }
-
         return {
             extensions,
-            promptEditorStyle,
         }
     }
 }

@@ -36,6 +36,7 @@
                     <!--<v-list-item @click="startNewModule('core/Loop')" prepend-icon="mdi-sync">Loop</v-list-item>-->
                     <v-list-item @click="startNewModule('core/Graph')" prepend-icon="mdi-file">Module</v-list-item>
                     <v-list-item @click="startNewModule('scene/SceneLoop')" prepend-icon="mdi-source-branch-sync">Scene Loop</v-list-item>
+                    <v-list-item @click="startNewModule('util/packaging/Package')" prepend-icon="mdi-package-variant">Package</v-list-item>
                 </v-list>
             </v-menu>
 

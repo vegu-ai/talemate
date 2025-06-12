@@ -16,3 +16,4 @@ import talemate.game.engine.nodes.focal
 import talemate.game.engine.nodes.util
 import talemate.game.engine.nodes.history
 import talemate.game.engine.nodes.prompt
+import talemate.game.engine.nodes.packaging

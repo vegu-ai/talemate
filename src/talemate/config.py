@@ -93,6 +93,7 @@ class General(BaseModel):
     auto_save: bool = True
     auto_progress: bool = True
     max_backscroll: int = 512
+    add_default_character: bool = True
 
 
 class StateReinforcementTemplate(BaseModel):
@@ -161,6 +162,9 @@ class DeepSeekConfig(BaseModel):
     api_key: Union[str, None] = None
 
 
+class OpenRouterConfig(BaseModel):
+    api_key: Union[str, None] = None
+
 class RunPodConfig(BaseModel):
     api_key: Union[str, None] = None
 
@@ -209,6 +213,7 @@ class EmbeddingFunctionPreset(BaseModel):
     gpu_recommendation: bool = False
     local: bool = True
     custom: bool = False
+    client: str | None = None
 
 
 
@@ -505,6 +510,8 @@ class Config(BaseModel):
     mistralai: MistralAIConfig = MistralAIConfig()
 
     anthropic: AnthropicConfig = AnthropicConfig()
+
+    openrouter: OpenRouterConfig = OpenRouterConfig()
 
     cohere: CohereConfig = CohereConfig()
 

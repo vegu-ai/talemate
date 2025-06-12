@@ -54,7 +54,7 @@ class EditorAgent(
                         type="text",
                         label="Formatting",
                         description="The formatting to use for exposition.",
-                        value="chat",
+                        value="novel",
                         choices=[
                             {"label": "Chat RP: \"Speech\" *narration*", "value": "chat"},
                             {"label": "Novel: \"Speech\" narration", "value": "novel"},

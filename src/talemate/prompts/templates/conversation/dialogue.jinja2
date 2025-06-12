@@ -62,25 +62,29 @@
 
 {% with direct=direct_instruction, character=talking_character %}{% include "regenerate-context.jinja2" %}{% endwith %}
 
-{% if director_guidance %}({{ talking_character.name }}'s next action: {{ director_guidance }}){% endif %}
+{% if director_guidance %}(Instructions for {{ talking_character.name }}'s next part in the scene: {{ director_guidance }}){% endif %}
 {% if direct_instruction -%}
-({{ talking_character.name }}'s next action: {{ direct_instruction }})
+(Instructions for {{ talking_character.name }}'s next part in the scene: {{ direct_instruction }})
 {% endif -%}
 {% endset %}
 {# END FINAL ACTING INSTRUCTIONS #}
 
 {# RENDER PROMPT #}
+{% set scene_context_length = count_tokens(scene_context_text) %}
+{% set large_context_threshold = 1024 %}
 {{ rendered_context_text }}
 
 {{ rag_context_text }}
 
 {{ task_main_text }}
 
+{% if scene_context_length < large_context_threshold %}{{ acting_instructions }}{% endif %}{# if scene context is relatively short, its beneficial to move the acting instructions into the task #}
+
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 
 {{ scene_context_text }}
 
-{{ acting_instructions }}
+{% if scene_context_length >= large_context_threshold %}{{ acting_instructions }}{% endif %}{# if scene context is relatively long, acting instrctions should be close to the end of the prompt so they get more importance attributed to them #}
 {# END RENDER PROMPT #}
 
 {% block response_scaffolding %}{% endblock -%}

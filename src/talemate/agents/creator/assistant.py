@@ -455,6 +455,7 @@ class AssistantMixin:
         )
 
         continuing_message = False
+        message = None
         
         try:
             message = self.scene.history[-1]
@@ -478,6 +479,7 @@ class AssistantMixin:
             "can_coerce": self.client.can_be_coerced,
             "response_length": response_length,
             "continuing_message": continuing_message,
+            "message": message,
             "anchor": anchor,
             "non_anchor": non_anchor,
             "prefix": prefix,

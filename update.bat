@@ -14,7 +14,7 @@ echo   !!! UPDATE FAILED !!!
 echo   %*
 echo ============================================================
 pause
-exit /b 1
+exit 1
 
 :after_die
 

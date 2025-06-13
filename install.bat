@@ -58,6 +58,10 @@ IF "%NEED_CLEAN%"=="1" (
     ECHO Cleanup complete.
 )
 
+REM ---------[ Version configuration ]---------
+SET "PYTHON_VERSION=3.11.9"
+SET "NODE_VERSION=22.16.0"
+
 REM ---------[ Detect architecture & choose download URL ]---------
 REM Prefer PROCESSOR_ARCHITEW6432 when the script is run from a 32-bit shell on 64-bit Windows
 IF DEFINED PROCESSOR_ARCHITEW6432 (
@@ -68,23 +72,23 @@ IF DEFINED PROCESSOR_ARCHITEW6432 (
 
 REM Map architecture to download URL
 IF /I "%ARCH%"=="AMD64" (
-    SET "PY_URL=https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip"
-    SET "NODE_URL=https://nodejs.org/dist/v22.16.0/node-v22.16.0-win-x64.zip"
-    SET "NODE_FOLDER=node-v22.16.0-win-x64"
+    SET "PY_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%/python-%PYTHON_VERSION%-embed-amd64.zip"
+    SET "NODE_URL=https://nodejs.org/dist/v%NODE_VERSION%/node-v%NODE_VERSION%-win-x64.zip"
+    SET "NODE_FOLDER=node-v%NODE_VERSION%-win-x64"
 ) ELSE IF /I "%ARCH%"=="IA64" (
     REM Itanium systems are rare, but AMD64 build works with WoW64 layer
-    SET "PY_URL=https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip"
-    SET "NODE_URL=https://nodejs.org/dist/v22.16.0/node-v22.16.0-win-x64.zip"
-    SET "NODE_FOLDER=node-v22.16.0-win-x64"
+    SET "PY_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%/python-%PYTHON_VERSION%-embed-amd64.zip"
+    SET "NODE_URL=https://nodejs.org/dist/v%NODE_VERSION%/node-v%NODE_VERSION%-win-x64.zip"
+    SET "NODE_FOLDER=node-v%NODE_VERSION%-win-x64"
 ) ELSE IF /I "%ARCH%"=="ARM64" (
-    SET "PY_URL=https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-arm64.zip"
-    SET "NODE_URL=https://nodejs.org/dist/v22.16.0/node-v22.16.0-win-arm64.zip"
-    SET "NODE_FOLDER=node-v22.16.0-win-arm64"
+    SET "PY_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%/python-%PYTHON_VERSION%-embed-arm64.zip"
+    SET "NODE_URL=https://nodejs.org/dist/v%NODE_VERSION%/node-v%NODE_VERSION%-win-arm64.zip"
+    SET "NODE_FOLDER=node-v%NODE_VERSION%-win-arm64"
 ) ELSE (
     REM Fallback to 64-bit build for x86 / unknown architectures
-    SET "PY_URL=https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip"
-    SET "NODE_URL=https://nodejs.org/dist/v22.16.0/node-v22.16.0-win-x86.zip"
-    SET "NODE_FOLDER=node-v22.16.0-win-x86"
+    SET "PY_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%/python-%PYTHON_VERSION%-embed-amd64.zip"
+    SET "NODE_URL=https://nodejs.org/dist/v%NODE_VERSION%/node-v%NODE_VERSION%-win-x86.zip"
+    SET "NODE_FOLDER=node-v%NODE_VERSION%-win-x86"
 )
 ECHO Detected architecture: %ARCH%
 ECHO Downloading embedded Python from: %PY_URL%
@@ -154,7 +158,7 @@ ECHO Upgrading pip & setuptools inside venv...
 python -m pip install --upgrade pip setuptools || CALL :die "Failed to upgrade pip/setuptools in venv."
 
 ECHO Installing Poetry & rapidfuzz...
-python -m pip install "poetry==1.7.1" "rapidfuzz>=3" -U || CALL :die "Failed to install Poetry & rapidfuzz."
+python -m pip install "poetry==2.1.3" "rapidfuzz>=3" -U || CALL :die "Failed to install Poetry & rapidfuzz."
 
 ECHO Installing backend dependencies via Poetry...
 python -m poetry install

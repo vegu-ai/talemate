@@ -326,6 +326,12 @@ class Prompt:
             os.path.join(
                 dir_path, "..", "..", "..", "templates", "prompts", self.agent_type
             ),
+            os.path.join(
+                dir_path, "..", "..", "..", "templates", "prompts", "common"
+            ),
+            os.path.join(
+                dir_path, "..", "..", "..", "templates", "modules"
+            ),
             os.path.join(dir_path, "templates", self.agent_type),
             os.path.join(dir_path, "templates", "common"),
         ]

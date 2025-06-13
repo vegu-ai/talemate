@@ -74,21 +74,17 @@ REM Map architecture to download URL
 IF /I "%ARCH%"=="AMD64" (
     SET "PY_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%/python-%PYTHON_VERSION%-embed-amd64.zip"
     SET "NODE_URL=https://nodejs.org/dist/v%NODE_VERSION%/node-v%NODE_VERSION%-win-x64.zip"
-    SET "NODE_FOLDER=node-v%NODE_VERSION%-win-x64"
 ) ELSE IF /I "%ARCH%"=="IA64" (
     REM Itanium systems are rare, but AMD64 build works with WoW64 layer
     SET "PY_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%/python-%PYTHON_VERSION%-embed-amd64.zip"
     SET "NODE_URL=https://nodejs.org/dist/v%NODE_VERSION%/node-v%NODE_VERSION%-win-x64.zip"
-    SET "NODE_FOLDER=node-v%NODE_VERSION%-win-x64"
 ) ELSE IF /I "%ARCH%"=="ARM64" (
     SET "PY_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%/python-%PYTHON_VERSION%-embed-arm64.zip"
     SET "NODE_URL=https://nodejs.org/dist/v%NODE_VERSION%/node-v%NODE_VERSION%-win-arm64.zip"
-    SET "NODE_FOLDER=node-v%NODE_VERSION%-win-arm64"
 ) ELSE (
     REM Fallback to 64-bit build for x86 / unknown architectures
     SET "PY_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%/python-%PYTHON_VERSION%-embed-amd64.zip"
     SET "NODE_URL=https://nodejs.org/dist/v%NODE_VERSION%/node-v%NODE_VERSION%-win-x86.zip"
-    SET "NODE_FOLDER=node-v%NODE_VERSION%-win-x86"
 )
 ECHO Detected architecture: %ARCH%
 ECHO Downloading embedded Python from: %PY_URL%
@@ -154,10 +150,10 @@ REM Activate the venv for the remainder of the script
 CALL talemate_env\Scripts\activate
 
 REM ---------[ Backend dependencies ]---------
-ECHO Upgrading pip & setuptools inside venv...
+ECHO Upgrading pip and setuptools inside venv...
 python -m pip install --upgrade pip setuptools || CALL :die "Failed to upgrade pip/setuptools in venv."
 
-ECHO Installing Poetry & rapidfuzz...
+ECHO Installing Poetry
 python -m pip install "poetry==2.1.3" -U || CALL :die "Failed to install Poetry & rapidfuzz."
 
 ECHO Installing backend dependencies via Poetry...
@@ -192,7 +188,7 @@ mkdir "%NODE_DIR%" || CALL :die "Could not create directory %NODE_DIR%."
 where tar >nul 2>&1
 IF %ERRORLEVEL% EQU 0 (
     ECHO Extracting Node.js...
-    tar -xf "%NODE_ZIP%" -C "%NODE_DIR%" || CALL :die "Failed to extract Node.js package with tar."
+    tar -xf "%NODE_ZIP%" -C "%NODE_DIR%" --strip-components 1 || CALL :die "Failed to extract Node.js package with tar."
 ) ELSE (
     CALL :die "tar utility not found (required to unpack zip without PowerShell)."
 )
@@ -200,8 +196,8 @@ IF %ERRORLEVEL% EQU 0 (
 DEL /F /Q "%NODE_ZIP%"
 
 REM Prepend Node.js folder to PATH so npm & node are available
-SET "PATH=%CD%\%NODE_DIR%\%NODE_FOLDER%;%PATH%"
-ECHO Using portable Node.js at %CD%\%NODE_DIR%\%NODE_FOLDER%\node.exe
+SET "PATH=%CD%\%NODE_DIR%;%PATH%"
+ECHO Using portable Node.js at %CD%\%NODE_DIR%\node.exe
 ECHO Node.js version:
 node -v
 

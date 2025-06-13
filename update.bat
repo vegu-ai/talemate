@@ -13,6 +13,17 @@ git pull
 REM activate the virtual environment
 call talemate_env\Scripts\activate
 
+REM ---------[ Use embedded Node.js ]---------
+SET "NODE_DIR=embedded_node"
+IF EXIST "%NODE_DIR%\node.exe" (
+    SET "PATH=%CD%\%NODE_DIR%;%PATH%"
+    ECHO Using embedded Node.js at %CD%\%NODE_DIR%\node.exe
+) ELSE (
+    ECHO Embedded Node.js not found (expected at %CD%\%NODE_DIR%). Please run install.bat first.
+    pause
+    exit /b 1
+)
+
 REM use poetry to install dependencies
 echo Updating virtual environment...
 python -m poetry install

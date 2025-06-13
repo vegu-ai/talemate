@@ -19,8 +19,15 @@
             <v-icon v-else-if="client.status == 'warning'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>
             <v-icon v-else-if="client.status == 'error'" color="red-darken-1" size="14">mdi-checkbox-blank-circle</v-icon>
             <v-btn v-else-if="client.status == 'disabled'" size="x-small" class="mr-1" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleClient(client)" icon="mdi-power-standby"></v-btn>
+
+            <!-- client status icon -->
             <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
-            <span :class="client.status == 'disabled' ? 'text-grey-darken-2 ml-1' : 'ml-1'"> {{ client.name }}</span>       
+
+            <!-- client name-->
+            <span :class="client.status == 'disabled' ? 'text-grey-darken-2 ml-1' : 'ml-1'"> {{ client.name }}</span>
+
+            <!-- request information -->
+            <AIClientRequestInformation :requestInformation="client.request_information" />
           </v-list-item-title>
           <div v-if="client.enabled">
   
@@ -29,7 +36,7 @@
                 {{ client.data.error_action.title }}
               </v-btn>
             </v-list-item-subtitle> 
-            <v-list-item-subtitle class="text-caption">
+            <v-list-item-subtitle class="text-caption mb-2">
               {{ client.model_name }}
             </v-list-item-subtitle>
             <v-list-item-title class="text-caption">
@@ -136,6 +143,7 @@
   
 <script>
 import ClientModal from './ClientModal.vue';
+import AIClientRequestInformation from './AIClientRequestInformation.vue';
 
 export default {
   props: {
@@ -143,6 +151,7 @@ export default {
   },
   components: {
     ClientModal,
+    AIClientRequestInformation,
   },
   data() {
     return {
@@ -355,6 +364,7 @@ export default {
           client.data = data.data;
           client.enabled = data.data.enabled;
           client.system_prompts = data.data.system_prompts;
+          client.request_information = data.data.request_information;
           client.preset_group = data.data.preset_group;
           for (let key in client.data.meta.extra_fields) {
             if (client.data[key] === null || client.data[key] === undefined) {
@@ -383,6 +393,7 @@ export default {
             enabled: data.data.enabled,
             system_prompts: data.data.system_prompts,
             preset_group: data.data.preset_group,
+            request_information: data.data.request_information,
           });
 
           // apply extra field defaults

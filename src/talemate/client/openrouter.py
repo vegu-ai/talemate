@@ -261,6 +261,7 @@ class OpenRouterClient(ClientBase):
         payload = {
             "model": self.model_name,
             "messages": messages,
+            "stream": True,
             **parameters
         }
 
@@ -270,10 +271,15 @@ class OpenRouterClient(ClientBase):
             parameters=parameters,
             model=self.model_name,
         )
-
+        
+        response_text = ""
+        buffer = ""
+        completion_tokens = 0
+        prompt_tokens = 0
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(
+                async with client.stream(
+                    "POST",
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers={
                         "Authorization": f"Bearer {self.openrouter_api_key}",
@@ -281,38 +287,55 @@ class OpenRouterClient(ClientBase):
                     },
                     json=payload,
                     timeout=120.0  # 2 minute timeout for generation
-                )
-                
-                if response.status_code != 200:
-                    error_data = response.json()
-                    error_message = error_data.get("error", {}).get("message", f"HTTP {response.status_code}")
-                    self.log.error(f"OpenRouter API error: {error_message}")
-                    emit("status", message=f"OpenRouter API Error: {error_message}", status="error")
-                    return ""
-                
-                data = response.json()
-                
-                # Extract the response content
-                response_content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                ) as response:
+                    async for chunk in response.aiter_text():
+                        buffer += chunk
+                        
+                        while True:
+                            # Find the next complete SSE line
+                            line_end = buffer.find('\n')
+                            if line_end == -1:
+                                break
+                            
+                            line = buffer[:line_end].strip()
+                            buffer = buffer[line_end + 1:]
+                            
+                            if line.startswith('data: '):
+                                data = line[6:]
+                                if data == '[DONE]':
+                                    break
+                                
+                                try:
+                                    data_obj = json.loads(data)
+                                    content = data_obj["choices"][0]["delta"].get("content")
+                                    usage = data_obj.get("usage", {})
+                                    completion_tokens += usage.get("completion_tokens", 0)
+                                    prompt_tokens += usage.get("prompt_tokens", 0)
+                                    if content:
+                                        response_text += content
+                                        # Update tokens as content streams in
+                                        self.update_request_tokens(self.count_tokens(content))
+                                                                                                                      
+                                except json.JSONDecodeError:
+                                    pass
+                            
+                    # Extract the response content
+                    response_content = response_text
+                    self._returned_prompt_tokens = prompt_tokens
+                    self._returned_response_tokens = completion_tokens
+                    
+                    # Handle JSON response unwrapping
+                    if expected_response and expected_response.startswith("{"):
+                        if response_content.startswith("```json") and response_content.endswith("```"):
+                            response_content = response_content[7:-3].strip()
 
-                # Handle JSON response unwrapping
-                if expected_response and expected_response.startswith("{"):
-                    if response_content.startswith("```json") and response_content.endswith("```"):
-                        response_content = response_content[7:-3].strip()
-
-                # Handle indirect coercion response
-                if right and response_content.startswith(right):
-                    response_content = response_content[len(right):].strip()
+                    # Handle indirect coercion response
+                    if right and response_content.startswith(right):
+                        response_content = response_content[len(right):].strip()
+                    
+                    return response_content
                 
-                # Store token usage if available
-                usage = data.get("usage", {})
-                if usage:
-                    self._returned_prompt_tokens = usage.get("prompt_tokens")
-                    self._returned_response_tokens = usage.get("completion_tokens")
-
-                return response_content
-                
-        except httpx.TimeoutError:
+        except httpx.ConnectTimeout:
             self.log.error("OpenRouter API timeout")
             emit("status", message="OpenRouter API: Request timed out", status="error")
             return ""

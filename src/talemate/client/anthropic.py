@@ -209,21 +209,40 @@ class AnthropicClient(ClientBase):
             parameters=parameters,
             system_message=system_message,
         )
+        
+        completion_tokens = 0
+        prompt_tokens = 0
 
         try:
-            response = await self.client.messages.create(
+            stream = await self.client.messages.create(
                 model=self.model_name,
                 system=system_message,
                 messages=[human_message],
+                stream=True,
                 **parameters,
             )
+            
+            response = ""
+            
+            async for event in stream:
+                
+                if event.type == "content_block_delta":
+                    content = event.delta.text
+                    print(content)
+                    response += content
+                    self.update_request_tokens(self.count_tokens(content))
+                    
+                elif event.type == "message_start":
+                    prompt_tokens = event.message.usage.input_tokens
+                    
+                elif event.type == "message_delta":
+                    completion_tokens += event.usage.output_tokens
+                
 
-            self._returned_prompt_tokens = self.prompt_tokens(response)
-            self._returned_response_tokens = self.response_tokens(response)
+            self._returned_prompt_tokens = prompt_tokens
+            self._returned_response_tokens = completion_tokens
 
-            log.debug("generated response", response=response.content)
-
-            response = response.content[0].text
+            log.debug("generated response", response=response)
 
             if expected_response and expected_response.startswith("{"):
                 if response.startswith("```json") and response.endswith("```"):

@@ -133,6 +133,7 @@ class OllamaClient(ClientBase):
         """
         
         if self.processing:
+            self.emit_status()
             return
 
         if not self.enabled:
@@ -244,17 +245,24 @@ class OllamaClient(ClientBase):
         
         try:
             # Use generate endpoint for completion
-            response = await self.client.generate(
+            stream = await self.client.generate(
                 model=self.model_name,
                 prompt=prompt.strip(),
-                stream=False,
                 options=options,
                 raw=self.can_be_coerced,
                 think=self.can_think,
+                stream=True,
             )
             
+            response = ""
+            
+            async for part in stream:
+                content = part.response
+                response += content
+                self.update_request_tokens(self.count_tokens(content))
+            
             # Extract the response text
-            return response.get("response", "")
+            return response
             
         except Exception as e:
             log.error("Ollama generation error", error=str(e), model=self.model_name)

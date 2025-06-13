@@ -43,7 +43,7 @@ IF EXIST "embedded_node" SET "NEED_CLEAN=1"
 
 IF "%NEED_CLEAN%"=="1" (
     ECHO.
-    ECHO Detected existing Talemate python and node.js environments.
+    ECHO Detected existing Talemate environments.
     REM Prompt user (empty input defaults to Y)
     SET "ANSWER=Y"
     SET /P "ANSWER=Perform a clean reinstall of the python and node.js environments? [Y/n] "

@@ -79,9 +79,6 @@ def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0
     elif "gpt-3.5-turbo" in model:
         return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613")
     elif "gpt-4" in model or "o1" in model or "o3" in model:
-        print(
-            "Warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613."
-        )
         return num_tokens_from_messages(messages, model="gpt-4-0613")
     else:
         raise NotImplementedError(
@@ -333,13 +330,28 @@ class OpenAIClient(ClientBase):
         )
 
         try:
-            response = await self.client.chat.completions.create(
+            stream = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
+                stream=True,
                 **parameters,
             )
+            
+            response = ""
 
-            response = response.choices[0].message.content
+            # Iterate over streamed chunks
+            async for chunk in stream:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                if delta and getattr(delta, "content", None):
+                    content_piece = delta.content
+                    response += content_piece
+                    # Incrementally track token usage
+                    self.update_request_tokens(self.count_tokens(content_piece))
+            
+            #self._returned_prompt_tokens = self.prompt_tokens(prompt)
+            #self._returned_response_tokens = self.response_tokens(response)
 
             # older models don't support json_object response coersion
             # and often like to return the response wrapped in ```json

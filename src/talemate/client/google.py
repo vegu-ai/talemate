@@ -247,8 +247,9 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
             model=model,
         )
 
-    def response_tokens(self, response: str):
-        return count_tokens(response.text)
+    def response_tokens(self, response:str):
+        """Return token count for a response which may be a string or SDK object."""
+        return count_tokens(response)
 
     def prompt_tokens(self, prompt: str):
         return count_tokens(prompt)
@@ -302,19 +303,36 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         )
 
         try:
-
             chat = self.model_instance.start_chat()
 
-            response = await chat.send_message_async(
+            # Use streaming so we can update_Request_tokens incrementally
+            stream = await chat.send_message_async(
                 human_message,
                 safety_settings=self.safety_settings,
                 generation_config=parameters,
+                stream=True
             )
 
+            response = ""
+
+            async for chunk in stream:
+                # For each streamed chunk, append content and update token counts
+                content_piece = getattr(chunk, "text", None)
+                if not content_piece:
+                    # Some SDK versions wrap text under candidates[0].text
+                    try:
+                        content_piece = chunk.candidates[0].text  # type: ignore
+                    except Exception:
+                        content_piece = None
+
+                if content_piece:
+                    response += content_piece
+                    # Incrementally update token usage
+                    self.update_request_tokens(count_tokens(content_piece))
+
+            # Store total token accounting for prompt/response
             self._returned_prompt_tokens = self.prompt_tokens(prompt)
             self._returned_response_tokens = self.response_tokens(response)
-
-            response = response.text
 
             log.debug("generated response", response=response)
 

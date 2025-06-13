@@ -230,16 +230,29 @@ class MistralAIClient(ClientBase):
         )
 
         try:
-            response = await self.client.chat.complete_async(
+            event_stream = await self.client.chat.stream_async(
                 model=self.model_name,
                 messages=messages,
                 **parameters,
             )
 
-            self._returned_prompt_tokens = self.prompt_tokens(response)
-            self._returned_response_tokens = self.response_tokens(response)
+            response = ""
+            
+            completion_tokens = 0
+            prompt_tokens = 0
 
-            response = response.choices[0].message.content
+            async for event in event_stream:
+                if event.data.choices:
+                    response += event.data.choices[0].delta.content
+                    self.update_request_tokens(self.count_tokens(event.data.choices[0].delta.content))
+                if event.data.usage:
+                    completion_tokens += event.data.usage.completion_tokens
+                    prompt_tokens += event.data.usage.prompt_tokens
+
+            self._returned_prompt_tokens = prompt_tokens
+            self._returned_response_tokens = completion_tokens
+
+            #response = response.choices[0].message.content
 
             # older models don't support json_object response coersion
             # and often like to return the response wrapped in ```json

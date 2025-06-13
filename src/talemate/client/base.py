@@ -102,6 +102,46 @@ class ParameterReroute(pydantic.BaseModel):
         return str(self) == str(other)
 
 
+class RequestInformation(pydantic.BaseModel):
+    start_time: float = pydantic.Field(default_factory=time.time)
+    end_time: float | None = None
+    tokens: int = 0
+    
+    @pydantic.computed_field(description="Duration")
+    @property
+    def duration(self) -> float:
+        end_time = self.end_time or time.time()
+        return end_time - self.start_time
+    
+    @pydantic.computed_field(description="Tokens per second")
+    @property
+    def rate(self) -> float:
+        try:
+            end_time = self.end_time or time.time()
+            return self.tokens / (end_time - self.start_time)
+        except:
+            pass
+        return 0
+    
+    @pydantic.computed_field(description="Status")
+    @property
+    def status(self) -> str:
+        if self.end_time:
+            return "completed"
+        elif self.start_time:
+            if self.duration > 1 and self.rate == 0:
+                return "stopped"
+            return "in progress"
+        else:
+            return "pending"
+        
+    @pydantic.computed_field(description="Age")
+    @property
+    def age(self) -> float:
+        if not self.end_time:
+            return -1
+        return time.time() - self.end_time
+    
 class ClientBase:
     api_url: str
     model_name: str
@@ -121,6 +161,7 @@ class ClientBase:
     data_format: Literal["yaml", "json"] | None = None
     rate_limit: int | None = None
     client_type = "base"
+    request_information: RequestInformation | None = None
     
     status_request_timeout:int = 2
     
@@ -347,7 +388,7 @@ class ClientBase:
         """
         Sets and emits the client status.
         """
-
+        
         if processing is not None:
             self.processing = processing
 
@@ -436,6 +477,7 @@ class ClientBase:
             "manual_model_choices": getattr(self.Meta(), "manual_model_choices", []),
             "supports_embeddings": self.supports_embeddings,
             "embeddings_status": self.embeddings_status,
+            "request_information": self.request_information.model_dump() if self.request_information else None,
         }
         
     def populate_extra_fields(self, data: dict):
@@ -469,6 +511,7 @@ class ClientBase:
         :return: None
         """
         if self.processing:
+            self.emit_status()
             return
 
         if not self.enabled:
@@ -649,8 +692,29 @@ class ClientBase:
         at the other side of the client.
         """
         pass
-
-
+    
+    def new_request(self):
+        """
+        Creates a new request information object.
+        """
+        self.request_information = RequestInformation()
+        
+    def end_request(self):
+        """
+        Ends the request information object.
+        """
+        self.request_information.end_time = time.time()
+        
+    def update_request_tokens(self, tokens: int, replace: bool = False):
+        """
+        Updates the request information object with the number of tokens received.
+        """
+        if self.request_information:
+            if replace:
+                self.request_information.tokens = tokens
+            else:
+                self.request_information.tokens += tokens
+        
     async def send_prompt(
         self,
         prompt: str,
@@ -767,7 +831,11 @@ class ClientBase:
             )
             prompt_sent = self.repetition_adjustment(finalized_prompt)
             
+            self.new_request()
+            
             response = await self._cancelable_generate(prompt_sent, prompt_param, kind)
+            
+            self.end_request()
             
             if isinstance(response, GenerationCancelled):
                 # generation was cancelled

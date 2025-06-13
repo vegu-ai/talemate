@@ -1,5 +1,7 @@
 import random
-import re
+import json
+import sseclient
+import asyncio
 from typing import TYPE_CHECKING
 import requests
 from chromadb.api.types import EmbeddingFunction, Documents, Embeddings
@@ -88,7 +90,7 @@ class KoboldCppClient(ClientBase):
         kcpp has two apis
 
         open-ai implementation at /v1
-        their own implenation at /api/v1
+        their own implementation at /api/v1
         """
         return "/api/v1" not in self.api_url
 
@@ -107,8 +109,8 @@ class KoboldCppClient(ClientBase):
             # join /v1/completions
             return urljoin(self.api_url, "completions")
         else:
-            # join /api/v1/generate
-            return urljoin(self.api_url, "generate")
+            # join /api/extra/generate/stream
+            return urljoin(self.api_url.replace("v1", "extra"), "generate/stream")
 
     @property
     def max_tokens_param_name(self):
@@ -279,8 +281,45 @@ class KoboldCppClient(ClientBase):
                 url_abort,
                 headers=self.request_headers,
             )
-
+    
     async def generate(self, prompt: str, parameters: dict, kind: str):
+        """
+        Generates text from the given prompt and parameters.
+        """
+        if self.is_openai:
+            return await self._generate_openai(prompt, parameters, kind)
+        else:
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, self._generate_kcpp_stream, prompt, parameters, kind)
+    
+    def _generate_kcpp_stream(self, prompt: str, parameters: dict, kind: str):
+        """
+        Generates text from the given prompt and parameters.
+        """
+        parameters["prompt"] = prompt.strip(" ")
+        
+        response = ""
+        parameters["stream"] = True
+        stream_response = requests.post(
+            self.api_url_for_generation,
+            json=parameters,
+            timeout=None,
+            headers=self.request_headers,
+            stream=True,
+        )
+        stream_response.raise_for_status()
+        
+        sse = sseclient.SSEClient(stream_response)
+        
+        for event in sse.events():
+            payload = json.loads(event.data)
+            chunk = payload['token']
+            response += chunk
+            self.update_request_tokens(self.count_tokens(chunk))
+        
+        return response
+
+    async def _generate_openai(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
         """

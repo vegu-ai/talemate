@@ -1,10 +1,10 @@
 import random
-import urllib
 from typing import Literal
-import aiohttp
+import json
+import httpx
 import pydantic
 import structlog
-from openai import AsyncOpenAI, NotFoundError, PermissionDeniedError
+from openai import PermissionDeniedError
 
 from talemate.client.base import ClientBase, ExtraField, CommonDefaults
 from talemate.client.registry import register
@@ -15,61 +15,6 @@ from talemate.emit import emit
 log = structlog.get_logger("talemate.client.tabbyapi")
 
 EXPERIMENTAL_DESCRIPTION = """Use this client to use all of TabbyAPI's features"""
-
-
-class CustomAPIClient:
-    def __init__(self, base_url, api_key):
-        self.base_url = base_url
-        self.api_key = api_key
-
-    async def get_model_name(self):
-        url = urljoin(self.base_url, "model")
-        headers = {
-            "x-api-key": self.api_key,
-        }
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as response:
-                if response.status != 200:
-                    raise Exception(f"Request failed: {response.status}")
-                response_data = await response.json()
-                model_name = response_data.get("id")
-                # split by "/" and take last
-                if model_name:
-                    model_name = model_name.split("/")[-1]
-                return model_name
-
-    async def create_chat_completion(self, model, messages, **parameters):
-        url = urljoin(self.base_url, "chat/completions")
-        headers = {
-            "x-api-key": self.api_key,
-            "Content-Type": "application/json",
-        }
-        data = {
-            "model": model,
-            "messages": messages,
-            **parameters,
-        }
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json=data) as response:
-                if response.status != 200:
-                    raise Exception(f"Request failed: {response.status}")
-                return await response.json()
-
-    async def create_completion(self, model, **parameters):
-        url = urljoin(self.base_url, "completions")
-        headers = {
-            "x-api-key": self.api_key,
-            "Content-Type": "application/json",
-        }
-        data = {
-            "model": model,
-            **parameters,
-        }
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json=data) as response:
-                if response.status != 200:
-                    raise Exception(f"Request failed: {response.status}")
-                return await response.json()
 
 
 class Defaults(CommonDefaults, pydantic.BaseModel):
@@ -153,7 +98,6 @@ class TabbyAPIClient(ClientBase):
         self.api_handles_prompt_template = kwargs.get(
             "api_handles_prompt_template", self.api_handles_prompt_template
         )
-        self.client = CustomAPIClient(base_url=self.api_url, api_key=self.api_key)
         self.model_name = (
             kwargs.get("model") or kwargs.get("model_name") or self.model_name
         )
@@ -178,49 +122,144 @@ class TabbyAPIClient(ClientBase):
         return prompt
 
     async def get_model_name(self):
-        return await self.client.get_model_name()
+        url = urljoin(self.api_url, "model")
+        headers = {
+            "x-api-key": self.api_key,
+        }
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, timeout=10.0)
+            if response.status_code != 200:
+                raise Exception(f"Request failed: {response.status_code}")
+            response_data = response.json()
+            model_name = response_data.get("id")
+            # split by "/" and take last
+            if model_name:
+                model_name = model_name.split("/")[-1]
+            return model_name
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
-        Generates text from the given prompt and parameters.
+        Generates text from the given prompt and parameters using streaming responses.
         """
+
+        # Determine whether we are using chat or completions endpoint
+        is_chat = self.api_handles_prompt_template
+
         try:
-            if self.api_handles_prompt_template:
-                # Custom API handles prompt template
-                # Use the chat completions endpoint
+            if is_chat:
+                # Chat completions endpoint
                 self.log.debug(
                     "generate (chat/completions)",
                     prompt=prompt[:128] + " ...",
                     parameters=parameters,
                 )
+
                 human_message = {"role": "user", "content": prompt.strip()}
-                response = await self.client.create_chat_completion(
-                    self.model_name, [human_message], **parameters
-                )
-                response = response["choices"][0]["message"]["content"]
-                return self.process_response_for_indirect_coercion(prompt, response)
+
+                payload = {
+                    "model": self.model_name,
+                    "messages": [human_message],
+                    "stream": True,
+                    "stream_options": {
+                        "include_usage": True,
+                    },
+                    **parameters,
+                }
+                endpoint = "chat/completions"
             else:
-                # Talemate handles prompt template
-                # Use the completions endpoint
+                # Completions endpoint
                 self.log.debug(
                     "generate (completions)",
                     prompt=prompt[:128] + " ...",
                     parameters=parameters,
                 )
-                parameters["prompt"] = prompt
-                response = await self.client.create_completion(
-                    self.model_name, **parameters
-                )
-                return response["choices"][0]["text"]
+
+                payload = {
+                    "model": self.model_name,
+                    "prompt": prompt,
+                    "stream": True,
+                    **parameters,
+                }
+                endpoint = "completions"
+
+            url = urljoin(self.api_url, endpoint)
+
+            headers = {
+                "x-api-key": self.api_key,
+                "Content-Type": "application/json",
+            }
+
+            response_text = ""
+            buffer = ""
+            completion_tokens = 0
+            prompt_tokens = 0
+
+            async with httpx.AsyncClient() as client:
+                async with client.stream("POST", url, headers=headers, json=payload, timeout=120.0) as response:
+                    async for chunk in response.aiter_text():
+                        buffer += chunk
+
+                        while True:
+                            line_end = buffer.find('\n')
+                            if line_end == -1:
+                                break
+
+                            line = buffer[:line_end].strip()
+                            buffer = buffer[line_end + 1:]
+
+                            if not line:
+                                continue
+
+                            if line.startswith("data: "):
+                                data = line[6:]
+                                if data == "[DONE]":
+                                    break
+
+                                try:
+                                    data_obj = json.loads(data)
+
+                                    choice = data_obj.get("choices", [{}])[0]
+
+                                    # Chat completions use delta -> content.  
+                                    delta = choice.get("delta", {})
+                                    content = (
+                                        delta.get("content")
+                                        or delta.get("text")
+                                        or choice.get("text")
+                                    )
+
+                                    usage = data_obj.get("usage", {})
+                                    completion_tokens = usage.get("completion_tokens", 0)
+                                    prompt_tokens = usage.get("prompt_tokens", 0)
+
+                                    if content:
+                                        response_text += content
+                                        self.update_request_tokens(self.count_tokens(content))
+                                except json.JSONDecodeError:
+                                    # ignore malformed json chunks
+                                    pass
+
+            # Save token stats for logging
+            self._returned_prompt_tokens = prompt_tokens
+            self._returned_response_tokens = completion_tokens
+
+            if is_chat:
+                # Process indirect coercion
+                response_text = self.process_response_for_indirect_coercion(prompt, response_text)
+
+            return response_text
+
         except PermissionDeniedError as e:
             self.log.error("generate error", e=e)
             emit("status", message="Client API: Permission Denied", status="error")
             return ""
+        except httpx.ConnectTimeout:
+            self.log.error("API timeout")
+            emit("status", message="TabbyAPI: Request timed out", status="error")
+            return ""
         except Exception as e:
             self.log.error("generate error", e=e)
-            emit(
-                "status", message="Error during generation (check logs)", status="error"
-            )
+            emit("status", message="Error during generation (check logs)", status="error")
             return ""
 
     def reconfigure(self, **kwargs):

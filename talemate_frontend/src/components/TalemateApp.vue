@@ -119,7 +119,7 @@
 
       </v-navigation-drawer>
       <!-- right side navigation drawer -->
-      <v-navigation-drawer v-model="drawer" app location="right" width="300" disable-resize-watcher>
+      <v-navigation-drawer v-model="drawer" app location="right" width="350" disable-resize-watcher>
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
           <p class="text-body-2" color="white">

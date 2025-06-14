@@ -195,7 +195,13 @@ class TabbyAPIClient(ClientBase):
             prompt_tokens = 0
 
             async with httpx.AsyncClient() as client:
-                async with client.stream("POST", url, headers=headers, json=payload, timeout=120.0) as response:
+                async with client.stream(
+                    "POST", 
+                    url, 
+                    headers=headers, 
+                    json=payload, 
+                    timeout=120.0
+                ) as response:
                     async for chunk in response.aiter_text():
                         buffer += chunk
 

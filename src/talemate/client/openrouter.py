@@ -103,6 +103,10 @@ class OpenRouterClient(ClientBase):
         handlers["config_saved"].connect(self.on_config_saved)
 
     @property
+    def can_be_coerced(self) -> bool:
+        return True
+
+    @property
     def openrouter_api_key(self):
         return self.config.get("openrouter", {}).get("api_key")
 
@@ -221,14 +225,10 @@ class OpenRouterClient(ClientBase):
         self.emit_status()
 
     def prompt_template(self, system_message: str, prompt: str):
-        # Handle BOT coercion similar to OpenAI client
-        if "<|BOT|>" in prompt:
-            _, right = prompt.split("<|BOT|>", 1)
-            if right:
-                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
-            else:
-                prompt = prompt.replace("<|BOT|>", "")
-
+        """
+        Open-router handles the prompt template internally, so we just
+        give the prompt as is.
+        """
         return prompt
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
@@ -239,23 +239,16 @@ class OpenRouterClient(ClientBase):
         if not self.openrouter_api_key:
             raise Exception("No OpenRouter API key set")
 
-        # Check if we should handle JSON response format
-        right = None
-        expected_response = None
-        try:
-            _, right = prompt.split("\nStart your response with: ")
-            expected_response = right.strip()
-            if expected_response.startswith("{"):
-                # Some models support JSON response format
-                parameters["response_format"] = {"type": "json_object"}
-        except (IndexError, ValueError):
-            pass
-
+        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        
         # Prepare messages for chat completion
         messages = [
             {"role": "system", "content": self.get_system_message(kind)},
             {"role": "user", "content": prompt.strip()}
         ]
+        
+        if coercion_prompt:
+            messages.append({"role": "assistant", "content": coercion_prompt.strip()})
 
         # Prepare request payload
         payload = {
@@ -323,15 +316,6 @@ class OpenRouterClient(ClientBase):
                     response_content = response_text
                     self._returned_prompt_tokens = prompt_tokens
                     self._returned_response_tokens = completion_tokens
-                    
-                    # Handle JSON response unwrapping
-                    if expected_response and expected_response.startswith("{"):
-                        if response_content.startswith("```json") and response_content.endswith("```"):
-                            response_content = response_content[7:-3].strip()
-
-                    # Handle indirect coercion response
-                    if right and response_content.startswith(right):
-                        response_content = response_content[len(right):].strip()
                     
                     return response_content
                 

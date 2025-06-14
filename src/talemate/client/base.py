@@ -283,6 +283,15 @@ class ClientBase:
             self.model_name, "{sysmsg}", "{prompt}<|BOT|>{LLM coercion}"
         )
 
+    def split_prompt_for_coercion(self, prompt: str) -> tuple[str, str]:
+        """
+        Splits the prompt and the prefill/coercion prompt.
+        """
+        if "<|BOT|>" in prompt:
+            _, right = prompt.split("<|BOT|>", 1)
+            return prompt, right
+        return prompt, None
+
     def reconfigure(self, **kwargs):
         """
         Reconfigures the client.
@@ -471,6 +480,7 @@ class ClientBase:
 
     def _common_status_data(self):
         return {
+            "can_be_coerced": self.can_be_coerced,
             "preset_group": self.preset_group or "",
             "rate_limit": self.rate_limit,
             "data_format": self.data_format,

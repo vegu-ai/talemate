@@ -140,13 +140,27 @@ def run_server(args):
                 age=template_override.age_difference,
             )
 
+    # Get (or create) the asyncio event loop
     loop = asyncio.get_event_loop()
-    
-    start_server = websockets.serve(
-        websocket_endpoint, args.host, args.port, max_size=2**23
-    )
-    
-    loop.run_until_complete(start_server)
+
+    # websockets>=12 requires ``websockets.serve`` to be called from within a
+    # running event-loop (it uses ``asyncio.get_running_loop()`` internally).
+    # Calling it directly, before the loop is running, raises
+    # ``RuntimeError: no running event loop``.  To stay compatible with both old
+    # and new versions we wrap the call in a small coroutine that we execute via
+    # ``run_until_complete`` – this guarantees the loop is running when
+    # ``serve`` is invoked.
+
+    async def _start_websocket_server():
+        return await websockets.serve(
+            websocket_endpoint,
+            args.host,
+            args.port,
+            max_size=2 ** 23,
+        )
+
+    # Start the websocket server and keep a reference so we can shut it down
+    websocket_server = loop.run_until_complete(_start_websocket_server())
     
     # start task to unstall punkt
     loop.create_task(install_punkt())
@@ -168,6 +182,9 @@ def run_server(args):
         
         if frontend_task:
             frontend_task.cancel()
+        # Gracefully close the websocket server
+        websocket_server.close()
+        loop.run_until_complete(websocket_server.wait_closed())
         loop.run_until_complete(cancel_all_tasks(loop))
         loop.run_until_complete(loop.shutdown_asyncgens())
         loop.close()

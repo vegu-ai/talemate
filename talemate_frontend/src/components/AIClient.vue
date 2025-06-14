@@ -354,6 +354,7 @@ export default {
           client.model = client.model_name;
           client.type = data.message;
           client.status = data.status;
+          client.can_be_coerced = data.data.can_be_coerced;
           client.max_token_length = data.max_token_length;
           client.api_url = data.api_url;
           client.api_key = data.api_key;
@@ -382,6 +383,7 @@ export default {
             model: data.model_name,
             type: data.message, 
             status: data.status,
+            can_be_coerced: data.data.can_be_coerced,
             max_token_length: data.max_token_length,
             api_url: data.api_url,
             api_key: data.api_key,

@@ -1,5 +1,5 @@
 <template>
-    <v-alert :variant="display" closable :type="color" density="compact" :icon="icon" class="mb-3 text-caption">
+    <v-alert :variant="display" closable :color="color" density="compact" :icon="icon" class="mb-3 text-caption">
         <v-alert-title v-if="title">{{ title }}</v-alert-title>
         <div class="message-body" v-if="!as_markdown">
             {{ message }}

@@ -62,7 +62,7 @@ export default {
                 case 'error':
                     return 'red-darken-2';
                 case 'warning':
-                    return 'warning';
+                    return 'orange-darken-4';
                 case 'info':
                     return 'info';
                 default:

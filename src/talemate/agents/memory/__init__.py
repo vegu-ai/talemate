@@ -34,6 +34,7 @@ from talemate.agents.memory.exceptions import (
 
 try:
     import chromadb
+    import chromadb.errors
     from chromadb.utils import embedding_functions
 except ImportError:
     chromadb = None
@@ -944,6 +945,10 @@ class ChromaDBMemoryAgent(MemoryAgent):
             )
             try:
                 self.db_client.delete_collection(collection_name)
+            except chromadb.errors.NotFoundError as exc:
+                log.error(
+                    "chromadb agent", error="collection not found", details=exc
+                )
             except ValueError as exc:
                 log.error(
                     "chromadb agent", error="failed to delete collection", details=exc

@@ -54,7 +54,7 @@ sseclient-py = "^1.8.0"
 ollama = "^0.5.1"
 
 # ChromaDB
-chromadb = ">=0.4.17,<1"
+chromadb = "^1.0.12"
 InstructorEmbedding = {url = "https://github.com/vegu-ai/instructor-embedding/archive/refs/heads/202506-fixes.zip"}
 torch = "^2.7.0"
 torchaudio = "^2.7.0"

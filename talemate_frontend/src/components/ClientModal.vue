@@ -115,7 +115,7 @@
                       The longer the coercion, the more likely it will coerce the model to accept the instruction, but it may also make the response less natural or affect accuracy. <span class="text-warning">Only set this if you are actually getting hard refusals from the model.</span>
                     </div>
                   </v-alert>
-                  <div class="mt-1" v-if="clientMeta().requires_prompt_template">
+                  <div class="mt-1" v-if="client.can_be_coerced">
                     <v-textarea v-model="client.double_coercion" rows="2" max-rows="3" auto-grow label="Coercion" placeholder="Certainly: "
                       hint=""></v-textarea>
                   </div>

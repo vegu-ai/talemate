@@ -46,9 +46,10 @@
                             label="API Key"></v-text-field>
                         </v-col>
                       </v-row>
+                      <!-- MODEL -->
                       <v-combobox v-model="client.model"
-                        v-if="clientMeta().manual_model && client.manual_model_choices"
-                        :items="client.manual_model_choices" label="Model"></v-combobox>
+                        v-if="clientMeta().manual_model && modelChoices"
+                        :items="modelChoices" label="Model"></v-combobox>
                       <v-text-field v-model="client.model_name" v-else-if="clientMeta().manual_model"
                         label="Manually specify model name"
                         hint="It looks like we're unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you're locally serving a model."></v-text-field>
@@ -213,6 +214,13 @@ export default {
     availableTabs() {
       return Object.values(this.tabs).filter(tab => !tab.condition || tab.condition());
     },
+    modelChoices() {
+      // comes from either client.manual_model_choices or clientMeta().manual_model_choices
+      if (this.client.manual_model_choices && this.client.manual_model_choices.length > 0) {
+        return this.client.manual_model_choices;
+      }
+      return this.clientMeta().manual_model_choices;
+    }
   },
   watch: {
     'state.dialog': {

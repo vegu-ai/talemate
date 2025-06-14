@@ -31,7 +31,7 @@ SUPPORTED_MODELS = [
 class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "claude-3-5-sonnet-latest"
-
+    double_coercion: str = None
 
 @register()
 class AnthropicClient(ClientBase):
@@ -107,6 +107,7 @@ class AnthropicClient(ClientBase):
 
         data={
             "error_action": error_action.model_dump() if error_action else None,
+            "double_coercion": self.double_coercion,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
         }
@@ -161,6 +162,9 @@ class AnthropicClient(ClientBase):
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
+            
+        if "double_coercion" in kwargs:
+            self.double_coercion = kwargs["double_coercion"]
             
         self._reconfigure_common_parameters(**kwargs)
 

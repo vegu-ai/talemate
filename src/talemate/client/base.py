@@ -289,6 +289,10 @@ class ClientBase:
         """
         if "<|BOT|>" in prompt:
             _, right = prompt.split("<|BOT|>", 1)
+            
+            if self.double_coercion:
+                right = f"{self.double_coercion}\n\n{right}"
+            
             return prompt, right
         return prompt, None
 

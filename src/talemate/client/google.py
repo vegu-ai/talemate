@@ -6,7 +6,6 @@ import structlog
 from google import genai
 import google.genai.types as genai_types
 from google.genai.errors import APIError
-from google.api_core.exceptions import ResourceExhausted
 
 from talemate.client.base import ClientBase, ErrorAction, ExtraField, ParameterReroute, CommonDefaults
 from talemate.client.registry import register
@@ -41,7 +40,7 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "gemini-2.0-flash"
     disable_safety_settings: bool = False
-
+    double_coercion: str = None
 
 class ClientConfig(BaseClientConfig):
     disable_safety_settings: bool = False
@@ -87,6 +86,10 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         super().__init__(**kwargs)
 
         handlers["config_saved"].connect(self.on_config_saved)
+
+    @property
+    def can_be_coerced(self) -> bool:
+        return True
 
     @property
     def google_credentials(self):
@@ -205,6 +208,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
 
         self.current_status = status
         data = {
+            "double_coercion": self.double_coercion,
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
@@ -281,6 +285,9 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
+            
+        if "double_coercion" in kwargs:
+            self.double_coercion = kwargs["double_coercion"]
             
         self._reconfigure_common_parameters(**kwargs)
 

@@ -62,6 +62,10 @@ class AnthropicClient(ClientBase):
         handlers["config_saved"].connect(self.on_config_saved)
 
     @property
+    def can_be_coerced(self) -> bool:
+        return True
+
+    @property
     def anthropic_api_key(self):
         return self.config.get("anthropic", {}).get("api_key")
 
@@ -175,13 +179,10 @@ class AnthropicClient(ClientBase):
         self.emit_status()
 
     def prompt_template(self, system_message: str, prompt: str):
-        if "<|BOT|>" in prompt:
-            _, right = prompt.split("<|BOT|>", 1)
-            if right:
-                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
-            else:
-                prompt = prompt.replace("<|BOT|>", "")
-
+        """
+        Anthropic handles the prompt template internally, so we just
+        give the prompt as is.
+        """
         return prompt
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
@@ -191,17 +192,17 @@ class AnthropicClient(ClientBase):
 
         if not self.anthropic_api_key:
             raise Exception("No anthropic API key set")
-
-        right = None
-        expected_response = None
-        try:
-            _, right = prompt.split("\nStart your response with: ")
-            expected_response = right.strip()
-        except (IndexError, ValueError):
-            pass
-
-        human_message = {"role": "user", "content": prompt.strip()}
+        
+        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        
         system_message = self.get_system_message(kind)
+        
+        messages = [
+            {"role": "user", "content": prompt.strip()}
+        ]
+        
+        if coercion_prompt:
+            messages.append({"role": "assistant", "content": coercion_prompt.strip()})
 
         self.log.debug(
             "generate",
@@ -217,7 +218,7 @@ class AnthropicClient(ClientBase):
             stream = await self.client.messages.create(
                 model=self.model_name,
                 system=system_message,
-                messages=[human_message],
+                messages=messages,
                 stream=True,
                 **parameters,
             )
@@ -228,7 +229,6 @@ class AnthropicClient(ClientBase):
                 
                 if event.type == "content_block_delta":
                     content = event.delta.text
-                    print(content)
                     response += content
                     self.update_request_tokens(self.count_tokens(content))
                     
@@ -243,13 +243,6 @@ class AnthropicClient(ClientBase):
             self._returned_response_tokens = completion_tokens
 
             log.debug("generated response", response=response)
-
-            if expected_response and expected_response.startswith("{"):
-                if response.startswith("```json") and response.endswith("```"):
-                    response = response[7:-3].strip()
-
-            if right and response.startswith(right):
-                response = response[len(right) :].strip()
 
             return response
         except PermissionDeniedError as e:

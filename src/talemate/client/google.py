@@ -3,15 +3,10 @@ import os
 
 import pydantic
 import structlog
-import vertexai
+from google import genai
+import google.genai.types as genai_types
+from google.genai.errors import APIError
 from google.api_core.exceptions import ResourceExhausted
-from vertexai.generative_models import (
-    ChatSession,
-    GenerationConfig,
-    GenerativeModel,
-    ResponseValidationError,
-    SafetySetting,
-)
 
 from talemate.client.base import ClientBase, ErrorAction, ExtraField, ParameterReroute, CommonDefaults
 from talemate.client.registry import register
@@ -44,7 +39,7 @@ SUPPORTED_MODELS = [
 
 class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
-    model: str = "gemini-1.0-pro"
+    model: str = "gemini-2.0-flash"
     disable_safety_settings: bool = False
 
 
@@ -81,7 +76,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
             ),
         }
 
-    def __init__(self, model="gemini-1.0-pro", **kwargs):
+    def __init__(self, model="gemini-2.0-flash", **kwargs):
         self.model_name = model
         self.setup_status = None
         self.model_instance = None
@@ -108,16 +103,36 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
     @property
     def google_location(self):
         return self.config.get("google").get("gcloud_location")
+    
+    @property
+    def google_api_key(self):
+        return self.config.get("google").get("api_key")
+
+    @property
+    def vertexai_ready(self) -> bool:
+        return all([
+            self.google_credentials_path,
+            self.google_location,
+        ])
+
+    @property
+    def developer_api_ready(self) -> bool:
+        return all([
+            self.google_api_key,
+        ])
+    
+    @property
+    def using(self) -> str:
+        if self.developer_api_ready:
+            return "API"
+        if self.vertexai_ready:
+            return "VertexAI"
+        return "Unknown"
 
     @property
     def ready(self):
         # all google settings must be set
-        return all(
-            [
-                self.google_credentials_path,
-                self.google_location,
-            ]
-        )
+        return self.vertexai_ready or self.developer_api_ready
 
     @property
     def safety_settings(self):
@@ -125,25 +140,25 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
             return None
 
         safety_settings = [
-            SafetySetting(
-                category=SafetySetting.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE,
+            genai_types.SafetySetting(
+                category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                threshold="BLOCK_NONE",
             ),
-            SafetySetting(
-                category=SafetySetting.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE,
+            genai_types.SafetySetting(
+                category="HARM_CATEGORY_DANGEROUS_CONTENT",
+                threshold="BLOCK_NONE",
             ),
-            SafetySetting(
-                category=SafetySetting.HarmCategory.HARM_CATEGORY_HARASSMENT,
-                threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE,
+            genai_types.SafetySetting(
+                category="HARM_CATEGORY_HARASSMENT",
+                threshold="BLOCK_NONE",
             ),
-            SafetySetting(
-                category=SafetySetting.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE,
+            genai_types.SafetySetting(
+                category="HARM_CATEGORY_HATE_SPEECH",
+                threshold="BLOCK_NONE",
             ),
-            SafetySetting(
-                category=SafetySetting.HarmCategory.HARM_CATEGORY_UNSPECIFIED,
-                threshold=SafetySetting.HarmBlockThreshold.BLOCK_NONE,
+            genai_types.SafetySetting(
+                category="HARM_CATEGORY_UNSPECIFIED",
+                threshold="BLOCK_NONE",
             ),
         ]
 
@@ -197,11 +212,16 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         data.update(self._common_status_data()) 
         self.populate_extra_fields(data)
 
+        if self.using == "VertexAI":
+            details = f"{model_name} (VertexAI)"
+        else:
+            details = model_name
+
         emit(
             "client_status",
             message=self.client_type,
             id=self.name,
-            details=model_name,
+            details=details,
             status=status if self.enabled else "disabled",
             data=data,
         )
@@ -216,7 +236,7 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
             return
 
         if not self.model_name:
-            self.model_name = "gemini-1.0-pro"
+            self.model_name = "gemini-2.0-flash"
 
         if max_token_length and not isinstance(max_token_length, int):
             max_token_length = int(max_token_length)
@@ -228,17 +248,14 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
 
         self.max_token_length = max_token_length or 16384
 
-        if not self.setup_status:
-            if self.setup_status is False:
-                project_id = self.google_credentials.get("project_id")
-                self.google_project_id = project_id
-                if self.google_credentials_path:
-                    vertexai.init(project=project_id, location=self.google_location)
-                emit("request_client_status")
-                emit("request_agent_status")
-            self.setup_status = True
-
-        self.model_instance = GenerativeModel(model_name=model)
+        if self.vertexai_ready:
+            self.client = genai.Client(
+                vertexai=True,
+                project=self.google_project_id,
+                location=self.google_location,
+            )
+        else:
+            self.client = genai.Client(api_key=self.google_api_key or None)
 
         log.info(
             "google set client",
@@ -274,24 +291,49 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         if "top_k" in parameters and parameters["top_k"] == 0:
             del parameters["top_k"]
 
+    def prompt_template(self, system_message: str, prompt: str):
+        """
+        Google handles the prompt template internally, so we just
+        give the prompt as is.
+        """
+        return prompt
+
+
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
         """
 
         if not self.ready:
-            raise Exception("Google cloud setup incomplete")
+            raise Exception("Google setup incomplete")
 
-        right = None
-        expected_response = None
-        try:
-            _, right = prompt.split("\nStart your response with: ")
-            expected_response = right.strip()
-        except (IndexError, ValueError):
-            pass
+        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
 
         human_message = prompt.strip()
         system_message = self.get_system_message(kind)
+        
+        contents = [
+            genai_types.Content(
+                role="user",
+                parts=[
+                    genai_types.Part.from_text(
+                        text=human_message,
+                    )
+                ]
+            )
+        ]
+        
+        if coercion_prompt:
+            contents.append(
+                genai_types.Content(
+                    role="assistant",
+                    parts=[
+                        genai_types.Part.from_text(
+                            text=coercion_prompt,
+                        )
+                    ]
+                )
+            )
 
         self.log.debug(
             "generate",
@@ -303,16 +345,23 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
         )
 
         try:
-            chat = self.model_instance.start_chat()
-
             # Use streaming so we can update_Request_tokens incrementally
-            stream = await chat.send_message_async(
-                human_message,
-                safety_settings=self.safety_settings,
-                generation_config=parameters,
-                stream=True
+            #stream = await chat.send_message_async(
+            #    human_message,
+            #    safety_settings=self.safety_settings,
+            #    generation_config=parameters,
+            #    stream=True
+            #)
+            
+            stream = await self.client.aio.models.generate_content_stream(
+                model=self.model_name,
+                contents=contents,
+                config=genai_types.GenerateContentConfig(
+                    safety_settings=self.safety_settings,
+                    **parameters
+                ),
             )
-
+            
             response = ""
 
             async for chunk in stream:
@@ -336,32 +385,11 @@ class GoogleClient(RemoteServiceMixin, ClientBase):
 
             log.debug("generated response", response=response)
 
-            if expected_response and expected_response.startswith("{"):
-                if response.startswith("```json") and response.endswith("```"):
-                    response = response[7:-3].strip()
-
-            if right and response.startswith(right):
-                response = response[len(right) :].strip()
-
             return response
 
-        # except PermissionDeniedError as e:
-        #    self.log.error("generate error", e=e)
-        #    emit("status", message="google API: Permission Denied", status="error")
-        #    return ""
-        except ResourceExhausted as e:
+        except APIError as e:
             self.log.error("generate error", e=e)
-            emit("status", message="google API: Quota Limit reached", status="error")
+            emit("status", message="google API: API Error", status="error")
             return ""
-        except ResponseValidationError as e:
-            self.log.error("generate error", e=e)
-            emit(
-                "status",
-                message="google API: Response Validation Error",
-                status="error",
-            )
-            if not self.disable_safety_settings:
-                return "Failed to generate response. Probably due to safety settings, you can turn them off in the client settings."
-            return "Failed to generate response. Please check logs."
         except Exception as e:
             raise

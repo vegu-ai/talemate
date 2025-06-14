@@ -198,7 +198,7 @@ export default {
           value: 'coercion',
           icon: 'mdi-account-lock-open',
           condition: () => {
-            return this.clientMeta().requires_prompt_template;
+            return this.client.can_be_coerced;
           },
         },
         system_prompts: {

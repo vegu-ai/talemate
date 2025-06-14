@@ -181,6 +181,7 @@ class CoquiConfig(BaseModel):
 class GoogleConfig(BaseModel):
     gcloud_credentials_path: Union[str, None] = None
     gcloud_location: Union[str, None] = None
+    api_key: Union[str, None] = None
 
 
 class TTSVoiceSamples(BaseModel):

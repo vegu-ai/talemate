@@ -7,7 +7,7 @@ export default {
     props: {
         requestInformation: {
             type: Object,
-            required: true
+            required: false
         }
     },
     computed: {

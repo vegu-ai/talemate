@@ -409,6 +409,7 @@ class WebsocketHandler(Receiver):
                 "message": emission.message,
                 "id": emission.id,
                 "status": emission.status,
+                "meta": emission.meta,
                 "character": emission.character.name if emission.character else "",
             }
         )

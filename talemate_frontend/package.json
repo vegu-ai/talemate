@@ -24,7 +24,8 @@
     "vue": "^3.5",
     "vue-codemirror": "^6.1.1",
     "vuetify": "^3.8",
-    "webfontloader": "^1.6.28"
+    "webfontloader": "^1.6.28",
+    "marked": "^15.0.12"
   },
   "devDependencies": {
     "@babel/core": "^7",

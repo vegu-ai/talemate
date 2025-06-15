@@ -234,7 +234,6 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
 
         self.log.debug(
             "generate",
-            api_key=self.api_key[:10] + "...",
             base_url=self.base_url,
             prompt=prompt[:128] + " ...",
             parameters=parameters,

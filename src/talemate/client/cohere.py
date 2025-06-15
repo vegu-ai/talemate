@@ -2,9 +2,14 @@ import pydantic
 import structlog
 from cohere import AsyncClientV2
 
-from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults
+from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults, ExtraField
 from talemate.client.registry import register
-from talemate.config import load_config
+from talemate.client.remote import (
+    EndpointOverride,
+    EndpointOverrideMixin,
+    endpoint_override_extra_fields,
+)
+from talemate.config import Client as BaseClientConfig, load_config
 from talemate.emit import emit
 from talemate.emit.signals import handlers
 from talemate.util import count_tokens
@@ -26,13 +31,17 @@ SUPPORTED_MODELS = [
 ]
 
 
-class Defaults(CommonDefaults, pydantic.BaseModel):
+class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "command-r-plus"
 
 
+class ClientConfig(EndpointOverride, BaseClientConfig):
+    pass
+
+
 @register()
-class CohereClient(ClientBase):
+class CohereClient(EndpointOverrideMixin, ClientBase):
     """
     Cohere client for generating text.
     """
@@ -41,18 +50,21 @@ class CohereClient(ClientBase):
     conversation_retries = 0
     auto_break_repetition_enabled = False
     decensor_enabled = True
-
+    config_cls = ClientConfig
+    
     class Meta(ClientBase.Meta):
         name_prefix: str = "Cohere"
         title: str = "Cohere"
         manual_model: bool = True
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
+        extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
         defaults: Defaults = Defaults()
 
     def __init__(self, model="command-r-plus", **kwargs):
         self.model_name = model
         self.api_key_status = None
+        self._reconfigure_endpoint_override(**kwargs)
         self.config = load_config()
         super().__init__(**kwargs)
 
@@ -119,7 +131,7 @@ class CohereClient(ClientBase):
         )
 
     def set_client(self, max_token_length: int = None):
-        if not self.cohere_api_key:
+        if not self.cohere_api_key and not self.endpoint_override_base_url_configured:
             self.client = AsyncClientV2("sk-1111")
             log.error("No cohere API key set")
             if self.api_key_status:
@@ -136,7 +148,7 @@ class CohereClient(ClientBase):
 
         model = self.model_name
 
-        self.client = AsyncClientV2(self.cohere_api_key)
+        self.client = AsyncClientV2(self.api_key, base_url=self.base_url)
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -161,6 +173,7 @@ class CohereClient(ClientBase):
             self.enabled = bool(kwargs["enabled"])
             
         self._reconfigure_common_parameters(**kwargs)
+        self._reconfigure_endpoint_override(**kwargs)
 
     def on_config_saved(self, event):
         config = event.data
@@ -207,7 +220,7 @@ class CohereClient(ClientBase):
         Generates text from the given prompt and parameters.
         """
 
-        if not self.cohere_api_key:
+        if not self.cohere_api_key and not self.endpoint_override_base_url_configured:
             raise Exception("No cohere API key set")
 
         right = None

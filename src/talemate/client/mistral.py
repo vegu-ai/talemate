@@ -4,9 +4,14 @@ from typing import Literal
 from mistralai import Mistral
 from mistralai.models.sdkerror import SDKError
 
-from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults
+from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults, ExtraField
 from talemate.client.registry import register
-from talemate.config import load_config
+from talemate.client.remote import (
+    EndpointOverride,
+    EndpointOverrideMixin,
+    endpoint_override_extra_fields,
+)
+from talemate.config import Client as BaseClientConfig, load_config
 from talemate.emit import emit
 from talemate.emit.signals import handlers
 
@@ -35,14 +40,15 @@ JSON_OBJECT_RESPONSE_MODELS = [
 ]
 
 
-class Defaults(CommonDefaults, pydantic.BaseModel):
+class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "open-mixtral-8x22b"
 
-
+class ClientConfig(EndpointOverride, BaseClientConfig):
+    pass
 
 @register()
-class MistralAIClient(ClientBase):
+class MistralAIClient(EndpointOverrideMixin, ClientBase):
     """
     OpenAI client for generating text.
     """
@@ -52,6 +58,7 @@ class MistralAIClient(ClientBase):
     auto_break_repetition_enabled = False
     # TODO: make this configurable?
     decensor_enabled = True
+    config_cls = ClientConfig
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "MistralAI"
@@ -60,16 +67,18 @@ class MistralAIClient(ClientBase):
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
-
+        extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
+    
     def __init__(self, model="open-mixtral-8x22b", **kwargs):
         self.model_name = model
         self.api_key_status = None
+        self._reconfigure_endpoint_override(**kwargs)
         self.config = load_config()
         super().__init__(**kwargs)
         handlers["config_saved"].connect(self.on_config_saved)
 
     @property
-    def mistralai_api_key(self):
+    def mistral_api_key(self):
         return self.config.get("mistralai", {}).get("api_key")
 
     @property
@@ -85,7 +94,7 @@ class MistralAIClient(ClientBase):
         if processing is not None:
             self.processing = processing
 
-        if self.mistralai_api_key:
+        if self.mistral_api_key:
             status = "busy" if self.processing else "idle"
             model_name = self.model_name
         else:
@@ -122,7 +131,7 @@ class MistralAIClient(ClientBase):
         )
 
     def set_client(self, max_token_length: int = None):
-        if not self.mistralai_api_key:
+        if not self.mistral_api_key and not self.endpoint_override_base_url_configured:
             self.client = Mistral(api_key="sk-1111")
             log.error("No mistral.ai API key set")
             if self.api_key_status:
@@ -139,7 +148,7 @@ class MistralAIClient(ClientBase):
 
         model = self.model_name
 
-        self.client = Mistral(api_key=self.mistralai_api_key)
+        self.client = Mistral(api_key=self.api_key, server_url=self.base_url)
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -160,7 +169,8 @@ class MistralAIClient(ClientBase):
             self.enabled = bool(kwargs["enabled"])
         
         self._reconfigure_common_parameters(**kwargs)
-
+        self._reconfigure_endpoint_override(**kwargs)
+        
         if kwargs.get("model"):
             self.model_name = kwargs["model"]
             self.set_client(kwargs.get("max_token_length"))
@@ -201,7 +211,7 @@ class MistralAIClient(ClientBase):
         Generates text from the given prompt and parameters.
         """
 
-        if not self.mistralai_api_key:
+        if not self.mistral_api_key:
             raise Exception("No mistral.ai API key set")
 
         supports_json_object = self.model_name in JSON_OBJECT_RESPONSE_MODELS
@@ -224,6 +234,8 @@ class MistralAIClient(ClientBase):
 
         self.log.debug(
             "generate",
+            api_key=self.api_key[:10] + "...",
+            base_url=self.base_url,
             prompt=prompt[:128] + " ...",
             parameters=parameters,
             system_message=system_message,

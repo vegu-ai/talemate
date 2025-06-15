@@ -2,8 +2,14 @@ import pydantic
 import structlog
 from anthropic import AsyncAnthropic, PermissionDeniedError
 
-from talemate.client.base import ClientBase, ErrorAction, CommonDefaults
+from talemate.client.base import ClientBase, ErrorAction, CommonDefaults, ExtraField
 from talemate.client.registry import register
+from talemate.client.remote import (
+    EndpointOverride,
+    EndpointOverrideMixin,
+    endpoint_override_extra_fields,
+)
+from talemate.config import Client as BaseClientConfig
 from talemate.config import load_config
 from talemate.emit import emit
 from talemate.emit.signals import handlers
@@ -28,13 +34,17 @@ SUPPORTED_MODELS = [
 ]
 
 
-class Defaults(CommonDefaults, pydantic.BaseModel):
+class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "claude-3-5-sonnet-latest"
     double_coercion: str = None
 
+class ClientConfig(EndpointOverride, BaseClientConfig):
+    pass
+
+
 @register()
-class AnthropicClient(ClientBase):
+class AnthropicClient(EndpointOverrideMixin, ClientBase):
     """
     Anthropic client for generating text.
     """
@@ -44,6 +54,7 @@ class AnthropicClient(ClientBase):
     auto_break_repetition_enabled = False
     # TODO: make this configurable?
     decensor_enabled = False
+    config_cls = ClientConfig
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "Anthropic"
@@ -52,10 +63,12 @@ class AnthropicClient(ClientBase):
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
+        extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
 
     def __init__(self, model="claude-3-5-sonnet-latest", **kwargs):
         self.model_name = model
         self.api_key_status = None
+        self._reconfigure_endpoint_override(**kwargs)
         self.config = load_config()
         super().__init__(**kwargs)
 
@@ -122,7 +135,7 @@ class AnthropicClient(ClientBase):
         )
 
     def set_client(self, max_token_length: int = None):
-        if not self.anthropic_api_key:
+        if not self.anthropic_api_key and not self.endpoint_override_base_url_configured:
             self.client = AsyncAnthropic(api_key="sk-1111")
             log.error("No anthropic API key set")
             if self.api_key_status:
@@ -139,7 +152,7 @@ class AnthropicClient(ClientBase):
 
         model = self.model_name
 
-        self.client = AsyncAnthropic(api_key=self.anthropic_api_key)
+        self.client = AsyncAnthropic(api_key=self.api_key, base_url=self.base_url)
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -167,6 +180,7 @@ class AnthropicClient(ClientBase):
             self.double_coercion = kwargs["double_coercion"]
             
         self._reconfigure_common_parameters(**kwargs)
+        self._reconfigure_endpoint_override(**kwargs)
 
     def on_config_saved(self, event):
         config = event.data
@@ -194,7 +208,7 @@ class AnthropicClient(ClientBase):
         Generates text from the given prompt and parameters.
         """
 
-        if not self.anthropic_api_key:
+        if not self.anthropic_api_key and not self.endpoint_override_base_url_configured:
             raise Exception("No anthropic API key set")
         
         prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)

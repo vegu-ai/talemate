@@ -78,13 +78,19 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
     double_coercion: str = None
 
 
+class FieldGroup(pydantic.BaseModel):
+    name: str
+    label: str
+    description: str
+    icon: str = "mdi-cog"
+
 class ExtraField(pydantic.BaseModel):
     name: str
     type: str
     label: str
     required: bool
     description: str
-
+    group: FieldGroup | None = None
 
 class ParameterReroute(pydantic.BaseModel):
     talemate_parameter: str
@@ -483,7 +489,7 @@ class ClientBase:
         return data
 
     def _common_status_data(self):
-        return {
+        common_data = {
             "can_be_coerced": self.can_be_coerced,
             "preset_group": self.preset_group or "",
             "rate_limit": self.rate_limit,
@@ -493,6 +499,12 @@ class ClientBase:
             "embeddings_status": self.embeddings_status,
             "request_information": self.request_information.model_dump() if self.request_information else None,
         }
+        
+        extra_fields = getattr(self.Meta(), "extra_fields", {})
+        for field_name in extra_fields.keys():
+            common_data[field_name] = getattr(self, field_name, None)
+        
+        return common_data
         
     def populate_extra_fields(self, data: dict):
         """

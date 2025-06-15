@@ -52,8 +52,8 @@
                                         <v-divider class="mb-2"></v-divider>
                                         <v-row>
                                             <v-col cols="12">
-                                                <v-checkbox v-model="app_config.game.general.auto_save" label="Auto save" messages="Automatically save after each game-loop"></v-checkbox>
-                                                <v-checkbox v-model="app_config.game.general.auto_progress" label="Auto progress" messages="AI automatically progresses after player turn."></v-checkbox>
+                                                <v-checkbox color="primary" v-model="app_config.game.general.auto_save" label="Auto save" messages="Automatically save after each game-loop"></v-checkbox>
+                                                <v-checkbox color="primary" v-model="app_config.game.general.auto_progress" label="Auto progress" messages="AI automatically progresses after player turn."></v-checkbox>
                                             </v-col>
                                         </v-row>
                                         <v-row>
@@ -66,8 +66,7 @@
                                         <v-alert color="white" variant="text" icon="mdi-human-edit" density="compact">
                                             <v-alert-title>Default player character</v-alert-title>
                                             <div class="text-grey">
-                                                This will be default player character that will be added to a game if the game does not come with a defined player character. Essentially this is relevant for when you load character-cards that aren't in the talemate scene format.                     
-
+                                                This will be default player character that will be added to a scene if the scene does not come with a defined player character. Mostly relevant when you load character-cards that aren't in the talemate scene format.                 
                                             </div>
                                         </v-alert>
                                         <v-divider class="mb-2"></v-divider>
@@ -85,6 +84,11 @@
                                             <v-col cols="12">
                                                 <v-textarea v-model="app_config.game.default_player_character.description"
                                                     auto-grow label="Description"></v-textarea>
+                                            </v-col>
+                                        </v-row>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-checkbox color="primary" v-model="app_config.game.general.add_default_character" label="Add default character to blank talemate scenes" messages="When creating a new scene, add the default player character to the scene."></v-checkbox>
                                             </v-col>
                                         </v-row>
                                     </div>
@@ -209,6 +213,23 @@
                                         </v-row>
                                     </div>
 
+                                    <!-- OPENROUTER API -->
+                                    <div v-if="applicationPageSelected === 'openrouter_api'">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
+                                            <v-alert-title>OpenRouter</v-alert-title>
+                                            <div class="text-grey">
+                                                Configure your OpenRouter API key here. You can get one from <a href="https://openrouter.ai/api-keys" target="_blank">https://openrouter.ai/settings/keys</a> 
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-text-field type="password" v-model="app_config.openrouter.api_key"
+                                                    label="OpenRouter API Key"></v-text-field>
+                                            </v-col>
+                                        </v-row>
+                                    </div>
+
                                     <!-- GROQ API -->
                                     <div v-if="applicationPageSelected === 'groq_api'">
                                         <v-alert color="white" variant="text" icon="mdi-api" density="compact">
@@ -235,18 +256,37 @@
 
                                     <div v-if="applicationPageSelected === 'google_api'">
                                         <v-alert color="white" variant="text" icon="mdi-google-cloud" density="compact">
-                                            <v-alert-title>Google Cloud</v-alert-title>
+                                            <v-alert-title>Google</v-alert-title>
                                             <div class="text-grey">
-                                                In order for you to use Google Cloud services like the vertexi ai api for Gemini inference you will need to set up a Google Cloud project and credentials.
-                                                
-                                                Please follow the instructions <a href="https://cloud.google.com/vertex-ai/docs/start/client-libraries">here</a> and then fill in the fields below.
+                                                <p class="mb-2"><strong>Option&nbsp;1 – API&nbsp;Key&nbsp;(recommended)</strong></p>
+                                                <p class="mb-1">Create a Google API key at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> and paste it in the field below. This is the quickest way to start using Gemini models.</p>
+
+                                                <v-divider class="my-4"></v-divider>
+
+                                                <p class="mb-2"><strong>Option&nbsp;2 – Vertex&nbsp;AI service&nbsp;account&nbsp;(advanced)</strong></p>
+                                                <p class="mb-0">If you prefer using a full Google Cloud project, follow the setup guide <a href="https://cloud.google.com/vertex-ai/docs/start/client-libraries" target="_blank">here</a> to generate a service-account JSON credential file, then complete the legacy fields below.</p>
+
+                                                <p class="text-caption mt-1 text-muted">
+                                                    If both are setup, the API key will be used.
+                                                </p>
                                             </div>
                                         </v-alert>
                                         <v-divider class="mb-2"></v-divider>
+                                        <!-- API KEY -->
+                                        <v-row class="mb-4">
+                                            <v-col cols="12">
+                                                <v-text-field type="password"
+                                                              v-model="app_config.google.api_key"
+                                                              label="Google API Key"
+                                                              messages="Paste your Google API key here. This is the easiest way to authenticate.">
+                                                </v-text-field>
+                                            </v-col>
+                                        </v-row>
+                                        <!-- Vertex AI (legacy) fields -->
                                         <v-row>
                                             <v-col cols="12">
                                                 <v-text-field v-model="app_config.google.gcloud_credentials_path"
-                                                    label="Google Cloud Credentials Path" messages="This should be a path to the credentials JSON file you downloaded through the setup above. This path needs to be accessible by the computer that is running the Talemate backend. If you are running Talemate on a server, you can upload the file to the server and the path should be the path to the file on the server."></v-text-field>
+                                                    label="Google Cloud Credentials Path" messages="Path to the service-account JSON credentials file on the machine running the Talemate backend."></v-text-field>
                                             </v-col>
                                             <v-col cols="6">
                                                 <v-combobox v-model="app_config.google.gcloud_location"
@@ -306,6 +346,7 @@
                     :immutable-config="app_config" 
                     :agentStatus="agentStatus"
                     :sceneActive="sceneActive"
+                    :clientStatus="clientStatus"
                     ></AppConfigPresets>
                 </v-window-item>
 
@@ -383,6 +424,7 @@ export default {
     props: {
         agentStatus: Object,
         sceneActive: Boolean,
+        clientStatus: Object,
     },
     data() {
         return {
@@ -399,14 +441,15 @@ export default {
                     {title: 'Scene', icon: 'mdi-script-text', value: 'scene'},
                 ],
                 application: [
-                    {title: 'OpenAI', icon: 'mdi-api', value: 'openai_api'},
-                    {title: 'mistral.ai', icon: 'mdi-api', value: 'mistralai_api'},
                     {title: 'Anthropic', icon: 'mdi-api', value: 'anthropic_api'},
                     {title: 'Cohere', icon: 'mdi-api', value: 'cohere_api'},
-                    {title: 'groq', icon: 'mdi-api', value: 'groq_api'},
                     {title: 'DeepSeek', icon: 'mdi-api', value: 'deepseek_api'},
-                    {title: 'Google Cloud', icon: 'mdi-google-cloud', value: 'google_api'},
                     {title: 'ElevenLabs', icon: 'mdi-api', value: 'elevenlabs_api'},
+                    {title: 'Google', icon: 'mdi-api', value: 'google_api'},
+                    {title: 'groq', icon: 'mdi-api', value: 'groq_api'},
+                    {title: 'mistral.ai', icon: 'mdi-api', value: 'mistralai_api'},
+                    {title: 'OpenAI', icon: 'mdi-api', value: 'openai_api'},
+                    {title: 'OpenRouter', icon: 'mdi-api', value: 'openrouter_api'},
                     {title: 'RunPod', icon: 'mdi-api', value: 'runpod_api'},
                 ],
                 creator: [

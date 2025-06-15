@@ -38,6 +38,7 @@ async_signals.register(
     "scene_loop_end_cycle",
     "scene_loop_error",
     "scene_loop_init",
+    "scene_loop_init_after",
 )
 
 @dataclasses.dataclass
@@ -1356,6 +1357,7 @@ class SceneLoop(Loop):
             state.data["_commands"] = {}
             await self.register_commands(scene, state)
             await async_signals.get("scene_loop_init").send(self.scene_loop_event)
+            await async_signals.get("scene_loop_init_after").send(self.scene_loop_event)
         
         trigger_game_loop = self.get_property("trigger_game_loop")
         

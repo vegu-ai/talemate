@@ -25,6 +25,7 @@ from talemate.server import (
     quick_settings,
     world_state_manager,
     node_editor,
+    package_manager,
 )
 
 __all__ = [
@@ -67,6 +68,7 @@ class WebsocketHandler(Receiver):
             ),
             devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
             node_editor.NodeEditorPlugin.router: node_editor.NodeEditorPlugin(self),
+            package_manager.PackageManagerPlugin.router: package_manager.PackageManagerPlugin(self),
         }
 
         # unconveniently named function, this `connect` method is called
@@ -407,6 +409,7 @@ class WebsocketHandler(Receiver):
                 "message": emission.message,
                 "id": emission.id,
                 "status": emission.status,
+                "meta": emission.meta,
                 "character": emission.character.name if emission.character else "",
             }
         )
@@ -734,6 +737,8 @@ class WebsocketHandler(Receiver):
         try:
             for asset_id in asset_ids:
                 asset = scene_assets.get_asset_bytes_as_base64(asset_id)
+                if not asset:
+                    continue
 
                 self.queue_put(
                     {

@@ -12,7 +12,7 @@
 
                 <!-- existing -->
                 <v-list-item v-for="(preset, preset_key) in config.embeddings" :key="preset_key" :value="preset_key" prepend-icon="mdi-tune">
-                    <v-list-item-title>{{ preset.model }}</v-list-item-title>
+                    <v-list-item-title>{{ preset.model || preset.client }}</v-list-item-title>
                     <v-list-item-subtitle>{{ preset.embeddings }}</v-list-item-subtitle>
                 </v-list-item>
             </v-list>
@@ -44,7 +44,9 @@
                         <v-card-text>
                             <v-select v-model="newPreset.embeddings" :items="embeddings" label="Embeddings" :rules="[rulesNewPreset.required]"></v-select>
                             
-                            <v-text-field v-model="newPreset.model" label="Model"  :rules="[rulesNewPreset.required, rulesNewPreset.exists]"></v-text-field>
+                            <v-select v-if="newPreset.embeddings === 'client-api'" v-model="newPreset.client" :items="suitableClients()" label="Client"  :rules="[rulesNewPreset.required, rulesNewPreset.exists]"></v-select>
+
+                            <v-text-field v-else v-model="newPreset.model" label="Model"  :rules="[rulesNewPreset.required, rulesNewPreset.exists]"></v-text-field>
                         </v-card-text>
                     </v-form>
 
@@ -130,6 +132,7 @@ export default {
         immutableConfig: Object,
         memoryAgentStatus: Object,
         sceneActive: Boolean,
+        clientStatus: Object,
     },
     watch: {
         immutableConfig: {
@@ -205,6 +208,7 @@ export default {
                 {title: 'SentenceTransformer', value: 'sentence-transformer'},
                 {title: 'Instructor', value: 'instructor'},
                 {title: 'OpenAI', value: 'openai'},
+                {title: 'Client API', value: 'client-api'},
             ],
             distanceFunctions: [
                 {title: 'Cosine similarity', value: 'cosine'},
@@ -218,6 +222,19 @@ export default {
         }
     },
     methods: {
+
+        suitableClients() {
+            const clients = [];
+            for(const client of Object.values(this.clientStatus)) {
+                if(client.supports_embeddings && client.ready) {
+                    clients.push({
+                        title: client.label,
+                        value: client.name,
+                    });
+                }
+            }
+            return clients;
+        },
 
         setPresetChanged(presetName) {
             // this ensures that the change gets saved
@@ -236,9 +253,9 @@ export default {
                 custom: true,
                 trust_remote_code: false,
                 device: 'cpu',
-                distance: 1.5,
+                distance: 1.0,
                 distance_mod: 1,
-                distance_function: 'l2',
+                distance_function: 'cosine',
                 fast: true,
                 gpu_recommendation: false,
                 local: true,
@@ -254,8 +271,14 @@ export default {
                 return;
             }
 
-            this.config.embeddings[this.newPreset.model] = this.newPreset;
-            this.selected = [this.newPreset.model];
+            let identifier = `${this.newPreset.embeddings}/${this.newPreset.model || this.newPreset.url || this.newPreset.client}`;
+
+            if(this.newPreset.embeddings === 'client-api') {
+                this.newPreset.local = false;
+            }
+
+            this.config.embeddings[identifier] = this.newPreset;
+            this.selected = [identifier];
             this.newPreset = null;
         },
 

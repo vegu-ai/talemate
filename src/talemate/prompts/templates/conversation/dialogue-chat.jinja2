@@ -1,33 +1,15 @@
-{% set rendered_context_content -%}
-<|SECTION:CHARACTERS|>
-{% for character in characters %}
-### {{ character.name }}
-{% if max_tokens > 6000 -%}
-{{ character.sheet }}
-{% else -%}
-{{ character.filtered_sheet(['age', 'gender']) }}
-{{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
-{% endif %}
+{% extends "dialogue.jinja2" %}
+{% block task_main_text %}
+{% set dialogue_examples -%}
+{% for example in talking_character.random_dialogue_examples(scene, num=2, strip_name=True) -%}
+``` example
+{{ talking_character.name }}: {{ example }}
+```
 
-{{ character.description }}
-{% endfor %}
-<|CLOSE_SECTION|>
-{% if talking_character.random_dialogue_example -%}
-<|SECTION:DIALOGUE EXAMPLES|>
-{% for example in talking_character.random_dialogue_examples(num=3) -%}
-{{ example }}
-{% endfor %}
-<|CLOSE_SECTION|>
-{% endif %}
-{% if scene.description %}
-<|SECTION:SCENE DESCRIPTION|>
-{{ scene.description }}
-<|CLOSE_SECTION|>
-{% endif -%}
-{# TASK #}<|SECTION:TASK|>
+{% endfor -%}
+{% endset %}
+<|SECTION:TASK|>
 This is a roleplaying session between {{main_character.name}} and {{formatted_names}}.
-
-Content Classification: This is a specific moment from {{ scene.context }}
 
 Continue the dialogue and respond as the character of {{ talking_character.name }}. ONLY ACT AS {{ talking_character.name.upper() }}.
 
@@ -42,51 +24,21 @@ Based on {{ talking_character.name}}'s example dialogue style, create a continua
 
 You may chose to have {{ talking_character.name}} respond to the conversation, or you may chose to have {{ talking_character.name}} perform a new action that is in line with {{ talking_character.name}}'s character.
 
-Always contain actions in asterisks. For example, *{{ talking_character.name}} smiles*.
-Always contain dialogue in quotation marks. For example, {{ talking_character.name}}: "Hello!"
+Start your response with the character's name followed by a colon indicating the character's turn. Then write the character's dialogue and actions. Spoken words MUST be enclosed in quotation marks. For example:
+
+{% if dialogue_examples.strip() %}
+{{ dialogue_examples.strip() }}
+{% else %}
+``` example
+{{ talking_character.name }}: "... spoken dialogue ..." ... some narrative ... "... more dialogue ..."
+```
+{% endif %}
 
 {{ task_instructions }}
 
 {% if scene.count_messages() >= 5 and not talking_character.dialogue_instructions %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is informal, conversational, natural, and spontaneous, with a sense of immediacy.
 {% endif -%}
 <|CLOSE_SECTION|>
-
-<|SECTION:How to use internal notes|>
-Internal notes may be given to you to help you with consistency when writing.
-
-They may be instructions on how the character should act or simply add some context that may inform the character's next dialogue.
-<|CLOSE_SECTION|>
-{# EXTRA CONTEXT #}{% include "extra-context.jinja2" %}
-{% endset -%}
-{{ rendered_context_content }}
-{% set rendered_context_tokens = count_tokens(rendered_context_content) -%}
-{% set director_guidance = agent_context_state["director__actor_guidance"] -%}
-{% set scene_history = scene.context_history(budget=max_tokens-200-rendered_context_tokens, min_dialogue=15, sections=False, keep_director=talking_character.name) -%}
-{# RAG CONTEXT #}{% with memory_prompt = scene_history %}{% include "memory-context.jinja2" %}{% endwith %}
-{# SCENE HISTORY #}<|SECTION:SCENE|>
-{% block scene_history_block -%}
-{% if not director_guidance -%}
-{%- if actor_instructions_offset > 0 and talking_character.dialogue_instructions and scene.count_messages() > actor_instructions_offset -%}
-    {%- set _ = scene_history.insert(-actor_instructions_offset, "(Internal acting instructions for "+talking_character.name+": "+talking_character.dialogue_instructions+" "+actor_instructions+")") -%}
-{% endif -%}
-{% endif -%}
-{% for scene_line in scene_history -%}
-{{ scene_line }}
-
-{% endfor %}
 {% endblock -%}
-<|CLOSE_SECTION|>
-{% if scene.count_messages() < actor_instructions_offset or actor_instructions_offset == 0 %}
-{% if not director_guidance -%}
-{% if not talking_character.dialogue_instructions %}({% if actor_instructions %} {{ actor_instructions }}{% else %}Use an informal and colloquial register with a conversational tone. Overall, {{ talking_character.name }}'s dialog is informal, conversational, natural, and spontaneous, with a sense of immediacy.{% endif -%}){% else %}(Internal acting instructions for {{ talking_character.name }}: {{ talking_character.dialogue_instructions }}{% if actor_instructions %} {{ actor_instructions }}{% endif %}){% endif -%}
-{% endif -%}
-{% if layered_history_investigation %}
-(Internal notes - historic context: {{ layered_history_investigation }})
-{% endif -%}
-{% endif -%}
 
-{% with direct=direct_instruction, character=talking_character %}{% include "regenerate-context.jinja2" %}{% endwith %}
-
-{% if director_guidance %}# {{ talking_character.name }}'s next action: {{ director_guidance|condensed }}{% endif %}
-{% if direct_instruction -%}# {{ talking_character.name }}'s next action: {{ direct_instruction|condensed }}. You must not add additional actions.{% endif -%}
-{{ bot_token }}{{ talking_character.name }}:{{ partial_message }}
+{% block response_scaffolding %}{{ bot_token }}{{ talking_character.name }}:{{ partial_message }}{% endblock -%}

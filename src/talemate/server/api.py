@@ -19,7 +19,7 @@ from talemate.game.engine.nodes.registry import import_initial_node_definitions
 
 log = structlog.get_logger("talemate")
 
-async def websocket_endpoint(websocket, path):
+async def websocket_endpoint(websocket):
     # Create a queue for outgoing messages
     message_queue = asyncio.Queue()
     handler = WebsocketHandler(websocket, message_queue)

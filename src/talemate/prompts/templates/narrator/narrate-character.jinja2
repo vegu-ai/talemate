@@ -1,8 +1,5 @@
 {% set extra_context_content -%}
 {% include "extra-context.jinja2" %}
-<|SECTION:{{ character.name|upper }}|>
-{{ character.sheet}}
-<|CLOSE_SECTION|>
 {% endset %}
 {{ extra_context_content }}
 {% set extra_context_tokens = count_tokens(extra_context_content) %}

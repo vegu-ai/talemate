@@ -189,6 +189,96 @@ class EmitStatus(Node):
             "emitted": True,
         })
         
+@register("event/EmitSystemMessage")
+class EmitSystemMessage(EmitStatus):
+    """
+    Emits a system message
+    
+    Inputs:
+    
+    - state: The graph state
+    - message: The message text to emit
+    
+    
+    Outputs:
+    
+    - state: The graph state
+    """
+    
+    class Fields:
+        message_title = PropertyField(
+            name="message_title",
+            description="The title of the message",
+            type="str",
+            default="",
+        )
+        message = PropertyField(
+            name="message",
+            description="The message text to emit",
+            type="text",
+            default="",
+        )
+        font_color = PropertyField(
+            name="font_color",
+            description="The color of the message",
+            type="str",
+            default="grey",
+            generate_choices=lambda: COLOR_NAMES,
+        )
+        icon = PropertyField(
+            name="icon",
+            description="The icon of the message",
+            type="str",
+            default="mdi-information", # information
+        )
+        display = PropertyField(
+            name="display",
+            description="Whether to display the message",
+            type="str",
+            default="text",
+            generate_choices=lambda: ["text", "tonal", "flat"],
+        )
+        as_markdown = PropertyField(
+            name="as_markdown",
+            description="Whether to render the message as markdown",
+            type="bool",
+            default=False,
+        )
+    
+    def __init__(self, title="Emit System Message", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("state")
+        self.add_input("message", socket_type="str", optional=True)
+        self.add_input("message_title", socket_type="str", optional=True)
+        self.set_property("message_title", "")
+        self.set_property("message", "")
+        self.set_property("font_color", "grey")
+        self.set_property("icon", "mdi-information")
+        self.set_property("display", "text")
+        self.set_property("as_markdown", False)
+        self.add_output("state")
+        
+    async def run(self, state: GraphState):
+        state = self.get_input_value("state")
+        message = self.require_input("message")
+        message_title = self.get_input_value("message_title")
+        font_color = self.get_property("font_color")
+        icon = self.get_property("icon")
+        display = self.get_property("display")
+        as_markdown = self.get_property("as_markdown")
+        emit("system", message=message, meta={
+            "color": font_color,
+            "icon": icon,
+            "title": message_title,
+            "display": display,
+            "as_markdown": as_markdown,
+        })
+        self.set_output_values({
+            "state": state,
+        })
+        
 @register("event/EmitStatusConditional")
 class EmitStatusConditional(EmitStatus):
     """

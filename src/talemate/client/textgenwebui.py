@@ -195,7 +195,8 @@ class TextGeneratorWebuiClient(ClientBase):
             payload = json.loads(event.data)
             chunk = payload['choices'][0]['text']
             response += chunk
-            
+            self.update_request_tokens(self.count_tokens(chunk))
+        
         return response
 
 

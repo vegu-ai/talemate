@@ -23,7 +23,7 @@ from talemate.emit.signals import handlers as signal_handlers
 from talemate.prompts.base import Prompt
 
 from .commands import *  # noqa
-from .context import VIS_TYPES, VisualContext, visual_context
+from .context import VIS_TYPES, VisualContext, VisualContextState, visual_context
 from .handlers import HANDLERS
 from .schema import RESOLUTION_MAP, RenderSettings
 from .style import MAJOR_STYLES, STYLE_MAP, Style, combine_styles
@@ -39,6 +39,14 @@ BACKENDS = [
     {"value": mixin_backend, "label": mixin["label"]}
     for mixin_backend, mixin in HANDLERS.items()
 ]
+
+PROMPT_OUTPUT_FORMAT = """
+### Positive
+{positive_prompt}
+
+### Negative
+{negative_prompt}
+"""
 
 log = structlog.get_logger("talemate.agents.visual")
 
@@ -425,10 +433,9 @@ class VisualBase(Agent):
         self, format: str = "portrait", prompt: str = None, automatic: bool = False
     ):
 
-        context = visual_context.get()
-
-        if not self.enabled:
-            return
+        context:VisualContextState = visual_context.get()
+        
+        log.debug("visual generate", context=context)
 
         if automatic and not self.allow_automatic_generation:
             return
@@ -459,7 +466,7 @@ class VisualBase(Agent):
 
         thematic_style = self.default_style
         vis_type_styles = self.vis_type_styles(context.vis_type)
-        prompt = self.prepare_prompt(prompt, [vis_type_styles, thematic_style])
+        prompt:Style = self.prepare_prompt(prompt, [vis_type_styles, thematic_style])
 
         if context.vis_type == VIS_TYPES.CHARACTER:
             prompt.keywords.append("character portrait")
@@ -481,7 +488,34 @@ class VisualBase(Agent):
             format = "portrait"
 
         context.format = format
-
+        
+        can_generate_image = self.enabled and self.backend_ready
+        
+        if not context.prompt_only and not can_generate_image:
+            emit("status", "Visual agent is not ready for image generation, will output prompt instead.", status="warning")
+        
+        # if prompt_only, we don't need to generate an image
+        # instead we emit a system message with the prompt
+        if context.prompt_only or not can_generate_image:
+            emit(
+                "system",
+                message=PROMPT_OUTPUT_FORMAT.format(
+                    positive_prompt=prompt.positive_prompt,
+                    negative_prompt=prompt.negative_prompt,
+                ),
+                meta={
+                    "icon": "mdi-image-text",
+                    "color": "highlight7",
+                    "title": f"Visual Prompt - {context.title}",
+                    "display": "tonal",
+                    "as_markdown": True,
+                }
+            )
+            return
+        
+        if not can_generate_image:
+            return
+        
         # Call the backend specific generate function
 
         backend = self.backend
@@ -541,8 +575,16 @@ class VisualBase(Agent):
 
         return response.strip()
 
-    async def generate_environment_background(self, instructions: str = None):
-        with VisualContext(vis_type=VIS_TYPES.ENVIRONMENT, instructions=instructions):
+    async def generate_environment_background(
+        self,
+        instructions: str = None,
+        prompt_only: bool = False,
+    ):
+        with VisualContext(
+            vis_type=VIS_TYPES.ENVIRONMENT,
+            instructions=instructions,
+            prompt_only=prompt_only,
+        ):
             await self.generate(format="landscape")
 
     async def generate_character_portrait(
@@ -550,12 +592,14 @@ class VisualBase(Agent):
         character_name: str,
         instructions: str = None,
         replace: bool = False,
+        prompt_only: bool = False,
     ):
         with VisualContext(
             vis_type=VIS_TYPES.CHARACTER,
             character_name=character_name,
             instructions=instructions,
             replace=replace,
+            prompt_only=prompt_only,
         ):
             await self.generate(format="portrait")
 

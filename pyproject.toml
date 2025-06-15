@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "talemate"
-version = "0.30.0"
+version = "0.31.0"
 description = "AI-backed roleplay and narrative tools"
 authors = ["VeguAITools"]
 license = "GNU Affero General Public License v3.0"
@@ -34,10 +34,10 @@ blinker = "^1.6.2"
 pydantic = "<3"
 beautifulsoup4 = "^4.12.2"
 python-dotenv = "^1.0.0"
-websockets = "^11.0.3"
 structlog = "^23.1.0"
-runpod = "^1.2.0"
-google-cloud-aiplatform = ">=1.50.0"
+# 1.7.11 breaks subprocess stuff ???
+runpod = "1.7.10"
+google-genai = "^1.20.0"
 nest_asyncio = "^1.5.7"
 isodate = ">=0.6.1"
 thefuzz = ">=0.20.0"
@@ -51,10 +51,11 @@ pyyaml = ">=6.0"
 limits = ">=5.0"
 diff-match-patch = ">=20241021"
 sseclient-py = "^1.8.0"
+ollama = "^0.5.1"
 
 # ChromaDB
-chromadb = ">=0.4.17,<1"
-InstructorEmbedding = "^1.0.1"
+chromadb = "^1.0.12"
+InstructorEmbedding = {url = "https://github.com/vegu-ai/instructor-embedding/archive/refs/heads/202506-fixes.zip"}
 torch = "^2.7.0"
 torchaudio = "^2.7.0"
 # locked for instructor embeddings

@@ -1,6 +1,6 @@
 import pydantic
 import structlog
-from cohere import AsyncClient
+from cohere import AsyncClientV2
 
 from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults
 from talemate.client.registry import register
@@ -120,7 +120,7 @@ class CohereClient(ClientBase):
 
     def set_client(self, max_token_length: int = None):
         if not self.cohere_api_key:
-            self.client = AsyncClient("sk-1111")
+            self.client = AsyncClientV2("sk-1111")
             log.error("No cohere API key set")
             if self.api_key_status:
                 self.api_key_status = False
@@ -136,7 +136,7 @@ class CohereClient(ClientBase):
 
         model = self.model_name
 
-        self.client = AsyncClient(self.cohere_api_key)
+        self.client = AsyncClientV2(self.cohere_api_key)
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -168,7 +168,7 @@ class CohereClient(ClientBase):
         self.set_client(max_token_length=self.max_token_length)
 
     def response_tokens(self, response: str):
-        return count_tokens(response.text)
+        return count_tokens(response)
 
     def prompt_tokens(self, prompt: str):
         return count_tokens(prompt)
@@ -227,21 +227,43 @@ class CohereClient(ClientBase):
             parameters=parameters,
             system_message=system_message,
         )
+        
+        messages = [
+            {
+                "role": "system",
+                "content": system_message,
+            },
+            {
+                "role": "user",
+                "content": human_message,
+            }
+        ]
 
         try:
-            response = await self.client.chat(
+            # Cohere's `chat_stream` returns an **asynchronous generator** that can be
+            # consumed directly with `async for`. It is not an asynchronous context
+            # manager, so attempting to use `async with` raises a `TypeError` as seen
+            # in issue logs. We therefore iterate over the generator directly.
+
+            stream = self.client.chat_stream(
                 model=self.model_name,
-                preamble=system_message,
-                message=human_message,
+                messages=messages,
                 **parameters,
             )
+
+            response = ""
+
+            async for event in stream:
+                if event and event.type == "content-delta":
+                    chunk = event.delta.message.content.text
+                    response += chunk
+                    # Track token usage incrementally
+                    self.update_request_tokens(self.count_tokens(chunk))
 
             self._returned_prompt_tokens = self.prompt_tokens(prompt)
             self._returned_response_tokens = self.response_tokens(response)
 
-            log.debug("generated response", response=response.text)
-
-            response = response.text
+            log.debug("generated response", response=response)
 
             if expected_response and expected_response.startswith("{"):
                 if response.startswith("```json") and response.endswith("```"):

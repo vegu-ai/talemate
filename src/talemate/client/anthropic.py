@@ -31,7 +31,7 @@ SUPPORTED_MODELS = [
 class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "claude-3-5-sonnet-latest"
-
+    double_coercion: str = None
 
 @register()
 class AnthropicClient(ClientBase):
@@ -60,6 +60,10 @@ class AnthropicClient(ClientBase):
         super().__init__(**kwargs)
 
         handlers["config_saved"].connect(self.on_config_saved)
+
+    @property
+    def can_be_coerced(self) -> bool:
+        return True
 
     @property
     def anthropic_api_key(self):
@@ -103,6 +107,7 @@ class AnthropicClient(ClientBase):
 
         data={
             "error_action": error_action.model_dump() if error_action else None,
+            "double_coercion": self.double_coercion,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
         }
@@ -158,6 +163,9 @@ class AnthropicClient(ClientBase):
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
             
+        if "double_coercion" in kwargs:
+            self.double_coercion = kwargs["double_coercion"]
+            
         self._reconfigure_common_parameters(**kwargs)
 
     def on_config_saved(self, event):
@@ -175,13 +183,10 @@ class AnthropicClient(ClientBase):
         self.emit_status()
 
     def prompt_template(self, system_message: str, prompt: str):
-        if "<|BOT|>" in prompt:
-            _, right = prompt.split("<|BOT|>", 1)
-            if right:
-                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
-            else:
-                prompt = prompt.replace("<|BOT|>", "")
-
+        """
+        Anthropic handles the prompt template internally, so we just
+        give the prompt as is.
+        """
         return prompt
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
@@ -191,17 +196,17 @@ class AnthropicClient(ClientBase):
 
         if not self.anthropic_api_key:
             raise Exception("No anthropic API key set")
-
-        right = None
-        expected_response = None
-        try:
-            _, right = prompt.split("\nStart your response with: ")
-            expected_response = right.strip()
-        except (IndexError, ValueError):
-            pass
-
-        human_message = {"role": "user", "content": prompt.strip()}
+        
+        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        
         system_message = self.get_system_message(kind)
+        
+        messages = [
+            {"role": "user", "content": prompt.strip()}
+        ]
+        
+        if coercion_prompt:
+            messages.append({"role": "assistant", "content": coercion_prompt.strip()})
 
         self.log.debug(
             "generate",
@@ -209,28 +214,39 @@ class AnthropicClient(ClientBase):
             parameters=parameters,
             system_message=system_message,
         )
+        
+        completion_tokens = 0
+        prompt_tokens = 0
 
         try:
-            response = await self.client.messages.create(
+            stream = await self.client.messages.create(
                 model=self.model_name,
                 system=system_message,
-                messages=[human_message],
+                messages=messages,
+                stream=True,
                 **parameters,
             )
+            
+            response = ""
+            
+            async for event in stream:
+                
+                if event.type == "content_block_delta":
+                    content = event.delta.text
+                    response += content
+                    self.update_request_tokens(self.count_tokens(content))
+                    
+                elif event.type == "message_start":
+                    prompt_tokens = event.message.usage.input_tokens
+                    
+                elif event.type == "message_delta":
+                    completion_tokens += event.usage.output_tokens
+                
 
-            self._returned_prompt_tokens = self.prompt_tokens(response)
-            self._returned_response_tokens = self.response_tokens(response)
+            self._returned_prompt_tokens = prompt_tokens
+            self._returned_response_tokens = completion_tokens
 
-            log.debug("generated response", response=response.content)
-
-            response = response.content[0].text
-
-            if expected_response and expected_response.startswith("{"):
-                if response.startswith("```json") and response.endswith("```"):
-                    response = response[7:-3].strip()
-
-            if right and response.startswith(right):
-                response = response[len(right) :].strip()
+            log.debug("generated response", response=response)
 
             return response
         except PermissionDeniedError as e:

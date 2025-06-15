@@ -3,6 +3,7 @@ import random
 import uuid
 from typing import TYPE_CHECKING, Tuple
 import dataclasses
+import traceback
 
 import pydantic
 import structlog
@@ -328,7 +329,14 @@ class AssistantMixin:
             if not content.startswith(generation_context.character + ":"):
                 content = generation_context.character + ": " + content
             content = util.strip_partial_sentences(content)
-            emission.response  = await editor.cleanup_character_message(content, generation_context.character.name)
+            
+            character = self.scene.get_character(generation_context.character)
+            
+            if not character:
+                log.warning("Character not found", character=generation_context.character)
+                return content
+            
+            emission.response  = await editor.cleanup_character_message(content, character)
             await async_signals.get("agent.creator.contextual_generate.after").send(emission)
             return emission.response
         
@@ -447,6 +455,7 @@ class AssistantMixin:
         )
 
         continuing_message = False
+        message = None
         
         try:
             message = self.scene.history[-1]
@@ -470,6 +479,7 @@ class AssistantMixin:
             "can_coerce": self.client.can_be_coerced,
             "response_length": response_length,
             "continuing_message": continuing_message,
+            "message": message,
             "anchor": anchor,
             "non_anchor": non_anchor,
             "prefix": prefix,
@@ -675,7 +685,7 @@ class AssistantMixin:
             
             emit("status", f"Scene forked", status="success")            
         except Exception as e:
-            log.exception("Scene fork failed", exc=e)
+            log.error("Scene fork failed", exc=traceback.format_exc())
             emit("status", "Scene fork failed", status="error")
         
         

@@ -46,9 +46,10 @@
                             label="API Key"></v-text-field>
                         </v-col>
                       </v-row>
-                      <v-select v-model="client.model"
-                        v-if="clientMeta().manual_model && clientMeta().manual_model_choices"
-                        :items="clientMeta().manual_model_choices" label="Model"></v-select>
+                      <!-- MODEL -->
+                      <v-combobox v-model="client.model"
+                        v-if="clientMeta().manual_model && modelChoices"
+                        :items="modelChoices" label="Model"></v-combobox>
                       <v-text-field v-model="client.model_name" v-else-if="clientMeta().manual_model"
                         label="Manually specify model name"
                         hint="It looks like we're unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you're locally serving a model."></v-text-field>
@@ -115,7 +116,7 @@
                       The longer the coercion, the more likely it will coerce the model to accept the instruction, but it may also make the response less natural or affect accuracy. <span class="text-warning">Only set this if you are actually getting hard refusals from the model.</span>
                     </div>
                   </v-alert>
-                  <div class="mt-1" v-if="clientMeta().requires_prompt_template">
+                  <div class="mt-1" v-if="client.can_be_coerced">
                     <v-textarea v-model="client.double_coercion" rows="2" max-rows="3" auto-grow label="Coercion" placeholder="Certainly: "
                       hint=""></v-textarea>
                   </div>
@@ -198,7 +199,7 @@ export default {
           value: 'coercion',
           icon: 'mdi-account-lock-open',
           condition: () => {
-            return this.clientMeta().requires_prompt_template;
+            return this.client.can_be_coerced;
           },
         },
         system_prompts: {
@@ -213,6 +214,13 @@ export default {
     availableTabs() {
       return Object.values(this.tabs).filter(tab => !tab.condition || tab.condition());
     },
+    modelChoices() {
+      // comes from either client.manual_model_choices or clientMeta().manual_model_choices
+      if (this.client.manual_model_choices && this.client.manual_model_choices.length > 0) {
+        return this.client.manual_model_choices;
+      }
+      return this.clientMeta().manual_model_choices;
+    }
   },
   watch: {
     'state.dialog': {

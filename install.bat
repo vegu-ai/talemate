@@ -132,11 +132,11 @@ ECHO Installing pip...
 )
 
 REM Upgrade pip to latest
-"%PYTHON%" -m pip install --upgrade pip || CALL :die "Failed to upgrade pip in embedded Python."
+"%PYTHON%" -m pip install --no-warn-script-location --upgrade pip || CALL :die "Failed to upgrade pip in embedded Python."
 
 REM ---------[ Install virtualenv ]---------
 ECHO Installing virtualenv...
-"%PYTHON%" -m pip install virtualenv || (
+"%PYTHON%" -m pip install --no-warn-script-location virtualenv || (
     CALL :die "virtualenv installation failed."
 )
 
@@ -151,10 +151,10 @@ CALL talemate_env\Scripts\activate
 
 REM ---------[ Backend dependencies ]---------
 ECHO Upgrading pip and setuptools inside venv...
-python -m pip install --upgrade pip setuptools || CALL :die "Failed to upgrade pip/setuptools in venv."
+python -m pip install --no-warn-script-location --upgrade pip setuptools || CALL :die "Failed to upgrade pip/setuptools in venv."
 
 ECHO Installing Poetry
-python -m pip install "poetry==2.1.3" -U || CALL :die "Failed to install Poetry & rapidfuzz."
+python -m pip install --no-warn-script-location "poetry==2.1.3" -U || CALL :die "Failed to install Poetry & rapidfuzz."
 
 ECHO Installing backend dependencies via Poetry...
 python -m poetry install

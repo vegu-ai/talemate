@@ -5,9 +5,14 @@ import structlog
 import tiktoken
 from openai import AsyncOpenAI, PermissionDeniedError
 
-from talemate.client.base import ClientBase, ErrorAction, CommonDefaults
+from talemate.client.base import ClientBase, ErrorAction, CommonDefaults, ExtraField
 from talemate.client.registry import register
-from talemate.config import load_config
+from talemate.client.remote import (
+    EndpointOverride,
+    EndpointOverrideMixin,
+    endpoint_override_extra_fields,
+)
+from talemate.config import Client as BaseClientConfig, load_config
 from talemate.emit import emit
 from talemate.emit.signals import handlers
 
@@ -99,13 +104,15 @@ def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0
     return num_tokens
 
 
-class Defaults(CommonDefaults, pydantic.BaseModel):
+class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "gpt-4o"
 
+class ClientConfig(EndpointOverride, BaseClientConfig):
+    pass
 
 @register()
-class OpenAIClient(ClientBase):
+class OpenAIClient(EndpointOverrideMixin, ClientBase):
     """
     OpenAI client for generating text.
     """
@@ -115,7 +122,8 @@ class OpenAIClient(ClientBase):
     auto_break_repetition_enabled = False
     # TODO: make this configurable?
     decensor_enabled = False
-
+    config_cls = ClientConfig
+    
     class Meta(ClientBase.Meta):
         name_prefix: str = "OpenAI"
         title: str = "OpenAI"
@@ -123,10 +131,11 @@ class OpenAIClient(ClientBase):
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
-
+        extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
     def __init__(self, model="gpt-4o", **kwargs):
         self.model_name = model
         self.api_key_status = None
+        self._reconfigure_endpoint_override(**kwargs)
         self.config = load_config()
         super().__init__(**kwargs)
 
@@ -189,7 +198,7 @@ class OpenAIClient(ClientBase):
         )
 
     def set_client(self, max_token_length: int = None):
-        if not self.openai_api_key:
+        if not self.openai_api_key and not self.endpoint_override_base_url_configured:
             self.client = AsyncOpenAI(api_key="sk-1111")
             log.error("No OpenAI API key set")
             if self.api_key_status:
@@ -206,7 +215,7 @@ class OpenAIClient(ClientBase):
 
         model = self.model_name
 
-        self.client = AsyncOpenAI(api_key=self.openai_api_key)
+        self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
         if model == "gpt-3.5-turbo":
             self.max_token_length = min(max_token_length or 4096, 4096)
         elif model == "gpt-4":
@@ -244,6 +253,7 @@ class OpenAIClient(ClientBase):
             self.enabled = bool(kwargs["enabled"])
 
         self._reconfigure_common_parameters(**kwargs)
+        self._reconfigure_endpoint_override(**kwargs)
 
     def on_config_saved(self, event):
         config = event.data
@@ -275,7 +285,7 @@ class OpenAIClient(ClientBase):
         Generates text from the given prompt and parameters.
         """
 
-        if not self.openai_api_key:
+        if not self.openai_api_key and not self.endpoint_override_base_url_configured:
             raise Exception("No OpenAI API key set")
 
         # only gpt-4-* supports enforcing json object

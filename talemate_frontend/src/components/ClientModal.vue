@@ -55,7 +55,7 @@
                         hint="It looks like we're unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you're locally serving a model."></v-text-field>
                     </v-col>
                   </v-row>
-                  <v-row v-for="field in clientMeta().extra_fields" :key="field.name">
+                  <v-row v-for="field in generalExtraFields" :key="field.name">
                     <v-col cols="12">
                       <v-text-field v-model="client[field.name]" v-if="field.type === 'text'" :label="field.label"
                         :rules="[rules.required]" :hint="field.description"></v-text-field>
@@ -131,6 +131,18 @@
                     scope="client"
                   >
                   </AppConfigPresetsSystemPrompts>
+                </v-window-item>
+                <!-- EXTRA FIELD GROUPS, ONE WINDOW ITEM PER GROUP -->
+                <v-window-item v-for="group in extraFieldGroups" :key="group.name" :value="group.name">
+                  <v-alert v-if="group.description" color="muted" variant="text" density="compact" :icon="group.icon" class="mb-2 pre-wrap">{{ group.description.replace(/{client_type}/g, client.type) }}</v-alert>
+                  <v-row v-for="field in extraFieldsByGroup[group.name]" :key="field.name">
+                    <v-col cols="12">
+                      <!-- handle `text`, `bool`, `password` -->
+                      <v-text-field v-if="field.type === 'text'" v-model="client[field.name]" :label="field.label" :hint="field.description"></v-text-field>
+                      <v-checkbox v-else-if="field.type === 'bool'" v-model="client[field.name]" :label="field.label" :hint="field.description"></v-checkbox>
+                      <v-text-field v-else-if="field.type === 'password'" v-model="client[field.name]" :label="field.label" :hint="field.description" type="password"></v-text-field>
+                    </v-col>
+                  </v-row>
                 </v-window-item>
               </v-window>
 
@@ -212,7 +224,15 @@ export default {
   },
   computed: {
     availableTabs() {
-      return Object.values(this.tabs).filter(tab => !tab.condition || tab.condition());
+      const tabs = Object.values(this.tabs).filter(tab => !tab.condition || tab.condition());
+      const extraFields = this.extraFieldGroups.map(group => {
+        return {
+          title: group.label,
+          value: group.name,
+          icon: group.icon,
+        };
+      });
+      return [...tabs, ...extraFields];
     },
     modelChoices() {
       // comes from either client.manual_model_choices or clientMeta().manual_model_choices
@@ -220,6 +240,43 @@ export default {
         return this.client.manual_model_choices;
       }
       return this.clientMeta().manual_model_choices;
+    },
+    generalExtraFields() {
+      // returns extra fields that have a null group and are to be shown in the general tab
+      if (!this.clientMeta().extra_fields) {
+        return [];
+      }
+      return Object.values(this.clientMeta().extra_fields).filter(field => !field.group);
+    },
+    extraFieldGroups() {
+      // returns an array of group objects from the extra fields, carefully only entering each group
+      // once based on the group name
+      const groups = {};
+      if (!this.clientMeta().extra_fields) {
+        return [];
+      }
+      Object.values(this.clientMeta().extra_fields).forEach(field => {
+        if (field.group) {
+          groups[field.group.name] = field.group;
+        }
+      });
+      return Object.values(groups);
+    },
+    extraFieldsByGroup() {
+      // returns an object with the group name as the key and the fields as the value
+      const fieldsByGroup = {};
+      if (!this.clientMeta().extra_fields) {
+        return {};
+      }
+      Object.values(this.clientMeta().extra_fields).forEach(field => {
+        if (field.group) {
+          if (!fieldsByGroup[field.group.name]) {
+            fieldsByGroup[field.group.name] = [];
+          }
+          fieldsByGroup[field.group.name].push(field);
+        }
+      });
+      return fieldsByGroup;
     }
   },
   watch: {
@@ -384,5 +441,8 @@ export default {
   white-space: pre-wrap;
   font-family: monospace;
   font-size: 0.8rem;
+}
+.pre-wrap {
+  white-space: pre-wrap;
 }
 </style>

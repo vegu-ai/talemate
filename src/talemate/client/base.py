@@ -25,6 +25,7 @@ from talemate.client.ratelimit import CounterRateLimiter
 from talemate.context import active_scene
 from talemate.emit import emit
 from talemate.exceptions import SceneInactiveError, GenerationCancelled
+import talemate.ux.schema as ux_schema
 
 from talemate.client.system_prompts import SystemPrompts
 
@@ -91,6 +92,7 @@ class ExtraField(pydantic.BaseModel):
     required: bool
     description: str
     group: FieldGroup | None = None
+    note: ux_schema.Note | None = None
 
 class ParameterReroute(pydantic.BaseModel):
     talemate_parameter: str

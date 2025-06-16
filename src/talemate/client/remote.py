@@ -3,6 +3,9 @@ import structlog
 
 from .base import FieldGroup, ExtraField
 
+import talemate.ux.schema as ux_schema
+
+
 log = structlog.get_logger(__name__)
 
 __all__ = [
@@ -29,7 +32,7 @@ class EndpointOverrideGroup(FieldGroup):
     name: str = "endpoint_override"
     label: str = "Endpoint Override"
     description: str = ("Override the default base URL used by this client to access the {client_type} service API.\n\n"
-                        "SECURITY WARNING: Provide an override only if you fully trust the endpoint. When set, any {client_type} API key defined in the global application settings is deliberately ignored to avoid accidental credential leakage. "
+                        "IMPORTANT: Provide an override only if you fully trust the endpoint. When set, the {client_type} API key defined in the global application settings is deliberately ignored to avoid accidental credential leakage. "
                         "If the override endpoint requires an API key, enter it below.")
     icon: str = "mdi-api"
 
@@ -49,6 +52,10 @@ class EndpointOverrideAPIKeyField(EndpointOverrideField):
     label: str = "API Key"
     required: bool = False
     description: str = "Override the API key for the remote service"
+    note: ux_schema.Note = pydantic.Field(default_factory=lambda: ux_schema.Note(
+        text="This is NOT the API key for the official {client_type} API. It is only used when overriding the base URL. The official {client_type} API key can be configured in the application settings.",
+        color="warning",
+    ))
 
 
 class EndpointOverrideMixin:

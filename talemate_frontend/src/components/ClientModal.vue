@@ -141,6 +141,8 @@
                       <v-text-field v-if="field.type === 'text'" v-model="client[field.name]" :label="field.label" :hint="field.description"></v-text-field>
                       <v-checkbox v-else-if="field.type === 'bool'" v-model="client[field.name]" :label="field.label" :hint="field.description"></v-checkbox>
                       <v-text-field v-else-if="field.type === 'password'" v-model="client[field.name]" :label="field.label" :hint="field.description" type="password"></v-text-field>
+                    
+                      <v-alert v-if="field.note" :color="field.note.color" variant="text" density="compact" :icon="field.note.icon" class="mt-2 pre-wrap text-caption">{{ field.note.text.replace(/{client_type}/g, client.type) }}</v-alert>
                     </v-col>
                   </v-row>
                 </v-window-item>

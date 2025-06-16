@@ -1,6 +1,8 @@
 <template>
     <v-fade-transition>
-        <v-chip v-if="requestInformation && (!requestInformation.end_time || requestInformation.age < timeout)" :color="color" label size="x-small" variant="text" class="ml-1" prepend-icon="mdi-progress-download">{{ formattedRate }} t/s</v-chip>
+        <v-chip v-if="requestInformation && (!requestInformation.end_time || requestInformation.age < timeout)"
+            :color="color" label size="x-small" variant="text" class="ml-1" prepend-icon="mdi-progress-download">
+            ~{{formattedRate }} t/s</v-chip>
     </v-fade-transition>
 </template>
 
@@ -22,10 +24,10 @@ export default {
             return this.requestInformation.rate.toFixed(2)
         },
         color() {
-            if(this.requestInformation.status === "completed") {
+            if (this.requestInformation.status === "completed") {
                 return "muted"
             }
-            if(this.requestInformation.status === "stopped") {
+            if (this.requestInformation.status === "stopped") {
                 return "error"
             }
             return "highlight3"

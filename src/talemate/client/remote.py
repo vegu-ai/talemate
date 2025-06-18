@@ -95,7 +95,7 @@ class EndpointOverrideMixin:
 
     def _reconfigure_endpoint_override(self, **kwargs):
         if "override_base_url" in kwargs:
-            orig = self.override_base_url
+            orig = getattr(self, "override_base_url", None)
             self.override_base_url = kwargs["override_base_url"]
             if getattr(self, "client", None) and orig != self.override_base_url:
                 log.info("Reconfiguring client base URL", new=self.override_base_url)

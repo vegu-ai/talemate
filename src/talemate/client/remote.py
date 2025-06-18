@@ -62,13 +62,6 @@ class EndpointOverrideMixin:
     override_base_url: str | None = None
     override_api_key: str | None = None
     
-    def set_client_base_url(self, base_url: str | None):
-        if getattr(self, "client", None):
-            try:
-                self.client.base_url = base_url
-            except Exception as e:
-                log.error("Error setting client base URL", error=e, client=self.client_type)
-        
     def set_client_api_key(self, api_key: str | None):
         if getattr(self, "client", None):
             try:
@@ -102,8 +95,12 @@ class EndpointOverrideMixin:
 
     def _reconfigure_endpoint_override(self, **kwargs):
         if "override_base_url" in kwargs:
+            orig = self.override_base_url
             self.override_base_url = kwargs["override_base_url"]
-            self.set_client_base_url(self.override_base_url)
+            if getattr(self, "client", None) and orig != self.override_base_url:
+                log.info("Reconfiguring client base URL", new=self.override_base_url)
+                self.set_client(kwargs.get("max_token_length"))
+            
         if "override_api_key" in kwargs:
             self.override_api_key = kwargs["override_api_key"]
             self.set_client_api_key(self.override_api_key)

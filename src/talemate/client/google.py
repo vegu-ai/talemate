@@ -168,7 +168,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
                 threshold="BLOCK_NONE",
             ),
             genai_types.SafetySetting(
-                category="HARM_CATEGORY_UNSPECIFIED",
+                category="HARM_CATEGORY_CIVIC_INTEGRITY",
                 threshold="BLOCK_NONE",
             ),
         ]
@@ -276,7 +276,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
         self.max_token_length = max_token_length or 16384
 
-        if self.vertexai_ready:
+        if self.vertexai_ready and not self.developer_api_ready:
             self.client = genai.Client(
                 vertexai=True,
                 project=self.google_project_id,
@@ -357,7 +357,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         if coercion_prompt:
             contents.append(
                 genai_types.Content(
-                    role="assistant",
+                    role="model",
                     parts=[
                         genai_types.Part.from_text(
                             text=coercion_prompt,

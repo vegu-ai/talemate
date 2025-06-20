@@ -14,12 +14,14 @@ import structlog
 
 import talemate.util as util
 from talemate.client.base import (
-    STOPPING_STRINGS,
     ClientBase,
     Defaults,
     ParameterReroute,
+    ClientEmbeddingsStatus
 )
 from talemate.client.registry import register
+import talemate.emit.async_signals as async_signals
+
 
 if TYPE_CHECKING:
     from talemate.agents.visual import VisualBase
@@ -44,6 +46,9 @@ class KoboldEmbeddingFunction(EmbeddingFunction):
         """
         Embed a list of input texts using the KoboldCPP embeddings endpoint.
         """
+        
+        log.debug("KoboldCppEmbeddingFunction", api_url=self.api_url, model_name=self.model_name)
+        
         # Prepare the request payload for KoboldCPP. Include model name if required.
         payload = {"input": texts}
         if self.model_name is not None:
@@ -169,15 +174,19 @@ class KoboldCppClient(ClientBase):
         return True
     
     @property
-    def embeddings_function(self):
+    def embeddings_model_name(self):
+        return getattr(self, "_embeddings_model_name", None)
+    
+    @property
+    def embeddings_url(self) -> str:
         if self.is_openai:
-            # join /embeddings to url
-            base_url = urljoin(self.api_url, "embeddings")
+            return urljoin(self.api_url, "embeddings")
         else:
-            # join /api/extra/embeddings to url
-            base_url = urljoin(self.api_url, "api/extra/embeddings")
-        
-        return KoboldEmbeddingFunction(base_url)
+            return urljoin(self.api_url, "api/extra/embeddings")
+    
+    @property
+    def embeddings_function(self):
+        return KoboldEmbeddingFunction(self.embeddings_url, self.embeddings_model_name)
     
     @property
     def embeddings_status(self):
@@ -204,14 +213,62 @@ class KoboldCppClient(ClientBase):
         self.api_key = kwargs.get("api_key", self.api_key)
         self.ensure_api_endpoint_specified()
 
-    async def get_model_name(self):
-        self.ensure_api_endpoint_specified()
+    async def get_embeddings_model_name(self):
+        # if self._embeddings_model_name is set, return it
+        if self.embeddings_model_name:
+            return self.embeddings_model_name
+        
+        # otherwise, get the model name by doing a request to
+        # the embeddings endpoint with a single character
+        
         async with httpx.AsyncClient() as client:
-            response = await client.get(
-                self.api_url_for_model,
+            response = await client.post(
+                self.embeddings_url,
+                json={"input": ["test"]},
                 timeout=2,
                 headers=self.request_headers,
             )
+            
+        response_data = response.json()
+        self._embeddings_model_name = response_data.get("model")
+        return self._embeddings_model_name
+        
+    async def get_embeddings_status(self):
+        url_version = urljoin(self.api_url, "api/extra/version")
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url_version, timeout=2)
+            response_data = response.json()
+            self._embeddings_status = response_data.get("embeddings", False)
+            
+            if not self.embeddings_status or self.embeddings_model_name:
+                return
+                
+            await self.get_embeddings_model_name()
+            
+            log.debug("KoboldCpp embeddings are enabled, suggesting embeddings", model_name=self.embeddings_model_name)
+            
+            self.set_embeddings()
+        
+            await async_signals.get("client.embeddings_available").send(
+                ClientEmbeddingsStatus(
+                    client=self,
+                    embedding_name=self.embeddings_model_name,
+                )
+            )
+        
+    async def get_model_name(self):
+        self.ensure_api_endpoint_specified()
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    self.api_url_for_model,
+                    timeout=2,
+                    headers=self.request_headers,
+                )
+        except Exception:
+            self._embeddings_model_name = None
+            raise
 
         if response.status_code == 404:
             raise KeyError(f"Could not find model info at: {self.api_url_for_model}")
@@ -228,11 +285,7 @@ class KoboldCppClient(ClientBase):
         if model_name:
             model_name = model_name.split("/")[-1]
         
-        url_version = urljoin(self.api_url, "api/extra/version")
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url_version, timeout=2)
-            response_data = response.json()
-            self._embeddings_status = response_data.get("embeddings", False)
+        await self.get_embeddings_status()
 
         return model_name
 

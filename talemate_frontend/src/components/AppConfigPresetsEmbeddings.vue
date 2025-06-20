@@ -12,8 +12,8 @@
 
                 <!-- existing -->
                 <v-list-item v-for="(preset, preset_key) in config.embeddings" :key="preset_key" :value="preset_key" prepend-icon="mdi-tune">
-                    <v-list-item-title>{{ preset.model || preset.client }}</v-list-item-title>
-                    <v-list-item-subtitle>{{ preset.embeddings }}</v-list-item-subtitle>
+                    <v-list-item-title>{{ preset.model }}</v-list-item-title>
+                    <v-list-item-subtitle>{{ preset.client ? preset.client : preset.embeddings }}</v-list-item-subtitle>
                 </v-list-item>
             </v-list>
         </v-col>

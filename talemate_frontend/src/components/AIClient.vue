@@ -41,10 +41,15 @@
             </v-list-item-subtitle>
             <v-list-item-title class="text-caption">
               <div class="d-flex flex-wrap align-center">
+                <!-- client type -->
                 <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-server-outline">{{ client.type }}</v-chip>
+                <!-- max token length -->
                 <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
+                <!-- embeddings -->
+                <v-chip v-if="client.embeddings_model_name" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-cube-unfolded">{{ client.embeddings_model_name }}</v-chip>
+                <!-- override base url -->
                 <v-chip  v-if="client.data.override_base_url" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-api">{{ client.data.override_base_url }}</v-chip>
-
+                <!-- rate limit -->
                 <v-chip v-if="client.rate_limit" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-speedometer">{{ client.rate_limit }}/min</v-chip>
                 <v-menu density="compact">
                   <template v-slot:activator="{ props }">
@@ -369,6 +374,7 @@ export default {
           client.system_prompts = data.data.system_prompts;
           client.request_information = data.data.request_information;
           client.preset_group = data.data.preset_group;
+          client.embeddings_model_name = data.data.embeddings_model_name;
           for (let key in client.data.meta.extra_fields) {
             if (client.data[key] === null || client.data[key] === undefined) {
               client.data[key] = client.data.meta.defaults[key];
@@ -398,6 +404,7 @@ export default {
             system_prompts: data.data.system_prompts,
             preset_group: data.data.preset_group,
             request_information: data.data.request_information,
+            embeddings_model_name: data.data.embeddings_model_name,
           });
 
           // apply extra field defaults

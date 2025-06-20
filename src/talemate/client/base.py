@@ -11,6 +11,7 @@ import asyncio
 from typing import Callable, Union, Literal
 
 import pydantic
+import dataclasses
 import structlog
 import urllib3
 from openai import AsyncOpenAI, PermissionDeniedError
@@ -24,6 +25,8 @@ from talemate.client.model_prompts import model_prompt
 from talemate.client.ratelimit import CounterRateLimiter
 from talemate.context import active_scene
 from talemate.emit import emit
+from talemate.config import load_config, save_config, EmbeddingFunctionPreset
+import talemate.emit.async_signals as async_signals
 from talemate.exceptions import SceneInactiveError, GenerationCancelled
 import talemate.ux.schema as ux_schema
 
@@ -149,7 +152,17 @@ class RequestInformation(pydantic.BaseModel):
         if not self.end_time:
             return -1
         return time.time() - self.end_time
-    
+
+
+@dataclasses.dataclass
+class ClientEmbeddingsStatus:
+    client: "ClientBase | None" = None
+    embedding_name: str | None = None
+
+async_signals.register(
+    "client.embeddings_available",
+)
+
 class ClientBase:
     api_url: str
     model_name: str
@@ -251,9 +264,50 @@ class ClientBase:
     @property
     def embeddings_status(self):
         return False
+    
+    @property
+    def embeddings_model_name(self) -> str | None:
+        return None
+    
+    @property
+    def embeddings_url(self) -> str:
+        return None
+
+    @property
+    def embeddings_identifier(self) -> str:
+        return f"client-api/{self.name}/{self.embeddings_model_name}"
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
+        
+    def set_embeddings(self):
+        
+        log.debug("setting embeddings", client=self.name, supports_embeddings=self.supports_embeddings, embeddings_status=self.embeddings_status)
+        
+        if not self.supports_embeddings or not self.embeddings_status:
+            return
+        
+        config = load_config(as_model=True)
+        
+        key = self.embeddings_identifier
+        
+        if key in config.presets.embeddings:
+            log.debug("embeddings already set", client=self.name, key=key)
+            return config.presets.embeddings[key]
+        
+        
+        log.debug("setting embeddings", client=self.name, key=key)
+        
+        config.presets.embeddings[key] = EmbeddingFunctionPreset(
+            embeddings="client-api",
+            client=self.name,
+            model=self.embeddings_model_name,
+            distance=1,
+            distance_function="cosine",
+            local=False,
+        )
+        
+        save_config(config)
 
     def set_system_prompts(self, system_prompts: dict | SystemPrompts):
         if isinstance(system_prompts, dict):
@@ -499,6 +553,7 @@ class ClientBase:
             "manual_model_choices": getattr(self.Meta(), "manual_model_choices", []),
             "supports_embeddings": self.supports_embeddings,
             "embeddings_status": self.embeddings_status,
+            "embeddings_model_name": self.embeddings_model_name,
             "request_information": self.request_information.model_dump() if self.request_information else None,
         }
         

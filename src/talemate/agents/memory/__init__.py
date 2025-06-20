@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import asyncio
 import functools
 import hashlib
-import uuid
 import traceback
 import numpy as np
 from typing import Callable
@@ -26,6 +27,7 @@ from talemate.config import load_config
 from talemate.context import scene_is_loading, active_scene
 from talemate.emit import emit
 from talemate.emit.signals import handlers
+import talemate.emit.async_signals as async_signals
 from talemate.agents.memory.context import memory_request, MemoryRequest
 from talemate.agents.memory.exceptions import (
     EmbeddingsModelLoadError,
@@ -40,13 +42,16 @@ except ImportError:
     chromadb = None
     pass
 
+from talemate.agents.registry import register
+
+if TYPE_CHECKING:
+    from talemate.client.base import ClientEmbeddingsStatus
+
 log = structlog.get_logger("talemate.agents.memory")
 
 if not chromadb:
     log.info("ChromaDB not found, disabling Chroma agent")
 
-
-from talemate.agents.registry import register
 
 class MemoryDocument(str):
     def __new__(cls, text, meta, id, raw):
@@ -109,8 +114,11 @@ class MemoryAgent(Agent):
         self.memory_tracker = {}
         self.config = load_config()
         self._ready_to_add = False
+        
+        self.available_client_embeddings = {}
 
         handlers["config_saved"].connect(self.on_config_saved)
+        async_signals.get("client.embeddings_available").connect(self.on_client_embeddings_available)
         
         self.actions = MemoryAgent.init_actions(presets=self.get_presets)
 
@@ -156,7 +164,7 @@ class MemoryAgent(Agent):
     
     @property
     def using_client_api_embeddings(self):
-        return self.embeddings == "client-api"
+        return self.embeddings and self.embeddings.startswith("client-api/")
     
     @property
     def using_local_embeddings(self):
@@ -410,6 +418,20 @@ class MemoryAgent(Agent):
         asyncio.ensure_future(
             self.add(event.text, uid=event.memory_id, ts=event.ts, typ="history")
         )
+        
+    async def on_client_embeddings_available(self, event: "ClientEmbeddingsStatus"):
+        self.available_client_embeddings[event.client.name] = event
+        
+        current_embeddings = self.actions["_config"].config["embeddings"].value
+        
+        if current_embeddings == event.client.embeddings_identifier:
+            return
+        
+        if not self.using_client_api_embeddings or not self.ready:
+            log.warning("memory agent - client embeddings available", status="changing embeddings", old=current_embeddings, new=event.client.embeddings_identifier)
+            self.actions["_config"].config["embeddings"].value = event.client.embeddings_identifier
+            await self.emit_status()
+            await self.handle_embeddings_change()
 
     def connect(self, scene):
         super().connect(scene)

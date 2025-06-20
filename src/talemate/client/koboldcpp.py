@@ -174,10 +174,6 @@ class KoboldCppClient(ClientBase):
         return True
     
     @property
-    def embeddings_model_name(self):
-        return getattr(self, "_embeddings_model_name", None)
-    
-    @property
     def embeddings_url(self) -> str:
         if self.is_openai:
             return urljoin(self.api_url, "embeddings")
@@ -188,11 +184,6 @@ class KoboldCppClient(ClientBase):
     def embeddings_function(self):
         return KoboldEmbeddingFunction(self.embeddings_url, self.embeddings_model_name)
     
-    @property
-    def embeddings_status(self):
-        return getattr(self, "_embeddings_status", False)
-
-
     def api_endpoint_specified(self, url: str) -> bool:
         return "/v1" in self.api_url
 

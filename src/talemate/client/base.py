@@ -262,12 +262,12 @@ class ClientBase:
         return None
     
     @property
-    def embeddings_status(self):
-        return False
+    def embeddings_status(self) -> bool:
+        return getattr(self, "_embeddings_status", False)
     
     @property
     def embeddings_model_name(self) -> str | None:
-        return None
+        return getattr(self, "_embeddings_model_name", None)
     
     @property
     def embeddings_url(self) -> str:
@@ -276,6 +276,10 @@ class ClientBase:
     @property
     def embeddings_identifier(self) -> str:
         return f"client-api/{self.name}/{self.embeddings_model_name}"
+
+    def reset_embeddings(self):
+        self._embeddings_model_name = None
+        self._embeddings_status = False
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
@@ -377,6 +381,8 @@ class ClientBase:
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
+            if not self.enabled and self.supports_embeddings and self.embeddings_status:
+                self.reset_embeddings()
 
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]

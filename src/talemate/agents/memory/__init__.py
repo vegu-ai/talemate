@@ -115,8 +115,6 @@ class MemoryAgent(Agent):
         self.config = load_config()
         self._ready_to_add = False
         
-        self.available_client_embeddings = {}
-
         handlers["config_saved"].connect(self.on_config_saved)
         async_signals.get("client.embeddings_available").connect(self.on_client_embeddings_available)
         
@@ -137,8 +135,16 @@ class MemoryAgent(Agent):
     
     @property
     def get_presets(self):
+        
+        def _label(embedding:dict):
+            prefix = embedding['client'] if embedding['client'] else embedding['embeddings']
+            if embedding['model']:
+                return f"{prefix}: {embedding['model']}"
+            else:
+                return f"{prefix}"
+        
         return [
-            {"value": k, "label": f"{v['embeddings']}: {v['model'] or v['client']}"} for k,v in self.config.get("presets", {}).get("embeddings", {}).items()
+            {"value": k, "label": _label(v)} for k,v in self.config.get("presets", {}).get("embeddings", {}).items()
         ]
         
     @property
@@ -164,7 +170,7 @@ class MemoryAgent(Agent):
     
     @property
     def using_client_api_embeddings(self):
-        return self.embeddings and self.embeddings.startswith("client-api/")
+        return self.embeddings == "client-api"
     
     @property
     def using_local_embeddings(self):
@@ -265,6 +271,19 @@ class MemoryAgent(Agent):
             
         if emit_status:
             loop.run_until_complete(self.emit_status())
+
+        
+    async def on_client_embeddings_available(self, event: "ClientEmbeddingsStatus"):
+        current_embeddings = self.actions["_config"].config["embeddings"].value
+        
+        if current_embeddings == event.client.embeddings_identifier:
+            return
+        
+        if not self.using_client_api_embeddings or not self.ready:
+            log.warning("memory agent - client embeddings available", status="changing embeddings", old=current_embeddings, new=event.client.embeddings_identifier)
+            self.actions["_config"].config["embeddings"].value = event.client.embeddings_identifier
+            await self.emit_status()
+            await self.handle_embeddings_change()
 
     @set_processing
     async def set_db(self):
@@ -418,20 +437,6 @@ class MemoryAgent(Agent):
         asyncio.ensure_future(
             self.add(event.text, uid=event.memory_id, ts=event.ts, typ="history")
         )
-        
-    async def on_client_embeddings_available(self, event: "ClientEmbeddingsStatus"):
-        self.available_client_embeddings[event.client.name] = event
-        
-        current_embeddings = self.actions["_config"].config["embeddings"].value
-        
-        if current_embeddings == event.client.embeddings_identifier:
-            return
-        
-        if not self.using_client_api_embeddings or not self.ready:
-            log.warning("memory agent - client embeddings available", status="changing embeddings", old=current_embeddings, new=event.client.embeddings_identifier)
-            self.actions["_config"].config["embeddings"].value = event.client.embeddings_identifier
-            await self.emit_status()
-            await self.handle_embeddings_change()
 
     def connect(self, scene):
         super().connect(scene)
@@ -832,7 +837,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         self.collection_name = collection_name = self.make_collection_name(self.scene)
 
         log.info(
-            "chromadb agent", status="setting up db", collection_name=collection_name
+            "chromadb agent", status="setting up db", collection_name=collection_name, embeddings=self.embeddings
         )
         
         distance_function = self.distance_function

@@ -744,7 +744,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             
         if self.embeddings_client:
             details["client"] = AgentDetail(
-                icon="mdi-server-outline",
+                icon="mdi-network-outline",
                 value=self.embeddings_client,
                 description="The client to use for embeddings.",
             ).model_dump()

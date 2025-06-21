@@ -32,6 +32,30 @@ __all__ = [
 log = structlog.get_logger()
 
 
+class ArchiveEntry(pydantic.BaseModel):
+    text: str
+    start: int | None = None
+    end: int | None = None
+    ts: str | None = None
+    
+class LayeredArchiveEntry(ArchiveEntry):
+    ts_start: str | None = None
+    ts_end: str | None = None
+    
+class HistoryEntry(pydantic.BaseModel):
+    text: str
+    ts: str
+    index: int
+    layer: int
+    ts_start: str | None = None
+    ts_end: str | None = None
+    time: str | None = None
+    time_start: str | None = None
+    time_end: str | None = None
+    start: int | None = None
+    end: int | None = None
+
+
 def pop_history(
     history: list[SceneMessage],
     typ: str,
@@ -68,7 +92,7 @@ def pop_history(
         history.remove(message)
 
 
-def history_with_relative_time(history: list[str], scene_time: str) -> list[dict]:
+def history_with_relative_time(history: list[str], scene_time: str, layer: int = 0) -> list[dict]:
     """
     Cycles through a list of Archived History entries and runs iso8601_diff_to_human
 
@@ -80,16 +104,20 @@ def history_with_relative_time(history: list[str], scene_time: str) -> list[dict
     """
 
     return [
-        {
-            "text": entry["text"],
-            "ts": entry["ts"],
-            "ts_start": entry.get("ts_start", None),
-            "ts_end": entry.get("ts_end", None),
-            "time": iso8601_diff_to_human(scene_time, entry["ts"]),
-            "time_start": iso8601_diff_to_human(scene_time, entry["ts_start"] if entry.get("ts_start") else None),
-            "time_end": iso8601_diff_to_human(scene_time, entry["ts_end"] if entry.get("ts_end") else None),
-        }
-        for entry in history
+        HistoryEntry(
+            text=entry["text"],
+            ts=entry["ts"],
+            index=index,
+            layer=layer,
+            ts_start=entry.get("ts_start", None),
+            ts_end=entry.get("ts_end", None),
+            time=iso8601_diff_to_human(scene_time, entry["ts"]),
+            time_start=iso8601_diff_to_human(scene_time, entry["ts_start"] if entry.get("ts_start") else None),
+            time_end=iso8601_diff_to_human(scene_time, entry["ts_end"] if entry.get("ts_end") else None),
+            start=entry.get("start", None),
+            end=entry.get("end", None),
+        ).model_dump()
+        for index, entry in enumerate(history)
     ]
 
 
@@ -207,3 +235,20 @@ async def character_activity(scene: "Scene", since_time_passage: bool = False) -
         none_have_acted=none_have_acted,
         characters=[scene.get_character(character) for character in activity]
     )
+    
+    
+async def update_history_entry(scene: "Scene", entry: HistoryEntry) -> LayeredArchiveEntry | ArchiveEntry:
+    """
+    Updates a history entry in the scene's archived history
+    """
+    
+    if entry.layer == 0:
+        # base layer
+        archive_entry = ArchiveEntry(**entry.model_dump())
+        scene.archived_history[entry.index] = archive_entry.model_dump(exclude_none=True)
+        return archive_entry
+    else:
+        # layered history
+        layered_entry = LayeredArchiveEntry(**entry.model_dump())
+        scene.layered_history[entry.layer - 1][entry.index] = layered_entry.model_dump(exclude_none=True)
+        return layered_entry

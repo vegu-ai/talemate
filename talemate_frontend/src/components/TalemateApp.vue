@@ -105,6 +105,7 @@
             ref="worldStateManagerMenu" 
             :scene="scene"
             :worldStateTemplates="worldStateTemplates"
+            :app-busy="busy"
             @world-state-manager-navigate="onOpenWorldStateManager" 
             />
           </v-tabs-window-item>

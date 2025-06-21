@@ -1,80 +1,55 @@
 <template>
 
     <v-tabs v-model="tab" density="compact" color="secondary">
-        <v-tab key="base">Base</v-tab>
-        <v-tab v-for="(layer, index) in layers" :key="index">{{ layer.title }}</v-tab>
+        <v-tab value="base">Base</v-tab>
+        <v-tab v-for="(layer, index) in layers" :key="index" :value="`layer_${index}`">{{ layer.title }}</v-tab>
     </v-tabs>
 
-    <v-tabs-window v-model="tab">
-        <v-tabs-window-item key="base">
+    <v-window v-model="tab">
+        <v-window-item value="base">
             <v-card>
                 <v-card-text>
                     
                     <v-alert color="muted" density="compact" variant="text" icon="mdi-timer-sand-complete">
-                        Whenever the scene is summarized a new entry is added to the history.
-                        This summarization happens either when a certain length threshold is met or when the scene time advances.
+                        <p>Whenever the scene is summarized a new entry is added to the history.</p>
+                        <p>This summarization happens either when a certain length threshold is met or when the scene time advances.</p>
+                        <p class="mt-2">As summarizations happen, they themselves will be summarized, resulting in a layered history, with each layer representing a different level of detail with the <span class="text-primary">base</span> layer being the most granular.</p>
                     </v-alert>
         
-                    <v-card-actions>
-                        <v-spacer></v-spacer>
-                        <ConfirmActionInline
-                            action-label="Regenerate History"
-                            confirm-label="Confirm"
-                            color="warning"
-                            icon="mdi-refresh"
-                            :disabled="busy"
-                            @confirm="regenerate"
-                        />
-                        <v-spacer></v-spacer>
-                    </v-card-actions>
                     <p v-if="busy">
                         <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
                     </p>
                     <v-divider v-else class="mt-2"></v-divider>
         
-                    <v-sheet class="ma-4 text-caption text-center">
-                        <span class="text-muted">Total time passed:</span> {{ scene.data.scene_time }}
+                    <v-sheet class="ma-4 text-caption">
+                        <span class="text-muted">Total time passed:</span> {{ scene?.data?.scene_time || '?' }}
                     </v-sheet>
-        
-                    <v-list slim density="compact">
-                        <v-list-item v-for="(entry, index) in history" :key="index" class="text-body-2" prepend-icon="mdi-clock">
-                            <v-list-item-subtitle>{{ entry.time }}</v-list-item-subtitle>
-                            <div class="history-entry text-muted">
-                                {{ entry.text }}
-                            </div>
-                        </v-list-item>
-                    </v-list>
+
+                    <WorldStateManagerHistoryEntry v-for="(entry, index) in history" :key="index" :entry="entry" />
         
                 </v-card-text>
             </v-card>
-        </v-tabs-window-item>
-        <v-tabs-window-item v-for="(layer, index) in layers" :key="index">
+        </v-window-item>
+        <v-window-item v-for="(layer, index) in layers" :key="index" :value="`layer_${index}`">
             <v-card>
                 <v-card-text>
-                    <v-list slim density="compact">
-                        <v-list-item v-for="(entry, index) in layer.entries" :key="index" class="text-body-2" prepend-icon="mdi-clock">
-                            <v-list-item-subtitle>{{ timespan(entry) }}</v-list-item-subtitle>
-                            <div class="history-entry text-muted">
-                                {{ entry.text }}
-                            </div>
-                        </v-list-item>
-                    </v-list>
+                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index" :entry="entry" />
                 </v-card-text>
             </v-card>
-        </v-tabs-window-item>
-    </v-tabs-window>
+        </v-window-item>
+    </v-window>
 
 
 </template>
 
 <script>
+import WorldStateManagerHistoryEntry from './WorldStateManagerHistoryEntry.vue';
 
-import ConfirmActionInline from './ConfirmActionInline.vue';
 
 export default {
     name: 'WorldStateManagerHistory',
     components: {
-        ConfirmActionInline,
+        WorldStateManagerHistoryEntry,
     },
     props: {
         generationOptions: Object,
@@ -120,6 +95,7 @@ export default {
                 generation_options: this.generationOptions,
             }));
         },
+
         timespan(entry) {
             // if different display as range
             if(entry.time_start != entry.time_end) {

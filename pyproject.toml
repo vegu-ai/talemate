@@ -1,76 +1,75 @@
-[build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
-
-[tool.poetry]
+[project]
 name = "talemate"
 version = "0.30.0"
 description = "AI-backed roleplay and narrative tools"
-authors = ["VeguAITools"]
-license = "GNU Affero General Public License v3.0"
+authors = [{name = "VeguAITools"}]
+license = {text = "GNU Affero General Public License v3.0"}
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "astroid>=2.8",
+    "jedi>=0.18",
+    "black",
+    "rope>=0.22",
+    "isort>=5.10",
+    "jinja2>=3.0",
+    "openai>=1",
+    "mistralai>=0.1.8",
+    "cohere>=5.2.2",
+    "anthropic>=0.19.1",
+    "groq>=0.5.0",
+    "requests>=2.26",
+    "colorama>=0.4.6",
+    "Pillow>=9.5",
+    "httpx<1",
+    "piexif>=1.1",
+    "typing-inspect==0.8.0",
+    "typing_extensions>=4.5.0",
+    "uvicorn>=0.23",
+    "blinker>=1.6.2",
+    "pydantic<3",
+    "beautifulsoup4>=4.12.2",
+    "python-dotenv>=1.0.0",
+    "websockets>=11.0.3",
+    "structlog>=23.1.0",
+    "runpod>=1.2.0",
+    "google-cloud-aiplatform>=1.50.0",
+    "nest_asyncio>=1.5.7",
+    "isodate>=0.6.1",
+    "thefuzz>=0.20.0",
+    "tiktoken>=0.5.1",
+    "nltk>=3.8.1",
+    "huggingface-hub>=0.20.2",
+    "RestrictedPython>7.1",
+    "numpy>=2",
+    "aiofiles>=24.1.0",
+    "pyyaml>=6.0",
+    "limits>=5.0",
+    "diff-match-patch>=20241021",
+    "sseclient-py>=1.8.0",
+    # ChromaDB
+    "chromadb>=0.4.17,<1",
+    "InstructorEmbedding>=1.0.1",
+    "torch>=2.7.0",
+    "torchaudio>=2.7.0",
+    "sentence_transformers>=2.7.0",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.14"
-astroid = "^2.8"
-jedi = "^0.18"
-black = "*"
-rope = "^0.22"
-isort = "^5.10"
-jinja2 = ">=3.0"
-openai = ">=1"
-mistralai = ">=0.1.8"
-cohere = ">=5.2.2"
-anthropic = ">=0.19.1"
-groq = ">=0.5.0"
-requests = "^2.26"
-colorama = ">=0.4.6"
-Pillow = ">=9.5"
-httpx = "<1"
-piexif = "^1.1"
-typing-inspect = "0.8.0"
-typing_extensions = "^4.5.0"
-uvicorn = "^0.23"
-blinker = "^1.6.2"
-pydantic = "<3"
-beautifulsoup4 = "^4.12.2"
-python-dotenv = "^1.0.0"
-websockets = "^11.0.3"
-structlog = "^23.1.0"
-runpod = "^1.2.0"
-google-cloud-aiplatform = ">=1.50.0"
-nest_asyncio = "^1.5.7"
-isodate = ">=0.6.1"
-thefuzz = ">=0.20.0"
-tiktoken = ">=0.5.1"
-nltk = ">=3.8.1"
-huggingface-hub = ">=0.20.2"
-RestrictedPython = ">7.1"
-numpy = "^2"
-aiofiles = ">=24.1.0"
-pyyaml = ">=6.0"
-limits = ">=5.0"
-diff-match-patch = ">=20241021"
-sseclient-py = "^1.8.0"
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.2",
+    "pytest-asyncio>=0.25.3",
+    "mypy>=0.910",
+    "mkdocs-material>=9.5.27",
+    "mkdocs-awesome-pages-plugin>=2.9.2",
+    "mkdocs-glightbox>=0.4.0",
+]
 
-# ChromaDB
-chromadb = ">=0.4.17,<1"
-InstructorEmbedding = "^1.0.1"
-torch = "^2.7.0"
-torchaudio = "^2.7.0"
-# locked for instructor embeddings
-#sentence-transformers="==2.2.2"
-sentence_transformers=">=2.7.0"
-
-[tool.poetry.dev-dependencies]
-pytest = ">=6.2"
-pytest-asyncio = ">=0.25.3"
-mypy = "^0.910"
-mkdocs-material = ">=9.5.27"
-mkdocs-awesome-pages-plugin = ">=2.9.2"
-mkdocs-glightbox = ">=0.4.0"
-
-[tool.poetry.scripts]
+[project.scripts]
 talemate = "talemate:cli.main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.black]
 line-length = 88

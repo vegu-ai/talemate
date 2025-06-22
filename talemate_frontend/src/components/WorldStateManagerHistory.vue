@@ -25,6 +25,10 @@
                         <span class="text-muted">Total time passed:</span> {{ scene?.data?.scene_time || '?' }}
                     </v-sheet>
 
+                    <v-alert v-if="history.length == 0" color="muted" density="compact" variant="text" icon="mdi-timer-sand-empty">
+                        <p>No history entries yet.</p>
+                    </v-alert>
+
                     <WorldStateManagerHistoryEntry v-for="(entry, index) in history" :key="index" 
                     :entry="entry" 
                     :app-busy="appBusy" 

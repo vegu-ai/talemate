@@ -25,7 +25,13 @@
                         <span class="text-muted">Total time passed:</span> {{ scene?.data?.scene_time || '?' }}
                     </v-sheet>
 
-                    <WorldStateManagerHistoryEntry v-for="(entry, index) in history" :key="index" :entry="entry" :app-busy="appBusy" :busy="busyEntry && busyEntry === entry.id" @busy="(entry_id) => setBusyEntry(entry_id)" />
+                    <WorldStateManagerHistoryEntry v-for="(entry, index) in history" :key="index" 
+                    :entry="entry" 
+                    :app-busy="appBusy" 
+                    :app-config="appConfig" 
+                    :busy="busyEntry && busyEntry === entry.id" 
+                    @busy="(entry_id) => setBusyEntry(entry_id)" 
+                    @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
         
                 </v-card-text>
             </v-card>
@@ -33,7 +39,13 @@
         <v-window-item v-for="(layer, index) in layers" :key="index" :value="`layer_${index}`">
             <v-card>
                 <v-card-text>
-                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index" :entry="entry" :app-busy="appBusy" :busy="busyEntry && busyEntry === entry.id" @busy="(entry_id) => setBusyEntry(entry_id)" />
+                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index" 
+                    :entry="entry" 
+                    :app-busy="appBusy" 
+                    :app-config="appConfig" 
+                    :busy="busyEntry && busyEntry === entry.id" 
+                    @busy="(entry_id) => setBusyEntry(entry_id)" 
+                    @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
                 </v-card-text>
             </v-card>
         </v-window-item>
@@ -55,6 +67,7 @@ export default {
         generationOptions: Object,
         scene: Object,
         appBusy: Boolean,
+        appConfig: Object,
     },
     data() {
         return {
@@ -112,6 +125,20 @@ export default {
             }));
         },
 
+        collapseSourceEntries(layer, entry_id) {
+            console.log("collapseSourceEntries", layer, entry_id);
+            if(layer == 0) {
+                const entry = this.history.find(e => e.id === entry_id);
+                if(entry) {
+                    entry.source_entries = null;
+                }
+            } else {
+                const entry = this.layered_history[layer - 1].find(e => e.id === entry_id);
+                if(entry) {
+                    entry.source_entries = null;
+                }
+            }
+        },
 
         setBusyEntry(entry_id) {
             console.log("setBusyEntry", entry_id);
@@ -136,6 +163,23 @@ export default {
             } else if (message.action == 'history_regenerated') {
                 this.busy = false;
                 this.requestSceneHistory();
+            } else if (message.action == 'history_entry_source_entries') {
+                const entries = message.data.entries;
+                const entry = message.data.entry;
+
+                console.log("history_entry_source_entries", entries, entry);
+
+                if(entry.layer == 0) {
+                    const existingEntry = this.history.find(e => e.id === message.data.entry.id);
+                    if(existingEntry) {
+                        existingEntry.source_entries = entries;
+                    }
+                } else {
+                    const existingEntry = this.layered_history[entry.layer - 1].find(e => e.id === message.data.entry.id);
+                    if(existingEntry) {
+                        existingEntry.source_entries = entries;
+                    }
+                }
             } else if (message.action == 'history_entry_regenerated') {
                 const entry = message.data;
 

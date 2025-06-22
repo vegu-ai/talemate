@@ -7,21 +7,32 @@
             <span v-if="!editing && !locked && hovered" class="text-caption text-muted ml-2"><v-icon size="small" icon="mdi-pencil"></v-icon> double-click to edit</span>
         </v-card-title>
         <v-card-text>
-            <div v-if="!editing" class="history-entry text-muted text-body-1" @dblclick="setEditing(true)" @mouseenter="hovered = true" @mouseleave="hovered = false">
+            <div v-if="!editing" class="history-entry text-grey-lighten-1 text-body-1" @dblclick="setEditing(true)" @mouseenter="hovered = true" @mouseleave="hovered = false">
                 {{ entry.text }}
             </div>
             <v-textarea v-else rows="1" auto-grow v-model="entry.text" @blur="setEditing(false)" @keydown.esc="setEditing(false)" ref="textarea" hint="Press Escape to cancel, Shift+Enter for new line, Enter to save" @keydown.enter="handleEnter" />
         </v-card-text>
+
         <v-card-actions v-if="hasSourceEntries">
             <div v-if="busy">
                 <v-progress-circular class="ml-3 mr-3" size="24" indeterminate="disable-shrink"
                 color="primary"></v-progress-circular> <span class="text-primary">Regenerating...</span>            
             </div>
             <div v-else>
-                <v-btn :disabled="editing || locked" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(entry, ev.ctrlKey)">Regenerate</v-btn>
-                <v-btn :disabled="editing || locked" color="primary" prepend-icon="mdi-magnify-expand" @click="inspectEntry(entry)">Inspect</v-btn>
+                <v-btn :disabled="editing || locked" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(ev.ctrlKey)">Regenerate</v-btn>
+                <v-btn :disabled="editing || locked" color="primary" prepend-icon="mdi-magnify-expand" @click="toggleSourceEntries">{{ entry.source_entries ? 'Collapse' : 'Inspect' }}</v-btn>
             </div>
         </v-card-actions>
+
+
+        <v-card v-if="hasSourceEntries && entry.source_entries" class="ma-4 bg-black" color="muted" variant="tonal">
+            <v-card-text>
+                <div v-for="source_entry in renderedSourceEntries" :key="source_entry.id" class="mb-2">
+                    <div v-html="source_entry"></div>
+                    <v-divider class="my-2"></v-divider>
+                </div>
+            </v-card-text>
+        </v-card>
 
     </v-card>
 </template>
@@ -62,12 +73,15 @@ class HistoryEntry(pydantic.BaseModel):
 
 */
 
+import { SceneTextParser } from '@/utils/sceneMessageRenderer';
+
 export default {
     name: 'WorldStateManagerHistoryEntry',
     props: {
         entry: Object,
         appBusy: Boolean,
         busy: Boolean,
+        appConfig: Object,
     },
     data() {
         return {
@@ -78,13 +92,29 @@ export default {
     inject:[
         'getWebsocket',
     ],
-    emits: ['busy'],
+    emits: ['busy', 'collapse'],
     computed: {
         locked() {
             return this.appBusy || this.busy;
         },
         hasSourceEntries() {
             return this.entry.start !== null && this.entry.end !== null;
+        },
+        renderedSourceEntries() {
+            const characterStyles = this.appConfig?.appearance?.scene?.character_messages || {};
+            const narratorStyles  = this.appConfig?.appearance?.scene?.narrator_messages   || {};
+
+            console.log("characterStyles", characterStyles);
+            console.log("narratorStyles", narratorStyles);
+
+            const parser = new SceneTextParser({
+                quotes: characterStyles,
+                emphasis: narratorStyles,
+            });
+            
+            return this.entry.source_entries.map(entry => {
+                return parser.parse(entry.text);
+            });
         }
     },
     methods: {
@@ -114,7 +144,8 @@ export default {
                 entry: entry,
             }));
         },
-        regenerateEntry(entry, regenerateAllSubsequent = false) {
+        regenerateEntry(regenerateAllSubsequent = false) {
+            const entry = this.entry;
             this.$emit('busy', entry.id);
             this.getWebsocket().send(JSON.stringify({
                 type: "world_state_manager",
@@ -123,13 +154,24 @@ export default {
                 regenerate_all_subsequent: regenerateAllSubsequent,
             }));
         },
-        inspectEntry(entry) {
+        inspectEntry() {
+            const entry = this.entry;
             this.getWebsocket().send(JSON.stringify({
                 type: "world_state_manager",
                 action: "inspect_history_entry",
                 entry: entry,
             }));
         },
+        collapseSourceEntries() {
+            this.$emit('collapse', this.entry.layer, this.entry.id);
+        },
+        toggleSourceEntries() {
+            if(!this.entry.source_entries) {
+                this.inspectEntry();
+            } else {
+                this.collapseSourceEntries();
+            }
+        }
     },
 }
 </script>

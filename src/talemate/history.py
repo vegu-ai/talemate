@@ -131,21 +131,21 @@ def collect_source_entries(scene: "Scene", entry: HistoryEntry) -> list[SourceEn
         return []
     
     if entry.layer == 0:
-        # base layer
-        # start and end are absed on message.id values that may no longer correlate with
-        # the actrual index in scene.history
-        
-        start_message_index = scene.message_index(entry.start)
-        end_message_index = scene.message_index(entry.end)
-        
-        if start_message_index == -1 or end_message_index == -1:
-            return []
-        
+        # base layer 
         def include_message(message: SceneMessage) -> bool:
             return message.typ not in ["director", "context_investigation", "reinforcement"]
         
         result = [
-            SourceEntry(text=str(source), layer=-1, id=source.id) for source in filter(include_message, scene.history[start_message_index:end_message_index+1])
+            SourceEntry(
+                text=str(source), 
+                layer=-1, 
+                id=source.id,
+                start=entry.start,
+                end=entry.end,
+                ts=source.ts,
+                ts_start=source.ts_start,
+                ts_end=source.ts_end) for source in filter(include_message, scene.history[entry.start:entry.end+1]
+            )
         ]
         
         return result

@@ -26,6 +26,11 @@ const DEFAULTS = {
         italic: true,        
         bold: false,
     },
+    prefix: {
+        color: "#FFE082",
+        italic: false,
+        bold: true,
+    },
 }
 
 export class SceneTextParser {
@@ -47,6 +52,7 @@ export class SceneTextParser {
             emphasis: merge('emphasis', { className: 'scene-emphasis' }, { color: DEFAULTS.emphasis.color, bold: DEFAULTS.emphasis.bold, italic: DEFAULTS.emphasis.italic }),
             parentheses: merge('parentheses', { className: 'scene-parentheses' }, { color: DEFAULTS.parentheses.color, bold: DEFAULTS.parentheses.bold, italic: DEFAULTS.parentheses.italic }),
             brackets: merge('brackets', { className: 'scene-brackets' }, { color: DEFAULTS.brackets.color, bold: DEFAULTS.brackets.bold, italic: DEFAULTS.brackets.italic }),
+            prefix:   merge('prefix',   { className: 'scene-prefix' },   { color: DEFAULTS.prefix.color,  bold: true, italic: false }),
             default: merge('default', { className: 'scene-default' }, { color: DEFAULTS.default.color, bold: false, italic: false }),
         };
         
@@ -191,7 +197,17 @@ export class SceneTextParser {
     }
     
     parse(text) {
-        return this.marked.parse(text);
+        let md = text;
+        // Detect "Character Name: " prefix at start of message
+        const prefixRegex = /^([^:\n]{1,50}):\s*/; // up to 50 chars before first colon
+        const m = md.match(prefixRegex);
+        if (m) {
+            const prefixStr = m[1] + ':';
+            const rest      = md.slice(m[0].length);
+            const styled    = this.buildSpan('prefix', prefixStr, this.config.prefix);
+            md = styled + ' ' + rest;
+        }
+        return this.marked.parse(md);
     }
     
     parseInline(text) {

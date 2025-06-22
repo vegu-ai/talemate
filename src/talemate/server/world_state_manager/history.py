@@ -9,6 +9,7 @@ from talemate.history import (
     HistoryEntry,
     update_history_entry,
     regenerate_history_entry,
+    collect_source_entries
 )
 from talemate.server.world_state_manager import world_state_templates
 
@@ -125,3 +126,24 @@ class HistoryMixin:
         )
         
         await self.signal_operation_done()
+        
+        
+    async def handle_inspect_history_entry(self, data):
+        """
+        Inspect a single history entry.
+        """
+        
+        payload = HistoryEntryPayload(**data)
+        
+        entries = collect_source_entries(self.scene, payload.entry)
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "history_entry_source_entries",
+                "data": {
+                    "entries": [entry.model_dump() for entry in entries],
+                    "entry": payload.entry.model_dump(),
+                }
+            }
+        )

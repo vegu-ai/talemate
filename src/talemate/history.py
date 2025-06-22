@@ -410,7 +410,7 @@ async def regenerate_history_entry(
     summarized = entry.text
     
     if isinstance(archive_entry, LayeredArchiveEntry):
-        new_archive_entry = await summarizer.summarize_entries_to_layered_history(
+        new_archive_entries = await summarizer.summarize_entries_to_layered_history(
             [entry.model_dump() for entry in entries],
             entry.layer,
             entry.start,
@@ -418,10 +418,12 @@ async def regenerate_history_entry(
             generation_options=generation_options,
         )
         
-        if not new_archive_entry:
+        if not new_archive_entries:
             raise UnregeneratableEntryError("Summarization produced no output")
         
-        summarized = new_archive_entry.text
+        # if there is more than one entry, merge into first entry
+        summarized = "\n\n".join(entry.text for entry in new_archive_entries)
+        
     elif isinstance(archive_entry, ArchiveEntry):
         summarized = await summarizer.summarize(
             "\n".join(map(str, entries)),

@@ -1,12 +1,10 @@
 import structlog
-import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 from talemate.agents.base import (
     set_processing,
     AgentAction,
     AgentActionConfig
 )
-from talemate.prompts import Prompt
 import talemate.emit.async_signals
 from talemate.exceptions import GenerationCancelled
 from talemate.world_state.templates import GenerationOptions
@@ -491,12 +489,13 @@ class LayeredHistoryMixin:
         next_layer_index: int,
         start_index: int,
         end_index: int,
-        generation_options: GenerationOptions | None = None
-    ) -> LayeredArchiveEntry | None:
+        generation_options: GenerationOptions | None = None,
+    ) -> list[LayeredArchiveEntry]:
         
         token_threshold = self.layered_history_threshold
         max_process_tokens = self.layered_history_max_process_tokens
                             
+        archive_entries = []
         summaries = []
         current_chunk = []
         current_tokens = 0
@@ -504,6 +503,7 @@ class LayeredHistoryMixin:
         ts = "PT1S"
         ts_start = "PT1S"
         ts_end = "PT1S"
+        
         
         for entry_index, entry in enumerate(entries):
             is_last_entry = entry_index == len(entries) - 1
@@ -557,18 +557,19 @@ class LayeredHistoryMixin:
                     # raise an error
                     if util.count_tokens(summaries) > text_length:
                         raise SummaryLongerThanOriginalError(text_length, util.count_tokens(summaries))
+                    
+                    archive_entry = LayeredArchiveEntry(**{
+                        "start": start_index,
+                        "end": end_index,
+                        "ts": ts,
+                        "ts_start": ts_start,
+                        "ts_end": ts_end,
+                        "text": "\n\n".join(summaries),
+                    })
+                    
+                    archive_entries.append(archive_entry)
 
             current_chunk.append(entry)
             current_tokens += entry_tokens
             
-        if not summaries:
-            return None
-            
-        return LayeredArchiveEntry(**{
-            "start": start_index,
-            "end": end_index,
-            "ts": ts,
-            "ts_start": ts_start,
-            "ts_end": ts_end,
-            "text": "\n\n".join(summaries),
-        })
+        return archive_entries

@@ -12,6 +12,7 @@ from talemate.exceptions import GenerationCancelled
 from talemate.world_state.templates import GenerationOptions
 from talemate.emit import emit
 from talemate.context import handle_generation_cancelled
+from talemate.history import LayeredArchiveEntry, HistoryEntry, entry_contained
 import talemate.util as util
 
 if TYPE_CHECKING:
@@ -164,6 +165,7 @@ class LayeredHistoryMixin:
         as_objects:bool=False, 
         include_base_layer:bool=False,
         max:int = None,
+        base_layer_end_id: str | None = None,
     ) -> list[str]:
         """
         Starts at the last layer and compiles the layered history into a single
@@ -194,6 +196,17 @@ class LayeredHistoryMixin:
             entry_num = 1
             
             for layered_history_entry in layered_history[i][next_layer_start if next_layer_start is not None else 0:]:
+                
+                if base_layer_end_id:
+                    contained = entry_contained(self.scene, base_layer_end_id, HistoryEntry(
+                        index=0,
+                        layer=i+1,
+                        **layered_history_entry)
+                    )
+                    if contained:
+                        log.debug("compile_layered_history", contained=True, base_layer_end_id=base_layer_end_id)
+                        break
+                
                 text = f"{layered_history_entry['text']}"
                 
                 if for_layer_index == i and max is not None and max <= layered_history_entry["end"]:
@@ -212,8 +225,8 @@ class LayeredHistoryMixin:
                     entry_num += 1
                 else:
                     compiled.append(text)
-                
-            next_layer_start = layered_history_entry["end"] + 1
+            
+                next_layer_start = layered_history_entry["end"] + 1
             
         if i == 0 and include_base_layer:
             # we are are at layered history layer zero and inclusion of base layer (archived history) is requested
@@ -222,7 +235,10 @@ class LayeredHistoryMixin:
             
             entry_num = 1
             
-            for ah in self.scene.archived_history[next_layer_start:]:
+            for ah in self.scene.archived_history[next_layer_start or 0:]:
+                
+                if base_layer_end_id and ah["id"] == base_layer_end_id:
+                    break
                 
                 text = f"{ah['text']}"
                 if as_objects:
@@ -375,14 +391,14 @@ class LayeredHistoryMixin:
                         
                         log.debug("summarize_to_layered_history", original_length=text_length, summarized_length=util.count_tokens(summaries))
                         
-                        next_layer.append({
+                        next_layer.append(LayeredArchiveEntry({
                             "start": start_index,
                             "end": i - 1,
                             "ts": ts,
                             "ts_start": ts_start,
                             "ts_end": ts_end,
-                            "text": "\n\n".join(summaries)
-                        })
+                            "text": "\n\n".join(summaries),
+                        }).model_dump(exclude_none=True))
                         
                         emit("status", status="busy", message=f"Updating layered history - layer {next_layer_index} - {num_entries_in_layer+1} / {estimated_entries}")
                             

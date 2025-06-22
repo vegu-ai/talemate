@@ -33,6 +33,7 @@ __all__ = [
     "regenerate_history_entry",
     "collect_source_entries",
     "resolve_history_entry",
+    "entry_contained",
     "emit_archive_add",
 ]
 
@@ -42,16 +43,14 @@ log = structlog.get_logger()
 class UnregeneratableEntryError(Exception):
     pass
 
-class ArchiveEntryBase(pydantic.BaseModel):
+class ArchiveEntry(pydantic.BaseModel):
     text: str
+    id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:8])
     start: int | None = None
     end: int | None = None
     ts: str = pydantic.Field(default_factory=lambda: "PT1S")
 
-class ArchiveEntry(ArchiveEntryBase):
-    id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:8])
-    
-class LayeredArchiveEntry(ArchiveEntryBase):
+class LayeredArchiveEntry(ArchiveEntry):
     ts_start: str | None = None
     ts_end: str | None = None
     
@@ -73,6 +72,9 @@ class HistoryEntry(pydantic.BaseModel):
 class SourceEntry(pydantic.BaseModel):
     text: str
     layer: int
+    id: str | int
+    start: int | None = None
+    end: int | None = None
     
     def __str__(self):
         return self.text
@@ -97,9 +99,74 @@ def resolve_history_entry(scene: "Scene", entry: HistoryEntry) -> LayeredArchive
     """
     
     if entry.layer == 0:
-        return scene.archived_history[entry.index]
+        return ArchiveEntry(**scene.archived_history[entry.index])
     else:
-        return scene.layered_history[entry.layer - 1][entry.index]
+        return LayeredArchiveEntry(**scene.layered_history[entry.layer - 1][entry.index])
+
+def entry_contained(scene: "Scene", entry_id: str, container: HistoryEntry | SourceEntry) -> bool:
+    """
+    Checks if entry_id is contained in container through source entries, checking all the way up to the base layer
+    """
+
+    messages = collect_source_entries(scene, container)
+    
+    for message in messages:
+        if message.id == entry_id:
+            return True
+        if not isinstance(message, SceneMessage) and entry_contained(scene, entry_id, message):
+            return True
+    
+    return False
+
+def collect_source_entries(scene: "Scene", entry: HistoryEntry) -> list[SourceEntry]:
+    """
+    Collects the source entries for a history entry
+    """
+    
+    if entry.start is None or entry.end is None:
+        # entries that dont defien a start and end are not regeneratable
+        return []
+    
+    if entry.layer == 0:
+        # base layer
+        # start and end are absed on message.id values that may no longer correlate with
+        # the actrual index in scene.history
+        
+        start_message_index = scene.message_index(entry.start)
+        end_message_index = scene.message_index(entry.end)
+        
+        if start_message_index == -1 or end_message_index == -1:
+            return []
+        
+        def include_message(message: SceneMessage) -> bool:
+            return message.typ not in ["director", "context_investigation", "reinforcement"]
+        
+        result = [
+            SourceEntry(text=str(source), layer=-1, id=source.id) for source in filter(include_message, scene.history[start_message_index:end_message_index+1])
+        ]
+        
+        return result
+        
+    else:
+        # layered history
+        if entry.layer == 1:
+            source_layer = scene.archived_history
+            source_layer_index = 0
+        else:
+            source_layer_index = entry.layer - 1
+            source_layer = scene.layered_history[source_layer_index]
+            
+        return [
+            SourceEntry(
+                text=source["text"], 
+                layer=source_layer_index, 
+                id=source["id"],
+                start=source.get("start", None),
+                end=source.get("end", None),
+            ) for source in source_layer[entry.start:entry.end+1]
+        ]
+        
+
 
 def pop_history(
     history: list[SceneMessage],
@@ -308,51 +375,7 @@ async def update_history_entry(scene: "Scene", entry: HistoryEntry) -> LayeredAr
         scene.layered_history[entry.layer - 1][entry.index] = layered_entry.model_dump(exclude_none=True)
         return layered_entry
 
-async def collect_source_entries(scene: "Scene", entry: HistoryEntry) -> list[SourceEntry]:
-    """
-    Collects the source entries for a history entry
-    """
-    
-    if not entry.start or not entry.end:
-        # entries that dont defien a start and end are not regeneratable
-        return []
-    
-    if entry.layer == 0:
-        # base layer
-        # start and end are absed on message.id values that may no longer correlate with
-        # the actrual index in scene.history
-        
-        start_message_index = scene.message_index(entry.start)
-        end_message_index = scene.message_index(entry.end)
-        
-        if start_message_index == -1 or end_message_index == -1:
-            return []
-        
-        def include_message(message: SceneMessage) -> bool:
-            return message.typ not in ["director", "context_investigation", "reinforcement"]
-        
-        result = [
-            SourceEntry(text=str(source), layer=-1) for source in filter(include_message, scene.history[start_message_index:end_message_index])
-        ]
-        
-        log.debug("collect_source_entries (base layer)", result=result)
-        
-        return result
-        
-    else:
-        # layered history
-        if entry.layer == 1:
-            source_layer = scene.archived_history
-            source_layer_index = 0
-        else:
-            source_layer_index = entry.layer - 1
-            source_layer = scene.layered_history[source_layer_index]
-            
-        return [
-            SourceEntry(text=source.text, layer=source_layer_index) for source in source_layer[entry.start:entry.end]
-        ]
-        
-    
+
     
 async def regenerate_history_entry(scene: "Scene", entry: HistoryEntry, generation_options: GenerationOptions | None = None) -> LayeredArchiveEntry | ArchiveEntry:
     """
@@ -364,21 +387,26 @@ async def regenerate_history_entry(scene: "Scene", entry: HistoryEntry, generati
         # entries that dont defien a start and end are not regeneratable
         raise UnregeneratableEntryError("No start or end")
 
-    entries = await collect_source_entries(scene, entry)
+    entries = collect_source_entries(scene, entry)
     
     if not entries:
         raise UnregeneratableEntryError("No entries")
     
     try:
-        resolve_history_entry(scene, entry)
+        archive_entry: ArchiveEntry | LayeredArchiveEntry = resolve_history_entry(scene, entry)
     except IndexError:
         raise UnregeneratableEntryError("Entry not found")
     
-    summarized = await summarizer.summarize(
-        "\n".join(map(str, entries)),
-        extra_context=await summarizer.previous_summaries(),
-        generation_options=generation_options,
-    )
+    summarized = entry.text
+    
+    if isinstance(archive_entry, ArchiveEntry):
+        summarized = await summarizer.summarize(
+            "\n".join(map(str, entries)),
+            extra_context=await summarizer.previous_summaries(archive_entry),
+            generation_options=generation_options,
+        )
+    elif isinstance(archive_entry, LayeredArchiveEntry):
+        raise NotImplementedError("Layered history entries are not supported yet")
     
     entry.text = summarized
     
@@ -389,8 +417,8 @@ async def regenerate_history_entry(scene: "Scene", entry: HistoryEntry, generati
 
 async def validate_history(scene: "Scene") -> bool:
     
-    memory = get_agent("memory")
     archived_history = scene.archived_history
+    layered_history = scene.layered_history
     
     # if archived_history does not have memory_id set, we need to ensure
     # they are set and reimport to the memory agent
@@ -398,7 +426,6 @@ async def validate_history(scene: "Scene") -> bool:
     any_missing_memory_id = any(entry.get("id") is None for entry in archived_history)
     
     invalid = any_missing_memory_id
-    
     
     if invalid:
         log.warning("History is invalid, fixing and reimporting", any_missing_memory_id=any_missing_memory_id)
@@ -426,5 +453,11 @@ async def validate_history(scene: "Scene") -> bool:
                 scene=scene, event_type="archive_add", text=entry["text"], ts=entry["ts"], memory_id=entry["id"]
             )
         )
+        
+    for layer_index, layer in enumerate(layered_history):
+        for entry_index, entry in enumerate(layer):
+            if not entry.get("id"):
+                log.warning("Layered history entry is missing id, generating one", layer=layer_index, index=entry_index)
+                entry["id"] = str(uuid.uuid4())[:8]
             
     return not invalid

@@ -193,19 +193,27 @@ class SummarizeAgent(
 
     # SUMMARIZATION HELPERS
     
-    async def previous_summaries(self) -> list[str]:
+    async def previous_summaries(self, entry: ArchiveEntry) -> list[str]:
         
         num_previous = self.archive_include_previous
-        recent_entry = self.scene.archived_history[-1] if self.scene.archived_history else None
         
+        # find entry by .id
+        entry_index = next((i for i, e in enumerate(self.scene.archived_history) if e["id"] == entry.id), None)
+        if entry_index is None:
+            raise ValueError("Entry not found")
+        end = entry_index - 1
+
         previous_summaries = []
         
-        if recent_entry and num_previous > 0:
+        if entry and num_previous > 0:
             if self.layered_history_available:
-                previous_summaries = self.compile_layered_history(include_base_layer=True)
+                previous_summaries = self.compile_layered_history(
+                    include_base_layer=True,
+                    base_layer_end_id=entry.id
+                )[:num_previous]
             else:
                 previous_summaries = [
-                    entry["text"] for entry in self.scene.archived_history[-num_previous:]
+                    entry.text for entry in self.scene.archived_history[end-num_previous:end]
                 ]
 
         return previous_summaries

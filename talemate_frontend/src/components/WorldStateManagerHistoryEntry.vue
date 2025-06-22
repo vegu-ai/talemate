@@ -4,7 +4,7 @@
             <span v-if="entry.id && hovered" class="text-caption text-grey-darken-1 ml-2">
                 {{ entry.id }}
             </span>
-            <span v-if="!editing && hovered" class="text-caption text-muted ml-2"><v-icon size="small" icon="mdi-pencil"></v-icon> double-click to edit</span>
+            <span v-if="!editing && !locked && hovered" class="text-caption text-muted ml-2"><v-icon size="small" icon="mdi-pencil"></v-icon> double-click to edit</span>
         </v-card-title>
         <v-card-text>
             <div v-if="!editing" class="history-entry text-muted text-body-1" @dblclick="setEditing(true)" @mouseenter="hovered = true" @mouseleave="hovered = false">
@@ -13,8 +13,8 @@
             <v-textarea v-else rows="1" auto-grow v-model="entry.text" @blur="setEditing(false)" @keydown.esc="setEditing(false)" ref="textarea" hint="Press Escape to cancel, Shift+Enter for new line, Enter to save" @keydown.enter="handleEnter" />
         </v-card-text>
         <v-card-actions v-if="hasSourceEntries">
-            <v-btn :disabled="editing || busy" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(entry, ev.ctrlKey)">Regenerate</v-btn>
-            <v-btn :disabled="editing || busy" color="primary" prepend-icon="mdi-magnify-expand" @click="inspectEntry(entry)">Inspect</v-btn>
+            <v-btn :disabled="editing || locked" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(entry, ev.ctrlKey)">Regenerate</v-btn>
+            <v-btn :disabled="editing || locked" color="primary" prepend-icon="mdi-magnify-expand" @click="inspectEntry(entry)">Inspect</v-btn>
         </v-card-actions>
     </v-card>
 </template>
@@ -25,6 +25,9 @@
 class HistoryEntry(pydantic.BaseModel):
     # text of the entry
     text: str
+
+    # id of the entry
+    id: str | None = None
 
     # iso8601 timestamp of the entry
     ts: str
@@ -56,6 +59,7 @@ export default {
     name: 'WorldStateManagerHistoryEntry',
     props: {
         entry: Object,
+        appBusy: Boolean,
     },
     data() {
         return {
@@ -66,12 +70,11 @@ export default {
     },
     inject:[
         'getWebsocket',
-        'registerMessageHandler',
-        'unregisterMessageHandler',
-        'setWaitingForInput',
-        'requestSceneAssets',
     ],
     computed: {
+        locked() {
+            return this.appBusy || this.busy;
+        },
         hasSourceEntries() {
             return this.entry.start !== null && this.entry.end !== null;
         }
@@ -85,6 +88,10 @@ export default {
             }
         },
         setEditing(value) {
+            if(this.locked) {
+                return;
+            }
+
             this.editing = value;
             if(value) {
                 setTimeout(() => {

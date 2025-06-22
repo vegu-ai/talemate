@@ -79,6 +79,7 @@
                 <WorldStateManagerHistory ref="history" 
                 :scene="scene"
                 :generation-options="generationOptions"
+                :app-busy="appBusy"
                 />
             </v-window-item>
 

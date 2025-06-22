@@ -25,7 +25,7 @@
                         <span class="text-muted">Total time passed:</span> {{ scene?.data?.scene_time || '?' }}
                     </v-sheet>
 
-                    <WorldStateManagerHistoryEntry v-for="(entry, index) in history" :key="index" :entry="entry" />
+                    <WorldStateManagerHistoryEntry v-for="(entry, index) in history" :key="index" :entry="entry" :app-busy="appBusy" />
         
                 </v-card-text>
             </v-card>
@@ -33,7 +33,7 @@
         <v-window-item v-for="(layer, index) in layers" :key="index" :value="`layer_${index}`">
             <v-card>
                 <v-card-text>
-                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index" :entry="entry" />
+                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index" :entry="entry" :app-busy="appBusy" />
                 </v-card-text>
             </v-card>
         </v-window-item>
@@ -54,6 +54,7 @@ export default {
     props: {
         generationOptions: Object,
         scene: Object,
+        appBusy: Boolean,
     },
     data() {
         return {
@@ -127,6 +128,16 @@ export default {
             } else if (message.action == 'history_regenerated') {
                 this.busy = false;
                 this.requestSceneHistory();
+            } else if (message.action == 'history_entry_regenerated') {
+                const entry = message.data;
+
+                console.log("history_entry_updated", entry);
+
+                if(entry.layer == 0) {
+                    this.history = this.history.map(e => e.id === entry.id ? entry : e);
+                } else {
+                    this.layered_history[entry.layer - 1] = this.layered_history[entry.layer - 1].map(e => e.id === entry.id ? entry : e);
+                }
             }
         }
     },

@@ -25,7 +25,7 @@
                         <span class="text-muted">Total time passed:</span> {{ scene?.data?.scene_time || '?' }}
                     </v-sheet>
 
-                    <WorldStateManagerHistoryEntry v-for="(entry, index) in history" :key="index" :entry="entry" :app-busy="appBusy" />
+                    <WorldStateManagerHistoryEntry v-for="(entry, index) in history" :key="index" :entry="entry" :app-busy="appBusy" :busy="busyEntry && busyEntry === entry.id" @busy="(entry_id) => setBusyEntry(entry_id)" />
         
                 </v-card-text>
             </v-card>
@@ -33,7 +33,7 @@
         <v-window-item v-for="(layer, index) in layers" :key="index" :value="`layer_${index}`">
             <v-card>
                 <v-card-text>
-                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index" :entry="entry" :app-busy="appBusy" />
+                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index" :entry="entry" :app-busy="appBusy" :busy="busyEntry && busyEntry === entry.id" @busy="(entry_id) => setBusyEntry(entry_id)" />
                 </v-card-text>
             </v-card>
         </v-window-item>
@@ -62,6 +62,7 @@ export default {
             layered_history: [],
             busy: false,
             tab: 'base',
+            busyEntry: null,
         }
     },
     computed: {
@@ -110,6 +111,13 @@ export default {
                 action: "request_scene_history",
             }));
         },
+
+
+        setBusyEntry(entry_id) {
+            console.log("setBusyEntry", entry_id);
+            this.busyEntry = entry_id;
+        },
+
         handleMessage(message) {
             if (message.type != 'world_state_manager') {
                 return;
@@ -138,6 +146,7 @@ export default {
                 } else {
                     this.layered_history[entry.layer - 1] = this.layered_history[entry.layer - 1].map(e => e.id === entry.id ? entry : e);
                 }
+                this.busyEntry = null;
             }
         }
     },

@@ -210,7 +210,7 @@ class SummarizeAgent(
                 previous_summaries = self.compile_layered_history(
                     include_base_layer=True,
                     base_layer_end_id=entry.id
-                )[:num_previous]
+                )[-num_previous:]
             else:
                 previous_summaries = [
                     entry.text for entry in self.scene.archived_history[end-num_previous:end]

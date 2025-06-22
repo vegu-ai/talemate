@@ -13,9 +13,16 @@
             <v-textarea v-else rows="1" auto-grow v-model="entry.text" @blur="setEditing(false)" @keydown.esc="setEditing(false)" ref="textarea" hint="Press Escape to cancel, Shift+Enter for new line, Enter to save" @keydown.enter="handleEnter" />
         </v-card-text>
         <v-card-actions v-if="hasSourceEntries">
-            <v-btn :disabled="editing || locked" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(entry, ev.ctrlKey)">Regenerate</v-btn>
-            <v-btn :disabled="editing || locked" color="primary" prepend-icon="mdi-magnify-expand" @click="inspectEntry(entry)">Inspect</v-btn>
+            <div v-if="busy">
+                <v-progress-circular class="ml-3 mr-3" size="24" indeterminate="disable-shrink"
+                color="primary"></v-progress-circular> <span class="text-primary">Regenerating...</span>            
+            </div>
+            <div v-else>
+                <v-btn :disabled="editing || locked" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(entry, ev.ctrlKey)">Regenerate</v-btn>
+                <v-btn :disabled="editing || locked" color="primary" prepend-icon="mdi-magnify-expand" @click="inspectEntry(entry)">Inspect</v-btn>
+            </div>
         </v-card-actions>
+
     </v-card>
 </template>
 
@@ -60,10 +67,10 @@ export default {
     props: {
         entry: Object,
         appBusy: Boolean,
+        busy: Boolean,
     },
     data() {
         return {
-            busy: false,
             editing: false,
             hovered: false
         }
@@ -71,6 +78,7 @@ export default {
     inject:[
         'getWebsocket',
     ],
+    emits: ['busy'],
     computed: {
         locked() {
             return this.appBusy || this.busy;
@@ -107,6 +115,7 @@ export default {
             }));
         },
         regenerateEntry(entry, regenerateAllSubsequent = false) {
+            this.$emit('busy', entry.id);
             this.getWebsocket().send(JSON.stringify({
                 type: "world_state_manager",
                 action: "regenerate_history_entry",

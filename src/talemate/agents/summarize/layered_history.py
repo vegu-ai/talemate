@@ -391,7 +391,7 @@ class LayeredHistoryMixin:
                         
                         log.debug("summarize_to_layered_history", original_length=text_length, summarized_length=util.count_tokens(summaries))
                         
-                        next_layer.append(LayeredArchiveEntry({
+                        next_layer.append(LayeredArchiveEntry(**{
                             "start": start_index,
                             "end": i - 1,
                             "ts": ts,

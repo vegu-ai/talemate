@@ -46,6 +46,8 @@ YOU MUST ONLY SUMMARIZE THE CONTENT EXPLICITLY STATED WITHIN {{ summary_target.u
 YOU MUST NOT INCLUDE OR REPEAT THE PREVIOUS CONTEXT IN YOUR SUMMARY.
 YOU MUST NOT QUOTE DIALOGUE.
 
+While it is ok, even recommended, to use an analytical approach during your analysis, you must never mention or directly reference the analysis in the actual text of the summary - furthermore refrain from directly mentioning the words "{{ summary_target }}" in the summary as it is supposed to be a narrative summary.
+
 {% if output_type == "narrative description" %}
 Provide a summarized {{output_type}} of {{ summary_target }}.
 {% elif output_type == "factual list" %}

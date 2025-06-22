@@ -75,6 +75,9 @@ class SourceEntry(pydantic.BaseModel):
     id: str | int
     start: int | None = None
     end: int | None = None
+    ts: str | None = None
+    ts_start: str | None = None
+    ts_end: str | None = None
     
     def __str__(self):
         return self.text
@@ -163,6 +166,9 @@ def collect_source_entries(scene: "Scene", entry: HistoryEntry) -> list[SourceEn
                 id=source["id"],
                 start=source.get("start", None),
                 end=source.get("end", None),
+                ts=source.get("ts", None),
+                ts_start=source.get("ts_start", None),
+                ts_end=source.get("ts_end", None),
             ) for source in source_layer[entry.start:entry.end+1]
         ]
         
@@ -377,13 +383,17 @@ async def update_history_entry(scene: "Scene", entry: HistoryEntry) -> LayeredAr
 
 
     
-async def regenerate_history_entry(scene: "Scene", entry: HistoryEntry, generation_options: GenerationOptions | None = None) -> LayeredArchiveEntry | ArchiveEntry:
+async def regenerate_history_entry(
+    scene: "Scene", 
+    entry: HistoryEntry, 
+    generation_options: GenerationOptions | None = None,
+) -> LayeredArchiveEntry | ArchiveEntry:
     """
     Regenerates a history entry in the scene's archived history
     """
     
     summarizer = get_agent("summarizer")
-    if not entry.start or not entry.end:
+    if entry.start is None or entry.end is None:
         # entries that dont defien a start and end are not regeneratable
         raise UnregeneratableEntryError("No start or end")
 
@@ -399,14 +409,25 @@ async def regenerate_history_entry(scene: "Scene", entry: HistoryEntry, generati
     
     summarized = entry.text
     
-    if isinstance(archive_entry, ArchiveEntry):
+    if isinstance(archive_entry, LayeredArchiveEntry):
+        new_archive_entry = await summarizer.summarize_entries_to_layered_history(
+            [entry.model_dump() for entry in entries],
+            entry.layer,
+            entry.start,
+            entry.end,
+            generation_options=generation_options,
+        )
+        
+        if not new_archive_entry:
+            raise UnregeneratableEntryError("Summarization produced no output")
+        
+        summarized = new_archive_entry.text
+    elif isinstance(archive_entry, ArchiveEntry):
         summarized = await summarizer.summarize(
             "\n".join(map(str, entries)),
             extra_context=await summarizer.previous_summaries(archive_entry),
             generation_options=generation_options,
         )
-    elif isinstance(archive_entry, LayeredArchiveEntry):
-        raise NotImplementedError("Layered history entries are not supported yet")
     
     entry.text = summarized
     
@@ -459,5 +480,8 @@ async def validate_history(scene: "Scene") -> bool:
             if not entry.get("id"):
                 log.warning("Layered history entry is missing id, generating one", layer=layer_index, index=entry_index)
                 entry["id"] = str(uuid.uuid4())[:8]
+                # these entries also have their `end` value incorrectly offset by -1 so we need to fix it
+                if entry.get("end") is not None:
+                    entry["end"] += 1
             
     return not invalid

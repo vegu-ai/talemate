@@ -107,7 +107,12 @@ class HistoryMixin:
         
         log.debug("regenerate_history_entry", payload=payload)
         
-        entry = await regenerate_history_entry(self.scene, payload.entry)
+        try:
+            entry = await regenerate_history_entry(self.scene, payload.entry)
+        except Exception as e:
+            log.error("regenerate_history_entry", error=e)
+            await self.signal_operation_failed(str(e))
+            return
         
         log.debug("regenerate_history_entry (done)", entry=entry)
         

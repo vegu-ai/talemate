@@ -147,6 +147,8 @@ export default {
                     this.layered_history[entry.layer - 1] = this.layered_history[entry.layer - 1].map(e => e.id === entry.id ? entry : e);
                 }
                 this.busyEntry = null;
+            } else if (message.action == 'operation_done') {
+                this.busyEntry = null;
             }
         }
     },

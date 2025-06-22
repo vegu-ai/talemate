@@ -1,20 +1,16 @@
 #!/bin/bash
 
-# create a virtual environment
-echo "Creating a virtual environment..."
-python3 -m venv talemate_env
+# create a virtual environment with uv
+echo "Creating a virtual environment with uv..."
+uv venv
 
 # activate the virtual environment
 echo "Activating the virtual environment..."
-source talemate_env/bin/activate
+source .venv/bin/activate
 
-# install poetry
-echo "Installing poetry..."
-pip install poetry
-
-# use poetry to install dependencies
+# install dependencies with uv
 echo "Installing dependencies..."
-poetry install
+uv pip install -e ".[dev]"
 
 # copy config.example.yaml to config.yaml only if config.yaml doesn't exist
 if [ ! -f config.yaml ]; then

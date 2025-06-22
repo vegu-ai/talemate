@@ -27,6 +27,7 @@ from talemate.util import extract_metadata
 from talemate.world_state import WorldState
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
+from talemate.history import validate_history
 
 __all__ = [
     "load_scene",
@@ -300,19 +301,8 @@ async def load_scene_from_data(
     if not scene.memory_session_id:
         scene.set_new_memory_session_id()
 
-    for ah in scene.archived_history:
-        if reset:
-            break
-        ts = ah.get("ts", "PT1S")
-
-        if not ah.get("ts"):
-            ah["ts"] = ts
-
-        scene.signals["archive_add"].send(
-            events.ArchiveEvent(
-                scene=scene, event_type="archive_add", text=ah["text"], ts=ts
-            )
-        )
+    if not reset:
+        await validate_history(scene)
 
     for character_name, character_data in scene_data.get(
         "inactive_characters", {}

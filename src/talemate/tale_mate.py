@@ -14,7 +14,6 @@ from blinker import signal
 import talemate.agents as agents
 import talemate.client as client
 import talemate.commands as commands
-import talemate.data_objects as data_objects
 import talemate.emit.async_signals as async_signals
 import talemate.events as events
 import talemate.save as save
@@ -54,7 +53,8 @@ from talemate.game.engine.nodes.core import GraphState
 from talemate.game.engine.nodes.layout import load_graph
 from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
-        
+from talemate.history import emit_archive_add, ArchiveEntry
+
 __all__ = [
     "Character",
     "Actor",
@@ -1270,22 +1270,15 @@ class Scene(Emitter):
 
         return "\n".join([message.as_format(as_format) for message in collected])
 
-    def push_archive(self, entry: data_objects.ArchiveEntry):
+    def push_archive(self, entry: ArchiveEntry):
         """
         Adds an entry to the archive history.
 
         The archive history is a list of summarized history entries.
         """
 
-        self.archived_history.append(entry.__dict__)
-        self.signals["archive_add"].send(
-            events.ArchiveEvent(
-                scene=self,
-                event_type="archive_add",
-                text=entry.text,
-                ts=entry.ts,
-            )
-        )
+        self.archived_history.append(entry.model_dump(exclude_none=True))
+        emit_archive_add(self, entry)
         emit(
             "archived_history",
             data={
@@ -2249,11 +2242,7 @@ class Scene(Emitter):
             if not ah.get("ts"):
                 ah["ts"] = ts
 
-            self.signals["archive_add"].send(
-                events.ArchiveEvent(
-                    scene=self, event_type="archive_add", text=ah["text"], ts=ts
-                )
-            )
+            emit_archive_add(self, ArchiveEntry(**ah))
             await asyncio.sleep(0)
 
         for character in self.characters:

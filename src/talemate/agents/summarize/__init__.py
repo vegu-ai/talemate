@@ -5,7 +5,6 @@ import dataclasses
 
 import structlog
 from typing import TYPE_CHECKING
-import talemate.data_objects as data_objects
 import talemate.emit.async_signals
 import talemate.util as util
 from talemate.emit import emit
@@ -34,6 +33,8 @@ from talemate.agents.base import (
 )
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
+
+from talemate.history import ArchiveEntry
 
 from .analyze_scene import SceneAnalyzationMixin
 from .context_investigation import ContextInvestigationMixin
@@ -189,6 +190,26 @@ class SummarizeAgent(
         
         return emission.sub_instruction
 
+
+    # SUMMARIZATION HELPERS
+    
+    async def previous_summaries(self) -> list[str]:
+        
+        num_previous = self.archive_include_previous
+        recent_entry = self.scene.archived_history[-1] if self.scene.archived_history else None
+        
+        previous_summaries = []
+        
+        if recent_entry and num_previous > 0:
+            if self.layered_history_available:
+                previous_summaries = self.compile_layered_history(include_base_layer=True)
+            else:
+                previous_summaries = [
+                    entry["text"] for entry in self.scene.archived_history[-num_previous:]
+                ]
+
+        return previous_summaries
+    
     # SUMMARIZE
 
     @set_processing
@@ -352,7 +373,7 @@ class SummarizeAgent(
 
         # determine the appropariate timestamp for the summarization
 
-        scene.push_archive(data_objects.ArchiveEntry(summarized, start, end, ts=ts))
+        scene.push_archive(ArchiveEntry(text=summarized, start=start, end=end, ts=ts))
         
         scene.ts=ts
         scene.emit_status()

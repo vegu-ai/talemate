@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Callable
 
 import structlog
 import traceback
+import uuid
 
 from talemate.emit import emit
 from talemate.instance import get_agent
@@ -18,6 +19,7 @@ from talemate.util import iso8601_diff_to_human
 from talemate.world_state.templates import GenerationOptions
 from talemate.exceptions import GenerationCancelled
 from talemate.context import handle_generation_cancelled
+from talemate.events import ArchiveEvent
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Character
@@ -27,18 +29,29 @@ __all__ = [
     "pop_history",
     "rebuild_history",
     "character_activity",
+    "update_history_entry",
+    "regenerate_history_entry",
+    "collect_source_entries",
+    "resolve_history_entry",
+    "emit_archive_add",
 ]
 
 log = structlog.get_logger()
 
 
-class ArchiveEntry(pydantic.BaseModel):
+class UnregeneratableEntryError(Exception):
+    pass
+
+class ArchiveEntryBase(pydantic.BaseModel):
     text: str
     start: int | None = None
     end: int | None = None
-    ts: str | None = None
+    ts: str = pydantic.Field(default_factory=lambda: "PT1S")
+
+class ArchiveEntry(ArchiveEntryBase):
+    id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:8])
     
-class LayeredArchiveEntry(ArchiveEntry):
+class LayeredArchiveEntry(ArchiveEntryBase):
     ts_start: str | None = None
     ts_end: str | None = None
     
@@ -47,6 +60,7 @@ class HistoryEntry(pydantic.BaseModel):
     ts: str
     index: int
     layer: int
+    id: str | None = None
     ts_start: str | None = None
     ts_end: str | None = None
     time: str | None = None
@@ -55,6 +69,37 @@ class HistoryEntry(pydantic.BaseModel):
     start: int | None = None
     end: int | None = None
 
+
+class SourceEntry(pydantic.BaseModel):
+    text: str
+    layer: int
+    
+    def __str__(self):
+        return self.text
+
+def emit_archive_add(scene: "Scene", entry: ArchiveEntry):
+    """
+    Emits the archive_add signal for an archive entry
+    """
+    scene.signals["archive_add"].send(
+        ArchiveEvent(
+            scene=scene, 
+            event_type="archive_add", 
+            text=entry.text, 
+            ts=entry.ts, 
+            memory_id=entry.id
+        )
+    )
+
+def resolve_history_entry(scene: "Scene", entry: HistoryEntry) -> LayeredArchiveEntry | ArchiveEntry:
+    """
+    Resolves a history entry in the scene's archived history
+    """
+    
+    if entry.layer == 0:
+        return scene.archived_history[entry.index]
+    else:
+        return scene.layered_history[entry.layer - 1][entry.index]
 
 def pop_history(
     history: list[SceneMessage],
@@ -107,6 +152,7 @@ def history_with_relative_time(history: list[str], scene_time: str, layer: int =
         HistoryEntry(
             text=entry["text"],
             ts=entry["ts"],
+            id=entry.get("id", None),
             index=index,
             layer=layer,
             ts_start=entry.get("ts_start", None),
@@ -120,6 +166,12 @@ def history_with_relative_time(history: list[str], scene_time: str, layer: int =
         for index, entry in enumerate(history)
     ]
 
+async def purge_all_history_from_memory():
+    """
+    Removes all history from the memory agent
+    """
+    memory = get_agent("memory")
+    await memory.delete({"typ": "history"})
 
 async def rebuild_history(
     scene: "Scene",
@@ -129,6 +181,8 @@ async def rebuild_history(
     """
     rebuilds all history for a scene
     """
+    memory = get_agent("memory")
+    summarizer = get_agent("summarizer")
 
     # clear out archived history, but keep pre-established history
     scene.archived_history = [
@@ -137,11 +191,11 @@ async def rebuild_history(
     
     scene.layered_history = []
 
+    await purge_all_history_from_memory()
+
     scene.saved = False
 
     scene.sync_time()
-
-    summarizer = get_agent("summarizer")
 
     entries = 0
     total_entries = summarizer.estimated_entry_count
@@ -246,9 +300,131 @@ async def update_history_entry(scene: "Scene", entry: HistoryEntry) -> LayeredAr
         # base layer
         archive_entry = ArchiveEntry(**entry.model_dump())
         scene.archived_history[entry.index] = archive_entry.model_dump(exclude_none=True)
+        emit_archive_add(scene, archive_entry)
         return archive_entry
     else:
         # layered history
         layered_entry = LayeredArchiveEntry(**entry.model_dump())
         scene.layered_history[entry.layer - 1][entry.index] = layered_entry.model_dump(exclude_none=True)
         return layered_entry
+
+async def collect_source_entries(scene: "Scene", entry: HistoryEntry) -> list[SourceEntry]:
+    """
+    Collects the source entries for a history entry
+    """
+    
+    if not entry.start or not entry.end:
+        # entries that dont defien a start and end are not regeneratable
+        return []
+    
+    if entry.layer == 0:
+        # base layer
+        # start and end are absed on message.id values that may no longer correlate with
+        # the actrual index in scene.history
+        
+        start_message_index = scene.message_index(entry.start)
+        end_message_index = scene.message_index(entry.end)
+        
+        if start_message_index == -1 or end_message_index == -1:
+            return []
+        
+        def include_message(message: SceneMessage) -> bool:
+            return message.typ not in ["director", "context_investigation", "reinforcement"]
+        
+        result = [
+            SourceEntry(text=str(source), layer=-1) for source in filter(include_message, scene.history[start_message_index:end_message_index])
+        ]
+        
+        log.debug("collect_source_entries (base layer)", result=result)
+        
+        return result
+        
+    else:
+        # layered history
+        if entry.layer == 1:
+            source_layer = scene.archived_history
+            source_layer_index = 0
+        else:
+            source_layer_index = entry.layer - 1
+            source_layer = scene.layered_history[source_layer_index]
+            
+        return [
+            SourceEntry(text=source.text, layer=source_layer_index) for source in source_layer[entry.start:entry.end]
+        ]
+        
+    
+    
+async def regenerate_history_entry(scene: "Scene", entry: HistoryEntry, generation_options: GenerationOptions | None = None) -> LayeredArchiveEntry | ArchiveEntry:
+    """
+    Regenerates a history entry in the scene's archived history
+    """
+    
+    summarizer = get_agent("summarizer")
+    if not entry.start or not entry.end:
+        # entries that dont defien a start and end are not regeneratable
+        raise UnregeneratableEntryError("No start or end")
+
+    entries = await collect_source_entries(scene, entry)
+    
+    if not entries:
+        raise UnregeneratableEntryError("No entries")
+    
+    try:
+        resolve_history_entry(scene, entry)
+    except IndexError:
+        raise UnregeneratableEntryError("Entry not found")
+    
+    summarized = await summarizer.summarize(
+        "\n".join(map(str, entries)),
+        extra_context=await summarizer.previous_summaries(),
+        generation_options=generation_options,
+    )
+    
+    entry.text = summarized
+    
+    await update_history_entry(scene, entry)
+    
+    return entry
+
+
+async def validate_history(scene: "Scene") -> bool:
+    
+    memory = get_agent("memory")
+    archived_history = scene.archived_history
+    
+    # if archived_history does not have memory_id set, we need to ensure
+    # they are set and reimport to the memory agent
+    
+    any_missing_memory_id = any(entry.get("id") is None for entry in archived_history)
+    
+    invalid = any_missing_memory_id
+    
+    
+    if invalid:
+        log.warning("History is invalid, fixing and reimporting", any_missing_memory_id=any_missing_memory_id)
+        await purge_all_history_from_memory()
+        
+        _archived_history = []
+        
+        for entry in archived_history:
+            try:
+                _archived_history.append(
+                    ArchiveEntry(**entry).model_dump(exclude_none=True)
+                )
+            except Exception as e:
+                log.error("Error validating history entry", error=e)
+                log.error("Invalid entry", entry=entry)
+                continue
+        
+        scene.archived_history = _archived_history
+    
+    # always send the archive_add signal for all entries
+    # this ensures the entries are up to date in the memory database
+    for entry in scene.archived_history:
+        scene.signals["archive_add"].send(
+            ArchiveEvent(
+                scene=scene, event_type="archive_add", text=entry["text"], ts=entry["ts"], memory_id=entry["id"]
+            )
+        )
+            
+    return not invalid

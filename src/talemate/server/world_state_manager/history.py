@@ -8,8 +8,7 @@ from talemate.history import (
     rebuild_history, 
     HistoryEntry,
     update_history_entry,
-    ArchiveEntry,
-    LayeredArchiveEntry,
+    regenerate_history_entry,
 )
 from talemate.server.world_state_manager import world_state_templates
 
@@ -87,8 +86,6 @@ class HistoryMixin:
     async def handle_update_history_entry(self, data):
         payload = HistoryEntryPayload(**data)
         
-        log.debug("update_history_entry", payload=payload)
-                
         entry = await update_history_entry(self.scene, payload.entry)
         
         self.websocket_handler.queue_put(
@@ -99,5 +96,27 @@ class HistoryMixin:
             }
         )
         
-        await self.handle_request_scene_history(data)
+        await self.signal_operation_done()
+        
+    async def handle_regenerate_history_entry(self, data):
+        """
+        Regenerate a single history entry.
+        """
+        
+        payload = HistoryEntryPayload(**data)
+        
+        log.debug("regenerate_history_entry", payload=payload)
+        
+        entry = await regenerate_history_entry(self.scene, payload.entry)
+        
+        log.debug("regenerate_history_entry (done)", entry=entry)
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "history_entry_regenerated",
+                "data": entry.model_dump()
+            }
+        )
+        
         await self.signal_operation_done()

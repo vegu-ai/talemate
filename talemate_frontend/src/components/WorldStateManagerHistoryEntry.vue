@@ -1,7 +1,10 @@
 <template>
     <v-card elevation="7" style="max-width: 1600px;" class="mb-2" density="compact">
         <v-card-title class="text-body-2 text-grey-lighten-3"><v-icon class="mr-2" size="small" icon="mdi-clock"></v-icon>{{ entry.time }}
-          <span v-if="!editing && hovered" class="text-caption text-muted ml-2"><v-icon size="small" icon="mdi-pencil"></v-icon> double-click to edit</span>
+            <span v-if="entry.id && hovered" class="text-caption text-grey-darken-1 ml-2">
+                {{ entry.id }}
+            </span>
+            <span v-if="!editing && hovered" class="text-caption text-muted ml-2"><v-icon size="small" icon="mdi-pencil"></v-icon> double-click to edit</span>
         </v-card-title>
         <v-card-text>
             <div v-if="!editing" class="history-entry text-muted text-body-1" @dblclick="setEditing(true)" @mouseenter="hovered = true" @mouseleave="hovered = false">
@@ -9,9 +12,9 @@
             </div>
             <v-textarea v-else rows="1" auto-grow v-model="entry.text" @blur="setEditing(false)" @keydown.esc="setEditing(false)" ref="textarea" hint="Press Escape to cancel, Shift+Enter for new line, Enter to save" @keydown.enter="handleEnter" />
         </v-card-text>
-        <v-card-actions>
-            <v-btn prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(entry, ev.ctrlKey)">Regenerate</v-btn>
-            <v-btn color="primary" prepend-icon="mdi-magnify-expand" @click="inspectEntry(entry)">Inspect</v-btn>
+        <v-card-actions v-if="hasSourceEntries">
+            <v-btn :disabled="editing || busy" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(entry, ev.ctrlKey)">Regenerate</v-btn>
+            <v-btn :disabled="editing || busy" color="primary" prepend-icon="mdi-magnify-expand" @click="inspectEntry(entry)">Inspect</v-btn>
         </v-card-actions>
     </v-card>
 </template>
@@ -68,6 +71,11 @@ export default {
         'setWaitingForInput',
         'requestSceneAssets',
     ],
+    computed: {
+        hasSourceEntries() {
+            return this.entry.start !== null && this.entry.end !== null;
+        }
+    },
     methods: {
         handleEnter(ev) {
             if(!ev.shiftKey) {

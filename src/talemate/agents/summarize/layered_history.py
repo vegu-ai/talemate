@@ -154,6 +154,80 @@ class LayeredHistoryMixin:
             await self.summarize_to_layered_history(
                 generation_options=emission.generation_options
             )
+            
+    # helpers
+    
+    async def _lh_split_and_summarize_chunks(
+        self, 
+        chunks: list[dict],
+        extra_context: str,
+        generation_options: GenerationOptions | None = None,
+    ) -> list[str]:
+        """
+        Split chunks based on max_process_tokens and summarize each part.
+        Returns a list of summary texts.
+        """
+        summaries = []
+        current_chunk = chunks.copy()
+        
+        while current_chunk:
+            partial_chunk = []
+            max_process_tokens = self.layered_history_max_process_tokens
+            
+            # Build partial chunk up to max_process_tokens
+            while current_chunk and util.count_tokens("\n\n".join(chunk['text'] for chunk in partial_chunk)) < max_process_tokens:
+                partial_chunk.append(current_chunk.pop(0))
+            
+            text_to_summarize = "\n\n".join(chunk['text'] for chunk in partial_chunk)
+            
+            log.debug("_split_and_summarize_chunks", 
+                     tokens_in_chunk=util.count_tokens(text_to_summarize), 
+                     max_process_tokens=max_process_tokens)
+            
+            summary_text = await self.summarize_events(
+                text_to_summarize,
+                extra_context=extra_context + "\n\n".join(summaries),
+                generation_options=generation_options,
+                response_length=self.layered_history_response_length,
+                analyze_chunks=self.layered_history_analyze_chunks,
+                chunk_size=self.layered_history_chunk_size,
+            )
+            summaries.append(summary_text)
+            
+        return summaries
+    
+    def _lh_validate_summary_length(self, summaries: list[str], original_length: int):
+        """
+        Validates that the summarized text is not longer than the original.
+        Raises SummaryLongerThanOriginalError if validation fails.
+        """
+        summarized_length = util.count_tokens(summaries)
+        if summarized_length > original_length:
+            raise SummaryLongerThanOriginalError(original_length, summarized_length)
+        
+        log.debug("_validate_summary_length", 
+                 original_length=original_length, 
+                 summarized_length=summarized_length)
+    
+    def _lh_build_extra_context(self, layer_index: int) -> str:
+        """
+        Builds extra context from compiled layered history for the given layer.
+        """
+        return "\n\n".join(self.compile_layered_history(layer_index))
+    
+    def _lh_extract_timestamps(self, chunk: list[dict]) -> tuple[str, str, str]:
+        """
+        Extracts timestamps from a chunk of entries.
+        Returns (ts, ts_start, ts_end)
+        """
+        if not chunk:
+            return "PT1S", "PT1S", "PT1S"
+            
+        ts = chunk[0].get('ts', 'PT1S')
+        ts_start = chunk[0].get('ts_start', ts)
+        ts_end = chunk[-1].get('ts_end', chunk[-1].get('ts', ts))
+        
+        return ts, ts_start, ts_end
     
     # methods
 
@@ -305,8 +379,6 @@ class LayeredHistoryMixin:
             return  # No base layer summaries to work with
         
         token_threshold = self.layered_history_threshold
-        method = self.actions["archive"].config["method"].value
-        max_process_tokens = self.layered_history_max_process_tokens
         max_layers = self.layered_history_max_layers
 
         if not hasattr(self.scene, 'layered_history'):
@@ -343,15 +415,9 @@ class LayeredHistoryMixin:
                             log.debug("summarize_to_layered_history", created_layer=next_layer_index)
                             next_layer = layered_history[next_layer_index]
                                 
-                        ts = current_chunk[0]['ts']
-                        ts_start = current_chunk[0]['ts_start'] if 'ts_start' in current_chunk[0] else ts
-                        ts_end = current_chunk[-1]['ts_end'] if 'ts_end' in current_chunk[-1] else ts
+                        ts, ts_start, ts_end = self._lh_extract_timestamps(current_chunk)
                         
-                        summaries = []
-
-                        extra_context = "\n\n".join(
-                            self.compile_layered_history(next_layer_index)
-                        )
+                        extra_context = self._lh_build_extra_context(next_layer_index)
 
                         text_length = util.count_tokens("\n\n".join(chunk['text'] for chunk in current_chunk))
 
@@ -359,35 +425,15 @@ class LayeredHistoryMixin:
 
                         emit("status", status="busy", message=f"Updating layered history - layer {next_layer_index} - {num_entries_in_layer} / {estimated_entries}", data={"cancellable": True})
                         
-                        while current_chunk:
+                        summaries = await self._lh_split_and_summarize_chunks(
+                            current_chunk,
+                            extra_context,
+                            generation_options=generation_options,
+                        )
+                        noop = False
                             
-                            log.debug("summarize_to_layered_history", tokens_in_chunk=util.count_tokens("\n\n".join(chunk['text'] for chunk in current_chunk)), max_process_tokens=max_process_tokens)
-                            
-                            partial_chunk = []
-                            
-                            while current_chunk and util.count_tokens("\n\n".join(chunk['text'] for chunk in partial_chunk)) < max_process_tokens:
-                                partial_chunk.append(current_chunk.pop(0))
-                            
-                            text_to_summarize = "\n\n".join(chunk['text'] for chunk in partial_chunk)
-                        
-
-                            summary_text = await self.summarize_events(
-                                text_to_summarize,
-                                extra_context=extra_context + "\n\n".join(summaries),
-                                generation_options=generation_options,
-                                response_length=self.layered_history_response_length,
-                                analyze_chunks=self.layered_history_analyze_chunks,
-                                chunk_size=self.layered_history_chunk_size,
-                            )
-                            noop = False
-                            summaries.append(summary_text)
-                            
-                        # if summarized text is longer than the original, we will
-                        # raise an error
-                        if util.count_tokens(summaries) > text_length:
-                            raise SummaryLongerThanOriginalError(text_length, util.count_tokens(summaries))
-                        
-                        log.debug("summarize_to_layered_history", original_length=text_length, summarized_length=util.count_tokens(summaries))
+                        # validate summary length
+                        self._lh_validate_summary_length(summaries, text_length)
                         
                         next_layer.append(LayeredArchiveEntry(**{
                             "start": start_index,
@@ -491,9 +537,41 @@ class LayeredHistoryMixin:
         end_index: int,
         generation_options: GenerationOptions | None = None,
     ) -> list[LayeredArchiveEntry]:
+        """
+        Summarizes a list of entries into layered history entries.
+        
+        This method is used for regenerating specific history entries by processing
+        their source entries. It chunks the entries based on the token threshold and
+        summarizes each chunk into a LayeredArchiveEntry.
+        
+        Args:
+            entries: List of dictionaries containing the text entries to summarize.
+                    Each entry should have at least a 'text' field and optionally
+                    'ts', 'ts_start', and 'ts_end' fields.
+            next_layer_index: The index of the layer where the summarized entries
+                            will be placed.
+            start_index: The starting index in the source layer that these entries
+                        correspond to.
+            end_index: The ending index in the source layer that these entries
+                      correspond to.
+            generation_options: Optional generation options to pass to the summarization
+                              process.
+        
+        Returns:
+            List of LayeredArchiveEntry objects containing the summarized text along
+            with timestamp and index information. Currently returns a list with a
+            single entry, but the structure supports multiple entries if needed.
+        
+        Notes:
+            - The method respects the layered_history_threshold for chunking
+            - Uses helper methods for timestamp extraction, context building, and
+              chunk summarization
+            - Validates that summaries are not longer than the original text
+            - The last entry is always included in the final chunk if it doesn't
+              exceed the token threshold
+        """
         
         token_threshold = self.layered_history_threshold
-        max_process_tokens = self.layered_history_max_process_tokens
                             
         archive_entries = []
         summaries = []
@@ -520,43 +598,20 @@ class LayeredHistoryMixin:
                     current_chunk.append(entry)
                 
                 if current_chunk:
-                    ts = current_chunk[0]['ts']
-                    ts_start = current_chunk[0]['ts_start'] if 'ts_start' in current_chunk[0] else ts
-                    ts_end = current_chunk[-1]['ts_end'] if 'ts_end' in current_chunk[-1] else ts
+                    ts, ts_start, ts_end = self._lh_extract_timestamps(current_chunk)
 
-
-                    extra_context = "\n\n".join(
-                        self.compile_layered_history(next_layer_index)
-                    )
+                    extra_context = self._lh_build_extra_context(next_layer_index)
 
                     text_length = util.count_tokens("\n\n".join(chunk['text'] for chunk in current_chunk))
 
-                    while current_chunk:
+                    summaries = await self._lh_split_and_summarize_chunks(
+                        current_chunk,
+                        extra_context,
+                        generation_options=generation_options,
+                    )
                         
-                        log.debug("summarize_entries_to_layered_history", tokens_in_chunk=util.count_tokens("\n\n".join(chunk['text'] for chunk in current_chunk)), max_process_tokens=max_process_tokens)
-                        
-                        partial_chunk = []
-                        
-                        while current_chunk and util.count_tokens("\n\n".join(chunk['text'] for chunk in partial_chunk)) < max_process_tokens:
-                            partial_chunk.append(current_chunk.pop(0))
-                        
-                        text_to_summarize = "\n\n".join(chunk['text'] for chunk in partial_chunk)
-                    
-
-                        summary_text = await self.summarize_events(
-                            text_to_summarize,
-                            extra_context=extra_context + "\n\n".join(summaries),
-                            generation_options=generation_options,
-                            response_length=self.layered_history_response_length,
-                            analyze_chunks=self.layered_history_analyze_chunks,
-                            chunk_size=self.layered_history_chunk_size,
-                        )
-                        summaries.append(summary_text)
-                        
-                    # if summarized text is longer than the original, we will
-                    # raise an error
-                    if util.count_tokens(summaries) > text_length:
-                        raise SummaryLongerThanOriginalError(text_length, util.count_tokens(summaries))
+                    # validate summary length
+                    self._lh_validate_summary_length(summaries, text_length)
                     
                     archive_entry = LayeredArchiveEntry(**{
                         "start": start_index,

@@ -1,18 +1,12 @@
 @echo off
 
-IF EXIST talemate_env rmdir /s /q "talemate_env"
+IF EXIST .venv rmdir /s /q ".venv"
 
-REM create a virtual environment
-python -m venv talemate_env
+REM create a virtual environment with uv
+uv venv
 
-REM activate the virtual environment
-call talemate_env\Scripts\activate
-
-REM install poetry
-python -m pip install "poetry==1.7.1" "rapidfuzz>=3" -U
-
-REM use poetry to install dependencies
-python -m poetry install
+REM install dependencies with uv
+uv pip install -e ".[dev]"
 
 echo Virtual environment re-created.
 pause

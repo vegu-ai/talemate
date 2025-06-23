@@ -25,14 +25,13 @@ RUN apt-get update && apt-get install -y \
 # Install uv
 RUN pip install uv
 
-# Copy installation files
-COPY pyproject.toml install.sh /app/
-
-# Run installation script
-RUN chmod +x install.sh && ./install.sh
-
-# Copy the Python source code
+# Copy project files first
+COPY pyproject.toml /app/
 COPY ./src /app/src
+
+# Create virtual environment and install dependencies
+RUN uv venv
+RUN uv pip install -e .
 
 # Conditional PyTorch+CUDA install
 ARG CUDA_AVAILABLE=false
@@ -67,11 +66,13 @@ COPY --from=frontend-build /app/dist /app/talemate_frontend/dist
 # Copy the frontend WSGI file if it exists
 COPY frontend_wsgi.py /app/frontend_wsgi.py
 
-# Copy base config
+# Copy essential directories and files
 COPY config.example.yaml /app/config.yaml
+COPY scenes /app/scenes/
+COPY templates /app/templates/
 
-# Copy essentials
-COPY scenes templates chroma* /app/
+# Create chroma directory (for vector database)
+RUN mkdir -p /app/chroma
 
 # Set PYTHONPATH to include the src directory
 ENV PYTHONPATH=/app/src:$PYTHONPATH

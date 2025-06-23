@@ -10,12 +10,9 @@ git remote add origin https://github.com/vegu-ai/talemate
 REM pull the latest changes from git repository
 git pull
 
-REM activate the virtual environment
-call talemate_env\Scripts\activate
-
-REM use poetry to install dependencies
+REM install dependencies with uv
 echo Updating virtual environment...
-python -m poetry install
+uv pip install -e ".[dev]"
 
 echo Virtual environment updated!
 

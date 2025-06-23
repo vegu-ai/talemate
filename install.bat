@@ -32,20 +32,11 @@ IF ERRORLEVEL 1 (
     exit /b 1
 )
 
-REM create a virtual environment
-%PYTHON% -m venv talemate_env
+REM create a virtual environment with uv
+uv venv
 
-REM activate the virtual environment
-call talemate_env\Scripts\activate
-
-REM upgrade pip and setuptools
-python -m pip install --upgrade pip setuptools
-
-REM install poetry
-python -m pip install "poetry==1.7.1" "rapidfuzz>=3" -U
-
-REM use poetry to install dependencies
-python -m poetry install
+REM install dependencies with uv
+uv pip install -e ".[dev]"
 
 REM copy config.example.yaml to config.yaml only if config.yaml doesn't exist
 IF NOT EXIST config.yaml copy config.example.yaml config.yaml

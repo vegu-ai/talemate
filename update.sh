@@ -10,12 +10,9 @@ fi
 # Pull latest changes
 git pull
 
-# Activate virtual environment
-. talemate_env/bin/activate
-
-# Install dependencies with poetry
+# Install dependencies with uv
 echo "Updating virtual environment..."
-python3 -m poetry install
+uv pip install -e ".[dev]"
 
 echo "Virtual environment updated!"
 

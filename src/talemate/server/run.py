@@ -136,7 +136,9 @@ async def async_run_server(args):
     
     # Create a wrapper that handles the new websockets API
     async def websocket_handler(websocket):
-        await websocket_endpoint(websocket, websocket.path)
+        # In newer versions of websockets, path might be in request.path
+        path = getattr(websocket, 'path', None) or getattr(websocket.request, 'path', '/') if hasattr(websocket, 'request') else '/'
+        await websocket_endpoint(websocket, path)
     
     server = await websockets.serve(
         websocket_handler, args.host, args.port, max_size=2**23

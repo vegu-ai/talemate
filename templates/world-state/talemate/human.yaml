@@ -33,6 +33,32 @@ templates:
     supports_style: false
     template_type: character_attribute
     uid: 2be87e1d-e888-4f63-af2e-a5ec0700ef29
+  2d638111-37a0-4e3f-ab2e-82ae841745a9:
+    attribute: Pubic Hair
+    description: null
+    favorite: false
+    group: 42a058e7-d6e0-412e-96f5-98f466c9e941
+    instructions: 'If {character_name} is female describe their public hair or lack
+      there of if they are to young or groomed. '
+    name: Pubic
+    priority: 2
+    supports_spice: false
+    supports_style: false
+    template_type: character_attribute
+    uid: 2d638111-37a0-4e3f-ab2e-82ae841745a9
+  62d4631d-1559-47f5-aaac-2ea3b1eb7db6:
+    attribute: Breast
+    description: null
+    favorite: false
+    group: 42a058e7-d6e0-412e-96f5-98f466c9e941
+    instructions: 'If {character_name} is female describe their beast. Cup size, firmnes.
+      Nipples. '
+    name: Breast
+    priority: 2
+    supports_spice: false
+    supports_style: false
+    template_type: character_attribute
+    uid: 62d4631d-1559-47f5-aaac-2ea3b1eb7db6
   6f469667-7873-446c-beb1-500b4a33aad5:
     attribute: Personality
     description: null
@@ -70,6 +96,18 @@ templates:
     supports_style: true
     template_type: character_detail
     uid: 8598cb17-7a80-402b-88b3-ac4153e4da70
+  a1ae5d54-2140-46ae-8202-49be66208122:
+    attribute: Labia
+    description: null
+    favorite: false
+    group: 42a058e7-d6e0-412e-96f5-98f466c9e941
+    instructions: 'If {character_name} is female describe their labia and vulva. '
+    name: Labia
+    priority: 2
+    supports_spice: false
+    supports_style: false
+    template_type: character_attribute
+    uid: a1ae5d54-2140-46ae-8202-49be66208122
   a544d80f-1d4a-4206-9503-9f066ef914b3:
     attribute: Likes
     description: What does the character enjoy?

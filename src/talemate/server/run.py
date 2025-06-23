@@ -59,12 +59,9 @@ async def log_stream(stream, log_func):
             # Use the provided log_func for other messages
             log_func("uvicron", message=decoded_line)
 
-async def run_frontend(host: str = "localhost", port: int = 8080):
-    if sys.platform == "win32":
-        activate_cmd = ".\\talemate_env\\Scripts\\activate.bat"
-        frontend_cmd = f"{activate_cmd} && uvicorn --host {host} --port {port} frontend_wsgi:application"
-    else:
-        frontend_cmd = f"/bin/bash -c 'source talemate_env/bin/activate && uvicorn --host {host} --port {port} frontend_wsgi:application'"
+async def run_frontend(host: str = "0.0.0.0", port: int = 8080):
+    # Use uv run to execute uvicorn
+    frontend_cmd = f"uv run uvicorn --host {host} --port {port} frontend_wsgi:application"
     frontend_cwd = None
         
     process = await asyncio.create_subprocess_shell(
@@ -98,7 +95,7 @@ async def cancel_all_tasks(loop):
     [task.cancel() for task in tasks]
     await asyncio.gather(*tasks, return_exceptions=True)
 
-def run_server(args):
+async def async_run_server(args):
     """
     Run the talemate web server using the provided arguments.
 
@@ -136,37 +133,47 @@ def run_server(args):
                 template=template_override.template_name,
                 age=template_override.age_difference,
             )
-
-    loop = asyncio.get_event_loop()
     
-    start_server = websockets.serve(
+    server = await websockets.serve(
         websocket_endpoint, args.host, args.port, max_size=2**23
     )
     
-    loop.run_until_complete(start_server)
-    
-    # start task to unstall punkt
-    loop.create_task(install_punkt())
+    # start task to install punkt
+    asyncio.create_task(install_punkt())
     
     if not args.backend_only:
-        frontend_task = loop.create_task(run_frontend(args.frontend_host, args.frontend_port))
+        frontend_task = asyncio.create_task(run_frontend(args.frontend_host, args.frontend_port))
     else:
         frontend_task = None
 
     log.info("talemate backend started", host=args.host, port=args.port)
+    
     try:
-        loop.run_forever()
-    except KeyboardInterrupt:
+        await asyncio.Future()  # run forever
+    except asyncio.CancelledError:
         pass
     finally:
         log.info("Shutting down...")
         
         if frontend_task:
             frontend_task.cancel()
-        loop.run_until_complete(cancel_all_tasks(loop))
-        loop.run_until_complete(loop.shutdown_asyncgens())
-        loop.close()
+            try:
+                await frontend_task
+            except asyncio.CancelledError:
+                pass
+        
+        server.close()
+        await server.wait_closed()
         log.info("Shutdown complete")
+
+def run_server(args):
+    """
+    Wrapper to run the async server function.
+    """
+    try:
+        asyncio.run(async_run_server(args))
+    except KeyboardInterrupt:
+        pass
 
 def main():
     parser = argparse.ArgumentParser(description="talemate server")
@@ -181,7 +188,7 @@ def main():
     runserver_parser.add_argument("--backend-only", action="store_true", help="Run the backend only")
 
     # frontend host and port
-    runserver_parser.add_argument("--frontend-host", default="localhost", help="Frontend Hostname")
+    runserver_parser.add_argument("--frontend-host", default="0.0.0.0", help="Frontend Hostname")
     runserver_parser.add_argument("--frontend-port", type=int, default=8080, help="Frontend Port")
 
     args = parser.parse_args()

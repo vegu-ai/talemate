@@ -25,13 +25,13 @@ If everything went well, you can proceed to [connect a client](../../connect-a-c
 
 1. Open a terminal.
 2. Navigate to the project directory.
-3. Create a virtual environment by running `python3 -m venv talemate_env`.
-4. Activate the virtual environment by running `source talemate_env/bin/activate`.
+3. Create a virtual environment by running `python3 -m venv .venv`.
+4. Activate the virtual environment by running `source .venv/bin/activate`.
 
 ### Installing Dependencies
 
-1. With the virtual environment activated, install poetry by running `pip install poetry`.
-2. Use poetry to install dependencies by running `poetry install`.
+1. With the virtual environment activated, install uv by running `pip install uv`.
+2. Use uv to install dependencies by running `uv pip install -e ".[dev]"`.
 
 ### Running the Backend
 

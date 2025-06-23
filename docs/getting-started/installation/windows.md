@@ -35,7 +35,7 @@ If everything went well, you can proceed to [connect a client](../../connect-a-c
 
 #### install.bat
 
-This batch file is used to set up the project on your local machine. It creates a virtual environment, activates it, installs poetry, and uses poetry to install dependencies. It then navigates to the frontend directory and installs the necessary npm packages.
+This batch file is used to set up the project on your local machine. It creates a virtual environment, activates it, installs uv, and uses uv to install dependencies. It then navigates to the frontend directory and installs the necessary npm packages.
 
 To run this file, simply double click on it or open a command prompt in the same directory and type `install.bat`.
 

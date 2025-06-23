@@ -14,7 +14,7 @@ Copy `start.sh` to `start_custom.sh` and edit the `--host` and `--port` paramete
 
 ```bash
 #!/bin/sh
-. talemate_env/bin/activate
+. .venv/bin/activate
 python src/talemate/server/run.py runserver --host 0.0.0.0 --port 1234
 ```
 
@@ -23,7 +23,7 @@ python src/talemate/server/run.py runserver --host 0.0.0.0 --port 1234
 Copy `start.bat` to `start_custom.bat` and edit the `--host` and `--port` parameters in the `uvicorn` command.
 
 ```batch
-start cmd /k "cd talemate_env\Scripts && activate && cd ../../ && python src\talemate\server\run.py runserver --host 0.0.0.0 --port 1234"
+start cmd /k "cd .venv\Scripts && activate && cd ../../ && python src\talemate\server\run.py runserver --host 0.0.0.0 --port 1234"
 ```
 
 ### Letting the frontend know about the new host and port
@@ -71,7 +71,7 @@ Copy `start.sh` to `start_custom.sh` and edit the `--frontend-host` and `--front
 
 ```bash
 #!/bin/sh
-. talemate_env/bin/activate
+. .venv/bin/activate
 python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5055 \
 --frontend-host localhost --frontend-port 8082
 ```
@@ -81,7 +81,7 @@ python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5055 \
 Copy `start.bat` to `start_custom.bat` and edit the `--frontend-host` and `--frontend-port` parameters.
 
 ```batch
-start cmd /k "cd talemate_env\Scripts && activate && cd ../../ && python src\talemate\server\run.py runserver --host 0.0.0.0 --port 5055 --frontend-host localhost --frontend-port 8082"
+start cmd /k "cd .venv\Scripts && activate && cd ../../ && python src\talemate\server\run.py runserver --host 0.0.0.0 --port 5055 --frontend-host localhost --frontend-port 8082"
 ```
 
 ### Start the backend and frontend

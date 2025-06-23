@@ -134,8 +134,12 @@ async def async_run_server(args):
                 age=template_override.age_difference,
             )
     
+    # Create a wrapper that handles the new websockets API
+    async def websocket_handler(websocket):
+        await websocket_endpoint(websocket, websocket.path)
+    
     server = await websockets.serve(
-        websocket_endpoint, args.host, args.port, max_size=2**23
+        websocket_handler, args.host, args.port, max_size=2**23
     )
     
     # start task to install punkt

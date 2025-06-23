@@ -1,5 +1,5 @@
 REM activate the virtual environment
-call talemate_env\Scripts\activate
+call .venv\Scripts\activate
 
 REM uninstall torch and torchaudio
 python -m pip uninstall torch torchaudio -y

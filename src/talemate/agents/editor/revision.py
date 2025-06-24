@@ -27,6 +27,7 @@ from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.agents.creator.assistant import ContextualGenerateEmission
 from talemate.agents.summarize import SummarizeEmission
+from talemate.agents.summarize.layered_history import LayeredHistoryFinalizeEmission
 from talemate.scene_message import CharacterMessage
 from talemate.util.dedupe import (
     dedupe_sentences, 
@@ -387,13 +388,16 @@ class RevisionMixin:
         async_signals.get("agent.summarization.summarize.after").connect(
             self.revision_on_generation
         )
+        async_signals.get("agent.summarization.layered_history.finalize").connect(
+            self.revision_on_generation
+        )
         # connect to the super class AFTER so these run first.
         super().connect(scene)
         
         
     async def revision_on_generation(
         self, 
-        emission: ConversationAgentEmission | NarratorAgentEmission | ContextualGenerateEmission | SummarizeEmission,
+        emission: ConversationAgentEmission | NarratorAgentEmission | ContextualGenerateEmission | SummarizeEmission | LayeredHistoryFinalizeEmission,
     ):
         """
         Called when a conversation or narrator message is generated
@@ -411,7 +415,15 @@ class RevisionMixin:
         if isinstance(emission, NarratorAgentEmission) and "narrator" not in self.revision_automatic_targets:
             return
         
-        if isinstance(emission, SummarizeEmission) and "summarization" not in self.revision_automatic_targets:
+        if isinstance(emission, SummarizeEmission):
+            if emission.summarization_type == "dialogue" and "summarization" not in self.revision_automatic_targets:
+                return
+            if emission.summarization_type == "events":
+                # event summarization is very pragmatic and doesn't really benefit 
+                # from revision, so we skip it
+                return
+        
+        if isinstance(emission, LayeredHistoryFinalizeEmission) and "summarization" not in self.revision_automatic_targets:
             return
         
         try:
@@ -428,7 +440,7 @@ class RevisionMixin:
             context_name = getattr(emission, "context_name", None),
         )
         
-        if isinstance(emission, SummarizeEmission):
+        if isinstance(emission, (SummarizeEmission, LayeredHistoryFinalizeEmission)):
             info.summarization_history = emission.summarization_history or []
         
         if isinstance(emission, ContextualGenerateEmission) and info.context_type not in CONTEXTUAL_GENERATION_TYPES:

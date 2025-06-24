@@ -4,7 +4,7 @@ import re
 import dataclasses
 
 import structlog
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 import talemate.emit.async_signals
 import talemate.util as util
 from talemate.emit import emit
@@ -64,6 +64,7 @@ class SummarizeEmission(AgentTemplateEmission):
     extra_instructions: str | None = None
     generation_options: GenerationOptions | None = None
     summarization_history: list[str] | None = None
+    summarization_type: Literal["dialogue", "events"] = "dialogue"
 
 @register()
 class SummarizeAgent(
@@ -507,7 +508,8 @@ class SummarizeAgent(
             extra_instructions=extra_instructions,
             generation_options=generation_options,
             template_vars=template_vars,
-            summarization_history=extra_context or []
+            summarization_history=extra_context or [],
+            summarization_type="dialogue",
         )
         
         await talemate.emit.async_signals.get("agent.summarization.summarize.before").send(emission)
@@ -591,7 +593,8 @@ class SummarizeAgent(
             extra_instructions=extra_instructions,
             generation_options=generation_options,
             template_vars=template_vars,
-            summarization_history=[extra_context] if extra_context else []
+            summarization_history=[extra_context] if extra_context else [],
+            summarization_type="events",
         )
         
         await talemate.emit.async_signals.get("agent.summarization.summarize.before").send(emission)

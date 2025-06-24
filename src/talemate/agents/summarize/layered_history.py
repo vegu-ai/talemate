@@ -3,8 +3,10 @@ from typing import TYPE_CHECKING, Callable
 from talemate.agents.base import (
     set_processing,
     AgentAction,
-    AgentActionConfig
+    AgentActionConfig,
+    AgentEmission,
 )
+import dataclasses
 import talemate.emit.async_signals
 from talemate.exceptions import GenerationCancelled
 from talemate.world_state.templates import GenerationOptions
@@ -17,6 +19,24 @@ if TYPE_CHECKING:
     from talemate.agents.summarize import BuildArchiveEmission
 
 log = structlog.get_logger()
+
+talemate.emit.async_signals.register(
+    "agent.summarization.layered_history.finalize",
+)
+
+@dataclasses.dataclass
+class LayeredHistoryFinalizeEmission(AgentEmission):
+    entry: LayeredArchiveEntry | None = None
+    summarization_history: list[str] = dataclasses.field(default_factory=lambda: [])
+    
+    @property
+    def response(self) -> str | None:
+        return self.entry.text if self.entry else None
+
+    @response.setter
+    def response(self, value: str):
+        if self.entry:
+            self.entry.text = value
 
 class SummaryLongerThanOriginalError(ValueError):
     def __init__(self, original_length:int, summarized_length:int):
@@ -228,7 +248,28 @@ class LayeredHistoryMixin:
         ts_end = chunk[-1].get('ts_end', chunk[-1].get('ts', ts))
         
         return ts, ts_start, ts_end
+
     
+    async def _lh_finalize_archive_entry(
+        self, 
+        entry: LayeredArchiveEntry,
+        summarization_history: list[str] | None = None,
+    ) -> LayeredArchiveEntry:
+        """
+        Finalizes an archive entry by summarizing it and adding it to the layered history.
+        """
+        
+        emission = LayeredHistoryFinalizeEmission(
+            agent=self,
+            entry=entry,
+            summarization_history=summarization_history,
+        )
+        
+        await talemate.emit.async_signals.get("agent.summarization.layered_history.finalize").send(emission)
+        
+        return emission.entry
+    
+
     # methods
 
     def compile_layered_history(
@@ -621,6 +662,8 @@ class LayeredHistoryMixin:
                         "ts_end": ts_end,
                         "text": "\n\n".join(summaries),
                     })
+                    
+                    archive_entry = await self._lh_finalize_archive_entry(archive_entry, extra_context.split("\n\n"))
                     
                     archive_entries.append(archive_entry)
 

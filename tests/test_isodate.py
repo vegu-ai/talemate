@@ -9,6 +9,7 @@ from talemate.util import (
     parse_duration_to_isodate_duration,
     timedelta_to_duration,
     duration_to_timedelta,
+    amount_unit_to_iso8601_duration,
 )
 
 
@@ -114,3 +115,34 @@ def test_iso8601_diff_to_human_unflattened(a, b, expected):
 def test_iso8601_diff_to_human_flattened(a, b, expected):
     assert iso8601_duration_to_human(iso8601_diff(a, b), flatten=True) == expected, \
            f"Failed for {a} vs {b}: Got {iso8601_duration_to_human(iso8601_diff(a, b), flatten=True)}"
+
+@pytest.mark.parametrize("amount, unit, expected", [
+    # Minutes
+    (5, "minutes", "PT5M"),
+    (1, "minute", "PT1M"),
+    # Hours
+    (3, "hours", "PT3H"),
+    # Days
+    (2, "days", "P2D"),
+    # Weeks
+    (2, "weeks", "P2W"),
+    # Months (handled specially in the date section)
+    (7, "months", "P7M"),
+    # Years
+    (4, "years", "P4Y"),
+    # Negative amount should be converted to positive duration
+    (-5, "hours", "PT5H"),
+])
+def test_amount_unit_to_iso8601_duration_valid(amount: int, unit: str, expected: str):
+    """Ensure valid (amount, unit) pairs are converted to the correct ISO-8601 duration."""
+    assert amount_unit_to_iso8601_duration(amount, unit) == expected
+
+
+@pytest.mark.parametrize("amount, unit", [
+    (1, "invalid"),
+    (0, "centuries"),
+])
+def test_amount_unit_to_iso8601_duration_invalid(amount: int, unit: str):
+    """Ensure invalid units raise ValueError."""
+    with pytest.raises(ValueError):
+        amount_unit_to_iso8601_duration(amount, unit)

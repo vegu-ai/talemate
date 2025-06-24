@@ -29,13 +29,21 @@
                         <p>No history entries yet.</p>
                     </v-alert>
 
-                    <WorldStateManagerHistoryEntry v-for="(entry, index) in history" :key="index" 
-                    :entry="entry" 
-                    :app-busy="appBusy" 
-                    :app-config="appConfig" 
-                    :busy="busyEntry && busyEntry === entry.id" 
-                    @busy="(entry_id) => setBusyEntry(entry_id)" 
-                    @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
+                    <template v-for="(entry, index) in history" :key="entry.id">
+                        <WorldStateManagerHistoryEntry 
+                            :entry="entry" 
+                            :app-busy="appBusy" 
+                            :app-config="appConfig" 
+                            :busy="busyEntry && busyEntry === entry.id" 
+                            @busy="(entry_id) => setBusyEntry(entry_id)" 
+                            @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
+
+                        <div v-if="index === firstSummaryIndex" class="my-4 d-flex justify-center my-2" style="max-width: 1600px;">
+                            <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || busy">
+                                Add Entry
+                            </v-btn>
+                        </div>
+                    </template>
         
                 </v-card-text>
             </v-card>
@@ -55,17 +63,20 @@
         </v-window-item>
     </v-window>
 
+    <WorldStateManagerHistoryAdd v-model="showAddDialog" @add="addHistoryEntry" />
 
 </template>
 
 <script>
 import WorldStateManagerHistoryEntry from './WorldStateManagerHistoryEntry.vue';
+import WorldStateManagerHistoryAdd from './WorldStateManagerHistoryAdd.vue';
 
 
 export default {
     name: 'WorldStateManagerHistory',
     components: {
         WorldStateManagerHistoryEntry,
+        WorldStateManagerHistoryAdd,
     },
     props: {
         generationOptions: Object,
@@ -80,6 +91,7 @@ export default {
             busy: false,
             tab: 'base',
             busyEntry: null,
+            showAddDialog: false,
         }
     },
     computed: {
@@ -90,6 +102,16 @@ export default {
                     entries: layer,
                 }
             });
+        },
+        firstSummaryIndex(){
+            // find the LAST index (oldest visible after reverse) where entry is summarized
+            let idx = -1;
+            this.history.forEach((e,i)=>{
+                if(e.start !== null && e.end !== null){
+                    idx = i;
+                }
+            });
+            return idx;
         }
     },
     inject:[
@@ -149,6 +171,20 @@ export default {
             this.busyEntry = entry_id;
         },
 
+        openAddDialog(){
+            this.showAddDialog = true;
+        },
+
+        addHistoryEntry(payload) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'add_history_entry',
+                text: payload.text,
+                amount: payload.amount,
+                unit: payload.unit,
+            }));
+        },
+
         handleMessage(message) {
             if (message.type != 'world_state_manager') {
                 return;
@@ -198,7 +234,7 @@ export default {
             } else if (message.action == 'operation_done') {
                 this.busyEntry = null;
             }
-        }
+        },
     },
     mounted(){
         this.registerMessageHandler(this.handleMessage);

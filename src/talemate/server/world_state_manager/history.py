@@ -9,9 +9,11 @@ from talemate.history import (
     HistoryEntry,
     update_history_entry,
     regenerate_history_entry,
-    collect_source_entries
+    collect_source_entries,
+    add_history_entry
 )
 from talemate.server.world_state_manager import world_state_templates
+from talemate.util.time import amount_unit_to_iso8601_duration
 
 log = structlog.get_logger("talemate.server.world_state_manager.history")
 
@@ -21,6 +23,12 @@ class RegenerateHistoryPayload(pydantic.BaseModel):
 
 class HistoryEntryPayload(pydantic.BaseModel):
     entry: HistoryEntry 
+
+
+class AddHistoryEntryPayload(pydantic.BaseModel):
+    text: str
+    amount: int
+    unit: str
 
 
 class HistoryMixin:
@@ -147,3 +155,28 @@ class HistoryMixin:
                 }
             }
         )
+
+    async def handle_add_history_entry(self, data):
+        """
+        Add a new manual history entry to the base (archived) layer.
+        """
+
+        payload = AddHistoryEntryPayload(**data)
+
+        try:
+            iso_offset = amount_unit_to_iso8601_duration(int(payload.amount), payload.unit)
+        except ValueError as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        try:
+            await add_history_entry(self.scene, payload.text, iso_offset)
+        except Exception as e:
+            log.error("add_history_entry", error=e)
+            await self.signal_operation_failed(str(e))
+            return
+
+        # Send updated history to the client via existing handler
+        await self.handle_request_scene_history({})
+
+        await self.signal_operation_done()

@@ -11,10 +11,27 @@ __all__ = [
     "iso8601_duration_to_human",
     "iso8601_diff_to_human",
     "iso8601_add",
-    "iso8601_correct_duration"
+    "iso8601_correct_duration",
+    "amount_unit_to_iso8601_duration"
 ]
 
 log = structlog.get_logger("talemate.util.time")
+
+# Mapping helper for unit conversion
+UNIT_TO_ISO = {
+    "minute": "M",
+    "minutes": "M",
+    "hour": "H",
+    "hours": "H",
+    "day": "D",
+    "days": "D",
+    "week": "W",
+    "weeks": "W",
+    "month": "M_month",  # special handling – months reside in date section
+    "months": "M_month",
+    "year": "Y",
+    "years": "Y",
+}
 
 def duration_to_timedelta(duration):
     """Convert an isodate.Duration object or a datetime.timedelta object to a datetime.timedelta object."""
@@ -246,3 +263,29 @@ def iso8601_correct_duration(duration: str) -> str:
         corrected_duration += "T" + time_component
 
     return corrected_duration
+
+def amount_unit_to_iso8601_duration(amount: int, unit: str) -> str:
+    """Converts numeric amount + textual unit into an ISO-8601 duration string.
+
+    Examples:
+        >>> amount_unit_to_iso8601_duration(5, "hours")  # 'PT5H'
+        >>> amount_unit_to_iso8601_duration(3, "days")   # 'P3D'
+    """
+    if amount < 0:
+        amount = abs(amount)
+
+    unit_key = unit.lower().strip()
+    if unit_key not in UNIT_TO_ISO:
+        raise ValueError(f"Invalid unit '{unit}'. Expected minutes, hours, days, weeks, months or years.")
+
+    code = UNIT_TO_ISO[unit_key]
+
+    # Months go in the date section with M but distinct from minutes
+    if code == "M_month":
+        return f"P{amount}M"
+
+    if code in ["H", "M", "S"]:
+        # time components require the T designator
+        return f"PT{amount}{code}"
+    else:
+        return f"P{amount}{code}"

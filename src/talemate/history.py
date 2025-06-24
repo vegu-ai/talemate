@@ -11,11 +11,13 @@ from typing import TYPE_CHECKING, Callable
 import structlog
 import traceback
 import uuid
+import datetime
+import isodate
 
 from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.scene_message import SceneMessage
-from talemate.util import iso8601_diff_to_human
+from talemate.util import iso8601_diff_to_human, iso8601_add, duration_to_timedelta, timedelta_to_duration
 from talemate.world_state.templates import GenerationOptions
 from talemate.exceptions import GenerationCancelled
 from talemate.context import handle_generation_cancelled
@@ -35,6 +37,7 @@ __all__ = [
     "resolve_history_entry",
     "entry_contained",
     "emit_archive_add",
+    "add_history_entry",
 ]
 
 log = structlog.get_logger()
@@ -487,3 +490,95 @@ async def validate_history(scene: "Scene") -> bool:
                     entry["end"] += 1
             
     return not invalid
+
+async def add_history_entry(scene: "Scene", text: str, offset: str) -> ArchiveEntry:
+    """
+    Inserts a manual history entry into the base (archived) history.
+
+    Args:
+        scene: The active Scene instance.
+        text: Human-provided text for the entry.
+        offset: ISO-8601 duration representing how long **before the current scene time** the entry occurred.
+
+    Returns:
+        The created ArchiveEntry dataclass instance.
+
+    Raises:
+        ValueError: If the entry would not be older than the first summarized archive entry or if no summarized entry exists.
+    """
+
+    # Parse and convert to timedelta for arithmetic
+    scene_td   = duration_to_timedelta(isodate.parse_duration(scene.ts))
+    offset_td  = duration_to_timedelta(isodate.parse_duration(offset))
+
+    new_ts_td: datetime.timedelta = scene_td - offset_td
+
+    # If offset predates the current scene start, shift timeline earlier so
+    # that the *relative* distance between existing events is preserved.
+    if new_ts_td.total_seconds() < 0:
+        shift_td = abs(new_ts_td)
+        shift_iso = isodate.duration_isoformat(shift_td)
+
+        # 1) Move scene time forward by shift (effectively extending timeline)
+        scene.ts = iso8601_add(scene.ts, shift_iso)
+
+        # 2) Shift all archived and layered history timestamps
+        def _shift_entry_ts(entry: dict):
+            for key in ["ts", "ts_start", "ts_end"]:
+                if entry.get(key):
+                    entry[key] = iso8601_add(entry[key], shift_iso)
+
+        for entry in scene.archived_history:
+            _shift_entry_ts(entry)
+
+        for layer in scene.layered_history:
+            for entry in layer:
+                _shift_entry_ts(entry)
+
+        # After shifting, the new entry will sit at PT0S
+        new_ts_td = datetime.timedelta(seconds=0)
+
+    # Find the first archive entry that originated from summarisation (has start & end)
+    first_summary: dict | None = None
+    for entry in scene.archived_history:
+        if entry.get("start") is not None and entry.get("end") is not None:
+            first_summary = entry
+            break
+
+    if first_summary is not None:
+        first_summary_td = duration_to_timedelta(isodate.parse_duration(first_summary["ts"]))
+
+        # New entry must be OLDER (i.e. smaller duration) than the first summary entry.
+        if new_ts_td >= first_summary_td:
+            raise ValueError("New entry must be older than the first summarized history entry.")
+
+    # Build ArchiveEntry
+    new_ts_str = isodate.duration_isoformat(new_ts_td)
+    archive_entry = ArchiveEntry(text=text, ts=new_ts_str)
+
+    # Insert maintaining chronological order (ascending by duration)
+    inserted = False
+    for idx, existing in enumerate(scene.archived_history):
+        try:
+            existing_ts_td = duration_to_timedelta(isodate.parse_duration(existing.get("ts", "PT0S")))
+        except Exception:
+            continue
+
+        if new_ts_td < existing_ts_td:
+            scene.archived_history.insert(idx, archive_entry.model_dump(exclude_none=True))
+            inserted = True
+            break
+
+    if not inserted:
+        scene.archived_history.append(archive_entry.model_dump(exclude_none=True))
+
+    # Emit memory-sync signal
+    emit_archive_add(scene, archive_entry)
+
+    # Recalculate scene time based on updated history/archives
+    try:
+        scene.sync_time()
+    except Exception as e:
+        log.error("add_history_entry.sync_time", error=e)
+
+    return archive_entry

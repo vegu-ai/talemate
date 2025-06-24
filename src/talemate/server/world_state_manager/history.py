@@ -10,7 +10,8 @@ from talemate.history import (
     update_history_entry,
     regenerate_history_entry,
     collect_source_entries,
-    add_history_entry
+    add_history_entry,
+    delete_history_entry
 )
 from talemate.server.world_state_manager import world_state_templates
 from talemate.util.time import amount_unit_to_iso8601_duration
@@ -29,7 +30,6 @@ class AddHistoryEntryPayload(pydantic.BaseModel):
     text: str
     amount: int
     unit: str
-
 
 class HistoryMixin:
     
@@ -177,6 +177,24 @@ class HistoryMixin:
             return
 
         # Send updated history to the client via existing handler
+        await self.handle_request_scene_history({})
+
+        await self.signal_operation_done()
+
+    async def handle_delete_history_entry(self, data):
+        """
+        Delete a manual base-layer history entry (no start/end indices).
+        """
+        payload = HistoryEntryPayload(**data)
+
+        try:
+            await delete_history_entry(self.scene, payload.entry)
+        except Exception as e:
+            log.error("delete_history_entry", error=e)
+            await self.signal_operation_failed(str(e))
+            return
+
+        # Send updated history to client
         await self.handle_request_scene_history({})
 
         await self.signal_operation_done()

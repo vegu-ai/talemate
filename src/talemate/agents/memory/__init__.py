@@ -433,14 +433,12 @@ class MemoryAgent(Agent):
     def _get_document(self, id):
         raise NotImplementedError()
 
-    def on_archive_add(self, event: events.ArchiveEvent):
-        asyncio.ensure_future(
-            self.add(event.text, uid=event.memory_id, ts=event.ts, typ="history")
-        )
+    async def on_archive_add(self, event: events.ArchiveEvent):
+        await self.add(event.text, uid=event.memory_id, ts=event.ts, typ="history")
 
     def connect(self, scene):
         super().connect(scene)
-        scene.signals["archive_add"].connect(self.on_archive_add)
+        async_signals.get("archive_add").connect(self.on_archive_add)
 
     async def memory_context(
         self,

@@ -381,7 +381,7 @@ class SummarizeAgent(
 
         # determine the appropariate timestamp for the summarization
 
-        scene.push_archive(ArchiveEntry(text=summarized, start=start, end=end, ts=ts))
+        await scene.push_archive(ArchiveEntry(text=summarized, start=start, end=end, ts=ts))
         
         scene.ts=ts
         scene.emit_status()

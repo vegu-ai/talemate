@@ -15,6 +15,7 @@ import datetime
 import isodate
 
 from talemate.emit import emit
+import talemate.emit.async_signals as async_signals
 from talemate.instance import get_agent
 from talemate.scene_message import SceneMessage
 from talemate.util import iso8601_diff_to_human, iso8601_add, duration_to_timedelta, timedelta_to_duration
@@ -38,10 +39,14 @@ __all__ = [
     "entry_contained",
     "emit_archive_add",
     "add_history_entry",
+    "delete_history_entry",
+    "reimport_history",
 ]
 
 log = structlog.get_logger()
 
+
+async_signals.register("archive_add")
 
 class UnregeneratableEntryError(Exception):
     pass
@@ -85,11 +90,11 @@ class SourceEntry(pydantic.BaseModel):
     def __str__(self):
         return self.text
 
-def emit_archive_add(scene: "Scene", entry: ArchiveEntry):
+async def emit_archive_add(scene: "Scene", entry: ArchiveEntry):
     """
     Emits the archive_add signal for an archive entry
     """
-    scene.signals["archive_add"].send(
+    await async_signals.get("archive_add").send(
         ArchiveEvent(
             scene=scene, 
             event_type="archive_add", 
@@ -376,7 +381,7 @@ async def update_history_entry(scene: "Scene", entry: HistoryEntry) -> LayeredAr
         # base layer
         archive_entry = ArchiveEntry(**entry.model_dump())
         scene.archived_history[entry.index] = archive_entry.model_dump(exclude_none=True)
-        emit_archive_add(scene, archive_entry)
+        await emit_archive_add(scene, archive_entry)
         return archive_entry
     else:
         # layered history
@@ -440,6 +445,24 @@ async def regenerate_history_entry(
     
     return entry
 
+async def reimport_history(scene: "Scene", emit_status:bool = True):
+    """
+    Reimports the history from the memory agent
+    """
+    try:
+        if emit_status:
+            emit("status", message="Reimporting history...", status="busy")
+        await purge_all_history_from_memory()
+        await validate_history(scene)
+    except Exception as e:
+        log.error("Error reimporting history", error=e)
+        if emit_status:
+            emit("status", message="Error reimporting history", status="error")
+        return
+    finally:
+        if emit_status:
+            emit("status", message="History reimported", status="success")
+    
 
 async def validate_history(scene: "Scene") -> bool:
     
@@ -474,11 +497,7 @@ async def validate_history(scene: "Scene") -> bool:
     # always send the archive_add signal for all entries
     # this ensures the entries are up to date in the memory database
     for entry in scene.archived_history:
-        scene.signals["archive_add"].send(
-            ArchiveEvent(
-                scene=scene, event_type="archive_add", text=entry["text"], ts=entry["ts"], memory_id=entry["id"]
-            )
-        )
+        await emit_archive_add(scene, ArchiveEntry(**entry))
         
     for layer_index, layer in enumerate(layered_history):
         for entry_index, entry in enumerate(layer):
@@ -572,13 +591,53 @@ async def add_history_entry(scene: "Scene", text: str, offset: str) -> ArchiveEn
     if not inserted:
         scene.archived_history.append(archive_entry.model_dump(exclude_none=True))
 
-    # Emit memory-sync signal
-    emit_archive_add(scene, archive_entry)
-
     # Recalculate scene time based on updated history/archives
     try:
         scene.sync_time()
     except Exception as e:
         log.error("add_history_entry.sync_time", error=e)
+        
+    await reimport_history(scene)
 
     return archive_entry
+
+async def delete_history_entry(scene: "Scene", entry: HistoryEntry) -> ArchiveEntry:
+    """
+    Deletes a manual base-layer history entry from the scene archives and removes it from the memory store.
+
+    Args:
+        scene: The Scene object whose history will be modified.
+        entry: The HistoryEntry to remove (must be layer 0 and have no start/end indices).
+
+    Returns:
+        The ArchiveEntry that was removed.
+
+    Raises:
+        ValueError: If the entry is not a base-layer manual entry or cannot be found.
+    """
+
+    # Validation – only base layer and manual (start/end are None)
+    if entry.layer != 0 or entry.start is not None or entry.end is not None:
+        raise ValueError("Only manual base-layer entries can be deleted.")
+
+    remove_idx: int | None = None
+    for idx, existing in enumerate(scene.archived_history):
+        if existing.get("id") == entry.id:
+            remove_idx = idx
+            break
+
+    if remove_idx is None:
+        raise ValueError("Entry not found.")
+
+    removed_raw = scene.archived_history.pop(remove_idx)
+    removed_entry = ArchiveEntry(**removed_raw)
+
+    # Ensure scene time remains consistent
+    try:
+        scene.sync_time()
+    except Exception as e:
+        log.error("delete_history_entry.sync_time", error=e)
+
+    await reimport_history(scene)
+
+    return removed_entry

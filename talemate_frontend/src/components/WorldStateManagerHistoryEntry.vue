@@ -13,17 +13,25 @@
             <v-textarea v-else rows="1" auto-grow v-model="entry.text" @blur="setEditing(false)" @keydown.esc="setEditing(false)" ref="textarea" hint="Press Escape to cancel, Shift+Enter for new line, Enter to save" @keydown.enter="handleEnter" />
         </v-card-text>
 
-        <v-card-actions v-if="hasSourceEntries">
+        <v-card-actions>
             <div v-if="busy">
-                <v-progress-circular class="ml-3 mr-3" size="24" indeterminate="disable-shrink"
-                color="primary"></v-progress-circular> <span class="text-primary">Regenerating...</span>            
+                <v-progress-circular class="ml-3 mr-3" size="24" indeterminate="disable-shrink" color="primary"></v-progress-circular>
+                <span class="text-primary">{{ pendingDelete ? 'Deleting...' : 'Regenerating...' }}</span>
             </div>
             <div v-else>
-                <v-btn :disabled="editing || locked" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(ev.ctrlKey)">Regenerate</v-btn>
-                <v-btn :disabled="editing || locked" color="primary" prepend-icon="mdi-magnify-expand" @click="toggleSourceEntries">{{ entry.source_entries ? 'Collapse' : 'Inspect' }}</v-btn>
+                <v-btn v-if="hasSourceEntries" :disabled="editing || locked" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(ev.ctrlKey)">Regenerate</v-btn>
+                <v-btn v-if="hasSourceEntries" :disabled="editing || locked" color="primary" prepend-icon="mdi-magnify-expand" @click="toggleSourceEntries">{{ entry.source_entries ? 'Collapse' : 'Inspect' }}</v-btn>
+                <ConfirmActionInline
+                    v-if="deletable"
+                    :disabled="locked"
+                    icon="mdi-close-box-outline"
+                    color="delete"
+                    action-label="Delete"
+                    confirm-label="Confirm"
+                    @confirm="deleteEntry"
+                />
             </div>
         </v-card-actions>
-
 
         <v-card v-if="hasSourceEntries && entry.source_entries" class="ma-4 bg-black" color="muted" variant="tonal">
             <v-card-text>
@@ -74,6 +82,7 @@ class HistoryEntry(pydantic.BaseModel):
 */
 
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
+import ConfirmActionInline from './ConfirmActionInline.vue';
 
 export default {
     name: 'WorldStateManagerHistoryEntry',
@@ -86,7 +95,8 @@ export default {
     data() {
         return {
             editing: false,
-            hovered: false
+            hovered: false,
+            pendingDelete: false,
         }
     },
     inject:[
@@ -115,6 +125,10 @@ export default {
             return this.entry.source_entries.map(entry => {
                 return parser.parse(entry.text);
             });
+        },
+        deletable() {
+            // Manual base-layer entries have no start/end indices
+            return this.entry.layer === 0 && this.entry.start === null && this.entry.end === null;
         }
     },
     methods: {
@@ -171,7 +185,20 @@ export default {
             } else {
                 this.collapseSourceEntries();
             }
+        },
+        deleteEntry(){
+            const entry = this.entry;
+            this.pendingDelete = true;
+            this.$emit('busy', entry.id);
+            this.getWebsocket().send(JSON.stringify({
+                type:"world_state_manager",
+                action:"delete_history_entry",
+                entry: entry,
+            }));
         }
+    },
+    components: {
+        ConfirmActionInline,
     },
 }
 </script>

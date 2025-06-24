@@ -715,7 +715,6 @@ class Scene(Emitter):
             "ai_message": signal("ai_message"),
             "player_message": signal("player_message"),
             "history_add": signal("history_add"),
-            "archive_add": signal("archive_add"),
             "game_loop": async_signals.get("game_loop"),
             "game_loop_start": async_signals.get("game_loop_start"),
             "game_loop_actor_iter": async_signals.get("game_loop_actor_iter"),
@@ -1270,7 +1269,7 @@ class Scene(Emitter):
 
         return "\n".join([message.as_format(as_format) for message in collected])
 
-    def push_archive(self, entry: ArchiveEntry):
+    async def push_archive(self, entry: ArchiveEntry):
         """
         Adds an entry to the archive history.
 
@@ -1278,7 +1277,7 @@ class Scene(Emitter):
         """
 
         self.archived_history.append(entry.model_dump(exclude_none=True))
-        emit_archive_add(self, entry)
+        await emit_archive_add(self, entry)
         emit(
             "archived_history",
             data={
@@ -2242,8 +2241,7 @@ class Scene(Emitter):
             if not ah.get("ts"):
                 ah["ts"] = ts
 
-            emit_archive_add(self, ArchiveEntry(**ah))
-            await asyncio.sleep(0)
+            await emit_archive_add(self, ArchiveEntry(**ah))
 
         for character in self.characters:
             await character.commit_to_memory(memory)

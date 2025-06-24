@@ -409,6 +409,7 @@
                                         :context-aware="false"
                                         :original="template.spices.join('\n')"
                                         :templates="templates"
+                                        :specify-length="true"
                                         @generate="onSpicesGenerated"
                                     />
                                 </v-card-actions> 

@@ -300,10 +300,13 @@ export default {
             }));
         },
         persistCharacter(name) {
-            this.getWebsocket().send(JSON.stringify({
-                type: 'interact',
-                text: `!pc:${name}`,
-            }));
+            this.getWebsocket().send(JSON.stringify(
+                {
+                    type: 'director',
+                    action: 'persist_character',
+                    name: name,
+                }
+            ));
         },
         lookAtItem(name) {
             this.getWebsocket().send(JSON.stringify({

@@ -90,7 +90,7 @@
         </v-alert>
         <v-tabs-window v-model="tab">
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
-            <v-alert type="warning" variant="tonal" v-if="!ready && connected">You need to configure a Talemate client before you can load scenes.</v-alert>
+            <v-alert type="warning" variant="tonal" v-if="!ready && connected">There are some outstanding configuration issues, please ensure that all enabled agents are configured correctly.</v-alert>
             <LoadScene 
             ref="loadScene" 
             :scene-loading-available="ready && connected"
@@ -108,10 +108,18 @@
             @world-state-manager-navigate="onOpenWorldStateManager" 
             />
           </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="package_manager">
+            <PackageManagerMenu v-if="sceneActive"
+            ref="packageManagerMenu" 
+            :scene="scene"
+            :app-busy="busy"
+            />
+          </v-tabs-window-item>
         </v-tabs-window>
+
       </v-navigation-drawer>
       <!-- right side navigation drawer -->
-      <v-navigation-drawer v-model="drawer" app location="right" width="300" disable-resize-watcher>
+      <v-navigation-drawer v-model="drawer" app location="right" width="350" disable-resize-watcher>
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
           <p class="text-body-2" color="white">
@@ -259,13 +267,17 @@
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />
           </v-tabs-window-item>
+          <!-- MODULES -->
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="package_manager">
+            <PackageManager :visible="tab === 'package_manager'" :scene="scene" :app-busy="busy" />
+          </v-tabs-window-item>
 
         </v-tabs-window>
 
       </v-container>
     </v-main>
 
-    <AppConfig ref="appConfig" :agentStatus="agentStatus" :sceneActive="sceneActive" />
+    <AppConfig ref="appConfig" :agentStatus="agentStatus" :sceneActive="sceneActive" :clientStatus="clientStatus" />
     <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
@@ -295,6 +307,8 @@ import IntroView from './IntroView.vue';
 import NodeEditor from './NodeEditor.vue';
 import DirectorConsole from './DirectorConsole.vue';
 import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
+import PackageManager from './PackageManager.vue';
+import PackageManagerMenu from './PackageManagerMenu.vue';
 // import debounce
 import { debounce } from 'lodash';
 
@@ -320,6 +334,8 @@ export default {
     DirectorConsole,
     RateLimitAlert,
     DirectorConsoleWidget,
+    PackageManager,
+    PackageManagerMenu,
   },
   name: 'TalemateApp',
   data() {
@@ -350,6 +366,17 @@ export default {
             });
           },
           value: 'world' 
+        },
+        {
+          title: () => { return 'Mods' },
+          condition: () => { return this.sceneActive },
+          icon: () => { return 'mdi-package-variant' },
+          click: () => {
+            this.$nextTick(() => {
+              this.onOpenPackageManager();
+            });
+          },
+          value: 'package_manager'
         },
         {
           title: () => { return 'Home' },
@@ -562,6 +589,13 @@ export default {
     };
   },
   methods: {
+
+    setBusy() {
+      this.busy = true;
+    },
+    setIdle() {
+      this.busy = false;
+    },
 
     onNodeEditorContainerResize() {
       this.$nextTick(() => {
@@ -862,8 +896,11 @@ export default {
         available: data.status === 'idle' || data.status === 'busy' || data.status === 'busy_bg',
         ready: data.status === 'idle',
         label: data.name,
+        name: data.name,
         lastActive: (wasBusy || busy ? this.lastClientUpdate : lastActive),
         recentlyActive: recentlyActive,
+        supports_embeddings: data.data.supports_embeddings,
+        embeddings_status: data.data.embeddings_status,
       }
 
       if(recentlyActive && !busy) {
@@ -1130,6 +1167,9 @@ export default {
       this.$nextTick(() => {
         this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
       });
+    },
+    onOpenPackageManager() {
+      this.tab = 'package_manager';
     },
     onWorldStateManagerNavigateR(tab, meta) {
       this.$nextTick(() => {

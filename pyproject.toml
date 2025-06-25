@@ -1,6 +1,6 @@
 [project]
 name = "talemate"
-version = "0.30.0"
+version = "0.31.0"
 description = "AI-backed roleplay and narrative tools"
 authors = [{name = "VeguAITools"}]
 license = {text = "GNU Affero General Public License v3.0"}
@@ -31,8 +31,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "websockets>=11.0.3",
     "structlog>=23.1.0",
-    "runpod>=1.2.0",
-    "google-cloud-aiplatform>=1.50.0",
+    "runpod==1.7.10",
+    "google-genai>=1.20.0",
     "nest_asyncio>=1.5.7",
     "isodate>=0.6.1",
     "thefuzz>=0.20.0",
@@ -46,9 +46,10 @@ dependencies = [
     "limits>=5.0",
     "diff-match-patch>=20241021",
     "sseclient-py>=1.8.0",
+    "ollama>=0.5.1",
     # ChromaDB
-    "chromadb>=0.4.17,<1",
-    "InstructorEmbedding>=1.0.1",
+    "chromadb>=1.0.12",
+    "InstructorEmbedding @ https://github.com/vegu-ai/instructor-embedding/archive/refs/heads/202506-fixes.zip",
     "torch>=2.7.0",
     "torchaudio>=2.7.0",
     "sentence_transformers>=2.7.0",
@@ -63,6 +64,10 @@ dev = [
     "mkdocs-awesome-pages-plugin>=2.9.2",
     "mkdocs-glightbox>=0.4.0",
 ]
+cpu = []
+cuda = []
+cuda121 = []
+cuda124 = []
 
 [project.scripts]
 talemate = "talemate:cli.main"
@@ -100,3 +105,32 @@ force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
 line_length = 88
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cpu", extra = "cpu" },
+    { index = "pytorch-cu121", extra = "cuda121" },
+    { index = "pytorch-cu124", extra = "cuda" },
+    { index = "pytorch-cu124", extra = "cuda124" },
+]
+torchaudio = [
+    { index = "pytorch-cpu", extra = "cpu" },
+    { index = "pytorch-cu121", extra = "cuda121" },
+    { index = "pytorch-cu124", extra = "cuda" },
+    { index = "pytorch-cu124", extra = "cuda124" },
+]

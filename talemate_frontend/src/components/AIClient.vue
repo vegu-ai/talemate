@@ -19,8 +19,15 @@
             <v-icon v-else-if="client.status == 'warning'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>
             <v-icon v-else-if="client.status == 'error'" color="red-darken-1" size="14">mdi-checkbox-blank-circle</v-icon>
             <v-btn v-else-if="client.status == 'disabled'" size="x-small" class="mr-1" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleClient(client)" icon="mdi-power-standby"></v-btn>
+
+            <!-- client status icon -->
             <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
-            <span :class="client.status == 'disabled' ? 'text-grey-darken-2 ml-1' : 'ml-1'"> {{ client.name }}</span>       
+
+            <!-- client name-->
+            <span :class="client.status == 'disabled' ? 'text-grey-darken-2 ml-1' : 'ml-1'"> {{ client.name }}</span>
+
+            <!-- request information -->
+            <AIClientRequestInformation :requestInformation="client.request_information" />
           </v-list-item-title>
           <div v-if="client.enabled">
   
@@ -29,13 +36,15 @@
                 {{ client.data.error_action.title }}
               </v-btn>
             </v-list-item-subtitle> 
-            <v-list-item-subtitle class="text-caption">
+            <v-list-item-subtitle class="text-caption mb-2">
               {{ client.model_name }}
             </v-list-item-subtitle>
             <v-list-item-title class="text-caption">
               <div class="d-flex flex-wrap align-center">
                 <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-server-outline">{{ client.type }}</v-chip>
                 <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
+                <v-chip  v-if="client.data.override_base_url" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-api">{{ client.data.override_base_url }}</v-chip>
+
                 <v-chip v-if="client.rate_limit" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-speedometer">{{ client.rate_limit }}/min</v-chip>
                 <v-menu density="compact">
                   <template v-slot:activator="{ props }">
@@ -136,6 +145,7 @@
   
 <script>
 import ClientModal from './ClientModal.vue';
+import AIClientRequestInformation from './AIClientRequestInformation.vue';
 
 export default {
   props: {
@@ -143,6 +153,7 @@ export default {
   },
   components: {
     ClientModal,
+    AIClientRequestInformation,
   },
   data() {
     return {
@@ -345,15 +356,18 @@ export default {
           client.model = client.model_name;
           client.type = data.message;
           client.status = data.status;
+          client.can_be_coerced = data.data.can_be_coerced;
           client.max_token_length = data.max_token_length;
           client.api_url = data.api_url;
           client.api_key = data.api_key;
           client.double_coercion = data.data.double_coercion;
+          client.manual_model_choices = data.data.manual_model_choices;
           client.rate_limit = data.data.rate_limit;
           client.data_format = data.data.data_format;
           client.data = data.data;
           client.enabled = data.data.enabled;
           client.system_prompts = data.data.system_prompts;
+          client.request_information = data.data.request_information;
           client.preset_group = data.data.preset_group;
           for (let key in client.data.meta.extra_fields) {
             if (client.data[key] === null || client.data[key] === undefined) {
@@ -371,16 +385,19 @@ export default {
             model: data.model_name,
             type: data.message, 
             status: data.status,
+            can_be_coerced: data.data.can_be_coerced,
             max_token_length: data.max_token_length,
             api_url: data.api_url,
             api_key: data.api_key,
             double_coercion: data.data.double_coercion,
+            manual_model_choices: data.data.manual_model_choices,
             rate_limit: data.data.rate_limit,
             data_format: data.data.data_format,
             data: data.data,
             enabled: data.data.enabled,
             system_prompts: data.data.system_prompts,
             preset_group: data.data.preset_group,
+            request_information: data.data.request_information,
           });
 
           // apply extra field defaults

@@ -52,6 +52,7 @@ from talemate.world_state import WorldState
 from talemate.world_state.manager import WorldStateManager
 from talemate.game.engine.nodes.core import GraphState
 from talemate.game.engine.nodes.layout import load_graph
+from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
         
 __all__ = [
@@ -187,8 +188,59 @@ class Character:
                 sheet_list.append(f"{key}: {value}")
 
         return "\n".join(sheet_list)
+    
+    def random_dialogue_examples(self, scene:"Scene", num: int = 3, strip_name: bool = False, max_backlog: int = 250, max_length: int = 192) -> list[str]:
+        """
+        Get multiple random example dialogue lines for this character.
+        
+        Will return up to `num` examples and not have any duplicates.
+        """
+        
+        history_examples = self._random_dialogue_examples_from_history(scene, num, max_backlog)
+        
+        if len(history_examples) < num:
+            random_examples = self._random_dialogue_examples(num - len(history_examples), strip_name)
+            
+            for example in random_examples:
+                history_examples.append(example)
+                
+        # ensure sane example lengths
+        
+        history_examples = [
+            util.strip_partial_sentences(example[:max_length])
+            for example in history_examples
+        ]
+                
+        log.debug("random_dialogue_examples", history_examples=history_examples)
+        return history_examples
+        
+    def _random_dialogue_examples_from_history(self, scene:"Scene", num: int = 3, max_backlog: int = 250) -> list[str]:
+        """
+        Get multiple random example dialogue lines for this character from the scene's history.
+        
+        Will checks the last `max_backlog` messages in the scene's history and returns up to `num` examples.
+        """
+        
+        history = scene.history[-max_backlog:]
+        
+        examples = []
+        
+        for message in history:
+            if not isinstance(message, CharacterMessage):
+                continue
+            
+            if message.character_name != self.name:
+                continue
+            
+            examples.append(message.without_name.strip())
+                
+        if not examples:
+            return []
+        
+        return random.sample(examples, min(num, len(examples)))
+        
 
-    def random_dialogue_examples(self, num: int = 3):
+    def _random_dialogue_examples(self, num: int = 3, strip_name: bool = False) -> list[str]:
         """
         Get multiple random example dialogue lines for this character.
 
@@ -207,6 +259,9 @@ class Character:
         random.shuffle(examples)
 
         # now pop examples until we have `num` examples or we run out of examples
+        
+        if strip_name:
+            examples = [example.split(":", 1)[1].strip() for example in examples]
 
         return [examples.pop() for _ in range(min(num, len(examples)))]
 
@@ -778,6 +833,10 @@ class Scene(Emitter):
     @property
     def nodes_dir(self):
         return os.path.join(self.save_dir, "nodes")
+    
+    @property
+    def info_dir(self):
+        return os.path.join(self.save_dir, "info")
         
     @property
     def auto_save(self):
@@ -845,6 +904,10 @@ class Scene(Emitter):
             "name": self.intent_state.current_scene_type.name,
             "intent": phase.intent,
         }
+        
+    @property
+    def active_node_graph(self):
+        return getattr(self, "node_graph", getattr(self, "creative_node_graph", None))
     
     def set_description(self, description: str):
         self.description = description
@@ -1827,7 +1890,7 @@ class Scene(Emitter):
             ts = self.ts
             self._fix_time()
         except Exception as e:
-            log.exception("fix_time", exc=e)
+            log.error("fix_time", exc=traceback.format_exc())
             self.ts = ts
         
     def _fix_time(self):
@@ -1964,9 +2027,11 @@ class Scene(Emitter):
                 
                 if self.environment == "creative":
                     self.creative_node_graph, _ = load_graph(self.creative_nodes_filename, [self.save_dir])
+                    await initialize_packages(self, self.creative_node_graph)
                     await self._run_creative_loop(init=first_loop)
                 else:
                     self.node_graph, _ = load_graph(self.nodes_filename, [self.save_dir])
+                    await initialize_packages(self, self.node_graph)
                     await self._run_game_loop(init=first_loop)
             except ExitScene:
                 break
@@ -1991,7 +2056,6 @@ class Scene(Emitter):
         if init:
             await self._game_startup()
             await self.emit_history()
-            await self.world_state.request_update(initial_only=True)
         
         self.nodegraph_state = state = GraphState()
         state.data["continue_scene"] = True

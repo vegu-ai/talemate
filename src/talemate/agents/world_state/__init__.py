@@ -18,6 +18,7 @@ from talemate.scene_message import (
     ReinforcementMessage,
     TimePassageMessage,
 )
+from talemate.util.response import extract_list
 
 
 from talemate.agents.base import Agent, AgentAction, AgentActionConfig, AgentEmission, set_processing
@@ -76,6 +77,12 @@ class WorldStateAgent(
                 label="Update world state",
                 description="Will attempt to update the world state based on the current scene. Runs automatically every N turns.",
                 config={
+                    "initial": AgentActionConfig(
+                        type="bool",
+                        label="When a new scene is started",
+                        description="Whether to update the world state on scene start.",
+                        value=True,
+                    ),
                     "turns": AgentActionConfig(
                         type="number",
                         label="Turns",
@@ -133,10 +140,15 @@ class WorldStateAgent(
     @property
     def experimental(self):
         return True
+    
+    @property
+    def initial_update(self):
+        return self.actions["update_world_state"].config["initial"].value
 
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("game_loop").connect(self.on_game_loop)
+        talemate.emit.async_signals.get("scene_loop_init_after").connect(self.on_scene_loop_init_after)
 
     async def advance_time(self, duration: str, narrative: str = None):
         """
@@ -162,6 +174,22 @@ class WorldStateAgent(
             )
         )
 
+    async def on_scene_loop_init_after(self, emission):
+        """
+        Called when a scene is initialized
+        """
+        if not self.enabled:
+            return
+
+        if not self.initial_update:
+            return
+        
+        if self.get_scene_state("inital_update_done"):
+            return
+
+        await self.scene.world_state.request_update()
+        self.set_scene_states(inital_update_done=True)
+        
     async def on_game_loop(self, emission: GameLoopEvent):
         """
         Called when a conversation is generated
@@ -305,7 +333,7 @@ class WorldStateAgent(
             },
         )
 
-        queries = response.split("\n")
+        queries = extract_list(response)
 
         memory_agent = get_agent("memory")
 

@@ -1,6 +1,15 @@
 {% set character_guidance = agent_action("director", "get_cached_character_guidance", character_name=character.name) %}
 {% set character_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=3) or conversation_instruction  -%}
 {% set character_instruction=agent_context_state["conversation__instruction"] -%}
+
+{# IF a `message` object is supplied check for the instruction there #}
+{% if not character_instruction %}
+{% if message and message.typ == "character" and message.from_choice %}
+{% set character_instruction = message.from_choice %}
+{% endif %}
+{% endif %}
+{# END IF #}
+
 {% if character_guidance %}
 <|SECTION:CHARACTER GUIDANCE|>
 {{ character_guidance }}

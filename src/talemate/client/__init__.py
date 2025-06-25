@@ -10,7 +10,9 @@ from talemate.client.groq import GroqClient
 from talemate.client.koboldcpp import KoboldCppClient
 from talemate.client.lmstudio import LMStudioClient
 from talemate.client.mistral import MistralAIClient
+from talemate.client.ollama import OllamaClient
 from talemate.client.openai import OpenAIClient
+from talemate.client.openrouter import OpenRouterClient
 from talemate.client.openai_compat import OpenAICompatibleClient
 from talemate.client.registry import CLIENT_CLASSES, get_client_class, register
 from talemate.client.tabbyapi import TabbyAPIClient

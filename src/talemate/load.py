@@ -40,8 +40,10 @@ log = structlog.get_logger("talemate.load")
 
 class ImportSpec(str, enum.Enum):
     talemate = "talemate"
+    chara_card_v0 = "chara_card_v0"
     chara_card_v2 = "chara_card_v2"
     chara_card_v1 = "chara_card_v1"
+    chara_card_v3 = "chara_card_v3"
 
 
 @set_loading("Loading scene...")
@@ -85,11 +87,26 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
 
 
 def identify_import_spec(data: dict) -> ImportSpec:
+
+    if data.get("spec") == "chara_card_v3":
+        return ImportSpec.chara_card_v3
+    
     if data.get("spec") == "chara_card_v2":
         return ImportSpec.chara_card_v2
 
     if data.get("spec") == "chara_card_v1":
         return ImportSpec.chara_card_v1
+    
+    
+    if "first_mes" in data:
+        # original chara card didnt specify a spec,
+        # if the first_mes key exists, we can assume it's a v0 chara card
+        return ImportSpec.chara_card_v0
+    
+    if "first_mes" in data.get("data", {}):
+        # this can also serve as a fallback for future chara card versions
+        # as they are supposed to be backwards compatible
+        return ImportSpec.chara_card_v3
 
     # TODO: probably should actually check for valid talemate scene data
     return ImportSpec.talemate
@@ -212,13 +229,6 @@ async def load_scene_from_character_card(scene, file_path):
     except Exception as e:
         log.error("generate story intent", error=e)
 
-    # update world state
-    try:
-        loading_status("Update world state ...")
-        await scene.world_state.request_update(initial_only=True)
-    except Exception as e:
-        log.error("world_state.request_update", error=e)
-
     scene.saved = False
 
     await scene.save_restore("initial.json")
@@ -323,7 +333,7 @@ async def load_scene_from_data(
         await scene.add_actor(actor)
 
     # if there is nio player character, add the default player character
-    await handle_no_player_character(scene)
+    await handle_no_player_character(scene, add_default_character=scene.config.get("game", {}).get("general", {}).get("add_default_character", True))
 
     # the scene has been saved before (since we just loaded it), so we set the saved flag to True
     # as long as the scene has a memory_id.
@@ -383,7 +393,7 @@ async def transfer_character(scene, scene_json_path, character_name):
     return scene
 
 
-async def handle_no_player_character(scene: Scene) -> None:
+async def handle_no_player_character(scene: Scene, add_default_character: bool = True) -> None:
     """
     Handle the case where there is no player character in the scene.
     """
@@ -393,7 +403,10 @@ async def handle_no_player_character(scene: Scene) -> None:
     if existing_player:
         return
     
-    player = default_player_character()
+    if add_default_character:
+        player = default_player_character()
+    else:
+        player = None
     
     if not player:
         # force scene into creative mode
@@ -413,10 +426,12 @@ def load_character_from_image(image_path: str, file_format: str) -> Character:
     """
     metadata = extract_metadata(image_path, file_format)
     spec = identify_import_spec(metadata)
+    
+    log.debug("load_character_from_image", spec=spec)
 
-    if spec == ImportSpec.chara_card_v2:
+    if spec == ImportSpec.chara_card_v2 or spec == ImportSpec.chara_card_v3:
         return character_from_chara_data(metadata["data"])
-    elif spec == ImportSpec.chara_card_v1:
+    elif spec == ImportSpec.chara_card_v1 or spec == ImportSpec.chara_card_v0:
         return character_from_chara_data(metadata)
 
     raise UnknownDataSpec(metadata)

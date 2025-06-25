@@ -2,9 +2,9 @@ name: Python Tests
 
 on:
   push:
-    branches: [ master, main, 'prep-*' ]
+    branches: [ main, 'prep-*' ]
   pull_request:
-    branches: [ master, main, 'prep-*' ]
+    branches: [ main, 'prep-*' ]
 
 jobs:
   test:

@@ -1,25 +1,14 @@
-:0
 @echo off
+REM update.bat - Update script for Talemate with uv
 
-SETLOCAL ENABLEDELAYEDEXPANSION
+REM Check if uv is installed
+where uv >nul 2>&1
+IF %ERRORLEVEL% NEQ 0 (
+    echo uv is not installed. Please install uv first: https://github.com/astral-sh/uv
+    exit /b 1
+)
 
-REM Define fatal-error handler (copied from install.bat)
-REM Usage: CALL :die "Message explaining what failed"
-goto :after_die
-
-:die
-echo.
-echo ============================================================
-echo   !!! UPDATE FAILED !!!
-echo   %*
-echo ============================================================
-pause
-exit 1
-
-:after_die
-
-echo Checking git repository...
-REM check if git repository is initialized and initialize if not
+REM check if we are inside a git checkout
 if not exist .git (
 git init
 git remote add origin https://github.com/vegu-ai/talemate
@@ -28,36 +17,21 @@ git remote add origin https://github.com/vegu-ai/talemate
 REM pull the latest changes from git repository
 git pull
 
-REM activate the virtual environment
-call talemate_env\Scripts\activate
-
-REM ---------[ Use embedded Node.js ]---------
-SET "NODE_DIR=embedded_node"
-IF NOT EXIST "%NODE_DIR%\node.exe" (
-    CALL :die "Embedded Node.js not found (expected at %CD%\%NODE_DIR%). Please run install.bat first."
-)
-
-REM Prepend embedded Node.js to PATH
-SET "PATH=%CD%\%NODE_DIR%;%PATH%"
-ECHO Using embedded Node.js at %CD%\%NODE_DIR%\node.exe
-
-REM use poetry to install dependencies
+REM install dependencies with uv
 echo Updating virtual environment...
-python -m poetry install || CALL :die "Poetry dependency install failed."
+uv pip install -e ".[dev]"
 
 echo Virtual environment updated!
 
 REM updating npm packages
 echo Updating npm packages...
 cd talemate_frontend
-call npm install || CALL :die "npm install failed."
-
-echo NPM packages updated
+npm install
 
 REM build the frontend
 echo Building frontend...
-call npm run build || CALL :die "Frontend build failed."
+npm run build
 
 cd ..
-echo Update complete - You may close this window now.
-pause
+
+echo Update complete!

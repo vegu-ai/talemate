@@ -4,6 +4,7 @@
     - [Click here for direct link to python 3.11.9 download](https://www.python.org/downloads/release/python-3119/)
     - June 2025: people have reported issues with python 3.13 still, due to some dependencies not being available yet, if you run into issues during installation try downgrading.
 1. Download and install Node.js from the [official Node.js website](https://nodejs.org/en/download/prebuilt-installer). This will also install npm.
+1. Install uv by running `pip install uv` in a command prompt.
 1. Download the Talemate project to your local machine. Download from [the Releases page](https://github.com/vegu-ai/talemate/releases).
 1. Unpack the download and run `install.bat` by double clicking it. This will set up the project on your local machine.
 1. **Optional:** If you are using an nvidia graphics card with CUDA support you may want to also run `install-cuda.bat` **afterwards**, to install the cuda enabled version of torch - although this is only needed if you want to run some bigger embedding models where CUDA can be helpful.
@@ -35,7 +36,7 @@ If everything went well, you can proceed to [connect a client](../../connect-a-c
 
 #### install.bat
 
-This batch file is used to set up the project on your local machine. It creates a virtual environment, activates it, installs poetry, and uses poetry to install dependencies. It then navigates to the frontend directory and installs the necessary npm packages.
+This batch file is used to set up the project on your local machine. It creates a virtual environment using uv and installs dependencies. It then navigates to the frontend directory and installs the necessary npm packages.
 
 To run this file, simply double click on it or open a command prompt in the same directory and type `install.bat`.
 
@@ -48,6 +49,6 @@ If you are inside a git checkout of talemate you can use this to pull and reinst
 
 #### start.bat
 
-This batch file is used to start the backend and frontend servers. It opens two command prompts, one for the frontend and one for the backend.
+This batch file is used to start the backend and frontend servers.
 
 To run this file, simply double click on it or open a command prompt in the same directory and type `start.bat`.

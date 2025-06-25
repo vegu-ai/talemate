@@ -2,14 +2,10 @@ version: '3.8'
 
 services:
   talemate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - CUDA_AVAILABLE=${CUDA_AVAILABLE:-false}
+    build: .
     ports:
-      - "${FRONTEND_PORT:-8080}:8080"
-      - "${BACKEND_PORT:-5050}:5050"
+      - "5050:5050"  # Backend port
+      - "8080:8080"  # Frontend port
     volumes:
       - ./config.yaml:/app/config.yaml
       - ./scenes:/app/scenes
@@ -18,4 +14,4 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app/src:$PYTHONPATH
-    command: ["/bin/bash", "-c", "source /app/talemate_env/bin/activate && python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050 --frontend-host 0.0.0.0 --frontend-port 8080"]
+    command: ["uv", "run", "src/talemate/server/run.py", "runserver", "--host", "0.0.0.0", "--port", "5050", "--frontend-host", "0.0.0.0", "--frontend-port", "8080"]

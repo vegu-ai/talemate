@@ -2,10 +2,14 @@ version: '3.8'
 
 services:
   talemate:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - CUDA_AVAILABLE=${CUDA_AVAILABLE:-false}
     ports:
-      - "5050:5050"  # Backend port
-      - "8080:8080"  # Frontend port
+      - "${FRONTEND_PORT:-8080}:8080"
+      - "${BACKEND_PORT:-5050}:5050"
     volumes:
       - ./config.yaml:/app/config.yaml
       - ./scenes:/app/scenes

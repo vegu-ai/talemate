@@ -27,20 +27,24 @@ RUN pip install uv
 
 # Copy project files first
 COPY pyproject.toml /app/
+COPY uv.lock /app/
 COPY ./src /app/src
 
 # Create virtual environment and install dependencies
-RUN uv venv
-RUN uv pip install -e .
+RUN uv sync --frozen --no-install-project
 
 # Conditional PyTorch+CUDA install
 ARG CUDA_AVAILABLE=false
-RUN . /app/.venv/bin/activate && \
-    if [ "$CUDA_AVAILABLE" = "true" ]; then \
+RUN if [ "$CUDA_AVAILABLE" = "true" ]; then \
         echo "Installing PyTorch with CUDA support..." && \
-        uv pip uninstall torch torchaudio && \
-        uv pip install torch~=2.4.1 torchaudio~=2.4.1 --index-url https://download.pytorch.org/whl/cu121; \
+        uv sync --frozen --extra cuda121; \
+    else \
+        echo "Installing PyTorch with CPU support..." && \
+        uv sync --frozen --extra cpu; \
     fi
+
+# Install the project itself
+RUN uv pip install -e .
 
 # Stage 3: Final image
 FROM python:3.11-slim

@@ -74,6 +74,9 @@ talemate = "talemate:cli.main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.black]
 line-length = 88
 target-version = ['py38']

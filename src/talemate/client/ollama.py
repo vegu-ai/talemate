@@ -1,9 +1,9 @@
 import asyncio
 import structlog
 import httpx
-import ollama
 import time
 from typing import Union
+from openai import AsyncOpenAI
 
 from talemate.client.base import STOPPING_STRINGS, ClientBase, CommonDefaults, ErrorAction, ParameterReroute, ExtraField
 from talemate.client.registry import register
@@ -115,9 +115,13 @@ class OllamaClient(ClientBase):
         if kwargs.get("model"):
             self.model_name = kwargs["model"]
             
-        # Create async client with the configured API URL
-        # Ollama's AsyncClient expects just the base URL without any path
-        self.client = ollama.AsyncClient(host=self.api_url)
+        # Create AsyncOpenAI client with Ollama's base URL
+        # Ollama provides an OpenAI-compatible API at /v1
+        ollama_base_url = self.api_url.rstrip('/') + "/v1"
+        self.client = AsyncOpenAI(
+            api_key="ollama",  # Ollama doesn't require an API key
+            base_url=ollama_base_url
+        )
         self.api_handles_prompt_template = kwargs.get(
             "api_handles_prompt_template", self.api_handles_prompt_template
         )   
@@ -166,11 +170,16 @@ class OllamaClient(ClientBase):
         if time.time() - self._models_last_fetched < FETCH_MODELS_INTERVAL:
             return self._available_models
         
-        response = await self.client.list()
-        models = response.get("models", [])
-        model_names = [model.model for model in models]
-        self._available_models = sorted(model_names)
-        self._models_last_fetched = time.time()
+        try:
+            # Use the OpenAI client to list models
+            models_response = await self.client.models.list()
+            model_names = [model.id for model in models_response.data]
+            self._available_models = sorted(model_names)
+            self._models_last_fetched = time.time()
+        except Exception as e:
+            log.error("Failed to fetch models", error=str(e))
+            # Keep existing models if fetch fails
+            
         return self._available_models
 
     def finalize_status(self, data: dict):
@@ -230,7 +239,7 @@ class OllamaClient(ClientBase):
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
-        Generate text using Ollama's generate endpoint.
+        Generate text using Ollama's OpenAI-compatible endpoint.
         """
         if not self.model_name:
             # Try to get a model name
@@ -238,30 +247,50 @@ class OllamaClient(ClientBase):
             if not self.model_name:
                 raise Exception("No model specified or available in Ollama")
         
-        # Prepare options for Ollama
-        options = parameters
+        # Prepare messages for chat completion
+        system_message = self.get_system_message(kind)
         
-        options["num_ctx"] = self.max_token_length
+        if self.api_handles_prompt_template:
+            # When API handles prompt template, we send the prompt as-is
+            messages = [
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": prompt.strip()}
+            ]
+        else:
+            # When we handle the prompt template, check for coercion
+            prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+            messages = [
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": prompt.strip()}
+            ]
+            if coercion_prompt:
+                messages.append({"role": "assistant", "content": coercion_prompt.strip()})
+        
+        # Convert stop parameter if present
+        if "stop" in parameters:
+            parameters["stop"] = parameters["stop"]
+        
+        # Set context length
+        if "num_ctx" not in parameters:
+            parameters["num_ctx"] = self.max_token_length
         
         try:
-            # Use generate endpoint for completion
-            stream = await self.client.generate(
+            # Use chat completions endpoint
+            stream = await self.client.chat.completions.create(
                 model=self.model_name,
-                prompt=prompt.strip(),
-                options=options,
-                raw=self.can_be_coerced,
-                think=self.can_think,
+                messages=messages,
                 stream=True,
+                **parameters
             )
             
             response = ""
             
-            async for part in stream:
-                content = part.response
-                response += content
-                self.update_request_tokens(self.count_tokens(content))
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    response += content
+                    self.update_request_tokens(self.count_tokens(content))
             
-            # Extract the response text
             return response
             
         except Exception as e:

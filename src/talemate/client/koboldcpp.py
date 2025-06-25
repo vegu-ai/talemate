@@ -5,6 +5,7 @@ import asyncio
 from typing import TYPE_CHECKING
 import requests
 from chromadb.api.types import EmbeddingFunction, Documents, Embeddings
+from openai import AsyncOpenAI
 
 # import urljoin
 from urllib.parse import urljoin, urlparse
@@ -197,12 +198,22 @@ class KoboldCppClient(ClientBase):
 
     def __init__(self, **kwargs):
         self.api_key = kwargs.pop("api_key", "")
+        self.openai_client = None
         super().__init__(**kwargs)
         self.ensure_api_endpoint_specified()
 
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)
         self.ensure_api_endpoint_specified()
+        
+        # Initialize OpenAI client if in OpenAI mode
+        if self.is_openai:
+            # For OpenAI mode, use the base URL without /v1 since AsyncOpenAI adds it
+            base_url = self.url
+            self.openai_client = AsyncOpenAI(
+                api_key=self.api_key or "dummy-key",  # KoboldCpp may not require API key
+                base_url=base_url
+            )
 
     async def get_model_name(self):
         self.ensure_api_endpoint_specified()
@@ -321,37 +332,56 @@ class KoboldCppClient(ClientBase):
 
     async def _generate_openai(self, prompt: str, parameters: dict, kind: str):
         """
-        Generates text from the given prompt and parameters.
+        Generates text from the given prompt and parameters using OpenAI-compatible API.
         """
+        if not self.openai_client:
+            # Initialize client if not already done
+            self.set_client(api_key=self.api_key)
+            
+        # Prepare messages for chat completion
+        system_message = self.get_system_message(kind)
+        
+        # Check for coercion
+        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": prompt.strip()}
+        ]
+        
+        if coercion_prompt:
+            messages.append({"role": "assistant", "content": coercion_prompt.strip()})
 
-        parameters["prompt"] = prompt.strip(" ")
-
-        self._returned_prompt_tokens = await self.tokencount(parameters["prompt"])
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                self.api_url_for_generation,
-                json=parameters,
-                timeout=None,
-                headers=self.request_headers,
+        try:
+            # Get model name if not already set
+            if not hasattr(self, 'model_name') or not self.model_name:
+                self.model_name = await self.get_model_name()
+            
+            # Use streaming for token tracking
+            stream = await self.openai_client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                stream=True,
+                **parameters
             )
-            response_data = response.json()
-            try:
-                if self.is_openai:
-                    response_text = response_data["choices"][0]["text"]
-                else:
-                    response_text = response_data["results"][0]["text"]
-            except (TypeError, KeyError) as exc:
-                log.error(
-                    "Failed to generate text",
-                    exc=exc,
-                    response_data=response_data,
-                    response_status=response.status_code,
-                )
-                response_text = ""
-
-            self._returned_response_tokens = await self.tokencount(response_text)
-            return response_text
+            
+            response = ""
+            prompt_tokens = await self.tokencount(prompt)
+            
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    response += content
+                    self.update_request_tokens(self.count_tokens(content))
+            
+            self._returned_prompt_tokens = prompt_tokens
+            self._returned_response_tokens = await self.tokencount(response)
+            
+            return response
+            
+        except Exception as e:
+            log.error("Failed to generate text", exc=e)
+            return ""
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

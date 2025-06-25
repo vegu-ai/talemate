@@ -1,6 +1,6 @@
 import pydantic
 import structlog
-from cohere import AsyncClientV2
+from openai import AsyncOpenAI
 
 from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults, ExtraField
 from talemate.client.registry import register
@@ -132,7 +132,6 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
 
     def set_client(self, max_token_length: int = None):
         if not self.cohere_api_key and not self.endpoint_override_base_url_configured:
-            self.client = AsyncClientV2("sk-1111")
             log.error("No cohere API key set")
             if self.api_key_status:
                 self.api_key_status = False
@@ -148,7 +147,13 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
 
         model = self.model_name
 
-        self.client = AsyncClientV2(self.api_key, base_url=self.base_url)
+        # Use AsyncOpenAI with Cohere's base URL
+        # Cohere provides an OpenAI-compatible API
+        cohere_base_url = self.base_url or "https://api.cohere.com/v1"
+        self.client = AsyncOpenAI(
+            api_key=self.api_key,
+            base_url=cohere_base_url
+        )
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -217,22 +222,24 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
-        Generates text from the given prompt and parameters.
+        Generates text from the given prompt and parameters using OpenAI-compatible API.
         """
 
         if not self.cohere_api_key and not self.endpoint_override_base_url_configured:
             raise Exception("No cohere API key set")
 
-        right = None
-        expected_response = None
-        try:
-            _, right = prompt.split("\nStart your response with: ")
-            expected_response = right.strip()
-        except (IndexError, ValueError):
-            pass
-
-        human_message = prompt.strip()
+        # Check for coercion
+        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        
+        # Prepare messages for chat completion
         system_message = self.get_system_message(kind)
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": prompt.strip()}
+        ]
+        
+        if coercion_prompt:
+            messages.append({"role": "assistant", "content": coercion_prompt.strip()})
 
         self.log.debug(
             "generate",
@@ -240,55 +247,53 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
             parameters=parameters,
             system_message=system_message,
         )
-        
-        messages = [
-            {
-                "role": "system",
-                "content": system_message,
-            },
-            {
-                "role": "user",
-                "content": human_message,
-            }
-        ]
+
+        # Convert stop_sequences to stop for OpenAI API
+        if "stop_sequences" in parameters:
+            parameters["stop"] = parameters.pop("stop_sequences")
 
         try:
-            # Cohere's `chat_stream` returns an **asynchronous generator** that can be
-            # consumed directly with `async for`. It is not an asynchronous context
-            # manager, so attempting to use `async with` raises a `TypeError` as seen
-            # in issue logs. We therefore iterate over the generator directly.
-
-            stream = self.client.chat_stream(
+            # Use streaming for token tracking
+            stream = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
-                **parameters,
+                stream=True,
+                **parameters
             )
 
             response = ""
+            completion_tokens = 0
+            prompt_tokens = 0
 
-            async for event in stream:
-                if event and event.type == "content-delta":
-                    chunk = event.delta.message.content.text
-                    response += chunk
-                    # Track token usage incrementally
-                    self.update_request_tokens(self.count_tokens(chunk))
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    response += content
+                    self.update_request_tokens(self.count_tokens(content))
+                
+                # Some providers include usage data in chunks
+                if hasattr(chunk, 'usage') and chunk.usage:
+                    if hasattr(chunk.usage, 'completion_tokens'):
+                        completion_tokens = chunk.usage.completion_tokens
+                    if hasattr(chunk.usage, 'prompt_tokens'):
+                        prompt_tokens = chunk.usage.prompt_tokens
 
-            self._returned_prompt_tokens = self.prompt_tokens(prompt)
-            self._returned_response_tokens = self.response_tokens(response)
+            self._returned_prompt_tokens = prompt_tokens or self.prompt_tokens(prompt)
+            self._returned_response_tokens = completion_tokens or self.response_tokens(response)
 
             log.debug("generated response", response=response)
 
-            if expected_response and expected_response.startswith("{"):
+            # Handle JSON response formatting
+            if coercion_prompt and coercion_prompt.strip().startswith("{"):
                 if response.startswith("```json") and response.endswith("```"):
                     response = response[7:-3].strip()
 
-            if right and response.startswith(right):
-                response = response[len(right) :].strip()
-
             return response
-        # except PermissionDeniedError as e:
-        #    self.log.error("generate error", e=e)
-        #    emit("status", message="cohere API: Permission Denied", status="error")
-        #    return ""
+            
         except Exception as e:
+            self.log.error("generate error", e=e)
+            if hasattr(e, '__class__') and hasattr(e.__class__, '__name__'):
+                if 'permission' in str(e).lower() or e.__class__.__name__ == 'PermissionDeniedError':
+                    emit("status", message="cohere API: Permission Denied", status="error")
+                    return ""
             raise

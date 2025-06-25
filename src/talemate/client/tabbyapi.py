@@ -4,7 +4,7 @@ import json
 import httpx
 import pydantic
 import structlog
-from openai import PermissionDeniedError
+from openai import AsyncOpenAI, PermissionDeniedError
 
 from talemate.client.base import ClientBase, ExtraField, CommonDefaults
 from talemate.client.registry import register
@@ -59,6 +59,7 @@ class TabbyAPIClient(ClientBase):
         self.model_name = model
         self.api_key = api_key
         self.api_handles_prompt_template = api_handles_prompt_template
+        self.client = None
         super().__init__(**kwargs)
 
     @property
@@ -101,6 +102,13 @@ class TabbyAPIClient(ClientBase):
         self.model_name = (
             kwargs.get("model") or kwargs.get("model_name") or self.model_name
         )
+        
+        # Initialize AsyncOpenAI client
+        self.client = AsyncOpenAI(
+            api_key=self.api_key or "dummy-key",  # TabbyAPI may not require API key
+            base_url=self.api_url,
+            default_headers={"x-api-key": self.api_key} if self.api_key else None
+        )
 
     def prompt_template(self, system_message: str, prompt: str):
 
@@ -139,13 +147,23 @@ class TabbyAPIClient(ClientBase):
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
-        Generates text from the given prompt and parameters using streaming responses.
+        Generates text from the given prompt and parameters using AsyncOpenAI.
         """
+        if not self.client:
+            self.set_client()
+            
+        # Get model name if not already set
+        if not self.model_name:
+            self.model_name = await self.get_model_name()
 
         # Determine whether we are using chat or completions endpoint
         is_chat = self.api_handles_prompt_template
 
         try:
+            response_text = ""
+            completion_tokens = 0
+            prompt_tokens = 0
+            
             if is_chat:
                 # Chat completions endpoint
                 self.log.debug(
@@ -154,100 +172,70 @@ class TabbyAPIClient(ClientBase):
                     parameters=parameters,
                 )
 
-                human_message = {"role": "user", "content": prompt.strip()}
+                system_message = self.get_system_message(kind)
+                messages = [
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": prompt.strip()}
+                ]
 
-                payload = {
-                    "model": self.model_name,
-                    "messages": [human_message],
-                    "stream": True,
-                    "stream_options": {
-                        "include_usage": True,
-                    },
-                    **parameters,
-                }
-                endpoint = "chat/completions"
+                stream = await self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    stream=True,
+                    **parameters
+                )
+                
+                async for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        content = chunk.choices[0].delta.content
+                        response_text += content
+                        self.update_request_tokens(self.count_tokens(content))
+                    
+                    # Some providers include usage data in chunks
+                    if hasattr(chunk, 'usage') and chunk.usage:
+                        if hasattr(chunk.usage, 'completion_tokens'):
+                            completion_tokens = chunk.usage.completion_tokens
+                        if hasattr(chunk.usage, 'prompt_tokens'):
+                            prompt_tokens = chunk.usage.prompt_tokens
+                
             else:
-                # Completions endpoint
+                # Completions endpoint (for raw prompt without chat formatting)
                 self.log.debug(
                     "generate (completions)",
                     prompt=prompt[:128] + " ...",
                     parameters=parameters,
                 )
+                
+                # Check for coercion
+                prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+                
+                # For completions endpoint, we need to use a different approach
+                # Some providers might support completions, but we'll use chat completions
+                # with a minimal system message
+                messages = [
+                    {"role": "system", "content": self.get_system_message(kind)},
+                    {"role": "user", "content": prompt.strip()}
+                ]
+                
+                if coercion_prompt:
+                    messages.append({"role": "assistant", "content": coercion_prompt.strip()})
 
-                payload = {
-                    "model": self.model_name,
-                    "prompt": prompt,
-                    "stream": True,
-                    **parameters,
-                }
-                endpoint = "completions"
-
-            url = urljoin(self.api_url, endpoint)
-
-            headers = {
-                "x-api-key": self.api_key,
-                "Content-Type": "application/json",
-            }
-
-            response_text = ""
-            buffer = ""
-            completion_tokens = 0
-            prompt_tokens = 0
-
-            async with httpx.AsyncClient() as client:
-                async with client.stream(
-                    "POST", 
-                    url, 
-                    headers=headers, 
-                    json=payload, 
-                    timeout=120.0
-                ) as response:
-                    async for chunk in response.aiter_text():
-                        buffer += chunk
-
-                        while True:
-                            line_end = buffer.find('\n')
-                            if line_end == -1:
-                                break
-
-                            line = buffer[:line_end].strip()
-                            buffer = buffer[line_end + 1:]
-
-                            if not line:
-                                continue
-
-                            if line.startswith("data: "):
-                                data = line[6:]
-                                if data == "[DONE]":
-                                    break
-
-                                try:
-                                    data_obj = json.loads(data)
-
-                                    choice = data_obj.get("choices", [{}])[0]
-
-                                    # Chat completions use delta -> content.  
-                                    delta = choice.get("delta", {})
-                                    content = (
-                                        delta.get("content")
-                                        or delta.get("text")
-                                        or choice.get("text")
-                                    )
-
-                                    usage = data_obj.get("usage", {})
-                                    completion_tokens = usage.get("completion_tokens", 0)
-                                    prompt_tokens = usage.get("prompt_tokens", 0)
-
-                                    if content:
-                                        response_text += content
-                                        self.update_request_tokens(self.count_tokens(content))
-                                except json.JSONDecodeError:
-                                    # ignore malformed json chunks
-                                    pass
+                stream = await self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    stream=True,
+                    **parameters
+                )
+                
+                async for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        content = chunk.choices[0].delta.content
+                        response_text += content
+                        self.update_request_tokens(self.count_tokens(content))
 
             # Save token stats for logging
-            self._returned_prompt_tokens = prompt_tokens
-            self._returned_response_tokens = completion_tokens
+            self._returned_prompt_tokens = prompt_tokens or self.count_tokens(prompt)
+            self._returned_response_tokens = completion_tokens or self.count_tokens(response_text)
 
             if is_chat:
                 # Process indirect coercion
@@ -259,13 +247,12 @@ class TabbyAPIClient(ClientBase):
             self.log.error("generate error", e=e)
             emit("status", message="Client API: Permission Denied", status="error")
             return ""
-        except httpx.ConnectTimeout:
-            self.log.error("API timeout")
-            emit("status", message="TabbyAPI: Request timed out", status="error")
-            return ""
         except Exception as e:
             self.log.error("generate error", e=e)
-            emit("status", message="Error during generation (check logs)", status="error")
+            if "timeout" in str(e).lower():
+                emit("status", message="TabbyAPI: Request timed out", status="error")
+            else:
+                emit("status", message="Error during generation (check logs)", status="error")
             return ""
 
     def reconfigure(self, **kwargs):

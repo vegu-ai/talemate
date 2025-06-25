@@ -218,21 +218,28 @@ class DeepSeekClient(ClientBase):
         except (IndexError, ValueError):
             pass
 
-        human_message = {"role": "user", "content": prompt.strip()}
-        system_message = {"role": "system", "content": self.get_system_message(kind)}
+        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        
+        # Prepare messages for chat completion
+        messages = [
+            {"role": "system", "content": self.get_system_message(kind)},
+            {"role": "user", "content": prompt.strip()}
+        ]
+        
+        if coercion_prompt:
+            messages.append({"role": "assistant", "content": coercion_prompt.strip()})
 
         self.log.debug(
             "generate",
             prompt=prompt[:128] + " ...",
             parameters=parameters,
-            system_message=system_message,
         )
 
         try:
             # Use streaming so we can update_Request_tokens incrementally
             stream = await self.client.chat.completions.create(
                 model=self.model_name,
-                messages=[system_message, human_message],
+                messages=messages,
                 stream=True,
                 **parameters,
             )

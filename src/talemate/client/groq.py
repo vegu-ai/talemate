@@ -1,6 +1,6 @@
 import pydantic
 import structlog
-from groq import AsyncGroq, PermissionDeniedError
+from openai import AsyncOpenAI, PermissionDeniedError
 
 from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, ExtraField
 from talemate.client.registry import register
@@ -129,7 +129,7 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
         # Determine if we should use the globally configured API key or the override key
         if not self.groq_api_key and not self.endpoint_override_base_url_configured:
             # No API key and no endpoint override – cannot initialize client correctly
-            self.client = AsyncGroq(api_key="sk-1111")
+            self.client = AsyncOpenAI(api_key="sk-1111", base_url="https://api.groq.com/openai/v1")
             log.error("No groq.ai API key set")
             if self.api_key_status:
                 self.api_key_status = False
@@ -145,8 +145,10 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
 
         model = self.model_name
 
-        # Use the override values (if any) when constructing the Groq client
-        self.client = AsyncGroq(api_key=self.api_key, base_url=self.base_url)
+        # Use the override values (if any) when constructing the client
+        # Groq uses OpenAI-compatible API, so we set the base_url to Groq's endpoint
+        groq_base_url = self.base_url or "https://api.groq.com/openai/v1"
+        self.client = AsyncOpenAI(api_key=self.api_key, base_url=groq_base_url)
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:

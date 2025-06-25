@@ -100,7 +100,10 @@ class TextGeneratorWebuiClient(ClientBase):
 
     def set_client(self, **kwargs):
         self.api_key = kwargs.get("api_key", self.api_key)
-        self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
+        self.client = AsyncOpenAI(
+            base_url=self.api_url + "/v1", 
+            api_key=self.api_key or "dummy-key"  # TextGenWebUI may not require API key
+        )
 
     def finalize_llama3(self, parameters: dict, prompt: str) -> tuple[str, bool]:
 
@@ -169,35 +172,55 @@ class TextGeneratorWebuiClient(ClientBase):
             )
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self._generate, prompt, parameters, kind)
-
-    def _generate(self, prompt: str, parameters: dict, kind: str):
         """
-        Generates text from the given prompt and parameters.
+        Generates text from the given prompt and parameters using OpenAI-compatible API.
         """
-        parameters["prompt"] = prompt.strip(" ")
+        # Prepare messages for chat completion
+        system_message = self.get_system_message(kind)
         
-        response = ""
-        parameters["stream"] = True
-        stream_response = requests.post(
-            f"{self.api_url}/v1/completions",
-            json=parameters,
-            timeout=None,
-            headers=self.request_headers,
-            stream=True,
-        )
-        stream_response.raise_for_status()
+        # Check for coercion
+        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
         
-        sse = sseclient.SSEClient(stream_response)
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": prompt.strip()}
+        ]
         
-        for event in sse.events():
-            payload = json.loads(event.data)
-            chunk = payload['choices'][0]['text']
-            response += chunk
-            self.update_request_tokens(self.count_tokens(chunk))
+        if coercion_prompt:
+            messages.append({"role": "assistant", "content": coercion_prompt.strip()})
         
-        return response
+        # Clean up parameters - remove internal parameters
+        if "extra_stopping_strings" in parameters:
+            del parameters["extra_stopping_strings"]
+        if "stream" in parameters:
+            del parameters["stream"]
+        
+        # Get model name if not already set
+        if not hasattr(self, 'model_name') or not self.model_name:
+            self.model_name = await self.get_model_name()
+        
+        try:
+            # Use streaming for token tracking
+            stream = await self.client.chat.completions.create(
+                model=self.model_name or "textgen",  # Use a default if model_name is None
+                messages=messages,
+                stream=True,
+                **parameters
+            )
+            
+            response = ""
+            
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    response += content
+                    self.update_request_tokens(self.count_tokens(content))
+            
+            return response
+            
+        except Exception as e:
+            log.error("Failed to generate text", exc=e)
+            raise
 
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:

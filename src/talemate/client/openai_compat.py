@@ -116,37 +116,74 @@ class OpenAICompatibleClient(ClientBase):
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
-        Generates text from the given prompt and parameters.
+        Generates text from the given prompt and parameters using streaming.
         """
-
         try:
             if self.api_handles_prompt_template:
-                # OpenAI API handles prompt template
-                # Use the chat completions endpoint
+                # API handles prompt template - use chat completions
                 self.log.debug(
                     "generate (chat/completions)",
                     prompt=prompt[:128] + " ...",
                     parameters=parameters,
                 )
-                human_message = {"role": "user", "content": prompt.strip()}
-                response = await self.client.chat.completions.create(
-                    model=self.model_name, messages=[human_message], stream=False, **parameters
+                
+                system_message = self.get_system_message(kind)
+                messages = [
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": prompt.strip()}
+                ]
+                
+                stream = await self.client.chat.completions.create(
+                    model=self.model_name, 
+                    messages=messages, 
+                    stream=True, 
+                    **parameters
                 )
-                response = response.choices[0].message.content
+                
+                response = ""
+                async for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        content = chunk.choices[0].delta.content
+                        response += content
+                        self.update_request_tokens(self.count_tokens(content))
+                
                 return self.process_response_for_indirect_coercion(prompt, response)
             else:
-                # Talemate handles prompt template
-                # Use the completions endpoint
+                # Talemate handles prompt template - use chat completions with coercion
                 self.log.debug(
-                    "generate (completions)",
+                    "generate (completions via chat)",
                     prompt=prompt[:128] + " ...",
                     parameters=parameters,
                 )
-                parameters["prompt"] = prompt
-                response = await self.client.completions.create(
-                    model=self.model_name, stream=False, **parameters
+                
+                # Check for coercion
+                prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+                
+                system_message = self.get_system_message(kind)
+                messages = [
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": prompt.strip()}
+                ]
+                
+                if coercion_prompt:
+                    messages.append({"role": "assistant", "content": coercion_prompt.strip()})
+                
+                stream = await self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    stream=True,
+                    **parameters
                 )
-                return response.choices[0].text
+                
+                response = ""
+                async for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        content = chunk.choices[0].delta.content
+                        response += content
+                        self.update_request_tokens(self.count_tokens(content))
+                
+                return response
+                
         except PermissionDeniedError as e:
             self.log.error("generate error", e=e)
             emit("status", message="Client API: Permission Denied", status="error")

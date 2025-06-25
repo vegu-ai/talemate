@@ -51,6 +51,7 @@ dependencies = [
     "chromadb>=1.0.12",
     "InstructorEmbedding @ https://github.com/vegu-ai/instructor-embedding/archive/refs/heads/202506-fixes.zip",
     "sentence_transformers>=2.7.0",
+    "instructor>=1.9.0",
 ]
 
 [project.optional-dependencies]

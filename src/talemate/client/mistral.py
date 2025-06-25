@@ -1,8 +1,7 @@
 import pydantic
 import structlog
 from typing import Literal
-from mistralai import Mistral
-from mistralai.models.sdkerror import SDKError
+from openai import AsyncOpenAI
 
 from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults, ExtraField
 from talemate.client.registry import register
@@ -132,7 +131,6 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
 
     def set_client(self, max_token_length: int = None):
         if not self.mistral_api_key and not self.endpoint_override_base_url_configured:
-            self.client = Mistral(api_key="sk-1111")
             log.error("No mistral.ai API key set")
             if self.api_key_status:
                 self.api_key_status = False
@@ -148,7 +146,9 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
 
         model = self.model_name
 
-        self.client = Mistral(api_key=self.api_key, server_url=self.base_url)
+        # Use AsyncOpenAI with Mistral's base URL
+        mistral_base_url = self.base_url or "https://api.mistral.ai/v1"
+        self.client = AsyncOpenAI(api_key=self.api_key, base_url=mistral_base_url)
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -241,29 +241,32 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
         )
 
         try:
-            event_stream = await self.client.chat.stream_async(
+            stream = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
+                stream=True,
                 **parameters,
             )
 
             response = ""
-            
             completion_tokens = 0
             prompt_tokens = 0
 
-            async for event in event_stream:
-                if event.data.choices:
-                    response += event.data.choices[0].delta.content
-                    self.update_request_tokens(self.count_tokens(event.data.choices[0].delta.content))
-                if event.data.usage:
-                    completion_tokens += event.data.usage.completion_tokens
-                    prompt_tokens += event.data.usage.prompt_tokens
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    response += content
+                    self.update_request_tokens(self.count_tokens(content))
+                
+                # Some providers include usage data in chunks
+                if hasattr(chunk, 'usage') and chunk.usage:
+                    if hasattr(chunk.usage, 'completion_tokens'):
+                        completion_tokens = chunk.usage.completion_tokens
+                    if hasattr(chunk.usage, 'prompt_tokens'):
+                        prompt_tokens = chunk.usage.prompt_tokens
 
             self._returned_prompt_tokens = prompt_tokens
             self._returned_response_tokens = completion_tokens
-
-            #response = response.choices[0].message.content
 
             # older models don't support json_object response coersion
             # and often like to return the response wrapped in ```json
@@ -280,14 +283,14 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
                 response = response[len(right) :].strip()
 
             return response
-        except SDKError as e:
-            self.log.error("generate error", e=e)
-            if hasattr(e, 'status_code') and e.status_code in [403, 401]:
-                emit(
-                    "status",
-                    message="mistral.ai API: Permission Denied",
-                    status="error",
-                )
-            return ""
         except Exception as e:
+            self.log.error("generate error", e=e)
+            if hasattr(e, '__class__') and hasattr(e.__class__, '__name__'):
+                if 'permission' in str(e).lower() or e.__class__.__name__ == 'PermissionDeniedError':
+                    emit(
+                        "status",
+                        message="mistral.ai API: Permission Denied",
+                        status="error",
+                    )
+                    return ""
             raise

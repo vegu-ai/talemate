@@ -59,6 +59,17 @@ class LMStudioClient(ClientBase):
         `update_request_tokens`.
         """
 
+        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        
+        # Prepare messages for chat completion
+        messages = [
+            {"role": "system", "content": self.get_system_message(kind)},
+            {"role": "user", "content": prompt.strip()}
+        ]
+        
+        if coercion_prompt:
+            messages.append({"role": "assistant", "content": coercion_prompt.strip()})
+
         self.log.debug(
             "generate",
             prompt=prompt[:128] + " ...",
@@ -67,9 +78,9 @@ class LMStudioClient(ClientBase):
 
         try:
             # Send the request in streaming mode so we can update token counts
-            stream = await self.client.completions.create(
+            stream = await self.client.chat.completions.create(
                 model=self.model_name,
-                prompt=prompt,
+                messages=messages,
                 stream=True,
                 **parameters,
             )
@@ -79,15 +90,14 @@ class LMStudioClient(ClientBase):
             # Iterate over streamed chunks and accumulate the response while
             # incrementally updating the token counter
             async for chunk in stream:
-                if not chunk.choices:
-                    continue
-                content_piece = chunk.choices[0].text
-                response += content_piece
-                # Track token usage incrementally
-                self.update_request_tokens(self.count_tokens(content_piece))
+                if chunk.choices and chunk.choices[0].delta.content:
+                    content_piece = chunk.choices[0].delta.content
+                    response += content_piece
+                    # Track token usage incrementally
+                    self.update_request_tokens(self.count_tokens(content_piece))
 
             # Store overall token accounting once the stream is finished
-            self._returned_prompt_tokens = self.prompt_tokens(prompt)
+            self._returned_prompt_tokens = self.prompt_tokens(messages)
             self._returned_response_tokens = self.response_tokens(response)
 
             return response
@@ -103,6 +113,12 @@ class LMStudioClient(ClientBase):
         """Count tokens in a model response string."""
         return self.count_tokens(response)
 
-    def prompt_tokens(self, prompt: str):
-        """Count tokens in a prompt string."""
+    def prompt_tokens(self, prompt):
+        """Count tokens in a prompt string or messages list."""
+        if isinstance(prompt, list):
+            # For messages format, concatenate all content
+            text = ""
+            for msg in prompt:
+                text += msg.get("content", "") + " "
+            return self.count_tokens(text.strip())
         return self.count_tokens(prompt)

@@ -1,8 +1,7 @@
 import pydantic
 import structlog
-import httpx
 import asyncio
-import json
+from openai import AsyncOpenAI
 
 from talemate.client.base import ClientBase, ErrorAction, CommonDefaults
 from talemate.client.registry import register
@@ -36,22 +35,18 @@ async def fetch_available_models(api_key: str = None):
         return AVAILABLE_MODELS
     
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                "https://openrouter.ai/api/v1/models",
-                timeout=10.0
-            )
-            if response.status_code == 200:
-                data = response.json()
-                models = []
-                for model in data.get("data", []):
-                    model_id = model.get("id")
-                    if model_id:
-                        models.append(model_id)
-                AVAILABLE_MODELS = sorted(models)
-                log.debug(f"Fetched {len(AVAILABLE_MODELS)} models from OpenRouter")
-            else:
-                log.warning(f"Failed to fetch models from OpenRouter: {response.status_code}")
+        # Use OpenAI client to fetch models
+        client = AsyncOpenAI(
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1"
+        )
+        models_response = await client.models.list()
+        models = []
+        for model in models_response.data:
+            if hasattr(model, 'id') and model.id:
+                models.append(model.id)
+        AVAILABLE_MODELS = sorted(models)
+        log.debug(f"Fetched {len(AVAILABLE_MODELS)} models from OpenRouter")
     except Exception as e:
         log.error(f"Error fetching models from OpenRouter: {e}")
     
@@ -167,9 +162,6 @@ class OpenRouterClient(ClientBase):
         )
 
     def set_client(self, max_token_length: int = None):
-        # Unlike other clients, we don't need to set up a client instance
-        # We'll use httpx directly in the generate method
-        
         if not self.openrouter_api_key:
             log.error("No OpenRouter API key set")
             if self.api_key_status:
@@ -186,6 +178,12 @@ class OpenRouterClient(ClientBase):
         
         # Set max token length (default to 16k if not specified)
         self.max_token_length = max_token_length or 16384
+
+        # Initialize the OpenAI client with OpenRouter's base URL
+        self.client = AsyncOpenAI(
+            api_key=self.openrouter_api_key,
+            base_url="https://openrouter.ai/api/v1"
+        )
 
         if not self.api_key_status:
             if self.api_key_status is False:
@@ -250,14 +248,6 @@ class OpenRouterClient(ClientBase):
         if coercion_prompt:
             messages.append({"role": "assistant", "content": coercion_prompt.strip()})
 
-        # Prepare request payload
-        payload = {
-            "model": self.model_name,
-            "messages": messages,
-            "stream": True,
-            **parameters
-        }
-
         self.log.debug(
             "generate",
             prompt=prompt[:128] + " ...",
@@ -266,64 +256,41 @@ class OpenRouterClient(ClientBase):
         )
         
         response_text = ""
-        buffer = ""
         completion_tokens = 0
         prompt_tokens = 0
+        
         try:
-            async with httpx.AsyncClient() as client:
-                async with client.stream(
-                    "POST",
-                    "https://openrouter.ai/api/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {self.openrouter_api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json=payload,
-                    timeout=120.0  # 2 minute timeout for generation
-                ) as response:
-                    async for chunk in response.aiter_text():
-                        buffer += chunk
-                        
-                        while True:
-                            # Find the next complete SSE line
-                            line_end = buffer.find('\n')
-                            if line_end == -1:
-                                break
-                            
-                            line = buffer[:line_end].strip()
-                            buffer = buffer[line_end + 1:]
-                            
-                            if line.startswith('data: '):
-                                data = line[6:]
-                                if data == '[DONE]':
-                                    break
-                                
-                                try:
-                                    data_obj = json.loads(data)
-                                    content = data_obj["choices"][0]["delta"].get("content")
-                                    usage = data_obj.get("usage", {})
-                                    completion_tokens += usage.get("completion_tokens", 0)
-                                    prompt_tokens += usage.get("prompt_tokens", 0)
-                                    if content:
-                                        response_text += content
-                                        # Update tokens as content streams in
-                                        self.update_request_tokens(self.count_tokens(content))
-                                                                                                                      
-                                except json.JSONDecodeError:
-                                    pass
-                            
-                    # Extract the response content
-                    response_content = response_text
-                    self._returned_prompt_tokens = prompt_tokens
-                    self._returned_response_tokens = completion_tokens
-                    
-                    return response_content
+            stream = await self.client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                stream=True,
+                **parameters
+            )
+            
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    response_text += content
+                    # Update tokens as content streams in
+                    self.update_request_tokens(self.count_tokens(content))
                 
-        except httpx.ConnectTimeout:
-            self.log.error("OpenRouter API timeout")
-            emit("status", message="OpenRouter API: Request timed out", status="error")
-            return ""
+                # OpenRouter may include usage data in chunks
+                if hasattr(chunk, 'usage') and chunk.usage:
+                    if hasattr(chunk.usage, 'completion_tokens'):
+                        completion_tokens = chunk.usage.completion_tokens
+                    if hasattr(chunk.usage, 'prompt_tokens'):
+                        prompt_tokens = chunk.usage.prompt_tokens
+            
+            self._returned_prompt_tokens = prompt_tokens
+            self._returned_response_tokens = completion_tokens
+            
+            return response_text
+                
         except Exception as e:
             self.log.error("generate error", e=e)
-            emit("status", message=f"OpenRouter API Error: {str(e)}", status="error")
-            raise
+            if "timeout" in str(e).lower():
+                emit("status", message="OpenRouter API: Request timed out", status="error")
+                return ""
+            else:
+                emit("status", message=f"OpenRouter API Error: {str(e)}", status="error")
+                raise

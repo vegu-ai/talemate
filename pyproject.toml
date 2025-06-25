@@ -50,8 +50,6 @@ dependencies = [
     # ChromaDB
     "chromadb>=1.0.12",
     "InstructorEmbedding @ https://github.com/vegu-ai/instructor-embedding/archive/refs/heads/202506-fixes.zip",
-    "torch>=2.7.0",
-    "torchaudio>=2.7.0",
     "sentence_transformers>=2.7.0",
 ]
 
@@ -64,10 +62,10 @@ dev = [
     "mkdocs-awesome-pages-plugin>=2.9.2",
     "mkdocs-glightbox>=0.4.0",
 ]
-cpu = []
-cuda = []
-cuda121 = []
-cuda124 = []
+cpu = ["torch>=2.7.0", "torchaudio>=2.7.0"]
+cuda = ["torch>=2.7.0", "torchaudio>=2.7.0"]
+cuda121 = ["torch>=2.7.0", "torchaudio>=2.7.0"]
+cuda124 = ["torch>=2.7.0", "torchaudio>=2.7.0"]
 
 [project.scripts]
 talemate = "talemate:cli.main"
@@ -78,6 +76,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/talemate"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.black]
 line-length = 88
@@ -123,14 +124,12 @@ explicit = true
 
 [tool.uv.sources]
 torch = [
-    { index = "pytorch-cpu", extra = "cpu" },
-    { index = "pytorch-cu121", extra = "cuda121" },
-    { index = "pytorch-cu124", extra = "cuda" },
-    { index = "pytorch-cu124", extra = "cuda124" },
+    { index = "pytorch-cpu", marker = "extra == 'cpu'" },
+    { index = "pytorch-cu121", marker = "extra != 'cpu' and extra == 'cuda121'" },
+    { index = "pytorch-cu124", marker = "extra != 'cpu' and extra != 'cuda121' and (extra == 'cuda' or extra == 'cuda124')" },
 ]
 torchaudio = [
-    { index = "pytorch-cpu", extra = "cpu" },
-    { index = "pytorch-cu121", extra = "cuda121" },
-    { index = "pytorch-cu124", extra = "cuda" },
-    { index = "pytorch-cu124", extra = "cuda124" },
+    { index = "pytorch-cpu", marker = "extra == 'cpu'" },
+    { index = "pytorch-cu121", marker = "extra != 'cpu' and extra == 'cuda121'" },
+    { index = "pytorch-cu124", marker = "extra != 'cpu' and extra != 'cuda121' and (extra == 'cuda' or extra == 'cuda124')" },
 ]

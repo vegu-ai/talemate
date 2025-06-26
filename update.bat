@@ -28,6 +28,12 @@ git remote add origin https://github.com/vegu-ai/talemate
 REM pull the latest changes from git repository
 git pull
 
+REM Check if .venv exists
+IF NOT EXIST ".venv" (
+    echo [ERROR] .venv directory not found. Please run install.bat first.
+    goto :eof
+)
+
 REM activate the virtual environment
 call .venv\Scripts\activate
 

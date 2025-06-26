@@ -44,7 +44,7 @@ RUN . /app/.venv/bin/activate && \
     if [ "$CUDA_AVAILABLE" = "true" ]; then \
         echo "Installing PyTorch with CUDA support..." && \
         uv pip uninstall torch torchaudio && \
-        uv pip install torch~=2.4.1 torchaudio~=2.4.1 --index-url https://download.pytorch.org/whl/cu121; \
+        uv pip install torch~=2.7.0 torchaudio~=2.7.0 --index-url https://download.pytorch.org/whl/cu128; \
     fi
 
 # Stage 3: Final image

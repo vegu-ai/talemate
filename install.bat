@@ -158,9 +158,13 @@ ECHO Creating virtual environment with uv...
 REM Activate the venv for the remainder of the script
 CALL .venv\Scripts\activate
 
+REM ---------[ Ensure uv available in venv ]---------
+ECHO Installing uv into virtual environment...
+python -m pip install uv || ECHO [WARNING] Failed to install uv inside venv & REM continue; python -m uv may still work if module available
+
 REM ---------[ Backend dependencies ]---------
 ECHO Installing backend dependencies with uv...
-uv sync || CALL :die "Failed to install backend dependencies with uv."
+python -m uv sync || CALL :die "Failed to install backend dependencies with uv."
 
 REM ---------[ Config file ]---------
 IF NOT EXIST config.yaml COPY config.example.yaml config.yaml

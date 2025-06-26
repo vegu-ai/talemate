@@ -158,6 +158,12 @@ ECHO Creating virtual environment with uv...
 REM Activate the venv for the remainder of the script
 CALL .venv\Scripts\activate
 
+REM ---------[ Ensure pip ]---------
+ECHO Installing pip...
+python install-utils\get-pip.py || (
+    CALL :die "pip installation failed."
+)
+
 REM ---------[ Ensure uv available in venv ]---------
 ECHO Installing uv into virtual environment...
 python -m pip install uv || ECHO [WARNING] Failed to install uv inside venv & REM continue; python -m uv may still work if module available

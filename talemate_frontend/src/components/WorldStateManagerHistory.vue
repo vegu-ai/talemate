@@ -28,6 +28,12 @@
                     <v-alert v-if="history.length == 0" color="muted" density="compact" variant="text" icon="mdi-timer-sand-empty">
                         <p>No history entries yet.</p>
                     </v-alert>
+                    
+                    <div v-if="noSummaryEntries || history.length == 0" class="d-flex justify-center my-2" style="max-width: 1600px;">
+                        <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || busy">
+                            Add Entry
+                        </v-btn>
+                    </div>
 
                     <template v-for="(entry, index) in history" :key="entry.id">
                         <WorldStateManagerHistoryEntry 
@@ -112,6 +118,9 @@ export default {
                 }
             });
             return idx;
+        },
+        noSummaryEntries() {
+            return this.history.filter(e => e.start === null || e.end === null).length > 0;
         }
     },
     inject:[

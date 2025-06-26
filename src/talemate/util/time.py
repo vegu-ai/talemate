@@ -141,9 +141,26 @@ def flatten_duration_components(years: int, months: int, weeks: int, days: int,
     
     # More than 3 years - show only years
     else:
-        new_years = total_months // 12
-        if months >= 6:  # Round up years if 6+ months remain
+        # Derive the base number of years directly from total days to avoid cumulative
+        # rounding errors that arise when repeatedly converting via an intermediate
+        # "30-day month" approximation.  This ensures that extremely long durations
+        # (e.g. hundreds of years) remain accurate.
+        new_years = total_days // 365
+
+        # Determine remaining days after extracting full 365-day years so we can
+        # optionally round up when the leftover portion represents roughly half a
+        # year or more (≥ 183 days).  This mirrors the previous behaviour that
+        # rounded up when ≥ 6 months remained, but is now based on actual day
+        # count which is more precise.
+        remaining_days = total_days % 365
+        # Convert leftover days to an approximate month count to mirror the original
+        # behaviour (30-day month heuristic).  If we have the equivalent of six or
+        # more months remaining, round the year up by one.
+        remaining_months = remaining_days // 30
+
+        if remaining_months >= 6:
             new_years += 1
+
         return new_years, 0, 0, 0, 0, 0, 0
 
 def iso8601_duration_to_human(iso_duration, suffix: str = " ago", 
@@ -217,18 +234,32 @@ def iso8601_diff_to_human(start, end, flatten: bool = True):
     return iso8601_duration_to_human(diff, flatten=flatten)
 
 
-def iso8601_add(date_a: str, date_b: str) -> str:
+def iso8601_add(date_a: str, date_b: str, *, clamp_non_negative: bool = False) -> str:
+    """Add two ISO-8601 durations and return an ISO-8601 duration string.
+
+    Parameters
+    ----------
+    date_a, date_b
+        Durations to add.
+    clamp_non_negative
+        If *True* and the resulting duration would be negative, the function
+        returns ``"P0D"`` (zero duration) instead of a negative value.
     """
-    Adds two ISO 8601 durations together.
-    """
-    # Validate input
+
+    # Validate input – treat missing values as zero for convenience
     if not date_a or not date_b:
         return "PT0S"
 
-    new_ts = isodate.parse_duration(date_a.strip()) + isodate.parse_duration(
+    result_duration = isodate.parse_duration(date_a.strip()) + isodate.parse_duration(
         date_b.strip()
     )
-    return isodate.duration_isoformat(new_ts)
+
+    result_iso = isodate.duration_isoformat(result_duration)
+
+    if clamp_non_negative and result_iso.startswith("-"):
+        return "P0D"
+
+    return result_iso
 
 
 def iso8601_correct_duration(duration: str) -> str:

@@ -13,6 +13,7 @@ import traceback
 import uuid
 import datetime
 import isodate
+import math
 
 from talemate.emit import emit
 import talemate.emit.async_signals as async_signals
@@ -525,37 +526,20 @@ async def add_history_entry(scene: "Scene", text: str, offset: str) -> ArchiveEn
     Raises:
         ValueError: If the entry would not be older than the first summarized archive entry or if no summarized entry exists.
     """
+    
+    is_first_entry = len(scene.archived_history) == 0
 
-    # Parse and convert to timedelta for arithmetic
-    scene_td   = duration_to_timedelta(isodate.parse_duration(scene.ts))
-    offset_td  = duration_to_timedelta(isodate.parse_duration(offset))
-
-    new_ts_td: datetime.timedelta = scene_td - offset_td
-
-    # If offset predates the current scene start, shift timeline earlier so
-    # that the *relative* distance between existing events is preserved.
-    if new_ts_td.total_seconds() < 0:
-        shift_td = abs(new_ts_td)
-        shift_iso = isodate.duration_isoformat(shift_td)
-
-        # 1) Move scene time forward by shift (effectively extending timeline)
-        scene.ts = iso8601_add(scene.ts, shift_iso)
-
-        # 2) Shift all archived and layered history timestamps
-        def _shift_entry_ts(entry: dict):
-            for key in ["ts", "ts_start", "ts_end"]:
-                if entry.get(key):
-                    entry[key] = iso8601_add(entry[key], shift_iso)
-
-        for entry in scene.archived_history:
-            _shift_entry_ts(entry)
-
-        for layer in scene.layered_history:
-            for entry in layer:
-                _shift_entry_ts(entry)
-
-        # After shifting, the new entry will sit at PT0S
-        new_ts_td = datetime.timedelta(seconds=0)
+    if is_first_entry:
+        # first entry we can just push it to the front of the history
+        entry = ArchiveEntry(
+            text=text,
+            ts="PT0S",
+            id=str(uuid.uuid4())[:8],
+        ).model_dump(exclude_none=True)
+        scene.archived_history.append(entry)
+        scene.ts = offset
+        await reimport_history(scene)
+        return entry
 
     # Find the first archive entry that originated from summarisation (has start & end)
     first_summary: dict | None = None
@@ -564,6 +548,36 @@ async def add_history_entry(scene: "Scene", text: str, offset: str) -> ArchiveEn
             first_summary = entry
             break
 
+    # Parse and convert to timedelta for arithmetic
+    scene_td   = duration_to_timedelta(isodate.parse_duration(scene.ts))
+    offset_td  = duration_to_timedelta(isodate.parse_duration(offset))
+
+    new_ts_td: datetime.timedelta = scene_td - offset_td
+    
+    log.debug("add_history_entry", is_first_entry=is_first_entry, scene_ts=scene.ts, offset=offset, scene_td=scene_td, offset_td=offset_td, new_ts_td=new_ts_td)
+
+    # If offset predates the current scene start, shift timeline earlier so
+    # that the *relative* distance between existing events is preserved.
+    if new_ts_td.total_seconds() < 0:
+        log.debug("offset is before scene start, shifting timeline", new_ts_td=new_ts_td)
+        # Amount we must shift the whole timeline forward so that the new
+        # entry can be placed at PT0S.  This is the *earliness* gap between
+        # the requested offset and the current earliest timestamp.
+        # We need to shift by: offset - scene.ts (which is positive since offset > scene.ts)
+        # Since we already have the timedeltas, we can compute this directly
+        shift_td = offset_td - scene_td  # This will be positive
+        shift_iso = isodate.duration_isoformat(shift_td)
+            
+        log.debug("shift_iso", shift_iso=shift_iso)
+
+        # Shift everything forward by the calculated amount so that the
+        # timeline can accommodate the earlier entry at PT0S.
+        shift_scene_timeline(scene, shift_iso)
+
+        # After shifting, the new entry will sit at PT0S
+        new_ts_td = datetime.timedelta(seconds=0)
+        
+        
     if first_summary is not None:
         first_summary_td = duration_to_timedelta(isodate.parse_duration(first_summary["ts"]))
 
@@ -593,7 +607,8 @@ async def add_history_entry(scene: "Scene", text: str, offset: str) -> ArchiveEn
 
     # Recalculate scene time based on updated history/archives
     try:
-        scene.sync_time()
+        if first_summary is not None:
+            scene.sync_time()
     except Exception as e:
         log.error("add_history_entry.sync_time", error=e)
         
@@ -625,12 +640,25 @@ async def delete_history_entry(scene: "Scene", entry: HistoryEntry) -> ArchiveEn
         if existing.get("id") == entry.id:
             remove_idx = idx
             break
+        
+    is_oldest_entry = remove_idx == 0
 
     if remove_idx is None:
         raise ValueError("Entry not found.")
 
     removed_raw = scene.archived_history.pop(remove_idx)
     removed_entry = ArchiveEntry(**removed_raw)
+    
+    if is_oldest_entry:
+        # The removed first entry is always at 0s.  We therefore need to shift
+        # the timeline by the timestamp of **what is now** the first entry so
+        # that it becomes ``PT0S``.
+        shift_iso = (
+            (scene.archived_history[0].get("ts") or "PT0S")
+            if scene.archived_history else "PT0S"
+        )
+        # Apply the negative shift to the entire scene timeline.
+        shift_scene_timeline(scene, f"-{shift_iso}")
 
     # Ensure scene time remains consistent
     try:
@@ -641,3 +669,47 @@ async def delete_history_entry(scene: "Scene", entry: HistoryEntry) -> ArchiveEn
     await reimport_history(scene)
 
     return removed_entry
+
+
+def _shift_entry_ts(entry: dict, shift_iso: str):
+    """Shift *in-place* the ts/ts_start/ts_end fields of a raw archive entry, clamping to >= 0."""
+    for key in ["ts", "ts_start", "ts_end"]:
+        if entry.get(key):
+            try:
+                entry[key] = iso8601_add(entry[key], shift_iso, clamp_non_negative=True)
+            except Exception as e:  # pragma: no cover – defensive only
+                log.error(
+                    "shift_entry_ts", error=e, key=key, value=entry.get(key), shift_iso=shift_iso
+                )
+
+
+def shift_scene_timeline(scene: "Scene", shift_iso: str):
+    """Shift *every* timeline reference in the scene by the provided ISO-8601 duration.
+
+    The function mutates the scene in place:
+
+    1. ``scene.ts`` – overall scene time
+    2. ``ts``, ``ts_start``, ``ts_end`` of every entry in ``scene.archived_history``
+    3. Same fields for every entry in every layer in ``scene.layered_history``
+
+    ``shift_iso`` can be positive (move forward in time) or negative (move backward).
+    """
+
+    if shift_iso in ["PT0S", "P0D", "PT0H", "P0M", "P0S", "-PT0S", "-P0D"]:
+        # No-op
+        return
+
+    # 1) shift scene timestamp
+    try:
+        scene.ts = iso8601_add(scene.ts, shift_iso, clamp_non_negative=True)
+    except Exception as e:  # pragma: no cover – defensive only
+        log.error("shift_scene_timeline.scene_ts", error=e, scene_ts=scene.ts, shift_iso=shift_iso)
+
+    # 2) shift archived_history entries
+    for entry in scene.archived_history:
+        _shift_entry_ts(entry, shift_iso)
+
+    # 3) shift layered history entries
+    for layer in scene.layered_history:
+        for entry in layer:
+            _shift_entry_ts(entry, shift_iso)

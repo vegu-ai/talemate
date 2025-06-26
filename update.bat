@@ -30,8 +30,7 @@ git pull
 
 REM Check if .venv exists
 IF NOT EXIST ".venv" (
-    echo [ERROR] .venv directory not found. Please run install.bat first.
-    goto :eof
+    CALL :die ".venv directory not found. Please run install.bat first."
 )
 
 REM activate the virtual environment

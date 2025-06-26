@@ -4,6 +4,7 @@ from typing import Literal
 from openai import AsyncOpenAI
 
 from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults, ExtraField
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.client.registry import register
 from talemate.client.remote import (
     EndpointOverride,
@@ -47,7 +48,7 @@ class ClientConfig(EndpointOverride, BaseClientConfig):
     pass
 
 @register()
-class MistralAIClient(EndpointOverrideMixin, ClientBase):
+class MistralAIClient(InstructorMixin, EndpointOverrideMixin, ClientBase):
     """
     OpenAI client for generating text.
     """
@@ -86,6 +87,9 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
             "temperature",
             "top_p",
             "max_tokens",
+            ParameterReroute(
+                talemate_parameter="stopping_strings", client_parameter="stop"
+            ),
         ]
 
     def emit_status(self, processing: bool = None):
@@ -150,6 +154,9 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
         mistral_base_url = self.base_url or "https://api.mistral.ai/v1"
         self.client = AsyncOpenAI(api_key=self.api_key, base_url=mistral_base_url)
         self.max_token_length = max_token_length or 16384
+        
+        # Setup instructor support
+        self.setup_instructor()
 
         if not self.api_key_status:
             if self.api_key_status is False:
@@ -241,6 +248,9 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
         )
 
         try:
+            # Clean parameters before sending
+            self.clean_prompt_parameters(parameters)
+            
             stream = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,

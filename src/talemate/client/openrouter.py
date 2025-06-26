@@ -4,6 +4,7 @@ import asyncio
 from openai import AsyncOpenAI
 
 from talemate.client.base import ClientBase, ErrorAction, CommonDefaults
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
@@ -69,7 +70,7 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
 
 
 @register()
-class OpenRouterClient(ClientBase):
+class OpenRouterClient(InstructorMixin, ClientBase):
     """
     OpenRouter client for generating text using various models.
     """
@@ -107,15 +108,24 @@ class OpenRouterClient(ClientBase):
 
     @property
     def supported_parameters(self):
+        # OpenAI SDK supports these parameters
         return [
             "temperature",
             "top_p",
-            "top_k",
-            "min_p",
             "frequency_penalty",
             "presence_penalty",
-            "repetition_penalty",
             "max_tokens",
+            "stop",
+            "n",
+            "logit_bias",
+            "user",
+            "seed",
+            "response_format",
+            "stream",
+            "tools",
+            "tool_choice",
+            # Note: OpenRouter may support additional parameters like top_k, min_p
+            # but the OpenAI SDK will ignore them
         ]
 
     def emit_status(self, processing: bool = None):
@@ -184,6 +194,9 @@ class OpenRouterClient(ClientBase):
             api_key=self.openrouter_api_key,
             base_url="https://openrouter.ai/api/v1"
         )
+        
+        # Setup instructor support
+        self.setup_instructor()
 
         if not self.api_key_status:
             if self.api_key_status is False:
@@ -258,6 +271,9 @@ class OpenRouterClient(ClientBase):
         response_text = ""
         completion_tokens = 0
         prompt_tokens = 0
+        
+        # Clean parameters using the base class method
+        self.clean_prompt_parameters(parameters)
         
         try:
             stream = await self.client.chat.completions.create(

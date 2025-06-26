@@ -20,6 +20,7 @@ from talemate.client.base import (
     Defaults,
     ParameterReroute,
 )
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.client.registry import register
 
 if TYPE_CHECKING:
@@ -62,7 +63,7 @@ class KoboldEmbeddingFunction(EmbeddingFunction):
 
         return embeddings
 @register()
-class KoboldCppClient(ClientBase):
+class KoboldCppClient(InstructorMixin, ClientBase):
     auto_determine_prompt_template: bool = True
     client_type = "koboldcpp"
 
@@ -157,12 +158,15 @@ class KoboldCppClient(ClientBase):
 
         else:
             # openai api
-
             return [
-                "max_tokens",
-                "presence_penalty",
-                "top_p",
                 "temperature",
+                "top_p",
+                "presence_penalty",
+                "frequency_penalty",
+                "max_tokens",
+                ParameterReroute(
+                    talemate_parameter="stopping_strings", client_parameter="stop"
+                ),
             ]
 
     @property
@@ -214,6 +218,13 @@ class KoboldCppClient(ClientBase):
                 api_key=self.api_key or "dummy-key",  # KoboldCpp may not require API key
                 base_url=base_url
             )
+            
+            # Setup instructor support for OpenAI mode
+            # We need to temporarily set self.client to use the mixin
+            self.client = self.openai_client
+            self.setup_instructor()
+            # Clear self.client as KoboldCpp doesn't normally use it
+            self.client = None
 
     async def get_model_name(self):
         self.ensure_api_endpoint_specified()
@@ -356,6 +367,9 @@ class KoboldCppClient(ClientBase):
             # Get model name if not already set
             if not hasattr(self, 'model_name') or not self.model_name:
                 self.model_name = await self.get_model_name()
+            
+            # Clean parameters before sending
+            self.clean_prompt_parameters(parameters)
             
             # Use streaming for token tracking
             stream = await self.openai_client.chat.completions.create(

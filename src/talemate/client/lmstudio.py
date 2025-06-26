@@ -2,6 +2,7 @@ import pydantic
 from openai import AsyncOpenAI
 
 from talemate.client.base import ClientBase, ParameterReroute, CommonDefaults
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.client.registry import register
 
 
@@ -11,7 +12,7 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
 
 
 @register()
-class LMStudioClient(ClientBase):
+class LMStudioClient(InstructorMixin, ClientBase):
     auto_determine_prompt_template: bool = True
     client_type = "lmstudio"
 
@@ -27,6 +28,7 @@ class LMStudioClient(ClientBase):
             "top_p",
             "frequency_penalty",
             "presence_penalty",
+            "max_tokens",
             ParameterReroute(
                 talemate_parameter="stopping_strings", client_parameter="stop"
             ),
@@ -34,6 +36,9 @@ class LMStudioClient(ClientBase):
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
+        
+        # Setup instructor support
+        self.setup_instructor()
 
     def reconfigure(self, **kwargs):
         super().reconfigure(**kwargs)
@@ -77,6 +82,9 @@ class LMStudioClient(ClientBase):
         )
 
         try:
+            # Clean parameters before sending
+            self.clean_prompt_parameters(parameters)
+            
             # Send the request in streaming mode so we can update token counts
             stream = await self.client.chat.completions.create(
                 model=self.model_name,

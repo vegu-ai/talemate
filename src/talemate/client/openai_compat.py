@@ -5,7 +5,8 @@ import pydantic
 import structlog
 from openai import AsyncOpenAI, NotFoundError, PermissionDeniedError
 
-from talemate.client.base import ClientBase, ExtraField
+from talemate.client.base import ClientBase, ExtraField, ParameterReroute
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.client.registry import register
 from talemate.config import Client as BaseClientConfig
 from talemate.emit import emit
@@ -28,9 +29,8 @@ class Defaults(pydantic.BaseModel):
 class ClientConfig(BaseClientConfig):
     api_handles_prompt_template: bool = False
 
-
 @register()
-class OpenAICompatibleClient(ClientBase):
+class OpenAICompatibleClient(InstructorMixin, ClientBase):
     client_type = "openai_compat"
     conversation_retries = 0
     config_cls = ClientConfig
@@ -77,8 +77,12 @@ class OpenAICompatibleClient(ClientBase):
         return [
             "temperature",
             "top_p",
+            "frequency_penalty",
             "presence_penalty",
             "max_tokens",
+            ParameterReroute(
+                talemate_parameter="stopping_strings", client_parameter="stop"
+            ),
         ]
 
     def set_client(self, **kwargs):
@@ -91,6 +95,9 @@ class OpenAICompatibleClient(ClientBase):
         self.model_name = (
             kwargs.get("model") or kwargs.get("model_name") or self.model_name
         )
+        
+        # Setup instructor support
+        self.setup_instructor()
 
     def prompt_template(self, system_message: str, prompt: str):
 
@@ -133,6 +140,9 @@ class OpenAICompatibleClient(ClientBase):
                     {"role": "user", "content": prompt.strip()}
                 ]
                 
+                # Clean parameters before sending
+                self.clean_prompt_parameters(parameters)
+                
                 stream = await self.client.chat.completions.create(
                     model=self.model_name, 
                     messages=messages, 
@@ -167,6 +177,9 @@ class OpenAICompatibleClient(ClientBase):
                 
                 if coercion_prompt:
                     messages.append({"role": "assistant", "content": coercion_prompt.strip()})
+                
+                # Clean parameters before sending
+                self.clean_prompt_parameters(parameters)
                 
                 stream = await self.client.chat.completions.create(
                     model=self.model_name,

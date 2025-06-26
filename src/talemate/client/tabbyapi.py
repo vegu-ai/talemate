@@ -6,7 +6,8 @@ import pydantic
 import structlog
 from openai import AsyncOpenAI, PermissionDeniedError
 
-from talemate.client.base import ClientBase, ExtraField, CommonDefaults
+from talemate.client.base import ClientBase, ExtraField, CommonDefaults, ParameterReroute
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.client.registry import register
 from talemate.client.utils import urljoin
 from talemate.config import Client as BaseClientConfig
@@ -31,7 +32,7 @@ class ClientConfig(BaseClientConfig):
 
 
 @register()
-class TabbyAPIClient(ClientBase):
+class TabbyAPIClient(InstructorMixin, ClientBase):
     client_type = "tabbyapi"
     conversation_retries = 0
     config_cls = ClientConfig
@@ -75,23 +76,16 @@ class TabbyAPIClient(ClientBase):
 
     @property
     def supported_parameters(self):
+        # Only OpenAI-compatible parameters
         return [
-            "max_tokens",
-            "presence_penalty",
-            "frequency_penalty",
-            "repetition_penalty_range",
-            "min_p",
-            "top_p",
-            "xtc_threshold",
-            "xtc_probability",
-            "dry_multiplier",
-            "dry_base",
-            "dry_allowed_length",
-            "dry_sequence_breakers",
-            # dry_range ?
-            "smoothing_factor",
-            "temperature_last",
             "temperature",
+            "top_p",
+            "frequency_penalty",
+            "presence_penalty",
+            "max_tokens",
+            ParameterReroute(
+                talemate_parameter="stopping_strings", client_parameter="stop"
+            ),
         ]
 
     def set_client(self, **kwargs):
@@ -109,6 +103,9 @@ class TabbyAPIClient(ClientBase):
             base_url=self.api_url,
             default_headers={"x-api-key": self.api_key} if self.api_key else None
         )
+        
+        # Setup instructor support
+        self.setup_instructor()
 
     def prompt_template(self, system_message: str, prompt: str):
 
@@ -178,6 +175,9 @@ class TabbyAPIClient(ClientBase):
                     {"role": "user", "content": prompt.strip()}
                 ]
 
+                # Clean parameters before sending
+                self.clean_prompt_parameters(parameters)
+
                 stream = await self.client.chat.completions.create(
                     model=self.model_name,
                     messages=messages,
@@ -219,6 +219,9 @@ class TabbyAPIClient(ClientBase):
                 
                 if coercion_prompt:
                     messages.append({"role": "assistant", "content": coercion_prompt.strip()})
+
+                # Clean parameters before sending
+                self.clean_prompt_parameters(parameters)
 
                 stream = await self.client.chat.completions.create(
                     model=self.model_name,

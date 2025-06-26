@@ -9,6 +9,7 @@ from talemate.client.remote import (
     EndpointOverrideMixin,
     endpoint_override_extra_fields,
 )
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.config import Client as BaseClientConfig
 from talemate.config import load_config
 from talemate.emit import emit
@@ -44,7 +45,7 @@ class ClientConfig(EndpointOverride, BaseClientConfig):
 
 
 @register()
-class AnthropicClient(EndpointOverrideMixin, ClientBase):
+class AnthropicClient(EndpointOverrideMixin, InstructorMixin, ClientBase):
     """
     Anthropic client for generating text.
     """
@@ -154,6 +155,9 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
 
         self.client = AsyncAnthropic(api_key=self.api_key, base_url=self.base_url)
         self.max_token_length = max_token_length or 16384
+        
+        # Setup instructor support
+        self.setup_instructor()
 
         if not self.api_key_status:
             if self.api_key_status is False:

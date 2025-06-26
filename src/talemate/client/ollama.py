@@ -6,6 +6,7 @@ from typing import Union
 from openai import AsyncOpenAI
 
 from talemate.client.base import STOPPING_STRINGS, ClientBase, CommonDefaults, ErrorAction, ParameterReroute, ExtraField
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.client.registry import register
 from talemate.config import Client as BaseClientConfig
 
@@ -25,7 +26,7 @@ class ClientConfig(BaseClientConfig):
     allow_thinking: bool = False
 
 @register()
-class OllamaClient(ClientBase):
+class OllamaClient(InstructorMixin, ClientBase):
     """
     Ollama client for generating text using locally hosted models.
     """
@@ -61,26 +62,16 @@ class OllamaClient(ClientBase):
     
     @property
     def supported_parameters(self):
-        # Parameters supported by Ollama's generate endpoint
-        # Based on the API documentation
+        # Only OpenAI-compatible parameters
         return [
             "temperature",
             "top_p", 
-            "top_k",
-            "min_p",
             "frequency_penalty",
             "presence_penalty",
+            "max_tokens",
             ParameterReroute(
-                talemate_parameter="repetition_penalty",
-                client_parameter="repeat_penalty"
+                talemate_parameter="stopping_strings", client_parameter="stop"
             ),
-            ParameterReroute(
-                talemate_parameter="max_tokens",
-                client_parameter="num_predict"
-            ),
-            "stopping_strings",
-            # internal parameters that will be removed before sending
-            "extra_stopping_strings",
         ]
 
     @property
@@ -122,6 +113,9 @@ class OllamaClient(ClientBase):
             api_key="ollama",  # Ollama doesn't require an API key
             base_url=ollama_base_url
         )
+        
+        # Setup instructor support
+        self.setup_instructor()
         self.api_handles_prompt_template = kwargs.get(
             "api_handles_prompt_template", self.api_handles_prompt_template
         )   
@@ -266,13 +260,12 @@ class OllamaClient(ClientBase):
             if coercion_prompt:
                 messages.append({"role": "assistant", "content": coercion_prompt.strip()})
         
-        # Convert stop parameter if present
-        if "stop" in parameters:
-            parameters["stop"] = parameters["stop"]
-        
-        # Set context length
+        # Set context length before cleaning
         if "num_ctx" not in parameters:
             parameters["num_ctx"] = self.max_token_length
+        
+        # Clean parameters before sending
+        self.clean_prompt_parameters(parameters)
         
         try:
             # Use chat completions endpoint

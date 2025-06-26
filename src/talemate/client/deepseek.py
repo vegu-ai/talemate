@@ -5,7 +5,8 @@ import structlog
 import tiktoken
 from openai import AsyncOpenAI, PermissionDeniedError
 
-from talemate.client.base import ClientBase, ErrorAction, CommonDefaults
+from talemate.client.base import ClientBase, ErrorAction, CommonDefaults, ParameterReroute
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
@@ -36,7 +37,7 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
 
 
 @register()
-class DeepSeekClient(ClientBase):
+class DeepSeekClient(InstructorMixin, ClientBase):
     """
     DeepSeek client for generating text.
     """
@@ -74,6 +75,9 @@ class DeepSeekClient(ClientBase):
             "top_p",
             "presence_penalty",
             "max_tokens",
+            ParameterReroute(
+                talemate_parameter="stopping_strings", client_parameter="stop"
+            ),
         ]
 
     def emit_status(self, processing: bool = None):
@@ -138,6 +142,9 @@ class DeepSeekClient(ClientBase):
 
         self.client = AsyncOpenAI(api_key=self.deepseek_api_key, base_url=BASE_URL)
         self.max_token_length = max_token_length or 16384
+        
+        # Setup instructor support
+        self.setup_instructor()
 
         if not self.api_key_status:
             if self.api_key_status is False:
@@ -236,6 +243,9 @@ class DeepSeekClient(ClientBase):
         )
 
         try:
+            # Clean parameters before sending
+            self.clean_prompt_parameters(parameters)
+            
             # Use streaming so we can update_Request_tokens incrementally
             stream = await self.client.chat.completions.create(
                 model=self.model_name,

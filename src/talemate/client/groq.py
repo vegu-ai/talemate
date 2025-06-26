@@ -3,6 +3,7 @@ import structlog
 from openai import AsyncOpenAI, PermissionDeniedError
 
 from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, ExtraField
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
@@ -34,7 +35,7 @@ class Defaults(EndpointOverride, pydantic.BaseModel):
 
 
 @register()
-class GroqClient(EndpointOverrideMixin, ClientBase):
+class GroqClient(InstructorMixin, EndpointOverrideMixin, ClientBase):
     """
     OpenAI client for generating text.
     """
@@ -75,10 +76,10 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
             "top_p",
             "presence_penalty",
             "frequency_penalty",
+            "max_tokens",
             ParameterReroute(
                 talemate_parameter="stopping_strings", client_parameter="stop"
             ),
-            "max_tokens",
         ]
 
     def emit_status(self, processing: bool = None):
@@ -150,6 +151,9 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
         groq_base_url = self.base_url or "https://api.groq.com/openai/v1"
         self.client = AsyncOpenAI(api_key=self.api_key, base_url=groq_base_url)
         self.max_token_length = max_token_length or 16384
+        
+        # Setup instructor support
+        self.setup_instructor()
 
         if not self.api_key_status:
             if self.api_key_status is False:
@@ -235,6 +239,9 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
         )
 
         try:
+            # Clean parameters before sending
+            self.clean_prompt_parameters(parameters)
+            
             response = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,

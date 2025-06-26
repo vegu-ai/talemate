@@ -12,6 +12,7 @@ from talemate.client.remote import (
     EndpointOverrideMixin,
     endpoint_override_extra_fields,
 )
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.config import Client as BaseClientConfig, load_config
 from talemate.emit import emit
 from talemate.emit.signals import handlers
@@ -112,7 +113,7 @@ class ClientConfig(EndpointOverride, BaseClientConfig):
     pass
 
 @register()
-class OpenAIClient(EndpointOverrideMixin, ClientBase):
+class OpenAIClient(EndpointOverrideMixin, InstructorMixin, ClientBase):
     """
     OpenAI client for generating text.
     """
@@ -230,6 +231,9 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
             self.max_token_length = min(max_token_length or 128000, 128000)
         else:
             self.max_token_length = max_token_length or 8192
+
+        # Setup instructor support
+        self.setup_instructor()
 
         if not self.api_key_status:
             if self.api_key_status is False:

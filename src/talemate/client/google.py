@@ -15,6 +15,7 @@ from talemate.client.remote import (
     EndpointOverrideMixin,
     endpoint_override_extra_fields,
 )
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.config import Client as BaseClientConfig
 from talemate.config import load_config
 from talemate.emit import emit
@@ -52,7 +53,7 @@ class ClientConfig(EndpointOverride, BaseClientConfig):
 
 
 @register()
-class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
+class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, InstructorMixin, ClientBase):
     """
     Google client for generating text.
     """
@@ -284,6 +285,9 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
             )
         else:
             self.client = genai.Client(api_key=self.api_key or None, http_options=self.http_options)
+
+        # Setup instructor support
+        self.setup_instructor()
 
         log.info(
             "google set client",

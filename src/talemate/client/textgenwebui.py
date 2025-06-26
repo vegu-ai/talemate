@@ -8,7 +8,8 @@ import httpx
 import structlog
 from openai import AsyncOpenAI
 
-from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults, ExtraField
+from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults, ExtraField, ParameterReroute
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.client.registry import register
 
 log = structlog.get_logger("talemate.client.textgenwebui")
@@ -19,7 +20,7 @@ class TextGeneratorWebuiClientDefaults(Defaults):
 
 
 @register()
-class TextGeneratorWebuiClient(ClientBase):
+class TextGeneratorWebuiClient(InstructorMixin, ClientBase):
     auto_determine_prompt_template: bool = True
     finalizers: list[str] = [
         "finalize_llama3",
@@ -44,41 +45,16 @@ class TextGeneratorWebuiClient(ClientBase):
 
     @property
     def supported_parameters(self):
-        # textgenwebui does not error on unsupported parameters
-        # but we should still drop them so they don't get passed to the API
-        # and show up in our prompt debugging tool.
-
-        # note that this is not the full list of their supported parameters
-        # but only those we send.
+        # Only OpenAI-compatible parameters
         return [
             "temperature",
             "top_p",
-            "top_k",
-            "min_p",
             "frequency_penalty",
             "presence_penalty",
-            "repetition_penalty",
-            "repetition_penalty_range",
-            "stopping_strings",
-            "skip_special_tokens",
             "max_tokens",
-            "stream",
-            "do_sample",
-            # arethese needed?
-            "max_new_tokens",
-            "stop",
-            "xtc_threshold",
-            "xtc_probability",
-            "dry_multiplier",
-            "dry_base",
-            "dry_allowed_length",
-            "dry_sequence_breakers",
-            "smoothing_factor",
-            "smoothing_curve",
-            # talemate internal
-            # These will be removed before sending to the API
-            # but we keep them here since they are used during the prompt finalization
-            "extra_stopping_strings",
+            ParameterReroute(
+                talemate_parameter="stopping_strings", client_parameter="stop"
+            ),
         ]
 
     def __init__(self, **kwargs):
@@ -104,6 +80,9 @@ class TextGeneratorWebuiClient(ClientBase):
             base_url=self.api_url + "/v1", 
             api_key=self.api_key or "dummy-key"  # TextGenWebUI may not require API key
         )
+        
+        # Setup instructor support
+        self.setup_instructor()
 
     def finalize_llama3(self, parameters: dict, prompt: str) -> tuple[str, bool]:
 
@@ -189,15 +168,12 @@ class TextGeneratorWebuiClient(ClientBase):
         if coercion_prompt:
             messages.append({"role": "assistant", "content": coercion_prompt.strip()})
         
-        # Clean up parameters - remove internal parameters
-        if "extra_stopping_strings" in parameters:
-            del parameters["extra_stopping_strings"]
-        if "stream" in parameters:
-            del parameters["stream"]
-        
         # Get model name if not already set
         if not hasattr(self, 'model_name') or not self.model_name:
             self.model_name = await self.get_model_name()
+        
+        # Clean parameters before sending
+        self.clean_prompt_parameters(parameters)
         
         try:
             # Use streaming for token tracking

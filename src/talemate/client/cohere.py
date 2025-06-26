@@ -3,6 +3,7 @@ import structlog
 from openai import AsyncOpenAI
 
 from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults, ExtraField
+from talemate.client.instructor_mixin import InstructorMixin
 from talemate.client.registry import register
 from talemate.client.remote import (
     EndpointOverride,
@@ -41,7 +42,7 @@ class ClientConfig(EndpointOverride, BaseClientConfig):
 
 
 @register()
-class CohereClient(EndpointOverrideMixin, ClientBase):
+class CohereClient(InstructorMixin, EndpointOverrideMixin, ClientBase):
     """
     Cohere client for generating text.
     """
@@ -76,16 +77,17 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
 
     @property
     def supported_parameters(self):
+        # Only OpenAI-compatible parameters
+        # Note: Cohere's API uses different parameter names, but we handle the mapping
         return [
             "temperature",
-            ParameterReroute(talemate_parameter="top_p", client_parameter="p"),
-            ParameterReroute(talemate_parameter="top_k", client_parameter="k"),
-            ParameterReroute(
-                talemate_parameter="stopping_strings", client_parameter="stop_sequences"
-            ),
+            "top_p",
             "frequency_penalty",
             "presence_penalty",
             "max_tokens",
+            ParameterReroute(
+                talemate_parameter="stopping_strings", client_parameter="stop"
+            ),
         ]
 
     def emit_status(self, processing: bool = None):
@@ -155,6 +157,9 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
             base_url=cohere_base_url
         )
         self.max_token_length = max_token_length or 16384
+        
+        # Setup instructor support
+        self.setup_instructor()
 
         if not self.api_key_status:
             if self.api_key_status is False:
@@ -248,9 +253,8 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
             system_message=system_message,
         )
 
-        # Convert stop_sequences to stop for OpenAI API
-        if "stop_sequences" in parameters:
-            parameters["stop"] = parameters.pop("stop_sequences")
+        # Clean parameters before sending (this will handle parameter reroutes)
+        self.clean_prompt_parameters(parameters)
 
         try:
             # Use streaming for token tracking

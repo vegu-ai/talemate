@@ -59,14 +59,14 @@ async def log_stream(stream, log_func):
             log.info("uvicorn", message=decoded_line)
         else:
             # Use the provided log_func for other messages
-            log_func("uvicron", message=decoded_line)
+            log_func("uvicorn", message=decoded_line)
 
 async def run_frontend(host: str = "localhost", port: int = 8080):
     if sys.platform == "win32":
-        activate_cmd = ".\\talemate_env\\Scripts\\activate.bat"
+        activate_cmd = ".\\.venv\\Scripts\\activate.bat"
         frontend_cmd = f"{activate_cmd} && uvicorn --host {host} --port {port} frontend_wsgi:application"
     else:
-        frontend_cmd = f"/bin/bash -c 'source talemate_env/bin/activate && uvicorn --host {host} --port {port} frontend_wsgi:application'"
+        frontend_cmd = f"/bin/bash -c 'source .venv/bin/activate && uvicorn --host {host} --port {port} frontend_wsgi:application'"
     frontend_cwd = None
         
     process = await asyncio.create_subprocess_shell(

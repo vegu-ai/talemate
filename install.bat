@@ -35,6 +35,12 @@ IF %ERRORLEVEL% NEQ 0 (
     where bitsadmin >nul 2>&1 || CALL :die "Neither curl nor bitsadmin found. Cannot download files."
 )
 
+REM ---------[ Remove legacy Poetry venv if present ]---------
+IF EXIST "talemate_env" (
+    ECHO Detected legacy Poetry virtual environment 'talemate_env'. Removing...
+    RD /S /Q "talemate_env" || CALL :die "Failed to remove legacy 'talemate_env' directory."
+)
+
 REM ---------[ Clean reinstall check ]---------
 SET "NEED_CLEAN=0"
 IF EXIST "talemate_env" SET "NEED_CLEAN=1"
@@ -136,7 +142,7 @@ REM Upgrade pip to latest
 
 REM ---------[ Install uv ]---------
 ECHO Installing uv...
-"%PYTHON%" -m pip install --no-warn-script-location uv || (
+"%PYTHON%" -m pip install uv || (
     CALL :die "uv installation failed."
 )
 
@@ -151,7 +157,7 @@ CALL .venv\Scripts\activate
 
 REM ---------[ Backend dependencies ]---------
 ECHO Installing backend dependencies with uv...
-uv sync --extra cpu || CALL :die "Failed to install backend dependencies with uv."
+uv sync || CALL :die "Failed to install backend dependencies with uv."
 
 REM ---------[ Config file ]---------
 IF NOT EXIST config.yaml COPY config.example.yaml config.yaml

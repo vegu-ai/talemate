@@ -46,7 +46,7 @@ IF EXIST "talemate_env" (
 
 REM ---------[ Clean reinstall check ]---------
 SET "NEED_CLEAN=0"
-IF EXIST "talemate_env" SET "NEED_CLEAN=1"
+IF EXIST ".venv" SET "NEED_CLEAN=1"
 IF EXIST "embedded_python" SET "NEED_CLEAN=1"
 IF EXIST "embedded_node" SET "NEED_CLEAN=1"
 
@@ -61,7 +61,7 @@ IF "%NEED_CLEAN%"=="1" (
         GOTO :EOF
     )
     ECHO Removing previous installation...
-    IF EXIST "talemate_env" RD /S /Q "talemate_env"
+    IF EXIST ".venv" RD /S /Q ".venv"
     IF EXIST "embedded_python" RD /S /Q "embedded_python"
     IF EXIST "embedded_node" RD /S /Q "embedded_node"
     ECHO Cleanup complete.
@@ -155,22 +155,15 @@ ECHO Creating virtual environment with uv...
     CALL :die "Virtual environment creation failed."
 )
 
+REM ---------[ Install dependencies using embedded Python's uv ]---------
+ECHO Installing backend dependencies with uv...
+"%PYTHON%" -m uv sync || CALL :die "Failed to install backend dependencies with uv."
+
 REM Activate the venv for the remainder of the script
 CALL .venv\Scripts\activate
 
-REM ---------[ Ensure pip ]---------
-ECHO Installing pip...
-python install-utils\get-pip.py || (
-    CALL :die "pip installation failed."
-)
-
-REM ---------[ Ensure uv available in venv ]---------
-ECHO Installing uv into virtual environment...
-python -m pip install uv || ECHO [WARNING] Failed to install uv inside venv & REM continue; python -m uv may still work if module available
-
-REM ---------[ Backend dependencies ]---------
-ECHO Installing backend dependencies with uv...
-python -m uv sync || CALL :die "Failed to install backend dependencies with uv."
+REM echo python version
+python --version
 
 REM ---------[ Config file ]---------
 IF NOT EXIST config.yaml COPY config.example.yaml config.yaml

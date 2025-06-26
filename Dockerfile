@@ -1,15 +1,19 @@
 # Stage 1: Frontend build
-FROM node:21 AS frontend-build
-
-ENV NODE_ENV=development
+FROM node:21-slim AS frontend-build
 
 WORKDIR /app
 
-# Copy the frontend directory contents into the container at /app
-COPY ./talemate_frontend /app
+# Copy frontend package files
+COPY talemate_frontend/package*.json ./
 
-# Install all dependencies and build
-RUN npm install && npm run build
+# Install dependencies
+RUN npm ci
+
+# Copy frontend source
+COPY talemate_frontend/ ./
+
+# Build frontend
+RUN npm run build
 
 # Stage 2: Backend build
 FROM python:3.11-slim AS backend-build
@@ -22,30 +26,25 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Install poetry
-RUN pip install poetry
+# Install uv
+RUN pip install uv
 
-# Copy poetry files
-COPY pyproject.toml poetry.lock* /app/
+# Copy installation files
+COPY pyproject.toml uv.lock /app/
 
-# Create a virtual environment
-RUN python -m venv /app/talemate_env
-
-# Activate virtual environment and install dependencies
-RUN . /app/talemate_env/bin/activate && \
-    poetry config virtualenvs.create false && \
-    poetry install  --only main --no-root
-
-# Copy the Python source code
+# Copy the Python source code (needed for editable install)
 COPY ./src /app/src
+
+# Create virtual environment and install dependencies
+RUN uv sync
 
 # Conditional PyTorch+CUDA install
 ARG CUDA_AVAILABLE=false
-RUN . /app/talemate_env/bin/activate && \
+RUN . /app/.venv/bin/activate && \
     if [ "$CUDA_AVAILABLE" = "true" ]; then \
         echo "Installing PyTorch with CUDA support..." && \
-        pip uninstall torch torchaudio -y && \
-        pip install torch~=2.4.1 torchaudio~=2.4.1 --index-url https://download.pytorch.org/whl/cu121; \
+        uv pip uninstall torch torchaudio && \
+        uv pip install torch~=2.7.0 torchaudio~=2.7.0 --index-url https://download.pytorch.org/whl/cu128; \
     fi
 
 # Stage 3: Final image
@@ -57,8 +56,11 @@ RUN apt-get update && apt-get install -y \
     bash \
     && rm -rf /var/lib/apt/lists/*
 
+# Install uv in the final stage
+RUN pip install uv
+
 # Copy virtual environment from backend-build stage
-COPY --from=backend-build /app/talemate_env /app/talemate_env
+COPY --from=backend-build /app/.venv /app/.venv
 
 # Copy Python source code
 COPY --from=backend-build /app/src /app/src
@@ -83,4 +85,4 @@ EXPOSE 5050
 EXPOSE 8080
 
 # Use bash as the shell, activate the virtual environment, and run backend server
-CMD ["/bin/bash", "-c", "source /app/talemate_env/bin/activate && python src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050 --frontend-host 0.0.0.0 --frontend-port 8080"]
+CMD ["uv", "run", "src/talemate/server/run.py", "runserver", "--host", "0.0.0.0", "--port", "5050", "--frontend-host", "0.0.0.0", "--frontend-port", "8080"]

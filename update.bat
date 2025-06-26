@@ -33,9 +33,6 @@ IF NOT EXIST ".venv" (
     CALL :die ".venv directory not found. Please run install.bat first."
 )
 
-REM activate the virtual environment
-call .venv\Scripts\activate
-
 REM Check if embedded Python exists
 IF NOT EXIST "embedded_python\python.exe" (
     CALL :die "embedded_python not found. Please run install.bat first."

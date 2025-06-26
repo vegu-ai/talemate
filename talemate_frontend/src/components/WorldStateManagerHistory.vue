@@ -29,7 +29,7 @@
                         <p>No history entries yet.</p>
                     </v-alert>
                     
-                    <div v-if="noSummaryEntries || history.length == 0" class="d-flex justify-center my-2" style="max-width: 1600px;">
+                    <div v-if="!summaryEntriesExist || history.length == 0" class="d-flex justify-center my-2" style="max-width: 1600px;">
                         <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || busy">
                             Add Entry
                         </v-btn>
@@ -119,8 +119,8 @@ export default {
             });
             return idx;
         },
-        noSummaryEntries() {
-            return this.history.filter(e => e.start === null || e.end === null).length > 0;
+        summaryEntriesExist() {
+            return this.history.some(e => e.start !== null && e.end !== null);
         }
     },
     inject:[

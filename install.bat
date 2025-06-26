@@ -38,7 +38,10 @@ IF %ERRORLEVEL% NEQ 0 (
 REM ---------[ Remove legacy Poetry venv if present ]---------
 IF EXIST "talemate_env" (
     ECHO Detected legacy Poetry virtual environment 'talemate_env'. Removing...
-    RD /S /Q "talemate_env" || CALL :die "Failed to remove legacy 'talemate_env' directory."
+    RD /S /Q "talemate_env"
+    IF ERRORLEVEL 1 (
+        ECHO [WARNING] Failed to fully remove legacy 'talemate_env' directory. Continuing installation.
+    )
 )
 
 REM ---------[ Clean reinstall check ]---------

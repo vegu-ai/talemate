@@ -30,13 +30,13 @@ RUN apt-get update && apt-get install -y \
 RUN pip install uv
 
 # Copy installation files
-COPY pyproject.toml install.sh /app/
+COPY pyproject.toml uv.lock /app/
 
-# Run installation script
-RUN chmod +x install.sh && ./install.sh
-
-# Copy the Python source code
+# Copy the Python source code (needed for editable install)
 COPY ./src /app/src
+
+# Create virtual environment and install dependencies
+RUN uv sync
 
 # Conditional PyTorch+CUDA install
 ARG CUDA_AVAILABLE=false

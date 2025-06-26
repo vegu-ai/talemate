@@ -29,7 +29,7 @@ REM pull the latest changes from git repository
 git pull
 
 REM activate the virtual environment
-call talemate_env\Scripts\activate
+call .venv\Scripts\activate
 
 REM ---------[ Use embedded Node.js ]---------
 SET "NODE_DIR=embedded_node"
@@ -41,9 +41,9 @@ REM Prepend embedded Node.js to PATH
 SET "PATH=%CD%\%NODE_DIR%;%PATH%"
 ECHO Using embedded Node.js at %CD%\%NODE_DIR%\node.exe
 
-REM use poetry to install dependencies
+REM install dependencies with uv
 echo Updating virtual environment...
-python -m poetry install || CALL :die "Poetry dependency install failed."
+uv sync --extra cpu || CALL :die "uv dependency sync failed."
 
 echo Virtual environment updated!
 

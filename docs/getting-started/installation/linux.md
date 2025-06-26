@@ -1,4 +1,3 @@
-
 ## Quick install instructions
 
 ### Dependencies
@@ -7,6 +6,7 @@
 
 1. node.js and npm - see instructions [here](https://nodejs.org/en/download/package-manager/)
 1. python- see instructions [here](https://www.python.org/downloads/)
+1. uv - see instructions [here](https://github.com/astral-sh/uv#installation)
 
 ### Installation
 
@@ -25,19 +25,15 @@ If everything went well, you can proceed to [connect a client](../../connect-a-c
 
 1. Open a terminal.
 2. Navigate to the project directory.
-3. Create a virtual environment by running `python3 -m venv talemate_env`.
-4. Activate the virtual environment by running `source talemate_env/bin/activate`.
+3. uv will automatically create a virtual environment when you run `uv venv`.
 
 ### Installing Dependencies
 
-1. With the virtual environment activated, install poetry by running `pip install poetry`.
-2. Use poetry to install dependencies by running `poetry install`.
+1. Use uv to install dependencies by running `uv pip install -e ".[dev]"`.
 
 ### Running the Backend
 
-1. With the virtual environment activated and dependencies installed, you can start the backend server.
-2. Navigate to the `src/talemate/server` directory.
-3. Run the server with `python run.py runserver --host 0.0.0.0 --port 5050`.
+1. You can start the backend server using `uv run src/talemate/server/run.py runserver --host 0.0.0.0 --port 5050`.
 
 ### Running the Frontend
 
@@ -45,4 +41,4 @@ If everything went well, you can proceed to [connect a client](../../connect-a-c
 2. If you haven't already, install npm dependencies by running `npm install`.
 3. Start the server with `npm run serve`.
 
-Please note that you may need to set environment variables or modify the host and port as per your setup. You can refer to the `runserver.sh` and `frontend.sh` files for more details.
+Please note that you may need to set environment variables or modify the host and port as per your setup. You can refer to the various start scripts for more details.

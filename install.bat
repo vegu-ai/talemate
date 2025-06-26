@@ -134,30 +134,24 @@ ECHO Installing pip...
 REM Upgrade pip to latest
 "%PYTHON%" -m pip install --no-warn-script-location --upgrade pip || CALL :die "Failed to upgrade pip in embedded Python."
 
-REM ---------[ Install virtualenv ]---------
-ECHO Installing virtualenv...
-"%PYTHON%" -m pip install --no-warn-script-location virtualenv || (
-    CALL :die "virtualenv installation failed."
+REM ---------[ Install uv ]---------
+ECHO Installing uv...
+"%PYTHON%" -m pip install --no-warn-script-location uv || (
+    CALL :die "uv installation failed."
 )
 
-REM ---------[ Create virtual environment ]---------
-ECHO Creating virtual environment (talemate_env)...
-"%PYTHON%" -m virtualenv talemate_env || (
+REM ---------[ Create virtual environment with uv ]---------
+ECHO Creating virtual environment with uv...
+"%PYTHON%" -m uv venv || (
     CALL :die "Virtual environment creation failed."
 )
 
 REM Activate the venv for the remainder of the script
-CALL talemate_env\Scripts\activate
+CALL .venv\Scripts\activate
 
 REM ---------[ Backend dependencies ]---------
-ECHO Upgrading pip and setuptools inside venv...
-python -m pip install --no-warn-script-location --upgrade pip setuptools || CALL :die "Failed to upgrade pip/setuptools in venv."
-
-ECHO Installing Poetry
-python -m pip install --no-warn-script-location "poetry==2.1.3" -U || CALL :die "Failed to install Poetry & rapidfuzz."
-
-ECHO Installing backend dependencies via Poetry...
-python -m poetry install
+ECHO Installing backend dependencies with uv...
+uv sync --extra cpu || CALL :die "Failed to install backend dependencies with uv."
 
 REM ---------[ Config file ]---------
 IF NOT EXIST config.yaml COPY config.example.yaml config.yaml

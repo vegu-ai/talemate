@@ -218,7 +218,7 @@
                                         <v-alert color="white" variant="text" icon="mdi-api" density="compact">
                                             <v-alert-title>OpenRouter</v-alert-title>
                                             <div class="text-grey">
-                                                Configure your OpenRouter API key here. You can get one from <a href="https://openrouter.ai/api-keys" target="_blank">https://openrouter.ai/settings/keys</a> 
+                                                Configure your OpenRouter API key here. You can get one from <a href="https://openrouter.ai/settings/keys" target="_blank">https://openrouter.ai/settings/keys</a> 
                                             </div>
                                         </v-alert>
                                         <v-divider class="mb-2"></v-divider>

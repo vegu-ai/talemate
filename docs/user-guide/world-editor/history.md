@@ -5,7 +5,7 @@ Will hold historical events for the scene.
 There are three types of historical entries:
 
 - **Archived history (static)** - These are entries are manually defined and dated before the starting point of the scene. Things that happened in the past that are **IMPORTANT** for the understanding of the world. For anything that is not **VITAL**, use world entries instead.
-- **Archived history (from summary)** - These are historical entries genertated from the progress in the scene. Whenever a certain token (length) threshold is reached, the [Summarizer Agent](/talemate/user-guide/agents/summarizer/) will generate a summary of the progression and add it to the history.
+- **Archived history (from summary)** - These are historical entries generated from the progress in the scene. Whenever a certain token (length) threshold is reached, the [Summarizer Agent](/talemate/user-guide/agents/summarizer/) will generate a summary of the progression and add it to the history.
 - **Layered history (from summary)** - As summary archives are generated, they themselves will be summarized again and added to the history, leading to a natural compression of the history sent with the context while also keeping track of the most important events. (hopefully)
 
 ![History](/talemate/img/0.31.0/history.png)

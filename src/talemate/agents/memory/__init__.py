@@ -235,7 +235,11 @@ class MemoryAgent(Agent):
     @set_processing
     async def handle_embeddings_change(self):
         scene = active_scene.get()
-        
+
+        # if sentence-transformer and no model-name, set embeddings to default
+        if self.using_sentence_transformer_embeddings and not self.model:
+            self.actions["_config"].config["embeddings"].value = "default"
+                
         if not scene or not scene.get_helper("memory"):
             return
         

@@ -277,12 +277,16 @@ class ClientBase:
     def embeddings_identifier(self) -> str:
         return f"client-api/{self.name}/{self.embeddings_model_name}"
 
-    def destroy(self, config:dict):
+    async def destroy(self, config:dict):
         """
         This is called before the client is removed from talemate.instance.clients
         
         Use this to perform any cleanup that is necessary.
+        
+        If a subclass overrides this method, it should call super().destroy(config) in the
+        end of the method.
         """
+        
         if self.supports_embeddings:
             self.remove_embeddings(config)
 

@@ -25,7 +25,7 @@ class AsyncSignal:
     async def send(self, emission):
         for receiver in self.receivers:
             await receiver(emission)
-
+    
 
 def _register(name: str):
     """

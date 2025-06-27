@@ -213,7 +213,10 @@ class MemoryAgent(Agent):
         """
         Returns a unique fingerprint for the current configuration
         """
-        return f"{self.embeddings}-{self.model.replace('/','-')}-{self.distance_function}-{self.device}-{self.trust_remote_code}".lower()   
+        
+        model_name = self.model.replace('/','-') if self.model else "none"
+        
+        return f"{self.embeddings}-{model_name}-{self.distance_function}-{self.device}-{self.trust_remote_code}".lower()   
 
     async def apply_config(self, *args, **kwargs):
         

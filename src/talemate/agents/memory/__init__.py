@@ -287,6 +287,7 @@ class MemoryAgent(Agent):
             self.actions["_config"].config["embeddings"].value = event.client.embeddings_identifier
             await self.emit_status()
             await self.handle_embeddings_change()
+            await self.save_config()
 
     @set_processing
     async def set_db(self):
@@ -768,6 +769,16 @@ class ChromaDBMemoryAgent(MemoryAgent):
             
         if self.using_client_api_embeddings:
             embeddings_client:ClientBase | None = instance.get_client(self.embeddings_client)
+
+            if not embeddings_client:
+                details["error"] = {
+                    "icon": "mdi-alert",
+                    "value": f"Client {self.embeddings_client} not found",
+                    "description": f"Client {self.embeddings_client} not found",
+                    "color": "error",
+                }
+                return details
+
             client_name = embeddings_client.name
             
             if not embeddings_client.supports_embeddings:

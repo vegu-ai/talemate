@@ -301,7 +301,7 @@ class WebsocketHandler(Receiver):
 
             for name in removed:
                 log.debug("Destroying client", name=name)
-                instance.destroy_client(name)
+                instance.destroy_client(name, self.config)
 
         self.config["clients"] = self.llm_clients
 

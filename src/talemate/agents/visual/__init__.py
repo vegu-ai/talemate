@@ -292,7 +292,7 @@ class VisualBase(Agent):
 
         try:
             backend = kwargs["actions"]["_config"]["config"]["backend"]["value"]
-        except KeyError:
+        except (KeyError, TypeError):
             backend = self.backend
 
         backend_changed = backend != self.backend

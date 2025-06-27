@@ -277,6 +277,15 @@ class ClientBase:
     def embeddings_identifier(self) -> str:
         return f"client-api/{self.name}/{self.embeddings_model_name}"
 
+    def destroy(self, config:dict):
+        """
+        This is called before the client is removed from talemate.instance.clients
+        
+        Use this to perform any cleanup that is necessary.
+        """
+        if self.supports_embeddings:
+            self.remove_embeddings(config)
+
     def reset_embeddings(self):
         self._embeddings_model_name = None
         self._embeddings_status = False
@@ -309,9 +318,17 @@ class ClientBase:
             distance=1,
             distance_function="cosine",
             local=False,
+            custom=True,
         )
         
         save_config(config)
+        
+    def remove_embeddings(self, config:dict | None = None):
+        # remove all embeddings for this client
+        for key, value in list(config["presets"]["embeddings"].items()):
+            if value["client"] == self.name and value["embeddings"] == "client-api":
+                log.warning("!!! removing embeddings", client=self.name, key=key)
+                config["presets"]["embeddings"].pop(key)
 
     def set_system_prompts(self, system_prompts: dict | SystemPrompts):
         if isinstance(system_prompts, dict):

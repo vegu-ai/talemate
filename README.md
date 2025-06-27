@@ -39,12 +39,14 @@ Need help? Join the new [Discord community](https://discord.gg/8bGNRmFxMj)
 - [Cohere](https://www.cohere.com/)
 - [Groq](https://www.groq.com/)
 - [Google Gemini](https://console.cloud.google.com/)
+- [OpenRouter](https://openrouter.ai/)
 
 Supported self-hosted APIs:
 - [KoboldCpp](https://koboldai.org/cpp) ([Local](https://koboldai.org/cpp), [Runpod](https://koboldai.org/runpodcpp), [VastAI](https://koboldai.org/vastcpp), also includes image gen support)
 - [oobabooga/text-generation-webui](https://github.com/oobabooga/text-generation-webui) (local or with runpod support)
 - [LMStudio](https://lmstudio.ai/)
 - [TabbyAPI](https://github.com/theroyallab/tabbyAPI/)
+- [Ollama](https://ollama.com/)
 
 Generic OpenAI api implementations (tested and confirmed working):
 - [DeepInfra](https://deepinfra.com/)

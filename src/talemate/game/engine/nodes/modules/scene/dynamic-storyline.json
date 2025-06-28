@@ -641,26 +641,6 @@
       "registry": "state/SetState",
       "base_type": "core/Node"
     },
-    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff": {
-      "title": "PROP topic",
-      "id": "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff",
-      "properties": {
-        "property_name": "topic",
-        "property_type": "str",
-        "default": "",
-        "choices": [],
-        "description": "The overarching topic",
-        "num": 0
-      },
-      "x": 29,
-      "y": -520,
-      "width": 255,
-      "height": 198,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
-      "base_type": "core/Node"
-    },
     "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b": {
       "title": "SET local.topic",
       "id": "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b",
@@ -723,26 +703,6 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "bb66531f-71dc-4ab5-820e-8b9d6059f450": {
-      "title": "PROP intro_length",
-      "id": "bb66531f-71dc-4ab5-820e-8b9d6059f450",
-      "properties": {
-        "property_name": "intro_length",
-        "property_type": "int",
-        "default": "512",
-        "choices": [],
-        "description": "Length of the introduction",
-        "num": 1
-      },
-      "x": 39,
-      "y": -250,
-      "width": 252,
-      "height": 198,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
-      "base_type": "core/Node"
-    },
     "86df3111-98d7-46a1-aa1d-93e6c53e282b": {
       "title": "PROP analysis_enabled",
       "id": "86df3111-98d7-46a1-aa1d-93e6c53e282b",
@@ -763,26 +723,6 @@
       "registry": "core/ModuleProperty",
       "base_type": "core/Node"
     },
-    "3f749c9f-71b0-4e9c-b99d-859e53f20569": {
-      "title": "PROP analysis_instructions",
-      "id": "3f749c9f-71b0-4e9c-b99d-859e53f20569",
-      "properties": {
-        "property_name": "analysis_instructions",
-        "property_type": "text",
-        "default": "",
-        "choices": [],
-        "description": "Instructions for the analysis",
-        "num": 3
-      },
-      "x": 29,
-      "y": -1040,
-      "width": 259,
-      "height": 198,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
-      "base_type": "core/Node"
-    },
     "43013315-b65d-4c51-bdab-fdffe051224f": {
       "title": "PROP reset",
       "id": "43013315-b65d-4c51-bdab-fdffe051224f",
@@ -797,6 +737,66 @@
       "x": 26,
       "y": -1299,
       "width": 268,
+      "height": 198,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "bb66531f-71dc-4ab5-820e-8b9d6059f450": {
+      "title": "PROP intro_length",
+      "id": "bb66531f-71dc-4ab5-820e-8b9d6059f450",
+      "properties": {
+        "property_name": "intro_length",
+        "property_type": "int",
+        "default": "512",
+        "choices": [],
+        "description": "Length of the introduction",
+        "num": 1
+      },
+      "x": 39,
+      "y": -250,
+      "width": 252,
+      "height": 198,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff": {
+      "title": "PROP topic",
+      "id": "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff",
+      "properties": {
+        "property_name": "topic",
+        "property_type": "str",
+        "default": "",
+        "choices": [],
+        "description": "The overarching topic - will be used to generate a theme that falls within this category. Example - 'Sci-fi adventure with cosmic horror'.",
+        "num": 0
+      },
+      "x": 29,
+      "y": -520,
+      "width": 255,
+      "height": 198,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569": {
+      "title": "PROP analysis_instructions",
+      "id": "3f749c9f-71b0-4e9c-b99d-859e53f20569",
+      "properties": {
+        "property_name": "analysis_instructions",
+        "property_type": "text",
+        "default": "",
+        "choices": [],
+        "description": "Additional instructions for topic analysis task - if topic analysis is enabled, this will be used to augment the topic analysis task with further instructions.",
+        "num": 3
+      },
+      "x": 29,
+      "y": -1040,
+      "width": 259,
       "height": 198,
       "collapsed": false,
       "inherited": false,
@@ -915,23 +915,11 @@
     "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value": [
       "08309808-d1f1-4a94-9027-363eceed41d1.state_c"
     ],
-    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.name": [
-      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.name"
-    ],
-    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.value": [
-      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value"
-    ],
     "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value": [
       "08309808-d1f1-4a94-9027-363eceed41d1.state_d"
     ],
     "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.value": [
       "880b6010-cdca-42d0-9dcb-58abecd31599.state"
-    ],
-    "bb66531f-71dc-4ab5-820e-8b9d6059f450.name": [
-      "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.name"
-    ],
-    "bb66531f-71dc-4ab5-820e-8b9d6059f450.value": [
-      "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.value"
     ],
     "86df3111-98d7-46a1-aa1d-93e6c53e282b.name": [
       "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.name"
@@ -939,17 +927,29 @@
     "86df3111-98d7-46a1-aa1d-93e6c53e282b.value": [
       "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value"
     ],
-    "3f749c9f-71b0-4e9c-b99d-859e53f20569.name": [
-      "c327b0c4-900e-4d27-a0b9-0d47e8479732.name"
-    ],
-    "3f749c9f-71b0-4e9c-b99d-859e53f20569.value": [
-      "c327b0c4-900e-4d27-a0b9-0d47e8479732.value"
-    ],
     "43013315-b65d-4c51-bdab-fdffe051224f.name": [
       "efc1c906-d725-4941-acab-a369366411d4.name"
     ],
     "43013315-b65d-4c51-bdab-fdffe051224f.value": [
       "efc1c906-d725-4941-acab-a369366411d4.value"
+    ],
+    "bb66531f-71dc-4ab5-820e-8b9d6059f450.name": [
+      "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.name"
+    ],
+    "bb66531f-71dc-4ab5-820e-8b9d6059f450.value": [
+      "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.value"
+    ],
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.name": [
+      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.name"
+    ],
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.value": [
+      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value"
+    ],
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569.name": [
+      "c327b0c4-900e-4d27-a0b9-0d47e8479732.name"
+    ],
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569.value": [
+      "c327b0c4-900e-4d27-a0b9-0d47e8479732.value"
     ]
   },
   "groups": [
@@ -1069,7 +1069,7 @@
   "module_properties": {
     "topic": {
       "name": "topic",
-      "description": "The overarching topic",
+      "description": "The overarching topic - will be used to generate a theme that falls within this category. Example - 'Sci-fi adventure with cosmic horror'.",
       "type": "str",
       "default": "",
       "choices": [],
@@ -1105,7 +1105,7 @@
     },
     "analysis_instructions": {
       "name": "analysis_instructions",
-      "description": "Instructions for the analysis",
+      "description": "Additional instructions for topic analysis task - if topic analysis is enabled, this will be used to augment the topic analysis task with further instructions.",
       "type": "text",
       "default": "",
       "choices": [],

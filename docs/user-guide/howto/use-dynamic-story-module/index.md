@@ -16,19 +16,39 @@ Save the scene.
 
 ## Install the module
 
-1. Click the `Mods` tab in the world editor
-    ![Mods Tab](./img/0002.png)
-1. Find the `Dynamic Storyline` module and click Install
-1. It will say installed (not configured)
-    ![Installed (not configured)](./img/0003.png)
-1. Click configure and set topic to something like "Sci-fi adventure with lovecraftian horror"
-    ![Configure Module](./img/0004.png)
-1. Optionally: max intro text length - how many tokens to generate for the intro text (512)
-1. Optionally: Additional instructions for topic analysis task - if topic analysis is enabled, this will be used to augment the topic analysis task with further instructions
-1. Optionally: Enable topic analysis - this will enable the topic analysis task
-1. Click save
+Click the `Mods` tab in the world editor.
+    
+![Mods Tab](./img/0002.png)
+
+
+Find the `Dynamic Storyline` module and click **Install**.
+
+It will say installed (not configured)
+
+![Installed (not configured)](./img/0003.png)
+
+Click **Configure** and set topic to something like `Sci-fi adventure with lovecraftian horror`.
+
+![Configure Module](./img/0004.png)
+
+!!! note "Optional settings"
+
+    ##### Max intro text length
+    How many tokens to generate for the intro text.
+
+    ##### Additional instructions for topic analysis task
+    If topic analysis is enabled, this will be used to augment the topic analysis task with further instructions
+
+    ##### Enable topic analysis
+    This will enable the topic analysis task
+
+**Save** the module configuration.
 
 Finally click "Reload Scene" in the left sidebar.
+
+![Reload Scene](./img/0007.png)
+
+If everything is configured correctly, the storyline generation will begin immediately.
 
 ![Dynamic Storyline Module Configured](./img/0005.png)
 

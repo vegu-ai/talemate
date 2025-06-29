@@ -65,6 +65,7 @@ dev = [
     "mkdocs-material>=9.5.27",
     "mkdocs-awesome-pages-plugin>=2.9.2",
     "mkdocs-glightbox>=0.4.0",
+    "pre-commit>=2.13",
 ]
 
 [project.scripts]

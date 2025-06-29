@@ -1,6 +1,5 @@
 import asyncio
 import structlog
-import traceback
 
 from talemate.emit import emit
 from talemate.exceptions import GenerationCancelled
@@ -16,8 +15,8 @@ log = structlog.get_logger("talemate.status")
 
 class set_loading:
     def __init__(
-        self, 
-        message, 
+        self,
+        message,
         set_busy: bool = True,
         set_success: bool = False,
         set_error: bool = False,
@@ -58,8 +57,9 @@ class set_loading:
 
         # if as_async we want to wrap the function in a coroutine
         # that adds a task to the event loop and returns the task
-        
+
         if self.as_async:
+
             async def async_wrapper(*args, **kwargs):
                 return asyncio.create_task(wrapper(*args, **kwargs))
 
@@ -76,12 +76,12 @@ class LoadingStatus:
 
     def __call__(self, message: str):
         self.current_step += 1
-        
+
         if self.max_steps is None:
             counter = ""
         else:
             counter = f" [{self.current_step}/{self.max_steps}]"
-        
+
         emit(
             "status",
             message=f"{message}{counter}",
@@ -90,11 +90,11 @@ class LoadingStatus:
                 "cancellable": self.cancellable,
             },
         )
-        
+
     def done(self, message: str = "", status: str = "idle"):
         if self.current_step == 0:
             return
-        
+
         emit(
             "status",
             message=message,

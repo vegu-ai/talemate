@@ -1,7 +1,7 @@
 import os
 import uuid
 from enum import IntEnum
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import pydantic
 import structlog
@@ -36,7 +36,6 @@ TEMPLATE_PATH_TALEMATE = os.path.join(TEMPLATE_PATH, "talemate")
 
 
 class register:
-
     def __init__(self, template_type: str):
         self.template_type = template_type
 
@@ -127,69 +126,71 @@ class Group(pydantic.BaseModel):
             data = yaml.safe_load(f)
             data = cls.sanitize_data(data)
             return cls(path=path, **data)
-        
+
     @classmethod
     def sanitize_data(cls, data: dict) -> dict:
         """
         Sanitizes the data for the group.
         """
-        
+
         data.pop("path", None)
-        
+
         # ensure uid is set
         if not data.get("uid"):
             data["uid"] = str(uuid.uuid4())
-        
+
         # if group name is null, set it to the group uid
         if not data.get("name"):
             uid = data.get("uid")
             log.warning("Group has no name", group_uid=uid)
             data["name"] = uid[:8]
-            
+
         # if description or author are null, set them to blank strings
-        if data.get("description") is None: 
+        if data.get("description") is None:
             data["description"] = ""
         if data.get("author") is None:
             data["author"] = ""
-        
+
         # 1 remove null templates
         for template_id, template in list(data["templates"].items()):
             if not template:
                 log.warning("Template is null", template_id=template_id)
                 del data["templates"][template_id]
-                
+
         # for templates with a null name, set it to the template_id
         for template_id, template in data["templates"].items():
             if template.get("group") != data["uid"]:
                 template["group"] = data["uid"]
-            
+
             if not template.get("uid"):
                 template["uid"] = template_id
-            
+
             if not template.get("name"):
                 log.warning("Template has no name", template_id=template_id)
                 template["name"] = template_id[:8]
-                
+
             # try to int priority, on failure set to 1
             try:
                 template["priority"] = int(template.get("priority", 1))
             except (ValueError, TypeError):
                 template["priority"] = 1
 
-                
         # ensure template_type exists and drop any that are invalid
         for template_id, template in list(data["templates"].items()):
             template_type = template.get("template_type")
             if not template_type:
                 log.warning("Template has no template_type", template_id=template_id)
                 del data["templates"][template_id]
-            
+
             if template_type not in MODELS:
-                log.warning("Template has invalid template_type", template_id=template_id, template_type=template_type)
+                log.warning(
+                    "Template has invalid template_type",
+                    template_id=template_id,
+                    template_type=template_type,
+                )
                 del data["templates"][template_id]
 
         return data
-        
 
     @property
     def filename(self):
@@ -197,7 +198,6 @@ class Group(pydantic.BaseModel):
         return f"{cleaned_name}.yaml"
 
     def save(self, path: str = TEMPLATE_PATH):
-
         if not self.path:
             path = os.path.join(path, self.filename)
         else:
@@ -223,7 +223,6 @@ class Group(pydantic.BaseModel):
         templates = {}
 
         for template_id, template in self.templates.items():
-
             # we need to ignore the value of `group` since that
             # is always going to be different.
             #
@@ -249,7 +248,6 @@ class Group(pydantic.BaseModel):
         )
 
     def insert_template(self, template: Template, save: bool = True):
-
         if template.uid in self.templates:
             raise ValueError(f"Template with id {template.uid} already exists in group")
 
@@ -259,7 +257,6 @@ class Group(pydantic.BaseModel):
             self.save()
 
     def update_template(self, template: Template, save: bool = True):
-
         self.templates[template.uid] = template
 
         if save:
@@ -339,7 +336,6 @@ class Collection(pydantic.BaseModel):
         config_templates = config.game.world_state.templates.model_dump()
 
         for template_type, templates in config_templates.items():
-
             name = f"legacy-{template_type.replace('_', '-')}s"
 
             if check_if_exists:
@@ -387,7 +383,6 @@ class Collection(pydantic.BaseModel):
 
         for group in self.groups:
             for template_id, template in group.templates.items():
-
                 if types and template.template_type not in types:
                     continue
 
@@ -395,7 +390,7 @@ class Collection(pydantic.BaseModel):
                 templates[uid] = template
 
         return FlatCollection(templates=templates)
-    
+
     def flat_by_template_uid_only(self) -> "FlatCollection":
         """
         Returns a flat collection of templates by template uid only
@@ -416,7 +411,6 @@ class Collection(pydantic.BaseModel):
 
         for group in self.groups:
             for template_id, template in group.templates.items():
-
                 if types and template.template_type not in types:
                     continue
 
@@ -447,7 +441,7 @@ class Collection(pydantic.BaseModel):
         self.groups.remove(group)
         if save:
             group.delete()
-            
+
     def collect_all(self, uids: list[str]) -> dict[str, AnnotatedTemplate]:
         """
         Returns a dictionary of all templates in the collection
@@ -469,7 +463,7 @@ class TypedCollection(pydantic.BaseModel):
     templates: dict[str, dict[str, AnnotatedTemplate]] = pydantic.Field(
         default_factory=dict
     )
-    
+
     def find_by_name(self, name: str) -> AnnotatedTemplate | None:
         for templates in self.templates.values():
             for template in templates.values():

@@ -1,8 +1,5 @@
-import json
-
 import pydantic
 import structlog
-import tiktoken
 from openai import AsyncOpenAI, PermissionDeniedError
 
 from talemate.client.base import ClientBase, ErrorAction, CommonDefaults
@@ -103,12 +100,12 @@ class DeepSeekClient(ClientBase):
 
         self.current_status = status
 
-        data={
+        data = {
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
         }
-        data.update(self._common_status_data()) 
+        data.update(self._common_status_data())
         emit(
             "client_status",
             message=self.client_type,
@@ -273,5 +270,5 @@ class DeepSeekClient(ClientBase):
             self.log.error("generate error", e=e)
             emit("status", message="DeepSeek API: Permission Denied", status="error")
             return ""
-        except Exception as e:
+        except Exception:
             raise

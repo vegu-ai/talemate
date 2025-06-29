@@ -42,6 +42,11 @@ jobs:
         source .venv/bin/activate
         uv pip install -e ".[dev]"
 
+    - name: Run linting
+      run: |
+        source .venv/bin/activate
+        uv run pre-commit run --all-files
+
     - name: Setup configuration file
       run: |
         cp config.example.yaml config.yaml

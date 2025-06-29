@@ -2,7 +2,7 @@
 Base prompt loader
 
 The idea is to be able to specify prompts for the various agents in a way that is
-changeable and extensible. 
+changeable and extensible.
 """
 
 import asyncio
@@ -53,11 +53,13 @@ log = structlog.get_logger("talemate")
 
 prepended_template_dirs = ContextVar("prepended_template_dirs", default=[])
 
+
 class PydanticJsonEncoder(json.JSONEncoder):
     def default(self, obj):
         if hasattr(obj, "model_dump"):
             return obj.model_dump()
         return super().default(obj)
+
 
 class PrependTemplateDirectories:
     def __init__(self, prepend_dir: list):
@@ -208,7 +210,6 @@ class LoopedPrompt:
 
 
 class JoinableList(list):
-
     def join(self, separator: str = "\n"):
         return separator.join(self)
 
@@ -230,8 +231,8 @@ class Prompt:
 
     # prompt text
     prompt: str = None
-    
-    # template text 
+
+    # template text
     template: str | None = None
 
     # prompt variables
@@ -278,7 +279,7 @@ class Prompt:
         return prompt
 
     @classmethod
-    def from_text(cls, text:str, vars: dict = None):
+    def from_text(cls, text: str, vars: dict = None):
         return cls(
             uid="",
             agent_type="",
@@ -326,12 +327,8 @@ class Prompt:
             os.path.join(
                 dir_path, "..", "..", "..", "templates", "prompts", self.agent_type
             ),
-            os.path.join(
-                dir_path, "..", "..", "..", "templates", "prompts", "common"
-            ),
-            os.path.join(
-                dir_path, "..", "..", "..", "templates", "modules"
-            ),
+            os.path.join(dir_path, "..", "..", "..", "templates", "prompts", "common"),
+            os.path.join(dir_path, "..", "..", "..", "templates", "modules"),
             os.path.join(dir_path, "templates", self.agent_type),
             os.path.join(dir_path, "templates", "common"),
         ]
@@ -377,7 +374,9 @@ class Prompt:
             "thematic_generator": thematic_generators.ThematicGenerator(),
             "regeneration_context": regeneration_context.get(),
             "active_agent": active_agent.get(),
-            "agent_context_state": active_agent.get().state if active_agent.get() else {},
+            "agent_context_state": active_agent.get().state
+            if active_agent.get()
+            else {},
         }
 
         env.globals["render_template"] = self.render_template
@@ -414,12 +413,14 @@ class Prompt:
         env.globals["make_list"] = lambda: JoinableList()
         env.globals["make_dict"] = lambda: {}
         env.globals["join"] = lambda x, y: y.join(x)
-        env.globals["data_format_type"] = lambda: getattr(self.client, "data_format", None) or self.data_format_type
+        env.globals["data_format_type"] = (
+            lambda: getattr(self.client, "data_format", None) or self.data_format_type
+        )
         env.globals["count_tokens"] = lambda x: count_tokens(
             dedupe_string(x, debug=False)
         )
         env.globals["print"] = lambda x: print(x)
-        env.globals["json"]= lambda x: json.dumps(x, indent=2, cls=PydanticJsonEncoder)
+        env.globals["json"] = lambda x: json.dumps(x, indent=2, cls=PydanticJsonEncoder)
         env.globals["emit_status"] = self.emit_status
         env.globals["emit_system"] = lambda status, message: emit(
             "system", status=status, message=message
@@ -432,7 +433,6 @@ class Prompt:
         env.filters["condensed"] = condensed
         env.filters["no_chapters"] = no_chapters
         ctx.update(self.vars)
-    
 
         if "decensor" not in ctx:
             ctx["decensor"] = False
@@ -448,7 +448,7 @@ class Prompt:
 
         # Render the template with the prompt variables
         self.eval_context = {}
-        #self.dedupe_enabled = True
+        # self.dedupe_enabled = True
         try:
             self.prompt = template.render(ctx)
             if not sectioning_handler:
@@ -549,7 +549,7 @@ class Prompt:
         return "\n".join(
             [
                 f"Question: {query}",
-                f"Answer: "
+                "Answer: "
                 + loop.run_until_complete(
                     narrator.narrate_query(
                         query, at_the_end=at_the_end, as_narrative=as_narrative
@@ -574,13 +574,15 @@ class Prompt:
 
         if not as_question_answer:
             return loop.run_until_complete(
-                world_state.analyze_text_and_answer_question(text, query, response_length=10 if short else 512)
+                world_state.analyze_text_and_answer_question(
+                    text, query, response_length=10 if short else 512
+                )
             )
 
         return "\n".join(
             [
                 f"Question: {query}",
-                f"Answer: "
+                "Answer: "
                 + loop.run_until_complete(
                     world_state.analyze_text_and_answer_question(
                         text, query, response_length=10 if short else 512
@@ -618,7 +620,7 @@ class Prompt:
                 )
             )
 
-    def instruct_text(self, instruction: str, text: str, as_list:bool=False):
+    def instruct_text(self, instruction: str, text: str, as_list: bool = False):
         loop = asyncio.get_event_loop()
         world_state = instance.get_agent("world_state")
         instruction = instruction.format(**self.vars)
@@ -629,7 +631,7 @@ class Prompt:
         response = loop.run_until_complete(
             world_state.analyze_and_follow_instruction(text, instruction)
         )
-        
+
         if as_list:
             return extract_list(response)
         else:
@@ -644,9 +646,8 @@ class Prompt:
         return loop.run_until_complete(
             world_state.analyze_text_and_extract_context("\n".join(lines), goal=goal)
         )
-        
-    def agent_config(self, config_path: str):
 
+    def agent_config(self, config_path: str):
         try:
             agent_name, action_name, config_name = config_path.split(".")
             agent = instance.get_agent(agent_name)
@@ -673,37 +674,33 @@ class Prompt:
             return ""
         return iso8601_diff_to_human(iso8601_time, scene.ts)
 
-    def text_to_chunks(self, text:str, chunk_size:int=512) -> list[str]:
+    def text_to_chunks(self, text: str, chunk_size: int = 512) -> list[str]:
         """
         Takes a text string and splits it into chunks based length of the text.
-        
+
         Arguments:
-        
+
         - text: The text to split into chunks.
         - chunk_size: number of characters in each chunk.
         """
-        
+
         chunks = []
-        
+
         for i, line in enumerate(text.split("\n")):
-            
             # dont push empty lines into empty chunks
             if not line.strip() and (not chunks or not chunks[-1]):
                 continue
-            
+
             if not chunks:
                 chunks.append([line])
                 continue
-            
+
             if len("\n".join(chunks[-1])) + len(line) < chunk_size:
                 chunks[-1].append(line)
             else:
                 chunks.append([line])
-        
 
         return ["\n\n".join(chunk) for chunk in chunks]
-        
-
 
     def set_prepared_response(self, response: str, prepend: str = ""):
         """
@@ -749,52 +746,68 @@ class Prompt:
     ):
         """
         Prepares for a data response in the client's preferred format (YAML or JSON)
-        
+
         Args:
             initial_object (dict): The data structure to serialize
             instruction (str): Optional instruction/schema comment
             cutoff (int): Number of lines to trim from the end
         """
         # Always use client data format if available
-        data_format_type = getattr(self.client, "data_format", None) or self.data_format_type
-            
+        data_format_type = (
+            getattr(self.client, "data_format", None) or self.data_format_type
+        )
+
         self.data_format_type = data_format_type
         self.data_response = True
-        
+
         if data_format_type == "yaml":
             if yaml is None:
-                raise ImportError("PyYAML is required for YAML support. Please install it with 'pip install pyyaml'.")
-                
+                raise ImportError(
+                    "PyYAML is required for YAML support. Please install it with 'pip install pyyaml'."
+                )
+
             # Serialize to YAML
-            prepared_response = yaml.safe_dump(initial_object, sort_keys=False).split("\n")
-            
+            prepared_response = yaml.safe_dump(initial_object, sort_keys=False).split(
+                "\n"
+            )
+
             # For list structures, ensure we stop after the key with a colon
-            if isinstance(initial_object, dict) and any(isinstance(v, list) for v in initial_object.values()):
+            if isinstance(initial_object, dict) and any(
+                isinstance(v, list) for v in initial_object.values()
+            ):
                 # Find the first key that has a list value and stop there
                 for i, line in enumerate(prepared_response):
-                    if line.strip().endswith(':'):  # Found a key that might have a list
+                    if line.strip().endswith(":"):  # Found a key that might have a list
                         # Look ahead to see if next line has a dash (indicating it's a list)
-                        if i+1 < len(prepared_response) and prepared_response[i+1].strip().startswith('- '):
+                        if i + 1 < len(prepared_response) and prepared_response[
+                            i + 1
+                        ].strip().startswith("- "):
                             # Keep only up to the key with colon, drop the list items
-                            prepared_response = prepared_response[:i+1]
+                            prepared_response = prepared_response[: i + 1]
                             break
             # For nested dictionary structures, keep only the top-level keys
-            elif isinstance(initial_object, dict) and any(isinstance(v, dict) for v in initial_object.values()):
+            elif isinstance(initial_object, dict) and any(
+                isinstance(v, dict) for v in initial_object.values()
+            ):
                 # Find keys that have dictionary values
                 for i, line in enumerate(prepared_response):
-                    if line.strip().endswith(':'):  # Found a key that might have a nested dict
+                    if line.strip().endswith(
+                        ":"
+                    ):  # Found a key that might have a nested dict
                         # Look ahead to see if next line is indented (indicating nested structure)
-                        if i+1 < len(prepared_response) and prepared_response[i+1].startswith('  '):
+                        if i + 1 < len(prepared_response) and prepared_response[
+                            i + 1
+                        ].startswith("  "):
                             # Keep only up to the key with colon, drop the nested content
-                            prepared_response = prepared_response[:i+1]
+                            prepared_response = prepared_response[: i + 1]
                             break
             elif cutoff > 0:
                 # For other structures, just remove last lines
                 prepared_response = prepared_response[:-cutoff]
-            
+
             if instruction:
                 prepared_response.insert(0, f"# {instruction}")
-            
+
             cleaned = "\n".join(prepared_response)
             # Wrap in markdown code block for YAML, but do not close the code block
             # Add an extra newline to ensure the model's response starts on a new line
@@ -810,12 +823,16 @@ class Prompt:
             cleaned = re.sub(r"\s+", " ", cleaned)
             return self.set_prepared_response(cleaned)
 
-    def set_json_response(self, initial_object: dict, instruction: str = "", cutoff: int = 3):
+    def set_json_response(
+        self, initial_object: dict, instruction: str = "", cutoff: int = 3
+    ):
         """
         Prepares for a json response
         """
         self.data_format_type = "json"
-        return self.set_data_response(initial_object, instruction=instruction, cutoff=cutoff)
+        return self.set_data_response(
+            initial_object, instruction=instruction, cutoff=cutoff
+        )
 
     def set_question_eval(
         self, question: str, trigger: str, counter: str, weight: float = 1.0
@@ -839,8 +856,10 @@ class Prompt:
         Parse a YAML response from the LLM.
         """
         if yaml is None:
-            raise ImportError("PyYAML is required for YAML support. Please install it with 'pip install pyyaml'.")
-        
+            raise ImportError(
+                "PyYAML is required for YAML support. Please install it with 'pip install pyyaml'."
+            )
+
         # Extract YAML from markdown code blocks
         if "```yaml" in response and "```" in response.split("```yaml", 1)[1]:
             yaml_block = response.split("```yaml", 1)[1].split("```", 1)[0]
@@ -849,7 +868,7 @@ class Prompt:
             yaml_block = response.split("```", 1)[1].split("```", 1)[0]
         else:
             yaml_block = response
-        
+
         try:
             return yaml.safe_load(yaml_block)
         except Exception as e:
@@ -858,7 +877,7 @@ class Prompt:
                 f"{self.name} - Error parsing YAML response: {e}",
                 model_name=self.client.model_name if self.client else "unknown",
             )
-    
+
     async def parse_data_response(self, response):
         """
         Parse response based on configured data format
@@ -870,7 +889,7 @@ class Prompt:
             return await self.parse_yaml_response(response)
         else:
             raise ValueError(f"Unsupported data format: {self.data_format_type}")
-            
+
     async def parse_json_response(self, response, ai_fix: bool = True):
         # strip comments
         try:
@@ -882,7 +901,7 @@ class Prompt:
             try:
                 response = json.loads(response)
                 return response
-            except json.decoder.JSONDecodeError as e:
+            except json.decoder.JSONDecodeError:
                 pass
             response = response.replace("True", "true").replace("False", "false")
             response = "\n".join(
@@ -1017,27 +1036,35 @@ class Prompt:
                 pad = " " if self.pad_prepended_response else ""
                 response = self.prepared_response.rstrip() + pad + response.strip()
         else:
-            format_type = getattr(self.client, "data_format", None) or self.data_format_type
-            
+            format_type = (
+                getattr(self.client, "data_format", None) or self.data_format_type
+            )
+
             json_start = response.lstrip().startswith("{")
             yaml_block = response.lstrip().startswith("```yaml")
-            
+
             # If response doesn't start with expected format markers, prepend the prepared response
-            if (format_type == "json" and not json_start) or (format_type == "yaml" and not yaml_block):
+            if (format_type == "json" and not json_start) or (
+                format_type == "yaml" and not yaml_block
+            ):
                 pad = " " if self.pad_prepended_response else ""
                 if format_type == "yaml":
                     if self.client.can_be_coerced:
                         response = self.prepared_response + response.rstrip()
                     else:
-                        response = self.prepared_response.rstrip() + "\n  " + response.rstrip()
+                        response = (
+                            self.prepared_response.rstrip() + "\n  " + response.rstrip()
+                        )
                 else:
                     response = self.prepared_response.rstrip() + pad + response.strip()
-                
+
         if self.eval_response:
             return await self.evaluate(response)
 
         if self.data_response:
-            log.debug("data_response", format_type=self.data_format_type, response=response)
+            log.debug(
+                "data_response", format_type=self.data_format_type, response=response
+            )
             return response, await self.parse_data_response(response)
 
         response = clean_response(response)
@@ -1189,7 +1216,7 @@ def titles_prompt_sectioning(prompt: Prompt) -> str:
 def html_prompt_sectioning(prompt: Prompt) -> str:
     return _prompt_sectioning(
         prompt,
-        lambda section_name: f"<{section_name.capitalize().replace(' ','')}>",
-        lambda section_name: f"</{section_name.capitalize().replace(' ','')}>",
+        lambda section_name: f"<{section_name.capitalize().replace(' ', '')}>",
+        lambda section_name: f"</{section_name.capitalize().replace(' ', '')}>",
         strip_empty_lines=True,
     )

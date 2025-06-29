@@ -12,7 +12,7 @@ __all__ = [
     "iso8601_diff_to_human",
     "iso8601_add",
     "iso8601_correct_duration",
-    "amount_unit_to_iso8601_duration"
+    "amount_unit_to_iso8601_duration",
 ]
 
 log = structlog.get_logger("talemate.util.time")
@@ -33,6 +33,7 @@ UNIT_TO_ISO = {
     "years": "Y",
 }
 
+
 def duration_to_timedelta(duration):
     """Convert an isodate.Duration object or a datetime.timedelta object to a datetime.timedelta object."""
     # Check if the duration is already a timedelta object
@@ -41,34 +42,36 @@ def duration_to_timedelta(duration):
 
     # If it's an isodate.Duration object with separate year, month, day, hour, minute, second attributes
     days = int(duration.years * 365 + duration.months * 30 + duration.days)
-    seconds = int(duration.tdelta.seconds if hasattr(duration, 'tdelta') else 0)
+    seconds = int(duration.tdelta.seconds if hasattr(duration, "tdelta") else 0)
     return datetime.timedelta(days=days, seconds=seconds)
+
 
 def timedelta_to_duration(delta):
     """Convert a datetime.timedelta object to an isodate.Duration object."""
     total_days = delta.days
-    
+
     # Convert days back to years and months
     years = total_days // 365
     remaining_days = total_days % 365
     months = remaining_days // 30
     days = remaining_days % 30
-    
+
     # Convert remaining seconds
     seconds = delta.seconds
     hours = seconds // 3600
     seconds %= 3600
     minutes = seconds // 60
     seconds %= 60
-    
+
     return isodate.Duration(
         years=years,
         months=months,
         days=days,
         hours=hours,
         minutes=minutes,
-        seconds=seconds
+        seconds=seconds,
     )
+
 
 def parse_duration_to_isodate_duration(duration_str):
     """Parse ISO 8601 duration string and ensure the result is an isodate.Duration."""
@@ -96,49 +99,56 @@ def iso8601_diff(duration_str1, duration_str2):
     return difference
 
 
-def flatten_duration_components(years: int, months: int, weeks: int, days: int, 
-                              hours: int, minutes: int, seconds: int):
+def flatten_duration_components(
+    years: int,
+    months: int,
+    weeks: int,
+    days: int,
+    hours: int,
+    minutes: int,
+    seconds: int,
+):
     """
     Flatten duration components based on total duration following specific rules.
     Returns adjusted component values based on the total duration.
     """
-    
+
     total_days = years * 365 + months * 30 + weeks * 7 + days
     total_months = total_days // 30
-    
+
     # Less than 1 day - keep original granularity
     if total_days < 1:
         return years, months, weeks, days, hours, minutes, seconds
-    
+
     # Less than 3 days - show only days and hours
     elif total_days < 3:
         if minutes >= 30:  # Round up hours if 30+ minutes
             hours += 1
         return 0, 0, 0, total_days, hours, 0, 0
-    
+
     # Less than a month - show only days
     elif total_days < 30:
         return 0, 0, 0, total_days, 0, 0, 0
-    
+
     # Less than 6 months - show months and days
     elif total_days < 180:
         new_months = total_days // 30
         new_days = total_days % 30
         return 0, new_months, 0, new_days, 0, 0, 0
-    
+
     # Less than 1 year - show only months
     elif total_months < 12:
         new_months = total_months
         if days > 15:  # Round up months if 15+ days remain
             new_months += 1
         return 0, new_months, 0, 0, 0, 0, 0
-    
+
     # Less than 3 years - show years and months
     elif total_months < 36:
         new_years = total_months // 12
         new_months = total_months % 12
         return new_years, new_months, 0, 0, 0, 0, 0
-    
+
     # More than 3 years - show only years
     else:
         # Derive the base number of years directly from total days to avoid cumulative
@@ -163,8 +173,13 @@ def flatten_duration_components(years: int, months: int, weeks: int, days: int,
 
         return new_years, 0, 0, 0, 0, 0, 0
 
-def iso8601_duration_to_human(iso_duration, suffix: str = " ago", 
-                            zero_time_default: str = "Recently", flatten: bool = True):
+
+def iso8601_duration_to_human(
+    iso_duration,
+    suffix: str = " ago",
+    zero_time_default: str = "Recently",
+    flatten: bool = True,
+):
     # Parse the ISO8601 duration string into an isodate duration object
     if not isinstance(iso_duration, isodate.Duration):
         duration = isodate.parse_duration(iso_duration)
@@ -192,8 +207,10 @@ def iso8601_duration_to_human(iso_duration, suffix: str = " ago",
 
     # If flattening is requested, adjust the components
     if flatten:
-        years, months, weeks, days, hours, minutes, seconds = flatten_duration_components(
-            years, months, weeks, days, hours, minutes, seconds
+        years, months, weeks, days, hours, minutes, seconds = (
+            flatten_duration_components(
+                years, months, weeks, days, hours, minutes, seconds
+            )
         )
 
     # Build the human-readable components
@@ -295,6 +312,7 @@ def iso8601_correct_duration(duration: str) -> str:
 
     return corrected_duration
 
+
 def amount_unit_to_iso8601_duration(amount: int, unit: str) -> str:
     """Converts numeric amount + textual unit into an ISO-8601 duration string.
 
@@ -307,7 +325,9 @@ def amount_unit_to_iso8601_duration(amount: int, unit: str) -> str:
 
     unit_key = unit.lower().strip()
     if unit_key not in UNIT_TO_ISO:
-        raise ValueError(f"Invalid unit '{unit}'. Expected minutes, hours, days, weeks, months or years.")
+        raise ValueError(
+            f"Invalid unit '{unit}'. Expected minutes, hours, days, weeks, months or years."
+        )
 
     code = UNIT_TO_ISO[unit_key]
 

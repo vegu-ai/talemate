@@ -108,8 +108,10 @@ class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "gpt-4o"
 
+
 class ClientConfig(EndpointOverride, BaseClientConfig):
     pass
+
 
 @register()
 class OpenAIClient(EndpointOverrideMixin, ClientBase):
@@ -123,7 +125,7 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
     # TODO: make this configurable?
     decensor_enabled = False
     config_cls = ClientConfig
-    
+
     class Meta(ClientBase.Meta):
         name_prefix: str = "OpenAI"
         title: str = "OpenAI"
@@ -132,6 +134,7 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
         extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
+
     def __init__(self, model="gpt-4o", **kwargs):
         self.model_name = model
         self.api_key_status = None
@@ -181,12 +184,12 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
 
         self.current_status = status
 
-        data={
+        data = {
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
         }
-        data.update(self._common_status_data()) 
+        data.update(self._common_status_data())
 
         emit(
             "client_status",
@@ -305,32 +308,34 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
 
         human_message = {"role": "user", "content": prompt.strip()}
         system_message = {"role": "system", "content": self.get_system_message(kind)}
-        
+
         # o1 and o3 models don't support system_message
         if "o1" in self.model_name or "o3" in self.model_name:
-            messages=[human_message]
+            messages = [human_message]
             # paramters need to be munged
             # `max_tokens` becomes `max_completion_tokens`
             if "max_tokens" in parameters:
                 parameters["max_completion_tokens"] = parameters.pop("max_tokens")
-                
+
             # temperature forced to 1
             if "temperature" in parameters:
-                log.debug(f"{self.model_name} does not support temperature, forcing to 1")
+                log.debug(
+                    f"{self.model_name} does not support temperature, forcing to 1"
+                )
                 parameters["temperature"] = 1
-                
+
             unsupported_params = [
                 "presence_penalty",
                 "top_p",
             ]
-            
+
             for param in unsupported_params:
                 if param in parameters:
                     log.debug(f"{self.model_name} does not support {param}, removing")
                     parameters.pop(param)
-                    
+
         else:
-            messages=[system_message, human_message]
+            messages = [system_message, human_message]
 
         self.log.debug(
             "generate",
@@ -346,7 +351,7 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
                 stream=True,
                 **parameters,
             )
-            
+
             response = ""
 
             # Iterate over streamed chunks
@@ -359,9 +364,9 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
                     response += content_piece
                     # Incrementally track token usage
                     self.update_request_tokens(self.count_tokens(content_piece))
-            
-            #self._returned_prompt_tokens = self.prompt_tokens(prompt)
-            #self._returned_response_tokens = self.response_tokens(response)
+
+            # self._returned_prompt_tokens = self.prompt_tokens(prompt)
+            # self._returned_response_tokens = self.response_tokens(response)
 
             # older models don't support json_object response coersion
             # and often like to return the response wrapped in ```json
@@ -382,5 +387,5 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
             self.log.error("generate error", e=e)
             emit("status", message="OpenAI API: Permission Denied", status="error")
             return ""
-        except Exception as e:
+        except Exception:
             raise

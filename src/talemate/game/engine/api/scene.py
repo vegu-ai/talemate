@@ -4,7 +4,7 @@ import pydantic
 
 import talemate.game.engine.api.schema as schema
 from talemate.game.engine.api.base import ScopedAPI, run_async
-from talemate.game.engine.api.exceptions import SceneInactive, UnknownCharacter
+from talemate.game.engine.api.exceptions import UnknownCharacter
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -14,7 +14,6 @@ __all__ = ["create"]
 
 def create(scene: "Scene") -> "ScopedAPI":
     class API(ScopedAPI):
-
         help_text = """Functions for scene direction and manipulation"""
 
         @property
@@ -93,7 +92,9 @@ def create(scene: "Scene") -> "ScopedAPI":
 
             validated = Arguments(budget=budget, keep_director=keep_director)
 
-            return scene.context_history(validated.budget, keep_director=validated.keep_director)
+            return scene.context_history(
+                validated.budget, keep_director=validated.keep_director
+            )
 
         def get_player_character(self) -> schema.CharacterSchema | None:
             """

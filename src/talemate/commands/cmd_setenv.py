@@ -22,10 +22,13 @@ class CmdSetEnvironmentToScene(TalemateCommand):
         player_character = self.scene.get_player_character()
 
         if not player_character:
-            self.system_message("No characters found - cannot switch to gameplay mode.", meta={
-                "icon": "mdi-alert",
-                "color": "warning",
-            })
+            self.system_message(
+                "No characters found - cannot switch to gameplay mode.",
+                meta={
+                    "icon": "mdi-alert",
+                    "color": "warning",
+                },
+            )
             return True
 
         self.scene.set_environment("scene")

@@ -850,6 +850,7 @@ scifi_tropes = [
 
 actor_name_colors = COLORS.copy()
 
+
 class ThematicGenerator:
     def __init__(self, seed: int = None):
         self.seed = seed

@@ -2,7 +2,13 @@ import pydantic
 import structlog
 from cohere import AsyncClientV2
 
-from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults, ExtraField
+from talemate.client.base import (
+    ClientBase,
+    ErrorAction,
+    ParameterReroute,
+    CommonDefaults,
+    ExtraField,
+)
 from talemate.client.registry import register
 from talemate.client.remote import (
     EndpointOverride,
@@ -51,7 +57,7 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
     auto_break_repetition_enabled = False
     decensor_enabled = True
     config_cls = ClientConfig
-    
+
     class Meta(ClientBase.Meta):
         name_prefix: str = "Cohere"
         title: str = "Cohere"
@@ -115,12 +121,12 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
 
         self.current_status = status
 
-        data={
+        data = {
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
         }
-        data.update(self._common_status_data()) 
+        data.update(self._common_status_data())
         emit(
             "client_status",
             message=self.client_type,
@@ -171,7 +177,7 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
-            
+
         self._reconfigure_common_parameters(**kwargs)
         self._reconfigure_endpoint_override(**kwargs)
 
@@ -200,7 +206,6 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
         return prompt
 
     def clean_prompt_parameters(self, parameters: dict):
-
         super().clean_prompt_parameters(parameters)
 
         # if temperature is set, it needs to be clamped between 0 and 1.0
@@ -240,7 +245,7 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
             parameters=parameters,
             system_message=system_message,
         )
-        
+
         messages = [
             {
                 "role": "system",
@@ -249,7 +254,7 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
             {
                 "role": "user",
                 "content": human_message,
-            }
+            },
         ]
 
         try:
@@ -290,5 +295,5 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
         #    self.log.error("generate error", e=e)
         #    emit("status", message="cohere API: Permission Denied", status="error")
         #    return ""
-        except Exception as e:
+        except Exception:
             raise

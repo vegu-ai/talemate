@@ -56,7 +56,6 @@ class VisualWebsocketHandler(Plugin):
         scene = self.scene
 
         if context and context.character_name:
-
             character = scene.get_character(context.character_name)
 
             if not character:

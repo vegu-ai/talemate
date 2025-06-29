@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-import random
 from typing import TYPE_CHECKING, List
 
 import structlog
 import traceback
 
-import talemate.emit.async_signals
 import talemate.instance as instance
-from talemate.agents.conversation import ConversationAgentEmission
 from talemate.emit import emit
-from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage
 from talemate.util import random_color
 from talemate.character import deactivate_character
@@ -27,7 +23,7 @@ from .legacy_scene_instructions import LegacySceneInstructionsMixin
 from .auto_direct import AutoDirectMixin
 from .websocket_handler import DirectorWebsocketHandler
 
-import talemate.agents.director.nodes
+import talemate.agents.director.nodes  # noqa: F401
 
 if TYPE_CHECKING:
     from talemate import Character, Scene
@@ -42,7 +38,7 @@ class DirectorAgent(
     GenerateChoicesMixin,
     AutoDirectMixin,
     LegacySceneInstructionsMixin,
-    Agent
+    Agent,
 ):
     agent_type = "director"
     verbose_name = "Director"
@@ -74,7 +70,7 @@ class DirectorAgent(
                         ],
                     ),
                 },
-            ), 
+            ),
         }
         MemoryRAGMixin.add_actions(actions)
         GenerateChoicesMixin.add_actions(actions)
@@ -112,7 +108,6 @@ class DirectorAgent(
         created_characters = []
 
         for character_name in self.scene.world_state.characters.keys():
-
             if exclude and character_name.lower() in exclude:
                 continue
 
@@ -148,12 +143,11 @@ class DirectorAgent(
         memory = instance.get_agent("memory")
         scene: "Scene" = self.scene
         any_attribute_templates = False
-        
+
         loading_status = LoadingStatus(max_steps=None, cancellable=True)
-        
+
         # Start of character creation
         log.debug("persist_character", name=name)
-
 
         # Determine the character's name (or clarify if it's already set)
         if determine_name:
@@ -162,7 +156,7 @@ class DirectorAgent(
             log.debug("persist_character", adjusted_name=name)
 
         # Create the blank character
-        character:Character = self.scene.Character(name=name)
+        character: Character = self.scene.Character(name=name)
 
         # Add the character to the scene
         character.color = random_color()
@@ -170,32 +164,44 @@ class DirectorAgent(
             character=character, agent=instance.get_agent("conversation")
         )
         await self.scene.add_actor(actor)
-        
-        try:
 
+        try:
             # Apply any character generation templates
             if templates:
                 loading_status("Applying character generation templates")
-                templates = scene.world_state_manager.template_collection.collect_all(templates)
+                templates = scene.world_state_manager.template_collection.collect_all(
+                    templates
+                )
                 log.debug("persist_character", applying_templates=templates)
                 await scene.world_state_manager.apply_templates(
-                    templates.values(), 
+                    templates.values(),
                     character_name=character.name,
-                    information=content
+                    information=content,
                 )
-                
+
                 # if any of the templates are attribute templates, then we no longer need to
                 # generate a character sheet
-                any_attribute_templates = any(template.template_type == "character_attribute" for template in templates.values())
-                log.debug("persist_character", any_attribute_templates=any_attribute_templates)
-                
-                if any_attribute_templates and augment_attributes and generate_attributes:
-                    log.debug("persist_character", augmenting_attributes=augment_attributes)
+                any_attribute_templates = any(
+                    template.template_type == "character_attribute"
+                    for template in templates.values()
+                )
+                log.debug(
+                    "persist_character", any_attribute_templates=any_attribute_templates
+                )
+
+                if (
+                    any_attribute_templates
+                    and augment_attributes
+                    and generate_attributes
+                ):
+                    log.debug(
+                        "persist_character", augmenting_attributes=augment_attributes
+                    )
                     loading_status("Augmenting character attributes")
                     additional_attributes = await world_state.extract_character_sheet(
                         name=name,
                         text=content,
-                        augmentation_instructions=augment_attributes
+                        augmentation_instructions=augment_attributes,
                     )
                     character.base_attributes.update(additional_attributes)
 
@@ -212,25 +218,26 @@ class DirectorAgent(
 
                 log.debug("persist_character", attributes=attributes)
                 character.base_attributes = attributes
-                
+
             # Generate a description for the character
             if not description:
                 loading_status("Generating character description")
-                description = await creator.determine_character_description(character, information=content)
+                description = await creator.determine_character_description(
+                    character, information=content
+                )
                 character.description = description
                 log.debug("persist_character", description=description)
 
             # Generate a dialogue instructions for the character
             loading_status("Generating acting instructions")
-            dialogue_instructions = await creator.determine_character_dialogue_instructions(
-                character,
-                information=content
+            dialogue_instructions = (
+                await creator.determine_character_dialogue_instructions(
+                    character, information=content
+                )
             )
             character.dialogue_instructions = dialogue_instructions
-            log.debug(
-                "persist_character", dialogue_instructions=dialogue_instructions
-            )
-            
+            log.debug("persist_character", dialogue_instructions=dialogue_instructions)
+
             # Narrate the character's entry if the option is selected
             if active and narrate_entry:
                 loading_status("Narrating character entry")
@@ -240,24 +247,26 @@ class DirectorAgent(
                         "narrate_character_entry",
                         emit_message=True,
                         character=character,
-                        narrative_direction=narrate_entry_direction
+                        narrative_direction=narrate_entry_direction,
                     )
-            
+
             # Deactivate the character if not active
             if not active:
                 await deactivate_character(scene, character)
-                
+
             # Commit the character's details to long term memory
             await character.commit_to_memory(memory)
             self.scene.emit_status()
             self.scene.world_state.emit()
-            
-            loading_status.done(message=f"{character.name} added to scene", status="success")
+
+            loading_status.done(
+                message=f"{character.name} added to scene", status="success"
+            )
             return character
         except GenerationCancelled:
             loading_status.done(message="Character creation cancelled", status="idle")
             await scene.remove_actor(actor)
-        except Exception as e:
+        except Exception:
             loading_status.done(message="Character creation failed", status="error")
             await scene.remove_actor(actor)
             log.error("Error persisting character", error=traceback.format_exc())

@@ -23,7 +23,10 @@ def model_to_dict_without_defaults(model_instance):
         if field.default == model_dict.get(field_name):
             del model_dict[field_name]
         # special case for conversation context, dont copy if talking_character is None
-        if field_name == "conversation" and model_dict.get(field_name).get("talking_character") is None:
+        if (
+            field_name == "conversation"
+            and model_dict.get(field_name).get("talking_character") is None
+        ):
             del model_dict[field_name]
     return model_dict
 
@@ -102,7 +105,7 @@ class ClientContext:
 
         # Update the context data
         self.token = context_data.set(data)
-        
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
         Reset the context variable `context_data` to its previous values when exiting the context.

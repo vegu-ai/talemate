@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union
+from typing import TYPE_CHECKING
 
 import pydantic
 
@@ -6,8 +6,6 @@ from talemate.instance import get_agent
 from talemate.world_state.templates.base import Template, log, register
 from talemate.world_state.templates.content import (
     GenerationOptions,
-    Spices,
-    WritingStyle,
 )
 
 if TYPE_CHECKING:
@@ -41,7 +39,6 @@ class Attribute(Template):
         generation_options: GenerationOptions | None = None,
         **kwargs,
     ) -> GeneratedAttribute:
-
         creator = get_agent("creator")
 
         character = scene.get_character(character_name)
@@ -106,7 +103,6 @@ class Detail(Template):
         generation_options: GenerationOptions | None = None,
         **kwargs,
     ) -> GeneratedDetail:
-
         creator = get_agent("creator")
 
         character = scene.get_character(character_name)

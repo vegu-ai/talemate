@@ -1,22 +1,15 @@
-import base64
-import io
-
 import httpx
 import structlog
-from PIL import Image
 
 from talemate.agents.base import (
-    Agent,
     AgentAction,
     AgentActionConditional,
     AgentActionConfig,
-    AgentDetail,
-    set_processing,
 )
 
 from .handlers import register
-from .schema import RenderSettings, Resolution
-from .style import STYLE_MAP, Style
+from .schema import RenderSettings
+from .style import Style
 
 log = structlog.get_logger("talemate.agents.visual.automatic1111")
 
@@ -58,9 +51,9 @@ SAMPLING_SCHEDULES = [
 
 SAMPLING_SCHEDULES = sorted(SAMPLING_SCHEDULES, key=lambda x: x["label"])
 
+
 @register(backend_name="automatic1111", label="AUTOMATIC1111")
 class Automatic1111Mixin:
-
     automatic1111_default_render_settings = RenderSettings()
 
     EXTEND_ACTIONS = {
@@ -139,14 +132,14 @@ class Automatic1111Mixin:
     @property
     def automatic1111_sampling_method(self):
         return self.actions["automatic1111"].config["sampling_method"].value
-        
+
     @property
     def automatic1111_schedule_type(self):
         return self.actions["automatic1111"].config["schedule_type"].value
-    
+
     @property
     def automatic1111_cfg(self):
-        return self.actions["automatic1111"].config["cfg"].value    
+        return self.actions["automatic1111"].config["cfg"].value
 
     async def automatic1111_generate(self, prompt: Style, format: str):
         url = self.api_url
@@ -162,14 +155,16 @@ class Automatic1111Mixin:
             "height": resolution.height,
             "cfg_scale": self.automatic1111_cfg,
             "sampler_name": self.automatic1111_sampling_method,
-            "scheduler": self.automatic1111_schedule_type
+            "scheduler": self.automatic1111_schedule_type,
         }
 
         log.info("automatic1111_generate", payload=payload, url=url)
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                url=f"{url}/sdapi/v1/txt2img", json=payload, timeout=self.generate_timeout
+                url=f"{url}/sdapi/v1/txt2img",
+                json=payload,
+                timeout=self.generate_timeout,
             )
 
         r = response.json()

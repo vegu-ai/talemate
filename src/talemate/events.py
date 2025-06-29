@@ -31,6 +31,7 @@ class ArchiveEvent(Event):
     memory_id: str
     ts: str = None
 
+
 @dataclass
 class CharacterStateEvent(Event):
     state: str
@@ -62,10 +63,12 @@ class GameLoopActorIterEvent(GameLoopBase):
     actor: Actor
     game_loop: GameLoopEvent
 
+
 @dataclass
 class GameLoopCharacterIterEvent(GameLoopBase):
     character: Character
     game_loop: GameLoopEvent
+
 
 @dataclass
 class GameLoopNewMessageEvent(GameLoopBase):
@@ -75,6 +78,7 @@ class GameLoopNewMessageEvent(GameLoopBase):
 @dataclass
 class PlayerTurnStartEvent(Event):
     pass
+
 
 @dataclass
 class RegenerateGeneration(Event):

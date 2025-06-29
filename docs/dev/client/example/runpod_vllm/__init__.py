@@ -19,13 +19,16 @@ from talemate.config import Client as BaseClientConfig
 
 log = structlog.get_logger("talemate.client.runpod_vllm")
 
+
 class Defaults(pydantic.BaseModel):
     max_token_length: int = 4096
     model: str = ""
     runpod_id: str = ""
-    
+
+
 class ClientConfig(BaseClientConfig):
     runpod_id: str = ""
+
 
 @register()
 class RunPodVLLMClient(ClientBase):
@@ -49,7 +52,6 @@ class RunPodVLLMClient(ClientBase):
             )
         }
 
-
     def __init__(self, model=None, runpod_id=None, **kwargs):
         self.model_name = model
         self.runpod_id = runpod_id
@@ -59,12 +61,10 @@ class RunPodVLLMClient(ClientBase):
     def experimental(self):
         return False
 
-
     def set_client(self, **kwargs):
         log.debug("set_client", kwargs=kwargs, runpod_id=self.runpod_id)
         self.runpod_id = kwargs.get("runpod_id", self.runpod_id)
-        
-        
+
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
 
@@ -88,32 +88,37 @@ class RunPodVLLMClient(ClientBase):
         self.log.debug("generate", prompt=prompt[:128] + " ...", parameters=parameters)
 
         try:
-            
             async with aiohttp.ClientSession() as session:
                 endpoint = runpod.AsyncioEndpoint(self.runpod_id, session)
-                
-                run_request = await endpoint.run({
-                    "input": {
-                        "prompt": prompt,   
+
+                run_request = await endpoint.run(
+                    {
+                        "input": {
+                            "prompt": prompt,
+                        }
+                        # "parameters": parameters
                     }
-                    #"parameters": parameters
-                })
-                
-                while (await run_request.status()) not in ["COMPLETED", "FAILED", "CANCELLED"]:
+                )
+
+                while (await run_request.status()) not in [
+                    "COMPLETED",
+                    "FAILED",
+                    "CANCELLED",
+                ]:
                     status = await run_request.status()
                     log.debug("generate", status=status)
                     await asyncio.sleep(0.1)
-                    
+
                 status = await run_request.status()
-                
+
                 log.debug("generate", status=status)
-                    
+
                 response = await run_request.output()
-                
+
                 log.debug("generate", response=response)
-                
+
                 return response["choices"][0]["tokens"][0]
-            
+
         except Exception as e:
             self.log.error("generate error", e=e)
             emit(

@@ -9,7 +9,7 @@ import talemate.instance as instance
 from talemate.emit import emit
 from talemate.prompts import Prompt
 from talemate.exceptions import GenerationCancelled
-import talemate.game.focal.schema as focal_schema 
+import talemate.game.focal.schema as focal_schema
 
 ANY_CHARACTER = "__any_character__"
 
@@ -75,11 +75,13 @@ class Suggestion(BaseModel):
     proposals: list[focal_schema.Call] = Field(default_factory=list)
 
     def remove_proposal(self, uid: str):
-        self.proposals = [proposal for proposal in self.proposals if proposal.uid != uid]
+        self.proposals = [
+            proposal for proposal in self.proposals if proposal.uid != uid
+        ]
 
-    def merge(self, other:"Suggestion"):
+    def merge(self, other: "Suggestion"):
         assert self.id == other.id, "Suggestion ids must match"
-        
+
         # loop through proposals, and override existing proposals if ids match
         # otherwise append the new proposal
         for proposal in other.proposals:
@@ -89,7 +91,8 @@ class Suggestion(BaseModel):
                     break
             else:
                 self.proposals.append(proposal)
-        
+
+
 class WorldState(BaseModel):
     # characters in the scene by name
     characters: dict[str, CharacterState] = {}
@@ -131,7 +134,7 @@ class WorldState(BaseModel):
 
     def add_character_name_mappings(self, *names):
         self.character_name_mappings.extend([name.lower() for name in names])
-        
+
     def normalize_name(self, name: str):
         """Normalizes item or character name away from variables style names
 
@@ -222,12 +225,11 @@ class WorldState(BaseModel):
             return
 
         previous_characters = self.characters
-        previous_items = self.items
         scene = self.agent.scene
         character_names = scene.character_names
         self.characters = {}
         self.items = {}
-        
+
         # if characters is not set or empty, make sure its at least a dict
         if not world_state.get("characters"):
             world_state["characters"] = {}
@@ -328,7 +330,6 @@ class WorldState(BaseModel):
         """
 
         memory = instance.get_agent("memory")
-        world_state = instance.get_agent("world_state")
 
         # first we check if any of the characters were refered
         # to with an alias
@@ -512,18 +513,18 @@ class WorldState(BaseModel):
 
         # find all instances of the reinforcement in the scene history
         # and remove them
-        
+
         reinforcement = self.reinforce[idx]
-        
+
         self.agent.scene.pop_history(
             typ="reinforcement",
             character_name=reinforcement.character,
             question=reinforcement.question,
             all=True,
         )
-        
-        #source = f"{self.reinforce[idx].question}:{self.reinforce[idx].character if self.reinforce[idx].character else ''}"
-        #self.agent.scene.pop_history(typ="reinforcement", source=source, all=True)
+
+        # source = f"{self.reinforce[idx].question}:{self.reinforce[idx].character if self.reinforce[idx].character else ''}"
+        # self.agent.scene.pop_history(typ="reinforcement", source=source, all=True)
 
         self.reinforce.pop(idx)
 

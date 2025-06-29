@@ -1,12 +1,8 @@
 import contextvars
 import uuid
-import hashlib
-from typing import TYPE_CHECKING, Callable
+from typing import Callable
 
 import pydantic
-
-if TYPE_CHECKING:
-    from talemate.tale_mate import Character
 
 __all__ = [
     "active_agent",
@@ -25,7 +21,6 @@ class ActiveAgentContext(pydantic.BaseModel):
     state: dict = pydantic.Field(default_factory=dict)
     state_params: dict = pydantic.Field(default_factory=dict)
     previous: "ActiveAgentContext" = None
-    
 
     class Config:
         arbitrary_types_allowed = True
@@ -35,29 +30,30 @@ class ActiveAgentContext(pydantic.BaseModel):
         return self.previous.first if self.previous else self
 
     @property
-    def action(self):    
+    def action(self):
         name = self.fn.__name__
         if name == "delegate":
             return self.fn_args[0].__name__
         return name
-    
+
     @property
     def fingerprint(self) -> int:
         if hasattr(self, "_fingerprint"):
             return self._fingerprint
         self._fingerprint = hash(frozenset(self.state_params.items()))
         return self._fingerprint
-    
+
     def __str__(self):
         return f"{self.agent.verbose_name}.{self.action}"
-    
+
 
 class ActiveAgent:
     def __init__(self, agent, fn, args=None, kwargs=None):
-        self.agent = ActiveAgentContext(agent=agent, fn=fn, fn_args=args or tuple(), fn_kwargs=kwargs or {})
+        self.agent = ActiveAgentContext(
+            agent=agent, fn=fn, fn_args=args or tuple(), fn_kwargs=kwargs or {}
+        )
 
     def __enter__(self):
-
         previous_agent = active_agent.get()
 
         if previous_agent:
@@ -70,7 +66,7 @@ class ActiveAgent:
             self.agent.agent_stack_uid = str(uuid.uuid4())
 
         self.token = active_agent.set(self.agent)
-        
+
         return self.agent
 
     def __exit__(self, *args, **kwargs):

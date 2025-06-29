@@ -1,7 +1,5 @@
 from typing import TYPE_CHECKING
 
-import pydantic
-
 import talemate.game.engine.api.schema as schema
 from talemate.game.engine.api.base import ScopedAPI
 
@@ -13,7 +11,6 @@ __all__ = ["create"]
 
 def create(game_state: "GameState") -> "ScopedAPI":
     class API(ScopedAPI):
-
         help_text = """Functions for game state management"""
 
         ### Variables

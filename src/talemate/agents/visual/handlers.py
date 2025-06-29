@@ -7,7 +7,6 @@ HANDLERS = {}
 
 
 class register:
-
     def __init__(self, backend_name: str, label: str):
         self.backend_name = backend_name
         self.label = label

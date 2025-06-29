@@ -8,7 +8,7 @@ import httpx
 import structlog
 from openai import AsyncOpenAI
 
-from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults, ExtraField
+from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults
 from talemate.client.registry import register
 
 log = structlog.get_logger("talemate.client.textgenwebui")
@@ -103,7 +103,6 @@ class TextGeneratorWebuiClient(ClientBase):
         self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
 
     def finalize_llama3(self, parameters: dict, prompt: str) -> tuple[str, bool]:
-
         if "<|eot_id|>" not in prompt:
             return prompt, False
 
@@ -122,7 +121,6 @@ class TextGeneratorWebuiClient(ClientBase):
         return prompt, True
 
     def finalize_YI(self, parameters: dict, prompt: str) -> tuple[str, bool]:
-
         if not self.model_name:
             return prompt, False
 
@@ -141,7 +139,6 @@ class TextGeneratorWebuiClient(ClientBase):
         return prompt, True
 
     async def get_model_name(self):
-
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{self.api_url}/v1/internal/model/info",
@@ -170,14 +167,16 @@ class TextGeneratorWebuiClient(ClientBase):
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self._generate, prompt, parameters, kind)
+        return await loop.run_in_executor(
+            None, self._generate, prompt, parameters, kind
+        )
 
     def _generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
         """
         parameters["prompt"] = prompt.strip(" ")
-        
+
         response = ""
         parameters["stream"] = True
         stream_response = requests.post(
@@ -188,17 +187,16 @@ class TextGeneratorWebuiClient(ClientBase):
             stream=True,
         )
         stream_response.raise_for_status()
-        
+
         sse = sseclient.SSEClient(stream_response)
-        
+
         for event in sse.events():
             payload = json.loads(event.data)
-            chunk = payload['choices'][0]['text']
+            chunk = payload["choices"][0]["text"]
             response += chunk
             self.update_request_tokens(self.count_tokens(chunk))
-        
-        return response
 
+        return response
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

@@ -35,11 +35,12 @@ regeneration_context = ContextVar("regeneration_context", default=None)
 active_scene = ContextVar("active_scene", default=None)
 interaction = ContextVar("interaction", default=InteractionState())
 
+
 def handle_generation_cancelled(exc: GenerationCancelled):
     # set cancel_requested to False on the active_scene
-    
+
     scene = active_scene.get()
-    
+
     if scene:
         scene.cancel_requested = False
 
@@ -102,6 +103,6 @@ class Interaction:
 def assert_active_scene(scene: object):
     if not active_scene.get():
         raise SceneInactiveError("Scene is not active")
-    
+
     if active_scene.get() != scene:
         raise SceneInactiveError("Scene has changed")

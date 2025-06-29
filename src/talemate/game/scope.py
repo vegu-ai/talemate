@@ -7,7 +7,6 @@ import structlog
 import talemate.game.engine.api as scoped_api
 from talemate.client.base import ClientBase
 from talemate.emit import emit
-from talemate.instance import get_agent
 from talemate.exceptions import GenerationCancelled
 from talemate.context import handle_generation_cancelled
 
@@ -48,7 +47,6 @@ class OpenScopedContext:
 
 
 class GameInstructionScope:
-
     def __init__(
         self,
         director: "DirectorAgent",

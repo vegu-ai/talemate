@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Union
 from talemate.instance import get_agent
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Actor, Character, Scene
+    from talemate.tale_mate import Character, Scene
 
 
 __all__ = [
@@ -45,7 +45,6 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
 
     if isinstance(character, str):
         character = scene.get_character(character)
-
 
     if character.name not in scene.inactive_characters:
         # already activated

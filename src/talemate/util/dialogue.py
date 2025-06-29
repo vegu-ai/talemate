@@ -34,31 +34,34 @@ def handle_endofline_special_delimiter(content: str) -> str:
     return content
 
 
-def remove_trailing_markers(content: str, pair_markers:list[str] = None, enclosure_markers:list[str] = None) -> str:
+def remove_trailing_markers(
+    content: str, pair_markers: list[str] = None, enclosure_markers: list[str] = None
+) -> str:
     """
     Will check for uneven balance in the specified markers
     and remove the trailing ones
     """
-    
+
     if not pair_markers:
-        pair_markers = ['"', '*']
-        
+        pair_markers = ['"', "*"]
+
     if not enclosure_markers:
-        enclosure_markers = ['(', '[', '{']
-    
+        enclosure_markers = ["(", "[", "{"]
+
     content = content.rstrip()
-    
+
     for marker in pair_markers:
         if content.count(marker) % 2 == 1 and content.endswith(marker):
             content = content[:-1]
             content = content.rstrip()
-            
+
     for marker in enclosure_markers:
         if content.endswith(marker):
             content = content[:-1]
             content = content.rstrip()
-            
+
     return content.rstrip()
+
 
 def parse_messages_from_str(string: str, names: list[str]) -> list[str]:
     """
@@ -90,6 +93,7 @@ def parse_messages_from_str(string: str, names: list[str]) -> list[str]:
 
     return messages
 
+
 def strip_partial_sentences(text: str) -> str:
     """
     Removes any unfinished sentences from the end of the input text.
@@ -112,6 +116,7 @@ def strip_partial_sentences(text: str) -> str:
 
     return text
 
+
 def clean_message(message: str) -> str:
     message = message.strip()
     message = re.sub(r" +", " ", message)
@@ -119,14 +124,12 @@ def clean_message(message: str) -> str:
 
 
 def clean_dialogue(dialogue: str, main_name: str) -> str:
-
     cleaned = []
 
     if not dialogue.startswith(main_name):
         dialogue = f"{main_name}: {dialogue}"
 
     for line in dialogue.split("\n"):
-
         if not cleaned:
             cleaned.append(line)
             continue
@@ -167,7 +170,9 @@ def replace_exposition_markers(s: str) -> str:
     return s
 
 
-def ensure_dialog_format(line: str, talking_character: str = None, formatting:str = "md") -> str:
+def ensure_dialog_format(
+    line: str, talking_character: str = None, formatting: str = "md"
+) -> str:
     # if "*" not in line and '"' not in line:
     #    if talking_character:
     #        line = line[len(talking_character)+1:].lstrip()
@@ -175,17 +180,16 @@ def ensure_dialog_format(line: str, talking_character: str = None, formatting:st
     #    return f"\"{line}\""
     #
 
-
     if talking_character:
         line = line[len(talking_character) + 1 :].lstrip()
     eval_line = line.strip()
-    
-    if eval_line.startswith('*') and eval_line.endswith('*'):
+
+    if eval_line.startswith("*") and eval_line.endswith("*"):
         if line.count("*") == 2 and not line.count('"'):
             return f"{talking_character}: {line}" if talking_character else line
 
     if eval_line.startswith('"') and eval_line.endswith('"'):
-        if line.count('"') == 2 and not line.count('*'):
+        if line.count('"') == 2 and not line.count("*"):
             return f"{talking_character}: {line}" if talking_character else line
 
     lines = []
@@ -395,32 +399,32 @@ def split_anchor_text(text: str, anchor_length: int = 10) -> tuple[str, str]:
     """
     Splits input text into two parts: non-anchor and anchor.
     The anchor is the last `anchor_length` words of the text.
-    
+
     Args:
         text (str): The input text to be split
         anchor_length (int): Number of words to use as anchor
-        
+
     Returns:
         tuple[str, str]: A tuple containing (non_anchor, anchor)
     """
     if not text:
         return "", ""
-        
+
     # Split the input into words
     words = text.split()
-    
+
     # If it's just one word, put it in the anchor
     if len(words) == 1:
         return "", text
-    
+
     # Get the anchor (last anchor_length words)
     if len(words) > anchor_length:
-        anchor = ' '.join(words[-anchor_length:])
-        non_anchor = ' '.join(words[:-anchor_length])
+        anchor = " ".join(words[-anchor_length:])
+        non_anchor = " ".join(words[:-anchor_length])
     else:
         # For text with words <= anchor_length (but more than 1 word), split evenly
         mid_point = len(words) // 2
-        non_anchor = ' '.join(words[:mid_point])
-        anchor = ' '.join(words[mid_point:])
-        
+        non_anchor = " ".join(words[:mid_point])
+        anchor = " ".join(words[mid_point:])
+
     return non_anchor, anchor

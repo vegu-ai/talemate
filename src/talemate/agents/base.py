@@ -6,11 +6,10 @@ from inspect import signature
 import re
 from abc import ABC
 from functools import wraps
-from typing import TYPE_CHECKING, Callable, List, Optional, Union
+from typing import Callable, Union
 import uuid
 import pydantic
 import structlog
-from blinker import signal
 
 import talemate.emit.async_signals
 import talemate.instance as instance
@@ -39,6 +38,7 @@ __all__ = [
 
 log = structlog.get_logger("talemate.agents.base")
 
+
 class AgentActionConditional(pydantic.BaseModel):
     attribute: str
     value: int | float | str | bool | list[int | float | str | bool] | None = None
@@ -47,6 +47,7 @@ class AgentActionConditional(pydantic.BaseModel):
 class AgentActionNote(pydantic.BaseModel):
     type: str
     text: str
+
 
 class AgentActionConfig(pydantic.BaseModel):
     type: str
@@ -65,7 +66,7 @@ class AgentActionConfig(pydantic.BaseModel):
     condition: Union[AgentActionConditional, None] = None
     title: Union[str, None] = None
     value_migration: Union[Callable, None] = pydantic.Field(default=None, exclude=True)
-    
+
     note_on_value: dict[str, AgentActionNote] = pydantic.Field(default_factory=dict)
 
     class Config:
@@ -85,37 +86,37 @@ class AgentAction(pydantic.BaseModel):
     quick_toggle: bool = False
     experimental: bool = False
 
+
 class AgentDetail(pydantic.BaseModel):
     value: Union[str, None] = None
     description: Union[str, None] = None
     icon: Union[str, None] = None
     color: str = "grey"
 
+
 class DynamicInstruction(pydantic.BaseModel):
     title: str
     content: str
-    
+
     def __str__(self) -> str:
         return "\n".join(
-            [
-                f"<|SECTION:{self.title}|>",
-                self.content,
-                "<|CLOSE_SECTION|>"
-            ]
+            [f"<|SECTION:{self.title}|>", self.content, "<|CLOSE_SECTION|>"]
         )
-        
 
-def args_and_kwargs_to_dict(fn, args: list, kwargs: dict, filter:list[str] = None) -> dict:
+
+def args_and_kwargs_to_dict(
+    fn, args: list, kwargs: dict, filter: list[str] = None
+) -> dict:
     """
     Takes a list of arguments and a dict of keyword arguments and returns
     a dict mapping parameter names to their values.
-    
+
     Args:
         fn: The function whose parameters we want to map
         args: List of positional arguments
         kwargs: Dictionary of keyword arguments
         filter: List of parameter names to include in the result, if None all parameters are included
-    
+
     Returns:
         Dict mapping parameter names to their values
     """
@@ -124,33 +125,35 @@ def args_and_kwargs_to_dict(fn, args: list, kwargs: dict, filter:list[str] = Non
     bound_args.apply_defaults()
     rv = dict(bound_args.arguments)
     rv.pop("self", None)
-    
+
     if filter:
         for key in list(rv.keys()):
             if key not in filter:
                 rv.pop(key)
-    
+
     return rv
 
 
 class store_context_state:
     """
     Flag to store a function's arguments in the agent's context state.
-    
+
     Any arguments passed to the function will be stored in the agent's context
-    
+
     If no arguments are passed, all arguments will be stored.
-    
+
     Keyword arguments can be passed to store additional values in the context state.
     """
+
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
-        
+
     def __call__(self, fn):
         fn.store_context_state = self.args
         fn.store_context_state_kwargs = self.kwargs
         return fn
+
 
 def set_processing(fn):
     """
@@ -165,31 +168,38 @@ def set_processing(fn):
     async def wrapper(self, *args, **kwargs):
         with ClientContext():
             scene = active_scene.get()
-            
+
             if scene:
                 scene.continue_actions()
-                
+
             if getattr(scene, "config", None):
-                set_client_context_attribute("app_config_system_prompts", scene.config.get("system_prompts", {}))
-            
+                set_client_context_attribute(
+                    "app_config_system_prompts", scene.config.get("system_prompts", {})
+                )
+
             with ActiveAgent(self, fn, args, kwargs) as active_agent_context:
                 try:
                     await self.emit_status(processing=True)
-                    
+
                     # Now pass the complete args list
                     if getattr(fn, "store_context_state", None) is not None:
                         all_args = args_and_kwargs_to_dict(
-                            fn, [self] + list(args), kwargs, getattr(fn, "store_context_state", [])
+                            fn,
+                            [self] + list(args),
+                            kwargs,
+                            getattr(fn, "store_context_state", []),
                         )
                         if getattr(fn, "store_context_state_kwargs", None) is not None:
-                            all_args.update(getattr(fn, "store_context_state_kwargs", {}))
-                        
+                            all_args.update(
+                                getattr(fn, "store_context_state_kwargs", {})
+                            )
+
                         all_args[f"fn_{fn.__name__}"] = True
-                        
+
                         active_agent_context.state_params = all_args
-                            
+
                         self.set_context_states(**all_args)
-        
+
                     return await fn(self, *args, **kwargs)
                 finally:
                     try:
@@ -215,24 +225,22 @@ class Agent(ABC):
     websocket_handler = None
     essential = True
     ready_check_error = None
-    
+
     @classmethod
-    def init_actions(cls, actions: dict[str, AgentAction] | None = None) -> dict[str, AgentAction]:
+    def init_actions(
+        cls, actions: dict[str, AgentAction] | None = None
+    ) -> dict[str, AgentAction]:
         if actions is None:
             actions = {}
-        
+
         return actions
-    
+
     @property
     def agent_details(self):
         if hasattr(self, "client"):
             if self.client:
                 return self.client.name
         return None
-
-    @property
-    def verbose_name(self):
-        return self.agent_type.capitalize()
 
     @property
     def ready(self):
@@ -315,67 +323,68 @@ class Agent(ABC):
             return {}
 
         return {k: v.model_dump() for k, v in self.actions.items()}
-    
+
     # scene state
-    
-    
+
     def context_fingerpint(self, extra: list[str] = []) -> str | None:
         active_agent_context = active_agent.get()
-        
+
         if not active_agent_context:
             return None
-        
+
         if self.scene.history:
             fingerprint = f"{self.scene.history[-1].fingerprint}-{active_agent_context.first.fingerprint}"
         else:
             fingerprint = f"START-{active_agent_context.first.fingerprint}"
-            
+
         for extra_key in extra:
             fingerprint += f"-{hash(extra_key)}"
-        
+
         return fingerprint
-    
-    
-    def get_scene_state(self, key:str, default=None):
+
+    def get_scene_state(self, key: str, default=None):
         agent_state = self.scene.agent_state.get(self.agent_type, {})
         return agent_state.get(key, default)
-        
+
     def set_scene_states(self, **kwargs):
         agent_state = self.scene.agent_state.get(self.agent_type, {})
         for key, value in kwargs.items():
             agent_state[key] = value
         self.scene.agent_state[self.agent_type] = agent_state
-    
+
     def dump_scene_state(self):
         return self.scene.agent_state.get(self.agent_type, {})
-    
+
     # active agent context state
-    
-    def get_context_state(self, key:str, default=None):
+
+    def get_context_state(self, key: str, default=None):
         key = f"{self.agent_type}__{key}"
         try:
             return active_agent.get().state.get(key, default)
         except AttributeError:
             log.warning("get_context_state error", agent=self.agent_type, key=key)
             return default
-        
+
     def set_context_states(self, **kwargs):
         try:
-            
             items = {f"{self.agent_type}__{k}": v for k, v in kwargs.items()}
             active_agent.get().state.update(items)
-            log.debug("set_context_states", agent=self.agent_type, state=active_agent.get().state)
+            log.debug(
+                "set_context_states",
+                agent=self.agent_type,
+                state=active_agent.get().state,
+            )
         except AttributeError:
             log.error("set_context_states error", agent=self.agent_type, kwargs=kwargs)
-        
+
     def dump_context_state(self):
         try:
             return active_agent.get().state
         except AttributeError:
             return {}
-    
+
     ###
-    
+
     async def _handle_ready_check(self, fut: asyncio.Future):
         callback_failure = getattr(self, "on_ready_check_failure", None)
         if fut.cancelled():
@@ -425,41 +434,50 @@ class Agent(ABC):
             if not action.config:
                 continue
 
-            for config_key, config in action.config.items():
+            for config_key, _config in action.config.items():
                 try:
-                    config.value = (
+                    _config.value = (
                         kwargs.get("actions", {})
                         .get(action_key, {})
                         .get("config", {})
                         .get(config_key, {})
-                        .get("value", config.value)
+                        .get("value", _config.value)
                     )
-                    if config.value_migration and callable(config.value_migration):
-                        config.value = config.value_migration(config.value)
+                    if _config.value_migration and callable(_config.value_migration):
+                        _config.value = _config.value_migration(_config.value)
                 except AttributeError:
                     pass
-
 
     async def save_config(self, app_config: config.Config | None = None):
         """
         Saves the agent config to the config file.
-        
+
         If no config object is provided, the config is loaded from the config file.
         """
-        
+
         if not app_config:
-            app_config:config.Config = config.load_config(as_model=True)
-        
+            app_config: config.Config = config.load_config(as_model=True)
+
         app_config.agents[self.agent_type] = config.Agent(
             name=self.agent_type,
             client=self.client.name if self.client else None,
             enabled=self.enabled,
-            actions={action_key: config.AgentAction(
-                enabled=action.enabled,
-                config={config_key: config.AgentActionConfig(value=config_obj.value) for config_key, config_obj in action.config.items()}
-            ) for action_key, action in self.actions.items()}
+            actions={
+                action_key: config.AgentAction(
+                    enabled=action.enabled,
+                    config={
+                        config_key: config.AgentActionConfig(value=config_obj.value)
+                        for config_key, config_obj in action.config.items()
+                    },
+                )
+                for action_key, action in self.actions.items()
+            },
         )
-        log.debug("saving agent config", agent=self.agent_type, config=app_config.agents[self.agent_type])
+        log.debug(
+            "saving agent config",
+            agent=self.agent_type,
+            config=app_config.agents[self.agent_type],
+        )
         config.save_config(app_config)
 
     async def on_game_loop_start(self, event: GameLoopStartEvent):
@@ -474,19 +492,19 @@ class Agent(ABC):
             if not action.config:
                 continue
 
-            for _, config in action.config.items():
-                if config.scope == "scene":
+            for _, _config in action.config.items():
+                if _config.scope == "scene":
                     # if default_value is None, just use the `type` of the current
                     # value
-                    if config.default_value is None:
-                        default_value = type(config.value)()
+                    if _config.default_value is None:
+                        default_value = type(_config.value)()
                     else:
-                        default_value = config.default_value
+                        default_value = _config.default_value
 
                     log.debug(
-                        "resetting config", config=config, default_value=default_value
+                        "resetting config", config=_config, default_value=default_value
                     )
-                    config.value = default_value
+                    _config.value = default_value
 
         await self.emit_status()
 
@@ -518,7 +536,9 @@ class Agent(ABC):
 
         await asyncio.sleep(0.01)
 
-    async def _handle_background_processing(self, fut: asyncio.Future, error_handler = None):
+    async def _handle_background_processing(
+        self, fut: asyncio.Future, error_handler=None
+    ):
         try:
             if fut.cancelled():
                 return
@@ -541,7 +561,7 @@ class Agent(ABC):
             self.processing_bg -= 1
             await self.emit_status()
 
-    async def set_background_processing(self, task: asyncio.Task, error_handler = None):
+    async def set_background_processing(self, task: asyncio.Task, error_handler=None):
         log.info("set_background_processing", agent=self.agent_type)
         if not hasattr(self, "processing_bg"):
             self.processing_bg = 0
@@ -550,7 +570,9 @@ class Agent(ABC):
 
         await self.emit_status()
         task.add_done_callback(
-            lambda fut: asyncio.create_task(self._handle_background_processing(fut, error_handler))
+            lambda fut: asyncio.create_task(
+                self._handle_background_processing(fut, error_handler)
+            )
         )
 
     def connect(self, scene):
@@ -623,7 +645,6 @@ class Agent(ABC):
         """
         return False
 
-
     @set_processing
     async def delegate(self, fn: Callable, *args, **kwargs):
         """
@@ -631,20 +652,22 @@ class Agent(ABC):
         by the agent.
         """
         return await fn(*args, **kwargs)
-        
-    async def emit_message(self, header:str, message:str | list[dict], meta: dict = None, **data):
+
+    async def emit_message(
+        self, header: str, message: str | list[dict], meta: dict = None, **data
+    ):
         if not data:
             data = {}
-            
+
         if not meta:
             meta = {}
-        
+
         if "uuid" not in data:
             data["uuid"] = str(uuid.uuid4())
-            
+
         if "agent" not in data:
             data["agent"] = self.agent_type
-        
+
         data["header"] = header
         emit(
             "agent_message",
@@ -653,17 +676,22 @@ class Agent(ABC):
             meta=meta,
             websocket_passthrough=True,
         )
-        
+
+
 @dataclasses.dataclass
 class AgentEmission:
     agent: Agent
+
 
 @dataclasses.dataclass
 class AgentTemplateEmission(AgentEmission):
     template_vars: dict = dataclasses.field(default_factory=dict)
     response: str = None
-    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(default_factory=list)
-    
+    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(
+        default_factory=list
+    )
+
+
 @dataclasses.dataclass
 class RagBuildSubInstructionEmission(AgentEmission):
     sub_instruction: str | None = None

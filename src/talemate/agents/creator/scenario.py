@@ -10,7 +10,7 @@ class ScenarioCreatorMixin:
     @set_processing
     async def determine_scenario_description(self, text: str):
         description = await Prompt.request(
-            f"creator.determine-scenario-description",
+            "creator.determine-scenario-description",
             self.client,
             "analyze_long",
             vars={
@@ -25,7 +25,7 @@ class ScenarioCreatorMixin:
         description: str,
     ):
         content_context = await Prompt.request(
-            f"creator.determine-content-context",
+            "creator.determine-content-context",
             self.client,
             "create_short",
             vars={

@@ -1,5 +1,4 @@
 import random
-from typing import Literal
 import json
 import httpx
 import pydantic
@@ -103,7 +102,6 @@ class TabbyAPIClient(ClientBase):
         )
 
     def prompt_template(self, system_message: str, prompt: str):
-
         log.debug(
             "IS API HANDLING PROMPT TEMPLATE",
             api_handles_prompt_template=self.api_handles_prompt_template,
@@ -196,22 +194,18 @@ class TabbyAPIClient(ClientBase):
 
             async with httpx.AsyncClient() as client:
                 async with client.stream(
-                    "POST", 
-                    url, 
-                    headers=headers, 
-                    json=payload, 
-                    timeout=120.0
+                    "POST", url, headers=headers, json=payload, timeout=120.0
                 ) as response:
                     async for chunk in response.aiter_text():
                         buffer += chunk
 
                         while True:
-                            line_end = buffer.find('\n')
+                            line_end = buffer.find("\n")
                             if line_end == -1:
                                 break
 
                             line = buffer[:line_end].strip()
-                            buffer = buffer[line_end + 1:]
+                            buffer = buffer[line_end + 1 :]
 
                             if not line:
                                 continue
@@ -226,7 +220,7 @@ class TabbyAPIClient(ClientBase):
 
                                     choice = data_obj.get("choices", [{}])[0]
 
-                                    # Chat completions use delta -> content.  
+                                    # Chat completions use delta -> content.
                                     delta = choice.get("delta", {})
                                     content = (
                                         delta.get("content")
@@ -235,12 +229,16 @@ class TabbyAPIClient(ClientBase):
                                     )
 
                                     usage = data_obj.get("usage", {})
-                                    completion_tokens = usage.get("completion_tokens", 0)
+                                    completion_tokens = usage.get(
+                                        "completion_tokens", 0
+                                    )
                                     prompt_tokens = usage.get("prompt_tokens", 0)
 
                                     if content:
                                         response_text += content
-                                        self.update_request_tokens(self.count_tokens(content))
+                                        self.update_request_tokens(
+                                            self.count_tokens(content)
+                                        )
                                 except json.JSONDecodeError:
                                     # ignore malformed json chunks
                                     pass
@@ -251,7 +249,9 @@ class TabbyAPIClient(ClientBase):
 
             if is_chat:
                 # Process indirect coercion
-                response_text = self.process_response_for_indirect_coercion(prompt, response_text)
+                response_text = self.process_response_for_indirect_coercion(
+                    prompt, response_text
+                )
 
             return response_text
 
@@ -265,7 +265,9 @@ class TabbyAPIClient(ClientBase):
             return ""
         except Exception as e:
             self.log.error("generate error", e=e)
-            emit("status", message="Error during generation (check logs)", status="error")
+            emit(
+                "status", message="Error during generation (check logs)", status="error"
+            )
             return ""
 
     def reconfigure(self, **kwargs):
@@ -287,7 +289,7 @@ class TabbyAPIClient(ClientBase):
             self.double_coercion = kwargs["double_coercion"]
 
         self._reconfigure_common_parameters(**kwargs)
-        
+
         self.set_client(**kwargs)
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:

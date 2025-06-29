@@ -49,6 +49,8 @@
                                             <v-card-actions>
                                                 <v-btn variant="text" color="primary"
                                                     @click="followLink(feature.link)" v-if="feature.link">Learn more</v-btn>
+                                                <v-spacer></v-spacer>
+                                                <a :href="feature.changelog" target="_blank" v-if="feature.changelog"><v-icon class="mr-1">mdi-open-in-new</v-icon>Changelog</a>
                                             </v-card-actions>
                                         </v-card>
                                     </v-col>
@@ -73,8 +75,49 @@ export default {
     data() {
         return {
             expand: false,
-            selected: "0.30.0",
+            selected: "0.31.0",
             whatsNew: [
+                {
+                    version: '0.31.0',
+                    items: [
+                        {
+                            title: "Installable node modules.",
+                            description: "Added very rudimentary way to register node modules as packages so they can be installed into a scene.\n\nA mods tab becomes available once a scene is loaded and allows installing / uninstalling of such modules. The Dynamic Story node module has had a package added to that effect and you should no longer need to mess with the node editor to set it up in a scene.",
+                        },
+                        {
+                            title: "History Management",
+                            description: "Can now add, edit, remove and regenerate entries in the History tab of the World Editor.\n\nEntries based on summarization can be inspected to show their source messages.",
+                        },
+                        {
+                            title: "Noteable improvements",
+                            description: "Bug-fixes and improvements",
+                            items: [
+                                "Instructor Embeddigns are once again functional",
+                                "OpenRouter support added",
+                                "Ollama support added",
+                                "KoboldCpp Embeddings support added",
+                                "Visual agent can now generate prompts only. This is available even if the visual agent is not fully configured for image generation",
+                                "Memory Agent - memory retrieval has been improved",
+                                "Summarization Agent - summarization improvements",
+                                "chara_card_v3 spec character card import fixed",
+                            ],
+                            changelog: "https://github.com/vegu-ai/talemate/pull/193"
+                        },
+                        {
+                            title: "Node Editor",
+                            description: "Node editor bug-fixes and improvements.",
+                            items: [
+                                "fixes issue where errors inside custom node graphs could hang talemate",
+                                "fixes issues with a bunch of math nodes that would cause them to run even though the wires to them were inactive",
+                                "fix issue with DynamicInstruction node that would cause it to run even though the wires to it were inactive",
+                                "fix issue where editor revision events were missing the `template_vars` value",
+                                "jinja2 templates existing in templates/modules can now be properly loaded",
+                                "Emit System Message node - allows for communication of messages to the user outside of the context history",
+                            ],
+                            changelog: "https://github.com/vegu-ai/talemate/pull/193"
+                        }
+                    ]
+                },
                 {
                     version: '0.30.0',
                     items: [

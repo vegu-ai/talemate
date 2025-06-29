@@ -33,9 +33,16 @@
                     </div>
                 </div>
             </div>
-            <v-alert v-else-if="message.type === 'system'" variant="text" closable :type="message.status || 'info'" class="system-message mb-3 text-caption"
-                :text="message.text">
-            </v-alert>
+            <div v-else-if="message.type === 'system'" :class="`message ${message.type}`">
+                <SystemMessage 
+                    :message="message.text" 
+                    :color="message.meta.color" 
+                    :icon="message.meta.icon" 
+                    :title="message.meta.title" 
+                    :display="message.meta.display" 
+                    :as_markdown="message.meta.as_markdown"
+                />
+            </div>
             <div v-else-if="message.type === 'status'" :class="`message ${message.type}`">
                 <div class="narrator-message">
                     <StatusMessage :text="message.text" :status="message.status" :isLastMessage="index === messages.length - 1" />
@@ -83,6 +90,7 @@ import StatusMessage from './StatusMessage.vue';
 import RequestInput from './RequestInput.vue';
 import PlayerChoiceMessage from './PlayerChoiceMessage.vue';
 import ContextInvestigationMessage from './ContextInvestigationMessage.vue';
+import SystemMessage from './SystemMessage.vue';
 
 const MESSAGE_FLAGS = {
     NONE: 0,
@@ -112,6 +120,7 @@ export default {
         RequestInput,
         PlayerChoiceMessage,
         ContextInvestigationMessage,
+        SystemMessage,
     },
     data() {
         return {
@@ -393,7 +402,19 @@ export default {
                     console.log('player_choice', data);
                     this.messages.push({ id: data.id, type: data.type, data: data.data });
                 } else if (this.messageTypeIsSceneMessage(data.type)) {
-                    this.messages.push({ id: data.id, type: data.type, text: data.message, color: data.color, character: data.character, status:data.status, ts:data.ts }); // Add color property to the message
+                    console.log('scene message', data);
+                    this.messages.push(
+                        { 
+                            id: data.id, 
+                            type: data.type, 
+                            text: data.message, 
+                            color: data.color, 
+                            character: data.character, 
+                            status: data.status, 
+                            ts: data.ts,
+                            meta: data.meta 
+                        }
+                    ); 
                 } else if (data.type === 'status' && data.data && data.data.as_scene_message === true) {
 
                     // status message can only exist once, remove the most recent one (if within the last 100 messages)
@@ -417,7 +438,7 @@ export default {
                          type: data.type,
                          text: data.message, 
                          status: data.status, 
-                         ts: data.ts
+                         ts: data.ts,
                     });
                 }
                 

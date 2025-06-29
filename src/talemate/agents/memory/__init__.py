@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import asyncio
 import functools
 import hashlib
-import uuid
+import traceback
 import numpy as np
 from typing import Callable
 
@@ -12,6 +14,8 @@ from chromadb.config import Settings
 
 import talemate.events as events
 import talemate.util as util
+from talemate.client import ClientBase
+import talemate.instance as instance
 from talemate.agents.base import (
     Agent,
     AgentAction,
@@ -23,6 +27,7 @@ from talemate.config import load_config
 from talemate.context import scene_is_loading, active_scene
 from talemate.emit import emit
 from talemate.emit.signals import handlers
+import talemate.emit.async_signals as async_signals
 from talemate.agents.memory.context import memory_request, MemoryRequest
 from talemate.agents.memory.exceptions import (
     EmbeddingsModelLoadError,
@@ -31,18 +36,22 @@ from talemate.agents.memory.exceptions import (
 
 try:
     import chromadb
+    import chromadb.errors
     from chromadb.utils import embedding_functions
 except ImportError:
     chromadb = None
     pass
+
+from talemate.agents.registry import register
+
+if TYPE_CHECKING:
+    from talemate.client.base import ClientEmbeddingsStatus
 
 log = structlog.get_logger("talemate.agents.memory")
 
 if not chromadb:
     log.info("ChromaDB not found, disabling Chroma agent")
 
-
-from talemate.agents.registry import register
 
 class MemoryDocument(str):
     def __new__(cls, text, meta, id, raw):
@@ -105,8 +114,9 @@ class MemoryAgent(Agent):
         self.memory_tracker = {}
         self.config = load_config()
         self._ready_to_add = False
-
+        
         handlers["config_saved"].connect(self.on_config_saved)
+        async_signals.get("client.embeddings_available").connect(self.on_client_embeddings_available)
         
         self.actions = MemoryAgent.init_actions(presets=self.get_presets)
 
@@ -125,8 +135,16 @@ class MemoryAgent(Agent):
     
     @property
     def get_presets(self):
+        
+        def _label(embedding:dict):
+            prefix = embedding['client'] if embedding['client'] else embedding['embeddings']
+            if embedding['model']:
+                return f"{prefix}: {embedding['model']}"
+            else:
+                return f"{prefix}"
+        
         return [
-            {"value": k, "label": f"{v['embeddings']}: {v['model']}"} for k,v in self.config.get("presets", {}).get("embeddings", {}).items()
+            {"value": k, "label": _label(v)} for k,v in self.config.get("presets", {}).get("embeddings", {}).items()
         ]
         
     @property
@@ -151,12 +169,21 @@ class MemoryAgent(Agent):
         return self.embeddings == "default" or self.embeddings == "sentence-transformer"
     
     @property
+    def using_client_api_embeddings(self):
+        return self.embeddings == "client-api"
+    
+    @property
     def using_local_embeddings(self):
         return self.embeddings in [
             "instructor",
             "sentence-transformer",
             "default"
         ]
+    
+    
+    @property
+    def embeddings_client(self):
+        return self.embeddings_config.get("client")
     
     @property
     def max_distance(self) -> float:
@@ -186,7 +213,10 @@ class MemoryAgent(Agent):
         """
         Returns a unique fingerprint for the current configuration
         """
-        return f"{self.embeddings}-{self.model.replace('/','-')}-{self.distance_function}-{self.device}-{self.trust_remote_code}".lower()   
+        
+        model_name = self.model.replace('/','-') if self.model else "none"
+        
+        return f"{self.embeddings}-{model_name}-{self.distance_function}-{self.device}-{self.trust_remote_code}".lower()   
 
     async def apply_config(self, *args, **kwargs):
         
@@ -205,7 +235,11 @@ class MemoryAgent(Agent):
     @set_processing
     async def handle_embeddings_change(self):
         scene = active_scene.get()
-        
+
+        # if sentence-transformer and no model-name, set embeddings to default
+        if self.using_sentence_transformer_embeddings and not self.model:
+            self.actions["_config"].config["embeddings"].value = "default"
+                
         if not scene or not scene.get_helper("memory"):
             return
         
@@ -216,20 +250,48 @@ class MemoryAgent(Agent):
             await scene.save(auto=True)
         emit("status", "Context database re-imported", status="success")
 
+    def sync_presets(self) -> list[dict]:
+        self.actions["_config"].config["embeddings"].choices = self.get_presets
+        return self.actions["_config"].config["embeddings"].choices
+
     def on_config_saved(self, event):
         loop = asyncio.get_running_loop()
         openai_key = self.openai_api_key
         
         fingerprint = self.fingerprint
         
+        old_presets = self.actions["_config"].config["embeddings"].choices.copy()
+        
         self.config = load_config()
-            
+        new_presets = self.sync_presets()
         if fingerprint != self.fingerprint:
             log.warning("memory agent", status="embedding function changed", old=fingerprint, new=self.fingerprint)
             loop.run_until_complete(self.handle_embeddings_change())
-            
+        
+        emit_status = False
+        
         if openai_key != self.openai_api_key:
+            emit_status = True
+            
+        if old_presets != new_presets:
+            emit_status = True
+            
+        if emit_status:
             loop.run_until_complete(self.emit_status())
+
+        
+    async def on_client_embeddings_available(self, event: "ClientEmbeddingsStatus"):
+        current_embeddings = self.actions["_config"].config["embeddings"].value
+        
+        if current_embeddings == event.client.embeddings_identifier:
+            return
+        
+        if not self.using_client_api_embeddings or not self.ready:
+            log.warning("memory agent - client embeddings available", status="changing embeddings", old=current_embeddings, new=event.client.embeddings_identifier)
+            self.actions["_config"].config["embeddings"].value = event.client.embeddings_identifier
+            await self.emit_status()
+            await self.handle_embeddings_change()
+            await self.save_config()
 
     @set_processing
     async def set_db(self):
@@ -239,7 +301,7 @@ class MemoryAgent(Agent):
         except EmbeddingsModelLoadError:
             raise
         except Exception as e:
-            log.error("memory agent", error="failed to set db", details=e)
+            log.error("memory agent", error="failed to set db", details=traceback.format_exc())
             
             if "torchvision::nms does not exist" in str(e):
                 raise SetDBError("The embeddings you are trying to use require the `torchvision` package to be installed")
@@ -379,14 +441,12 @@ class MemoryAgent(Agent):
     def _get_document(self, id):
         raise NotImplementedError()
 
-    def on_archive_add(self, event: events.ArchiveEvent):
-        asyncio.ensure_future(
-            self.add(event.text, uid=event.memory_id, ts=event.ts, typ="history")
-        )
+    async def on_archive_add(self, event: events.ArchiveEvent):
+        await self.add(event.text, uid=event.memory_id, ts=event.ts, typ="history")
 
     def connect(self, scene):
         super().connect(scene)
-        scene.signals["archive_add"].connect(self.on_archive_add)
+        async_signals.get("archive_add").connect(self.on_archive_add)
 
     async def memory_context(
         self,
@@ -453,29 +513,72 @@ class MemoryAgent(Agent):
         Get the character memory context for a given character
         """
 
-        memory_context = []
+        # First, collect results for each individual query (respecting the
+        # per-query `iterate` limit) so that we have them available before we
+        # start filling the final context. This prevents early queries from
+        # monopolising the token budget.
+
+        per_query_results: list[list[str]] = []
+
         for query in queries:
+            # Skip empty queries so that we keep indexing consistent for the
+            # round-robin step that follows.
             if not query:
+                per_query_results.append([])
                 continue
 
-            i = 0
-            for memory in await self.get(formatter(query), limit=limit, **where):
-                if memory in memory_context:
-                    continue
+            # Fetch potential memories for this query.
+            raw_results = await self.get(
+                formatter(query), limit=limit, **where
+            )
 
+            # Apply filter and respect the `iterate` limit for this query.
+            accepted: list[str] = []
+            for memory in raw_results:
                 if filter and not filter(memory):
                     continue
 
+                accepted.append(memory)
+                if len(accepted) >= iterate:
+                    break
+
+            per_query_results.append(accepted)
+
+        # Now interleave the results in a round-robin fashion so that each
+        # query gets a fair chance to contribute, until we hit the token
+        # budget.
+
+        memory_context: list[str] = []
+        idx = 0
+        while True:
+            added_any = False
+
+            for result_list in per_query_results:
+                if idx >= len(result_list):
+                    # No more items remaining for this query at this depth.
+                    continue
+
+                memory = result_list[idx]
+
+                # Avoid duplicates in the final context.
+                if memory in memory_context:
+                    continue
+
                 memory_context.append(memory)
+                added_any = True
 
-                i += 1
-                if i >= iterate:
-                    break
-
+                # Check token budget after each addition.
                 if util.count_tokens(memory_context) >= max_tokens:
-                    break
-            if util.count_tokens(memory_context) >= max_tokens:
+                    return memory_context
+
+            if not added_any:
+                # We iterated over all query result lists without adding
+                # anything. That means we have exhausted all available
+                # memories.
                 break
+
+            idx += 1
+
         return memory_context
 
     @property
@@ -587,9 +690,32 @@ class ChromaDBMemoryAgent(MemoryAgent):
         if getattr(self, "db_client", None):
             return True
         return False
+    
+    @property
+    def client_api_ready(self) -> bool:
+        if self.using_client_api_embeddings:
+            embeddings_client:ClientBase | None = instance.get_client(self.embeddings_client)
+            if not embeddings_client:
+                return False
+            
+            if not embeddings_client.supports_embeddings:
+                return False
+            
+            if not embeddings_client.embeddings_status:
+                return False
+            
+            if embeddings_client.current_status not in ["idle", "busy"]:
+                return False
+            
+            return True
+        
+        return False
 
     @property
     def status(self):
+        if self.using_client_api_embeddings and not self.client_api_ready:
+            return "error"
+        
         if self.ready:
             return "active" if not getattr(self, "processing", False) else "busy"
 
@@ -612,12 +738,22 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 value=self.embeddings,
                 description="The embeddings type.",
             ).model_dump(),
-            "model": AgentDetail(
+
+        }
+        
+        if self.model:
+            details["model"] = AgentDetail(
                 icon="mdi-brain",
                 value=self.model,
                 description="The embeddings model.",
-            ).model_dump(),
-        }
+            ).model_dump()
+            
+        if self.embeddings_client:
+            details["client"] = AgentDetail(
+                icon="mdi-network-outline",
+                value=self.embeddings_client,
+                description="The client to use for embeddings.",
+            ).model_dump()
         
         if self.using_local_embeddings:
             details["device"] = AgentDetail(
@@ -634,6 +770,37 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 "description": "You must provide an OpenAI API key to use OpenAI embeddings",
                 "color": "error",
             }
+            
+        if self.using_client_api_embeddings:
+            embeddings_client:ClientBase | None = instance.get_client(self.embeddings_client)
+
+            if not embeddings_client:
+                details["error"] = {
+                    "icon": "mdi-alert",
+                    "value": f"Client {self.embeddings_client} not found",
+                    "description": f"Client {self.embeddings_client} not found",
+                    "color": "error",
+                }
+                return details
+
+            client_name = embeddings_client.name
+            
+            if not embeddings_client.supports_embeddings:
+                error_message = f"{client_name} does not support embeddings"
+            elif embeddings_client.current_status not in ["idle", "busy"]:
+                error_message = f"{client_name} is not ready"
+            elif not embeddings_client.embeddings_status:
+                error_message = f"{client_name} has no embeddings model loaded"
+            else:
+                error_message = None
+                
+            if error_message:
+                details["error"] = {
+                    "icon": "mdi-alert",
+                    "value": error_message,
+                    "description": error_message,
+                    "color": "error",
+                }
 
         return details
 
@@ -686,7 +853,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         self.collection_name = collection_name = self.make_collection_name(self.scene)
 
         log.info(
-            "chromadb agent", status="setting up db", collection_name=collection_name
+            "chromadb agent", status="setting up db", collection_name=collection_name, embeddings=self.embeddings
         )
         
         distance_function = self.distance_function
@@ -713,6 +880,26 @@ class ChromaDBMemoryAgent(MemoryAgent):
             self.db = self.db_client.get_or_create_collection(
                 collection_name, embedding_function=openai_ef, metadata=collection_metadata
             )
+        elif self.using_client_api_embeddings:
+            log.info(
+                "chromadb",
+                embeddings="Client API",
+                client=self.embeddings_client,
+            )
+            
+            embeddings_client:ClientBase | None = instance.get_client(self.embeddings_client)
+            if not embeddings_client:
+                raise ValueError(f"Client API embeddings client {self.embeddings_client} not found")
+            
+            if not embeddings_client.supports_embeddings:
+                raise ValueError(f"Client API embeddings client {self.embeddings_client} does not support embeddings")
+            
+            ef = embeddings_client.embeddings_function
+            
+            self.db = self.db_client.get_or_create_collection(
+                collection_name, embedding_function=ef, metadata=collection_metadata
+            )
+            
         elif self.using_instructor_embeddings:
             log.info(
                 "chromadb",
@@ -722,7 +909,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             )
 
             ef = embedding_functions.InstructorEmbeddingFunction(
-                model_name=model_name, device=device
+                model_name=model_name, device=device, instruction="Represent the document for retrieval:"
             )
 
             log.info("chromadb", status="embedding function ready")
@@ -801,6 +988,10 @@ class ChromaDBMemoryAgent(MemoryAgent):
             )
             try:
                 self.db_client.delete_collection(collection_name)
+            except chromadb.errors.NotFoundError as exc:
+                log.error(
+                    "chromadb agent", error="collection not found", details=exc
+                )
             except ValueError as exc:
                 log.error(
                     "chromadb agent", error="failed to delete collection", details=exc

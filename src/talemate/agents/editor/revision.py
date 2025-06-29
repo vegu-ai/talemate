@@ -27,6 +27,7 @@ from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.agents.creator.assistant import ContextualGenerateEmission
 from talemate.agents.summarize import SummarizeEmission
+from talemate.agents.summarize.layered_history import LayeredHistoryFinalizeEmission
 from talemate.scene_message import CharacterMessage
 from talemate.util.dedupe import (
     dedupe_sentences, 
@@ -387,13 +388,16 @@ class RevisionMixin:
         async_signals.get("agent.summarization.summarize.after").connect(
             self.revision_on_generation
         )
+        async_signals.get("agent.summarization.layered_history.finalize").connect(
+            self.revision_on_generation
+        )
         # connect to the super class AFTER so these run first.
         super().connect(scene)
         
         
     async def revision_on_generation(
         self, 
-        emission: ConversationAgentEmission | NarratorAgentEmission | ContextualGenerateEmission | SummarizeEmission,
+        emission: ConversationAgentEmission | NarratorAgentEmission | ContextualGenerateEmission | SummarizeEmission | LayeredHistoryFinalizeEmission,
     ):
         """
         Called when a conversation or narrator message is generated
@@ -411,7 +415,15 @@ class RevisionMixin:
         if isinstance(emission, NarratorAgentEmission) and "narrator" not in self.revision_automatic_targets:
             return
         
-        if isinstance(emission, SummarizeEmission) and "summarization" not in self.revision_automatic_targets:
+        if isinstance(emission, SummarizeEmission):
+            if emission.summarization_type == "dialogue" and "summarization" not in self.revision_automatic_targets:
+                return
+            if emission.summarization_type == "events":
+                # event summarization is very pragmatic and doesn't really benefit 
+                # from revision, so we skip it
+                return
+        
+        if isinstance(emission, LayeredHistoryFinalizeEmission) and "summarization" not in self.revision_automatic_targets:
             return
         
         try:
@@ -428,7 +440,7 @@ class RevisionMixin:
             context_name = getattr(emission, "context_name", None),
         )
         
-        if isinstance(emission, SummarizeEmission):
+        if isinstance(emission, (SummarizeEmission, LayeredHistoryFinalizeEmission)):
             info.summarization_history = emission.summarization_history or []
         
         if isinstance(emission, ContextualGenerateEmission) and info.context_type not in CONTEXTUAL_GENERATION_TYPES:
@@ -489,7 +501,8 @@ class RevisionMixin:
             log.warning("revision_revise: generation cancelled", text=info.text)
             return info.text
         except Exception as e:
-            log.exception("revision_revise: error", error=e)
+            import traceback
+            log.error("revision_revise: error", error=traceback.format_exc())
             return info.text
         finally:
             info.loading_status.done()
@@ -871,8 +884,14 @@ class RevisionMixin:
         
         if loading_status:
             loading_status("Editor - Issues identified, analyzing text...")
-           
-        template_vars = {
+
+        emission = RevisionEmission(
+            agent=self, 
+            info=info, 
+            issues=issues,
+        )
+
+        emission.template_vars = {
             "text": text,
             "character": character,
             "scene": self.scene,
@@ -880,14 +899,11 @@ class RevisionMixin:
             "max_tokens": self.client.max_token_length,
             "repetition": issues.repetition,
             "bad_prose": issues.bad_prose,
+            "dynamic_instructions": emission.dynamic_instructions,
+            "context_type": info.context_type,
+            "context_name": info.context_name,
         }
         
-        emission = RevisionEmission(
-            agent=self, 
-            template_vars=template_vars, 
-            info=info, 
-            issues=issues,
-        )
         
         await async_signals.get("agent.editor.revision-revise.before").send(
             emission
@@ -898,18 +914,7 @@ class RevisionMixin:
             "editor.revision-analysis",
             self.client,
             f"edit_768",
-            vars={
-                "text": text,
-                "character": character,
-                "scene": self.scene,
-                "response_length": token_count,
-                "max_tokens": self.client.max_token_length,
-                "repetition": issues.repetition,
-                "bad_prose": issues.bad_prose,
-                "dynamic_instructions": emission.dynamic_instructions,
-                "context_type": info.context_type,
-                "context_name": info.context_name,
-            },
+            vars=emission.template_vars,
             dedupe_enabled=False,
         )
         
@@ -1016,11 +1021,28 @@ class RevisionMixin:
         
         log.debug("revision_unslop: issues", issues=issues, template=template)
         
+
+        
         emission = RevisionEmission(
             agent=self,
             info=info,
             issues=issues,
         )
+        
+        emission.template_vars = {
+            "text": text,
+            "scene_analysis": scene_analysis,
+            "character": character,
+            "scene": self.scene,
+            "response_length": response_length,
+            "max_tokens": self.client.max_token_length,
+            "repetition": issues.repetition,
+            "bad_prose": issues.bad_prose,
+            "dynamic_instructions": emission.dynamic_instructions,
+            "context_type": info.context_type,
+            "context_name": info.context_name,
+            "summarization_history": info.summarization_history,
+        }
         
         await async_signals.get("agent.editor.revision-revise.before").send(emission)
         
@@ -1028,27 +1050,14 @@ class RevisionMixin:
             template,
             self.client,
             "edit_768",
-            vars={
-                "text": text,
-                "scene_analysis": scene_analysis,
-                "character": character,
-                "scene": self.scene,
-                "response_length": response_length,
-                "max_tokens": self.client.max_token_length,
-                "repetition": issues.repetition,
-                "bad_prose": issues.bad_prose,
-                "dynamic_instructions": emission.dynamic_instructions,
-                "context_type": info.context_type,
-                "context_name": info.context_name,
-                "summarization_history": info.summarization_history,
-            },
+            vars=emission.template_vars,
             dedupe_enabled=False,
         )
         
         # extract <FIX>...</FIX>
         
         if "<FIX>" not in response:
-            log.error("revision_unslop: no <FIX> found in response", response=response)
+            log.debug("revision_unslop: no <FIX> found in response", response=response)
             return original_text
 
         fix = response.split("<FIX>", 1)[1]

@@ -19,6 +19,7 @@ from talemate.agents.context import ActiveAgent, active_agent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
+import talemate.config as config
 from talemate.client.context import (
     ClientContext,
     set_client_context_attribute,
@@ -437,6 +438,29 @@ class Agent(ABC):
                         config.value = config.value_migration(config.value)
                 except AttributeError:
                     pass
+
+
+    async def save_config(self, app_config: config.Config | None = None):
+        """
+        Saves the agent config to the config file.
+        
+        If no config object is provided, the config is loaded from the config file.
+        """
+        
+        if not app_config:
+            app_config:config.Config = config.load_config(as_model=True)
+        
+        app_config.agents[self.agent_type] = config.Agent(
+            name=self.agent_type,
+            client=self.client.name if self.client else None,
+            enabled=self.enabled,
+            actions={action_key: config.AgentAction(
+                enabled=action.enabled,
+                config={config_key: config.AgentActionConfig(value=config_obj.value) for config_key, config_obj in action.config.items()}
+            ) for action_key, action in self.actions.items()}
+        )
+        log.debug("saving agent config", agent=self.agent_type, config=app_config.agents[self.agent_type])
+        config.save_config(app_config)
 
     async def on_game_loop_start(self, event: GameLoopStartEvent):
         """

@@ -9,6 +9,7 @@ import asyncio
 import dataclasses
 import fnmatch
 import json
+import traceback
 import yaml
 import os
 import random
@@ -31,6 +32,7 @@ from talemate.util import (
     count_tokens,
     dedupe_string,
     extract_json,
+    extract_list,
     fix_faulty_json,
     remove_extra_linebreaks,
     iso8601_diff_to_human,
@@ -324,6 +326,12 @@ class Prompt:
             os.path.join(
                 dir_path, "..", "..", "..", "templates", "prompts", self.agent_type
             ),
+            os.path.join(
+                dir_path, "..", "..", "..", "templates", "prompts", "common"
+            ),
+            os.path.join(
+                dir_path, "..", "..", "..", "templates", "modules"
+            ),
             os.path.join(dir_path, "templates", self.agent_type),
             os.path.join(dir_path, "templates", "common"),
         ]
@@ -452,7 +460,7 @@ class Prompt:
             else:
                 self.prompt = sectioning_handler(self)
         except jinja2.exceptions.TemplateError as e:
-            log.exception("prompt.render", prompt=self.name, error=e)
+            log.error("prompt.render", prompt=self.name, error=traceback.format_exc())
             emit(
                 "system",
                 status="error",
@@ -610,7 +618,7 @@ class Prompt:
                 )
             )
 
-    def instruct_text(self, instruction: str, text: str):
+    def instruct_text(self, instruction: str, text: str, as_list:bool=False):
         loop = asyncio.get_event_loop()
         world_state = instance.get_agent("world_state")
         instruction = instruction.format(**self.vars)
@@ -618,9 +626,14 @@ class Prompt:
         if isinstance(text, list):
             text = "\n".join(text)
 
-        return loop.run_until_complete(
+        response = loop.run_until_complete(
             world_state.analyze_and_follow_instruction(text, instruction)
         )
+        
+        if as_list:
+            return extract_list(response)
+        else:
+            return response
 
     def retrieve_memories(self, lines: list[str], goal: str = None):
         loop = asyncio.get_event_loop()

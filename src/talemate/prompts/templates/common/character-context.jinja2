@@ -1,0 +1,22 @@
+<|SECTION:CHARACTERS|>
+{# active characters #}{% for character in scene.characters %}
+{% if not skip_characters or character.name not in skip_characters %}
+### {{ character.name }}
+{{ character.sheet }}
+
+{{ character.description }}
+
+{% if include_dialogue_instructions and character.dialogue_instructions %}
+#### General character guide for {{ character.name }}
+{{ character.dialogue_instructions }}
+{% endif %}
+{% endif %}
+{% endfor %}
+
+{# mentioned characters #}{% if mentioned_characters -%}
+{% for character in mentioned_characters -%}
+### {{ character.name }}
+{{ character.description }}
+{% endfor %}
+{% endif %}
+<|CLOSE_SECTION|>

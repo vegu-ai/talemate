@@ -1,3 +1,5 @@
+print("Talemate starting.")
+print("Startup may take a moment to download some dependencies, please be patient ...")
 import os
 
 import logging
@@ -57,14 +59,14 @@ async def log_stream(stream, log_func):
             log.info("uvicorn", message=decoded_line)
         else:
             # Use the provided log_func for other messages
-            log_func("uvicron", message=decoded_line)
+            log_func("uvicorn", message=decoded_line)
 
 async def run_frontend(host: str = "localhost", port: int = 8080):
     if sys.platform == "win32":
-        activate_cmd = ".\\talemate_env\\Scripts\\activate.bat"
+        activate_cmd = ".\\.venv\\Scripts\\activate.bat"
         frontend_cmd = f"{activate_cmd} && uvicorn --host {host} --port {port} frontend_wsgi:application"
     else:
-        frontend_cmd = f"/bin/bash -c 'source talemate_env/bin/activate && uvicorn --host {host} --port {port} frontend_wsgi:application'"
+        frontend_cmd = f"/bin/bash -c 'source .venv/bin/activate && uvicorn --host {host} --port {port} frontend_wsgi:application'"
     frontend_cwd = None
         
     process = await asyncio.create_subprocess_shell(
@@ -112,6 +114,7 @@ def run_server(args):
     from talemate.world_state.templates import Collection
     from talemate.prompts.overrides import get_template_overrides
     import talemate.client.system_prompts as system_prompts
+    from talemate.emit.base import emit
     
     # import node libraries
     import talemate.game.engine.nodes.load_definitions
@@ -137,13 +140,27 @@ def run_server(args):
                 age=template_override.age_difference,
             )
 
+    # Get (or create) the asyncio event loop
     loop = asyncio.get_event_loop()
-    
-    start_server = websockets.serve(
-        websocket_endpoint, args.host, args.port, max_size=2**23
-    )
-    
-    loop.run_until_complete(start_server)
+
+    # websockets>=12 requires ``websockets.serve`` to be called from within a
+    # running event-loop (it uses ``asyncio.get_running_loop()`` internally).
+    # Calling it directly, before the loop is running, raises
+    # ``RuntimeError: no running event loop``.  To stay compatible with both old
+    # and new versions we wrap the call in a small coroutine that we execute via
+    # ``run_until_complete`` – this guarantees the loop is running when
+    # ``serve`` is invoked.
+
+    async def _start_websocket_server():
+        return await websockets.serve(
+            websocket_endpoint,
+            args.host,
+            args.port,
+            max_size=2 ** 23,
+        )
+
+    # Start the websocket server and keep a reference so we can shut it down
+    websocket_server = loop.run_until_complete(_start_websocket_server())
     
     # start task to unstall punkt
     loop.create_task(install_punkt())
@@ -154,6 +171,8 @@ def run_server(args):
         frontend_task = None
 
     log.info("talemate backend started", host=args.host, port=args.port)
+    emit("talemate_started", data=config.model_dump())
+    
     try:
         loop.run_forever()
     except KeyboardInterrupt:
@@ -161,12 +180,25 @@ def run_server(args):
     finally:
         log.info("Shutting down...")
         
-        if frontend_task:
-            frontend_task.cancel()
-        loop.run_until_complete(cancel_all_tasks(loop))
-        loop.run_until_complete(loop.shutdown_asyncgens())
-        loop.close()
-        log.info("Shutdown complete")
+        try:
+            if frontend_task:
+                frontend_task.cancel()
+
+            # Gracefully close the websocket server
+            websocket_server.close()
+            # Shield against additional Ctrl+C during the close handshake
+            loop.run_until_complete(asyncio.shield(websocket_server.wait_closed()))
+
+            # Cancel any remaining tasks
+            loop.run_until_complete(cancel_all_tasks(loop))
+            loop.run_until_complete(loop.shutdown_asyncgens())
+        except KeyboardInterrupt:
+            # If the user hits Ctrl+C again during shutdown, exit quickly without
+            # another traceback.
+            log.warning("Forced termination requested during shutdown - exiting immediately")
+        finally:
+            loop.close()
+            log.info("Shutdown complete")
 
 def main():
     parser = argparse.ArgumentParser(description="talemate server")

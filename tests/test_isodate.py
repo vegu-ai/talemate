@@ -9,6 +9,7 @@ from talemate.util import (
     parse_duration_to_isodate_duration,
     timedelta_to_duration,
     duration_to_timedelta,
+    amount_unit_to_iso8601_duration,
 )
 
 
@@ -92,6 +93,10 @@ def test_adding_isodates(dates: list[str], expected: str):
     ("P1Y", "P1Y", "Recently"),
     ("P1M", "P1M", "Recently"),
     ("PT0S", "PT0S", "Recently"),
+    
+    # long durations
+    ("P0D", "P998Y23M30D", "999 Years, 11 Months, 3 Weeks and 4 Days ago"),
+    ("P0D", "P12M364640D", "1000 Years ago"),
 ])
 def test_iso8601_diff_to_human_unflattened(a, b, expected):
     assert iso8601_diff_to_human(a, b, flatten=False) == expected, iso8601_diff_to_human(a, b, flatten=False)
@@ -110,7 +115,41 @@ def test_iso8601_diff_to_human_unflattened(a, b, expected):
     ("P2DT45M", "PT0S", "2 Days and 1 Hour ago"),
     ("P15DT8H", "PT0S", "15 Days ago"),
     ("P35DT12H30M", "PT0S", "1 Month and 5 Days ago"),
+    ("P12M364640D", "P0D", "1000 Years ago"),
 ])
 def test_iso8601_diff_to_human_flattened(a, b, expected):
     assert iso8601_duration_to_human(iso8601_diff(a, b), flatten=True) == expected, \
            f"Failed for {a} vs {b}: Got {iso8601_duration_to_human(iso8601_diff(a, b), flatten=True)}"
+
+@pytest.mark.parametrize("amount, unit, expected", [
+    # Minutes
+    (5, "minutes", "PT5M"),
+    (1, "minute", "PT1M"),
+    # Hours
+    (3, "hours", "PT3H"),
+    # Days
+    (2, "days", "P2D"),
+    # Weeks
+    (2, "weeks", "P2W"),
+    # Months (handled specially in the date section)
+    (7, "months", "P7M"),
+    # Years
+    (4, "years", "P4Y"),
+    # Negative amount should be converted to positive duration
+    (-5, "hours", "PT5H"),
+    # 1000 years
+    (1000, "years", "P1000Y"),
+])
+def test_amount_unit_to_iso8601_duration_valid(amount: int, unit: str, expected: str):
+    """Ensure valid (amount, unit) pairs are converted to the correct ISO-8601 duration."""
+    assert amount_unit_to_iso8601_duration(amount, unit) == expected
+
+
+@pytest.mark.parametrize("amount, unit", [
+    (1, "invalid"),
+    (0, "centuries"),
+])
+def test_amount_unit_to_iso8601_duration_invalid(amount: int, unit: str):
+    """Ensure invalid units raise ValueError."""
+    with pytest.raises(ValueError):
+        amount_unit_to_iso8601_duration(amount, unit)

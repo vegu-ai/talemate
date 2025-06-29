@@ -39,6 +39,7 @@
         ref="historyTools" 
         :scene="scene" 
         :manager="manager"
+        :app-busy="appBusy"
         :world-state-templates="worldStateTemplates"
         @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
         />
@@ -79,6 +80,7 @@ export default {
     props: {
         scene: Object,
         worldStateTemplates: Object,
+        appBusy: Boolean,
     },
     computed: {
         icon() {

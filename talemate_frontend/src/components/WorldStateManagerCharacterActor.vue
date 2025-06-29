@@ -22,6 +22,7 @@
                     :character="character.name"
                     :rewrite-enabled="false"
                     :generation-options="generationOptions"
+                    :specify-length="true"
                     @generate="content => { setCharacterDialogueInstructions(content); updateCharacterActor(); }"
                 />
                 <v-textarea 
@@ -59,6 +60,7 @@
                     :character="character.name"
                     :rewrite-enabled="false"
                     :generation-options="generationOptions"
+                    :specify-length="true"
                     @generate="content => { dialogueExamples.push(content); updateCharacterActor(); }"
                 />
 

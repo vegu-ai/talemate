@@ -6,6 +6,7 @@
 {% set output_type = "narrative description" -%}
 {% set max_length = " Length: 1 - 2 paragraphs" %}
 {% endif -%}
+{% with task_instructions="Use it to guide the content of your summary."%}{% include "scene-intent.jinja2" %}{% endwith %}
 {% if extra_context -%}
 <|SECTION:PREVIOUS CHAPTERS|>
 {% for chapter_summary in extra_context %}
@@ -42,8 +43,10 @@ This should be a short and specific summary of the dialogue, including the most 
 {% endif -%}
 
 YOU MUST ONLY SUMMARIZE THE CONTENT EXPLICITLY STATED WITHIN {{ summary_target.upper() }}. 
-YOU MUST NOT INCLUDE OR REPEAT THE PREVIOUS CONTEXT iN YOUR SUMMARY.
+YOU MUST NOT INCLUDE OR REPEAT THE PREVIOUS CONTEXT IN YOUR SUMMARY.
 YOU MUST NOT QUOTE DIALOGUE.
+
+While it is ok, even recommended, to use an analytical approach during your analysis, you must never mention or directly reference the analysis in the actual text of the summary - furthermore refrain from directly mentioning the words "{{ summary_target }}" in the summary as it is supposed to be a narrative summary.
 
 {% if output_type == "narrative description" %}
 Provide a summarized {{output_type}} of {{ summary_target }}.
@@ -59,6 +62,7 @@ Provide a highly accurate numerical chronological list of the events and state c
 Your response must follow this format:
 
 ANALYSIS: <brief analysis the cross over point from previous chapters to {{ summary_target }}. How does {{ summary_target }} start and what should be in the summary.>
+{% if scene and scene.writing_style %}WRITING STYLE: <brief understanding of the writing style requirements and the story intention. Note at least one example where you will apply it.>{% endif %}
 SUMMARY: <summary of {{ summary_target }} based on analysis.{{ max_length }}>
 <|CLOSE_SECTION|>
 <|SECTION:SUMMARY OF {{ summary_target.upper() }}|>

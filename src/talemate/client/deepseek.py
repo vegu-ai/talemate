@@ -187,6 +187,14 @@ class DeepSeekClient(ClientBase):
 
         return prompt
 
+    def response_tokens(self, response: str):
+        # Count tokens in a response string using the util.count_tokens helper
+        return self.count_tokens(response)
+
+    def prompt_tokens(self, prompt: str):
+        # Count tokens in a prompt string using the util.count_tokens helper
+        return self.count_tokens(prompt)
+
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
@@ -221,13 +229,30 @@ class DeepSeekClient(ClientBase):
         )
 
         try:
-            response = await self.client.chat.completions.create(
+            # Use streaming so we can update_Request_tokens incrementally
+            stream = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[system_message, human_message],
+                stream=True,
                 **parameters,
             )
 
-            response = response.choices[0].message.content
+            response = ""
+
+            # Iterate over streamed chunks
+            async for chunk in stream:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                if delta and getattr(delta, "content", None):
+                    content_piece = delta.content
+                    response += content_piece
+                    # Incrementally track token usage
+                    self.update_request_tokens(self.count_tokens(content_piece))
+
+            # Save token accounting for whole request
+            self._returned_prompt_tokens = self.prompt_tokens(prompt)
+            self._returned_response_tokens = self.response_tokens(response)
 
             # older models don't support json_object response coersion
             # and often like to return the response wrapped in ```json

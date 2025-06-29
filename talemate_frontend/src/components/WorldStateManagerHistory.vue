@@ -1,84 +1,94 @@
 <template>
 
     <v-tabs v-model="tab" density="compact" color="secondary">
-        <v-tab key="base">Base</v-tab>
-        <v-tab v-for="(layer, index) in layers" :key="index">{{ layer.title }}</v-tab>
+        <v-tab value="base">Base</v-tab>
+        <v-tab v-for="(layer, index) in layers" :key="index" :value="`layer_${index}`">{{ layer.title }}</v-tab>
     </v-tabs>
 
-    <v-tabs-window v-model="tab">
-        <v-tabs-window-item key="base">
+    <v-window v-model="tab">
+        <v-window-item value="base">
             <v-card>
                 <v-card-text>
                     
                     <v-alert color="muted" density="compact" variant="text" icon="mdi-timer-sand-complete">
-                        Whenever the scene is summarized a new entry is added to the history.
-                        This summarization happens either when a certain length threshold is met or when the scene time advances.
+                        <p>Whenever the scene is summarized a new entry is added to the history.</p>
+                        <p>This summarization happens either when a certain length threshold is met or when the scene time advances.</p>
+                        <p class="mt-2">As summarizations happen, they themselves will be summarized, resulting in a layered history, with each layer representing a different level of detail with the <span class="text-primary">base</span> layer being the most granular.</p>
                     </v-alert>
         
-                    <v-card-actions>
-                        <v-spacer></v-spacer>
-                        <ConfirmActionInline
-                            action-label="Regenerate History"
-                            confirm-label="Confirm"
-                            color="warning"
-                            icon="mdi-refresh"
-                            :disabled="busy"
-                            @confirm="regenerate"
-                        />
-                        <v-spacer></v-spacer>
-                    </v-card-actions>
                     <p v-if="busy">
                         <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
                     </p>
                     <v-divider v-else class="mt-2"></v-divider>
         
-                    <v-sheet class="ma-4 text-caption text-center">
-                        <span class="text-muted">Total time passed:</span> {{ scene.data.scene_time }}
+                    <v-sheet class="ma-4 text-caption">
+                        <span class="text-muted">Total time passed:</span> {{ scene?.data?.scene_time || '?' }}
                     </v-sheet>
-        
-                    <v-list slim density="compact">
-                        <v-list-item v-for="(entry, index) in history" :key="index" class="text-body-2" prepend-icon="mdi-clock">
-                            <v-list-item-subtitle>{{ entry.time }}</v-list-item-subtitle>
-                            <div class="history-entry text-muted">
-                                {{ entry.text }}
-                            </div>
-                        </v-list-item>
-                    </v-list>
+
+                    <v-alert v-if="history.length == 0" color="muted" density="compact" variant="text" icon="mdi-timer-sand-empty">
+                        <p>No history entries yet.</p>
+                    </v-alert>
+                    
+                    <div v-if="!summaryEntriesExist || history.length == 0" class="d-flex justify-center my-2" style="max-width: 1600px;">
+                        <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || busy">
+                            Add Entry
+                        </v-btn>
+                    </div>
+
+                    <template v-for="(entry, index) in history" :key="entry.id">
+                        <WorldStateManagerHistoryEntry 
+                            :entry="entry" 
+                            :app-busy="appBusy" 
+                            :app-config="appConfig" 
+                            :busy="busyEntry && busyEntry === entry.id" 
+                            @busy="(entry_id) => setBusyEntry(entry_id)" 
+                            @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
+
+                        <div v-if="index === firstSummaryIndex" class="my-4 d-flex justify-center my-2" style="max-width: 1600px;">
+                            <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || busy">
+                                Add Entry
+                            </v-btn>
+                        </div>
+                    </template>
         
                 </v-card-text>
             </v-card>
-        </v-tabs-window-item>
-        <v-tabs-window-item v-for="(layer, index) in layers" :key="index">
+        </v-window-item>
+        <v-window-item v-for="(layer, index) in layers" :key="index" :value="`layer_${index}`">
             <v-card>
                 <v-card-text>
-                    <v-list slim density="compact">
-                        <v-list-item v-for="(entry, index) in layer.entries" :key="index" class="text-body-2" prepend-icon="mdi-clock">
-                            <v-list-item-subtitle>{{ timespan(entry) }}</v-list-item-subtitle>
-                            <div class="history-entry text-muted">
-                                {{ entry.text }}
-                            </div>
-                        </v-list-item>
-                    </v-list>
+                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index" 
+                    :entry="entry" 
+                    :app-busy="appBusy" 
+                    :app-config="appConfig" 
+                    :busy="busyEntry && busyEntry === entry.id" 
+                    @busy="(entry_id) => setBusyEntry(entry_id)" 
+                    @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
                 </v-card-text>
             </v-card>
-        </v-tabs-window-item>
-    </v-tabs-window>
+        </v-window-item>
+    </v-window>
 
+    <WorldStateManagerHistoryAdd v-model="showAddDialog" @add="addHistoryEntry" />
 
 </template>
 
 <script>
+import WorldStateManagerHistoryEntry from './WorldStateManagerHistoryEntry.vue';
+import WorldStateManagerHistoryAdd from './WorldStateManagerHistoryAdd.vue';
 
-import ConfirmActionInline from './ConfirmActionInline.vue';
 
 export default {
     name: 'WorldStateManagerHistory',
     components: {
-        ConfirmActionInline,
+        WorldStateManagerHistoryEntry,
+        WorldStateManagerHistoryAdd,
     },
     props: {
         generationOptions: Object,
         scene: Object,
+        appBusy: Boolean,
+        appConfig: Object,
     },
     data() {
         return {
@@ -86,6 +96,8 @@ export default {
             layered_history: [],
             busy: false,
             tab: 'base',
+            busyEntry: null,
+            showAddDialog: false,
         }
     },
     computed: {
@@ -96,6 +108,19 @@ export default {
                     entries: layer,
                 }
             });
+        },
+        firstSummaryIndex(){
+            // find the LAST index (oldest visible after reverse) where entry is summarized
+            let idx = -1;
+            this.history.forEach((e,i)=>{
+                if(e.start !== null && e.end !== null){
+                    idx = i;
+                }
+            });
+            return idx;
+        },
+        summaryEntriesExist() {
+            return this.history.some(e => e.start !== null && e.end !== null);
         }
     },
     inject:[
@@ -120,6 +145,7 @@ export default {
                 generation_options: this.generationOptions,
             }));
         },
+
         timespan(entry) {
             // if different display as range
             if(entry.time_start != entry.time_end) {
@@ -133,6 +159,41 @@ export default {
                 action: "request_scene_history",
             }));
         },
+
+        collapseSourceEntries(layer, entry_id) {
+            console.log("collapseSourceEntries", layer, entry_id);
+            if(layer == 0) {
+                const entry = this.history.find(e => e.id === entry_id);
+                if(entry) {
+                    entry.source_entries = null;
+                }
+            } else {
+                const entry = this.layered_history[layer - 1].find(e => e.id === entry_id);
+                if(entry) {
+                    entry.source_entries = null;
+                }
+            }
+        },
+
+        setBusyEntry(entry_id) {
+            console.log("setBusyEntry", entry_id);
+            this.busyEntry = entry_id;
+        },
+
+        openAddDialog(){
+            this.showAddDialog = true;
+        },
+
+        addHistoryEntry(payload) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'add_history_entry',
+                text: payload.text,
+                amount: payload.amount,
+                unit: payload.unit,
+            }));
+        },
+
         handleMessage(message) {
             if (message.type != 'world_state_manager') {
                 return;
@@ -151,8 +212,38 @@ export default {
             } else if (message.action == 'history_regenerated') {
                 this.busy = false;
                 this.requestSceneHistory();
+            } else if (message.action == 'history_entry_source_entries') {
+                const entries = message.data.entries;
+                const entry = message.data.entry;
+
+                console.log("history_entry_source_entries", entries, entry);
+
+                if(entry.layer == 0) {
+                    const existingEntry = this.history.find(e => e.id === message.data.entry.id);
+                    if(existingEntry) {
+                        existingEntry.source_entries = entries;
+                    }
+                } else {
+                    const existingEntry = this.layered_history[entry.layer - 1].find(e => e.id === message.data.entry.id);
+                    if(existingEntry) {
+                        existingEntry.source_entries = entries;
+                    }
+                }
+            } else if (message.action == 'history_entry_regenerated') {
+                const entry = message.data;
+
+                console.log("history_entry_updated", entry);
+
+                if(entry.layer == 0) {
+                    this.history = this.history.map(e => e.id === entry.id ? entry : e);
+                } else {
+                    this.layered_history[entry.layer - 1] = this.layered_history[entry.layer - 1].map(e => e.id === entry.id ? entry : e);
+                }
+                this.busyEntry = null;
+            } else if (message.action == 'operation_done') {
+                this.busyEntry = null;
             }
-        }
+        },
     },
     mounted(){
         this.registerMessageHandler(this.handleMessage);

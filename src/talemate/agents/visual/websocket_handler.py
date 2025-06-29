@@ -90,12 +90,16 @@ class VisualWebsocketHandler(Plugin):
         payload = GeneratePayload(**data)
         visual = get_agent("visual")
         await visual.generate_character_portrait(
-            payload.context.character_name, payload.context.instructions, replace=True
+            payload.context.character_name,
+            payload.context.instructions,
+            replace=True,
+            prompt_only=payload.context.prompt_only,
         )
 
     async def handle_visualize_environment(self, data: dict):
         payload = GeneratePayload(**data)
         visual = get_agent("visual")
         await visual.generate_environment_background(
-            instructions=payload.context.instructions
+            instructions=payload.context.instructions,
+            prompt_only=payload.context.prompt_only,
         )

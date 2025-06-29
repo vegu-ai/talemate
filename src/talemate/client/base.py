@@ -6,10 +6,12 @@ import ipaddress
 import logging
 import random
 import time
+import traceback
 import asyncio
 from typing import Callable, Union, Literal
 
 import pydantic
+import dataclasses
 import structlog
 import urllib3
 from openai import AsyncOpenAI, PermissionDeniedError
@@ -23,7 +25,10 @@ from talemate.client.model_prompts import model_prompt
 from talemate.client.ratelimit import CounterRateLimiter
 from talemate.context import active_scene
 from talemate.emit import emit
+from talemate.config import load_config, save_config, EmbeddingFunctionPreset
+import talemate.emit.async_signals as async_signals
 from talemate.exceptions import SceneInactiveError, GenerationCancelled
+import talemate.ux.schema as ux_schema
 
 from talemate.client.system_prompts import SystemPrompts
 
@@ -77,13 +82,20 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
     double_coercion: str = None
 
 
+class FieldGroup(pydantic.BaseModel):
+    name: str
+    label: str
+    description: str
+    icon: str = "mdi-cog"
+
 class ExtraField(pydantic.BaseModel):
     name: str
     type: str
     label: str
     required: bool
     description: str
-
+    group: FieldGroup | None = None
+    note: ux_schema.Note | None = None
 
 class ParameterReroute(pydantic.BaseModel):
     talemate_parameter: str
@@ -100,6 +112,56 @@ class ParameterReroute(pydantic.BaseModel):
     def __eq__(self, other):
         return str(self) == str(other)
 
+
+class RequestInformation(pydantic.BaseModel):
+    start_time: float = pydantic.Field(default_factory=time.time)
+    end_time: float | None = None
+    tokens: int = 0
+    
+    @pydantic.computed_field(description="Duration")
+    @property
+    def duration(self) -> float:
+        end_time = self.end_time or time.time()
+        return end_time - self.start_time
+    
+    @pydantic.computed_field(description="Tokens per second")
+    @property
+    def rate(self) -> float:
+        try:
+            end_time = self.end_time or time.time()
+            return self.tokens / (end_time - self.start_time)
+        except:
+            pass
+        return 0
+    
+    @pydantic.computed_field(description="Status")
+    @property
+    def status(self) -> str:
+        if self.end_time:
+            return "completed"
+        elif self.start_time:
+            if self.duration > 1 and self.rate == 0:
+                return "stopped"
+            return "in progress"
+        else:
+            return "pending"
+        
+    @pydantic.computed_field(description="Age")
+    @property
+    def age(self) -> float:
+        if not self.end_time:
+            return -1
+        return time.time() - self.end_time
+
+
+@dataclasses.dataclass
+class ClientEmbeddingsStatus:
+    client: "ClientBase | None" = None
+    embedding_name: str | None = None
+
+async_signals.register(
+    "client.embeddings_available",
+)
 
 class ClientBase:
     api_url: str
@@ -120,6 +182,7 @@ class ClientBase:
     data_format: Literal["yaml", "json"] | None = None
     rate_limit: int | None = None
     client_type = "base"
+    request_information: RequestInformation | None = None
     
     status_request_timeout:int = 2
     
@@ -172,6 +235,13 @@ class ClientBase:
         return self.Meta().requires_prompt_template
 
     @property
+    def can_think(self) -> bool:
+        """
+        Allow reasoning models to think before responding.
+        """
+        return False
+
+    @property
     def max_tokens_param_name(self):
         return "max_tokens"
 
@@ -182,9 +252,87 @@ class ClientBase:
             "temperature",
             "max_tokens",
         ]
+        
+    @property
+    def supports_embeddings(self) -> bool:
+        return False
+    
+    @property
+    def embeddings_function(self):
+        return None
+    
+    @property
+    def embeddings_status(self) -> bool:
+        return getattr(self, "_embeddings_status", False)
+    
+    @property
+    def embeddings_model_name(self) -> str | None:
+        return getattr(self, "_embeddings_model_name", None)
+    
+    @property
+    def embeddings_url(self) -> str:
+        return None
+
+    @property
+    def embeddings_identifier(self) -> str:
+        return f"client-api/{self.name}/{self.embeddings_model_name}"
+
+    async def destroy(self, config:dict):
+        """
+        This is called before the client is removed from talemate.instance.clients
+        
+        Use this to perform any cleanup that is necessary.
+        
+        If a subclass overrides this method, it should call super().destroy(config) in the
+        end of the method.
+        """
+        
+        if self.supports_embeddings:
+            self.remove_embeddings(config)
+
+    def reset_embeddings(self):
+        self._embeddings_model_name = None
+        self._embeddings_status = False
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
+        
+    def set_embeddings(self):
+        
+        log.debug("setting embeddings", client=self.name, supports_embeddings=self.supports_embeddings, embeddings_status=self.embeddings_status)
+        
+        if not self.supports_embeddings or not self.embeddings_status:
+            return
+        
+        config = load_config(as_model=True)
+        
+        key = self.embeddings_identifier
+        
+        if key in config.presets.embeddings:
+            log.debug("embeddings already set", client=self.name, key=key)
+            return config.presets.embeddings[key]
+        
+        
+        log.debug("setting embeddings", client=self.name, key=key)
+        
+        config.presets.embeddings[key] = EmbeddingFunctionPreset(
+            embeddings="client-api",
+            client=self.name,
+            model=self.embeddings_model_name,
+            distance=1,
+            distance_function="cosine",
+            local=False,
+            custom=True,
+        )
+        
+        save_config(config)
+        
+    def remove_embeddings(self, config:dict | None = None):
+        # remove all embeddings for this client
+        for key, value in list(config["presets"]["embeddings"].items()):
+            if value["client"] == self.name and value["embeddings"] == "client-api":
+                log.warning("!!! removing embeddings", client=self.name, key=key)
+                config["presets"]["embeddings"].pop(key)
 
     def set_system_prompts(self, system_prompts: dict | SystemPrompts):
         if isinstance(system_prompts, dict):
@@ -222,6 +370,19 @@ class ClientBase:
             self.model_name, "{sysmsg}", "{prompt}<|BOT|>{LLM coercion}"
         )
 
+    def split_prompt_for_coercion(self, prompt: str) -> tuple[str, str]:
+        """
+        Splits the prompt and the prefill/coercion prompt.
+        """
+        if "<|BOT|>" in prompt:
+            _, right = prompt.split("<|BOT|>", 1)
+            
+            if self.double_coercion:
+                right = f"{self.double_coercion}\n\n{right}"
+            
+            return prompt, right
+        return prompt, None
+
     def reconfigure(self, **kwargs):
         """
         Reconfigures the client.
@@ -241,6 +402,8 @@ class ClientBase:
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
+            if not self.enabled and self.supports_embeddings and self.embeddings_status:
+                self.reset_embeddings()
 
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
@@ -327,7 +490,7 @@ class ClientBase:
         """
         Sets and emits the client status.
         """
-
+        
         if processing is not None:
             self.processing = processing
 
@@ -388,6 +551,8 @@ class ClientBase:
         for field_name in getattr(self.Meta(), "extra_fields", {}).keys():
             data[field_name] = getattr(self, field_name, None)
 
+        data = self.finalize_status(data)
+
         emit(
             "client_status",
             message=self.client_type,
@@ -400,13 +565,31 @@ class ClientBase:
         if status_change:
             instance.emit_agent_status_by_client(self)
 
+    def finalize_status(self, data: dict):
+        """
+        Finalizes the status data for the client.
+        """
+        return data
+
     def _common_status_data(self):
-        return {
+        common_data = {
+            "can_be_coerced": self.can_be_coerced,
             "preset_group": self.preset_group or "",
             "rate_limit": self.rate_limit,
             "data_format": self.data_format,
+            "manual_model_choices": getattr(self.Meta(), "manual_model_choices", []),
+            "supports_embeddings": self.supports_embeddings,
+            "embeddings_status": self.embeddings_status,
+            "embeddings_model_name": self.embeddings_model_name,
+            "request_information": self.request_information.model_dump() if self.request_information else None,
         }
-
+        
+        extra_fields = getattr(self.Meta(), "extra_fields", {})
+        for field_name in extra_fields.keys():
+            common_data[field_name] = getattr(self, field_name, None)
+        
+        return common_data
+        
     def populate_extra_fields(self, data: dict):
         """
         Updates data with the extra fields from the client's Meta
@@ -438,6 +621,7 @@ class ClientBase:
         :return: None
         """
         if self.processing:
+            self.emit_status()
             return
 
         if not self.enabled:
@@ -618,8 +802,29 @@ class ClientBase:
         at the other side of the client.
         """
         pass
-
-
+    
+    def new_request(self):
+        """
+        Creates a new request information object.
+        """
+        self.request_information = RequestInformation()
+        
+    def end_request(self):
+        """
+        Ends the request information object.
+        """
+        self.request_information.end_time = time.time()
+        
+    def update_request_tokens(self, tokens: int, replace: bool = False):
+        """
+        Updates the request information object with the number of tokens received.
+        """
+        if self.request_information:
+            if replace:
+                self.request_information.tokens = tokens
+            else:
+                self.request_information.tokens += tokens
+        
     async def send_prompt(
         self,
         prompt: str,
@@ -690,7 +895,7 @@ class ClientBase:
         except GenerationCancelled:
             raise
         except Exception as e:
-            log.exception("Error during rate limit check", e=e)
+            log.error("Error during rate limit check", e=traceback.format_exc())
         
 
         if not active_scene.get():
@@ -736,7 +941,11 @@ class ClientBase:
             )
             prompt_sent = self.repetition_adjustment(finalized_prompt)
             
+            self.new_request()
+            
             response = await self._cancelable_generate(prompt_sent, prompt_param, kind)
+            
+            self.end_request()
             
             if isinstance(response, GenerationCancelled):
                 # generation was cancelled
@@ -786,7 +995,7 @@ class ClientBase:
         except GenerationCancelled as e:
             raise
         except Exception as e:
-            self.log.exception("send_prompt error", e=e)
+            self.log.error("send_prompt error", e=traceback.format_exc())
             emit(
                 "status", message="Error during generation (check logs)", status="error"
             )

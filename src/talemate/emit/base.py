@@ -180,11 +180,11 @@ class Emitter:
     def setup_emitter(self, scene: Scene = None):
         self.emit_for_scene = scene
 
-    def emit(self, typ: str, message: str, character: Character = None):
-        emit(typ, message, character=character, scene=self.emit_for_scene)
+    def emit(self, typ: str, message: str, character: Character = None, **kwargs):
+        emit(typ, message, character=character, scene=self.emit_for_scene, **kwargs)
 
-    def system_message(self, message: str):
-        self.emit("system", message)
+    def system_message(self, message: str, **kwargs):
+        self.emit("system", message, **kwargs)
 
     def narrator_message(self, message: str):
         self.emit("narrator", message)

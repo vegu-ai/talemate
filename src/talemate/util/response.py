@@ -39,7 +39,7 @@ def extract_list(response: str) -> list:
             list_start = index
             break
 
-    if index is None:
+    if index is None or list_start is None:
         # No list found
         return []
 

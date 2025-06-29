@@ -2,11 +2,16 @@ import pydantic
 import structlog
 from groq import AsyncGroq, PermissionDeniedError
 
-from talemate.client.base import ClientBase, ErrorAction, ParameterReroute
+from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, ExtraField
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
 from talemate.emit.signals import handlers
+from talemate.client.remote import (
+    EndpointOverride,
+    EndpointOverrideMixin,
+    endpoint_override_extra_fields,
+)
 
 __all__ = [
     "GroqClient",
@@ -23,13 +28,13 @@ SUPPORTED_MODELS = [
 JSON_OBJECT_RESPONSE_MODELS = []
 
 
-class Defaults(pydantic.BaseModel):
+class Defaults(EndpointOverride, pydantic.BaseModel):
     max_token_length: int = 8192
     model: str = "llama3-70b-8192"
 
 
 @register()
-class GroqClient(ClientBase):
+class GroqClient(EndpointOverrideMixin, ClientBase):
     """
     OpenAI client for generating text.
     """
@@ -47,10 +52,13 @@ class GroqClient(ClientBase):
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
+        extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
 
     def __init__(self, model="llama3-70b-8192", **kwargs):
         self.model_name = model
         self.api_key_status = None
+        # Apply any endpoint override parameters provided via kwargs before creating client
+        self._reconfigure_endpoint_override(**kwargs)
         self.config = load_config()
         super().__init__(**kwargs)
 
@@ -100,21 +108,27 @@ class GroqClient(ClientBase):
 
         self.current_status = status
 
+        data = {
+            "error_action": error_action.model_dump() if error_action else None,
+            "meta": self.Meta().model_dump(),
+            "enabled": self.enabled,
+        }
+        # Include shared/common status data (rate limit, etc.)
+        data.update(self._common_status_data())
+
         emit(
             "client_status",
             message=self.client_type,
             id=self.name,
             details=model_name,
             status=status if self.enabled else "disabled",
-            data={
-                "error_action": error_action.model_dump() if error_action else None,
-                "meta": self.Meta().model_dump(),
-                "enabled": self.enabled,
-            },
+            data=data,
         )
 
     def set_client(self, max_token_length: int = None):
-        if not self.groq_api_key:
+        # Determine if we should use the globally configured API key or the override key
+        if not self.groq_api_key and not self.endpoint_override_base_url_configured:
+            # No API key and no endpoint override – cannot initialize client correctly
             self.client = AsyncGroq(api_key="sk-1111")
             log.error("No groq.ai API key set")
             if self.api_key_status:
@@ -131,7 +145,8 @@ class GroqClient(ClientBase):
 
         model = self.model_name
 
-        self.client = AsyncGroq(api_key=self.groq_api_key)
+        # Use the override values (if any) when constructing the Groq client
+        self.client = AsyncGroq(api_key=self.api_key, base_url=self.base_url)
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -154,6 +169,11 @@ class GroqClient(ClientBase):
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
+
+        # Allow dynamic reconfiguration of endpoint override parameters
+        self._reconfigure_endpoint_override(**kwargs)
+        # Reconfigure any common parameters (rate limit, data format, etc.)
+        self._reconfigure_common_parameters(**kwargs)
 
     def on_config_saved(self, event):
         config = event.data
@@ -184,7 +204,7 @@ class GroqClient(ClientBase):
         Generates text from the given prompt and parameters.
         """
 
-        if not self.groq_api_key:
+        if not self.groq_api_key and not self.endpoint_override_base_url_configured:
             raise Exception("No groq.ai API key set")
 
         supports_json_object = self.model_name in JSON_OBJECT_RESPONSE_MODELS

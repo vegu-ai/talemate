@@ -35,9 +35,10 @@ def set_agent(typ, agent):
     AGENTS[typ] = agent
 
 
-def destroy_client(name: str):
+async def destroy_client(name: str, config: dict):
     client = CLIENTS.get(name)
     if client:
+        await client.destroy(config)
         del CLIENTS[name]
 
 

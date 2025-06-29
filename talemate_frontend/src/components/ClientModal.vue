@@ -46,15 +46,16 @@
                             label="API Key"></v-text-field>
                         </v-col>
                       </v-row>
-                      <v-select v-model="client.model"
-                        v-if="clientMeta().manual_model && clientMeta().manual_model_choices"
-                        :items="clientMeta().manual_model_choices" label="Model"></v-select>
+                      <!-- MODEL -->
+                      <v-combobox v-model="client.model"
+                        v-if="clientMeta().manual_model && modelChoices"
+                        :items="modelChoices" label="Model"></v-combobox>
                       <v-text-field v-model="client.model_name" v-else-if="clientMeta().manual_model"
                         label="Manually specify model name"
                         hint="It looks like we're unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you're locally serving a model."></v-text-field>
                     </v-col>
                   </v-row>
-                  <v-row v-for="field in clientMeta().extra_fields" :key="field.name">
+                  <v-row v-for="field in generalExtraFields" :key="field.name">
                     <v-col cols="12">
                       <v-text-field v-model="client[field.name]" v-if="field.type === 'text'" :label="field.label"
                         :rules="[rules.required]" :hint="field.description"></v-text-field>
@@ -115,7 +116,7 @@
                       The longer the coercion, the more likely it will coerce the model to accept the instruction, but it may also make the response less natural or affect accuracy. <span class="text-warning">Only set this if you are actually getting hard refusals from the model.</span>
                     </div>
                   </v-alert>
-                  <div class="mt-1" v-if="clientMeta().requires_prompt_template">
+                  <div class="mt-1" v-if="client.can_be_coerced">
                     <v-textarea v-model="client.double_coercion" rows="2" max-rows="3" auto-grow label="Coercion" placeholder="Certainly: "
                       hint=""></v-textarea>
                   </div>
@@ -130,6 +131,20 @@
                     scope="client"
                   >
                   </AppConfigPresetsSystemPrompts>
+                </v-window-item>
+                <!-- EXTRA FIELD GROUPS, ONE WINDOW ITEM PER GROUP -->
+                <v-window-item v-for="group in extraFieldGroups" :key="group.name" :value="group.name">
+                  <v-alert v-if="group.description" color="muted" variant="text" density="compact" :icon="group.icon" class="mb-2 pre-wrap">{{ group.description.replace(/{client_type}/g, client.type) }}</v-alert>
+                  <v-row v-for="field in extraFieldsByGroup[group.name]" :key="field.name">
+                    <v-col cols="12">
+                      <!-- handle `text`, `bool`, `password` -->
+                      <v-text-field v-if="field.type === 'text'" v-model="client[field.name]" :label="field.label" :hint="field.description"></v-text-field>
+                      <v-checkbox v-else-if="field.type === 'bool'" v-model="client[field.name]" :label="field.label" :hint="field.description"></v-checkbox>
+                      <v-text-field v-else-if="field.type === 'password'" v-model="client[field.name]" :label="field.label" :hint="field.description" type="password"></v-text-field>
+                    
+                      <v-alert v-if="field.note" :color="field.note.color" variant="text" density="compact" :icon="field.note.icon" class="mt-2 pre-wrap text-caption">{{ field.note.text.replace(/{client_type}/g, client.type) }}</v-alert>
+                    </v-col>
+                  </v-row>
                 </v-window-item>
               </v-window>
 
@@ -198,7 +213,7 @@ export default {
           value: 'coercion',
           icon: 'mdi-account-lock-open',
           condition: () => {
-            return this.clientMeta().requires_prompt_template;
+            return this.client.can_be_coerced;
           },
         },
         system_prompts: {
@@ -211,8 +226,60 @@ export default {
   },
   computed: {
     availableTabs() {
-      return Object.values(this.tabs).filter(tab => !tab.condition || tab.condition());
+      const tabs = Object.values(this.tabs).filter(tab => !tab.condition || tab.condition());
+      const extraFields = this.extraFieldGroups.map(group => {
+        return {
+          title: group.label,
+          value: group.name,
+          icon: group.icon,
+        };
+      });
+      return [...tabs, ...extraFields];
     },
+    modelChoices() {
+      // comes from either client.manual_model_choices or clientMeta().manual_model_choices
+      if (this.client.manual_model_choices && this.client.manual_model_choices.length > 0) {
+        return this.client.manual_model_choices;
+      }
+      return this.clientMeta().manual_model_choices;
+    },
+    generalExtraFields() {
+      // returns extra fields that have a null group and are to be shown in the general tab
+      if (!this.clientMeta().extra_fields) {
+        return [];
+      }
+      return Object.values(this.clientMeta().extra_fields).filter(field => !field.group);
+    },
+    extraFieldGroups() {
+      // returns an array of group objects from the extra fields, carefully only entering each group
+      // once based on the group name
+      const groups = {};
+      if (!this.clientMeta().extra_fields) {
+        return [];
+      }
+      Object.values(this.clientMeta().extra_fields).forEach(field => {
+        if (field.group) {
+          groups[field.group.name] = field.group;
+        }
+      });
+      return Object.values(groups);
+    },
+    extraFieldsByGroup() {
+      // returns an object with the group name as the key and the fields as the value
+      const fieldsByGroup = {};
+      if (!this.clientMeta().extra_fields) {
+        return {};
+      }
+      Object.values(this.clientMeta().extra_fields).forEach(field => {
+        if (field.group) {
+          if (!fieldsByGroup[field.group.name]) {
+            fieldsByGroup[field.group.name] = [];
+          }
+          fieldsByGroup[field.group.name].push(field);
+        }
+      });
+      return fieldsByGroup;
+    }
   },
   watch: {
     'state.dialog': {
@@ -376,5 +443,8 @@ export default {
   white-space: pre-wrap;
   font-family: monospace;
   font-size: 0.8rem;
+}
+.pre-wrap {
+  white-space: pre-wrap;
 }
 </style>

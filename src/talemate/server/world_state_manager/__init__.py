@@ -7,7 +7,6 @@ import structlog
 
 import talemate.world_state.templates as world_state_templates
 from talemate.export import ExportOptions, export
-from talemate.history import history_with_relative_time, rebuild_history
 from talemate.instance import get_agent
 from talemate.world_state.manager import WorldStateManager, Suggestion
 from talemate.status import set_loading
@@ -15,6 +14,7 @@ import talemate.game.focal as focal
 from talemate.server.websocket_plugin import Plugin
 
 from .scene_intent import SceneIntentMixin
+from .history import HistoryMixin
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -171,10 +171,6 @@ class SaveScenePayload(pydantic.BaseModel):
     project_name: str | None = None
 
 
-class RegenerateHistoryPayload(pydantic.BaseModel):
-    generation_options: world_state_templates.GenerationOptions | None = None
-
-
 class GenerateSuggestionPayload(pydantic.BaseModel):
     name: str
     suggestion_type: str
@@ -186,7 +182,11 @@ class SuggestionPayload(pydantic.BaseModel):
     id: str
     proposal_uid: str | None = None
 
-class WorldStateManagerPlugin(SceneIntentMixin, Plugin):
+class WorldStateManagerPlugin(
+    SceneIntentMixin, 
+    HistoryMixin, 
+    Plugin
+):
     router = "world_state_manager"
 
     @property
@@ -1018,62 +1018,6 @@ class WorldStateManagerPlugin(SceneIntentMixin, Plugin):
         await self.scene.save(auto=False, force=True, copy_name=payload.save_as)
         self.scene.emit_status()
 
-    async def handle_request_scene_history(self, data):
-        history = history_with_relative_time(self.scene.archived_history, self.scene.ts)
-        
-        layered_history = []
-        
-        summarizer = get_agent("summarizer")
-        
-        if summarizer.layered_history_enabled:
-            for layer in self.scene.layered_history:
-                layered_history.append(
-                    history_with_relative_time(layer, self.scene.ts)
-                )
-
-        self.websocket_handler.queue_put(
-            {"type": "world_state_manager", "action": "scene_history", "data": {
-                "history": history,
-                "layered_history": layered_history,
-            }}
-        )
-
-    async def handle_regenerate_history(self, data):
-
-        payload = RegenerateHistoryPayload(**data)
-        
-        async def callback():
-            self.scene.emit_status()
-            await self.handle_request_scene_history(data)
-            #self.websocket_handler.queue_put(
-            #    {
-            #        "type": "world_state_manager",
-            #        "action": "history_entry_added",
-            #        "data": history_with_relative_time(
-            #            self.scene.archived_history, self.scene.ts
-            #        ),
-            #    }
-            #)
-
-        task = asyncio.create_task(rebuild_history(
-            self.scene, callback=callback, generation_options=payload.generation_options
-        ))
-        
-        async def done():
-            self.websocket_handler.queue_put(
-                {
-                    "type": "world_state_manager",
-                    "action": "history_regenerated",
-                    "data": payload.model_dump(),
-                }
-            )
-
-            await self.signal_operation_done()
-            await self.handle_request_scene_history(data)
-        
-        # when task is done,  queue a message to the client
-        task.add_done_callback(lambda _: asyncio.create_task(done()))
-    
     # Suggestions
     
     async def handle_request_suggestions(self, data):

@@ -4,8 +4,7 @@ import re
 import dataclasses
 
 import structlog
-from typing import TYPE_CHECKING
-import talemate.data_objects as data_objects
+from typing import TYPE_CHECKING, Literal
 import talemate.emit.async_signals
 import talemate.util as util
 from talemate.emit import emit
@@ -35,6 +34,8 @@ from talemate.agents.base import (
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
 
+from talemate.history import ArchiveEntry
+
 from .analyze_scene import SceneAnalyzationMixin
 from .context_investigation import ContextInvestigationMixin
 from .layered_history import LayeredHistoryMixin
@@ -63,6 +64,7 @@ class SummarizeEmission(AgentTemplateEmission):
     extra_instructions: str | None = None
     generation_options: GenerationOptions | None = None
     summarization_history: list[str] | None = None
+    summarization_type: Literal["dialogue", "events"] = "dialogue"
 
 @register()
 class SummarizeAgent(
@@ -189,6 +191,34 @@ class SummarizeAgent(
         
         return emission.sub_instruction
 
+
+    # SUMMARIZATION HELPERS
+    
+    async def previous_summaries(self, entry: ArchiveEntry) -> list[str]:
+        
+        num_previous = self.archive_include_previous
+        
+        # find entry by .id
+        entry_index = next((i for i, e in enumerate(self.scene.archived_history) if e["id"] == entry.id), None)
+        if entry_index is None:
+            raise ValueError("Entry not found")
+        end = entry_index - 1
+
+        previous_summaries = []
+        
+        if entry and num_previous > 0:
+            if self.layered_history_available:
+                previous_summaries = self.compile_layered_history(
+                    include_base_layer=True,
+                    base_layer_end_id=entry.id
+                )[-num_previous:]
+            else:
+                previous_summaries = [
+                    entry.text for entry in self.scene.archived_history[end-num_previous:end]
+                ]
+
+        return previous_summaries
+    
     # SUMMARIZE
 
     @set_processing
@@ -352,7 +382,7 @@ class SummarizeAgent(
 
         # determine the appropariate timestamp for the summarization
 
-        scene.push_archive(data_objects.ArchiveEntry(summarized, start, end, ts=ts))
+        await scene.push_archive(ArchiveEntry(text=summarized, start=start, end=end, ts=ts))
         
         scene.ts=ts
         scene.emit_status()
@@ -478,7 +508,8 @@ class SummarizeAgent(
             extra_instructions=extra_instructions,
             generation_options=generation_options,
             template_vars=template_vars,
-            summarization_history=extra_context or []
+            summarization_history=extra_context or [],
+            summarization_type="dialogue",
         )
         
         await talemate.emit.async_signals.get("agent.summarization.summarize.before").send(emission)
@@ -562,7 +593,8 @@ class SummarizeAgent(
             extra_instructions=extra_instructions,
             generation_options=generation_options,
             template_vars=template_vars,
-            summarization_history=[extra_context] if extra_context else []
+            summarization_history=[extra_context] if extra_context else [],
+            summarization_type="events",
         )
         
         await talemate.emit.async_signals.get("agent.summarization.summarize.before").send(emission)

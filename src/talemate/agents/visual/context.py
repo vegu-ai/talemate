@@ -29,6 +29,15 @@ class VisualContextState(pydantic.BaseModel):
     prepared_prompt: Union[str, None] = None
     format: Union[str, None] = None
     replace: bool = False
+    prompt_only: bool = False
+    
+    @property
+    def title(self) -> str:
+        if self.vis_type == VIS_TYPES.ENVIRONMENT:
+            return "Environment"
+        elif self.vis_type == VIS_TYPES.CHARACTER:
+            return f"Character: {self.character_name}"
+        return "Visual Context"
 
 
 class VisualContext:

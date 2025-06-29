@@ -5,5 +5,6 @@ nav:
     - Google Cloud: google.md
     - Groq: groq.md
     - Mistral.ai: mistral.md
+    - OpenRouter: openrouter.md
     - OpenAI: openai.md
     - ...

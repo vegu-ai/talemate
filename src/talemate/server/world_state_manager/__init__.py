@@ -178,15 +178,13 @@ class GenerateSuggestionPayload(pydantic.BaseModel):
     generation_options: world_state_templates.GenerationOptions | None = None
     instructions: str | None = None
 
+
 class SuggestionPayload(pydantic.BaseModel):
     id: str
     proposal_uid: str | None = None
 
-class WorldStateManagerPlugin(
-    SceneIntentMixin, 
-    HistoryMixin, 
-    Plugin
-):
+
+class WorldStateManagerPlugin(SceneIntentMixin, HistoryMixin, Plugin):
     router = "world_state_manager"
 
     @property
@@ -516,10 +514,11 @@ class WorldStateManagerPlugin(
             None, payload.question, payload.reset
         )
 
-        _, reinforcement = (
-            await self.world_state_manager.world_state.find_reinforcement(
-                payload.question, None
-            )
+        (
+            _,
+            reinforcement,
+        ) = await self.world_state_manager.world_state.find_reinforcement(
+            payload.question, None
         )
 
         if not reinforcement:
@@ -797,7 +796,6 @@ class WorldStateManagerPlugin(
         await self.signal_operation_done()
 
     async def handle_delete_template_group(self, data):
-
         payload = DeleteWorldStateTemplateGroupPayload(**data)
         group = payload.group
 
@@ -867,7 +865,7 @@ class WorldStateManagerPlugin(
             }
         )
 
-        await self.scene.remove_character(character)            
+        await self.scene.remove_character(character)
         await self.signal_operation_done()
         await self.handle_get_character_list({})
         self.scene.emit_status()
@@ -1009,7 +1007,7 @@ class WorldStateManagerPlugin(
         payload = SaveScenePayload(**data)
 
         log.debug("Save scene", copy=payload.save_as, project_name=payload.project_name)
-        
+
         if not self.scene.filename:
             # scene has never been saved before
             # specify project name (directory name)
@@ -1019,12 +1017,12 @@ class WorldStateManagerPlugin(
         self.scene.emit_status()
 
     # Suggestions
-    
+
     async def handle_request_suggestions(self, data):
         """
         Request current suggestions from the world state.
         """
-        
+
         world_state_dict = self.scene.world_state.model_dump()
         suggestions = world_state_dict.get("suggestions", [])
         self.websocket_handler.queue_put(
@@ -1034,13 +1032,15 @@ class WorldStateManagerPlugin(
                 "data": suggestions,
             }
         )
-        
+
     async def handle_remove_suggestion(self, data):
         payload = SuggestionPayload(**data)
         if not payload.proposal_uid:
             await self.world_state_manager.remove_suggestion(payload.id)
         else:
-            await self.world_state_manager.remove_suggestion_proposal(payload.id, payload.proposal_uid)
+            await self.world_state_manager.remove_suggestion_proposal(
+                payload.id, payload.proposal_uid
+            )
 
         self.websocket_handler.queue_put(
             {
@@ -1049,38 +1049,36 @@ class WorldStateManagerPlugin(
                 "data": payload.model_dump(),
             }
         )
-    
 
     async def handle_generate_suggestions(self, data):
         """
         Generate's suggestions for character development.
         """
-        
+
         world_state = get_agent("world_state")
-        world_state_manager:WorldStateManager = self.scene.world_state_manager
+        world_state_manager: WorldStateManager = self.scene.world_state_manager
         payload = GenerateSuggestionPayload(**data)
-        
+
         log.debug("Generate suggestions", payload=payload)
-        
-        async def send_suggestion(call:focal.Call):
+
+        async def send_suggestion(call: focal.Call):
             await world_state_manager.add_suggestion(
                 Suggestion(
                     name=payload.name,
                     type=payload.suggestion_type,
                     id=f"{payload.suggestion_type}-{payload.name}",
-                    proposals=[call]
+                    proposals=[call],
                 )
             )
-            
+
         with focal.FocalContext() as focal_context:
-            
             if payload.suggestion_type == "character":
                 character = self.scene.get_character(payload.name)
-                
+
                 if not character:
                     log.error("Character not found", name=payload.name)
                     return
-                
+
                 self.websocket_handler.queue_put(
                     {
                         "type": "world_state_manager",
@@ -1090,20 +1088,29 @@ class WorldStateManagerPlugin(
                         "name": payload.name,
                     }
                 )
-                
+
                 if not payload.auto_apply:
                     focal_context.hooks_before_call.append(send_suggestion)
                     focal_context.hooks_after_call.append(send_suggestion)
-                    
-                @set_loading("Analyzing character development", cancellable=True, set_success=True, set_error=True)
+
+                @set_loading(
+                    "Analyzing character development",
+                    cancellable=True,
+                    set_success=True,
+                    set_error=True,
+                )
                 async def task_wrapper():
                     await world_state.determine_character_development(
-                        character, 
+                        character,
                         generation_options=payload.generation_options,
                         instructions=payload.instructions,
                     )
-                
+
                 task = asyncio.create_task(task_wrapper())
-                
-                task.add_done_callback(lambda _: asyncio.create_task(self.handle_request_suggestions({})))
-                task.add_done_callback(lambda _: asyncio.create_task(self.signal_operation_done()))
+
+                task.add_done_callback(
+                    lambda _: asyncio.create_task(self.handle_request_suggestions({}))
+                )
+                task.add_done_callback(
+                    lambda _: asyncio.create_task(self.signal_operation_done())
+                )

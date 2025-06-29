@@ -21,25 +21,25 @@ AVAILABLE_MODELS = []
 DEFAULT_MODEL = ""
 MODELS_FETCHED = False
 
+
 async def fetch_available_models(api_key: str = None):
     """Fetch available models from OpenRouter API"""
     global AVAILABLE_MODELS, DEFAULT_MODEL, MODELS_FETCHED
-    
+
     if not api_key:
         return []
-    
+
     if MODELS_FETCHED:
         return AVAILABLE_MODELS
-    
+
     # Only fetch if we haven't already or if explicitly requested
     if AVAILABLE_MODELS and not api_key:
         return AVAILABLE_MODELS
-    
+
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                "https://openrouter.ai/api/v1/models",
-                timeout=10.0
+                "https://openrouter.ai/api/v1/models", timeout=10.0
             )
             if response.status_code == 200:
                 data = response.json()
@@ -51,13 +51,14 @@ async def fetch_available_models(api_key: str = None):
                 AVAILABLE_MODELS = sorted(models)
                 log.debug(f"Fetched {len(AVAILABLE_MODELS)} models from OpenRouter")
             else:
-                log.warning(f"Failed to fetch models from OpenRouter: {response.status_code}")
+                log.warning(
+                    f"Failed to fetch models from OpenRouter: {response.status_code}"
+                )
     except Exception as e:
         log.error(f"Error fetching models from OpenRouter: {e}")
-    
+
     MODELS_FETCHED = True
     return AVAILABLE_MODELS
-
 
 
 def fetch_models_sync(event):
@@ -65,8 +66,10 @@ def fetch_models_sync(event):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(fetch_available_models(api_key))
 
+
 handlers["config_saved"].connect(fetch_models_sync)
 handlers["talemate_started"].connect(fetch_models_sync)
+
 
 class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
@@ -89,7 +92,9 @@ class OpenRouterClient(ClientBase):
         name_prefix: str = "OpenRouter"
         title: str = "OpenRouter"
         manual_model: bool = True
-        manual_model_choices: list[str] = pydantic.Field(default_factory=lambda: AVAILABLE_MODELS)
+        manual_model_choices: list[str] = pydantic.Field(
+            default_factory=lambda: AVAILABLE_MODELS
+        )
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
 
@@ -169,7 +174,7 @@ class OpenRouterClient(ClientBase):
     def set_client(self, max_token_length: int = None):
         # Unlike other clients, we don't need to set up a client instance
         # We'll use httpx directly in the generate method
-        
+
         if not self.openrouter_api_key:
             log.error("No OpenRouter API key set")
             if self.api_key_status:
@@ -183,7 +188,7 @@ class OpenRouterClient(ClientBase):
 
         if max_token_length and not isinstance(max_token_length, int):
             max_token_length = int(max_token_length)
-        
+
         # Set max token length (default to 16k if not specified)
         self.max_token_length = max_token_length or 16384
 
@@ -221,7 +226,7 @@ class OpenRouterClient(ClientBase):
             self._models_fetched = True
             # Update the Meta class with new model choices
             self.Meta.manual_model_choices = AVAILABLE_MODELS
-        
+
         self.emit_status()
 
     def prompt_template(self, system_message: str, prompt: str):
@@ -240,13 +245,13 @@ class OpenRouterClient(ClientBase):
             raise Exception("No OpenRouter API key set")
 
         prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
-        
+
         # Prepare messages for chat completion
         messages = [
             {"role": "system", "content": self.get_system_message(kind)},
-            {"role": "user", "content": prompt.strip()}
+            {"role": "user", "content": prompt.strip()},
         ]
-        
+
         if coercion_prompt:
             messages.append({"role": "assistant", "content": coercion_prompt.strip()})
 
@@ -255,7 +260,7 @@ class OpenRouterClient(ClientBase):
             "model": self.model_name,
             "messages": messages,
             "stream": True,
-            **parameters
+            **parameters,
         }
 
         self.log.debug(
@@ -264,7 +269,7 @@ class OpenRouterClient(ClientBase):
             parameters=parameters,
             model=self.model_name,
         )
-        
+
         response_text = ""
         buffer = ""
         completion_tokens = 0
@@ -279,46 +284,52 @@ class OpenRouterClient(ClientBase):
                         "Content-Type": "application/json",
                     },
                     json=payload,
-                    timeout=120.0  # 2 minute timeout for generation
+                    timeout=120.0,  # 2 minute timeout for generation
                 ) as response:
                     async for chunk in response.aiter_text():
                         buffer += chunk
-                        
+
                         while True:
                             # Find the next complete SSE line
-                            line_end = buffer.find('\n')
+                            line_end = buffer.find("\n")
                             if line_end == -1:
                                 break
-                            
+
                             line = buffer[:line_end].strip()
-                            buffer = buffer[line_end + 1:]
-                            
-                            if line.startswith('data: '):
+                            buffer = buffer[line_end + 1 :]
+
+                            if line.startswith("data: "):
                                 data = line[6:]
-                                if data == '[DONE]':
+                                if data == "[DONE]":
                                     break
-                                
+
                                 try:
                                     data_obj = json.loads(data)
-                                    content = data_obj["choices"][0]["delta"].get("content")
+                                    content = data_obj["choices"][0]["delta"].get(
+                                        "content"
+                                    )
                                     usage = data_obj.get("usage", {})
-                                    completion_tokens += usage.get("completion_tokens", 0)
+                                    completion_tokens += usage.get(
+                                        "completion_tokens", 0
+                                    )
                                     prompt_tokens += usage.get("prompt_tokens", 0)
                                     if content:
                                         response_text += content
                                         # Update tokens as content streams in
-                                        self.update_request_tokens(self.count_tokens(content))
-                                                                                                                      
+                                        self.update_request_tokens(
+                                            self.count_tokens(content)
+                                        )
+
                                 except json.JSONDecodeError:
                                     pass
-                            
+
                     # Extract the response content
                     response_content = response_text
                     self._returned_prompt_tokens = prompt_tokens
                     self._returned_response_tokens = completion_tokens
-                    
+
                     return response_content
-                
+
         except httpx.ConnectTimeout:
             self.log.error("OpenRouter API timeout")
             emit("status", message="OpenRouter API: Request timed out", status="error")

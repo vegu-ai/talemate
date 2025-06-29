@@ -1,10 +1,14 @@
 import pydantic
 import structlog
-from typing import Literal
 from mistralai import Mistral
 from mistralai.models.sdkerror import SDKError
 
-from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults, ExtraField
+from talemate.client.base import (
+    ClientBase,
+    ErrorAction,
+    CommonDefaults,
+    ExtraField,
+)
 from talemate.client.registry import register
 from talemate.client.remote import (
     EndpointOverride,
@@ -44,8 +48,10 @@ class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "open-mixtral-8x22b"
 
+
 class ClientConfig(EndpointOverride, BaseClientConfig):
     pass
+
 
 @register()
 class MistralAIClient(EndpointOverrideMixin, ClientBase):
@@ -68,7 +74,7 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
         extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
-    
+
     def __init__(self, model="open-mixtral-8x22b", **kwargs):
         self.model_name = model
         self.api_key_status = None
@@ -115,7 +121,7 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
             model_name = "No model loaded"
 
         self.current_status = status
-        data={
+        data = {
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
@@ -167,10 +173,10 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
     def reconfigure(self, **kwargs):
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
-        
+
         self._reconfigure_common_parameters(**kwargs)
         self._reconfigure_endpoint_override(**kwargs)
-        
+
         if kwargs.get("model"):
             self.model_name = kwargs["model"]
             self.set_client(kwargs.get("max_token_length"))
@@ -248,14 +254,16 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
             )
 
             response = ""
-            
+
             completion_tokens = 0
             prompt_tokens = 0
 
             async for event in event_stream:
                 if event.data.choices:
                     response += event.data.choices[0].delta.content
-                    self.update_request_tokens(self.count_tokens(event.data.choices[0].delta.content))
+                    self.update_request_tokens(
+                        self.count_tokens(event.data.choices[0].delta.content)
+                    )
                 if event.data.usage:
                     completion_tokens += event.data.usage.completion_tokens
                     prompt_tokens += event.data.usage.prompt_tokens
@@ -263,7 +271,7 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
             self._returned_prompt_tokens = prompt_tokens
             self._returned_response_tokens = completion_tokens
 
-            #response = response.choices[0].message.content
+            # response = response.choices[0].message.content
 
             # older models don't support json_object response coersion
             # and often like to return the response wrapped in ```json
@@ -282,12 +290,12 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
             return response
         except SDKError as e:
             self.log.error("generate error", e=e)
-            if hasattr(e, 'status_code') and e.status_code in [403, 401]:
+            if hasattr(e, "status_code") and e.status_code in [403, 401]:
                 emit(
                     "status",
                     message="mistral.ai API: Permission Denied",
                     status="error",
                 )
             return ""
-        except Exception as e:
+        except Exception:
             raise

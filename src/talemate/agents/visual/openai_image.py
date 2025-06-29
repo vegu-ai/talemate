@@ -1,31 +1,21 @@
-import base64
-import io
-from urllib.parse import parse_qs, unquote, urlparse
-
-import httpx
 import structlog
 from openai import AsyncOpenAI
-from PIL import Image
 
 from talemate.agents.base import (
-    Agent,
     AgentAction,
     AgentActionConditional,
     AgentActionConfig,
-    AgentDetail,
-    set_processing,
 )
 
 from .handlers import register
 from .schema import RenderSettings, Resolution
-from .style import STYLE_MAP, Style
+from .style import Style
 
 log = structlog.get_logger("talemate.agents.visual.openai_image")
 
 
 @register(backend_name="openai_image", label="OpenAI")
 class OpenAIImageMixin:
-
     openai_image_default_render_settings = RenderSettings()
 
     EXTEND_ACTIONS = {

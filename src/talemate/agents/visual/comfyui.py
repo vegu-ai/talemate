@@ -1,6 +1,5 @@
 import asyncio
 import base64
-import io
 import json
 import os
 import random
@@ -10,13 +9,12 @@ import urllib.parse
 import httpx
 import pydantic
 import structlog
-from PIL import Image
 
 from talemate.agents.base import AgentAction, AgentActionConditional, AgentActionConfig
 
 from .handlers import register
 from .schema import RenderSettings, Resolution
-from .style import STYLE_MAP, Style
+from .style import Style
 
 log = structlog.get_logger("talemate.agents.visual.comfyui")
 
@@ -25,7 +23,6 @@ class Workflow(pydantic.BaseModel):
     nodes: dict
 
     def set_resolution(self, resolution: Resolution):
-
         # will collect all latent image nodes
         # if there is multiple will look for the one with the
         # title "Talemate Resolution"
@@ -55,7 +52,6 @@ class Workflow(pydantic.BaseModel):
         latent_image_node["inputs"]["height"] = resolution.height
 
     def set_prompt(self, prompt: str, negative_prompt: str = None):
-
         # will collect all CLIPTextEncode nodes
 
         # if there is multiple will look for the one with the
@@ -79,7 +75,6 @@ class Workflow(pydantic.BaseModel):
         negative_prompt_node = None
 
         for node_id, node in self.nodes.items():
-
             if node["class_type"] == "CLIPTextEncode":
                 if not positive_prompt_node:
                     positive_prompt_node = node
@@ -102,7 +97,6 @@ class Workflow(pydantic.BaseModel):
             negative_prompt_node["inputs"]["text"] = negative_prompt
 
     def set_checkpoint(self, checkpoint: str):
-
         # will collect all CheckpointLoaderSimple nodes
         # if there is multiple will look for the one with the
         # title "Talemate Load Checkpoint"
@@ -139,7 +133,6 @@ class Workflow(pydantic.BaseModel):
 
 @register(backend_name="comfyui", label="ComfyUI")
 class ComfyUIMixin:
-
     comfyui_default_render_settings = RenderSettings()
 
     EXTEND_ACTIONS = {
@@ -287,7 +280,9 @@ class ComfyUIMixin:
         log.info("comfyui_generate", payload=payload, url=url)
 
         async with httpx.AsyncClient() as client:
-            response = await client.post(url=f"{url}/prompt", json=payload, timeout=self.generate_timeout)
+            response = await client.post(
+                url=f"{url}/prompt", json=payload, timeout=self.generate_timeout
+            )
 
         log.info("comfyui_generate", response=response.text)
 

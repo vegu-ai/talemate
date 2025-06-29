@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pydantic
 
@@ -198,7 +198,7 @@ class SceneAssets:
         """
 
         asset_path = self.asset_path(asset_id)
-        
+
         if not asset_path:
             log.debug("asset_path not found", asset_id=asset_id)
             return None

@@ -1,28 +1,29 @@
 import json
 import re
-import json
 import structlog
 import yaml
 from datetime import date, datetime
 
 __all__ = [
     "fix_faulty_json",
-    'extract_data',
+    "extract_data",
     "extract_json",
     "extract_json_v2",
     "extract_yaml_v2",
-    'JSONEncoder',
-    'DataParsingError',
+    "JSONEncoder",
+    "DataParsingError",
     "fix_yaml_colon_in_strings",
     "fix_faulty_yaml",
 ]
 
 log = structlog.get_logger("talemate.util.dedupe")
 
+
 class JSONEncoder(json.JSONEncoder):
     """
     Default to str() on unknown types
     """
+
     def default(self, obj):
         try:
             if isinstance(obj, (date, datetime)):
@@ -30,16 +31,18 @@ class JSONEncoder(json.JSONEncoder):
             return super().default(obj)
         except TypeError:
             return str(obj)
-        
+
 
 class DataParsingError(Exception):
     """
     Custom error class for data parsing errors (JSON, YAML, etc).
     """
+
     def __init__(self, message, data=None):
         self.message = message
         self.data = data
         super().__init__(self.message)
+
 
 def fix_faulty_json(data: str) -> str:
     # Fix missing commas
@@ -123,48 +126,49 @@ def extract_json(s):
     json_object = json.loads(json_string)
     return json_string, json_object
 
+
 def extract_json_v2(text):
     """
     Extracts JSON structures from code blocks in a text string.
-    
+
     Parameters:
         text (str): The input text containing code blocks with JSON.
-        
+
     Returns:
         list: A list of unique parsed JSON objects.
-        
+
     Raises:
         DataParsingError: If invalid JSON is encountered in code blocks.
     """
     unique_jsons = []
     seen = set()
-    
+
     # Split by code block markers
     parts = text.split("```")
-    
+
     # Process every code block (odd indices after split)
     for i in range(1, len(parts), 2):
         if i >= len(parts):
             break
-            
+
         block = parts[i].strip()
-        
+
         # Skip empty blocks
         if not block:
             continue
-            
+
         # Remove language identifier if present
         if block.startswith("json"):
             block = block[4:].strip()
-        
+
         # Try to parse the block as a single JSON object first
         try:
             fixed_block = fix_faulty_json(block)
             json_obj = json.loads(fixed_block)
-            
+
             # Convert to string for deduplication check
             json_str = json.dumps(json_obj, sort_keys=True)
-            
+
             # Only add if we haven't seen this object before
             if json_str not in seen:
                 seen.add(json_str)
@@ -174,21 +178,21 @@ def extract_json_v2(text):
             try:
                 # Add commas between adjacent objects if needed
                 fixed_block = fix_faulty_json(block)
-                
+
                 # Check for multiple JSON objects by looking for patterns like }{ or }[
                 # Replace with },{ or },[
                 fixed_block = re.sub(r"}\s*{", "},{", fixed_block)
                 fixed_block = re.sub(r"]\s*{", "],[", fixed_block)
-                fixed_block = re.sub(r"}\s*\[", "},["   , fixed_block)
-                fixed_block = re.sub(r"]\s*\[", "],["   , fixed_block)
-                
+                fixed_block = re.sub(r"}\s*\[", "},[", fixed_block)
+                fixed_block = re.sub(r"]\s*\[", "],[", fixed_block)
+
                 # Wrap in array brackets if not already an array
-                if not (fixed_block.startswith('[') and fixed_block.endswith(']')):
+                if not (fixed_block.startswith("[") and fixed_block.endswith("]")):
                     fixed_block = "[" + fixed_block + "]"
-                
+
                 # Parse as array
                 json_array = json.loads(fixed_block)
-                
+
                 # Process each object in the array
                 for json_obj in json_array:
                     json_str = json.dumps(json_obj, sort_keys=True)
@@ -197,43 +201,44 @@ def extract_json_v2(text):
                         unique_jsons.append(json_obj)
             except json.JSONDecodeError as e:
                 raise DataParsingError(f"Invalid JSON in code block: {str(e)}", block)
-            
+
     return unique_jsons
+
 
 def extract_yaml_v2(text):
     """
     Extracts YAML structures from code blocks in a text string.
-    
+
     Parameters:
         text (str): The input text containing code blocks with YAML.
-        
+
     Returns:
         list: A list of unique parsed YAML objects.
-        
+
     Raises:
         DataParsingError: If invalid YAML is encountered in code blocks.
     """
     unique_yamls = []
     seen = set()
-    
+
     # Split by code block markers
     parts = text.split("```")
-    
+
     # Process every code block (odd indices after split)
     for i in range(1, len(parts), 2):
         if i >= len(parts):
             break
-            
+
         block = parts[i].strip()
-        
+
         # Skip empty blocks
         if not block:
             continue
-            
+
         # Remove language identifier if present
         if block.startswith("yaml") or block.startswith("yml"):
-            block = block[block.find("\n"):].strip()
-        
+            block = block[block.find("\n") :].strip()
+
         # Parse YAML (supporting multiple documents with ---)
         try:
             # First try to parse the YAML as-is
@@ -243,103 +248,113 @@ def extract_yaml_v2(text):
             try:
                 # Apply fixes to YAML before parsing
                 fixed_block = fix_faulty_yaml(block)
-                
+
                 # Use safe_load_all to get all YAML documents in the block
                 yaml_docs = list(yaml.safe_load_all(fixed_block))
-            except yaml.YAMLError as e2:
+            except yaml.YAMLError:
                 # If it still fails, raise the original error
                 raise DataParsingError(f"Invalid YAML in code block: {str(e)}", block)
-        
+
         # If we only have one document and it's a dict, check if we should split it into multiple documents
         if len(yaml_docs) == 1 and isinstance(yaml_docs[0], dict) and yaml_docs[0]:
             # Check if the document has a nested structure where first level keys represent separate documents
             root_doc = yaml_docs[0]
-            
+
             # If the first level keys all have dict values, treat them as separate documents
             if all(isinstance(root_doc[key], dict) for key in root_doc):
                 # Replace yaml_docs with separate documents
                 yaml_docs = [root_doc[key] for key in root_doc]
-        
+
         # Process each YAML document
         for yaml_obj in yaml_docs:
             # Skip if None (empty YAML)
             if yaml_obj is None:
                 continue
-                
+
             # Convert to JSON string for deduplication check
             json_str = json.dumps(yaml_obj, sort_keys=True, cls=JSONEncoder)
-            
+
             # Only add if we haven't seen this object before
             if json_str not in seen:
                 seen.add(json_str)
                 unique_yamls.append(yaml_obj)
-            
+
     return unique_yamls
 
 
 def fix_yaml_colon_in_strings(yaml_text):
     """
     Fixes YAML issues with unquoted strings containing colons.
-    
+
     Parameters:
         yaml_text (str): The input YAML text to fix
-        
+
     Returns:
         str: Fixed YAML text
     """
     # Split the YAML text into lines
-    lines = yaml_text.split('\n')
+    lines = yaml_text.split("\n")
     result_lines = []
-    
+
     for line in lines:
         # Look for lines with key-value pairs where value has a colon
-        if ':' in line and line.count(':') > 1:
+        if ":" in line and line.count(":") > 1:
             # Check if this is a list item with a colon
-            list_item_match = re.match(r'^(\s*)-\s+(.+)$', line)
+            list_item_match = re.match(r"^(\s*)-\s+(.+)$", line)
             if list_item_match:
                 indent, content = list_item_match.groups()
-                if ':' in content and not (content.startswith('"') or content.startswith("'") or 
-                                         content.startswith('>') or content.startswith('|')):
+                if ":" in content and not (
+                    content.startswith('"')
+                    or content.startswith("'")
+                    or content.startswith(">")
+                    or content.startswith("|")
+                ):
                     # Convert to block scalar notation for list item
                     result_lines.append(f"{indent}- |-")
                     # Add the content indented on the next line
                     result_lines.append(f"{indent}  {content}")
                     continue
-            
+
             # Check if this looks like a key: value line with an unquoted value containing a colon
-            key_match = re.match(r'^(\s*)([^:]+):\s+(.+)$', line)
+            key_match = re.match(r"^(\s*)([^:]+):\s+(.+)$", line)
             if key_match:
                 indent, key, value = key_match.groups()
                 # If value has a colon and isn't already properly quoted/formatted
-                if ':' in value and not (value.startswith('"') or value.startswith("'") or 
-                                         value.startswith('>') or value.startswith('|')):
+                if ":" in value and not (
+                    value.startswith('"')
+                    or value.startswith("'")
+                    or value.startswith(">")
+                    or value.startswith("|")
+                ):
                     # Convert to block scalar notation
                     result_lines.append(f"{indent}{key}: |-")
                     # Add the value indented on the next line
                     result_lines.append(f"{indent}  {value}")
                     continue
-        
+
         # If no processing needed, keep the original line
         result_lines.append(line)
-    
-    return '\n'.join(result_lines)
+
+    return "\n".join(result_lines)
+
 
 def fix_faulty_yaml(yaml_text):
     """
     Fixes common YAML syntax issues by applying a series of fixers.
-    
+
     Parameters:
         yaml_text (str): The input YAML text to fix
-        
+
     Returns:
         str: Fixed YAML text
     """
     # Apply specific fixers in sequence
     fixed_text = fix_yaml_colon_in_strings(yaml_text)
-    
+
     # Add more fixers here as needed
-    
+
     return fixed_text
+
 
 def extract_data(text, schema_format: str = "json"):
     """

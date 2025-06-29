@@ -17,7 +17,6 @@ __all__ = ["create"]
 
 def create(scene: "Scene") -> "ScopedAPI":
     class API(ScopedAPI):
-
         def activate_character(self, character_name: str):
             """
             Activates a character.

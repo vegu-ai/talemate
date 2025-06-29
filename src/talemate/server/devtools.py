@@ -1,7 +1,5 @@
 import pydantic
 import structlog
-from talemate.game.state import GameState
-from talemate.world_state import WorldState
 from talemate.scene.state_editor import SceneStateEditor
 from talemate.scene.schema import SceneState
 from talemate.server.websocket_plugin import Plugin
@@ -16,9 +14,10 @@ class TestPromptPayload(pydantic.BaseModel):
     client_name: str
     kind: str
 
+
 class SetSceneStatePayload(pydantic.BaseModel):
     state: SceneState
-    
+
 
 def ensure_number(v):
     """
@@ -70,39 +69,31 @@ class DevToolsPlugin(Plugin):
                 },
             }
         )
-        
+
     async def handle_get_scene_state(self, data):
         scene = self.scene
         editor = SceneStateEditor(scene)
         state = editor.dump()
-        
+
         self.websocket_handler.queue_put(
-            {
-                "type": "devtools",
-                "action": "scene_state",
-                "data": state
-            }
+            {"type": "devtools", "action": "scene_state", "data": state}
         )
-        
+
     async def handle_update_scene_state(self, data):
         scene = self.scene
         editor = SceneStateEditor(scene)
-        
+
         try:
             payload = SetSceneStatePayload(**data)
             editor.load(payload.model_dump().get("state"))
         except Exception as exc:
             await self.signal_operation_failed(str(exc))
             return
-        
+
         emit("status", message="Scene state updated", status="success")
-        
+
         self.websocket_handler.queue_put(
-            {
-                "type": "devtools",
-                "action": "scene_state_updated",
-                "data": editor.dump()
-            }
+            {"type": "devtools", "action": "scene_state_updated", "data": editor.dump()}
         )
-        
+
         await self.signal_operation_done()

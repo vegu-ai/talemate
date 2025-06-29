@@ -1,8 +1,6 @@
 import fnmatch
 import os
 
-from talemate.config import load_config
-
 
 def list_scenes_directory(path: str = ".") -> list:
     """
@@ -10,8 +8,6 @@ def list_scenes_directory(path: str = ".") -> list:
     :param directory: Directory to list scene files from.
     :return: List of scene files in the given directory.
     """
-    config = load_config()
-
     current_dir = os.getcwd()
 
     scenes = _list_files_and_directories(os.path.join(current_dir, "scenes"), path)
@@ -36,9 +32,9 @@ def _list_files_and_directories(root: str, path: str) -> list:
         # Check each file if it matches any of the patterns
         for filename in filenames:
             # Skip JSON files inside 'nodes' directories
-            if filename.endswith('.json') and 'nodes' in dirpath.split(os.sep):
+            if filename.endswith(".json") and "nodes" in dirpath.split(os.sep):
                 continue
-                
+
             # Get the relative file path
             rel_path = os.path.relpath(dirpath, root)
             for pattern in patterns:

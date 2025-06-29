@@ -42,6 +42,7 @@ STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 # disable smart quotes until text rendering is refactored
 REPLACE_SMART_QUOTES = True
 
+
 class ClientDisabledError(OSError):
     def __init__(self, client: "ClientBase"):
         self.client = client
@@ -76,6 +77,7 @@ class CommonDefaults(pydantic.BaseModel):
     data_format: Literal["yaml", "json"] | None = None
     preset_group: str | None = None
 
+
 class Defaults(CommonDefaults, pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
     max_token_length: int = 8192
@@ -88,6 +90,7 @@ class FieldGroup(pydantic.BaseModel):
     description: str
     icon: str = "mdi-cog"
 
+
 class ExtraField(pydantic.BaseModel):
     name: str
     type: str
@@ -96,6 +99,7 @@ class ExtraField(pydantic.BaseModel):
     description: str
     group: FieldGroup | None = None
     note: ux_schema.Note | None = None
+
 
 class ParameterReroute(pydantic.BaseModel):
     talemate_parameter: str
@@ -117,23 +121,23 @@ class RequestInformation(pydantic.BaseModel):
     start_time: float = pydantic.Field(default_factory=time.time)
     end_time: float | None = None
     tokens: int = 0
-    
+
     @pydantic.computed_field(description="Duration")
     @property
     def duration(self) -> float:
         end_time = self.end_time or time.time()
         return end_time - self.start_time
-    
+
     @pydantic.computed_field(description="Tokens per second")
     @property
     def rate(self) -> float:
         try:
             end_time = self.end_time or time.time()
             return self.tokens / (end_time - self.start_time)
-        except:
+        except Exception:
             pass
         return 0
-    
+
     @pydantic.computed_field(description="Status")
     @property
     def status(self) -> str:
@@ -145,7 +149,7 @@ class RequestInformation(pydantic.BaseModel):
             return "in progress"
         else:
             return "pending"
-        
+
     @pydantic.computed_field(description="Age")
     @property
     def age(self) -> float:
@@ -159,9 +163,11 @@ class ClientEmbeddingsStatus:
     client: "ClientBase | None" = None
     embedding_name: str | None = None
 
+
 async_signals.register(
     "client.embeddings_available",
 )
+
 
 class ClientBase:
     api_url: str
@@ -183,10 +189,10 @@ class ClientBase:
     rate_limit: int | None = None
     client_type = "base"
     request_information: RequestInformation | None = None
-    
-    status_request_timeout:int = 2
-    
-    system_prompts:SystemPrompts = SystemPrompts()
+
+    status_request_timeout: int = 2
+
+    system_prompts: SystemPrompts = SystemPrompts()
     preset_group: str | None = ""
 
     rate_limit_counter: CounterRateLimiter = None
@@ -216,7 +222,7 @@ class ClientBase:
             self.max_token_length = (
                 int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 8192
             )
-            
+
         self.set_client(max_token_length=self.max_token_length)
 
     def __str__(self):
@@ -252,23 +258,23 @@ class ClientBase:
             "temperature",
             "max_tokens",
         ]
-        
+
     @property
     def supports_embeddings(self) -> bool:
         return False
-    
+
     @property
     def embeddings_function(self):
         return None
-    
+
     @property
     def embeddings_status(self) -> bool:
         return getattr(self, "_embeddings_status", False)
-    
+
     @property
     def embeddings_model_name(self) -> str | None:
         return getattr(self, "_embeddings_model_name", None)
-    
+
     @property
     def embeddings_url(self) -> str:
         return None
@@ -277,16 +283,16 @@ class ClientBase:
     def embeddings_identifier(self) -> str:
         return f"client-api/{self.name}/{self.embeddings_model_name}"
 
-    async def destroy(self, config:dict):
+    async def destroy(self, config: dict):
         """
         This is called before the client is removed from talemate.instance.clients
-        
+
         Use this to perform any cleanup that is necessary.
-        
+
         If a subclass overrides this method, it should call super().destroy(config) in the
         end of the method.
         """
-        
+
         if self.supports_embeddings:
             self.remove_embeddings(config)
 
@@ -296,25 +302,28 @@ class ClientBase:
 
     def set_client(self, **kwargs):
         self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
-        
+
     def set_embeddings(self):
-        
-        log.debug("setting embeddings", client=self.name, supports_embeddings=self.supports_embeddings, embeddings_status=self.embeddings_status)
-        
+        log.debug(
+            "setting embeddings",
+            client=self.name,
+            supports_embeddings=self.supports_embeddings,
+            embeddings_status=self.embeddings_status,
+        )
+
         if not self.supports_embeddings or not self.embeddings_status:
             return
-        
+
         config = load_config(as_model=True)
-        
+
         key = self.embeddings_identifier
-        
+
         if key in config.presets.embeddings:
             log.debug("embeddings already set", client=self.name, key=key)
             return config.presets.embeddings[key]
-        
-        
+
         log.debug("setting embeddings", client=self.name, key=key)
-        
+
         config.presets.embeddings[key] = EmbeddingFunctionPreset(
             embeddings="client-api",
             client=self.name,
@@ -324,10 +333,10 @@ class ClientBase:
             local=False,
             custom=True,
         )
-        
+
         save_config(config)
-        
-    def remove_embeddings(self, config:dict | None = None):
+
+    def remove_embeddings(self, config: dict | None = None):
         # remove all embeddings for this client
         for key, value in list(config["presets"]["embeddings"].items()):
             if value["client"] == self.name and value["embeddings"] == "client-api":
@@ -338,7 +347,9 @@ class ClientBase:
         if isinstance(system_prompts, dict):
             self.system_prompts = SystemPrompts(**system_prompts)
         elif not isinstance(system_prompts, SystemPrompts):
-            raise ValueError("system_prompts must be a `dict` or `SystemPrompts` instance")
+            raise ValueError(
+                "system_prompts must be a `dict` or `SystemPrompts` instance"
+            )
         else:
             self.system_prompts = system_prompts
 
@@ -376,10 +387,10 @@ class ClientBase:
         """
         if "<|BOT|>" in prompt:
             _, right = prompt.split("<|BOT|>", 1)
-            
+
             if self.double_coercion:
                 right = f"{self.double_coercion}\n\n{right}"
-            
+
             return prompt, right
         return prompt, None
 
@@ -407,7 +418,7 @@ class ClientBase:
 
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
-            
+
         self._reconfigure_common_parameters(**kwargs)
 
     def _reconfigure_common_parameters(self, **kwargs):
@@ -415,12 +426,14 @@ class ClientBase:
             self.rate_limit = kwargs["rate_limit"]
             if self.rate_limit:
                 if not self.rate_limit_counter:
-                    self.rate_limit_counter = CounterRateLimiter(rate_per_minute=self.rate_limit)
+                    self.rate_limit_counter = CounterRateLimiter(
+                        rate_per_minute=self.rate_limit
+                    )
                 else:
                     self.rate_limit_counter.update_rate_limit(self.rate_limit)
             else:
                 self.rate_limit_counter = None
-            
+
         if "data_format" in kwargs:
             self.data_format = kwargs["data_format"]
 
@@ -478,19 +491,21 @@ class ClientBase:
 
         - kind: the kind of generation
         """
-        
-        app_config_system_prompts = client_context_attribute("app_config_system_prompts")
-        
+
+        app_config_system_prompts = client_context_attribute(
+            "app_config_system_prompts"
+        )
+
         if app_config_system_prompts:
             self.system_prompts.parent = SystemPrompts(**app_config_system_prompts)
-        
+
         return self.system_prompts.get(kind, self.decensor_enabled)
 
     def emit_status(self, processing: bool = None):
         """
         Sets and emits the client status.
         """
-        
+
         if processing is not None:
             self.processing = processing
 
@@ -516,7 +531,6 @@ class ClientBase:
         )
 
         if not has_prompt_template and self.auto_determine_prompt_template:
-
             # only attempt to determine the prompt template once per model and
             # only if the model does not already have a prompt template
 
@@ -581,15 +595,17 @@ class ClientBase:
             "supports_embeddings": self.supports_embeddings,
             "embeddings_status": self.embeddings_status,
             "embeddings_model_name": self.embeddings_model_name,
-            "request_information": self.request_information.model_dump() if self.request_information else None,
+            "request_information": self.request_information.model_dump()
+            if self.request_information
+            else None,
         }
-        
+
         extra_fields = getattr(self.Meta(), "extra_fields", {})
         for field_name in extra_fields.keys():
             common_data[field_name] = getattr(self, field_name, None)
-        
+
         return common_data
-        
+
     def populate_extra_fields(self, data: dict):
         """
         Updates data with the extra fields from the client's Meta
@@ -665,7 +681,7 @@ class ClientBase:
             agent_context.agent.inject_prompt_paramters(
                 parameters, kind, agent_context.action
             )
-            
+
         if client_context_attribute(
             "nuke_repetition"
         ) > 0.0 and self.jiggle_enabled_for(kind):
@@ -707,7 +723,6 @@ class ClientBase:
                 del parameters[key]
 
     def finalize(self, parameters: dict, prompt: str):
-
         prompt = util.replace_special_tokens(prompt)
 
         for finalizer in self.finalizers:
@@ -740,22 +755,20 @@ class ClientBase:
                 "status", message="Error during generation (check logs)", status="error"
             )
             return ""
-        
-        
+
     def _generate_task(self, prompt: str, parameters: dict, kind: str):
         """
         Creates an asyncio task to generate text from the given prompt and parameters.
         """
-        
+
         return asyncio.create_task(self.generate(prompt, parameters, kind))
-    
 
     def _poll_interrupt(self):
         """
         Creatates a task that continiously checks active_scene.cancel_requested and
         will complete the task if it is requested.
         """
-        
+
         async def poll():
             while True:
                 scene = active_scene.get()
@@ -763,58 +776,58 @@ class ClientBase:
                     break
                 await asyncio.sleep(0.3)
             return GenerationCancelled("Generation cancelled")
-        
+
         return asyncio.create_task(poll())
-        
-    async def _cancelable_generate(self, prompt: str, parameters: dict, kind: str) -> str | GenerationCancelled:
-        
+
+    async def _cancelable_generate(
+        self, prompt: str, parameters: dict, kind: str
+    ) -> str | GenerationCancelled:
         """
         Queues the generation task and the poll task to be run concurrently.
-        
+
         If the poll task completes before the generation task, the generation task
         will be cancelled.
-        
+
         If the generation task completes before the poll task, the poll task will
         be cancelled.
         """
-        
+
         task_poll = self._poll_interrupt()
         task_generate = self._generate_task(prompt, parameters, kind)
-        
+
         done, pending = await asyncio.wait(
-            [task_poll, task_generate],
-            return_when=asyncio.FIRST_COMPLETED
+            [task_poll, task_generate], return_when=asyncio.FIRST_COMPLETED
         )
-        
+
         # cancel the remaining task
         for task in pending:
             task.cancel()
-        
+
         # return the result of the completed task
         return done.pop().result()
-        
+
     async def abort_generation(self):
         """
         This function can be overwritten to trigger an abortion at the other
         side of the client.
-        
+
         So a generation is cancelled here, this can be used to cancel a generation
         at the other side of the client.
         """
         pass
-    
+
     def new_request(self):
         """
         Creates a new request information object.
         """
         self.request_information = RequestInformation()
-        
+
     def end_request(self):
         """
         Ends the request information object.
         """
         self.request_information.end_time = time.time()
-        
+
     def update_request_tokens(self, tokens: int, replace: bool = False):
         """
         Updates the request information object with the number of tokens received.
@@ -824,7 +837,7 @@ class ClientBase:
                 self.request_information.tokens = tokens
             else:
                 self.request_information.tokens += tokens
-        
+
     async def send_prompt(
         self,
         prompt: str,
@@ -837,13 +850,13 @@ class ClientBase:
         :param prompt: The text prompt to send.
         :return: The AI's response text.
         """
-        
+
         try:
             return await self._send_prompt(prompt, kind, finalize, retries)
         except GenerationCancelled:
             await self.abort_generation()
             raise
-        
+
     async def _send_prompt(
         self,
         prompt: str,
@@ -856,47 +869,49 @@ class ClientBase:
         :param prompt: The text prompt to send.
         :return: The AI's response text.
         """
-        
+
         try:
             if self.rate_limit_counter:
-                aborted:bool = False
+                aborted: bool = False
                 while not self.rate_limit_counter.increment():
                     log.warn("Rate limit exceeded", client=self.name)
                     emit(
                         "rate_limited",
-                        message="Rate limit exceeded", 
-                        status="error", 
+                        message="Rate limit exceeded",
+                        status="error",
                         websocket_passthrough=True,
                         data={
                             "client": self.name,
                             "rate_limit": self.rate_limit,
                             "reset_time": self.rate_limit_counter.reset_time(),
-                        }
+                        },
                     )
-                    
+
                     scene = active_scene.get()
                     if not scene or not scene.active or scene.cancel_requested:
-                        log.info("Rate limit exceeded, generation cancelled", client=self.name)
+                        log.info(
+                            "Rate limit exceeded, generation cancelled",
+                            client=self.name,
+                        )
                         aborted = True
                         break
-                    
+
                     await asyncio.sleep(1)
-                
+
                 emit(
                     "rate_limit_reset",
                     message="Rate limit reset",
                     status="info",
                     websocket_passthrough=True,
-                    data={"client": self.name}
+                    data={"client": self.name},
                 )
-                
+
                 if aborted:
                     raise GenerationCancelled("Generation cancelled")
         except GenerationCancelled:
             raise
-        except Exception as e:
+        except Exception:
             log.error("Error during rate limit check", e=traceback.format_exc())
-        
 
         if not active_scene.get():
             log.error("SceneInactiveError", scene=active_scene.get())
@@ -940,25 +955,25 @@ class ClientBase:
                 parameters=prompt_param,
             )
             prompt_sent = self.repetition_adjustment(finalized_prompt)
-            
+
             self.new_request()
-            
+
             response = await self._cancelable_generate(prompt_sent, prompt_param, kind)
-            
+
             self.end_request()
-            
+
             if isinstance(response, GenerationCancelled):
                 # generation was cancelled
                 raise response
-            
-            #response = await self.generate(prompt_sent, prompt_param, kind)
-            
+
+            # response = await self.generate(prompt_sent, prompt_param, kind)
+
             response, finalized_prompt = await self.auto_break_repetition(
                 finalized_prompt, prompt_param, response, kind, retries
             )
-            
+
             if REPLACE_SMART_QUOTES:
-                response = response.replace('“', '"').replace('”', '"')
+                response = response.replace("“", '"').replace("”", '"')
 
             time_end = time.time()
 
@@ -992,9 +1007,9 @@ class ClientBase:
             )
 
             return response
-        except GenerationCancelled as e:
+        except GenerationCancelled:
             raise
-        except Exception as e:
+        except Exception:
             self.log.error("send_prompt error", e=traceback.format_exc())
             emit(
                 "status", message="Error during generation (check logs)", status="error"
@@ -1004,7 +1019,7 @@ class ClientBase:
             self.emit_status(processing=False)
             self._returned_prompt_tokens = None
             self._returned_response_tokens = None
-            
+
             if self.rate_limit_counter:
                 self.rate_limit_counter.increment()
 

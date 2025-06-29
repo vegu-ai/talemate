@@ -17,7 +17,6 @@ __all__ = ["create"]
 
 def create(scene: "Scene") -> "ScopedAPI":
     class API(ScopedAPI):
-
         def generate_character_portrait(
             self,
             character_name: str,

@@ -30,7 +30,7 @@ class VisualContextState(pydantic.BaseModel):
     format: Union[str, None] = None
     replace: bool = False
     prompt_only: bool = False
-    
+
     @property
     def title(self) -> str:
         if self.vis_type == VIS_TYPES.ENVIRONMENT:

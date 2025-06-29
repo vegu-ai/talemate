@@ -39,6 +39,7 @@ class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     model: str = "claude-3-5-sonnet-latest"
     double_coercion: str = None
 
+
 class ClientConfig(EndpointOverride, BaseClientConfig):
     pass
 
@@ -118,13 +119,13 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
 
         self.current_status = status
 
-        data={
+        data = {
             "error_action": error_action.model_dump() if error_action else None,
             "double_coercion": self.double_coercion,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
         }
-        data.update(self._common_status_data()) 
+        data.update(self._common_status_data())
         emit(
             "client_status",
             message=self.client_type,
@@ -135,7 +136,10 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
         )
 
     def set_client(self, max_token_length: int = None):
-        if not self.anthropic_api_key and not self.endpoint_override_base_url_configured:
+        if (
+            not self.anthropic_api_key
+            and not self.endpoint_override_base_url_configured
+        ):
             self.client = AsyncAnthropic(api_key="sk-1111")
             log.error("No anthropic API key set")
             if self.api_key_status:
@@ -175,10 +179,10 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
-            
+
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
-            
+
         self._reconfigure_common_parameters(**kwargs)
         self._reconfigure_endpoint_override(**kwargs)
 
@@ -208,17 +212,18 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
         Generates text from the given prompt and parameters.
         """
 
-        if not self.anthropic_api_key and not self.endpoint_override_base_url_configured:
+        if (
+            not self.anthropic_api_key
+            and not self.endpoint_override_base_url_configured
+        ):
             raise Exception("No anthropic API key set")
-        
+
         prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
-        
+
         system_message = self.get_system_message(kind)
-        
-        messages = [
-            {"role": "user", "content": prompt.strip()}
-        ]
-        
+
+        messages = [{"role": "user", "content": prompt.strip()}]
+
         if coercion_prompt:
             messages.append({"role": "assistant", "content": coercion_prompt.strip()})
 
@@ -228,7 +233,7 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
             parameters=parameters,
             system_message=system_message,
         )
-        
+
         completion_tokens = 0
         prompt_tokens = 0
 
@@ -240,22 +245,20 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
                 stream=True,
                 **parameters,
             )
-            
+
             response = ""
-            
+
             async for event in stream:
-                
                 if event.type == "content_block_delta":
                     content = event.delta.text
                     response += content
                     self.update_request_tokens(self.count_tokens(content))
-                    
+
                 elif event.type == "message_start":
                     prompt_tokens = event.message.usage.input_tokens
-                    
+
                 elif event.type == "message_delta":
                     completion_tokens += event.usage.output_tokens
-                
 
             self._returned_prompt_tokens = prompt_tokens
             self._returned_response_tokens = completion_tokens
@@ -267,5 +270,5 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
             self.log.error("generate error", e=e)
             emit("status", message="anthropic API: Permission Denied", status="error")
             return ""
-        except Exception as e:
+        except Exception:
             raise

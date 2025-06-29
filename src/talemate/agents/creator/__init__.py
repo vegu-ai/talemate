@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-import json
-import os
-
 import talemate.client as client
 from talemate.agents.base import Agent, set_processing
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
-from talemate.emit import emit
 from talemate.prompts import Prompt
 
 from .assistant import AssistantMixin
@@ -16,7 +12,8 @@ from .scenario import ScenarioCreatorMixin
 
 from talemate.agents.base import AgentAction
 
-import talemate.agents.creator.nodes
+import talemate.agents.creator.nodes  # noqa: F401
+
 
 @register()
 class CreatorAgent(
@@ -51,7 +48,7 @@ class CreatorAgent(
     @set_processing
     async def generate_title(self, text: str):
         title = await Prompt.request(
-            f"creator.generate-title",
+            "creator.generate-title",
             self.client,
             "create_short",
             vars={

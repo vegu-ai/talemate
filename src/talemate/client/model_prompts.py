@@ -117,7 +117,6 @@ class ModelPrompt:
             prompt = f"{prompt}<|BOT|>"
 
         if "<|BOT|>" in prompt:
-
             response_str = f"{double_coercion}{response_str}"
 
             if "\n<|BOT|>" in prompt:
@@ -264,7 +263,11 @@ class Mistralv7TekkenIdentifier(TemplateIdentifier):
     template_str = "MistralV7Tekken"
 
     def __call__(self, content: str):
-        return "[SYSTEM_PROMPT]" in content and "[INST]" in content and "[/INST]" in content
+        return (
+            "[SYSTEM_PROMPT]" in content
+            and "[INST]" in content
+            and "[/INST]" in content
+        )
 
 
 @register_template_identifier

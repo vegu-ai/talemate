@@ -11,9 +11,7 @@ import signal
 import sys
 
 import websockets
-import re
 
-import talemate.config
 from talemate.server.api import websocket_endpoint
 from talemate.version import VERSION
 
@@ -38,13 +36,15 @@ STARTUP_TEXT = f"""
 v{VERSION}
 """
 
+
 async def install_punkt():
     import nltk
-    
+
     log.info("Downloading NLTK punkt tokenizer")
     await asyncio.get_event_loop().run_in_executor(None, nltk.download, "punkt")
     await asyncio.get_event_loop().run_in_executor(None, nltk.download, "punkt_tab")
     log.info("Download complete")
+
 
 async def log_stream(stream, log_func):
     while True:
@@ -52,7 +52,7 @@ async def log_stream(stream, log_func):
         if not line:
             break
         decoded_line = line.decode().strip()
-        
+
         # Check if the original line started with "INFO:" (Uvicorn startup messages)
         if decoded_line.startswith("INFO:"):
             # Use info level for Uvicorn startup messages
@@ -61,6 +61,7 @@ async def log_stream(stream, log_func):
             # Use the provided log_func for other messages
             log_func("uvicorn", message=decoded_line)
 
+
 async def run_frontend(host: str = "localhost", port: int = 8080):
     if sys.platform == "win32":
         activate_cmd = ".\\.venv\\Scripts\\activate.bat"
@@ -68,23 +69,28 @@ async def run_frontend(host: str = "localhost", port: int = 8080):
     else:
         frontend_cmd = f"/bin/bash -c 'source .venv/bin/activate && uvicorn --host {host} --port {port} frontend_wsgi:application'"
     frontend_cwd = None
-        
+
     process = await asyncio.create_subprocess_shell(
         frontend_cmd,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
         cwd=frontend_cwd,
         shell=True,
-        preexec_fn=os.setsid if sys.platform != "win32" else None
+        preexec_fn=os.setsid if sys.platform != "win32" else None,
     )
-    
-    
-    log.info(f"talemate frontend started", host=host, port=port, server="uvicorn", process=process.pid)
-    
+
+    log.info(
+        "talemate frontend started",
+        host=host,
+        port=port,
+        server="uvicorn",
+        process=process.pid,
+    )
+
     try:
         stdout_task = asyncio.create_task(log_stream(process.stdout, log.info))
         stderr_task = asyncio.create_task(log_stream(process.stderr, log.error))
-        
+
         await asyncio.gather(stdout_task, stderr_task)
         await process.wait()
     finally:
@@ -95,10 +101,12 @@ async def run_frontend(host: str = "localhost", port: int = 8080):
                 os.killpg(os.getpgid(process.pid), signal.SIGTERM)
             await process.wait()
 
+
 async def cancel_all_tasks(loop):
     tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task()]
     [task.cancel() for task in tasks]
     await asyncio.gather(*tasks, return_exceptions=True)
+
 
 def run_server(args):
     """
@@ -115,19 +123,18 @@ def run_server(args):
     from talemate.prompts.overrides import get_template_overrides
     import talemate.client.system_prompts as system_prompts
     from talemate.emit.base import emit
-    
+
     # import node libraries
     import talemate.game.engine.nodes.load_definitions
-
 
     config = talemate.config.cleanup()
 
     if config.game.world_state.templates.state_reinforcement:
         Collection.create_from_legacy_config(config)
-        
+
     # pre-cache system prompts
     system_prompts.cache_all()
-    
+
     for agent_type in get_agent_types():
         template_overrides = get_template_overrides(agent_type)
         for template_override in template_overrides:
@@ -156,30 +163,32 @@ def run_server(args):
             websocket_endpoint,
             args.host,
             args.port,
-            max_size=2 ** 23,
+            max_size=2**23,
         )
 
     # Start the websocket server and keep a reference so we can shut it down
     websocket_server = loop.run_until_complete(_start_websocket_server())
-    
+
     # start task to unstall punkt
     loop.create_task(install_punkt())
-    
+
     if not args.backend_only:
-        frontend_task = loop.create_task(run_frontend(args.frontend_host, args.frontend_port))
+        frontend_task = loop.create_task(
+            run_frontend(args.frontend_host, args.frontend_port)
+        )
     else:
         frontend_task = None
 
     log.info("talemate backend started", host=args.host, port=args.port)
     emit("talemate_started", data=config.model_dump())
-    
+
     try:
         loop.run_forever()
     except KeyboardInterrupt:
         pass
     finally:
         log.info("Shutting down...")
-        
+
         try:
             if frontend_task:
                 frontend_task.cancel()
@@ -195,10 +204,13 @@ def run_server(args):
         except KeyboardInterrupt:
             # If the user hits Ctrl+C again during shutdown, exit quickly without
             # another traceback.
-            log.warning("Forced termination requested during shutdown - exiting immediately")
+            log.warning(
+                "Forced termination requested during shutdown - exiting immediately"
+            )
         finally:
             loop.close()
             log.info("Shutdown complete")
+
 
 def main():
     parser = argparse.ArgumentParser(description="talemate server")
@@ -210,14 +222,20 @@ def main():
     )
     runserver_parser.add_argument("--host", default="localhost", help="Hostname")
     runserver_parser.add_argument("--port", type=int, default=6000, help="Port")
-    runserver_parser.add_argument("--backend-only", action="store_true", help="Run the backend only")
+    runserver_parser.add_argument(
+        "--backend-only", action="store_true", help="Run the backend only"
+    )
 
     # frontend host and port
-    runserver_parser.add_argument("--frontend-host", default="localhost", help="Frontend Hostname")
-    runserver_parser.add_argument("--frontend-port", type=int, default=8080, help="Frontend Port")
+    runserver_parser.add_argument(
+        "--frontend-host", default="localhost", help="Frontend Hostname"
+    )
+    runserver_parser.add_argument(
+        "--frontend-port", type=int, default=8080, help="Frontend Port"
+    )
 
     args = parser.parse_args()
-    
+
     # wipe screen if backend only mode is not enabled
     # reason: backend only is run usually in dev mode and may be worth keeping the console output
     if not args.backend_only:

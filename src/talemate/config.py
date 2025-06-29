@@ -1,4 +1,3 @@
-import copy
 import datetime
 import os
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union, Literal
@@ -6,8 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union,
 import pydantic
 import structlog
 import yaml
-from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing_extensions import Annotated
 
 from talemate.agents.registry import get_agent_class
@@ -43,7 +41,7 @@ class Client(BaseModel):
     rate_limit: Union[int, None] = None
     data_format: Literal["json", "yaml"] | None = None
     enabled: bool = True
-    
+
     system_prompts: SystemPrompts = SystemPrompts()
     preset_group: str | None = None
 
@@ -165,6 +163,7 @@ class DeepSeekConfig(BaseModel):
 class OpenRouterConfig(BaseModel):
     api_key: Union[str, None] = None
 
+
 class RunPodConfig(BaseModel):
     api_key: Union[str, None] = None
 
@@ -202,6 +201,7 @@ class RecentScene(BaseModel):
     date: str
     cover_image: Union[Asset, None] = None
 
+
 class EmbeddingFunctionPreset(BaseModel):
     embeddings: str = "sentence-transformer"
     model: str = "all-MiniLM-L6-v2"
@@ -217,12 +217,11 @@ class EmbeddingFunctionPreset(BaseModel):
     client: str | None = None
 
 
-
 def generate_chromadb_presets() -> dict[str, EmbeddingFunctionPreset]:
     """
     Returns a dict of default embedding presets
     """
-    
+
     return {
         "default": EmbeddingFunctionPreset(),
         "Alibaba-NLP/gte-base-en-v1.5": EmbeddingFunctionPreset(
@@ -274,25 +273,24 @@ class InferenceParameters(BaseModel):
     frequency_penalty: float | None = 0.05
     repetition_penalty: float | None = 1.0
     repetition_penalty_range: int | None = 1024
-    
+
     xtc_threshold: float | None = 0.1
     xtc_probability: float | None = 0.0
-    
+
     dry_multiplier: float | None = 0.0
     dry_base: float | None = 1.75
     dry_allowed_length: int | None = 2
     dry_sequence_breakers: str | None = '"\\n", ":", "\\"", "*"'
-    
+
     smoothing_factor: float | None = 0.0
     smoothing_curve: float | None = 1.0
-    
+
     # this determines whether or not it should be persisted
     # to the config file
     changed: bool = False
 
 
 class InferencePresets(BaseModel):
-
     analytical: InferenceParameters = InferenceParameters(
         temperature=0.7,
         presence_penalty=0,
@@ -325,19 +323,26 @@ class InferencePresets(BaseModel):
         presence_penalty=0.0,
     )
 
+
 class InferencePresetGroup(BaseModel):
     name: str
     presets: InferencePresets
 
+
 class Presets(BaseModel):
     inference_defaults: InferencePresets = InferencePresets()
     inference: InferencePresets = InferencePresets()
-    
-    inference_groups: dict[str, InferencePresetGroup] = pydantic.Field(default_factory=dict)
-    
-    embeddings_defaults: dict[str, EmbeddingFunctionPreset] = pydantic.Field(default_factory=generate_chromadb_presets)
-    embeddings: dict[str, EmbeddingFunctionPreset] = pydantic.Field(default_factory=generate_chromadb_presets)
 
+    inference_groups: dict[str, InferencePresetGroup] = pydantic.Field(
+        default_factory=dict
+    )
+
+    embeddings_defaults: dict[str, EmbeddingFunctionPreset] = pydantic.Field(
+        default_factory=generate_chromadb_presets
+    )
+    embeddings: dict[str, EmbeddingFunctionPreset] = pydantic.Field(
+        default_factory=generate_chromadb_presets
+    )
 
 
 def gnerate_intro_scenes():
@@ -471,28 +476,28 @@ AnnotatedClient = Annotated[
 class HistoryMessageStyle(BaseModel):
     italic: bool = False
     bold: bool = False
-    
+
     # Leave None for default color
-    color: str | None = None 
+    color: str | None = None
 
 
 class HidableHistoryMessageStyle(HistoryMessageStyle):
     # certain messages can be hidden, but all messages are shown by default
     show: bool = True
-    
+
 
 class SceneAppearance(BaseModel):
-
     narrator_messages: HistoryMessageStyle = HistoryMessageStyle(italic=True)
     character_messages: HistoryMessageStyle = HistoryMessageStyle()
     director_messages: HidableHistoryMessageStyle = HidableHistoryMessageStyle()
     time_messages: HistoryMessageStyle = HistoryMessageStyle()
-    context_investigation_messages: HidableHistoryMessageStyle = HidableHistoryMessageStyle()
-    
+    context_investigation_messages: HidableHistoryMessageStyle = (
+        HidableHistoryMessageStyle()
+    )
+
+
 class Appearance(BaseModel):
-    
     scene: SceneAppearance = SceneAppearance()
-    
 
 
 class Config(BaseModel):
@@ -505,7 +510,7 @@ class Config(BaseModel):
     creator: CreatorConfig = CreatorConfig()
 
     openai: OpenAIConfig = OpenAIConfig()
-    
+
     deepseek: DeepSeekConfig = DeepSeekConfig()
 
     mistralai: MistralAIConfig = MistralAIConfig()
@@ -531,11 +536,11 @@ class Config(BaseModel):
     recent_scenes: RecentScenes = RecentScenes()
 
     presets: Presets = Presets()
-    
+
     appearance: Appearance = Appearance()
-    
+
     system_prompts: SystemPrompts = SystemPrompts()
-    
+
     class Config:
         extra = "ignore"
 
@@ -595,18 +600,18 @@ def save_config(config, file_path: str = "./config.yaml"):
     # we dont want to persist the following, so we drop them:
     # - presets.inference_defaults
     # - presets.embeddings_defaults
-    
+
     if "inference_defaults" in config["presets"]:
         config["presets"].pop("inference_defaults")
-        
+
     if "embeddings_defaults" in config["presets"]:
         config["presets"].pop("embeddings_defaults")
-    
+
     # for normal presets we only want to persist if they have changed
     for preset_name, preset in list(config["presets"]["inference"].items()):
         if not preset.get("changed"):
             config["presets"]["inference"].pop(preset_name)
-    
+
     # in inference groups also only keep if changed
     for group_name, group in list(config["presets"]["inference_groups"].items()):
         for preset_name, preset in list(group["presets"].items()):
@@ -616,7 +621,7 @@ def save_config(config, file_path: str = "./config.yaml"):
     # if presets is empty, remove it
     if not config["presets"]["inference"]:
         config["presets"].pop("inference")
-        
+
     # if system_prompts is empty, remove it
     if not config["system_prompts"]:
         config.pop("system_prompts")
@@ -624,12 +629,13 @@ def save_config(config, file_path: str = "./config.yaml"):
     # set any client preset_group to "" if it references an
     # entry that no longer exists in inference_groups
     for client in config["clients"].values():
-        
         if not client.get("preset_group"):
             continue
-        
+
         if client["preset_group"] not in config["presets"].get("inference_groups", {}):
-            log.warning(f"Client {client['name']} references non-existent preset group {client['preset_group']}, setting to default")
+            log.warning(
+                f"Client {client['name']} references non-existent preset group {client['preset_group']}, setting to default"
+            )
             client["preset_group"] = ""
 
     with open(file_path, "w") as file:
@@ -639,7 +645,6 @@ def save_config(config, file_path: str = "./config.yaml"):
 
 
 def cleanup() -> Config:
-
     log.info("cleaning up config")
 
     config = load_config(as_model=True)

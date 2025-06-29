@@ -7,7 +7,13 @@ from google import genai
 import google.genai.types as genai_types
 from google.genai.errors import APIError
 
-from talemate.client.base import ClientBase, ErrorAction, ExtraField, ParameterReroute, CommonDefaults
+from talemate.client.base import (
+    ClientBase,
+    ErrorAction,
+    ExtraField,
+    ParameterReroute,
+    CommonDefaults,
+)
 from talemate.client.registry import register
 from talemate.client.remote import (
     RemoteServiceMixin,
@@ -41,11 +47,13 @@ SUPPORTED_MODELS = [
     "gemini-2.5-pro-preview-06-05",
 ]
 
+
 class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "gemini-2.0-flash"
     disable_safety_settings: bool = False
     double_coercion: str = None
+
 
 class ClientConfig(EndpointOverride, BaseClientConfig):
     disable_safety_settings: bool = False
@@ -80,7 +88,6 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
             ),
         }
         extra_fields.update(endpoint_override_extra_fields())
-        
 
     def __init__(self, model="gemini-2.0-flash", **kwargs):
         self.model_name = model
@@ -114,24 +121,28 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
     @property
     def google_location(self):
         return self.config.get("google").get("gcloud_location")
-    
+
     @property
     def google_api_key(self):
         return self.config.get("google").get("api_key")
 
     @property
     def vertexai_ready(self) -> bool:
-        return all([
-            self.google_credentials_path,
-            self.google_location,
-        ])
+        return all(
+            [
+                self.google_credentials_path,
+                self.google_location,
+            ]
+        )
 
     @property
     def developer_api_ready(self) -> bool:
-        return all([
-            self.google_api_key,
-        ])
-    
+        return all(
+            [
+                self.google_api_key,
+            ]
+        )
+
     @property
     def using(self) -> str:
         if self.developer_api_ready:
@@ -143,7 +154,11 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
     @property
     def ready(self):
         # all google settings must be set
-        return self.vertexai_ready or self.developer_api_ready or self.endpoint_override_base_url_configured
+        return (
+            self.vertexai_ready
+            or self.developer_api_ready
+            or self.endpoint_override_base_url_configured
+        )
 
     @property
     def safety_settings(self):
@@ -179,10 +194,8 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
     def http_options(self) -> genai_types.HttpOptions | None:
         if not self.endpoint_override_base_url_configured:
             return None
-        
-        return genai_types.HttpOptions(
-            base_url=self.base_url
-        )
+
+        return genai_types.HttpOptions(base_url=self.base_url)
 
     @property
     def supported_parameters(self):
@@ -230,7 +243,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
         }
-        data.update(self._common_status_data()) 
+        data.update(self._common_status_data())
         self.populate_extra_fields(data)
 
         if self.using == "VertexAI":
@@ -252,7 +265,9 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
             try:
                 self.client.http_options.base_url = base_url
             except Exception as e:
-                log.error("Error setting client base URL", error=e, client=self.client_type)
+                log.error(
+                    "Error setting client base URL", error=e, client=self.client_type
+                )
 
     def set_client(self, max_token_length: int = None, **kwargs):
         if not self.ready:
@@ -283,7 +298,9 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
                 location=self.google_location,
             )
         else:
-            self.client = genai.Client(api_key=self.api_key or None, http_options=self.http_options)
+            self.client = genai.Client(
+                api_key=self.api_key or None, http_options=self.http_options
+            )
 
         log.info(
             "google set client",
@@ -292,7 +309,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
             model=model,
         )
 
-    def response_tokens(self, response:str):
+    def response_tokens(self, response: str):
         """Return token count for a response which may be a string or SDK object."""
         return count_tokens(response)
 
@@ -309,10 +326,10 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
-            
+
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
-            
+
         self._reconfigure_common_parameters(**kwargs)
 
     def clean_prompt_parameters(self, parameters: dict):
@@ -329,7 +346,6 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         """
         return prompt
 
-
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
@@ -342,7 +358,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
         human_message = prompt.strip()
         system_message = self.get_system_message(kind)
-        
+
         contents = [
             genai_types.Content(
                 role="user",
@@ -350,10 +366,10 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
                     genai_types.Part.from_text(
                         text=human_message,
                     )
-                ]
+                ],
             )
         ]
-        
+
         if coercion_prompt:
             contents.append(
                 genai_types.Content(
@@ -362,7 +378,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
                         genai_types.Part.from_text(
                             text=coercion_prompt,
                         )
-                    ]
+                    ],
                 )
             )
 
@@ -378,24 +394,23 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
         try:
             # Use streaming so we can update_Request_tokens incrementally
-            #stream = await chat.send_message_async(
+            # stream = await chat.send_message_async(
             #    human_message,
             #    safety_settings=self.safety_settings,
             #    generation_config=parameters,
             #    stream=True
-            #)
+            # )
 
-            
             stream = await self.client.aio.models.generate_content_stream(
                 model=self.model_name,
                 contents=contents,
                 config=genai_types.GenerateContentConfig(
                     safety_settings=self.safety_settings,
                     http_options=self.http_options,
-                    **parameters
+                    **parameters,
                 ),
             )
-            
+
             response = ""
 
             async for chunk in stream:
@@ -425,5 +440,5 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
             self.log.error("generate error", e=e)
             emit("status", message="google API: API Error", status="error")
             return ""
-        except Exception as e:
+        except Exception:
             raise

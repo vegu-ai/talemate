@@ -1,4 +1,3 @@
-from typing import TYPE_CHECKING
 import structlog
 from talemate.agents.base import (
     set_processing,
@@ -9,24 +8,27 @@ from talemate.events import GameLoopActorIterEvent, SceneStateEvent
 
 log = structlog.get_logger("talemate.agents.conversation.legacy_scene_instructions")
 
+
 class LegacySceneInstructionsMixin(
     GameInstructionsMixin,
 ):
     """
     Legacy support for scoped api instructions in scenes.
-    
+
     This is being replaced by node based in structions, but kept for backwards compatibility.
-    
+
     THIS WILL BE DEPRECATED IN THE FUTURE.
     """
-    
+
     # signal connect
-    
+
     def connect(self, scene):
         super().connect(scene)
-        talemate.emit.async_signals.get("game_loop_actor_iter").connect(self.LSI_on_player_dialog)
+        talemate.emit.async_signals.get("game_loop_actor_iter").connect(
+            self.LSI_on_player_dialog
+        )
         talemate.emit.async_signals.get("scene_init").connect(self.LSI_on_scene_init)
-        
+
     async def LSI_on_scene_init(self, event: SceneStateEvent):
         """
         LEGACY: If game state instructions specify to be run at the start of the game loop
@@ -57,8 +59,10 @@ class LegacySceneInstructionsMixin(
 
         if not event.actor.character.is_player:
             return
-        
-        log.warning(f"LSI_on_player_dialog is being DEPRECATED. Please use the new node based instructions. Support for this will be removed in the future.")
+
+        log.warning(
+            "LSI_on_player_dialog is being DEPRECATED. Please use the new node based instructions. Support for this will be removed in the future."
+        )
 
         if event.game_loop.had_passive_narration:
             log.debug(
@@ -77,17 +81,17 @@ class LegacySceneInstructionsMixin(
             not self.scene.npc_character_names
             or self.scene.game_state.ops.always_direct
         )
-        
-        log.warning(f"LSI_direct is being DEPRECATED. Please use the new node based instructions. Support for this will be removed in the future.", always_direct=always_direct)
+
+        log.warning(
+            "LSI_direct is being DEPRECATED. Please use the new node based instructions. Support for this will be removed in the future.",
+            always_direct=always_direct,
+        )
 
         next_direct = self.next_direct_scene
 
         TURNS = 5
 
-        if (
-            next_direct % TURNS != 0
-            or next_direct == 0
-        ):
+        if next_direct % TURNS != 0 or next_direct == 0:
             if not always_direct:
                 log.info("direct", skip=True, next_direct=next_direct)
                 self.next_direct_scene += 1
@@ -112,8 +116,10 @@ class LegacySceneInstructionsMixin(
     async def LSI_direct_scene(self):
         """
         LEGACY: Direct the scene based scoped api scene instructions.
-        This is being replaced by node based instructions, but kept for 
+        This is being replaced by node based instructions, but kept for
         backwards compatibility.
         """
-        log.warning(f"Direct python scene instructions are being DEPRECATED. Please use the new node based instructions. Support for this will be removed in the future.")
+        log.warning(
+            "Direct python scene instructions are being DEPRECATED. Please use the new node based instructions. Support for this will be removed in the future."
+        )
         await self.run_scene_instructions(self.scene)

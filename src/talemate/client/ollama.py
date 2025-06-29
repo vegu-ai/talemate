@@ -1,11 +1,16 @@
-import asyncio
 import structlog
 import httpx
 import ollama
 import time
-from typing import Union
 
-from talemate.client.base import STOPPING_STRINGS, ClientBase, CommonDefaults, ErrorAction, ParameterReroute, ExtraField
+from talemate.client.base import (
+    STOPPING_STRINGS,
+    ClientBase,
+    CommonDefaults,
+    ErrorAction,
+    ParameterReroute,
+    ExtraField,
+)
 from talemate.client.registry import register
 from talemate.config import Client as BaseClientConfig
 
@@ -14,27 +19,30 @@ log = structlog.get_logger("talemate.client.ollama")
 
 FETCH_MODELS_INTERVAL = 15
 
+
 class OllamaClientDefaults(CommonDefaults):
     api_url: str = "http://localhost:11434"  # Default Ollama URL
     model: str = ""  # Allow empty default, will fetch from Ollama
     api_handles_prompt_template: bool = False
     allow_thinking: bool = False
 
+
 class ClientConfig(BaseClientConfig):
     api_handles_prompt_template: bool = False
     allow_thinking: bool = False
+
 
 @register()
 class OllamaClient(ClientBase):
     """
     Ollama client for generating text using locally hosted models.
     """
-    
+
     auto_determine_prompt_template: bool = True
     client_type = "ollama"
     conversation_retries = 0
     config_cls = ClientConfig
-    
+
     class Meta(ClientBase.Meta):
         name_prefix: str = "Ollama"
         title: str = "Ollama"
@@ -56,27 +64,26 @@ class OllamaClient(ClientBase):
                 label="Allow thinking",
                 required=False,
                 description="Allow the model to think before responding. Talemate does not have a good way to deal with this yet, so it's recommended to leave this off.",
-            )
+            ),
         }
-    
+
     @property
     def supported_parameters(self):
         # Parameters supported by Ollama's generate endpoint
         # Based on the API documentation
         return [
             "temperature",
-            "top_p", 
+            "top_p",
             "top_k",
             "min_p",
             "frequency_penalty",
             "presence_penalty",
             ParameterReroute(
                 talemate_parameter="repetition_penalty",
-                client_parameter="repeat_penalty"
+                client_parameter="repeat_penalty",
             ),
             ParameterReroute(
-                talemate_parameter="max_tokens",
-                client_parameter="num_predict"
+                talemate_parameter="max_tokens", client_parameter="num_predict"
             ),
             "stopping_strings",
             # internal parameters that will be removed before sending
@@ -98,7 +105,13 @@ class OllamaClient(ClientBase):
         """
         return self.allow_thinking
 
-    def __init__(self, model=None, api_handles_prompt_template=False, allow_thinking=False, **kwargs):
+    def __init__(
+        self,
+        model=None,
+        api_handles_prompt_template=False,
+        allow_thinking=False,
+        **kwargs,
+    ):
         self.model_name = model
         self.api_handles_prompt_template = api_handles_prompt_template
         self.allow_thinking = allow_thinking
@@ -114,16 +127,14 @@ class OllamaClient(ClientBase):
         # Update model if provided
         if kwargs.get("model"):
             self.model_name = kwargs["model"]
-            
+
         # Create async client with the configured API URL
         # Ollama's AsyncClient expects just the base URL without any path
         self.client = ollama.AsyncClient(host=self.api_url)
         self.api_handles_prompt_template = kwargs.get(
             "api_handles_prompt_template", self.api_handles_prompt_template
-        )   
-        self.allow_thinking = kwargs.get(
-            "allow_thinking", self.allow_thinking
         )
+        self.allow_thinking = kwargs.get("allow_thinking", self.allow_thinking)
 
     async def status(self):
         """
@@ -131,7 +142,7 @@ class OllamaClient(ClientBase):
         Raises an error if no model name is returned.
         :return: None
         """
-        
+
         if self.processing:
             self.emit_status()
             return
@@ -140,7 +151,7 @@ class OllamaClient(ClientBase):
             self.connected = False
             self.emit_status()
             return
-        
+
         try:
             # instead of using the client (which apparently cannot set a timeout per endpoint)
             # we use httpx to check {api_url}/api/version to see if the server is running
@@ -148,7 +159,7 @@ class OllamaClient(ClientBase):
             async with httpx.AsyncClient() as client:
                 response = await client.get(f"{self.api_url}/api/version", timeout=2)
                 response.raise_for_status()
-                
+
             # if the server is running, fetch the available models
             await self.fetch_available_models()
         except Exception as e:
@@ -156,7 +167,7 @@ class OllamaClient(ClientBase):
             self.connected = False
             self.emit_status()
             return
-        
+
         await super().status()
 
     async def fetch_available_models(self):
@@ -165,7 +176,7 @@ class OllamaClient(ClientBase):
         """
         if time.time() - self._models_last_fetched < FETCH_MODELS_INTERVAL:
             return self._available_models
-        
+
         response = await self.client.list()
         models = response.get("models", [])
         model_names = [model.model for model in models]
@@ -182,7 +193,7 @@ class OllamaClient(ClientBase):
 
     async def get_model_name(self):
         return self.model_name
-    
+
     def prompt_template(self, system_message: str, prompt: str):
         if not self.api_handles_prompt_template:
             return super().prompt_template(system_message, prompt)
@@ -201,10 +212,12 @@ class OllamaClient(ClientBase):
         Tune parameters for Ollama's generate endpoint.
         """
         super().tune_prompt_parameters(parameters, kind)
-        
+
         # Build stopping strings list
-        parameters["stop"] = STOPPING_STRINGS + parameters.get("extra_stopping_strings", [])
-        
+        parameters["stop"] = STOPPING_STRINGS + parameters.get(
+            "extra_stopping_strings", []
+        )
+
         # Ollama uses num_predict instead of max_tokens
         if "max_tokens" in parameters:
             parameters["num_predict"] = parameters["max_tokens"]
@@ -215,7 +228,7 @@ class OllamaClient(ClientBase):
         """
         # First let parent class handle parameter reroutes and cleanup
         super().clean_prompt_parameters(parameters)
-        
+
         # Remove our internal parameters
         if "extra_stopping_strings" in parameters:
             del parameters["extra_stopping_strings"]
@@ -223,7 +236,7 @@ class OllamaClient(ClientBase):
             del parameters["stopping_strings"]
         if "stream" in parameters:
             del parameters["stream"]
-        
+
         # Remove max_tokens as we've already converted it to num_predict
         if "max_tokens" in parameters:
             del parameters["max_tokens"]
@@ -237,12 +250,12 @@ class OllamaClient(ClientBase):
             await self.get_model_name()
             if not self.model_name:
                 raise Exception("No model specified or available in Ollama")
-        
+
         # Prepare options for Ollama
         options = parameters
-        
+
         options["num_ctx"] = self.max_token_length
-        
+
         try:
             # Use generate endpoint for completion
             stream = await self.client.generate(
@@ -253,22 +266,21 @@ class OllamaClient(ClientBase):
                 think=self.can_think,
                 stream=True,
             )
-            
+
             response = ""
-            
+
             async for part in stream:
                 content = part.response
                 response += content
                 self.update_request_tokens(self.count_tokens(content))
-            
+
             # Extract the response text
             return response
-            
+
         except Exception as e:
             log.error("Ollama generation error", error=str(e), model=self.model_name)
             raise ErrorAction(
-                message=f"Ollama generation failed: {str(e)}",
-                title="Generation Error"
+                message=f"Ollama generation failed: {str(e)}", title="Generation Error"
             )
 
     async def abort_generation(self):
@@ -284,7 +296,7 @@ class OllamaClient(ClientBase):
         Adjusts temperature and repetition_penalty by random values.
         """
         import random
-        
+
         temp = prompt_config["temperature"]
         rep_pen = prompt_config.get("repetition_penalty", 1.0)
 
@@ -302,12 +314,12 @@ class OllamaClient(ClientBase):
         # Handle model update
         if kwargs.get("model"):
             self.model_name = kwargs["model"]
-            
+
         super().reconfigure(**kwargs)
-        
+
         # Re-initialize client if API URL changed or model changed
         if "api_url" in kwargs or "model" in kwargs:
             self.set_client(**kwargs)
-            
+
         if "api_handles_prompt_template" in kwargs:
             self.api_handles_prompt_template = kwargs["api_handles_prompt_template"]

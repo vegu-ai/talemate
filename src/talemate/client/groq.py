@@ -260,5 +260,5 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
             self.log.error("generate error", e=e)
             emit("status", message="OpenAI API: Permission Denied", status="error")
             return ""
-        except Exception as e:
+        except Exception:
             raise

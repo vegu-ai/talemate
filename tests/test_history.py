@@ -2,7 +2,6 @@ import pytest
 import types
 
 from talemate.history import shift_scene_timeline
-from talemate.util import iso8601_add
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -83,9 +82,7 @@ def dummy_scene():
             ["P1002Y"],
         ),
     ],
-    ids=[
-        "hour_plus", "hour_minus", "month_plus", "year_minus", "millennia_plus"
-    ],
+    ids=["hour_plus", "hour_minus", "month_plus", "year_minus", "millennia_plus"],
 )
 def test_shift_scene_timeline_basic(
     dummy_scene,
@@ -121,6 +118,7 @@ def test_shift_scene_timeline_noop(dummy_scene):
     )
 
     import copy
+
     pre_state = (
         scene.ts,
         copy.deepcopy(scene.archived_history),
@@ -131,4 +129,4 @@ def test_shift_scene_timeline_noop(dummy_scene):
 
     assert scene.ts == pre_state[0]
     assert scene.archived_history == pre_state[1]
-    assert scene.layered_history == pre_state[2] 
+    assert scene.layered_history == pre_state[2]

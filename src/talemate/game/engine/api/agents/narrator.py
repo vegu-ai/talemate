@@ -21,7 +21,6 @@ __all__ = ["create"]
 
 def create(scene: "Scene") -> "ScopedAPI":
     class API(ScopedAPI):
-
         def action_to_narration(
             self,
             action_name: str,

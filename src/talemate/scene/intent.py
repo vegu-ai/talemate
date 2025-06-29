@@ -5,7 +5,7 @@ Intention of the story or a sub-scene. What are the expectations of the user and
 
 What is the overarching intention of the story?
 
-This is probably an abstract description of what type of experiences will be relayed by the story through individual scenes. 
+This is probably an abstract description of what type of experiences will be relayed by the story through individual scenes.
 
 ## Individual Scene Intent
 
@@ -25,25 +25,28 @@ from .schema import (
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
-    
+
 __all__ = [
     "set_scene_phase",
 ]
 
-async def set_scene_phase(scene:"Scene", scene_type_id:str, intent:str) -> ScenePhase:
+
+async def set_scene_phase(
+    scene: "Scene", scene_type_id: str, intent: str
+) -> ScenePhase:
     """
     Set the scene phase.
     """
-    
-    scene_intent:SceneIntent = scene.intent_state
-    
+
+    scene_intent: SceneIntent = scene.intent_state
+
     if scene_type_id not in scene_intent.scene_types:
         raise ValueError(f"Invalid scene type: {scene_type_id}")
-    
+
     scene_intent.phase = ScenePhase(
-        scene_type=scene_type_id, 
+        scene_type=scene_type_id,
         intent=intent,
-        start=scene.history[-1].id if scene.history else 0
+        start=scene.history[-1].id if scene.history else 0,
     )
-    
+
     return scene_intent.phase

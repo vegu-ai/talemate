@@ -41,6 +41,7 @@ class ToggleClientPayload(pydantic.BaseModel):
 class DeleteScenePayload(pydantic.BaseModel):
     path: str
 
+
 class ConfigPlugin:
     router = "config"
 
@@ -220,7 +221,6 @@ class ConfigPlugin:
 
         await emit_clients_status()
 
-
     async def handle_remove_scene_from_recents(self, data):
         payload = DeleteScenePayload(**data)
 
@@ -243,11 +243,11 @@ class ConfigPlugin:
                 },
             }
         )
-        
+
         self.websocket_handler.queue_put(
             {"type": "app_config", "data": load_config(), "version": VERSION}
         )
-        
+
     async def handle_delete_scene(self, data):
         payload = DeleteScenePayload(**data)
 

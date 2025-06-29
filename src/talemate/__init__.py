@@ -1,4 +1,4 @@
-from .tale_mate import *
+from .tale_mate import *  # noqa: F401, F403
 
 from .version import VERSION
 

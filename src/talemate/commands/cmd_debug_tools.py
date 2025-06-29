@@ -1,6 +1,4 @@
 import asyncio
-import json
-import logging
 
 import structlog
 
@@ -17,7 +15,6 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.commands.cmd_debug_tools")
-
 
 
 @register
@@ -95,7 +92,8 @@ class CmdSummarizerUpdateLayeredHistory(TalemateCommand):
         summarizer = get_agent("summarizer")
 
         await summarizer.summarize_to_layered_history()
-        
+
+
 @register
 class CmdSummarizerResetLayeredHistory(TalemateCommand):
     """
@@ -108,16 +106,17 @@ class CmdSummarizerResetLayeredHistory(TalemateCommand):
 
     async def run(self):
         summarizer = get_agent("summarizer")
-        
+
         # if arg is provided remove the last n layers
         if self.args:
             n = int(self.args[0])
             self.scene.layered_history = self.scene.layered_history[:-n]
         else:
             self.scene.layered_history = []
-        
+
         await summarizer.summarize_to_layered_history()
-        
+
+
 @register
 class CmdSummarizerContextInvestigation(TalemateCommand):
     """
@@ -135,11 +134,10 @@ class CmdSummarizerContextInvestigation(TalemateCommand):
         if not self.args:
             self.emit("system", "You must specify a query")
             return
-        
+
         await summarizer.request_context_investigations(self.args[0], max_calls=1)
-        
-        
-        
+
+
 @register
 class CmdMemoryCompareStrings(TalemateCommand):
     """
@@ -156,13 +154,14 @@ class CmdMemoryCompareStrings(TalemateCommand):
         if not self.args:
             self.emit("system", "You must specify two strings to compare")
             return
-        
+
         string1 = self.args[0]
         string2 = self.args[1]
 
         result = await memory.compare_strings(string1, string2)
         self.emit("system", f"The strings are {result['cosine_similarity']} similar")
-        
+
+
 @register
 class CmdRunEditorRevision(TalemateCommand):
     """
@@ -172,14 +171,13 @@ class CmdRunEditorRevision(TalemateCommand):
     name = "run_editor_revision"
     description = "Run the editor revision"
     aliases = ["run_revision"]
-    
+
     async def run(self):
         editor = get_agent("editor")
         scene = self.scene
-        
+
         last_message = scene.history[-1]
-        
+
         result = await editor.revision_detect_bad_prose(str(last_message))
-        
+
         self.emit("system", f"Result: {result}")
-        

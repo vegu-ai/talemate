@@ -1,10 +1,9 @@
-import uuid
-from typing import Any, Union
+from typing import Any
 
 import pydantic
 import structlog
 
-from talemate.config import load_config, save_config
+from talemate.config import save_config
 
 log = structlog.get_logger("talemate.server.quick_settings")
 

@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
 def create(scene: "Scene", client: "ClientBase") -> "ScopedAPI":
     class API(ScopedAPI):
-
         def request(
             self,
             template_name: str,

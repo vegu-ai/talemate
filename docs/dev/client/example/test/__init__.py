@@ -9,6 +9,7 @@ class Defaults(pydantic.BaseModel):
     api_url: str = "http://localhost:1234"
     max_token_length: int = 4096
 
+
 @register()
 class TestClient(ClientBase):
     client_type = "test"
@@ -22,14 +23,13 @@ class TestClient(ClientBase):
         self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
-        
         """
         Talemate adds a bunch of parameters to the prompt, but not all of them are valid for all clients.
-        
+
         This method is called before the prompt is sent to the client, and it allows the client to remove
         any parameters that it doesn't support.
         """
-        
+
         super().tune_prompt_parameters(parameters, kind)
 
         keys = list(parameters.keys())
@@ -41,11 +41,10 @@ class TestClient(ClientBase):
                 del parameters[key]
 
     async def get_model_name(self):
-        
         """
         This should return the name of the model that is being used.
         """
-        
+
         return "Mock test model"
 
     async def generate(self, prompt: str, parameters: dict, kind: str):

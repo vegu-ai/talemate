@@ -1,6 +1,6 @@
 import os
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 
@@ -14,6 +14,7 @@ app = FastAPI()
 # Serve static files, but exclude the root path
 app.mount("/", StaticFiles(directory=dist_dir, html=True), name="static")
 
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_root():
     index_path = os.path.join(dist_dir, "index.html")
@@ -23,6 +24,7 @@ async def serve_root():
         return HTMLResponse(content=content)
     else:
         raise HTTPException(status_code=404, detail="index.html not found")
+
 
 # This is the ASGI application
 application = app

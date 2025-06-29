@@ -1,6 +1,6 @@
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
-from talemate.emit import emit, wait_for_input, wait_for_input_yesno
+from talemate.emit import wait_for_input_yesno
 from talemate.exceptions import ResetScene
 
 

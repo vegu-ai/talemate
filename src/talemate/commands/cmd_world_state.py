@@ -109,8 +109,6 @@ class CmdUpdateReinforcements(TalemateCommand):
     aliases = ["ws_ur"]
 
     async def run(self):
-        scene = self.scene
-
         world_state = get_agent("world_state")
 
         await world_state.update_reinforcements(force=True)
@@ -234,18 +232,16 @@ class CmdDetermineCharacterDevelopment(TalemateCommand):
         scene = self.scene
 
         world_state = get_agent("world_state")
-        creator = get_agent("creator")
 
         if not len(self.args):
             raise ValueError("No character name provided.")
 
         character_name = self.args[0]
-        
+
         character = scene.get_character(character_name)
-        
+
         if not character:
             raise ValueError(f"Character {character_name} not found.")
 
-        instructions = await world_state.determine_character_development(character)
-        
+        await world_state.determine_character_development(character)
         # updates = await creator.update_character_sheet(character, instructions)

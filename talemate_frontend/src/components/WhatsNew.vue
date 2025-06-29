@@ -75,10 +75,10 @@ export default {
     data() {
         return {
             expand: false,
-            selected: "0.31.0",
+            selected: "0.32.0",
             whatsNew: [
                 {
-                    version: '0.31.0',
+                    version: '0.32.0',
                     items: [
                         {
                             title: "Installable node modules.",

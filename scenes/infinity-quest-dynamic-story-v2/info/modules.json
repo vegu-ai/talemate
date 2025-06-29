@@ -16,7 +16,7 @@
                     "description": "The overarching topic - will be used to generate a theme that falls within this category. Example - 'Sci-fi adventure with cosmic horror'.",
                     "type": "str",
                     "default": "",
-                    "value": "Sci-fi with cosmic horror elements.",
+                    "value": "Sci-fi episodic adventures onboard of a spaceship, with focus on AI, alien contact, ancient creators and cosmic horror.",
                     "required": true,
                     "choices": []
                 },

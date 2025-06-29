@@ -237,6 +237,12 @@ async def load_scene_from_character_card(scene, file_path):
 
     import_scene_node_definitions(scene)
 
+    await scene.save(
+        save_as=True,
+        auto=True,
+        copy_name=f"{scene.project_name}.json",
+    )
+
     return scene
 
 

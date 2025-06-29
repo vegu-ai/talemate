@@ -19,11 +19,13 @@ export default {
         },
         color: {
             type: String,
-            required: true,
+            required: false,
+            default: "info",
         },
         icon: {
             type: String,
-            required: true,
+            required: false,
+            default: "mdi-information-outline",
         },
         title: {
             type: String,

@@ -40,7 +40,8 @@ jobs:
 
   deploy-docs:
     if: github.event_name == 'release'
-    runs-on: ubuntu-latest    steps:
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/checkout@v4
       - name: Configure Git credentials
         run: |

@@ -123,13 +123,13 @@
 
                           <!-- number -->
                           <v-slider 
-                            v-if="action_config.type === 'number' && action_config.step !== null" 
+                            v-if="action_config.type === 'number'" 
                             v-model="action.config[config_key].value" 
                             :label="action_config.label" 
                             :hint="action_config.description" 
                             :min="action_config.min" 
                             :max="action_config.max" 
-                            :step="action_config.step" 
+                            :step="action_config.step || 1" 
                             density="compact" 
                             @update:modelValue="save(true)" 
                             color="primary" 

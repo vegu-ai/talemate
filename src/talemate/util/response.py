@@ -18,7 +18,7 @@ def extract_list(response: str) -> list:
 
     # Locate the beginning of the list
     lines = response.split("\n")
-    
+
     # strip empty lines
     lines = [line for line in lines if line.strip() != ""]
 
@@ -39,7 +39,7 @@ def extract_list(response: str) -> list:
             list_start = index
             break
 
-    if index is None:
+    if index is None or list_start is None:
         # No list found
         return []
 
@@ -53,7 +53,6 @@ def extract_list(response: str) -> list:
             or re.match(r"^\* ", line)
             or re.match(r"^- ", line)
         ):
-
             # strip the number or bullet
             line = re.sub(r"^(?:\d+\.|\*|-)", "", line).strip()
 

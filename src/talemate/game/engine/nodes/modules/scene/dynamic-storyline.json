@@ -19,8 +19,8 @@
         "name": "intro_generated",
         "scope": "game"
       },
-      "x": 555,
-      "y": 856,
+      "x": 733,
+      "y": 1031,
       "width": 254,
       "height": 146,
       "collapsed": false,
@@ -35,56 +35,8 @@
         "name": null,
         "scope": "local"
       },
-      "x": 323,
-      "y": -1210,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "c327b0c4-900e-4d27-a0b9-0d47e8479732": {
-      "title": "SET local.analysis_instructions",
-      "id": "c327b0c4-900e-4d27-a0b9-0d47e8479732",
-      "properties": {
-        "name": null,
-        "scope": "local"
-      },
-      "x": 323,
-      "y": -970,
-      "width": 260,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb": {
-      "title": "SET local.analysis_enabled",
-      "id": "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb",
-      "properties": {
-        "name": null,
-        "scope": "local"
-      },
-      "x": 323,
-      "y": -710,
-      "width": 218,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b": {
-      "title": "SET local.topic",
-      "id": "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b",
-      "properties": {
-        "name": null,
-        "scope": "local"
-      },
-      "x": 323,
-      "y": -480,
+      "x": 326,
+      "y": -1299,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -99,89 +51,13 @@
         "name": "topic",
         "scope": "local"
       },
-      "x": 26,
-      "y": 1321,
+      "x": 27,
+      "y": 1577,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "3f749c9f-71b0-4e9c-b99d-859e53f20569": {
-      "title": "PROP analysis_instructions",
-      "id": "3f749c9f-71b0-4e9c-b99d-859e53f20569",
-      "properties": {
-        "property_name": "analysis_instructions",
-        "property_type": "text",
-        "default": "",
-        "choices": [],
-        "description": "Instructions for the analysis"
-      },
-      "x": 23,
-      "y": -970,
-      "width": 262,
-      "height": 174,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
-      "base_type": "core/Node"
-    },
-    "43013315-b65d-4c51-bdab-fdffe051224f": {
-      "title": "PROP reset",
-      "id": "43013315-b65d-4c51-bdab-fdffe051224f",
-      "properties": {
-        "property_name": "reset",
-        "property_type": "bool",
-        "default": "false",
-        "choices": [],
-        "description": "Reset the introduction"
-      },
-      "x": 23,
-      "y": -1210,
-      "width": 271,
-      "height": 181,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
-      "base_type": "core/Node"
-    },
-    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff": {
-      "title": "PROP topic",
-      "id": "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff",
-      "properties": {
-        "property_name": "topic",
-        "property_type": "str",
-        "default": "",
-        "choices": [],
-        "description": "The overarching topic"
-      },
-      "x": 26,
-      "y": -466,
-      "width": 256,
-      "height": 174,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
-      "base_type": "core/Node"
-    },
-    "86df3111-98d7-46a1-aa1d-93e6c53e282b": {
-      "title": "PROP analysis_enabled",
-      "id": "86df3111-98d7-46a1-aa1d-93e6c53e282b",
-      "properties": {
-        "property_name": "analysis_enabled",
-        "property_type": "bool",
-        "default": "true",
-        "choices": [],
-        "description": "Theme analysis"
-      },
-      "x": 23,
-      "y": -710,
-      "width": 260,
-      "height": 174,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ModuleProperty",
       "base_type": "core/Node"
     },
     "db171bea-e4a0-48b9-9a98-a7cd354d8fcf": {
@@ -219,8 +95,8 @@
         "introduction": null,
         "emit_history": true
       },
-      "x": 1048,
-      "y": 1208,
+      "x": 1049,
+      "y": 1464,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -232,8 +108,8 @@
       "title": "Theme",
       "id": "7438bc9b-4b38-4c5c-a9a8-df5ebf098691",
       "properties": {},
-      "x": 1108,
-      "y": 1448,
+      "x": 1109,
+      "y": 1704,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -247,44 +123,13 @@
       "properties": {
         "pass_through": false
       },
-      "x": 278,
-      "y": 1178,
+      "x": 279,
+      "y": 1434,
       "width": 210,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "85be1eb8-f1ca-47c4-b30f-539a1c10dae3": {
-      "title": "Set Introduction",
-      "id": "85be1eb8-f1ca-47c4-b30f-539a1c10dae3",
-      "properties": {
-        "introduction": "",
-        "emit_history": true
-      },
-      "x": 839,
-      "y": 869,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/SetIntroduction",
-      "base_type": "core/Node"
-    },
-    "08309808-d1f1-4a94-9027-363eceed41d1": {
-      "title": "Stage 0",
-      "id": "08309808-d1f1-4a94-9027-363eceed41d1",
-      "properties": {
-        "stage": 0
-      },
-      "x": 727,
-      "y": -865,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "4e9136e5-4557-4ef6-9124-9468d9e39815": {
@@ -294,8 +139,8 @@
         "name": "intro_generated",
         "scope": "game"
       },
-      "x": 518,
-      "y": 1258,
+      "x": 519,
+      "y": 1514,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -310,44 +155,13 @@
         "name": "intro_generated",
         "scope": "game"
       },
-      "x": 26,
-      "y": 1131,
+      "x": 27,
+      "y": 1387,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "a593c81a-25af-4199-abe6-884962c3492d": {
-      "title": "GET local.reset",
-      "id": "a593c81a-25af-4199-abe6-884962c3492d",
-      "properties": {
-        "name": "reset",
-        "scope": "local"
-      },
-      "x": 25,
-      "y": 857,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "e4eee8cc-10dc-4a04-9a77-d9598b202924": {
-      "title": "Switch",
-      "id": "e4eee8cc-10dc-4a04-9a77-d9598b202924",
-      "properties": {
-        "pass_through": true
-      },
-      "x": 295,
-      "y": 856,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Switch",
       "base_type": "core/Node"
     },
     "be9bdeff-2232-4e00-894c-6476c4efdbc7": {
@@ -363,21 +177,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "ca241a90-daa3-40e4-9b7a-b857c334cd39": {
-      "title": "Stage 4",
-      "id": "ca241a90-daa3-40e4-9b7a-b857c334cd39",
-      "properties": {
-        "stage": 4
-      },
-      "x": 1323,
-      "y": 1185,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "912201d4-2678-45d4-a032-12707836c723": {
@@ -549,21 +348,6 @@
       "registry": "data/string/MakeText",
       "base_type": "core/Node"
     },
-    "e601163e-fc37-4bd4-bffa-866f2ec6457e": {
-      "title": "Stage 3",
-      "id": "e601163e-fc37-4bd4-bffa-866f2ec6457e",
-      "properties": {
-        "stage": 3
-      },
-      "x": 1090,
-      "y": 868,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "07c15b6d-a275-4156-8f98-1759db36e4d0": {
       "title": "Stage 1",
       "id": "07c15b6d-a275-4156-8f98-1759db36e4d0",
@@ -650,8 +434,8 @@
         "name": "analysis_instructions",
         "scope": "local"
       },
-      "x": 30,
-      "y": 1501,
+      "x": 31,
+      "y": 1757,
       "width": 260,
       "height": 122,
       "collapsed": false,
@@ -666,8 +450,8 @@
         "name": "analysis_enabled",
         "scope": "local"
       },
-      "x": 30,
-      "y": 1681,
+      "x": 31,
+      "y": 1937,
       "width": 250,
       "height": 122,
       "collapsed": false,
@@ -682,13 +466,210 @@
         "name": "intro_length",
         "scope": "local"
       },
-      "x": 30,
-      "y": 1861,
+      "x": 31,
+      "y": 2117,
       "width": 250,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "958c9db5-6df8-4d04-919d-c0a4b42fe3f8": {
+      "title": "Generate Storyline",
+      "id": "958c9db5-6df8-4d04-919d-c0a4b42fe3f8",
+      "properties": {},
+      "x": 771,
+      "y": 1676,
+      "width": 228,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/generateStoryline",
+      "base_type": "core/Graph"
+    },
+    "ca241a90-daa3-40e4-9b7a-b857c334cd39": {
+      "title": "Stage 4",
+      "id": "ca241a90-daa3-40e4-9b7a-b857c334cd39",
+      "properties": {
+        "stage": 4
+      },
+      "x": 1311,
+      "y": 1446,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "85be1eb8-f1ca-47c4-b30f-539a1c10dae3": {
+      "title": "Set Introduction",
+      "id": "85be1eb8-f1ca-47c4-b30f-539a1c10dae3",
+      "properties": {
+        "introduction": "",
+        "emit_history": true
+      },
+      "x": 1019,
+      "y": 1046,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/SetIntroduction",
+      "base_type": "core/Node"
+    },
+    "2e3c7602-8673-47c3-9686-b92efb33aff4": {
+      "title": "Switch",
+      "id": "2e3c7602-8673-47c3-9686-b92efb33aff4",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 266,
+      "y": 1133,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "21050f79-592b-4213-be45-76261955994f": {
+      "title": "GET game.intro_generated",
+      "id": "21050f79-592b-4213-be45-76261955994f",
+      "properties": {
+        "name": "intro_generated",
+        "scope": "game"
+      },
+      "x": 26,
+      "y": 1133,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "a593c81a-25af-4199-abe6-884962c3492d": {
+      "title": "GET local.reset",
+      "id": "a593c81a-25af-4199-abe6-884962c3492d",
+      "properties": {
+        "name": "reset",
+        "scope": "local"
+      },
+      "x": 26,
+      "y": 913,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "e4eee8cc-10dc-4a04-9a77-d9598b202924": {
+      "title": "Switch",
+      "id": "e4eee8cc-10dc-4a04-9a77-d9598b202924",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 276,
+      "y": 933,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "0c73a403-ada1-45fa-ac3d-9a4890f4c9d0": {
+      "title": "OR Router",
+      "id": "0c73a403-ada1-45fa-ac3d-9a4890f4c9d0",
+      "properties": {},
+      "x": 546,
+      "y": 1033,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ORRouter",
+      "base_type": "core/Node"
+    },
+    "e601163e-fc37-4bd4-bffa-866f2ec6457e": {
+      "title": "Stage 3",
+      "id": "e601163e-fc37-4bd4-bffa-866f2ec6457e",
+      "properties": {
+        "stage": 3
+      },
+      "x": 1266,
+      "y": 1043,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "c327b0c4-900e-4d27-a0b9-0d47e8479732": {
+      "title": "SET local.analysis_instructions",
+      "id": "c327b0c4-900e-4d27-a0b9-0d47e8479732",
+      "properties": {
+        "name": null,
+        "scope": "local"
+      },
+      "x": 329,
+      "y": -1040,
+      "width": 260,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb": {
+      "title": "SET local.analysis_enabled",
+      "id": "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb",
+      "properties": {
+        "name": null,
+        "scope": "local"
+      },
+      "x": 329,
+      "y": -780,
+      "width": 218,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b": {
+      "title": "SET local.topic",
+      "id": "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b",
+      "properties": {
+        "name": null,
+        "scope": "local"
+      },
+      "x": 329,
+      "y": -520,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "08309808-d1f1-4a94-9027-363eceed41d1": {
+      "title": "Stage 0",
+      "id": "08309808-d1f1-4a94-9027-363eceed41d1",
+      "properties": {
+        "stage": 0
+      },
+      "x": 739,
+      "y": -890,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "def10ae9-f0f7-45a2-9fd6-42e58dc353ed": {
@@ -698,8 +679,8 @@
         "name": null,
         "scope": "local"
       },
-      "x": 350,
-      "y": -210,
+      "x": 359,
+      "y": -250,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -713,13 +694,53 @@
       "properties": {
         "stage": 0
       },
-      "x": 660,
-      "y": -210,
+      "x": 709,
+      "y": -230,
       "width": 210,
       "height": 118,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "86df3111-98d7-46a1-aa1d-93e6c53e282b": {
+      "title": "PROP analysis_enabled",
+      "id": "86df3111-98d7-46a1-aa1d-93e6c53e282b",
+      "properties": {
+        "property_name": "analysis_enabled",
+        "property_type": "bool",
+        "default": "true",
+        "choices": [],
+        "description": "Theme analysis",
+        "num": 2
+      },
+      "x": 29,
+      "y": -780,
+      "width": 258,
+      "height": 198,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "43013315-b65d-4c51-bdab-fdffe051224f": {
+      "title": "PROP reset",
+      "id": "43013315-b65d-4c51-bdab-fdffe051224f",
+      "properties": {
+        "property_name": "reset",
+        "property_type": "bool",
+        "default": "false",
+        "choices": [],
+        "description": "Reset the introduction",
+        "num": 4
+      },
+      "x": 26,
+      "y": -1299,
+      "width": 268,
+      "height": 198,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
       "base_type": "core/Node"
     },
     "bb66531f-71dc-4ab5-820e-8b9d6059f450": {
@@ -730,29 +751,57 @@
         "property_type": "int",
         "default": "512",
         "choices": [],
-        "description": "Length of the introduction"
+        "description": "Length of the introduction",
+        "num": 1
       },
-      "x": 30,
-      "y": -210,
-      "width": 256,
-      "height": 174,
+      "x": 39,
+      "y": -250,
+      "width": 252,
+      "height": 198,
       "collapsed": false,
       "inherited": false,
       "registry": "core/ModuleProperty",
       "base_type": "core/Node"
     },
-    "958c9db5-6df8-4d04-919d-c0a4b42fe3f8": {
-      "title": "Generate Storyline",
-      "id": "958c9db5-6df8-4d04-919d-c0a4b42fe3f8",
-      "properties": {},
-      "x": 770,
-      "y": 1420,
-      "width": 228,
-      "height": 106,
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff": {
+      "title": "PROP topic",
+      "id": "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff",
+      "properties": {
+        "property_name": "topic",
+        "property_type": "str",
+        "default": "",
+        "choices": [],
+        "description": "The overarching topic - will be used to generate a theme that falls within this category. Example - 'Sci-fi adventure with cosmic horror'.",
+        "num": 0
+      },
+      "x": 29,
+      "y": -520,
+      "width": 255,
+      "height": 198,
       "collapsed": false,
       "inherited": false,
-      "registry": "scene/generateStoryline",
-      "base_type": "core/Graph"
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
+    },
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569": {
+      "title": "PROP analysis_instructions",
+      "id": "3f749c9f-71b0-4e9c-b99d-859e53f20569",
+      "properties": {
+        "property_name": "analysis_instructions",
+        "property_type": "text",
+        "default": "",
+        "choices": [],
+        "description": "Additional instructions for topic analysis task - if topic analysis is enabled, this will be used to augment the topic analysis task with further instructions.",
+        "num": 3
+      },
+      "x": 29,
+      "y": -1040,
+      "width": 259,
+      "height": 198,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ModuleProperty",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -762,41 +811,8 @@
     "efc1c906-d725-4941-acab-a369366411d4.value": [
       "08309808-d1f1-4a94-9027-363eceed41d1.state"
     ],
-    "c327b0c4-900e-4d27-a0b9-0d47e8479732.value": [
-      "08309808-d1f1-4a94-9027-363eceed41d1.state_b"
-    ],
-    "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value": [
-      "08309808-d1f1-4a94-9027-363eceed41d1.state_c"
-    ],
-    "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value": [
-      "08309808-d1f1-4a94-9027-363eceed41d1.state_d"
-    ],
     "2a4e0aed-e85a-4fba-ae30-630c71f91db9.value": [
       "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.topic"
-    ],
-    "3f749c9f-71b0-4e9c-b99d-859e53f20569.name": [
-      "c327b0c4-900e-4d27-a0b9-0d47e8479732.name"
-    ],
-    "3f749c9f-71b0-4e9c-b99d-859e53f20569.value": [
-      "c327b0c4-900e-4d27-a0b9-0d47e8479732.value"
-    ],
-    "43013315-b65d-4c51-bdab-fdffe051224f.name": [
-      "efc1c906-d725-4941-acab-a369366411d4.name"
-    ],
-    "43013315-b65d-4c51-bdab-fdffe051224f.value": [
-      "efc1c906-d725-4941-acab-a369366411d4.value"
-    ],
-    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.name": [
-      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.name"
-    ],
-    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.value": [
-      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value"
-    ],
-    "86df3111-98d7-46a1-aa1d-93e6c53e282b.name": [
-      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.name"
-    ],
-    "86df3111-98d7-46a1-aa1d-93e6c53e282b.value": [
-      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value"
     ],
     "db171bea-e4a0-48b9-9a98-a7cd354d8fcf.scene": [
       "97204757-5fb9-4d81-ac90-20825b9a1b32.object"
@@ -811,20 +827,11 @@
       "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.state",
       "4e9136e5-4557-4ef6-9124-9468d9e39815.value"
     ],
-    "85be1eb8-f1ca-47c4-b30f-539a1c10dae3.state": [
-      "e601163e-fc37-4bd4-bffa-866f2ec6457e.state"
-    ],
     "4e9136e5-4557-4ef6-9124-9468d9e39815.value": [
       "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.state"
     ],
     "37313611-7de1-478b-8840-e5ea7ba856fe.value": [
       "11965433-d217-47d1-bc37-8808426798ce.value"
-    ],
-    "a593c81a-25af-4199-abe6-884962c3492d.value": [
-      "e4eee8cc-10dc-4a04-9a77-d9598b202924.value"
-    ],
-    "e4eee8cc-10dc-4a04-9a77-d9598b202924.yes": [
-      "7c8b1e17-c5a4-4eb3-a1dc-d9b5ea782e6b.state"
     ],
     "be9bdeff-2232-4e00-894c-6476c4efdbc7.yes": [
       "626e25be-9d1f-460a-9611-7adc1a1fb28f.state"
@@ -878,8 +885,53 @@
     "a99989f1-d426-4195-9918-ac659bf24510.value": [
       "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.intro_length"
     ],
+    "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.text": [
+      "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.introduction"
+    ],
+    "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.theme": [
+      "7438bc9b-4b38-4c5c-a9a8-df5ebf098691.value"
+    ],
+    "85be1eb8-f1ca-47c4-b30f-539a1c10dae3.state": [
+      "e601163e-fc37-4bd4-bffa-866f2ec6457e.state"
+    ],
+    "2e3c7602-8673-47c3-9686-b92efb33aff4.no": [
+      "0c73a403-ada1-45fa-ac3d-9a4890f4c9d0.b"
+    ],
+    "21050f79-592b-4213-be45-76261955994f.value": [
+      "2e3c7602-8673-47c3-9686-b92efb33aff4.value"
+    ],
+    "a593c81a-25af-4199-abe6-884962c3492d.value": [
+      "e4eee8cc-10dc-4a04-9a77-d9598b202924.value"
+    ],
+    "e4eee8cc-10dc-4a04-9a77-d9598b202924.yes": [
+      "0c73a403-ada1-45fa-ac3d-9a4890f4c9d0.a"
+    ],
+    "0c73a403-ada1-45fa-ac3d-9a4890f4c9d0.yes": [
+      "7c8b1e17-c5a4-4eb3-a1dc-d9b5ea782e6b.state"
+    ],
+    "c327b0c4-900e-4d27-a0b9-0d47e8479732.value": [
+      "08309808-d1f1-4a94-9027-363eceed41d1.state_b"
+    ],
+    "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value": [
+      "08309808-d1f1-4a94-9027-363eceed41d1.state_c"
+    ],
+    "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value": [
+      "08309808-d1f1-4a94-9027-363eceed41d1.state_d"
+    ],
     "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.value": [
       "880b6010-cdca-42d0-9dcb-58abecd31599.state"
+    ],
+    "86df3111-98d7-46a1-aa1d-93e6c53e282b.name": [
+      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.name"
+    ],
+    "86df3111-98d7-46a1-aa1d-93e6c53e282b.value": [
+      "4c8fe008-93ed-4f61-b6ec-3be96fbe2ebb.value"
+    ],
+    "43013315-b65d-4c51-bdab-fdffe051224f.name": [
+      "efc1c906-d725-4941-acab-a369366411d4.name"
+    ],
+    "43013315-b65d-4c51-bdab-fdffe051224f.value": [
+      "efc1c906-d725-4941-acab-a369366411d4.value"
     ],
     "bb66531f-71dc-4ab5-820e-8b9d6059f450.name": [
       "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.name"
@@ -887,18 +939,24 @@
     "bb66531f-71dc-4ab5-820e-8b9d6059f450.value": [
       "def10ae9-f0f7-45a2-9fd6-42e58dc353ed.value"
     ],
-    "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.text": [
-      "a14b3571-899f-47e6-90cd-6bf0fec6e4bb.introduction"
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.name": [
+      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.name"
     ],
-    "958c9db5-6df8-4d04-919d-c0a4b42fe3f8.theme": [
-      "7438bc9b-4b38-4c5c-a9a8-df5ebf098691.value"
+    "6ffb6fe2-7f51-4ade-9dfa-b1f079bda6ff.value": [
+      "7c21ebae-d27c-4f08-b53c-24bbd7af8d4b.value"
+    ],
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569.name": [
+      "c327b0c4-900e-4d27-a0b9-0d47e8479732.name"
+    ],
+    "3f749c9f-71b0-4e9c-b99d-859e53f20569.value": [
+      "c327b0c4-900e-4d27-a0b9-0d47e8479732.value"
     ]
   },
   "groups": [
     {
       "title": "Generate Premise - Stage 4",
       "x": 1,
-      "y": 1028,
+      "y": 1283,
       "width": 1557,
       "height": 980,
       "color": "#3f789e",
@@ -907,10 +965,10 @@
     },
     {
       "title": "Properties - Stage 0",
-      "x": -2,
-      "y": -1290,
-      "width": 964,
-      "height": 1279,
+      "x": 1,
+      "y": -1379,
+      "width": 972,
+      "height": 1352,
       "color": "#8AA",
       "font_size": 24,
       "inherited": false
@@ -928,9 +986,9 @@
     {
       "title": "Reset - Stage 3",
       "x": 1,
-      "y": 774,
-      "width": 1314,
-      "height": 251,
+      "y": 773,
+      "width": 1500,
+      "height": 507,
       "color": "#88A",
       "font_size": 24,
       "inherited": false
@@ -949,8 +1007,8 @@
   "comments": [
     {
       "text": "SetState here so we don't infinitely try to generate premise if something goes wrong.",
-      "x": 518,
-      "y": 1108,
+      "x": 519,
+      "y": 1364,
       "width": 200,
       "inherited": false
     },
@@ -995,6 +1053,13 @@
       "y": 300,
       "width": 408,
       "inherited": false
+    },
+    {
+      "text": "When we are generating the first introduction OR when we are resetting the process: Remove the current introductory text.",
+      "x": 546,
+      "y": 853,
+      "width": 200,
+      "inherited": false
     }
   ],
   "extends": null,
@@ -1002,35 +1067,23 @@
   "inputs": [],
   "outputs": [],
   "module_properties": {
-    "analysis_instructions": {
-      "name": "analysis_instructions",
-      "description": "Instructions for the analysis",
-      "type": "text",
-      "default": "",
-      "choices": [],
-      "readonly": false,
-      "step": null,
-      "min": null,
-      "max": null,
-      "ephemeral": false
-    },
-    "reset": {
-      "name": "reset",
-      "description": "Reset the introduction",
-      "type": "bool",
-      "default": false,
-      "choices": [],
-      "readonly": false,
-      "step": null,
-      "min": null,
-      "max": null,
-      "ephemeral": false
-    },
     "topic": {
       "name": "topic",
-      "description": "The overarching topic",
+      "description": "The overarching topic - will be used to generate a theme that falls within this category. Example - 'Sci-fi adventure with cosmic horror'.",
       "type": "str",
       "default": "",
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "intro_length": {
+      "name": "intro_length",
+      "description": "Length of the introduction",
+      "type": "int",
+      "default": 512,
       "choices": [],
       "readonly": false,
       "step": null,
@@ -1050,11 +1103,23 @@
       "max": null,
       "ephemeral": false
     },
-    "intro_length": {
-      "name": "intro_length",
-      "description": "Length of the introduction",
-      "type": "int",
-      "default": 512,
+    "analysis_instructions": {
+      "name": "analysis_instructions",
+      "description": "Additional instructions for topic analysis task - if topic analysis is enabled, this will be used to augment the topic analysis task with further instructions.",
+      "type": "text",
+      "default": "",
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "reset": {
+      "name": "reset",
+      "description": "Reset the introduction",
+      "type": "bool",
+      "default": false,
       "choices": [],
       "readonly": false,
       "step": null,

@@ -33,6 +33,14 @@ class ResetScene(TalemateInterrupt):
 
     pass
 
+
+class GenerationCancelled(TalemateInterrupt):
+    """
+    Interrupt current scene and return action to the user
+    """
+
+    pass
+
 class GenerationCancelled(TalemateInterrupt):
     """
     Interrupt current scene and return action to the user 
@@ -76,19 +84,21 @@ class UnknownDataSpec(TalemateError):
 
     pass
 
+
 class ActedAsCharacter(Exception):
     """
     Raised when the user acts as another character
     than the main player character
     """
 
-    def __init__(self, character_name:str):
+    def __init__(self, character_name: str):
         self.character_name = character_name
         super().__init__(f"Acted as character: {character_name}")
-        
-        
+
+
 class AbortCommand(IOError):
     pass
+
 
 class AbortWaitForInput(IOError):
     pass

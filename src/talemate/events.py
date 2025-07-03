@@ -6,6 +6,8 @@ import pydantic
 
 import talemate.emit.async_signals as async_signals
 
+import talemate.emit.async_signals as async_signals
+
 if TYPE_CHECKING:
     from talemate.tale_mate import Actor, Scene, SceneMessage, Character
 
@@ -29,7 +31,7 @@ class HistoryEvent(Event):
 @dataclass
 class ArchiveEvent(Event):
     text: str
-    memory_id: str = None
+    memory_id: str
     ts: str = None
 
 
@@ -64,10 +66,12 @@ class GameLoopActorIterEvent(GameLoopBase):
     actor: Actor
     game_loop: GameLoopEvent
 
+
 @dataclass
 class GameLoopCharacterIterEvent(GameLoopBase):
     character: Character
     game_loop: GameLoopEvent
+
 
 @dataclass
 class GameLoopNewMessageEvent(GameLoopBase):
@@ -77,6 +81,7 @@ class GameLoopNewMessageEvent(GameLoopBase):
 @dataclass
 class PlayerTurnStartEvent(Event):
     pass
+
 
 @dataclass
 class RegenerateGeneration(Event):

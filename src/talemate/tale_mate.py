@@ -14,7 +14,6 @@ from blinker import signal
 import talemate.agents as agents
 import talemate.client as client
 import talemate.commands as commands
-import talemate.data_objects as data_objects
 import talemate.emit.async_signals as async_signals
 import talemate.events as events
 import talemate.save as save
@@ -52,8 +51,10 @@ from talemate.world_state import WorldState
 from talemate.world_state.manager import WorldStateManager
 from talemate.game.engine.nodes.core import GraphState
 from talemate.game.engine.nodes.layout import load_graph
+from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
-        
+from talemate.history import emit_archive_add, ArchiveEntry
+
 __all__ = [
     "Character",
     "Actor",
@@ -173,7 +174,6 @@ class Character:
         self.cover_image = asset_id
 
     def sheet_filtered(self, *exclude):
-
         sheet = self.base_attributes or {
             "name": self.name,
             "gender": self.gender,
@@ -188,7 +188,72 @@ class Character:
 
         return "\n".join(sheet_list)
 
-    def random_dialogue_examples(self, num: int = 3):
+    def random_dialogue_examples(
+        self,
+        scene: "Scene",
+        num: int = 3,
+        strip_name: bool = False,
+        max_backlog: int = 250,
+        max_length: int = 192,
+    ) -> list[str]:
+        """
+        Get multiple random example dialogue lines for this character.
+
+        Will return up to `num` examples and not have any duplicates.
+        """
+
+        history_examples = self._random_dialogue_examples_from_history(
+            scene, num, max_backlog
+        )
+
+        if len(history_examples) < num:
+            random_examples = self._random_dialogue_examples(
+                num - len(history_examples), strip_name
+            )
+
+            for example in random_examples:
+                history_examples.append(example)
+
+        # ensure sane example lengths
+
+        history_examples = [
+            util.strip_partial_sentences(example[:max_length])
+            for example in history_examples
+        ]
+
+        log.debug("random_dialogue_examples", history_examples=history_examples)
+        return history_examples
+
+    def _random_dialogue_examples_from_history(
+        self, scene: "Scene", num: int = 3, max_backlog: int = 250
+    ) -> list[str]:
+        """
+        Get multiple random example dialogue lines for this character from the scene's history.
+
+        Will checks the last `max_backlog` messages in the scene's history and returns up to `num` examples.
+        """
+
+        history = scene.history[-max_backlog:]
+
+        examples = []
+
+        for message in history:
+            if not isinstance(message, CharacterMessage):
+                continue
+
+            if message.character_name != self.name:
+                continue
+
+            examples.append(message.without_name.strip())
+
+        if not examples:
+            return []
+
+        return random.sample(examples, min(num, len(examples)))
+
+    def _random_dialogue_examples(
+        self, num: int = 3, strip_name: bool = False
+    ) -> list[str]:
         """
         Get multiple random example dialogue lines for this character.
 
@@ -207,6 +272,9 @@ class Character:
         random.shuffle(examples)
 
         # now pop examples until we have `num` examples or we run out of examples
+
+        if strip_name:
+            examples = [example.split(":", 1)[1].strip() for example in examples]
 
         return [examples.pop() for _ in range(min(num, len(examples)))]
 
@@ -332,9 +400,9 @@ class Character:
                         },
                     }
                 )
-                
+
         seen_attributes = set()
-                
+
         for attr, value in self.base_attributes.items():
             if attr.startswith("_"):
                 continue
@@ -357,11 +425,10 @@ class Character:
             )
 
         for key, detail in self.details.items():
-            
             # if colliding with attribute name, prefix with detail_
             if key in seen_attributes:
                 key = f"detail_{key}"
-            
+
             items.append(
                 {
                     "text": f"{self.name} - {key}: {detail}",
@@ -572,9 +639,11 @@ class Actor:
     def history(self):
         return self.scene.history
 
+
 class Player(Actor):
     muted = 0
     ai_controlled = 0
+
 
 class Scene(Emitter):
     """
@@ -640,7 +709,7 @@ class Scene(Emitter):
         self.Actor = Actor
         self.Player = Player
         self.Character = Character
-        
+
         self.narrator_character_object = Character(name="__narrator__")
 
         self.active_pins = []
@@ -656,11 +725,19 @@ class Scene(Emitter):
         # a GenerationCancelled exception
         self.cancel_requested = False
 
+        # if the user has requested to cancel the current action
+        # or series of agent actions this will be true
+        #
+        # A check to self.continue_actions() will be made
+        #
+        # if self.cancel_requested is True self.continue_actions() will raise
+        # a GenerationCancelled exception
+        self.cancel_requested = False
+
         self.signals = {
             "ai_message": signal("ai_message"),
             "player_message": signal("player_message"),
             "history_add": signal("history_add"),
-            "archive_add": signal("archive_add"),
             "game_loop": async_signals.get("game_loop"),
             "game_loop_start": async_signals.get("game_loop_start"),
             "game_loop_actor_iter": async_signals.get("game_loop_actor_iter"),
@@ -727,15 +804,15 @@ class Scene(Emitter):
         """
         if hasattr(self, "_save_files"):
             return self._save_files
-        
+
         save_files = []
-        
+
         for file in os.listdir(self.save_dir):
             if file.endswith(".json"):
                 save_files.append(file)
-                
+
         self._save_files = sorted(save_files)
-        
+
         return self._save_files
 
     @property
@@ -774,11 +851,15 @@ class Scene(Emitter):
     @property
     def template_dir(self):
         return os.path.join(self.save_dir, "templates")
-    
+
     @property
     def nodes_dir(self):
         return os.path.join(self.save_dir, "nodes")
-        
+
+    @property
+    def info_dir(self):
+        return os.path.join(self.save_dir, "info")
+
     @property
     def auto_save(self):
         return self.config.get("game", {}).get("general", {}).get("auto_save", True)
@@ -797,19 +878,18 @@ class Scene(Emitter):
 
     @property
     def writing_style(self) -> world_state_templates.WritingStyle | None:
-        
         if not self.writing_style_template:
             return None
-        
+
         try:
             group_uid, template_uid = self.writing_style_template.split("__", 1)
             return self._world_state_templates.find_template(group_uid, template_uid)
         except ValueError:
             return None
-    
+
     @property
     def max_backscroll(self):
-        return self.config.get("game", {}).get("general", {}).get("max_backscroll", 512)    
+        return self.config.get("game", {}).get("general", {}).get("max_backscroll", 512)
 
     @property
     def nodes_filename(self):
@@ -818,7 +898,7 @@ class Scene(Emitter):
     @nodes_filename.setter
     def nodes_filename(self, value: str):
         self._nodes_filename = value or ""
-        
+
     @property
     def nodes_filepath(self) -> str:
         return os.path.join(self.nodes_dir, self.nodes_filename)
@@ -826,11 +906,11 @@ class Scene(Emitter):
     @property
     def creative_nodes_filename(self):
         return self._creative_nodes_filename or "creative-loop.json"
-    
+
     @creative_nodes_filename.setter
     def creative_nodes_filename(self, value: str):
         self._creative_nodes_filename = value or ""
-    
+
     @property
     def creative_nodes_filepath(self) -> str:
         return os.path.join(self.nodes_dir, self.creative_nodes_filename)
@@ -840,14 +920,15 @@ class Scene(Emitter):
         phase = self.intent_state.phase
         if not phase:
             return {}
-        
+
         return {
             "name": self.intent_state.current_scene_type.name,
             "intent": phase.intent,
         }
-    
-    def set_description(self, description: str):
-        self.description = description
+
+    @property
+    def active_node_graph(self):
+        return getattr(self, "node_graph", getattr(self, "creative_node_graph", None))
 
     def set_intro(self, intro: str):
         self.intro = intro
@@ -857,9 +938,6 @@ class Scene(Emitter):
 
     def set_title(self, title: str):
         self.title = title
-
-    def set_content_context(self, content_context: str):
-        self.context = content_context
 
     def connect(self):
         """
@@ -972,7 +1050,7 @@ class Scene(Emitter):
         max_iterations: int = None,
         reverse: bool = False,
         meta_hash: int = None,
-        **filters
+        **filters,
     ):
         """
         Removes the last message from the history that matches the given typ and source
@@ -988,31 +1066,31 @@ class Scene(Emitter):
 
         for idx in iter_range:
             message = self.history[idx]
-            
+
             if message.typ != typ:
                 iterations += 1
                 continue
-                
+
             if source is not None and message.source != source:
                 iterations += 1
                 continue
-                
+
             if meta_hash is not None and message.meta_hash != meta_hash:
                 iterations += 1
                 continue
-            
+
             # Apply additional filters
             valid = True
             for filter_name, filter_value in filters.items():
                 if getattr(message, filter_name, None) != filter_value:
                     valid = False
                     break
-                    
+
             if valid:
                 to_remove.append(message)
                 if not all:
                     break
-                    
+
             iterations += 1
             if max_iterations and iterations >= max_iterations:
                 break
@@ -1027,21 +1105,19 @@ class Scene(Emitter):
         iterations = 0
         for idx in range(len(self.history) - 1, -1, -1):
             message: SceneMessage = self.history[idx]
-            
+
             iterations += 1
             if iterations >= max_iterations:
                 return None
-            
+
             if message.typ != typ:
                 continue
-            
+
             for filter_name, filter_value in filters.items():
                 if getattr(message, filter_name, None) != filter_value:
                     continue
-            
+
             return self.history[idx]
-
-
 
     def message_index(self, message_id: int) -> int:
         """
@@ -1068,19 +1144,19 @@ class Scene(Emitter):
             if isinstance(self.history[idx], CharacterMessage):
                 if self.history[idx].source == "player":
                     return self.history[idx]
-                
+
     def last_message_of_type(
-        self, 
-        typ: str | list[str], 
+        self,
+        typ: str | list[str],
         source: str = None,
-        max_iterations: int = None, 
+        max_iterations: int = None,
         stop_on_time_passage: bool = False,
         on_iterate: Callable = None,
-        **filters
+        **filters,
     ) -> SceneMessage | None:
         """
         Returns the last message of the given type and source
-        
+
         Arguments:
         - typ: str | list[str] - the type of message to find
         - source: str - the source of the message
@@ -1090,44 +1166,43 @@ class Scene(Emitter):
         Keyword Arguments:
         Any additional keyword arguments will be used to filter the messages against their attributes
         """
-        
+
         if not isinstance(typ, list):
             typ = [typ]
-            
+
         num_iterations = 0
-        
+
         for idx in range(len(self.history) - 1, -1, -1):
-            
             if max_iterations is not None and num_iterations >= max_iterations:
                 return None
-            
+
             message = self.history[idx]
-            
+
             if on_iterate:
                 on_iterate(message)
-            
+
             if isinstance(message, TimePassageMessage) and stop_on_time_passage:
                 return None
-            
+
             num_iterations += 1
-            
+
             if message.typ not in typ or (source and message.source != source):
                 continue
-            
+
             valid = True
-            
+
             for filter_name, filter_value in filters.items():
                 message_value = getattr(message, filter_name, None)
                 if message_value != filter_value:
                     valid = False
                     break
-                
+
             if valid:
                 return message
 
     def collect_messages(
-        self, 
-        typ: str | list[str] = None, 
+        self,
+        typ: str | list[str] = None,
         source: str = None,
         max_iterations: int = 100,
         max_messages: int | None = None,
@@ -1144,10 +1219,10 @@ class Scene(Emitter):
         messages = []
         iterations = 0
         collected = 0
-        
+
         if start_idx is None:
             start_idx = len(self.history) - 1
-        
+
         for idx in range(start_idx, -1, -1):
             message = self.history[idx]
             if (not typ or message.typ in typ) and (
@@ -1167,9 +1242,9 @@ class Scene(Emitter):
         return messages
 
     def snapshot(
-        self, 
-        lines: int = 3, 
-        ignore: list[str | SceneMessage] = None, 
+        self,
+        lines: int = 3,
+        ignore: list[str | SceneMessage] = None,
         start: int = None,
         as_format: str = "movie_script",
     ) -> str:
@@ -1178,18 +1253,24 @@ class Scene(Emitter):
         """
 
         if not ignore:
-            ignore = [ReinforcementMessage, DirectorMessage, ContextInvestigationMessage]
+            ignore = [
+                ReinforcementMessage,
+                DirectorMessage,
+                ContextInvestigationMessage,
+            ]
         else:
             # ignore me also be a list of message type strings (e.g. 'director')
             # convert to class types
             _ignore = []
             for item in ignore:
                 if isinstance(item, str):
-                    _ignore.append(MESSAGE_TYPES.get(item)) 
+                    _ignore.append(MESSAGE_TYPES.get(item))
                 elif isinstance(item, SceneMessage):
                     _ignore.append(item)
                 else:
-                    raise ValueError("ignore must be a list of strings or SceneMessage types")
+                    raise ValueError(
+                        "ignore must be a list of strings or SceneMessage types"
+                    )
             ignore = _ignore
 
         collected = []
@@ -1207,22 +1288,15 @@ class Scene(Emitter):
 
         return "\n".join([message.as_format(as_format) for message in collected])
 
-    def push_archive(self, entry: data_objects.ArchiveEntry):
+    async def push_archive(self, entry: ArchiveEntry):
         """
         Adds an entry to the archive history.
 
         The archive history is a list of summarized history entries.
         """
 
-        self.archived_history.append(entry.__dict__)
-        self.signals["archive_add"].send(
-            events.ArchiveEvent(
-                scene=self,
-                event_type="archive_add",
-                text=entry.text,
-                ts=entry.ts,
-            )
-        )
+        self.archived_history.append(entry.model_dump(exclude_none=True))
+        await emit_archive_add(self, entry)
         emit(
             "archived_history",
             data={
@@ -1280,25 +1354,25 @@ class Scene(Emitter):
         if memory_helper:
             await actor.character.commit_to_memory(memory_helper.agent)
 
-
-    async def remove_character(self, character: Character, purge_from_memory: bool = True):
+    async def remove_character(
+        self, character: Character, purge_from_memory: bool = True
+    ):
         """
         Remove a character from the scene
-        
+
         Class remove_actor if the character is active
         otherwise remove from inactive_characters.
         """
-        
+
         for actor in self.actors:
             if actor.character == character:
                 await self.remove_actor(actor)
-        
+
         if character.name in self.inactive_characters:
             del self.inactive_characters[character.name]
-            
+
         if purge_from_memory:
             await character.purge_from_memory()
-
 
     async def remove_actor(self, actor: Actor):
         """
@@ -1334,10 +1408,10 @@ class Scene(Emitter):
 
         if not character_name:
             return
-        
+
         if character_name == "__narrator__":
             return self.narrator_character_object
-        
+
         if character_name in self.inactive_characters:
             return self.inactive_characters[character_name]
 
@@ -1354,6 +1428,10 @@ class Scene(Emitter):
             if isinstance(actor, Player):
                 return actor.character
             
+        # No active player found, return the first NPC
+        for actor in self.actors:
+            return actor.character
+
         # No active player found, return the first NPC
         for actor in self.actors:
             return actor.character
@@ -1375,7 +1453,9 @@ class Scene(Emitter):
             if actor.character.name.lower() in line.lower():
                 return actor.character
 
-    def parse_characters_from_text(self, text: str, exclude_active:bool=False) -> list[Character]:
+    def parse_characters_from_text(
+        self, text: str, exclude_active: bool = False
+    ) -> list[Character]:
         """
         Parse characters from a block of text
         """
@@ -1389,7 +1469,7 @@ class Scene(Emitter):
                 # use regex with word boundaries to match whole words
                 if re.search(rf"\b{actor.character.name.lower()}\b", text):
                     characters.append(actor.character)
-                    
+
         # inactive characters
         for character in self.inactive_characters.values():
             if re.search(rf"\b{character.name.lower()}\b", text):
@@ -1413,14 +1493,14 @@ class Scene(Emitter):
         """
         self.description = description
 
-    def get_intro(self, intro:str = None) -> str:
+    def get_intro(self, intro: str = None) -> str:
         """
         Returns the intro text of the scene
         """
-        
+
         if not intro:
             intro = self.intro
-        
+
         try:
             player_name = self.get_player_character().name
             intro = intro.replace("{{user}}", player_name).replace(
@@ -1428,9 +1508,9 @@ class Scene(Emitter):
             )
         except AttributeError:
             intro = self.intro
-            
+
         editor = self.get_helper("editor").agent
-            
+
         if editor.fix_exposition_enabled and editor.fix_exposition_narrator:
             if '"' not in intro and "*" not in intro:
                 intro = f"*{intro}*"
@@ -1465,35 +1545,37 @@ class Scene(Emitter):
 
         return count
 
-    def context_history(
-        self, budget: int = 8192, **kwargs
-    ):
+    def context_history(self, budget: int = 8192, **kwargs):
         parts_context = []
         parts_dialogue = []
 
         budget_context = int(0.5 * budget)
         budget_dialogue = int(0.5 * budget)
-        
+
         keep_director = kwargs.get("keep_director", False)
         keep_context_investigation = kwargs.get("keep_context_investigation", True)
         show_hidden = kwargs.get("show_hidden", False)
 
         conversation_format = self.conversation_format
         actor_direction_mode = self.get_helper("director").agent.actor_direction_mode
-        layered_history_enabled = self.get_helper("summarizer").agent.layered_history_enabled
+        layered_history_enabled = self.get_helper(
+            "summarizer"
+        ).agent.layered_history_enabled
         include_reinforcements = kwargs.get("include_reinforcements", True)
         assured_dialogue_num = kwargs.get("assured_dialogue_num", 5)
-        
+
         chapter_labels = kwargs.get("chapter_labels", False)
         chapter_numbers = []
 
         history_len = len(self.history)
 
-
         # CONTEXT
         # collect context, ignore where end > len(history) - count
-        if not self.layered_history or not layered_history_enabled or not self.layered_history[0]:
-            
+        if (
+            not self.layered_history
+            or not layered_history_enabled
+            or not self.layered_history[0]
+        ):
             # no layered history available
 
             for i in range(len(self.archived_history) - 1, -1, -1):
@@ -1509,82 +1591,95 @@ class Scene(Emitter):
                     )
                     text = f"{time_message}: {archive_history_entry['text']}"
                 except Exception as e:
-                    log.error("context_history", error=e, traceback=traceback.format_exc())
+                    log.error(
+                        "context_history", error=e, traceback=traceback.format_exc()
+                    )
                     text = archive_history_entry["text"]
 
                 if count_tokens(parts_context) + count_tokens(text) > budget_context:
                     break
-                
+
                 text = condensed(text)
-                
+
                 parts_context.insert(0, text)
-                    
+
         else:
-            
             # layered history available
             # start with the last layer and work backwards
-            
+
             next_layer_start = None
             num_layers = len(self.layered_history)
-            
+
             for i in range(len(self.layered_history) - 1, -1, -1):
-                
-                log.debug("context_history - layered history", i=i, next_layer_start=next_layer_start)
-                
+                log.debug(
+                    "context_history - layered history",
+                    i=i,
+                    next_layer_start=next_layer_start,
+                )
+
                 if not self.layered_history[i]:
                     continue
-                
+
                 k = next_layer_start if next_layer_start is not None else 0
-                
-                for layered_history_entry in self.layered_history[i][next_layer_start if next_layer_start is not None else 0:]:
-                    
+
+                for layered_history_entry in self.layered_history[i][
+                    next_layer_start if next_layer_start is not None else 0 :
+                ]:
                     time_message_start = util.iso8601_diff_to_human(
                         layered_history_entry["ts_start"], self.ts
                     )
                     time_message_end = util.iso8601_diff_to_human(
                         layered_history_entry["ts_end"], self.ts
                     )
-                    
+
                     if time_message_start == time_message_end:
                         time_message = time_message_start
                     else:
-                        time_message = f"Start:{time_message_start}, End:{time_message_end}" if time_message_start != time_message_end else time_message_start
+                        time_message = (
+                            f"Start:{time_message_start}, End:{time_message_end}"
+                            if time_message_start != time_message_end
+                            else time_message_start
+                        )
                     text = f"{time_message} {layered_history_entry['text']}"
-                    
+
                     # prepend chapter labels
                     if chapter_labels:
                         chapter_number = f"{num_layers - i}.{k + 1}"
                         text = f"### Chapter {chapter_number}\n{text}"
                         chapter_numbers.append(chapter_number)
-                    
+
                     parts_context.append(text)
-                    
+
                     k += 1
-                    
+
                 next_layer_start = layered_history_entry["end"] + 1
-            
+
             # collect archived history entries that have not yet been
             # summarized to the layered history
-            base_layer_start = self.layered_history[0][-1]["end"] + 1 if self.layered_history[0] else None
-            
+            base_layer_start = (
+                self.layered_history[0][-1]["end"] + 1
+                if self.layered_history[0]
+                else None
+            )
+
             if base_layer_start is not None:
                 i = 0
-                
+
                 # if chapter labels have been appanded, we need to
                 # open a new section for the current scene
-                
+
                 if chapter_labels:
                     parts_context.append("### Current\n")
-                
+
                 for archive_history_entry in self.archived_history[base_layer_start:]:
                     time_message = util.iso8601_diff_to_human(
                         archive_history_entry["ts"], self.ts
                     )
-                    
+
                     text = f"{time_message}: {archive_history_entry['text']}"
-                    
+
                     text = condensed(text)
-                    
+
                     parts_context.append(text)
 
                     i += 1
@@ -1597,34 +1692,43 @@ class Scene(Emitter):
 
         # DIALOGUE
         try:
-            summarized_to = self.archived_history[-1]["end"] if self.archived_history else 0
+            summarized_to = (
+                self.archived_history[-1]["end"] if self.archived_history else 0
+            )
         except KeyError:
             # only static archived history entries exist (pre-entered history
             # that doesnt have start and end timestamps)
             summarized_to = 0
-        
-        
+
         # if summarized_to somehow is bigger than the length of the history
         # since we have no way to determine where they sync up just put as much of
         # the dialogue as possible
         if summarized_to and summarized_to >= history_len:
-            log.warning("context_history", message="summarized_to is greater than history length - may want to regenerate history")
+            log.warning(
+                "context_history",
+                message="summarized_to is greater than history length - may want to regenerate history",
+            )
             summarized_to = 0
-            
-        log.debug("context_history", summarized_to=summarized_to, history_len=history_len)
-        
-        dialogue_messages_collected = 0 
-        
-        #for message in self.history[summarized_to if summarized_to is not None else 0:]:
+
+        log.debug(
+            "context_history", summarized_to=summarized_to, history_len=history_len
+        )
+
+        dialogue_messages_collected = 0
+
+        # for message in self.history[summarized_to if summarized_to is not None else 0:]:
         for i in range(len(self.history) - 1, -1, -1):
             message = self.history[i]
-            
-            if i < summarized_to and dialogue_messages_collected >= assured_dialogue_num:
+
+            if (
+                i < summarized_to
+                and dialogue_messages_collected >= assured_dialogue_num
+            ):
                 break
 
             if message.hidden and not show_hidden:
                 continue
-            
+
             if isinstance(message, ReinforcementMessage) and not include_reinforcements:
                 continue
 
@@ -1637,30 +1741,32 @@ class Scene(Emitter):
                     # TODO: we may want to include these in the future
                     continue
 
-                elif isinstance(keep_director, str) and message.character_name != keep_director:
+                elif (
+                    isinstance(keep_director, str)
+                    and message.character_name != keep_director
+                ):
                     continue
-            
-            elif isinstance(message, ContextInvestigationMessage) and not keep_context_investigation:
-                continue
 
+            elif (
+                isinstance(message, ContextInvestigationMessage)
+                and not keep_context_investigation
+            ):
+                continue
 
             if count_tokens(parts_dialogue) + count_tokens(message) > budget_dialogue:
                 break
-            
+
             parts_dialogue.insert(
-                0, 
-                message.as_format(conversation_format, mode=actor_direction_mode)
+                0, message.as_format(conversation_format, mode=actor_direction_mode)
             )
-            
+
             if isinstance(message, CharacterMessage):
                 dialogue_messages_collected += 1
-                    
-            
+
         if count_tokens(parts_context) < 128:
             intro = self.get_intro()
             if intro:
                 parts_context.insert(0, intro)
-                
 
         active_agent_ctx = active_agent.get()
         if active_agent_ctx:
@@ -1746,7 +1852,9 @@ class Scene(Emitter):
             "scene_status",
             scene=self.name,
             scene_time=self.ts,
-            human_ts=util.iso8601_duration_to_human(self.ts, suffix="") if self.ts else None,
+            human_ts=util.iso8601_duration_to_human(self.ts, suffix="")
+            if self.ts
+            else None,
             saved=self.saved,
         )
 
@@ -1811,41 +1919,41 @@ class Scene(Emitter):
         # TODO: need to adjust archived_history ts as well
         # but removal also probably means the history needs to be regenerated
         # anyway.
-        
+
     def fix_time(self):
         """
         New implementation of sync_time that will fix time across the board
         using the base history as the sole source of truth.
-        
+
         This means first identifying the time jumps in the base history by
         looking for TimePassageMessages and then applying those time jumps
-        
+
         to the archived history and the layered history based on their start and end
         indexes.
         """
         try:
             ts = self.ts
             self._fix_time()
-        except Exception as e:
-            log.exception("fix_time", exc=e)
+        except Exception:
+            log.error("fix_time", exc=traceback.format_exc())
             self.ts = ts
-        
+
     def _fix_time(self):
         starting_time = "PT0S"
-        
+
         for archived_entry in self.archived_history:
             if "ts" in archived_entry and "end" not in archived_entry:
                 starting_time = archived_entry["ts"]
             elif "end" in archived_entry:
                 break
-        
+
         # store time jumps by index
         time_jumps = []
-        
+
         for idx, message in enumerate(self.history):
             if isinstance(message, TimePassageMessage):
                 time_jumps.append((idx, message.ts))
-        
+
         # now make the timejumps cumulative, meaning that each time jump
         # will be the sum of all time jumps up to that point
         cumulative_time_jumps = []
@@ -1853,33 +1961,32 @@ class Scene(Emitter):
         for idx, ts_jump in time_jumps:
             ts = util.iso8601_add(ts, ts_jump)
             cumulative_time_jumps.append((idx, ts))
-            
+
         try:
             ending_time = cumulative_time_jumps[-1][1]
         except IndexError:
             # no time jumps found
             ending_time = starting_time
             self.ts = ending_time
-            return    
-            
+            return
+
         # apply time jumps to the archived history
         ts = starting_time
         for _, entry in enumerate(self.archived_history):
-            
             if "end" not in entry:
                 continue
-            
+
             # we need to find best_ts by comparing entry["end"]
             # index to time_jumps (find the closest time jump that is
             # smaller than entry["end"])
-            
+
             best_ts = None
             for jump_idx, jump_ts in cumulative_time_jumps:
                 if jump_idx < entry["end"]:
                     best_ts = jump_ts
                 else:
                     break
-            
+
             if best_ts:
                 entry["ts"] = best_ts
                 ts = entry["ts"]
@@ -1918,27 +2025,27 @@ class Scene(Emitter):
 
         _active_pins = await self.world_state_manager.get_pins(active=True)
         self.active_pins = list(_active_pins.pins.values())
-        
+
     async def ensure_memory_db(self):
         memory = self.get_helper("memory").agent
         if not memory.db:
             await memory.set_db()
 
     async def emit_history(self):
-        emit("clear_screen", "")        
+        emit("clear_screen", "")
         # this is mostly to support character cards
         # we introduce the main character to all such characters, replacing
         # the {{ user }} placeholder
         for npc in self.npcs:
             if npc.introduce_main_character:
                 npc.introduce_main_character(self.main_character.character)
-        
+
         # emit intro
-        intro:str = self.get_intro()
+        intro: str = self.get_intro()
         self.narrator_message(intro)
-        
+
         # emit history
-        for message in self.history[-self.max_backscroll:]:
+        for message in self.history[-self.max_backscroll :]:
             if isinstance(message, CharacterMessage):
                 character = self.get_character(message.character_name)
             else:
@@ -1959,14 +2066,20 @@ class Scene(Emitter):
         while True:
             try:
                 log.debug(f"Starting scene loop: {self.environment}")
-                
+
                 self.world_state.emit()
-                
+
                 if self.environment == "creative":
-                    self.creative_node_graph, _ = load_graph(self.creative_nodes_filename, [self.save_dir])
+                    self.creative_node_graph, _ = load_graph(
+                        self.creative_nodes_filename, [self.save_dir]
+                    )
+                    await initialize_packages(self, self.creative_node_graph)
                     await self._run_creative_loop(init=first_loop)
                 else:
-                    self.node_graph, _ = load_graph(self.nodes_filename, [self.save_dir])
+                    self.node_graph, _ = load_graph(
+                        self.nodes_filename, [self.save_dir]
+                    )
+                    await initialize_packages(self, self.node_graph)
                     await self._run_game_loop(init=first_loop)
             except ExitScene:
                 break
@@ -1980,22 +2093,20 @@ class Scene(Emitter):
             await asyncio.sleep(0.01)
 
     async def _game_startup(self):
-        self.commands = command = commands.Manager(self)
-        
+        self.commands = commands.Manager(self)
+
         await self.signals["scene_init"].send(
             events.SceneStateEvent(scene=self, event_type="scene_init")
         )
-        
-        
-    async def _run_game_loop(self, init: bool = True, node_graph = None):        
+
+    async def _run_game_loop(self, init: bool = True, node_graph=None):
         if init:
             await self._game_startup()
             await self.emit_history()
-            await self.world_state.request_update(initial_only=True)
-        
+
         self.nodegraph_state = state = GraphState()
         state.data["continue_scene"] = True
-        
+
         while state.data["continue_scene"] and self.active:
             try:
                 await self.node_graph.execute(state)
@@ -2033,13 +2144,12 @@ class Scene(Emitter):
                 )
                 emit("system", status="error", message=f"Unhandled Error: {e}")
 
-
     async def _run_creative_loop(self, init: bool = True):
         await self.emit_history()
-        
+
         self.nodegraph_state = state = GraphState()
         state.data["continue_scene"] = True
-        
+
         while state.data["continue_scene"] and self.active:
             try:
                 await self.creative_node_graph.execute(state)
@@ -2088,7 +2198,6 @@ class Scene(Emitter):
         """
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
-        scene = self
 
         if self.immutable_save and not save_as and not force:
             save_as = True
@@ -2132,7 +2241,7 @@ class Scene(Emitter):
 
         # Create a dictionary to store the scene data
         scene_data = self.serialize
-        
+
         if not auto:
             emit("status", status="success", message="Saved scene")
 
@@ -2149,14 +2258,14 @@ class Scene(Emitter):
         # add this scene to recent scenes in config
         await self.add_to_recent_scenes()
 
-    async def save_restore(self, filename:str):
+    async def save_restore(self, filename: str):
         """
         Serializes the scene to a file.
-        
+
         immutable_save will be set to True
         memory_sesion_id will be randomized
         """
-        
+
         serialized = self.serialize
         serialized["immutable_save"] = True
         serialized["memory_session_id"] = str(uuid.uuid4())[:10]
@@ -2185,12 +2294,7 @@ class Scene(Emitter):
             if not ah.get("ts"):
                 ah["ts"] = ts
 
-            self.signals["archive_add"].send(
-                events.ArchiveEvent(
-                    scene=self, event_type="archive_add", text=ah["text"], ts=ts
-                )
-            )
-            await asyncio.sleep(0)
+            await emit_archive_add(self, ArchiveEntry(**ah))
 
         for character in self.characters:
             await character.commit_to_memory(memory)
@@ -2224,7 +2328,7 @@ class Scene(Emitter):
 
         self.set_new_memory_session_id()
 
-    async def restore(self, save_as:str | None=None):
+    async def restore(self, save_as: str | None = None):
         try:
             self.log.info("Restoring", source=self.restore_from)
 
@@ -2245,22 +2349,22 @@ class Scene(Emitter):
                 os.path.join(self.save_dir, self.restore_from),
                 self.get_helper("conversation").agent.client,
             )
-            
+
             await self.reset_memory()
-            
+
             if save_as:
                 self.restore_from = restore_from
                 await self.save(save_as=True, copy_name=save_as)
             else:
                 self.filename = None
             self.emit_status(restored=True)
-            
+
             interaction_state = interaction.get()
-            
+
             if interaction_state:
                 # Break and restart the game loop
                 interaction_state.reset_requested = True
-            
+
         except Exception as e:
             self.log.error("restore", error=e, traceback=traceback.format_exc())
 
@@ -2307,7 +2411,6 @@ class Scene(Emitter):
     @property
     def json(self):
         return json.dumps(self.serialize, indent=2, cls=save.SceneEncoder)
-
 
     def interrupt(self):
         self.cancel_requested = True

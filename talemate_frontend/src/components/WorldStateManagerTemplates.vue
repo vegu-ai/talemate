@@ -15,10 +15,10 @@
                         <v-text-field 
                         v-model="group.name" 
                         label="Group name" 
-                        :rules="[v => !!v || 'Name is required']"
+                        :rules="[v => !!v || 'Name is required', v => validateGroupName(v)]"
                         required
                         @blur="saveTemplateGroup"
-                        hint="No special characters allowed" 
+                        hint="Invalid characters: &lt; &gt; : / \\ | ? *" 
                         >
                         </v-text-field>
                     </v-col>
@@ -409,6 +409,7 @@
                                         :context-aware="false"
                                         :original="template.spices.join('\n')"
                                         :templates="templates"
+                                        :specify-length="true"
                                         @generate="onSpicesGenerated"
                                     />
                                 </v-card-actions> 
@@ -683,6 +684,19 @@ export default {
                 return "No special characters allowed";
             }
             return true
+        },
+
+        validateGroupName(value) {
+            if (value == null) {
+                return true;
+            }
+            // Characters invalid in Windows and Linux filenames
+            // Windows: < > : " / \ | ? *
+            // Linux: / (null byte is not possible to input from UI)
+            if(/[<>:"/\\|?*]/.test(value)) {
+                return "Name contains invalid characters";
+            }
+            return true;
         },
 
         selectTemplate(index) {

@@ -321,6 +321,8 @@ Sarah poured him a coffee. "Want to talk through it?"
 
 ---
 
+{# SCENE CONTEXT #}
+{% set scene_context_text %}
 {% set history = scene.context_history(
     budget=1024, 
     min_dialogue=20, 
@@ -331,12 +333,24 @@ Sarah poured him a coffee. "Want to talk through it?"
 {{ scene_context }}
 {% endfor %}
 <|CLOSE_SECTION|>
+{% endset %}
+{# END SCENE CONTEXT #}
 
+{# SCENE ANALYSIS #}
+{% set scene_analysis_text %}
 {% if scene_analysis %}
 <|SECTION:SCENE ANALYSIS|>
 {{ scene_analysis }}
 <|CLOSE_SECTION|>
 {% endif %}
+{% endset %}
+{# END SCENE ANALYSIS #}
+
+{{ scene_context_text }}
+
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
+
+{{ scene_analysis_text }}
 
 {% include "character-guidance.jinja2" %}
 
@@ -358,7 +372,7 @@ Fix bad AI writing by making it simpler, shorter, and more natural.
    - Unique objects, settings, or sensory details that create atmosphere
    - Any detail that would change the meaning if removed
    Only cut pure embellishment that adds no information
-{{ li() }}. MAKE dialogue natural - Use contractions, casual speech, how people actually talk  
+{{ li() }}. MAKE dialogue natural - Use contractions, casual speech, how people actually talk. Important: character defining speaking patterns should be preserved.
 {{ li() }}. CUT excessive description - Remove unnecessary details, measurements, and over-explanation
 {{ li() }}. BE CONCISE - Remove only redundant or purple prose. Length reduction is a side effect, not the goal
 {{ li() }}. MATCH THE ORIGINAL TENSE - If the REVIEW passage is in present tense, keep the FIX in present tense. If it's in past tense, keep it in past tense. Only change tense when the original is inconsistent and you're clearly standardising it. 

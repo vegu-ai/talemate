@@ -16,11 +16,6 @@ __all__ = [
     "preset_for_kind",
     "make_kind",
     "max_tokens_for_kind",
-    "PRESET_TALEMATE_CONVERSATION",
-    "PRESET_TALEMATE_CREATOR",
-    "PRESET_LLAMA_PRECISE",
-    "PRESET_DIVINE_INTELLECT",
-    "PRESET_SIMPLE_1",
 ]
 
 log = structlog.get_logger("talemate.client.presets")
@@ -42,27 +37,31 @@ def sync_config(event):
     )
     CONFIG["inference_groups"] = {
         group: InferencePresetGroup(**data)
-        for group, data in event.data.get("presets", {}).get("inference_groups", {}).items()
+        for group, data in event.data.get("presets", {})
+        .get("inference_groups", {})
+        .items()
     }
 
 
 handlers["config_saved"].connect(sync_config)
 
 
-def get_inference_parameters(preset_name: str, group:str|None = None) -> dict:
+def get_inference_parameters(preset_name: str, group: str | None = None) -> dict:
     """
     Returns the inference parameters for the given preset name.
     """
-    
+
     presets = CONFIG["inference"].model_dump()
-    
+
     if group:
         try:
             group_presets = CONFIG["inference_groups"].get(group).model_dump()
             presets.update(group_presets["presets"])
         except AttributeError:
-            log.warning(f"Invalid preset group referenced: {group}. Falling back to defaults.")
-    
+            log.warning(
+                f"Invalid preset group referenced: {group}. Falling back to defaults."
+            )
+
     if preset_name in presets:
         return presets[preset_name]
 
@@ -145,7 +144,7 @@ def preset_for_kind(kind: str, client: "ClientBase") -> dict:
             presets=CONFIG["inference"],
         )
         preset_name = "scene_direction"
-        
+
     set_client_context_attribute("inference_preset", preset_name)
 
     return get_inference_parameters(preset_name, client.preset_group)
@@ -197,29 +196,26 @@ def max_tokens_for_kind(kind: str, total_budget: int) -> int:
             return value
     if token_value is not None:
         return token_value
-    
+
     # finally check if splitting last item off of _ is a number, and then just
     # return that number
     kind_split = kind.split("_")[-1]
     if kind_split.isdigit():
         return int(kind_split)
-    
+
     return 150  # Default value if none of the kinds match
 
 
-
-def make_kind(action_type: str, length: int, expect_json:bool=False) -> str:
+def make_kind(action_type: str, length: int, expect_json: bool = False) -> str:
     """
     Creates a kind string based on the preset_arch_type and length.
     """
 
     if action_type == "analyze" and not expect_json:
-        kind = f"investigate"
+        kind = "investigate"
     else:
         kind = action_type
-                
+
     kind = f"{kind}_{length}"
-    
-    return kind    
-    
-   
+
+    return kind

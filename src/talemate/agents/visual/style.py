@@ -83,7 +83,9 @@ class Style(pydantic.BaseModel):
 # Almost taken straight from some of the fooocus style presets, credit goes to the original author
 
 STYLE_MAP["digital_art"] = Style(
-    keywords="in the style of a digital artwork, masterpiece, best quality, high detail".split(", "),
+    keywords="in the style of a digital artwork, masterpiece, best quality, high detail".split(
+        ", "
+    ),
     negative_keywords="text, watermark, low quality, blurry, photo".split(", "),
 )
 
@@ -95,12 +97,16 @@ STYLE_MAP["concept_art"] = Style(
 )
 
 STYLE_MAP["ink_illustration"] = Style(
-    keywords="in the style of ink illustration, painting, masterpiece, best quality".split(", "),
+    keywords="in the style of ink illustration, painting, masterpiece, best quality".split(
+        ", "
+    ),
     negative_keywords="text, watermark, low quality, blurry, photo".split(", "),
 )
 
 STYLE_MAP["anime"] = Style(
-    keywords="in the style of anime, masterpiece, best quality, illustration".split(", "),
+    keywords="in the style of anime, masterpiece, best quality, illustration".split(
+        ", "
+    ),
     negative_keywords="text, watermark, low quality, blurry, photo, 3d".split(", "),
 )
 

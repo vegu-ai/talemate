@@ -1,0 +1,142 @@
+author: talemate
+description: Templates to facilitate the generation of human characters.
+name: Human
+templates:
+  1295ecdd-b462-41bf-89cf-157141fdc22d:
+    attribute: Dislikes
+    description: What does the character dislike?
+    favorite: false
+    group: 42a058e7-d6e0-412e-96f5-98f466c9e941
+    instructions: 'List some things that {character_name} dislikes. Respond with a
+      comma separated list of things. (2 - 3 things)
+
+
+      Examples: cats, dogs, pizza, etc.'
+    name: Dislikes
+    priority: 2
+    supports_spice: true
+    supports_style: false
+    template_type: character_attribute
+    uid: 1295ecdd-b462-41bf-89cf-157141fdc22d
+  2be87e1d-e888-4f63-af2e-a5ec0700ef29:
+    attribute: Age
+    description: null
+    favorite: false
+    group: 42a058e7-d6e0-412e-96f5-98f466c9e941
+    instructions: 'Respond with a number only
+
+
+      For example: 21, 25, 33 etc.'
+    name: Age
+    priority: 3
+    supports_spice: false
+    supports_style: false
+    template_type: character_attribute
+    uid: 2be87e1d-e888-4f63-af2e-a5ec0700ef29
+  6f469667-7873-446c-beb1-500b4a33aad5:
+    attribute: Personality
+    description: null
+    favorite: false
+    group: 42a058e7-d6e0-412e-96f5-98f466c9e941
+    instructions: Briefly describe the character's personality.  (1 - 2 sentences)
+    name: Personality
+    priority: 1
+    supports_spice: true
+    supports_style: true
+    template_type: character_attribute
+    uid: 6f469667-7873-446c-beb1-500b4a33aad5
+  77e0a6b7-83c3-409d-964c-8679b3133761:
+    attribute: Family and Friends
+    description: null
+    favorite: false
+    group: 42a058e7-d6e0-412e-96f5-98f466c9e941
+    instructions: List close family and friends of {character_name}. Respond with
+      a comma separated list of names. (2 - 3 names, include age)
+    name: Family and Friends
+    priority: 1
+    supports_spice: true
+    supports_style: false
+    template_type: character_attribute
+    uid: 77e0a6b7-83c3-409d-964c-8679b3133761
+  8598cb17-7a80-402b-88b3-ac4153e4da70:
+    description: null
+    detail: What is a traumatic event in {character_name}'s past?
+    favorite: false
+    group: 42a058e7-d6e0-412e-96f5-98f466c9e941
+    instructions: Describe a traumatic event in {character_name}'s past.
+    name: Traumatic Event
+    priority: 1
+    supports_spice: true
+    supports_style: true
+    template_type: character_detail
+    uid: 8598cb17-7a80-402b-88b3-ac4153e4da70
+  a544d80f-1d4a-4206-9503-9f066ef914b3:
+    attribute: Likes
+    description: What does the character enjoy?
+    favorite: false
+    group: 42a058e7-d6e0-412e-96f5-98f466c9e941
+    instructions: 'List some things that {character_name} likes. Respond with a comma
+      separated list of things. (2 - 3 things)
+
+
+      Examples: cats, dogs, pizza, etc.'
+    name: Likes
+    priority: 2
+    supports_spice: true
+    supports_style: false
+    template_type: character_attribute
+    uid: a544d80f-1d4a-4206-9503-9f066ef914b3
+  d56e9593-cc74-40ed-adf5-e93269cc8ae6:
+    description: null
+    detail: What's {character_name}'s fondest memory?
+    favorite: false
+    group: 42a058e7-d6e0-412e-96f5-98f466c9e941
+    instructions: ''
+    name: Happy memory
+    priority: 1
+    supports_spice: true
+    supports_style: true
+    template_type: character_detail
+    uid: d56e9593-cc74-40ed-adf5-e93269cc8ae6
+  d8b99b5b-6dd3-45c6-8b4b-ee3502e3c95c:
+    attribute: Gender
+    description: null
+    favorite: false
+    group: 42a058e7-d6e0-412e-96f5-98f466c9e941
+    instructions: 'Respond with a single word. Based on the information you know about
+      {character_name}.
+
+
+      Examples: male, female, neutral'
+    name: Gender
+    priority: 3
+    supports_spice: false
+    supports_style: false
+    template_type: character_attribute
+    uid: d8b99b5b-6dd3-45c6-8b4b-ee3502e3c95c
+  ea99d4b0-66af-4a18-9d4c-2fb8b2cc3451:
+    attribute: Appearance
+    description: The character's general appearance.
+    favorite: false
+    group: 42a058e7-d6e0-412e-96f5-98f466c9e941
+    instructions: Briefly describe the character's appearance. (1 - 2 sentences)
+    name: Appearance
+    priority: 2
+    supports_spice: true
+    supports_style: true
+    template_type: character_attribute
+    uid: ea99d4b0-66af-4a18-9d4c-2fb8b2cc3451
+  f9da8d32-9412-482e-b770-2bc367135c8e:
+    attribute: Clothes and Accessories
+    description: null
+    favorite: false
+    group: 42a058e7-d6e0-412e-96f5-98f466c9e941
+    instructions: 'Briefly describe {character_name}''s clothes and accessories. (1
+      - 2 sentences). '
+    name: Clothes and Accessories
+    priority: 1
+    supports_spice: true
+    supports_style: true
+    template_type: character_attribute
+    uid: f9da8d32-9412-482e-b770-2bc367135c8e
+uid: 42a058e7-d6e0-412e-96f5-98f466c9e941

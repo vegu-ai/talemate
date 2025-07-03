@@ -29,7 +29,6 @@ COLOR_MAP = {
     "brown": "#795548",
     "blue-grey": "#607D8B",
     "grey": "#9E9E9E",
-    
     # Lighten-3 colors
     "red-lighten-3": "#EF9A9A",
     "pink-lighten-3": "#F48FB1",
@@ -50,7 +49,6 @@ COLOR_MAP = {
     "brown-lighten-3": "#BCAAA4",
     "blue-grey-lighten-3": "#B0BEC5",
     "grey-lighten-3": "#EEEEEE",
-    
     # Darken-3 colors
     "red-darken-3": "#C62828",
     "pink-darken-3": "#AD1457",
@@ -76,6 +74,7 @@ COLOR_MAP = {
 # Derive lists from the map
 COLOR_NAMES = sorted(list(COLOR_MAP.keys()))
 COLORS = sorted(list(COLOR_MAP.values()))
+
 
 def random_color() -> str:
     return random.choice(COLORS)

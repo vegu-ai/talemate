@@ -18,9 +18,16 @@ from talemate.scene_message import (
     ReinforcementMessage,
     TimePassageMessage,
 )
+from talemate.util.response import extract_list
 
 
-from talemate.agents.base import Agent, AgentAction, AgentActionConfig, AgentEmission, set_processing
+from talemate.agents.base import (
+    Agent,
+    AgentAction,
+    AgentActionConfig,
+    AgentEmission,
+    set_processing,
+)
 from talemate.agents.registry import register
 
 
@@ -56,10 +63,7 @@ class TimePassageEmission(WorldStateAgentEmission):
 
 
 @register()
-class WorldStateAgent(
-    CharacterProgressionMixin,
-    Agent
-):
+class WorldStateAgent(CharacterProgressionMixin, Agent):
     """
     An agent that handles world state related tasks.
     """
@@ -76,6 +80,12 @@ class WorldStateAgent(
                 label="Update world state",
                 description="Will attempt to update the world state based on the current scene. Runs automatically every N turns.",
                 config={
+                    "initial": AgentActionConfig(
+                        type="bool",
+                        label="When a new scene is started",
+                        description="Whether to update the world state on scene start.",
+                        value=True,
+                    ),
                     "turns": AgentActionConfig(
                         type="number",
                         label="Turns",
@@ -84,7 +94,7 @@ class WorldStateAgent(
                         min=1,
                         max=100,
                         step=1,
-                    )
+                    ),
                 },
             ),
             "update_reinforcements": AgentAction(
@@ -134,9 +144,16 @@ class WorldStateAgent(
     def experimental(self):
         return True
 
+    @property
+    def initial_update(self):
+        return self.actions["update_world_state"].config["initial"].value
+
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("game_loop").connect(self.on_game_loop)
+        talemate.emit.async_signals.get("scene_loop_init_after").connect(
+            self.on_scene_loop_init_after
+        )
 
     async def advance_time(self, duration: str, narrative: str = None):
         """
@@ -161,6 +178,22 @@ class WorldStateAgent(
                 human_duration=human_duration,
             )
         )
+
+    async def on_scene_loop_init_after(self, emission):
+        """
+        Called when a scene is initialized
+        """
+        if not self.enabled:
+            return
+
+        if not self.initial_update:
+            return
+
+        if self.get_scene_state("inital_update_done"):
+            return
+
+        await self.scene.world_state.request_update()
+        self.set_scene_states(inital_update_done=True)
 
     async def on_game_loop(self, emission: GameLoopEvent):
         """
@@ -305,19 +338,19 @@ class WorldStateAgent(
             },
         )
 
-        queries = response.split("\n")
+        queries = extract_list(response)
 
         memory_agent = get_agent("memory")
 
         context = await memory_agent.multi_query(queries, iterate=3)
 
-        #log.debug(
+        # log.debug(
         #    "analyze_text_and_extract_context_via_queries",
         #    goal=goal,
         #    text=text,
         #    queries=queries,
         #    context=context,
-        #)
+        # )
 
         return context
 
@@ -328,7 +361,6 @@ class WorldStateAgent(
         instruction: str,
         short: bool = False,
     ):
-
         kind = "analyze_freeform_short" if short else "analyze_freeform"
 
         response = await Prompt.request(
@@ -380,21 +412,20 @@ class WorldStateAgent(
         )
 
         return response
-    
+
     @set_processing
     async def analyze_history_and_follow_instructions(
         self,
         entries: list[dict],
         instructions: str,
         analysis: str = "",
-        response_length: int = 512
+        response_length: int = 512,
     ) -> str:
-        
         """
         Takes a list of archived_history or layered_history entries
         and follows the instructions to generate a response.
         """
-        
+
         response = await Prompt.request(
             "world_state.analyze-history-and-follow-instructions",
             self.client,
@@ -408,7 +439,7 @@ class WorldStateAgent(
                 "response_length": response_length,
             },
         )
-        
+
         return response.strip()
 
     @set_processing
@@ -452,7 +483,7 @@ class WorldStateAgent(
         for line in response.split("\n"):
             if not line.strip():
                 continue
-            if not ":" in line:
+            if ":" not in line:
                 break
             name, value = line.split(":", 1)
             data[name.strip()] = value.strip()
@@ -514,24 +545,33 @@ class WorldStateAgent(
         """
         Queries a single re-inforcement
         """
-        
+
         if isinstance(character, self.scene.Character):
             character = character.name
-        
+
         message = None
         idx, reinforcement = await self.scene.world_state.find_reinforcement(
             question, character
         )
 
         if not reinforcement:
-            log.warning(f"Reinforcement not found", question=question, character=character)
+            log.warning(
+                "Reinforcement not found", question=question, character=character
+            )
             return
 
         message = ReinforcementMessage(message="")
-        message.set_source("world_state", "update_reinforcement", question=question, character=character)
-        
+        message.set_source(
+            "world_state",
+            "update_reinforcement",
+            question=question,
+            character=character,
+        )
+
         if reset and reinforcement.insert == "sequential":
-            self.scene.pop_history(typ="reinforcement", meta_hash=message.meta_hash, all=True)
+            self.scene.pop_history(
+                typ="reinforcement", meta_hash=message.meta_hash, all=True
+            )
 
         if reinforcement.insert == "sequential":
             kind = "analyze_freeform_medium_short"
@@ -566,7 +606,7 @@ class WorldStateAgent(
 
         reinforcement.answer = answer
         reinforcement.due = reinforcement.interval
-        
+
         # remove any recent previous reinforcement message with same question
         # to avoid overloading the near history with reinforcement messages
         if not reset:

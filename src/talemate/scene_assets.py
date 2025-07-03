@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pydantic
 
@@ -192,22 +192,29 @@ class SceneAssets:
 
         return self.assets[asset_id]
 
-    def get_asset_bytes(self, asset_id: str) -> bytes:
+    def get_asset_bytes(self, asset_id: str) -> bytes | None:
         """
         Returns the bytes of the asset with the given id.
         """
 
         asset_path = self.asset_path(asset_id)
 
+        if not asset_path:
+            log.debug("asset_path not found", asset_id=asset_id)
+            return None
+
         with open(asset_path, "rb") as f:
             return f.read()
 
-    def get_asset_bytes_as_base64(self, asset_id: str) -> str:
+    def get_asset_bytes_as_base64(self, asset_id: str) -> str | None:
         """
         Returns the bytes of the asset with the given id as a base64 encoded string.
         """
 
         bytes = self.get_asset_bytes(asset_id)
+
+        if not bytes:
+            return None
 
         return base64.b64encode(bytes).decode("utf-8")
 

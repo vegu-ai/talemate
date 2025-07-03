@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import random
 import re
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
@@ -10,14 +9,12 @@ import structlog
 
 import talemate.client as client
 import talemate.emit.async_signals
-import talemate.instance as instance
 import talemate.util as util
 from talemate.client.context import (
     client_context_attribute,
     set_client_context_attribute,
     set_conversation_context_attribute,
 )
-from talemate.events import GameLoopEvent
 from talemate.exceptions import LLMAccuracyError
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage, DirectorMessage
@@ -37,7 +34,7 @@ from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.agents.context import active_agent
 
 from .websocket_handler import ConversationWebsocketHandler
-import talemate.agents.conversation.nodes
+import talemate.agents.conversation.nodes  # noqa: F401
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Actor, Character
@@ -50,21 +47,20 @@ class ConversationAgentEmission(AgentEmission):
     actor: Actor
     character: Character
     response: str
-    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(default_factory=list)
+    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(
+        default_factory=list
+    )
 
 
 talemate.emit.async_signals.register(
-    "agent.conversation.before_generate", 
+    "agent.conversation.before_generate",
     "agent.conversation.inject_instructions",
-    "agent.conversation.generated"
+    "agent.conversation.generated",
 )
 
 
 @register()
-class ConversationAgent(
-    MemoryRAGMixin,
-    Agent
-):
+class ConversationAgent(MemoryRAGMixin, Agent):
     """
     An agent that can be used to have a conversation with the AI
 
@@ -135,8 +131,6 @@ class ConversationAgent(
                         max=20,
                         step=1,
                     ),
-                    
-
                 },
             ),
             "auto_break_repetition": AgentAction(
@@ -159,7 +153,7 @@ class ConversationAgent(
                         description="Use the writing style selected in the scene settings",
                         value=True,
                     ),
-                }
+                },
             ),
         }
         MemoryRAGMixin.add_actions(actions)
@@ -205,7 +199,6 @@ class ConversationAgent(
 
     @property
     def agent_details(self) -> dict:
-
         details = {
             "client": AgentDetail(
                 icon="mdi-network-outline",
@@ -231,7 +224,19 @@ class ConversationAgent(
 
     @property
     def generation_settings_actor_instructions_offset(self):
-        return self.actions["generation_override"].config["actor_instructions_offset"].value
+        return (
+            self.actions["generation_override"]
+            .config["actor_instructions_offset"]
+            .value
+        )
+
+    @property
+    def generation_settings_response_length(self):
+        return self.actions["generation_override"].config["length"].value
+
+    @property
+    def generation_settings_override_enabled(self):
+        return self.actions["generation_override"].enabled
 
     @property
     def content_use_writing_style(self) -> bool:
@@ -266,7 +271,7 @@ class ConversationAgent(
         main_character = scene.main_character.character
 
         character_names = [c.name for c in scene.characters]
-        
+
         if main_character:
             try:
                 character_names.remove(main_character.name)
@@ -286,21 +291,22 @@ class ConversationAgent(
             director_message = isinstance(scene_and_dialogue[-1], DirectorMessage)
         except IndexError:
             director_message = False
-            
-        
+
         inject_instructions_emission = ConversationAgentEmission(
             agent=self,
-            response="", 
-            actor=None, 
-            character=character, 
+            response="",
+            actor=None,
+            character=character,
         )
         await talemate.emit.async_signals.get(
             "agent.conversation.inject_instructions"
         ).send(inject_instructions_emission)
-        
+
         agent_context = active_agent.get()
-        agent_context.state["dynamic_instructions"] = inject_instructions_emission.dynamic_instructions
-        
+        agent_context.state["dynamic_instructions"] = (
+            inject_instructions_emission.dynamic_instructions
+        )
+
         conversation_format = self.conversation_format
         prompt = Prompt.get(
             f"conversation.dialogue-{conversation_format}",
@@ -309,25 +315,30 @@ class ConversationAgent(
                 "max_tokens": self.client.max_token_length,
                 "scene_and_dialogue_budget": scene_and_dialogue_budget,
                 "scene_and_dialogue": scene_and_dialogue,
-                "memory": None, # DEPRECATED VARIABLE
+                "memory": None,  # DEPRECATED VARIABLE
                 "characters": list(scene.get_characters()),
                 "main_character": main_character,
                 "formatted_names": formatted_names,
                 "talking_character": character,
                 "partial_message": char_message,
                 "director_message": director_message,
-                "extra_instructions": self.generation_settings_task_instructions, #backward compatibility
+                "extra_instructions": self.generation_settings_task_instructions,  # backward compatibility
                 "task_instructions": self.generation_settings_task_instructions,
                 "actor_instructions": self.generation_settings_actor_instructions,
                 "actor_instructions_offset": self.generation_settings_actor_instructions_offset,
                 "direct_instruction": instruction,
                 "decensor": self.client.decensor_enabled,
+                "response_length": self.generation_settings_response_length
+                if self.generation_settings_override_enabled
+                else None,
             },
         )
 
         return str(prompt)
 
-    async def build_prompt(self, character, char_message: str = "", instruction:str = None):
+    async def build_prompt(
+        self, character, char_message: str = "", instruction: str = None
+    ):
         fn = self.build_prompt_default
 
         return await fn(character, char_message=char_message, instruction=instruction)
@@ -365,12 +376,12 @@ class ConversationAgent(
                 set_client_context_attribute("nuke_repetition", nuke_repetition)
 
     @set_processing
-    @store_context_state('instruction')
+    @store_context_state("instruction")
     async def converse(
-        self, 
+        self,
         actor,
-        instruction:str = None,
-        emit_signals:bool = True,
+        instruction: str = None,
+        emit_signals: bool = True,
     ) -> list[CharacterMessage]:
         """
         Have a conversation with the AI
@@ -387,7 +398,9 @@ class ConversationAgent(
 
         self.set_generation_overrides()
 
-        result = await self.client.send_prompt(await self.build_prompt(character, instruction=instruction))
+        result = await self.client.send_prompt(
+            await self.build_prompt(character, instruction=instruction)
+        )
 
         result = self.clean_result(result, character)
 
@@ -443,7 +456,7 @@ class ConversationAgent(
         # movie script format
         # {uppercase character name}
         # {dialogue}
-        total_result = total_result.replace(f"{character.name.upper()}\n", f"")
+        total_result = total_result.replace(f"{character.name.upper()}\n", "")
 
         # chat format
         # {character name}: {dialogue}
@@ -453,7 +466,7 @@ class ConversationAgent(
         total_result = util.clean_dialogue(total_result, main_name=character.name)
 
         # Check if total_result starts with character name, if not, prepend it
-        if not total_result.startswith(character.name+":"):
+        if not total_result.startswith(character.name + ":"):
             total_result = f"{character.name}: {total_result}"
 
         total_result = total_result.strip()
@@ -470,11 +483,11 @@ class ConversationAgent(
 
         log.debug("conversation agent", response=response)
         emission = ConversationAgentEmission(
-            agent=self, 
-            actor=actor, 
-            character=character, 
+            agent=self,
+            actor=actor,
+            character=character,
             response=response,
-        )        
+        )
         if emit_signals:
             await talemate.emit.async_signals.get("agent.conversation.generated").send(
                 emission

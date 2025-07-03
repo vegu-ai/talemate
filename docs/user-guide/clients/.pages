@@ -4,4 +4,5 @@ nav:
     - Recommended Local Models: recommended-models.md
     - Inference Presets: presets.md
     - Client Types: types
+    - Endpoint Override: endpoint-override.md
     - ...

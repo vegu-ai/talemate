@@ -35,6 +35,15 @@
             </template>
         </v-tooltip>
 
+        <!-- if in creative mode provide a button to exit -->
+        <v-tooltip v-if="scene?.environment === 'creative'" text="Exit creative mode">
+            <template v-slot:activator="{ props }">
+                <v-chip size="x-small" v-bind="props" variant="tonal" color="secondary" class="ma-1" @click="exitCreativeMode()">
+                    <v-icon class="mr-1">mdi-exit-to-app</v-icon>
+                    Exit creative mode
+                </v-chip>
+            </template>
+        </v-tooltip>
     </v-sheet>
 
     <!-- Hotbuttons Section -->
@@ -228,29 +237,12 @@
                 />
                 <!-- visualizer actions -->
              
-                <v-menu>
-                    <template v-slot:activator="{ props }">
-                        <v-progress-circular class="ml-1 mr-1" size="24" v-if="agentStatus.visual && agentStatus.visual.busy" indeterminate="disable-shrink"
-                        color="secondary"></v-progress-circular>   
-                        <v-btn v-else class="hotkey mx-1" v-bind="props" :disabled="appBusy || !visualAgentReady" color="primary" icon variant="text">
-                            <v-icon>mdi-image-frame</v-icon>
-                        </v-btn>
-                    </template>
-                    <v-list>
-                        <v-list-subheader>Visualize</v-list-subheader>
-                        <!-- environment -->
-                        <v-list-item @click="sendHotButtonMessage('!vis_env')" prepend-icon="mdi-image-filter-hdr">
-                            <v-list-item-title>Visualize Environment</v-list-item-title>
-                            <v-list-item-subtitle>Generate a background image of the environment</v-list-item-subtitle>
-                        </v-list-item>
-                        <!-- npcs -->
-                        <v-list-item v-for="npc_name in npc_characters" :key="npc_name"
-                            @click="sendHotButtonMessage('!vis_char:' + npc_name)" prepend-icon="mdi-brush">
-                            <v-list-item-title>Visualize {{ npc_name }}</v-list-item-title>
-                            <v-list-item-subtitle>Generate a portrait of {{ npc_name }}</v-list-item-subtitle>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
+                <SceneToolsVisual 
+                    :disabled="appBusy"
+                    :agent-status="agentStatus"
+                    :visual-agent-ready="visualAgentReady"
+                    :npc-characters="npc_characters"
+                />
 
                 <!-- save menu -->
 
@@ -286,6 +278,8 @@ import SceneToolsDirector from './SceneToolsDirector.vue';
 import SceneToolsNarrator from './SceneToolsNarrator.vue';
 import SceneToolsActor from './SceneToolsActor.vue';
 import SceneToolsCreative from './SceneToolsCreative.vue';
+import SceneToolsVisual from './SceneToolsVisual.vue';
+
 export default {
 
     name: 'SceneTools',
@@ -294,6 +288,7 @@ export default {
         SceneToolsNarrator,
         SceneToolsActor,
         SceneToolsCreative,
+        SceneToolsVisual,
     },
     props: {
         appBusy: Boolean,
@@ -553,6 +548,10 @@ export default {
 
         interruptScene() {
             this.getWebsocket().send(JSON.stringify({ type: 'interrupt' }));
+        },
+
+        exitCreativeMode() {
+            this.sendHotButtonMessage('!setenv_scene');
         },
 
         // Handle incoming messages

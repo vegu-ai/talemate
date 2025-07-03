@@ -1,5 +1,3 @@
-import asyncio
-
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
 from talemate.emit import emit
@@ -29,7 +27,7 @@ class CmdRebuildArchive(TalemateCommand):
         ]
 
         self.scene.ts = "PT0S"
-        
+
         memory.delete({"typ": "history"})
 
         entries = 0
@@ -42,9 +40,9 @@ class CmdRebuildArchive(TalemateCommand):
             )
             more = await summarizer.agent.build_archive(self.scene)
             self.scene.sync_time()
-            
+
             entries += 1
-            
+
             if not more:
                 break
 

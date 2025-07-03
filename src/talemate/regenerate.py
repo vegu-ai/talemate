@@ -9,8 +9,6 @@ from talemate.scene_message import (
     SceneMessage,
     CharacterMessage,
     NarratorMessage,
-    DirectorMessage,
-    TimePassageMessage,
     ReinforcementMessage,
     ContextInvestigationMessage,
 )
@@ -27,81 +25,98 @@ __all__ = [
 log = structlog.get_logger("talemate.regenerate")
 
 
-async def regenerate_character_message(message: CharacterMessage, scene:"Scene") -> CharacterMessage:
-    character:"Character | None" = scene.get_character(message.character_name)
-    
+async def regenerate_character_message(
+    message: CharacterMessage, scene: "Scene"
+) -> CharacterMessage:
+    character: "Character | None" = scene.get_character(message.character_name)
+
     if not character:
-        log.error("regenerate_character_message: Could not find character", message=message)
+        log.error(
+            "regenerate_character_message: Could not find character", message=message
+        )
         return message
-    
+
     agent = get_agent("conversation")
-    
+
     if message.source == "player" and not message.from_choice:
-        log.warning("regenerate_character_message: Static user message, no regeneration possible", message=message)
+        log.warning(
+            "regenerate_character_message: Static user message, no regeneration possible",
+            message=message,
+        )
         return
-    
+
     messages = await agent.converse(character.actor, instruction=message.from_choice)
-    
+
     for message in messages:
         scene.push_history(message)
         emit("character", message=message, character=character)
-        
-    return messages
-        
 
-async def regenerate_message(message: SceneMessage, scene:"Scene") -> list[SceneMessage] | None:
+    return messages
+
+
+async def regenerate_message(
+    message: SceneMessage, scene: "Scene"
+) -> list[SceneMessage] | None:
     """
     Will regenerate the message, using the meta information
     """
-    
+
     if isinstance(message, CharacterMessage):
         # character messages need specific handling
         messages = await regenerate_character_message(message, scene)
     else:
         # all other message types
-        
+
         try:
             agent = get_agent(message.meta.get("agent"))
         except Exception as e:
-            log.error(f"regenerate_message: Could not find agent", message=message, error=e)
+            log.error(
+                "regenerate_message: Could not find agent", message=message, error=e
+            )
             return
-        
+
         if not agent:
-            log.error(f"regenerate_message: Could not find agent", message=message)
+            log.error("regenerate_message: Could not find agent", message=message)
             return
-        
+
         function_name = message.meta.get("function")
         fn = getattr(agent, function_name, None)
-        
+
         if not fn:
-            log.error(f"regenerate_message: Could not find agent function", message=message)
+            log.error(
+                "regenerate_message: Could not find agent function", message=message
+            )
             return
 
         arguments = message.meta.get("arguments", {}).copy()
-        
+
         # if `character` is set and a string, convert it to a Character
         if arguments.get("character") and isinstance(arguments.get("character"), str):
             arguments["character"] = scene.get_character(arguments.get("character"))
-        
-        log.debug(f"regenerate_message: Calling agent function", function=function_name, arguments=arguments)
-        
+
+        log.debug(
+            "regenerate_message: Calling agent function",
+            function=function_name,
+            arguments=arguments,
+        )
+
         new_message = await fn(**arguments)
-        
+
         if not new_message:
-            log.error(f"regenerate_message: No new message generated", message=message)
+            log.error("regenerate_message: No new message generated", message=message)
             return
-        
+
         if isinstance(new_message, str):
             new_message = message.__class__(new_message)
             new_message.meta = message.meta.copy()
-        
+
         if isinstance(message, ContextInvestigationMessage):
             new_message.sub_type = message.sub_type
-        
+
         if not isinstance(new_message, (ReinforcementMessage)):
             scene.push_history(new_message)
             emit(new_message.typ, message=new_message)
-            
+
         messages = [new_message]
 
     for message in messages:
@@ -109,15 +124,17 @@ async def regenerate_message(message: SceneMessage, scene:"Scene") -> list[Scene
             events.RegenerateGeneration(
                 scene=scene,
                 message=message,
-                character=scene.get_character(message.character_name) if isinstance(message, CharacterMessage) else None,
+                character=scene.get_character(message.character_name)
+                if isinstance(message, CharacterMessage)
+                else None,
                 event_type=f"regenerate.msg.{message.typ}",
             )
         )
-        
+
     return messages
 
 
-async def regenerate(scene:"Scene", idx:int=-1) -> list[SceneMessage]:
+async def regenerate(scene: "Scene", idx: int = -1) -> list[SceneMessage]:
     """
     Regenerate the most recent AI response, remove their previous message from the history,
     and call talk() for the most recent AI Character.
@@ -127,7 +144,7 @@ async def regenerate(scene:"Scene", idx:int=-1) -> list[SceneMessage]:
         message = scene.history[idx]
     except IndexError:
         return
-    
+
     regenerated_messages = []
 
     # while message type is ReinforcementMessage, keep going back in history
@@ -156,25 +173,26 @@ async def regenerate(scene:"Scene", idx:int=-1) -> list[SceneMessage]:
     if current_regeneration_context:
         current_regeneration_context.message = message.message
 
-    if not isinstance(message, (CharacterMessage, NarratorMessage, ContextInvestigationMessage)):
+    if not isinstance(
+        message, (CharacterMessage, NarratorMessage, ContextInvestigationMessage)
+    ):
         log.warning("Cannot regenerate message", message=message)
         return regenerated_messages
-    
+
     scene.history.pop()
     emit("remove_message", "", id=message.id)
     new_messages = await regenerate_message(message, scene)
-    
+
     if not new_messages:
         log.error("No new messages generated", message=message)
         scene.push_history(message)
         for message in reversed(popped_reinforcement_messages):
             scene.push_history(message)
         return regenerated_messages
-        
-    
+
     if new_messages:
         regenerated_messages.extend(new_messages)
-    
+
     for message in popped_reinforcement_messages:
         new_messages = await regenerate_message(message, scene)
         if new_messages:

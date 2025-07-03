@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Callable
 
 import structlog
 
@@ -123,16 +123,16 @@ async def wait_for_input(
 
     while input_received["message"] is None:
         await asyncio.sleep(sleep_time)
-        
+
         interaction_state = interaction.get()
-        
+
         if abort_condition and (await abort_condition()):
             raise AbortWaitForInput()
-        
+
         if interaction_state.reset_requested:
             interaction_state.reset_requested = False
             raise RestartSceneLoop()
-        
+
         if interaction_state.input:
             input_received["message"] = interaction_state.input
             input_received["interaction"] = interaction_state
@@ -140,7 +140,7 @@ async def wait_for_input(
             interaction_state.input = None
             interaction_state.from_choice = None
             break
-        
+
     handlers["receive_input"].disconnect(input_receiver)
 
     if input_received["message"] == "!abort":
@@ -180,11 +180,11 @@ class Emitter:
     def setup_emitter(self, scene: Scene = None):
         self.emit_for_scene = scene
 
-    def emit(self, typ: str, message: str, character: Character = None):
-        emit(typ, message, character=character, scene=self.emit_for_scene)
+    def emit(self, typ: str, message: str, character: Character = None, **kwargs):
+        emit(typ, message, character=character, scene=self.emit_for_scene, **kwargs)
 
-    def system_message(self, message: str):
-        self.emit("system", message)
+    def system_message(self, message: str, **kwargs):
+        self.emit("system", message, **kwargs)
 
     def narrator_message(self, message: str):
         self.emit("narrator", message)
@@ -194,6 +194,6 @@ class Emitter:
 
     def player_message(self, message: str, character: Character):
         self.emit("player", message, character=character)
-        
+
     def context_investigation_message(self, message: str):
         self.emit("context_investigation", message)

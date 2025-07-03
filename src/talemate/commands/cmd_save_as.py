@@ -1,5 +1,3 @@
-import asyncio
-
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
 

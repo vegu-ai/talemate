@@ -1,15 +1,13 @@
 import asyncio
-import traceback
 
 import structlog
 
-import talemate.agents.visual.automatic1111
-import talemate.agents.visual.comfyui
-import talemate.agents.visual.openai_image
+import talemate.agents.visual.automatic1111  # noqa: F401
+import talemate.agents.visual.comfyui  # noqa: F401
+import talemate.agents.visual.openai_image  # noqa: F401
 from talemate.agents.base import (
     Agent,
     AgentAction,
-    AgentActionConditional,
     AgentActionConfig,
     AgentDetail,
     set_processing,
@@ -23,13 +21,13 @@ from talemate.emit.signals import handlers as signal_handlers
 from talemate.prompts.base import Prompt
 
 from .commands import *  # noqa
-from .context import VIS_TYPES, VisualContext, visual_context
+from .context import VIS_TYPES, VisualContext, VisualContextState, visual_context
 from .handlers import HANDLERS
-from .schema import RESOLUTION_MAP, RenderSettings
-from .style import MAJOR_STYLES, STYLE_MAP, Style, combine_styles
+from .schema import RESOLUTION_MAP
+from .style import MAJOR_STYLES, STYLE_MAP, Style
 from .websocket_handler import VisualWebsocketHandler
 
-import talemate.agents.visual.nodes
+import talemate.agents.visual.nodes  # noqa: F401
 
 __all__ = [
     "VisualAgent",
@@ -39,6 +37,14 @@ BACKENDS = [
     {"value": mixin_backend, "label": mixin["label"]}
     for mixin_backend, mixin in HANDLERS.items()
 ]
+
+PROMPT_OUTPUT_FORMAT = """
+### Positive
+{positive_prompt}
+
+### Negative
+{negative_prompt}
+"""
 
 log = structlog.get_logger("talemate.agents.visual")
 
@@ -106,7 +112,6 @@ class VisualBase(Agent):
                 label="Process in Background",
                 description="Process renders in the background",
             ),
-
             "_prompts": AgentAction(
                 enabled=True,
                 container=True,
@@ -272,7 +277,6 @@ class VisualBase(Agent):
         await super().ready_check(task)
 
     async def setup_check(self):
-
         if not self.actions["automatic_setup"].enabled:
             return
 
@@ -281,10 +285,9 @@ class VisualBase(Agent):
             await getattr(self.client, f"visual_{backend.lower()}_setup")(self)
 
     async def apply_config(self, *args, **kwargs):
-
         try:
             backend = kwargs["actions"]["_config"]["config"]["backend"]["value"]
-        except KeyError:
+        except (KeyError, TypeError):
             backend = self.backend
 
         backend_changed = backend != self.backend
@@ -304,7 +307,6 @@ class VisualBase(Agent):
 
         backend_fn = getattr(self, f"{self.backend.lower()}_apply_config", None)
         if backend_fn:
-
             if not backend_changed and was_disabled and self.enabled:
                 # If the backend has not changed, but the agent was previously disabled
                 # and is now enabled, we need to trigger the backend apply_config function
@@ -328,7 +330,6 @@ class VisualBase(Agent):
         )
 
     def prepare_prompt(self, prompt: str, styles: list[Style] = None) -> Style:
-
         prompt_style = Style()
         prompt_style.load(prompt)
 
@@ -424,11 +425,9 @@ class VisualBase(Agent):
     async def generate(
         self, format: str = "portrait", prompt: str = None, automatic: bool = False
     ):
+        context: VisualContextState = visual_context.get()
 
-        context = visual_context.get()
-
-        if not self.enabled:
-            return
+        log.debug("visual generate", context=context)
 
         if automatic and not self.allow_automatic_generation:
             return
@@ -459,7 +458,7 @@ class VisualBase(Agent):
 
         thematic_style = self.default_style
         vis_type_styles = self.vis_type_styles(context.vis_type)
-        prompt = self.prepare_prompt(prompt, [vis_type_styles, thematic_style])
+        prompt: Style = self.prepare_prompt(prompt, [vis_type_styles, thematic_style])
 
         if context.vis_type == VIS_TYPES.CHARACTER:
             prompt.keywords.append("character portrait")
@@ -482,13 +481,48 @@ class VisualBase(Agent):
 
         context.format = format
 
+        can_generate_image = self.enabled and self.backend_ready
+
+        if not context.prompt_only and not can_generate_image:
+            emit(
+                "status",
+                "Visual agent is not ready for image generation, will output prompt instead.",
+                status="warning",
+            )
+
+        # if prompt_only, we don't need to generate an image
+        # instead we emit a system message with the prompt
+        if context.prompt_only or not can_generate_image:
+            emit(
+                "system",
+                message=PROMPT_OUTPUT_FORMAT.format(
+                    positive_prompt=prompt.positive_prompt,
+                    negative_prompt=prompt.negative_prompt,
+                ),
+                meta={
+                    "icon": "mdi-image-text",
+                    "color": "highlight7",
+                    "title": f"Visual Prompt - {context.title}",
+                    "display": "tonal",
+                    "as_markdown": True,
+                },
+            )
+            return
+
+        if not can_generate_image:
+            return
+
         # Call the backend specific generate function
 
         backend = self.backend
         fn = f"{backend.lower()}_generate"
 
         log.info(
-            "visual generate", backend=backend, prompt=prompt, format=format, context=context
+            "visual generate",
+            backend=backend,
+            prompt=prompt,
+            format=format,
+            context=context,
         )
 
         if not hasattr(self, fn):
@@ -504,7 +538,6 @@ class VisualBase(Agent):
 
     @set_processing
     async def generate_environment_prompt(self, instructions: str = None):
-
         with RevisionDisabled():
             response = await Prompt.request(
                 "visual.generate-environment-prompt",
@@ -522,7 +555,6 @@ class VisualBase(Agent):
     async def generate_character_prompt(
         self, character_name: str, instructions: str = None
     ):
-
         character = self.scene.get_character(character_name)
 
         with RevisionDisabled():
@@ -541,8 +573,16 @@ class VisualBase(Agent):
 
         return response.strip()
 
-    async def generate_environment_background(self, instructions: str = None):
-        with VisualContext(vis_type=VIS_TYPES.ENVIRONMENT, instructions=instructions):
+    async def generate_environment_background(
+        self,
+        instructions: str = None,
+        prompt_only: bool = False,
+    ):
+        with VisualContext(
+            vis_type=VIS_TYPES.ENVIRONMENT,
+            instructions=instructions,
+            prompt_only=prompt_only,
+        ):
             await self.generate(format="landscape")
 
     async def generate_character_portrait(
@@ -550,12 +590,14 @@ class VisualBase(Agent):
         character_name: str,
         instructions: str = None,
         replace: bool = False,
+        prompt_only: bool = False,
     ):
         with VisualContext(
             vis_type=VIS_TYPES.CHARACTER,
             character_name=character_name,
             instructions=instructions,
             replace=replace,
+            prompt_only=prompt_only,
         ):
             await self.generate(format="portrait")
 

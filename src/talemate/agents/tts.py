@@ -51,11 +51,10 @@ if not TTS:
 
 
 def parse_chunks(text: str) -> list[str]:
-
     """
     Takes a string and splits it into chunks based on punctuation.
-    
-    In case of an error it will return the original text as a single chunk and 
+
+    In case of an error it will return the original text as a single chunk and
     the error will be logged.
     """
 
@@ -278,7 +277,6 @@ class TTSAgent(Agent):
 
     @property
     def agent_details(self):
-
         details = {
             "api": AgentDetail(
                 icon="mdi-server-outline",
@@ -645,7 +643,6 @@ class TTSAgent(Agent):
     # OPENAI
 
     async def _generate_openai(self, text: str, chunk_size: int = 1024):
-
         client = AsyncOpenAI(api_key=self.openai_api_key)
 
         model = self.actions["openai"].config["model"].value

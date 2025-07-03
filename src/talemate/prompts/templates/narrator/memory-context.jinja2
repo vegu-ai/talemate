@@ -5,9 +5,9 @@
 {% set memory_stack = agent_action("narrator", "rag_build", prompt=memory_prompt, sub_instruction=memory_goal) %}
 {% if memory_stack %}
 <|SECTION:POTENTIALLY RELEVANT INFORMATION|>
-{%- for memory in memory_stack -%}
+{% for memory in memory_stack -%}
 {{ memory|condensed }}
-
+---
 {% endfor -%}
 <|CLOSE_SECTION|>
 {% endif %}

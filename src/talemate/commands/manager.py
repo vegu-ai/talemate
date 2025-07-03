@@ -36,7 +36,7 @@ class Manager(Emitter):
                     aliases[alias] = name.replace("cmd_", "")
         return aliases
 
-    async def execute(self, cmd, emit_on_unknown:bool = True, state:dict = None):
+    async def execute(self, cmd, emit_on_unknown: bool = True, state: dict = None):
         # commands start with ! and are followed by a command name
         cmd = cmd.strip()
         cmd_args = ""
@@ -56,7 +56,6 @@ class Manager(Emitter):
 
         for command_cls in self.command_classes:
             if command_cls.is_command(cmd_name):
-
                 if command_cls.argument_cls:
                     cmd_kwargs = json.loads(cmd_args_unsplit)
                     cmd_args = []

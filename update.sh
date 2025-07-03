@@ -1,7 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-echo "Checking git repository..."
-# Initialize git if needed
+# check if we are inside a git checkout
 if [ ! -d ".git" ]; then
     git init
     git remote add origin https://github.com/vegu-ai/talemate
@@ -10,12 +9,9 @@ fi
 # Pull latest changes
 git pull
 
-# Activate virtual environment
-. talemate_env/bin/activate
-
-# Install dependencies with poetry
+# Install dependencies with uv
 echo "Updating virtual environment..."
-python3 -m poetry install
+uv pip install -e ".[dev]"
 
 echo "Virtual environment updated!"
 
@@ -24,11 +20,10 @@ echo "Updating npm packages..."
 cd talemate_frontend
 npm install
 
-echo "NPM packages updated"
-
 # Build frontend
 echo "Building frontend..."
 npm run build
 
 cd ..
-echo "Update complete"
+
+echo "Update complete!"

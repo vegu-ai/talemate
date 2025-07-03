@@ -7,8 +7,6 @@ import structlog
 from talemate.agents.base import set_processing
 from talemate.prompts import Prompt
 
-import talemate.game.focal as focal
-
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
 
@@ -18,14 +16,13 @@ DEFAULT_CONTENT_CONTEXT = "a fun and engaging adventure aimed at an adult audien
 
 
 class CharacterCreatorMixin:
-
     @set_processing
     async def determine_content_context_for_character(
         self,
         character: Character,
     ):
         content_context = await Prompt.request(
-            f"creator.determine-content-context",
+            "creator.determine-content-context",
             self.client,
             "create_192",
             vars={
@@ -42,7 +39,7 @@ class CharacterCreatorMixin:
         information: str = "",
     ):
         instructions = await Prompt.request(
-            f"creator.determine-character-dialogue-instructions",
+            "creator.determine-character-dialogue-instructions",
             self.client,
             "create_concise",
             vars={
@@ -63,7 +60,7 @@ class CharacterCreatorMixin:
         character: Character,
     ):
         attributes = await Prompt.request(
-            f"creator.determine-character-attributes",
+            "creator.determine-character-attributes",
             self.client,
             "analyze_long",
             vars={
@@ -81,7 +78,7 @@ class CharacterCreatorMixin:
         instructions: str = "",
     ) -> str:
         name = await Prompt.request(
-            f"creator.determine-character-name",
+            "creator.determine-character-name",
             self.client,
             "analyze_freeform_short",
             vars={
@@ -97,14 +94,14 @@ class CharacterCreatorMixin:
 
     @set_processing
     async def determine_character_description(
-        self, 
+        self,
         character: Character,
         text: str = "",
         instructions: str = "",
         information: str = "",
     ):
         description = await Prompt.request(
-            f"creator.determine-character-description",
+            "creator.determine-character-description",
             self.client,
             "create",
             vars={
@@ -125,7 +122,7 @@ class CharacterCreatorMixin:
         goal_instructions: str,
     ):
         goals = await Prompt.request(
-            f"creator.determine-character-goals",
+            "creator.determine-character-goals",
             self.client,
             "create",
             vars={

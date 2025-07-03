@@ -109,6 +109,42 @@ The revelations of that fateful night sent shockwaves through the very foundatio
 That night's revelations changed everything. They discovered a generations-old conspiracy involving powerful figures. Former allies turned out to be enemies, making it impossible to know who to trust.
 </FIX>
 
+---
+
+<REVIEW>
+Marcus received word that his brother had been captured during a failed diplomatic mission to the eastern territories.
+
+He spent two days recruiting twenty mercenaries and gathering supplies for the rescue mission.
+
+The party traveled east for a week through mountain passes and storms, losing several pack animals.
+
+They found the enemy camp had over a hundred soldiers, watchtowers, and a fortified prisoner compound.
+
+Marcus split his forces, using half to create a distraction by burning supply tents while the other half freed the prisoners.
+
+Twelve mercenaries died during the escape when the enemy discovered them and pursued them through the camp.
+
+The survivors retreated into the mountains and evaded pursuit for three days before reaching friendly territory.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This is already clean prose but reads like isolated bullet points. Each event stands alone without narrative connection. Need to link these events naturally while keeping the clear, direct style and all plot details.
+- Purple prose: NONE - already cleaned
+- Dialogue present: NO
+- Format issue: DISCONNECTED PARAGRAPHS - events presented as isolated chunks
+- Essential information: All present and clearly stated
+- Length: APPROPRIATE - but needs connecting tissue
+- Narrative flow: MISSING - reads like a series of disconnected facts
+</ANALYSIS>
+
+<FIX>
+Marcus received word that his brother had been captured during a failed diplomatic mission to the eastern territories. He immediately spent two days recruiting twenty mercenaries and gathering supplies for the rescue mission.
+
+The party traveled east for a week through mountain passes and storms, losing several pack animals along the way. When they arrived, they found the enemy camp had over a hundred soldiers, watchtowers, and a fortified prisoner compound.
+
+Marcus split his forces for the rescue. Half his men created a distraction by burning supply tents while the other half freed the prisoners. However, the enemy discovered them during the escape, and twelve mercenaries died in the ensuing pursuit through the camp. The survivors retreated into the mountains and evaded pursuit for three days before finally reaching friendly territory.
+</FIX>
+
 <|SECTION:PREVIOUS CHAPTERS|>
 {% for chapter_summary in summarization_history %}
 ## Chapter {{ loop.index }}
@@ -136,6 +172,8 @@ Fix overwritten narrative summaries by making them clear and direct while preser
 {{ li() }}. MAINTAIN tone - Keep genre-appropriate language without the excess
 {{ li() }}. PRESERVE mature content - Keep swear words, slang, and raw language exactly as written
 {{ li() }}. REMOVE dialogue - Convert any dialogue into narrative description of what was communicated
+{{ li() }}. CONNECT isolated events - Link disconnected paragraphs using transitional phrases ("then," "after," "while," "when") to create narrative flow
+{{ li() }}. PRESERVE simplicity - When fixing choppy text, don't overcorrect by adding purple prose; keep the clean, direct style
 
 **What to keep vs cut:**
 - KEEP: What happened, who was involved, consequences, important details
@@ -149,6 +187,9 @@ Fix overwritten narrative summaries by making them clear and direct while preser
 - "Dance of death" → "battle" or "fight"
 - "You betrayed me!" he cried → "He accused them of betrayal"
 - "I had no choice," she whispered → "She claimed she had no choice"
+- [Event A paragraph] + [Event B paragraph] → Event A. [Transitional phrase], Event B.
+- Isolated paragraphs → Combined narrative with temporal/causal connections
+- Choppy mission report style → Flowing story that maintains all facts
 
 Use the examples for a deeper understanding of the task and provide your analysis and fix, with the fix being the final output.
 

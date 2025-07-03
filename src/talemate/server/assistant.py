@@ -1,5 +1,6 @@
 import pydantic
 import structlog
+import traceback
 
 from talemate.agents.creator.assistant import ContentGenerationContext
 from talemate.emit import emit
@@ -11,6 +12,7 @@ log = structlog.get_logger("talemate.server.assistant")
 class ForkScenePayload(pydantic.BaseModel):
     message_id: int
     save_name: str | None = None
+
 
 class AssistantPlugin:
     router = "assistant"
@@ -35,14 +37,15 @@ class AssistantPlugin:
     async def handle_contextual_generate(self, data: dict):
         payload = ContentGenerationContext(**data)
         creator = get_agent("creator")
-        
+
         if payload.computed_context[0] == "acting_instructions":
             content = await creator.determine_character_dialogue_instructions(
-                self.scene.get_character(payload.character), instructions=payload.instructions
+                self.scene.get_character(payload.character),
+                instructions=payload.instructions,
             )
         else:
             content = await creator.contextual_generate(payload)
-        
+
         self.websocket_handler.queue_put(
             {
                 "type": self.router,
@@ -62,7 +65,6 @@ class AssistantPlugin:
             context_type, context_name = data.computed_context
 
             if context_type == "dialogue":
-
                 if not data.character:
                     character = self.scene.get_player_character()
                 else:
@@ -86,7 +88,9 @@ class AssistantPlugin:
             data.length = 35
             log.info("Running autocomplete for contextual generation", args=data)
             completion = await creator.contextual_generate(data)
-            log.info("Autocomplete for contextual generation complete", completion=completion)
+            log.info(
+                "Autocomplete for contextual generation complete", completion=completion
+            )
             completion = (
                 completion.replace(f"{context_name}: {data.partial}", "")
                 .lstrip(".")
@@ -94,25 +98,24 @@ class AssistantPlugin:
             )
 
             emit("autocomplete_suggestion", completion)
-        except Exception as e:
-            log.exception("Error running autocomplete", error=str(e))
+        except Exception:
+            log.error("Error running autocomplete", error=traceback.format_exc())
             emit("autocomplete_suggestion", "")
-
 
     async def handle_fork_new_scene(self, data: dict):
         """
         Allows to fork a new scene from a specific message
         in the current scene.
-        
+
         All content after the message will be removed and the
         context database will be re imported ensuring a clean state.
-        
+
         All state reinforcements will be reset to their most recent
         state before the message.
         """
-        
+
         payload = ForkScenePayload(**data)
-        
+
         creator = get_agent("creator")
-        
+
         await creator.fork_scene(payload.message_id, payload.save_name)

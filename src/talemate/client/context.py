@@ -23,7 +23,10 @@ def model_to_dict_without_defaults(model_instance):
         if field.default == model_dict.get(field_name):
             del model_dict[field_name]
         # special case for conversation context, dont copy if talking_character is None
-        if field_name == "conversation" and model_dict.get(field_name).get("talking_character") is None:
+        if (
+            field_name == "conversation"
+            and model_dict.get(field_name).get("talking_character") is None
+        ):
             del model_dict[field_name]
     return model_dict
 
@@ -96,6 +99,12 @@ class ClientContext:
         Set the key-value pairs to the context variable `context_data` when entering the context.
         """
         # Get the current context data
+
+        data = deepcopy(context_data.get()) if context_data.get() else {}
+        data.update(self.values)
+
+        # Update the context data
+        self.token = context_data.set(data)
 
         data = deepcopy(context_data.get()) if context_data.get() else {}
         data.update(self.values)

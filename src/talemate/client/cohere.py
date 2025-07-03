@@ -1,10 +1,21 @@
 import pydantic
 import structlog
-from cohere import AsyncClient
+from cohere import AsyncClientV2
 
-from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults
+from talemate.client.base import (
+    ClientBase,
+    ErrorAction,
+    ParameterReroute,
+    CommonDefaults,
+    ExtraField,
+)
 from talemate.client.registry import register
-from talemate.config import load_config
+from talemate.client.remote import (
+    EndpointOverride,
+    EndpointOverrideMixin,
+    endpoint_override_extra_fields,
+)
+from talemate.config import Client as BaseClientConfig, load_config
 from talemate.emit import emit
 from talemate.emit.signals import handlers
 from talemate.util import count_tokens
@@ -26,13 +37,17 @@ SUPPORTED_MODELS = [
 ]
 
 
-class Defaults(CommonDefaults, pydantic.BaseModel):
+class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "command-r-plus"
 
 
+class ClientConfig(EndpointOverride, BaseClientConfig):
+    pass
+
+
 @register()
-class CohereClient(ClientBase):
+class CohereClient(EndpointOverrideMixin, ClientBase):
     """
     Cohere client for generating text.
     """
@@ -41,6 +56,7 @@ class CohereClient(ClientBase):
     conversation_retries = 0
     auto_break_repetition_enabled = False
     decensor_enabled = True
+    config_cls = ClientConfig
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "Cohere"
@@ -48,11 +64,13 @@ class CohereClient(ClientBase):
         manual_model: bool = True
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
+        extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
         defaults: Defaults = Defaults()
 
     def __init__(self, model="command-r-plus", **kwargs):
         self.model_name = model
         self.api_key_status = None
+        self._reconfigure_endpoint_override(**kwargs)
         self.config = load_config()
         super().__init__(**kwargs)
 
@@ -103,12 +121,12 @@ class CohereClient(ClientBase):
 
         self.current_status = status
 
-        data={
+        data = {
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
         }
-        data.update(self._common_status_data()) 
+        data.update(self._common_status_data())
         emit(
             "client_status",
             message=self.client_type,
@@ -119,8 +137,8 @@ class CohereClient(ClientBase):
         )
 
     def set_client(self, max_token_length: int = None):
-        if not self.cohere_api_key:
-            self.client = AsyncClient("sk-1111")
+        if not self.cohere_api_key and not self.endpoint_override_base_url_configured:
+            self.client = AsyncClientV2("sk-1111")
             log.error("No cohere API key set")
             if self.api_key_status:
                 self.api_key_status = False
@@ -136,7 +154,7 @@ class CohereClient(ClientBase):
 
         model = self.model_name
 
-        self.client = AsyncClient(self.cohere_api_key)
+        self.client = AsyncClientV2(self.api_key, base_url=self.base_url)
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -159,8 +177,9 @@ class CohereClient(ClientBase):
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
-            
+
         self._reconfigure_common_parameters(**kwargs)
+        self._reconfigure_endpoint_override(**kwargs)
 
     def on_config_saved(self, event):
         config = event.data
@@ -168,7 +187,7 @@ class CohereClient(ClientBase):
         self.set_client(max_token_length=self.max_token_length)
 
     def response_tokens(self, response: str):
-        return count_tokens(response.text)
+        return count_tokens(response)
 
     def prompt_tokens(self, prompt: str):
         return count_tokens(prompt)
@@ -187,7 +206,6 @@ class CohereClient(ClientBase):
         return prompt
 
     def clean_prompt_parameters(self, parameters: dict):
-
         super().clean_prompt_parameters(parameters)
 
         # if temperature is set, it needs to be clamped between 0 and 1.0
@@ -207,7 +225,7 @@ class CohereClient(ClientBase):
         Generates text from the given prompt and parameters.
         """
 
-        if not self.cohere_api_key:
+        if not self.cohere_api_key and not self.endpoint_override_base_url_configured:
             raise Exception("No cohere API key set")
 
         right = None
@@ -228,20 +246,42 @@ class CohereClient(ClientBase):
             system_message=system_message,
         )
 
+        messages = [
+            {
+                "role": "system",
+                "content": system_message,
+            },
+            {
+                "role": "user",
+                "content": human_message,
+            },
+        ]
+
         try:
-            response = await self.client.chat(
+            # Cohere's `chat_stream` returns an **asynchronous generator** that can be
+            # consumed directly with `async for`. It is not an asynchronous context
+            # manager, so attempting to use `async with` raises a `TypeError` as seen
+            # in issue logs. We therefore iterate over the generator directly.
+
+            stream = self.client.chat_stream(
                 model=self.model_name,
-                preamble=system_message,
-                message=human_message,
+                messages=messages,
                 **parameters,
             )
+
+            response = ""
+
+            async for event in stream:
+                if event and event.type == "content-delta":
+                    chunk = event.delta.message.content.text
+                    response += chunk
+                    # Track token usage incrementally
+                    self.update_request_tokens(self.count_tokens(chunk))
 
             self._returned_prompt_tokens = self.prompt_tokens(prompt)
             self._returned_response_tokens = self.response_tokens(response)
 
-            log.debug("generated response", response=response.text)
-
-            response = response.text
+            log.debug("generated response", response=response)
 
             if expected_response and expected_response.startswith("{"):
                 if response.startswith("```json") and response.endswith("```"):
@@ -255,5 +295,5 @@ class CohereClient(ClientBase):
         #    self.log.error("generate error", e=e)
         #    emit("status", message="cohere API: Permission Denied", status="error")
         #    return ""
-        except Exception as e:
+        except Exception:
             raise

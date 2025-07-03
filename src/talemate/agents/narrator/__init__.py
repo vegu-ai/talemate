@@ -3,7 +3,6 @@ from __future__ import annotations
 import dataclasses
 import random
 from functools import wraps
-from inspect import signature
 from typing import TYPE_CHECKING
 
 import structlog
@@ -50,14 +49,17 @@ log = structlog.get_logger("talemate.agents.narrator")
 class NarratorAgentEmission(AgentEmission):
     generation: list[str] = dataclasses.field(default_factory=list)
     response: str = dataclasses.field(default="")
-    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(default_factory=list)
+    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(
+        default_factory=list
+    )
 
 
 talemate.emit.async_signals.register(
-    "agent.narrator.before_generate", 
+    "agent.narrator.before_generate",
     "agent.narrator.inject_instructions",
     "agent.narrator.generated",
 )
+
 
 def set_processing(fn):
     """
@@ -74,11 +76,15 @@ def set_processing(fn):
         if self.content_use_writing_style:
             self.set_context_states(writing_style=self.scene.writing_style)
 
-        await talemate.emit.async_signals.get("agent.narrator.before_generate").send(emission)
-        await talemate.emit.async_signals.get("agent.narrator.inject_instructions").send(emission)
-        
+        await talemate.emit.async_signals.get("agent.narrator.before_generate").send(
+            emission
+        )
+        await talemate.emit.async_signals.get(
+            "agent.narrator.inject_instructions"
+        ).send(emission)
+
         agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
-        
+
         response = await fn(self, *args, **kwargs)
         emission.response = response
         await talemate.emit.async_signals.get("agent.narrator.generated").send(emission)
@@ -88,10 +94,7 @@ def set_processing(fn):
 
 
 @register()
-class NarratorAgent(
-    MemoryRAGMixin,
-    Agent
-):
+class NarratorAgent(MemoryRAGMixin, Agent):
     """
     Handles narration of the story
     """
@@ -99,7 +102,7 @@ class NarratorAgent(
     agent_type = "narrator"
     verbose_name = "Narrator"
     set_processing = set_processing
-    
+
     websocket_handler = NarratorWebsocketHandler
 
     @classmethod
@@ -117,7 +120,7 @@ class NarratorAgent(
                         min=32,
                         max=1024,
                         step=32,
-                    ), 
+                    ),
                     "instructions": AgentActionConfig(
                         type="text",
                         label="Instructions",
@@ -154,7 +157,7 @@ class NarratorAgent(
                         description="Use the writing style selected in the scene settings",
                         value=True,
                     ),
-                }
+                },
             ),
             "narrate_time_passage": AgentAction(
                 enabled=True,
@@ -201,7 +204,7 @@ class NarratorAgent(
                 },
             ),
         }
-        
+
         MemoryRAGMixin.add_actions(actions)
         return actions
 
@@ -232,28 +235,33 @@ class NarratorAgent(
         if self.actions["generation_override"].enabled:
             return self.actions["generation_override"].config["length"].value
         return 128
-        
+
     @property
     def narrate_time_passage_enabled(self) -> bool:
         return self.actions["narrate_time_passage"].enabled
-    
+
     @property
     def narrate_dialogue_enabled(self) -> bool:
         return self.actions["narrate_dialogue"].enabled
 
     @property
-    def narrate_dialogue_ai_chance(self) -> float: 
+    def narrate_dialogue_ai_chance(self) -> float:
         return self.actions["narrate_dialogue"].config["ai_dialog"].value
-    
+
     @property
     def narrate_dialogue_player_chance(self) -> float:
         return self.actions["narrate_dialogue"].config["player_dialog"].value
-    
+
     @property
     def content_use_writing_style(self) -> bool:
         return self.actions["content"].config["use_writing_style"].value
-    
-    def clean_result(self, result:str, ensure_dialog_format:bool=True, force_narrative:bool=True) -> str:
+
+    def clean_result(
+        self,
+        result: str,
+        ensure_dialog_format: bool = True,
+        force_narrative: bool = True,
+    ) -> str:
         """
         Cleans the result of a narration
         """
@@ -264,15 +272,14 @@ class NarratorAgent(
 
         cleaned = []
         for line in result.split("\n"):
-            
             # skip lines that start with a #
             if line.startswith("#"):
                 continue
-            
+
             log.debug("clean_result", line=line)
-            
+
             character_dialogue_detected = False
-            
+
             for character_name in character_names:
                 if not character_name:
                     continue
@@ -280,25 +287,24 @@ class NarratorAgent(
                     character_dialogue_detected = True
                 elif line.startswith(f"{character_name.upper()}"):
                     character_dialogue_detected = True
-                    
+
                 if character_dialogue_detected:
                     break
-            
+
             if character_dialogue_detected:
                 break
-                
+
             cleaned.append(line)
 
         result = "\n".join(cleaned)
-        
+
         result = util.strip_partial_sentences(result)
         editor = get_agent("editor")
-        
+
         if ensure_dialog_format or force_narrative:
             if editor.fix_exposition_enabled and editor.fix_exposition_narrator:
                 result = editor.fix_exposition_in_text(result)
-            
-        
+
         return result
 
     def connect(self, scene):
@@ -324,16 +330,16 @@ class NarratorAgent(
             event.duration, event.human_duration, event.narrative
         )
         narrator_message = NarratorMessage(
-            response, 
-            meta = {
+            response,
+            meta={
                 "agent": "narrator",
                 "function": "narrate_time_passage",
                 "arguments": {
                     "duration": event.duration,
                     "time_passed": event.human_duration,
                     "narrative_direction": event.narrative,
-                }
-            }
+                },
+            },
         )
         emit("narrator", narrator_message)
         self.scene.push_history(narrator_message)
@@ -345,7 +351,7 @@ class NarratorAgent(
 
         if not self.narrate_dialogue_enabled:
             return
-        
+
         if event.game_loop.had_passive_narration:
             log.debug(
                 "narrate on dialog",
@@ -375,14 +381,14 @@ class NarratorAgent(
 
         response = await self.narrate_after_dialogue(event.actor.character)
         narrator_message = NarratorMessage(
-            response, 
+            response,
             meta={
                 "agent": "narrator",
                 "function": "narrate_after_dialogue",
                 "arguments": {
                     "character": event.actor.character.name,
-                }
-            }
+                },
+            },
         )
         emit("narrator", narrator_message)
         self.scene.push_history(narrator_message)
@@ -390,7 +396,7 @@ class NarratorAgent(
         event.game_loop.had_passive_narration = True
 
     @set_processing
-    @store_context_state('narrative_direction', visual_narration=True)
+    @store_context_state("narrative_direction", visual_narration=True)
     async def narrate_scene(self, narrative_direction: str | None = None):
         """
         Narrate the scene
@@ -413,13 +419,13 @@ class NarratorAgent(
         return response
 
     @set_processing
-    @store_context_state('narrative_direction')
+    @store_context_state("narrative_direction")
     async def progress_story(self, narrative_direction: str | None = None):
         """
         Narrate scene progression, moving the plot forward.
-        
+
         Arguments:
-        
+
         - narrative_direction: A string describing the direction the narrative should take. If not provided, will attempt to subtly move the story forward.
         """
 
@@ -431,10 +437,8 @@ class NarratorAgent(
         if narrative_direction is None:
             narrative_direction = "Slightly move the current scene forward."
 
-        log.debug(
-            "narrative_direction", narrative_direction=narrative_direction
-        )
-        
+        log.debug("narrative_direction", narrative_direction=narrative_direction)
+
         response = await Prompt.request(
             "narrator.narrate-progress",
             self.client,
@@ -453,13 +457,17 @@ class NarratorAgent(
         log.debug("progress_story", response=response)
 
         response = self.clean_result(response.strip())
-        
+
         return response
 
     @set_processing
-    @store_context_state('query', query_narration=True)
+    @store_context_state("query", query_narration=True)
     async def narrate_query(
-        self, query: str, at_the_end: bool = False, as_narrative: bool = True, extra_context: str = None
+        self,
+        query: str,
+        at_the_end: bool = False,
+        as_narrative: bool = True,
+        extra_context: str = None,
     ):
         """
         Narrate a specific query
@@ -479,20 +487,20 @@ class NarratorAgent(
             },
         )
         response = self.clean_result(
-            response.strip(), 
-            ensure_dialog_format=False, 
-            force_narrative=as_narrative
+            response.strip(), ensure_dialog_format=False, force_narrative=as_narrative
         )
 
         return response
-    
+
     @set_processing
-    @store_context_state('character', 'narrative_direction', visual_narration=True)
-    async def narrate_character(self, character:"Character", narrative_direction: str = None):
+    @store_context_state("character", "narrative_direction", visual_narration=True)
+    async def narrate_character(
+        self, character: "Character", narrative_direction: str = None
+    ):
         """
         Narrate a specific character
         """
-        
+
         response = await Prompt.request(
             "narrator.narrate-character",
             self.client,
@@ -506,59 +514,14 @@ class NarratorAgent(
             },
         )
 
-        response = self.clean_result(response.strip(), ensure_dialog_format=False, force_narrative=True)
+        response = self.clean_result(
+            response.strip(), ensure_dialog_format=False, force_narrative=True
+        )
 
         return response
 
     @set_processing
-    async def augment_context(self):
-        """
-        Takes a context history generated via scene.context_history() and augments it with additional information
-        by asking and answering questions with help from the long term memory.
-        """
-        memory = self.scene.get_helper("memory").agent
-
-        questions = await Prompt.request(
-            "narrator.context-questions",
-            self.client,
-            "narrate",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "extra_instructions": self.extra_instructions,
-            },
-        )
-
-        log.debug("context_questions", questions=questions)
-
-        questions = [q for q in questions.split("\n") if q.strip()]
-
-        memory_context = await memory.multi_query(
-            questions, iterate=2, max_tokens=self.client.max_token_length - 1000
-        )
-
-        answers = await Prompt.request(
-            "narrator.context-answers",
-            self.client,
-            "narrate",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "memory": memory_context,
-                "questions": questions,
-                "extra_instructions": self.extra_instructions,
-            },
-        )
-
-        log.debug("context_answers", answers=answers)
-
-        answers = [a for a in answers.split("\n") if a.strip()]
-
-        # return questions and answers
-        return list(zip(questions, answers))
-
-    @set_processing
-    @store_context_state('narrative_direction', time_narration=True)
+    @store_context_state("narrative_direction", time_narration=True)
     async def narrate_time_passage(
         self, duration: str, time_passed: str, narrative_direction: str
     ):
@@ -575,7 +538,7 @@ class NarratorAgent(
                 "max_tokens": self.client.max_token_length,
                 "duration": duration,
                 "time_passed": time_passed,
-                "narrative": narrative_direction, # backwards compatibility
+                "narrative": narrative_direction,  # backwards compatibility
                 "narrative_direction": narrative_direction,
                 "extra_instructions": self.extra_instructions,
             },
@@ -588,7 +551,7 @@ class NarratorAgent(
         return response
 
     @set_processing
-    @store_context_state('narrative_direction', sensory_narration=True)
+    @store_context_state("narrative_direction", sensory_narration=True)
     async def narrate_after_dialogue(
         self,
         character: Character,
@@ -619,16 +582,16 @@ class NarratorAgent(
     async def narrate_environment(self, narrative_direction: str = None):
         """
         Narrate the environment
-        
+
         Wraps narrate_after_dialogue with the player character
         as the perspective character
         """
-        
+
         pc = self.scene.get_player_character()
         return await self.narrate_after_dialogue(pc, narrative_direction)
 
     @set_processing
-    @store_context_state('narrative_direction', 'character')
+    @store_context_state("narrative_direction", "character")
     async def narrate_character_entry(
         self, character: Character, narrative_direction: str = None
     ):
@@ -654,11 +617,9 @@ class NarratorAgent(
         return response
 
     @set_processing
-    @store_context_state('narrative_direction', 'character')
+    @store_context_state("narrative_direction", "character")
     async def narrate_character_exit(
-        self, 
-        character: Character, 
-        narrative_direction: str = None
+        self, character: Character, narrative_direction: str = None
     ):
         """
         Narrate a character exiting the scene
@@ -726,8 +687,10 @@ class NarratorAgent(
         later on
         """
         args = parameters.copy()
-        
-        if args.get("character") and isinstance(args["character"], self.scene.Character):
+
+        if args.get("character") and isinstance(
+            args["character"], self.scene.Character
+        ):
             args["character"] = args["character"].name
 
         return {
@@ -748,7 +711,9 @@ class NarratorAgent(
         fn = getattr(self, action_name)
         narration = await fn(**kwargs)
 
-        narrator_message = NarratorMessage(narration, meta=self.action_to_meta(action_name, kwargs))
+        narrator_message = NarratorMessage(
+            narration, meta=self.action_to_meta(action_name, kwargs)
+        )
         self.scene.push_history(narrator_message)
 
         if emit_message:
@@ -767,20 +732,22 @@ class NarratorAgent(
             kind=kind,
             agent_function_name=agent_function_name,
         )
-        
+
         # depending on conversation format in the context, stopping strings
         # for character names may change format
         conversation_agent = get_agent("conversation")
-        
+
         if conversation_agent.conversation_format == "movie_script":
-            character_names = [f"\n{c.name.upper()}\n" for c in self.scene.get_characters()]
-        else: 
+            character_names = [
+                f"\n{c.name.upper()}\n" for c in self.scene.get_characters()
+            ]
+        else:
             character_names = [f"\n{c.name}:" for c in self.scene.get_characters()]
-        
+
         if prompt_param.get("extra_stopping_strings") is None:
             prompt_param["extra_stopping_strings"] = []
         prompt_param["extra_stopping_strings"] += character_names
-        
+
         self.set_generation_overrides(prompt_param)
 
     def allow_repetition_break(
@@ -795,7 +762,9 @@ class NarratorAgent(
         if not self.actions["generation_override"].enabled:
             return
 
-        prompt_param["max_tokens"] = min(prompt_param.get("max_tokens", 256), self.max_generation_length)
+        prompt_param["max_tokens"] = min(
+            prompt_param.get("max_tokens", 256), self.max_generation_length
+        )
 
         if self.jiggle > 0.0:
             nuke_repetition = client_context_attribute("nuke_repetition")

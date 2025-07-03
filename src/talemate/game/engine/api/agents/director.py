@@ -18,7 +18,6 @@ __all__ = ["create"]
 
 def create(scene: "Scene") -> "ScopedAPI":
     class API(ScopedAPI):
-
         def persist_character(
             self,
             character_name: str,

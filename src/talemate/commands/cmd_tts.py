@@ -1,10 +1,6 @@
-import asyncio
-import logging
-
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
 from talemate.instance import get_agent
-from talemate.prompts.base import set_default_sectioning_handler
 
 __all__ = [
     "CmdTestTTS",

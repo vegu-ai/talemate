@@ -54,7 +54,7 @@ class SceneMessage:
 
     # the source of the message (e.g. "ai", "progress_story", "director")
     source: str = ""
-    
+
     meta: dict | None = None
 
     flags: Flags = Flags.NONE
@@ -84,10 +84,10 @@ class SceneMessage:
             "source": self.source,
             "flags": int(self.flags),
         }
-        
+
         if self.meta:
             rv["meta"] = self.meta
-        
+
         return rv
 
     def __iter__(self):
@@ -113,7 +113,7 @@ class SceneMessage:
     @property
     def hidden(self):
         return self.flags & Flags.HIDDEN
-    
+
     @property
     def fingerprint(self) -> str:
         """
@@ -124,11 +124,11 @@ class SceneMessage:
     @property
     def source_agent(self) -> str | None:
         return (self.meta or {}).get("agent", None)
-        
+
     @property
     def source_function(self) -> str | None:
         return (self.meta or {}).get("function", None)
-    
+
     @property
     def source_arguments(self) -> dict:
         return (self.meta or {}).get("arguments", {})
@@ -147,18 +147,19 @@ class SceneMessage:
         if format == "movie_script":
             return self.message.rstrip("\n") + "\n"
         return self.message
-    
+
     def set_source(self, agent: str, function: str, **kwargs):
         if not self.meta:
             self.meta = {}
         self.meta["agent"] = agent
         self.meta["function"] = function
         self.meta["arguments"] = kwargs
-    
+
     def set_meta(self, **kwargs):
         if not self.meta:
             self.meta = {}
         self.meta.update(kwargs)
+
 
 @dataclass
 class CharacterMessage(SceneMessage):
@@ -180,7 +181,7 @@ class CharacterMessage(SceneMessage):
     @property
     def raw(self):
         return self.message.split(":", 1)[1].replace('"', "").replace("*", "").strip()
-    
+
     @property
     def without_name(self) -> str:
         return self.message.split(":", 1)[1]
@@ -198,7 +199,10 @@ class CharacterMessage(SceneMessage):
         try:
             message = self.message.split(":", 1)[1].strip()
         except IndexError:
-            log.warning("character_message_as_movie_script failed to parse correct format", msg=self.message)
+            log.warning(
+                "character_message_as_movie_script failed to parse correct format",
+                msg=self.message,
+            )
             message = self.message
 
         return f"\n{self.character_name.upper()}\n{message}\nEND-OF-LINE\n"
@@ -221,7 +225,6 @@ class CharacterMessage(SceneMessage):
 class NarratorMessage(SceneMessage):
     source: str = "ai"
     typ = "narrator"
-
 
     def source_to_meta(self) -> dict:
         source = self.source
@@ -247,11 +250,7 @@ class NarratorMessage(SceneMessage):
         elif action_name == "narrate_after_dialogue":
             parameters["character"] = args[0]
 
-        return {
-            "agent": "narrator",
-            "function": action_name,
-            "arguments": parameters
-        }
+        return {"agent": "narrator", "function": action_name, "arguments": parameters}
 
     def migrate_source_to_meta(self):
         if self.source and not self.meta:
@@ -261,6 +260,7 @@ class NarratorMessage(SceneMessage):
                 log.warning("migrate_narrator_source_to_meta", error=e, msg=self.id)
 
         return self
+
 
 @dataclass
 class DirectorMessage(SceneMessage):
@@ -278,7 +278,6 @@ class DirectorMessage(SceneMessage):
 
     @property
     def as_inner_monologue(self):
-
         # instructions may be written referencing the character as you, your etc.,
         # so we need to replace those to fit a first person perspective
 
@@ -302,29 +301,28 @@ class DirectorMessage(SceneMessage):
     @property
     def as_story_progression(self):
         return f"{self.character_name}'s next action: {self.instructions}"
-    
+
     @property
     def as_director_action(self) -> str:
         if not self.character_name:
             return f"{self.message}\n{self.action}"
 
-    #Become aggressive towards Elmer as you no longer recognize the man.
+    # Become aggressive towards Elmer as you no longer recognize the man.
     def migrate_message_to_meta(self):
         if self.message.startswith("Director instructs"):
             parts = self.message.split(":", 1)
             character_name = parts[0].replace("Director instructs ", "").strip()
             instructions = parts[1].strip()
-            
+
             self.set_source(
-                "director", 
-                "actor_instruction", 
+                "director",
+                "actor_instruction",
                 character=character_name,
             )
             self.message = instructions
             self.source = "player"
-        
+
         return self
-            
 
     def __dict__(self) -> dict:
         rv = super().__dict__()
@@ -341,6 +339,9 @@ class DirectorMessage(SceneMessage):
         return self.as_format("chat")
 
     def as_format(self, format: str, **kwargs) -> str:
+        if not self.instructions.strip():
+            return ""
+
         mode = kwargs.get("mode", "direction")
         if format == "movie_script":
             if mode == "internal_monologue":
@@ -365,6 +366,7 @@ class TimePassageMessage(SceneMessage):
         rv["ts"] = self.ts
         return rv
 
+
 @dataclass
 class ReinforcementMessage(SceneMessage):
     typ = "reinforcement"
@@ -379,9 +381,7 @@ class ReinforcementMessage(SceneMessage):
         return self.source_arguments.get("question", "question")
 
     def __str__(self):
-        return (
-            f"# Internal note for {self.character_name} - {self.question}\n{self.message}"
-        )
+        return f"# Internal note for {self.character_name} - {self.question}\n{self.message}"
 
     def as_format(self, format: str, **kwargs) -> str:
         if format == "movie_script":
@@ -394,7 +394,9 @@ class ReinforcementMessage(SceneMessage):
             try:
                 self.source_to_meta()
             except Exception as e:
-                log.warning("migrate_reinforcement_source_to_meta", error=e, msg=self.id)
+                log.warning(
+                    "migrate_reinforcement_source_to_meta", error=e, msg=self.id
+                )
 
         return self
 
@@ -403,6 +405,7 @@ class ReinforcementMessage(SceneMessage):
         args = source.split(":")
         parameters = {"character": args[1], "question": args[0]}
         self.set_source("world_state", "update_reinforcement", **parameters)
+
 
 @dataclass
 class ContextInvestigationMessage(SceneMessage):
@@ -413,25 +416,25 @@ class ContextInvestigationMessage(SceneMessage):
     @property
     def character(self) -> str:
         return self.source_arguments.get("character", "character")
-    
+
     @property
     def query(self) -> str:
         return self.source_arguments.get("query", "query")
-    
+
     @property
     def title(self) -> str:
         """
         The title will differ based on sub_type
-        
+
         Current sub_types:
-        
+
         - visual-character
         - visual-scene
         - query
-        
+
         A natural language title will be generated based on the sub_type
         """
-        
+
         if self.sub_type == "visual-character":
             return f"Visual description of {self.character} in the current moment"
         elif self.sub_type == "visual-scene":
@@ -439,17 +442,15 @@ class ContextInvestigationMessage(SceneMessage):
         elif self.sub_type == "query":
             return f"Query: {self.query}"
         return "Internal note"
-    
+
     def __str__(self):
-        return (
-            f"# {self.title}: {self.message}"
-        )
+        return f"# {self.title}: {self.message}"
 
     def __dict__(self) -> dict:
         rv = super().__dict__()
         rv["sub_type"] = self.sub_type
         return rv
-        
+
     def as_format(self, format: str, **kwargs) -> str:
         if format == "movie_script":
             message = str(self)[2:]

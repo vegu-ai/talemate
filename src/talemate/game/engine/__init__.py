@@ -19,16 +19,18 @@ nest_asyncio.apply()
 
 DEV_MODE = True
 
+
 def empty_function(*args, **kwargs):
     pass
 
-def exec_restricted(code: str, filename:str, **kwargs):
+
+def exec_restricted(code: str, filename: str, **kwargs):
     compiled_code = compile_restricted(code, filename=filename, mode="exec")
-    
+
     # Create a restricted globals dictionary
     restricted_globals = safe_globals.copy()
     safe_locals = {}
-    
+
     # Add custom variables, functions, or objects to the restricted globals
     restricted_globals.update(kwargs)
     restricted_globals["__name__"] = "__main__"
@@ -43,6 +45,7 @@ def exec_restricted(code: str, filename:str, **kwargs):
 
     # Execute the compiled code with the restricted globals
     return exec(compiled_code, restricted_globals, safe_locals)
+
 
 def compile_scene_module(module_code: str, **kwargs) -> dict[str, callable]:
     # Compile the module code using RestrictedPython
@@ -71,7 +74,9 @@ def compile_scene_module(module_code: str, **kwargs) -> dict[str, callable]:
 
     return {
         "game": safe_locals.get("game"),
-        "on_generation_cancelled": safe_locals.get("on_generation_cancelled", empty_function)
+        "on_generation_cancelled": safe_locals.get(
+            "on_generation_cancelled", empty_function
+        ),
     }
 
 
@@ -180,18 +185,22 @@ class GameInstructionsMixin:
         # read thje file into _module property
         with open(module_path, "r") as f:
             module_code = f.read()
-            
+
             scene_modules = compile_scene_module(module_code)
-            
+
             if "game" not in scene_modules:
-                raise ValueError(f"`game` function not found in scene module {module_path}")
-            
+                raise ValueError(
+                    f"`game` function not found in scene module {module_path}"
+                )
+
             scene._module = GameInstructionScope(
                 director=self,
                 log=log,
                 scene=scene,
                 module_function=scene_modules["game"],
-                on_generation_cancelled=scene_modules.get("on_generation_cancelled", empty_function)
+                on_generation_cancelled=scene_modules.get(
+                    "on_generation_cancelled", empty_function
+                ),
             )
 
     async def scene_has_module(self, scene: "Scene"):

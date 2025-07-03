@@ -1,12 +1,21 @@
 import pydantic
 import structlog
-from typing import Literal
 from mistralai import Mistral
 from mistralai.models.sdkerror import SDKError
 
-from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, CommonDefaults
+from talemate.client.base import (
+    ClientBase,
+    ErrorAction,
+    CommonDefaults,
+    ExtraField,
+)
 from talemate.client.registry import register
-from talemate.config import load_config
+from talemate.client.remote import (
+    EndpointOverride,
+    EndpointOverrideMixin,
+    endpoint_override_extra_fields,
+)
+from talemate.config import Client as BaseClientConfig, load_config
 from talemate.emit import emit
 from talemate.emit.signals import handlers
 
@@ -35,14 +44,17 @@ JSON_OBJECT_RESPONSE_MODELS = [
 ]
 
 
-class Defaults(CommonDefaults, pydantic.BaseModel):
+class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = "open-mixtral-8x22b"
 
 
+class ClientConfig(EndpointOverride, BaseClientConfig):
+    pass
+
 
 @register()
-class MistralAIClient(ClientBase):
+class MistralAIClient(EndpointOverrideMixin, ClientBase):
     """
     OpenAI client for generating text.
     """
@@ -52,6 +64,7 @@ class MistralAIClient(ClientBase):
     auto_break_repetition_enabled = False
     # TODO: make this configurable?
     decensor_enabled = True
+    config_cls = ClientConfig
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "MistralAI"
@@ -60,16 +73,18 @@ class MistralAIClient(ClientBase):
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
+        extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
 
     def __init__(self, model="open-mixtral-8x22b", **kwargs):
         self.model_name = model
         self.api_key_status = None
+        self._reconfigure_endpoint_override(**kwargs)
         self.config = load_config()
         super().__init__(**kwargs)
         handlers["config_saved"].connect(self.on_config_saved)
 
     @property
-    def mistralai_api_key(self):
+    def mistral_api_key(self):
         return self.config.get("mistralai", {}).get("api_key")
 
     @property
@@ -85,7 +100,7 @@ class MistralAIClient(ClientBase):
         if processing is not None:
             self.processing = processing
 
-        if self.mistralai_api_key:
+        if self.mistral_api_key:
             status = "busy" if self.processing else "idle"
             model_name = self.model_name
         else:
@@ -106,7 +121,7 @@ class MistralAIClient(ClientBase):
             model_name = "No model loaded"
 
         self.current_status = status
-        data={
+        data = {
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
@@ -122,7 +137,7 @@ class MistralAIClient(ClientBase):
         )
 
     def set_client(self, max_token_length: int = None):
-        if not self.mistralai_api_key:
+        if not self.mistral_api_key and not self.endpoint_override_base_url_configured:
             self.client = Mistral(api_key="sk-1111")
             log.error("No mistral.ai API key set")
             if self.api_key_status:
@@ -139,7 +154,7 @@ class MistralAIClient(ClientBase):
 
         model = self.model_name
 
-        self.client = Mistral(api_key=self.mistralai_api_key)
+        self.client = Mistral(api_key=self.api_key, server_url=self.base_url)
         self.max_token_length = max_token_length or 16384
 
         if not self.api_key_status:
@@ -158,8 +173,9 @@ class MistralAIClient(ClientBase):
     def reconfigure(self, **kwargs):
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
-        
+
         self._reconfigure_common_parameters(**kwargs)
+        self._reconfigure_endpoint_override(**kwargs)
 
         if kwargs.get("model"):
             self.model_name = kwargs["model"]
@@ -201,7 +217,7 @@ class MistralAIClient(ClientBase):
         Generates text from the given prompt and parameters.
         """
 
-        if not self.mistralai_api_key:
+        if not self.mistral_api_key:
             raise Exception("No mistral.ai API key set")
 
         supports_json_object = self.model_name in JSON_OBJECT_RESPONSE_MODELS
@@ -224,22 +240,38 @@ class MistralAIClient(ClientBase):
 
         self.log.debug(
             "generate",
+            base_url=self.base_url,
             prompt=prompt[:128] + " ...",
             parameters=parameters,
             system_message=system_message,
         )
 
         try:
-            response = await self.client.chat.complete_async(
+            event_stream = await self.client.chat.stream_async(
                 model=self.model_name,
                 messages=messages,
                 **parameters,
             )
 
-            self._returned_prompt_tokens = self.prompt_tokens(response)
-            self._returned_response_tokens = self.response_tokens(response)
+            response = ""
 
-            response = response.choices[0].message.content
+            completion_tokens = 0
+            prompt_tokens = 0
+
+            async for event in event_stream:
+                if event.data.choices:
+                    response += event.data.choices[0].delta.content
+                    self.update_request_tokens(
+                        self.count_tokens(event.data.choices[0].delta.content)
+                    )
+                if event.data.usage:
+                    completion_tokens += event.data.usage.completion_tokens
+                    prompt_tokens += event.data.usage.prompt_tokens
+
+            self._returned_prompt_tokens = prompt_tokens
+            self._returned_response_tokens = completion_tokens
+
+            # response = response.choices[0].message.content
 
             # older models don't support json_object response coersion
             # and often like to return the response wrapped in ```json
@@ -258,12 +290,12 @@ class MistralAIClient(ClientBase):
             return response
         except SDKError as e:
             self.log.error("generate error", e=e)
-            if hasattr(e, 'status_code') and e.status_code in [403, 401]:
+            if hasattr(e, "status_code") and e.status_code in [403, 401]:
                 emit(
                     "status",
                     message="mistral.ai API: Permission Denied",
                     status="error",
                 )
             return ""
-        except Exception as e:
+        except Exception:
             raise

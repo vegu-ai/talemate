@@ -117,7 +117,6 @@ class ModelPrompt:
             prompt = f"{prompt}<|BOT|>"
 
         if "<|BOT|>" in prompt:
-
             response_str = f"{double_coercion}{response_str}"
 
             if "\n<|BOT|>" in prompt:
@@ -129,6 +128,12 @@ class ModelPrompt:
 
         return prompt
 
+    def clean_model_name(self, model_name: str):
+        """
+        Clean the model name to be used in the template file name.
+        """
+        return model_name.replace("/", "__").replace(":", "_")
+
     def get_template(self, model_name: str):
         """
         Will attempt to load an LLM prompt template - this supports
@@ -137,7 +142,7 @@ class ModelPrompt:
 
         matches = []
 
-        cleaned_model_name = model_name.replace("/", "__")
+        cleaned_model_name = self.clean_model_name(model_name)
 
         # Iterate over all templates in the loader's directory
         for template_name in self.env.list_templates():
@@ -166,7 +171,7 @@ class ModelPrompt:
 
         template_name = template_name.split(".jinja2")[0]
 
-        cleaned_model_name = model_name.replace("/", "__")
+        cleaned_model_name = self.clean_model_name(model_name)
 
         shutil.copyfile(
             os.path.join(STD_TEMPLATE_PATH, template_name + ".jinja2"),
@@ -258,7 +263,11 @@ class Mistralv7TekkenIdentifier(TemplateIdentifier):
     template_str = "MistralV7Tekken"
 
     def __call__(self, content: str):
-        return "[SYSTEM_PROMPT]" in content and "[INST]" in content and "[/INST]" in content
+        return (
+            "[SYSTEM_PROMPT]" in content
+            and "[INST]" in content
+            and "[/INST]" in content
+        )
 
 
 @register_template_identifier

@@ -5,10 +5,14 @@ import structlog
 
 import talemate.world_state.templates as world_state_templates
 from talemate.character import activate_character, deactivate_character
-from talemate.config import save_config
 from talemate.instance import get_agent
 from talemate.emit import emit
-from talemate.world_state import ContextPin, InsertionMode, ManualContext, Reinforcement, Suggestion
+from talemate.world_state import (
+    ContextPin,
+    ManualContext,
+    Reinforcement,
+    Suggestion,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -739,7 +743,6 @@ class WorldStateManager:
         run_immediately: bool = False,
         **kwargs,
     ) -> str:
-
         if isinstance(template, str):
             template_uid = template
             template = self.template_collection.flat(
@@ -760,7 +763,6 @@ class WorldStateManager:
         character_name: str,
         **kwargs,
     ) -> str:
-
         if isinstance(template, str):
             template_uid = template
             template = self.template_collection.flat(
@@ -838,7 +840,7 @@ class WorldStateManager:
                     character="the character",
                 )
                 tries -= 1
-                
+
         if not name:
             raise ValueError("Failed to generate a name for the character.")
 
@@ -853,7 +855,7 @@ class WorldStateManager:
             )
 
         # create character instance
-        character:"Character" = self.scene.Character(
+        character: "Character" = self.scene.Character(
             name=name,
             description=description,
             base_attributes={},
@@ -871,14 +873,13 @@ class WorldStateManager:
         actor = ActorCls(character, get_agent("conversation"))
 
         await self.scene.add_actor(actor)
-        
+
         try:
             if generate_attributes:
                 base_attributes = await world_state.extract_character_sheet(
                     name=name, text=description
                 )
                 character.update(base_attributes=base_attributes)
-
 
             if not active:
                 await deactivate_character(self.scene, name)
@@ -895,7 +896,6 @@ class WorldStateManager:
         intro: str | None = None,
         context: str | None = None,
     ) -> "Scene":
-
         scene = self.scene
         scene.title = title
         scene.description = description
@@ -911,43 +911,45 @@ class WorldStateManager:
         writing_style_template: str | None = None,
         restore_from: str | None = None,
     ) -> "Scene":
-
         scene = self.scene
         scene.immutable_save = immutable_save
         scene.experimental = experimental
         scene.writing_style_template = writing_style_template
-        
+
         if restore_from and restore_from not in scene.save_files:
-            raise ValueError(f"Restore file {restore_from} not found in scene save files.")
-        
+            raise ValueError(
+                f"Restore file {restore_from} not found in scene save files."
+            )
+
         scene.restore_from = restore_from
 
         return scene
 
-
     # suggestions
-    
+
     async def clear_suggestions(self):
         """
         Clears all suggestions from the scene.
         """
         self.scene.world_state.suggestions = []
         self.scene.world_state.emit()
-    
+
     async def add_suggestion(self, suggestion: Suggestion):
         """
         Adds a suggestion to the scene.
         """
-        
-        existing:Suggestion = await self.get_suggestion_by_id(suggestion.id)
-        
-        log.debug("WorldStateManager.add_suggestion", suggestion=suggestion, existing=existing)
-        
+
+        existing: Suggestion = await self.get_suggestion_by_id(suggestion.id)
+
+        log.debug(
+            "WorldStateManager.add_suggestion", suggestion=suggestion, existing=existing
+        )
+
         if existing:
             existing.merge(suggestion)
         else:
             self.scene.world_state.suggestions.append(suggestion)
-        
+
         # changes will be emitted to the world editor as proposals for the character
         for proposal in suggestion.proposals:
             emit(
@@ -959,52 +961,48 @@ class WorldStateManager:
                     "suggestion_type": suggestion.type,
                     "name": suggestion.name,
                     "id": suggestion.id,
-                }
+                },
             )
-        
+
         self.scene.world_state.emit()
-                
-        
-    async def get_suggestion_by_id(self, id:str) -> Suggestion:
+
+    async def get_suggestion_by_id(self, id: str) -> Suggestion:
         """
         Retrieves a suggestion from the scene by its id.
         """
-        
+
         for s in self.scene.world_state.suggestions:
             if s.id == id:
                 return s
-        
+
         self.scene.world_state.emit()
-        
-        
-    async def remove_suggestion(self, suggestion:str | Suggestion):
+
+    async def remove_suggestion(self, suggestion: str | Suggestion):
         """
         Removes a suggestion from the scene by its id.
         """
         if isinstance(suggestion, str):
             suggestion = await self.get_suggestion_by_id(suggestion)
-        
+
         if not suggestion:
             return
-        
+
         self.scene.world_state.suggestions.remove(suggestion)
         self.scene.world_state.emit()
-        
-        
-    async def remove_suggestion_proposal(self, suggestion_id:str, proposal_uid:str):
+
+    async def remove_suggestion_proposal(self, suggestion_id: str, proposal_uid: str):
         """
         Removes a proposal from a suggestion by its uid.
         """
-        
-        suggestion:Suggestion = await self.get_suggestion_by_id(suggestion_id)
-        
+
+        suggestion: Suggestion = await self.get_suggestion_by_id(suggestion_id)
+
         if not suggestion:
             return
-        
+
         suggestion.remove_proposal(proposal_uid)
-        
+
         # if suggestion is empty, remove it
         if not suggestion.proposals:
             await self.remove_suggestion(suggestion)
         self.scene.world_state.emit()
-        

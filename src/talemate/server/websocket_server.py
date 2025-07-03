@@ -11,7 +11,7 @@ from talemate.client.base import ClientBase
 from talemate.client.registry import CLIENT_CLASSES
 from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.config import SceneAssetUpload, load_config, save_config
-from talemate.context import ActiveScene, active_scene
+from talemate.context import ActiveScene
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 from talemate.files import list_scenes_directory
 from talemate.load import load_scene
@@ -25,6 +25,7 @@ from talemate.server import (
     quick_settings,
     world_state_manager,
     node_editor,
+    package_manager,
 )
 
 __all__ = [
@@ -67,6 +68,9 @@ class WebsocketHandler(Receiver):
             ),
             devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
             node_editor.NodeEditorPlugin.router: node_editor.NodeEditorPlugin(self),
+            package_manager.PackageManagerPlugin.router: package_manager.PackageManagerPlugin(
+                self
+            ),
         }
 
         # unconveniently named function, this `connect` method is called
@@ -84,7 +88,6 @@ class WebsocketHandler(Receiver):
         # instance.emit_clients_status()
 
     def set_agent_routers(self):
-
         for agent_type, agent in instance.AGENTS.items():
             handler_cls = getattr(agent, "websocket_handler", None)
             if not handler_cls or handler_cls.router in self.routes:
@@ -102,7 +105,7 @@ class WebsocketHandler(Receiver):
         memory_agent = instance.get_agent("memory")
         if memory_agent and self.scene:
             memory_agent.close_db(self.scene)
-            
+
         for plugin in self.routes.values():
             if hasattr(plugin, "disconnect"):
                 plugin.disconnect()
@@ -215,13 +218,15 @@ class WebsocketHandler(Receiver):
             with ActiveScene(scene):
                 try:
                     scene = await load_scene(
-                        scene, path_or_data, conversation_helper.agent.client, reset=reset
+                        scene,
+                        path_or_data,
+                        conversation_helper.agent.client,
+                        reset=reset,
                     )
                 except MemoryAgentError as e:
                     emit("status", message=str(e), status="error")
                     log.error("load_scene", error=str(e))
                     return
-                
 
             self.scene = scene
 
@@ -299,7 +304,7 @@ class WebsocketHandler(Receiver):
 
             for name in removed:
                 log.debug("Destroying client", name=name)
-                instance.destroy_client(name)
+                await instance.destroy_client(name, self.config)
 
         self.config["clients"] = self.llm_clients
 
@@ -397,7 +402,7 @@ class WebsocketHandler(Receiver):
                         **emission.kwargs,
                     }
                 )
-            except Exception as e:
+            except Exception:
                 log.error("emission passthrough", error=traceback.format_exc())
 
     def handle_system(self, emission: Emission):
@@ -407,6 +412,7 @@ class WebsocketHandler(Receiver):
                 "message": emission.message,
                 "id": emission.id,
                 "status": emission.status,
+                "meta": emission.meta,
                 "character": emission.character.name if emission.character else "",
             }
         )
@@ -480,15 +486,23 @@ class WebsocketHandler(Receiver):
                 ),
             }
         )
-        
+
     def handle_context_investigation(self, emission: Emission):
         self.queue_put(
             {
                 "type": "context_investigation",
-                "sub_type": emission.message_object.sub_type if emission.message_object else None,
-                "source_agent": emission.message_object.source_agent if emission.message_object else None,
-                "source_function": emission.message_object.source_function if emission.message_object else None,
-                "source_arguments": emission.message_object.source_arguments if emission.message_object else None,
+                "sub_type": emission.message_object.sub_type
+                if emission.message_object
+                else None,
+                "source_agent": emission.message_object.source_agent
+                if emission.message_object
+                else None,
+                "source_function": emission.message_object.source_function
+                if emission.message_object
+                else None,
+                "source_arguments": emission.message_object.source_arguments
+                if emission.message_object
+                else None,
                 "message": emission.message,
                 "id": emission.id,
                 "flags": (
@@ -540,9 +554,8 @@ class WebsocketHandler(Receiver):
         )
 
     def handle_config_saved(self, emission: Emission):
-        
         emission.data.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
-        
+
         self.queue_put(
             {
                 "type": "app_config",
@@ -579,7 +592,6 @@ class WebsocketHandler(Receiver):
                 "status": emission.status,
                 "data": emission.data,
                 "max_token_length": client.max_token_length if client else 8192,
-                "api_url": getattr(client, "api_url", None) if client else None,
                 "api_url": getattr(client, "api_url", None) if client else None,
                 "api_key": getattr(client, "api_key", None) if client else None,
             }
@@ -668,9 +680,6 @@ class WebsocketHandler(Receiver):
             self.queue_put({"type": "processing_input"})
             return
 
-        player_character = self.scene.get_player_character()
-        player_character_name = player_character.name if player_character else ""
-
         self.queue_put(
             {
                 "type": "processing_input",
@@ -734,6 +743,8 @@ class WebsocketHandler(Receiver):
         try:
             for asset_id in asset_ids:
                 asset = scene_assets.get_asset_bytes_as_base64(asset_id)
+                if not asset:
+                    continue
 
                 self.queue_put(
                     {
@@ -743,7 +754,7 @@ class WebsocketHandler(Receiver):
                         "media_type": scene_assets.get_asset(asset_id).media_type,
                     }
                 )
-        except Exception as exc:
+        except Exception:
             log.error("request_scene_assets", error=traceback.format_exc())
 
     def request_assets(self, assets: list[dict]):
@@ -758,7 +769,7 @@ class WebsocketHandler(Receiver):
         for asset_dict in assets:
             try:
                 asset_id, asset = self._asset(**asset_dict)
-            except Exception as exc:
+            except Exception:
                 log.error("request_assets", error=traceback.format_exc(), **asset_dict)
                 continue
             _assets[asset_id] = asset
@@ -823,7 +834,6 @@ class WebsocketHandler(Receiver):
         self.scene.delete_message(message_id)
 
     def edit_message(self, message_id, new_text):
-
         message = self.scene.get_message(message_id)
 
         editor = instance.get_agent("editor")
@@ -838,7 +848,6 @@ class WebsocketHandler(Receiver):
         self.scene.edit_message(message_id, new_text)
 
     def handle_character_card_upload(self, image_data_url: str, filename: str) -> str:
-        image_type = image_data_url.split(";")[0].split(":")[1]
         image_data = base64.b64decode(image_data_url.split(",")[1])
         characters_path = os.path.join("./scenes", "characters")
 

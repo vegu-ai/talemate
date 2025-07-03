@@ -1,0 +1,5 @@
+[lint]
+# Disable automatic fix for unused imports (`F401`). We check these manually.
+unfixable = ["F401"]
+# Ignore E402
+extend-ignore = ["E402"]

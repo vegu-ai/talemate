@@ -3,17 +3,12 @@ from typing import TYPE_CHECKING, Literal
 
 import pydantic
 
-from talemate.world_state.templates.base import Template, log, register
+from talemate.world_state.templates.base import Template, register
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
-__all__ = [
-    "GenerationOptions", 
-    "Spices", 
-    "WritingStyle", 
-    "PhraseDetection"
-]
+__all__ = ["GenerationOptions", "Spices", "WritingStyle", "PhraseDetection"]
 
 
 @register("spices")
@@ -26,6 +21,7 @@ class Spices(Template):
 
         return self.formatted("instructions", scene, character_name, spice=spice)
 
+
 class PhraseDetection(pydantic.BaseModel):
     phrase: str
     instructions: str
@@ -33,7 +29,8 @@ class PhraseDetection(pydantic.BaseModel):
     classification: Literal["unwanted"] = "unwanted"
     match_method: Literal["regex", "semantic_similarity"] = "regex"
     active: bool = True
-    
+
+
 @register("writing_style")
 class WritingStyle(Template):
     description: str | None = None
@@ -41,6 +38,7 @@ class WritingStyle(Template):
 
     def render(self, scene: "Scene", character_name: str):
         return self.formatted("instructions", scene, character_name)
+
 
 class GenerationOptions(pydantic.BaseModel):
     spices: Spices | None = None

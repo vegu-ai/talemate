@@ -37,13 +37,13 @@ class LMStudioClient(ClientBase):
 
     def reconfigure(self, **kwargs):
         super().reconfigure(**kwargs)
-        
+
         if self.client and self.client.base_url != self.api_url:
             self.set_client()
 
     async def get_model_name(self):
         model_name = await super().get_model_name()
-        
+
         # model name comes back as a file path, so we need to extract the model name
         # the path could be windows or linux so it needs to handle both backslash and forward slash
 
@@ -54,18 +54,55 @@ class LMStudioClient(ClientBase):
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
-        Generates text from the given prompt and parameters.
+        Generates text from the given prompt and parameters using a streaming
+        request so that token usage can be tracked incrementally via
+        `update_request_tokens`.
         """
-        human_message = {"role": "user", "content": prompt.strip()}
 
-        self.log.debug("generate", prompt=prompt[:128] + " ...", parameters=parameters)
+        self.log.debug(
+            "generate",
+            prompt=prompt[:128] + " ...",
+            parameters=parameters,
+        )
 
         try:
-            response = await self.client.chat.completions.create(
-                model=self.model_name, messages=[human_message], **parameters
+            # Send the request in streaming mode so we can update token counts
+            stream = await self.client.completions.create(
+                model=self.model_name,
+                prompt=prompt,
+                stream=True,
+                **parameters,
             )
 
-            return response.choices[0].message.content
+            response = ""
+
+            # Iterate over streamed chunks and accumulate the response while
+            # incrementally updating the token counter
+            async for chunk in stream:
+                if not chunk.choices:
+                    continue
+                content_piece = chunk.choices[0].text
+                response += content_piece
+                # Track token usage incrementally
+                self.update_request_tokens(self.count_tokens(content_piece))
+
+            # Store overall token accounting once the stream is finished
+            self._returned_prompt_tokens = self.prompt_tokens(prompt)
+            self._returned_response_tokens = self.response_tokens(response)
+
+            return response
         except Exception as e:
             self.log.error("generate error", e=e)
             return ""
+
+    # ------------------------------------------------------------------
+    # Token helpers
+    # ------------------------------------------------------------------
+
+    def response_tokens(self, response: str):
+        """Count tokens in a model response string."""
+        return self.count_tokens(response)
+
+    def prompt_tokens(self, prompt: str):
+        """Count tokens in a prompt string."""
+        return self.count_tokens(prompt)

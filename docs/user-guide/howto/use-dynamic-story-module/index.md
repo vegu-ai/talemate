@@ -2,17 +2,6 @@
 
 This tutorial will show you how to use the `Dynamic Storyline` module (added in `0.30`) to randomize the scene introduction for ANY scene.
 
-!!! note "A more streamlined approach is coming soon"
-    I am aware that some people may not want to touch the node editor at all, so a more streamlined approach is planned.
-
-    For now this will lay out the simplest way to set this up while still using the node editor.
-
-!!! learn-more "For those interested..."
-
-    There is tutorial on how the `Dynamic Storyline` module was made (or at least the beginnings of it).
-
-    If you are interested in the process, you can find it [here](/talemate/user-guide/howto/infinity-quest-dynamic).
-
 ## Save a foundation scene copy
 
 This should be a save of your scene that has had NO progress made to it yet. We are generating a new scene introduction after all.
@@ -21,59 +10,52 @@ The introduction is only generated once. So you should maintain a save-file of t
 
 To ensure this foundation scene save isn't overwritten you can go to the scene settings in the world editor and turn on the Locked save file flag:
 
-![Immutable save](./img/0008.png)
+![Immutable save](./img/0001.png)
 
 Save the scene.
 
-## Switch to the node editor
+## Install the module
 
-In your scene tools find the :material-puzzle-edit: creative menu and click on the **Node Editor** option.
+Click the `Mods` tab in the world editor.
+    
+![Mods Tab](./img/0002.png)
 
-![Node Editor](./img/0001.png)
 
-Find the `COPY AS EDITABLE MODULE FOR ..` button beneath the node editor.
+Find the `Dynamic Storyline` module and click **Install**.
 
-![Copy as editable module](./img/0002.png)
+It will say installed (not configured)
 
-Click it.
+![Installed (not configured)](./img/0003.png)
 
-In the next window, don't even read any of the stuff, just click **Continue**.
+Click **Configure** and set topic to something like `Sci-fi adventure with lovecraftian horror`.
 
-## Find a blank area
+![Configure Module](./img/0004.png)
 
-Use the mousewheel to zoom out a bit, then click the canvas and drag it to the side so you're looking at some blank space. Literally anywhere that's grey background is fine.
+!!! note "Optional settings"
 
-Double click the empty area to bring up the module searcand type in "Dynamic Story" into th
+    ##### Max intro text length
+    How many tokens to generate for the intro text.
 
-![Dynamic Story](./img/0003.png)
+    ##### Additional instructions for topic analysis task
+    If topic analysis is enabled, this will be used to augment the topic analysis task with further instructions
 
-Select the `Dynamic Storyline` node to add it to the scene.
+    ##### Enable topic analysis
+    This will enable the topic analysis task
 
-![Dynamic Story](./img/0004.png)
+**Save** the module configuration.
 
-Click the `topic` input and type in a general genre or thematic guide for the story.
+Finally click "Reload Scene" in the left sidebar.
 
-Some examples
+![Reload Scene](./img/0007.png)
 
-- `sci-fi with cosmic horror elements`
-- `dungeons and dragons campaign ideas`
-- `slice of life story ideas`
+If everything is configured correctly, the storyline generation will begin immediately.
 
-Whatever you enter will be used to generate a list of story ideas, of which one will be chosen at random to bootstrap a new story, taking the scene context that exists already into account. 
+![Dynamic Storyline Module Configured](./img/0005.png)
 
-This will NOT create new characters or world context.
+!!! note "Switch out of edit mode"
 
-It simply bootstraps a story premise based on the random topic and what's already there.
+    If nothing is happening after configuration and reloading the scene, make sure you are not in edit mode.
 
-Once the topic is set, save the changes by clicking the node editor's **Save** button in the upper right corner.
-
-![Save](./img/0005.png)
-
-Exit the node editor through the same menu as before.
-
-![Exit node editor](./img/0006.png)
-
-Once back in the scene, if everythign was done correctly you should see it working on setting the scene introduction.
-
-![Scene introduction](./img/0007.png)
-
+    You can leave edit mode by clicking the "Exit Node Editor" button in the creative menu.
+    
+    ![Exit Node Editor](./img/0006.png)

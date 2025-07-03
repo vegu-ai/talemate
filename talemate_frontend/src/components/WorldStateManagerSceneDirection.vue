@@ -26,6 +26,7 @@
                     :original="sceneIntent.intent"
                     :templates="templates"
                     :generationOptions="generationOptions"
+                    :specify-length="true"
                     @generate="content => setAndUpdateIntent(content)"
                 />
                 
@@ -95,6 +96,7 @@
                         :templates="templates"
                         :length="256"
                         :generationOptions="generationOptions"
+                        :specify-length="true"
                         @generate="content => setAndUpdatePhaseIntent(content)"
                     />
                     

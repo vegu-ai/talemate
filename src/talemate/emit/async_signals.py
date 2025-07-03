@@ -6,6 +6,7 @@ __all__ = [
 
 handlers = {}
 
+
 class AsyncSignal:
     def __init__(self, name):
         self.receivers = []
@@ -21,7 +22,7 @@ class AsyncSignal:
             self.receivers.remove(handler)
         except ValueError:
             pass
-        
+
     async def send(self, emission):
         for receiver in self.receivers:
             await receiver(emission)

@@ -1,0 +1,65 @@
+{
+    "packages": [
+        {
+            "name": "Dynamic Storyline",
+            "author": "Talemate",
+            "description": "Generate a random story premise at the beginning of the scene.",
+            "installable": true,
+            "registry": "package/talemate/DynamicStoryline",
+            "status": "installed",
+            "errors": [],
+            "package_properties": {
+                "topic": {
+                    "module": "scene/dynamicStoryline",
+                    "name": "topic",
+                    "label": "Topic",
+                    "description": "The overarching topic - will be used to generate a theme that falls within this category. Example - 'Sci-fi adventure with cosmic horror'.",
+                    "type": "str",
+                    "default": "",
+                    "value": "Sci-fi episodic adventures onboard of a spaceship, with focus on AI, alien contact, ancient creators and cosmic horror.",
+                    "required": true,
+                    "choices": []
+                },
+                "intro_length": {
+                    "module": "scene/dynamicStoryline",
+                    "name": "intro_length",
+                    "label": "Max. intro text length (tokens)",
+                    "description": "Length of the introduction",
+                    "type": "int",
+                    "default": 512,
+                    "value": 512,
+                    "required": true,
+                    "choices": []
+                },
+                "analysis_instructions": {
+                    "module": "scene/dynamicStoryline",
+                    "name": "analysis_instructions",
+                    "label": "Additional instructions for topic analysis task",
+                    "description": "Additional instructions for topic analysis task - if topic analysis is enabled, this will be used to augment the topic analysis task with further instructions.",
+                    "type": "text",
+                    "default": "",
+                    "value": "",
+                    "required": false,
+                    "choices": []
+                },
+                "analysis_enabled": {
+                    "module": "scene/dynamicStoryline",
+                    "name": "analysis_enabled",
+                    "label": "Enable topic analysis",
+                    "description": "Theme analysis",
+                    "type": "bool",
+                    "default": true,
+                    "value": true,
+                    "required": false,
+                    "choices": []
+                }
+            },
+            "install_nodes": [
+                "scene/dynamicStoryline"
+            ],
+            "installed_nodes": [],
+            "restart_scene_loop": true,
+            "configured": true
+        }
+    ]
+}

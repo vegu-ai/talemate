@@ -13,7 +13,6 @@ __all__ = ["create"]
 
 def create() -> "ScopedAPI":
     class API(ScopedAPI):
-
         def status(self, status: str, message: str, as_scene_message: bool = False):
             """
             Emits a status message to the scene

@@ -1,9 +1,8 @@
 import random
-import urllib
 
 import pydantic
 import structlog
-from openai import AsyncOpenAI, NotFoundError, PermissionDeniedError
+from openai import AsyncOpenAI, PermissionDeniedError
 
 from talemate.client.base import ClientBase, ExtraField
 from talemate.client.registry import register
@@ -93,7 +92,6 @@ class OpenAICompatibleClient(ClientBase):
         )
 
     def prompt_template(self, system_message: str, prompt: str):
-
         log.debug(
             "IS API HANDLING PROMPT TEMPLATE",
             api_handles_prompt_template=self.api_handles_prompt_template,
@@ -130,7 +128,10 @@ class OpenAICompatibleClient(ClientBase):
                 )
                 human_message = {"role": "user", "content": prompt.strip()}
                 response = await self.client.chat.completions.create(
-                    model=self.model_name, messages=[human_message], stream=False, **parameters
+                    model=self.model_name,
+                    messages=[human_message],
+                    stream=False,
+                    **parameters,
                 )
                 response = response.choices[0].message.content
                 return self.process_response_for_indirect_coercion(prompt, response)
@@ -177,7 +178,7 @@ class OpenAICompatibleClient(ClientBase):
 
         if "double_coercion" in kwargs:
             self.double_coercion = kwargs["double_coercion"]
-            
+
         if "rate_limit" in kwargs:
             self.rate_limit = kwargs["rate_limit"]
 

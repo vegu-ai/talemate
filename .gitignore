@@ -8,6 +8,9 @@
 talemate_env
 chroma
 config.yaml
+
+# uv
+.venv/
 templates/llm-prompt/user/*.jinja2
 templates/world-state/*.yaml
 scenes/

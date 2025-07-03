@@ -8,6 +8,8 @@ nav:
     - Mistral.ai: mistral.md
     - OpenAI: openai.md
     - OpenAI Compatible: openai-compatible.md
+    - Ollama: ollama.md
+    - OpenRouter: openrouter.md
     - TabbyAPI: tabbyapi.md
     - Text-Generation-WebUI: text-generation-webui.md
     - ...

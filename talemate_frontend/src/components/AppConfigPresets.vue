@@ -14,6 +14,7 @@
             ref="embeddings" 
             @busy="() => busy = true"
             @done="() => busy = false"
+            :clientStatus="clientStatus"
             :memoryAgentStatus="agentStatus.memory || null" :immutableConfig="immutableConfig"
             :sceneActive="sceneActive"
             @update="() => $emit('update', config)"
@@ -45,6 +46,7 @@ export default {
         immutableConfig: Object,
         agentStatus: Object,
         sceneActive: Boolean,
+        clientStatus: Object,
     },
     emits: [
         'update',

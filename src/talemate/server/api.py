@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 import traceback
 
 import starlette.websockets
@@ -19,7 +18,8 @@ from talemate.game.engine.nodes.registry import import_initial_node_definitions
 
 log = structlog.get_logger("talemate")
 
-async def websocket_endpoint(websocket, path):
+
+async def websocket_endpoint(websocket):
     # Create a queue for outgoing messages
     message_queue = asyncio.Queue()
     handler = WebsocketHandler(websocket, message_queue)
@@ -29,10 +29,12 @@ async def websocket_endpoint(websocket, path):
     
     import_initial_node_definitions()
 
+    import_initial_node_definitions()
+
     async def frontend_disconnect(exc):
         nonlocal scene_task
         log.warning(f"frontend disconnected: {exc}")
-        
+
         main_task.cancel()
         send_messages_task.cancel()
         send_status_task.cancel()
@@ -56,7 +58,6 @@ async def websocket_endpoint(websocket, path):
             message = await message_queue.get()
             await websocket.send(json.dumps(message, cls=JSONEncoder))
 
-
     # Create a task to send regular client status updates
     async def send_status():
         while True:
@@ -77,7 +78,6 @@ async def websocket_endpoint(websocket, path):
                 )
             await asyncio.sleep(15)
 
-    
     # task to test connection
     async def test_connection():
         while True:
@@ -86,9 +86,7 @@ async def websocket_endpoint(websocket, path):
             except Exception as e:
                 await frontend_disconnect(e)
             await asyncio.sleep(1)
-    
-    
-    
+
     # main loop task
     async def handle_messages():
         nonlocal scene_task
@@ -187,10 +185,10 @@ async def websocket_endpoint(websocket, path):
                         handler.scene.interrupt()
                     elif action_type == "request_app_config":
                         log.info("request_app_config")
-                        
+
                         config = load_config()
                         config.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
-                        
+
                         await message_queue.put(
                             {
                                 "type": "app_config",
@@ -201,7 +199,6 @@ async def websocket_endpoint(websocket, path):
                     else:
                         log.info("Routing to sub-handler", action_type=action_type)
                         await handler.route(data)
-                        
 
         # handle disconnects
         except (
@@ -211,11 +208,16 @@ async def websocket_endpoint(websocket, path):
         ) as exc:
             await frontend_disconnect(exc)
 
-
     main_task = asyncio.create_task(handle_messages())
     send_messages_task = asyncio.create_task(send_messages())
     send_status_task = asyncio.create_task(send_status())
     send_client_bootstraps_task = asyncio.create_task(send_client_bootstraps())
     test_connection_task = asyncio.create_task(test_connection())
-    
-    await asyncio.gather(main_task, send_messages_task, send_status_task, send_client_bootstraps_task, test_connection_task)
+
+    await asyncio.gather(
+        main_task,
+        send_messages_task,
+        send_status_task,
+        send_client_bootstraps_task,
+        test_connection_task,
+    )

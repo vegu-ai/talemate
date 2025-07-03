@@ -58,6 +58,7 @@
                             :templates="templates"
                             :generation-options="generationOptions"
                             :history-aware="false"
+                            :specify-length="true"
                             @generate="content => setIntroAndQueueUpdate(content)"
                         />
                         <v-textarea

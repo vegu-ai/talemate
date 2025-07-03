@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 def create(scene: "Scene") -> "ScopedAPI":
     class API(ScopedAPI):
-
         def determine_content_context_for_description(
             self,
             description: str,

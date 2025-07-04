@@ -114,7 +114,7 @@ async def load_scene_from_character_card(scene, file_path):
     """
     Load a character card (tavern etc.) from the given file path.
     """
-    
+
     director = get_agent("director")
     LOADING_STEPS = 5
     if director.auto_direct_enabled:

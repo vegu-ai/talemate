@@ -389,7 +389,7 @@ class ClientBase:
             _, right = prompt.split("<|BOT|>", 1)
 
             if self.double_coercion:
-                right = f"{self.double_coercion}\n\n{right}"
+                right = f"{self.double_coercion}{right}"
 
             return prompt, right
         return prompt, None

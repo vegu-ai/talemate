@@ -74,6 +74,7 @@ handlers["talemate_started"].connect(fetch_models_sync)
 class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = DEFAULT_MODEL
+    double_coercion: str = None
 
 
 @register()
@@ -103,6 +104,7 @@ class OpenRouterClient(ClientBase):
         self.api_key_status = None
         self.config = load_config()
         self._models_fetched = False
+        self.double_coercion = kwargs.get("double_coercion", None)
         super().__init__(**kwargs)
 
         handlers["config_saved"].connect(self.on_config_saved)
@@ -157,6 +159,7 @@ class OpenRouterClient(ClientBase):
 
         data = {
             "error_action": error_action.model_dump() if error_action else None,
+            "double_coercion": self.double_coercion,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
         }
@@ -212,6 +215,9 @@ class OpenRouterClient(ClientBase):
 
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
+
+        if "double_coercion" in kwargs:
+            self.double_coercion = kwargs["double_coercion"]
 
         self._reconfigure_common_parameters(**kwargs)
 

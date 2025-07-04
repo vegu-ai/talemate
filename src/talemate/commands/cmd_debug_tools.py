@@ -2,7 +2,6 @@ import asyncio
 
 import structlog
 
-import structlog
 
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register

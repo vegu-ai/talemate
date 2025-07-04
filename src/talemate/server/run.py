@@ -12,10 +12,6 @@ import sys
 
 import websockets
 
-import websockets
-import re
-
-import talemate.config
 from talemate.server.api import websocket_endpoint
 from talemate.version import VERSION
 
@@ -222,19 +218,18 @@ def run_server(args):
     from talemate.world_state.templates import Collection
     from talemate.prompts.overrides import get_template_overrides
     import talemate.client.system_prompts as system_prompts
-    
+
     # import node libraries
     import talemate.game.engine.nodes.load_definitions
-
 
     config = talemate.config.cleanup()
 
     if config.game.world_state.templates.state_reinforcement:
         Collection.create_from_legacy_config(config)
-        
+
     # pre-cache system prompts
     system_prompts.cache_all()
-    
+
     for agent_type in get_agent_types():
         template_overrides = get_template_overrides(agent_type)
         for template_override in template_overrides:
@@ -248,18 +243,20 @@ def run_server(args):
             )
 
     loop = asyncio.get_event_loop()
-    
+
     start_server = websockets.serve(
         websocket_endpoint, args.host, args.port, max_size=2**23
     )
-    
+
     loop.run_until_complete(start_server)
-    
+
     # start task to unstall punkt
     loop.create_task(install_punkt())
-    
+
     if not args.backend_only:
-        frontend_task = loop.create_task(run_frontend(args.frontend_host, args.frontend_port))
+        frontend_task = loop.create_task(
+            run_frontend(args.frontend_host, args.frontend_port)
+        )
     else:
         frontend_task = None
 
@@ -270,13 +267,14 @@ def run_server(args):
         pass
     finally:
         log.info("Shutting down...")
-        
+
         if frontend_task:
             frontend_task.cancel()
         loop.run_until_complete(cancel_all_tasks(loop))
         loop.run_until_complete(loop.shutdown_asyncgens())
         loop.close()
         log.info("Shutdown complete")
+
 
 def main():
     parser = argparse.ArgumentParser(description="talemate server")
@@ -301,7 +299,7 @@ def main():
     )
 
     args = parser.parse_args()
-    
+
     # wipe screen if backend only mode is not enabled
     # reason: backend only is run usually in dev mode and may be worth keeping the console output
     if not args.backend_only:

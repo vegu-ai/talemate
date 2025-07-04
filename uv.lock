@@ -4403,6 +4403,11 @@ dev = [
     { name = "pytest-asyncio" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "aiofiles", specifier = ">=24.1.0" },
@@ -4459,6 +4464,9 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.23" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "mypy", specifier = ">=1.16.1" }]
 
 [[package]]
 name = "tenacity"

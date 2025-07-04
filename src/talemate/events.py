@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-import pydantic
 
 import talemate.emit.async_signals as async_signals
 
-import talemate.emit.async_signals as async_signals
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Actor, Scene, SceneMessage, Character

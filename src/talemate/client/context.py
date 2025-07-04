@@ -111,7 +111,7 @@ class ClientContext:
 
         # Update the context data
         self.token = context_data.set(data)
-        
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
         Reset the context variable `context_data` to its previous values when exiting the context.

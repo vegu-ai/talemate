@@ -715,7 +715,7 @@ class Scene(Emitter):
         self.active_pins = []
         # Add an attribute to store the most recent AI Actor
         self.most_recent_ai_actor = None
-        
+
         # if the user has requested to cancel the current action
         # or series of agent actions this will be true
         #
@@ -1427,7 +1427,7 @@ class Scene(Emitter):
         for actor in self.actors:
             if isinstance(actor, Player):
                 return actor.character
-            
+
         # No active player found, return the first NPC
         for actor in self.actors:
             return actor.character

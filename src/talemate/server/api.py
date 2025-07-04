@@ -26,7 +26,7 @@ async def websocket_endpoint(websocket):
     scene_task = None
 
     log.info("frontend connected")
-    
+
     import_initial_node_definitions()
 
     import_initial_node_definitions()

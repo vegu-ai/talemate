@@ -93,7 +93,7 @@ class Template(pydantic.BaseModel):
         value = getattr(self, prop_name)
 
         if not value:
-            return value
+            return "" if value is None else value
 
         kwargs = {}
 

@@ -10,4 +10,5 @@
 {% endif %}
 <|SECTION:TASK|>
 Identify all main characters by name respond with a json object in the format of {"characters":[{"name": "John" , "description": "Information about the character" }]}
+Keep in mind that that a group of characters is not a single character, so if there are multiple characters in a group, they should be splited in to induvidial characters.
 {{ set_data_response({"characters":[""]}) }}

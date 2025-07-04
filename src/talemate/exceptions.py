@@ -41,12 +41,6 @@ class GenerationCancelled(TalemateInterrupt):
 
     pass
 
-class GenerationCancelled(TalemateInterrupt):
-    """
-    Interrupt current scene and return action to the user 
-    """
-    pass 
-
 
 class RenderPromptError(TalemateError):
     """

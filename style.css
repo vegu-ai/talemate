@@ -1,0 +1,60 @@
+pre > code {
+    white-space: pre-wrap;
+}
+
+/* Custom load admonition */
+.md-typeset .admonition.load,
+.md-typeset details.load {
+    border-color: #9c27b0;
+}
+
+.md-typeset .load > .admonition-title,
+.md-typeset .load > summary {
+    background-color: rgba(156, 39, 176, 0.1);
+    border-color: #9c27b0;
+}
+
+.md-typeset .load > .admonition-title::before,
+.md-typeset .load > summary::before {
+    background-color: #9c27b0;
+    -webkit-mask-image: var(--md-admonition-icon--load);
+            mask-image: var(--md-admonition-icon--load);
+}
+
+/* custom event payload admonition */
+.md-typeset .admonition.payload,
+.md-typeset details.payload {
+    border-color: #616799;
+}
+
+.md-typeset .payload > .admonition-title,
+.md-typeset .payload > summary {
+    background-color: rgba(97, 103, 153, 0.1);
+    border-color: #616799;
+}
+
+.md-typeset .payload > .admonition-title::before,
+.md-typeset .payload > summary::before {
+    background-color: #616799;
+    -webkit-mask-image: var(--md-admonition-icon--payload);
+    mask-image: var(--md-admonition-icon--payload);
+}
+
+/* custom learn more admonition (605381 color) */
+.md-typeset .admonition.learn-more,
+.md-typeset details.learn-more {
+    border-color: #605381;
+}
+
+.md-typeset .learn-more > .admonition-title,
+.md-typeset .learn-more > summary {
+    background-color: rgba(96, 83, 129, 0.1);
+    border-color: #605381;
+}
+
+.md-typeset .learn-more > .admonition-title::before,
+.md-typeset .learn-more > summary::before {
+    background-color: #6f5aa3;
+    -webkit-mask-image: var(--md-admonition-icon--learn-more);
+    mask-image: var(--md-admonition-icon--learn-more);
+}

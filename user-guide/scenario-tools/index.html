@@ -1,0 +1,5979 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://vegu-ai.github.io/talemate/user-guide/scenario-tools/">
+      
+      
+        <link rel="prev" href="../saving/">
+      
+      
+        <link rel="next" href="../tracking-a-state/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.15">
+    
+    
+      
+        <title>Scene Tools - Talemate Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.342714a4.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+  
+  
+    
+    
+  
+    
+    
+  
+    
+    
+  
+    
+    
+  
+    
+    
+  
+    
+    
+  
+    
+    
+  
+    
+    
+  
+    
+    
+  
+    
+    
+  
+    
+    
+  
+    
+    
+  
+    
+    
+  
+    
+    
+  
+    
+    
+  
+  
+  <style>:root{--md-admonition-icon--note:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M1%207.775V2.75C1%201.784%201.784%201%202.75%201h5.025c.464%200%20.91.184%201.238.513l6.25%206.25a1.75%201.75%200%200%201%200%202.474l-5.026%205.026a1.75%201.75%200%200%201-2.474%200l-6.25-6.25A1.75%201.75%200%200%201%201%207.775m1.5%200c0%20.066.026.13.073.177l6.25%206.25a.25.25%200%200%200%20.354%200l5.025-5.025a.25.25%200%200%200%200-.354l-6.25-6.25a.25.25%200%200%200-.177-.073H2.75a.25.25%200%200%200-.25.25ZM6%205a1%201%200%201%201%200%202%201%201%200%200%201%200-2%22/%3E%3C/svg%3E');--md-admonition-icon--abstract:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M2.5%201.75v11.5c0%20.138.112.25.25.25h3.17a.75.75%200%200%201%200%201.5H2.75A1.75%201.75%200%200%201%201%2013.25V1.75C1%20.784%201.784%200%202.75%200h8.5C12.216%200%2013%20.784%2013%201.75v7.736a.75.75%200%200%201-1.5%200V1.75a.25.25%200%200%200-.25-.25h-8.5a.25.25%200%200%200-.25.25m13.274%209.537zl-4.557%204.45a.75.75%200%200%201-1.055-.008l-1.943-1.95a.75.75%200%200%201%201.062-1.058l1.419%201.425%204.026-3.932a.75.75%200%201%201%201.048%201.074M4.75%204h4.5a.75.75%200%200%201%200%201.5h-4.5a.75.75%200%200%201%200-1.5M4%207.75A.75.75%200%200%201%204.75%207h2a.75.75%200%200%201%200%201.5h-2A.75.75%200%200%201%204%207.75%22/%3E%3C/svg%3E');--md-admonition-icon--info:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M0%208a8%208%200%201%201%2016%200A8%208%200%200%201%200%208m8-6.5a6.5%206.5%200%201%200%200%2013%206.5%206.5%200%200%200%200-13M6.5%207.75A.75.75%200%200%201%207.25%207h1a.75.75%200%200%201%20.75.75v2.75h.25a.75.75%200%200%201%200%201.5h-2a.75.75%200%200%201%200-1.5h.25v-2h-.25a.75.75%200%200%201-.75-.75M8%206a1%201%200%201%201%200-2%201%201%200%200%201%200%202%22/%3E%3C/svg%3E');--md-admonition-icon--tip:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M3.499.75a.75.75%200%200%201%201.5%200v.996C5.9%202.903%206.793%203.65%207.662%204.376l.24.202c-.036-.694.055-1.422.426-2.163C9.1.873%2010.794-.045%2012.622.26%2014.408.558%2016%201.94%2016%204.25c0%201.278-.954%202.575-2.44%202.734l.146.508.065.22c.203.701.412%201.455.476%202.226.142%201.707-.4%203.03-1.487%203.898C11.714%2014.671%2010.27%2015%208.75%2015h-6a.75.75%200%200%201%200-1.5h1.376a4.5%204.5%200%200%201-.563-1.191%203.84%203.84%200%200%201-.05-2.063%204.65%204.65%200%200%201-2.025-.293.75.75%200%200%201%20.525-1.406c1.357.507%202.376-.006%202.698-.318l.009-.01a.747.747%200%200%201%201.06%200%20.75.75%200%200%201-.012%201.074c-.912.92-.992%201.835-.768%202.586.221.74.745%201.337%201.196%201.621H8.75c1.343%200%202.398-.296%203.074-.836.635-.507%201.036-1.31.928-2.602-.05-.603-.216-1.224-.422-1.93l-.064-.221c-.12-.407-.246-.84-.353-1.29a2.4%202.4%200%200%201-.507-.441%203.1%203.1%200%200%201-.633-1.248.75.75%200%200%201%201.455-.364c.046.185.144.436.31.627.146.168.353.305.712.305.738%200%201.25-.615%201.25-1.25%200-1.47-.95-2.315-2.123-2.51-1.172-.196-2.227.387-2.706%201.345-.46.92-.27%201.774.019%203.062l.042.19.01.05c.348.443.666.949.94%201.553a.75.75%200%201%201-1.365.62c-.553-1.217-1.32-1.94-2.3-2.768L6.7%205.527c-.814-.68-1.75-1.462-2.692-2.619a3.7%203.7%200%200%200-1.023.88c-.406.495-.663%201.036-.722%201.508.116.122.306.21.591.239.388.038.797-.06%201.032-.19a.75.75%200%200%201%20.728%201.31c-.515.287-1.23.439-1.906.373-.682-.067-1.473-.38-1.879-1.193L.75%205.677V5.5c0-.984.48-1.94%201.077-2.664.46-.559%201.05-1.055%201.673-1.353z%22/%3E%3C/svg%3E');--md-admonition-icon--success:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M13.78%204.22a.75.75%200%200%201%200%201.06l-7.25%207.25a.75.75%200%200%201-1.06%200L2.22%209.28a.75.75%200%200%201%20.018-1.042.75.75%200%200%201%201.042-.018L6%2010.94l6.72-6.72a.75.75%200%200%201%201.06%200%22/%3E%3C/svg%3E');--md-admonition-icon--question:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M0%208a8%208%200%201%201%2016%200A8%208%200%200%201%200%208m8-6.5a6.5%206.5%200%201%200%200%2013%206.5%206.5%200%200%200%200-13M6.92%206.085h.001a.749.749%200%201%201-1.342-.67c.169-.339.436-.701.849-.977C6.845%204.16%207.369%204%208%204a2.76%202.76%200%200%201%201.637.525c.503.377.863.965.863%201.725%200%20.448-.115.83-.329%201.15-.205.307-.47.513-.692.662-.109.072-.22.138-.313.195l-.006.004a6%206%200%200%200-.26.16%201%201%200%200%200-.276.245.75.75%200%200%201-1.248-.832c.184-.264.42-.489.692-.661q.154-.1.313-.195l.007-.004c.1-.061.182-.11.258-.161a1%201%200%200%200%20.277-.245C8.96%206.514%209%206.427%209%206.25a.61.61%200%200%200-.262-.525A1.27%201.27%200%200%200%208%205.5c-.369%200-.595.09-.74.187a1%201%200%200%200-.34.398M9%2011a1%201%200%201%201-2%200%201%201%200%200%201%202%200%22/%3E%3C/svg%3E');--md-admonition-icon--warning:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M6.457%201.047c.659-1.234%202.427-1.234%203.086%200l6.082%2011.378A1.75%201.75%200%200%201%2014.082%2015H1.918a1.75%201.75%200%200%201-1.543-2.575Zm1.763.707a.25.25%200%200%200-.44%200L1.698%2013.132a.25.25%200%200%200%20.22.368h12.164a.25.25%200%200%200%20.22-.368Zm.53%203.996v2.5a.75.75%200%200%201-1.5%200v-2.5a.75.75%200%200%201%201.5%200M9%2011a1%201%200%201%201-2%200%201%201%200%200%201%202%200%22/%3E%3C/svg%3E');--md-admonition-icon--failure:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M2.344%202.343za8%208%200%200%201%2011.314%2011.314A8.002%208.002%200%200%201%20.234%2010.089a8%208%200%200%201%202.11-7.746m1.06%2010.253a6.5%206.5%200%201%200%209.108-9.275%206.5%206.5%200%200%200-9.108%209.275M6.03%204.97%208%206.94l1.97-1.97a.749.749%200%200%201%201.275.326.75.75%200%200%201-.215.734L9.06%208l1.97%201.97a.749.749%200%200%201-.326%201.275.75.75%200%200%201-.734-.215L8%209.06l-1.97%201.97a.749.749%200%200%201-1.275-.326.75.75%200%200%201%20.215-.734L6.94%208%204.97%206.03a.75.75%200%200%201%20.018-1.042.75.75%200%200%201%201.042-.018%22/%3E%3C/svg%3E');--md-admonition-icon--danger:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M9.504.43a1.516%201.516%200%200%201%202.437%201.713L10.415%205.5h2.123c1.57%200%202.346%201.909%201.22%203.004l-7.34%207.142a1.25%201.25%200%200%201-.871.354h-.302a1.25%201.25%200%200%201-1.157-1.723L5.633%2010.5H3.462c-1.57%200-2.346-1.909-1.22-3.004zm1.047%201.074L3.286%208.571A.25.25%200%200%200%203.462%209H6.75a.75.75%200%200%201%20.694%201.034l-1.713%204.188%206.982-6.793A.25.25%200%200%200%2012.538%207H9.25a.75.75%200%200%201-.683-1.06l2.008-4.418.003-.006-.004-.009-.006-.006-.008-.001q-.005%200-.009.004%22/%3E%3C/svg%3E');--md-admonition-icon--bug:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M4.72.22a.75.75%200%200%201%201.06%200l1%20.999a3.5%203.5%200%200%201%202.441%200l.999-1a.748.748%200%200%201%201.265.332.75.75%200%200%201-.205.729l-.775.776c.616.63.995%201.493.995%202.444v.327q0%20.15-.025.292c.408.14.764.392%201.029.722l1.968-.787a.75.75%200%200%201%20.556%201.392L13%207.258V9h2.25a.75.75%200%200%201%200%201.5H13v.5q-.002.615-.141%201.186l2.17.868a.75.75%200%200%201-.557%201.392l-2.184-.873A5%205%200%200%201%208%2016a5%205%200%200%201-4.288-2.427l-2.183.873a.75.75%200%200%201-.558-1.392l2.17-.868A5%205%200%200%201%203%2011v-.5H.75a.75.75%200%200%201%200-1.5H3V7.258L.971%206.446a.75.75%200%200%201%20.558-1.392l1.967.787c.265-.33.62-.583%201.03-.722a1.7%201.7%200%200%201-.026-.292V4.5c0-.951.38-1.814.995-2.444L4.72%201.28a.75.75%200%200%201%200-1.06m.53%206.28a.75.75%200%200%200-.75.75V11a3.5%203.5%200%201%200%207%200V7.25a.75.75%200%200%200-.75-.75ZM6.173%205h3.654A.17.17%200%200%200%2010%204.827V4.5a2%202%200%201%200-4%200v.327c0%20.096.077.173.173.173%22/%3E%3C/svg%3E');--md-admonition-icon--example:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M5%205.782V2.5h-.25a.75.75%200%200%201%200-1.5h6.5a.75.75%200%200%201%200%201.5H11v3.282l3.666%205.76C15.619%2013.04%2014.543%2015%2012.767%2015H3.233c-1.776%200-2.852-1.96-1.899-3.458Zm-2.4%206.565a.75.75%200%200%200%20.633%201.153h9.534a.75.75%200%200%200%20.633-1.153L12.225%2010.5h-8.45ZM9.5%202.5h-3V6c0%20.143-.04.283-.117.403L4.73%209h6.54L9.617%206.403A.75.75%200%200%201%209.5%206Z%22/%3E%3C/svg%3E');--md-admonition-icon--quote:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22M1.75%202.5h10.5a.75.75%200%200%201%200%201.5H1.75a.75.75%200%200%201%200-1.5m4%205h8.5a.75.75%200%200%201%200%201.5h-8.5a.75.75%200%200%201%200-1.5m0%205h8.5a.75.75%200%200%201%200%201.5h-8.5a.75.75%200%200%201%200-1.5M2.5%207.75v6a.75.75%200%200%201-1.5%200v-6a.75.75%200%200%201%201.5%200%22/%3E%3C/svg%3E');--md-admonition-icon--load:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M14%203v2h3.59l-9.83%209.83%201.41%201.41L19%206.41V10h2V3m-2%2016H5V5h7V3H5a2%202%200%200%200-2%202v14a2%202%200%200%200%202%202h14a2%202%200%200%200%202-2v-7h-2z%22/%3E%3C/svg%3E');--md-admonition-icon--payload:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M19%203H5c-1.1%200-2%20.9-2%202v14c0%201.1.9%202%202%202h14c1.1%200%202-.9%202-2V5c0-1.1-.9-2-2-2M7%207h2v2H7zm0%204h2v2H7zm0%204h2v2H7zm10%202h-6v-2h6zm0-4h-6v-2h6zm0-4h-6V7h6z%22/%3E%3C/svg%3E');--md-admonition-icon--learn-more:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M12%2021.5c-1.35-.85-3.8-1.5-5.5-1.5-1.65%200-3.35.3-4.75%201.05-.1.05-.15.05-.25.05-.25%200-.5-.25-.5-.5V6c.6-.45%201.25-.75%202-1%201.11-.35%202.33-.5%203.5-.5%201.95%200%204.05.4%205.5%201.5%201.45-1.1%203.55-1.5%205.5-1.5%201.17%200%202.39.15%203.5.5.75.25%201.4.55%202%201v14.6c0%20.25-.25.5-.5.5-.1%200-.15%200-.25-.05-1.4-.75-3.1-1.05-4.75-1.05-1.7%200-4.15.65-5.5%201.5m-1-14c-1.36-.6-3.16-1-4.5-1-1.2%200-2.4.15-3.5.5v11.5c1.1-.35%202.3-.5%203.5-.5%201.34%200%203.14.4%204.5%201zM13%2019c1.36-.6%203.16-1%204.5-1%201.2%200%202.4.15%203.5.5V7c-1.1-.35-2.3-.5-3.5-.5-1.34%200-3.14.4-4.5%201zm1-2.65c.96-.35%202.12-.52%203.5-.52%201.04%200%201.88.08%202.5.24v-1.5a13.9%2013.9%200%200%200-6%20.19zm0-2.66c.96-.35%202.12-.53%203.5-.53%201.04%200%201.88.08%202.5.24v-1.5c-.87-.16-1.71-.23-2.5-.23-1.28%200-2.45.15-3.5.45zM14%2011c.96-.33%202.12-.5%203.5-.5.91%200%201.76.09%202.5.28V9.23c-.87-.15-1.71-.23-2.5-.23-1.32%200-2.5.15-3.5.46z%22/%3E%3C/svg%3E');}</style>
+
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../style.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+   <link href="../../assets/stylesheets/glightbox.min.css" rel="stylesheet"/><style>
+    html.glightbox-open { overflow: initial; height: 100%; }
+    .gslide-title { margin-top: 0px; user-select: text; }
+    .gslide-desc { color: #666; user-select: text; }
+    .gslide-image img { background: white; }
+    .gscrollbar-fixer { padding-right: 15px; }
+    .gdesc-inner { font-size: 0.75rem; }
+    body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color);}
+    body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color);}
+    body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color);}</style> <script src="../../assets/javascripts/glightbox.min.js"></script></head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#scene-tools" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Talemate Documentation" class="md-header__button md-logo" aria-label="Talemate Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Talemate Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Scene Tools
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Talemate Documentation" class="md-nav__button md-logo" aria-label="Talemate Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Talemate Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Getting started
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1" id="__nav_2_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    1. Installation
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1">
+            <span class="md-nav__icon md-icon"></span>
+            1. Installation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/windows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Windows
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/linux/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Linux
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Docker
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/troubleshoot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Common issues
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/connect-a-client/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    2. Connect a client
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/load-a-scene/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    3. Load a scene
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_4" id="__nav_2_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Advanced
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_4">
+            <span class="md-nav__icon md-icon"></span>
+            Advanced
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/advanced/change-host-and-port/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Changing host and port
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    User guide
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            User guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../interacting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Interacting with the scene
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../saving/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Saving
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Scene Tools
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Scene Tools
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#regenerate-ai-response" class="md-nav__link">
+    <span class="md-ellipsis">
+      Regenerate AI response
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#regenerate-ai-response-nuke-option" class="md-nav__link">
+    <span class="md-ellipsis">
+      Regenerate AI Response (nuke option)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#actor-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Actor Actions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Actor Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#actor-action-specific-character" class="md-nav__link">
+    <span class="md-ellipsis">
+      Actor Action (Specific Character)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Actor Action (Specific Character)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hold-ctrl-to-provide-direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hold ctrl to provide direction
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#actor-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      Actor Action
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#narrator-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Narrator Actions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Narrator Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#progress-story" class="md-nav__link">
+    <span class="md-ellipsis">
+      Progress Story
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Progress Story">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scope-of-progress" class="md-nav__link">
+    <span class="md-ellipsis">
+      Scope of progress
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#narrate-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Narrate Environment
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#look-at-scene" class="md-nav__link">
+    <span class="md-ellipsis">
+      Look at Scene
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#look-at-character-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      Look at (Character Name)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advance-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advance time
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#world-state-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      World State Actions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="World State Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automatic-state-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      Automatic State Updates
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#open-the-world-state-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      Open the world state manager
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#update-the-world-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      Update the world state
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#creative-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      Creative Tools
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Creative Tools">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#take-character-out-of-scene" class="md-nav__link">
+    <span class="md-ellipsis">
+      Take character out of scene
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#call-character-to-scene" class="md-nav__link">
+    <span class="md-ellipsis">
+      Call character to scene
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#introduce-new-character-directed" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduce new character - Directed
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Introduce new character - Directed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#determine-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      Determine Name
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#active" class="md-nav__link">
+    <span class="md-ellipsis">
+      Active
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#narrate-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      Narrate entry
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instructions-for-the-new-character" class="md-nav__link">
+    <span class="md-ellipsis">
+      Instructions for the new character
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#narration-direction-for-the-characters-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      Narration direction for the character's entry
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      Templates
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#augment-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Augment Attributes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#introduce-new-character-from-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduce new character - From context
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visualizer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Visualizer
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Visualizer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#visualize-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Visualize Environment
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visualize-character" class="md-nav__link">
+    <span class="md-ellipsis">
+      Visualize Character
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#saving" class="md-nav__link">
+    <span class="md-ellipsis">
+      Saving
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tracking-a-state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tracked states
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    World State
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Agents
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
+            <span class="md-nav__icon md-icon"></span>
+            Agents
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6_2" id="__nav_3_6_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Conversation
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_6_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6_2">
+            <span class="md-nav__icon md-icon"></span>
+            Conversation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/conversation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/conversation/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6_3" id="__nav_3_6_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Creator
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_6_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6_3">
+            <span class="md-nav__icon md-icon"></span>
+            Creator
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/creator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/creator/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6_4" id="__nav_3_6_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Director
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_6_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6_4">
+            <span class="md-nav__icon md-icon"></span>
+            Director
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/director/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/director/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6_5" id="__nav_3_6_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Editor
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_6_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6_5">
+            <span class="md-nav__icon md-icon"></span>
+            Editor
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/editor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/editor/revisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Revisions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/editor/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6_6" id="__nav_3_6_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Memory
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_6_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6_6">
+            <span class="md-nav__icon md-icon"></span>
+            Memory
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/memory/embeddings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Embeddings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/memory/koboldcpp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    KoboldCpp Embeddings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/memory/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/memory/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Testing Embeddings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6_7" id="__nav_3_6_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Narrator
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_6_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6_7">
+            <span class="md-nav__icon md-icon"></span>
+            Narrator
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/narrator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/narrator/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6_8" id="__nav_3_6_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Summarizer
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_6_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6_8">
+            <span class="md-nav__icon md-icon"></span>
+            Summarizer
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/summarizer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/summarizer/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6_9" id="__nav_3_6_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Visualizer
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_6_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6_9">
+            <span class="md-nav__icon md-icon"></span>
+            Visualizer
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/visualizer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/visualizer/automatic1111/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    AUTOMATIC1111
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/visualizer/comfyui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ComfyUI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/visualizer/openai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    OpenAI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/visualizer/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6_10" id="__nav_3_6_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Voice
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_6_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6_10">
+            <span class="md-nav__icon md-icon"></span>
+            Voice
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/voice/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/voice/elevenlabs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ElevenLabs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/voice/local_tts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Local TTS
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/voice/openai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    OpenAI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/voice/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6_11" id="__nav_3_6_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    World state
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_6_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6_11">
+            <span class="md-nav__icon md-icon"></span>
+            World state
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/world-state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/world-state/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    App settings
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            App settings
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../app-settings/appearance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Appearance
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../app-settings/application/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Application
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../app-settings/game/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Game
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../app-settings/presets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Presets
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_8" id="__nav_3_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Clients
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_8">
+            <span class="md-nav__icon md-icon"></span>
+            Clients
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/prompt-templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Prompt Templates
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/recommended-models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Recommended Local Models
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/presets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Inference Presets
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_8_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_8_5" id="__nav_3_8_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Client Types
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_8_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_8_5">
+            <span class="md-nav__icon md-icon"></span>
+            Client Types
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/types/anthropic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Anthropic
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/types/cohere/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Cohere
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/types/google/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Google
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/types/groq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Groq
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/types/koboldcpp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    KoboldCpp
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/types/lmstudio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    LMStudio
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/types/mistral/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Mistral.ai
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/types/openai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    OpenAI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/types/openai-compatible/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    OpenAI Compatible
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/types/ollama/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Ollama
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/types/openrouter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    OpenRouter
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/types/tabbyapi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    TabbyAPI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/types/text-generation-webui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Text-Generation-WebUI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/endpoint-override/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Endpoint Override
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/hibernate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Hibernation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clients/rate-limiting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Rate Limiting
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_9" id="__nav_3_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Node editor
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9">
+            <span class="md-nav__icon md-icon"></span>
+            Node editor
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_9_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_9_2" id="__nav_3_9_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Core concepts
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_9_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9_2">
+            <span class="md-nav__icon md-icon"></span>
+            Core concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/core-concepts/command_module/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Command Modules
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/core-concepts/error-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Error Handling
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/core-concepts/events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Events
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/core-concepts/functions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Functions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/core-concepts/modularity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Modularity
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/core-concepts/module-inheritance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Module Inheritance
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/core-concepts/package/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Installable Packages
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/core-concepts/prompt-templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Prompt Templates
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/core-concepts/staging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Staging
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/core-concepts/states/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    State Management
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/core-concepts/switches/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Switches and conditional routing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/core-concepts/user-interface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Using the node editor
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_9_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_9_3" id="__nav_3_9_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Reference
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_9_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_9_3">
+            <span class="md-nav__icon md-icon"></span>
+            Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/reference/events/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Events
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/reference/template_functions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Template Functions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../node-editor/reference/useful-template-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Template Pattern Cheat Sheet
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_10" id="__nav_3_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    World editor
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10">
+            <span class="md-nav__icon md-icon"></span>
+            World editor
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/context-db/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Context DB
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/generation-settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Generation Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    History
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/pins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Pins
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/suggestions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Suggestions
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_10_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_10_6" id="__nav_3_10_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Characters
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_10_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10_6">
+            <span class="md-nav__icon md-icon"></span>
+            Characters
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/characters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/characters/deactivate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Activate / Deactivate
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/characters/actor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Actor management
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/characters/attributes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Attributes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/characters/create/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Create new character
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/characters/delete/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Delete a character
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/characters/description/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Description
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/characters/details/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Details
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/characters/import/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Import a character
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/characters/states/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tracked states
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_10_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_10_7" id="__nav_3_10_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Scene
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_10_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10_7">
+            <span class="md-nav__icon md-icon"></span>
+            Scene
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/scene/outline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Outline
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/scene/direction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Direction
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/scene/settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Settings
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/scene/export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Export
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_10_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_10_8" id="__nav_3_10_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Templates
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_10_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10_8">
+            <span class="md-nav__icon md-icon"></span>
+            Templates
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/templates/attribute/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Character Attribute
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/templates/detail/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Character Detail
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/templates/groups/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Groups
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/templates/scene_type/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Scene Types
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/templates/spice/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Spice Collection
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/templates/state/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    State Reinforcement
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/templates/writing-style/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Writing Styles
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_10_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_10_9" id="__nav_3_10_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    World
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_10_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_10_9">
+            <span class="md-nav__icon md-icon"></span>
+            World
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../world-editor/world/states/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tracked states
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_11" id="__nav_3_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Tutorials
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_11">
+            <span class="md-nav__icon md-icon"></span>
+            Tutorials
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_11_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_11_1" id="__nav_3_11_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Creating a basic scene
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_11_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_11_1">
+            <span class="md-nav__icon md-icon"></span>
+            Creating a basic scene
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/create-a-new-scene/create-empty-scene/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    1. An empty scene
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/create-a-new-scene/create-player-character/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    2. Add a player character
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/create-a-new-scene/create-npc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    3. Add an AI character
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/create-a-new-scene/test/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4. Test your scene
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_11_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_11_2" id="__nav_3_11_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Dynamic storylines
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_11_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_11_2">
+            <span class="md-nav__icon md-icon"></span>
+            Dynamic storylines
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/use-dynamic-story-module/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Tutorial
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_11_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_11_3" id="__nav_3_11_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Node Editor - Crash Course
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_11_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_11_3">
+            <span class="md-nav__icon md-icon"></span>
+            Node Editor - Crash Course
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/infinity-quest-dynamic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/infinity-quest-dynamic/1-create-the-scene-project/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    1 - Scene Project
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/infinity-quest-dynamic/2-initial-nodes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    2 - Initial Nodes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/infinity-quest-dynamic/3-improvements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    3 - Improvements
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/infinity-quest-dynamic/4-get-organized/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    4 - Get organized
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/infinity-quest-dynamic/5-agentic-workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    5 - Agentic Flow
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/infinity-quest-dynamic/6-reusable-module/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    6 - Reusable Module
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../howto/infinity-quest-dynamic/7-polish/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    7 - Polish
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_12" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_12" id="__nav_3_12_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Third Party APIs
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_12">
+            <span class="md-nav__icon md-icon"></span>
+            Third Party APIs
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../apis/anthropic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Anthropic
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../apis/cohere/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Cohere
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../apis/elevenlabs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    ElevenLabs
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../apis/google/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Google Cloud
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../apis/groq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Groq
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../apis/mistral/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Mistral.ai
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../apis/openrouter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    OpenRouter
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../apis/openai/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    OpenAI
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_13" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_13" id="__nav_3_13_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Third Party Integrations
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_13">
+            <span class="md-nav__icon md-icon"></span>
+            Third Party Integrations
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/runpod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Runpod
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Developer guide
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Developer guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dev/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Coming soon
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dev/templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Template Overrides
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dev/third-party-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Third party reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4_4" id="__nav_4_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Howto
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4_4">
+            <span class="md-nav__icon md-icon"></span>
+            Howto
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dev/howto/add-a-worldstate-template-type/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Adding a new world-state template
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#regenerate-ai-response" class="md-nav__link">
+    <span class="md-ellipsis">
+      Regenerate AI response
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#regenerate-ai-response-nuke-option" class="md-nav__link">
+    <span class="md-ellipsis">
+      Regenerate AI Response (nuke option)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#actor-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Actor Actions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Actor Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#actor-action-specific-character" class="md-nav__link">
+    <span class="md-ellipsis">
+      Actor Action (Specific Character)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Actor Action (Specific Character)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hold-ctrl-to-provide-direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hold ctrl to provide direction
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#actor-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      Actor Action
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#narrator-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Narrator Actions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Narrator Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#progress-story" class="md-nav__link">
+    <span class="md-ellipsis">
+      Progress Story
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Progress Story">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scope-of-progress" class="md-nav__link">
+    <span class="md-ellipsis">
+      Scope of progress
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#narrate-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Narrate Environment
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#look-at-scene" class="md-nav__link">
+    <span class="md-ellipsis">
+      Look at Scene
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#look-at-character-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      Look at (Character Name)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#advance-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      Advance time
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#world-state-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      World State Actions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="World State Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#automatic-state-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      Automatic State Updates
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#open-the-world-state-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      Open the world state manager
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#update-the-world-state" class="md-nav__link">
+    <span class="md-ellipsis">
+      Update the world state
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#creative-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      Creative Tools
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Creative Tools">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#take-character-out-of-scene" class="md-nav__link">
+    <span class="md-ellipsis">
+      Take character out of scene
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#call-character-to-scene" class="md-nav__link">
+    <span class="md-ellipsis">
+      Call character to scene
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#introduce-new-character-directed" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduce new character - Directed
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Introduce new character - Directed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#determine-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      Determine Name
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#active" class="md-nav__link">
+    <span class="md-ellipsis">
+      Active
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#narrate-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      Narrate entry
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#instructions-for-the-new-character" class="md-nav__link">
+    <span class="md-ellipsis">
+      Instructions for the new character
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#narration-direction-for-the-characters-entry" class="md-nav__link">
+    <span class="md-ellipsis">
+      Narration direction for the character's entry
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      Templates
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#augment-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Augment Attributes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#introduce-new-character-from-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      Introduce new character - From context
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visualizer" class="md-nav__link">
+    <span class="md-ellipsis">
+      Visualizer
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Visualizer">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#visualize-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      Visualize Environment
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visualize-character" class="md-nav__link">
+    <span class="md-ellipsis">
+      Visualize Character
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#saving" class="md-nav__link">
+    <span class="md-ellipsis">
+      Saving
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="scene-tools">Scene Tools</h1>
+<p><a class="glightbox" href="/talemate/img/0.26.0/getting-started-ui-element-tools.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="Tool bar" src="/talemate/img/0.26.0/getting-started-ui-element-tools.png" /></a></p>
+<h4 id="regenerate-ai-response"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 0 0-8 8 8 8 0 0 0 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18a6 6 0 0 1-6-6 6 6 0 0 1 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z"/></svg></span> Regenerate AI response</h4>
+<p>This will regenerate the most recent message, if it is an AI generated message.</p>
+<div class="admonition note">
+<p class="admonition-title">Keyboard modifiers</p>
+<p>If you hold <code>ctrl</code> when clicking this button you will be prompted to supply some instructions for the
+regeneration. This can be useful to guide the AI in a certain direction.</p>
+<p>If you hold <code>ctrl+alt</code> when clicking this button you will be prompted to supply some instructions for the
+regeneration while keeping the original message as context. This is useful for rewrites.</p>
+</div>
+<h4 id="regenerate-ai-response-nuke-option"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.04 12H10v-1H5.5A3.5 3.5 0 0 1 2 7.5 3.5 3.5 0 0 1 5.5 4c1.03 0 1.95.44 2.59 1.15C8.5 3.35 10.08 2 12 2s3.5 1.35 3.91 3.15C16.55 4.44 17.47 4 18.5 4A3.5 3.5 0 0 1 22 7.5a3.5 3.5 0 0 1-3.5 3.5h-4.46zM10 16.9v-1.14H5v-2h14v2h-4.96v1.16L20 19.08c.58.21 1 .76 1 1.42a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 20.5c0-.66.42-1.21 1-1.42z"/></svg></span> Regenerate AI Response (nuke option)</h4>
+<p>This will regenerate the most recent message, if it is an AI generated message, but with a higher temperature and repetition penalties applied, which can lead to more creative responses. Use this to break out of repetitive loops.</p>
+<div class="admonition note">
+<p class="admonition-title">Keyboard modifiers</p>
+<p>If you hold <code>ctrl</code> when clicking this button you will be prompted to supply some instructions for the
+regeneration. This can be useful to guide the AI in a certain direction.</p>
+<p>If you hold <code>ctrl+alt</code> when clicking this button you will be prompted to supply some instructions for the
+regeneration while keeping the original message as context. This is useful for rewrites.</p>
+</div>
+<h3 id="actor-actions"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 5a4 4 0 0 1 4 4 4 4 0 0 1-4 4 4 4 0 0 1-4-4 4 4 0 0 1 4-4m0 10c2.67 0 8 1.34 8 4v2H1v-2c0-2.66 5.33-4 8-4m7.76-9.64c2.02 2.2 2.02 5.25 0 7.27l-1.68-1.69c.84-1.18.84-2.71 0-3.89zM20.07 2c3.93 4.05 3.9 10.11 0 14l-1.63-1.63c2.77-3.18 2.77-7.72 0-10.74z"/></svg></span> Actor Actions</h3>
+<p>Will open a context menu that allows you to have the actor perform actions.</p>
+<p><a class="glightbox" href="/talemate/img/0.30.0/scene-tool-character-actions.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="Actor Actions" src="/talemate/img/0.30.0/scene-tool-character-actions.png" /></a></p>
+<div class="admonition info">
+<p class="admonition-title">Recommendation</p>
+<p>Turn auto progress off if you want full control and use these actions to guide the scene.</p>
+<p><a class="glightbox" href="/talemate/img/0.26.0/auto-progress-off.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="auto progress off" src="/talemate/img/0.26.0/auto-progress-off.png" /></a></p>
+</div>
+<h4 id="actor-action-specific-character"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 22a1 1 0 0 1-1-1v-3H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6.1l-3.7 3.71c-.2.19-.45.29-.7.29zm1-6v3.08L13.08 16H20V4H4v12zm6-2H8v-1c0-1.33 2.67-2 4-2s4 .67 4 2zm-4-8a2 2 0 0 1 2 2 2 2 0 0 1-2 2 2 2 0 0 1-2-2 2 2 0 0 1 2-2"/></svg></span> Actor Action (Specific Character)</h4>
+<p>Will pick a character to performan an action.</p>
+<h5 id="hold-ctrl-to-provide-direction">Hold ctrl to provide direction</h5>
+<p>If you hold the <code>ctrl</code> key while clicking the menu item it will prompt you for a direction to inform the character's action.</p>
+<p>Depending on what the <code>Actor Direction Mode</code> setting in the <a href="/talemate/user-guide/agents/director/settings/#actor-direction-mode"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h1v4a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-4h3l5 4V4zm9.5 4c0 1.71-.96 3.26-2.5 4V8c1.53.75 2.5 2.3 2.5 4"/></svg></span> Director Agent Settings</a> the direction will either be given as an instruction or as inner monologue.</p>
+<p>Regardless of mode you should write your instruction so it completets the following sentence: <code>I want you to ...</code></p>
+<p>Some examples:</p>
+<blockquote>
+<p>be angry at the other character</p>
+</blockquote>
+<p>or</p>
+<blockquote>
+<p>be annoyed at the situation and storm off</p>
+</blockquote>
+<h4 id="actor-action"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 22a1 1 0 0 1-1-1v-3H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6.1l-3.7 3.71c-.2.19-.45.29-.7.29zm1-6v3.08L13.08 16H20V4H4v12zM6 7h12v2H6zm0 4h9v2H6z"/></svg></span> Actor Action</h4>
+<p>Automatically picks a character to generate dialogue and actions based on the current scene state.</p>
+<h3 id="narrator-actions"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.8 20c-.4 1.2-1.5 2-2.8 2H5c-1.7 0-3-1.3-3-3v-1h12.2c.4 1.2 1.5 2 2.8 2zM19 2c1.7 0 3 1.3 3 3v1h-2V5c0-.6-.4-1-1-1s-1 .4-1 1v13h-1c-.6 0-1-.4-1-1v-1H5V5c0-1.7 1.3-3 3-3zM8 6v2h7V6zm0 4v2h6v-2z"/></svg></span> Narrator Actions</h3>
+<p>Will open a context menu that allows you to have the narrator perform actions.</p>
+<p><a class="glightbox" href="/talemate/img/0.30.0/scene-tool-narrator-actions.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="Narrator Actions" src="/talemate/img/0.30.0/scene-tool-narrator-actions.png" /></a></p>
+<h4 id="progress-story"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.8 22H5c-1.7 0-3-1.3-3-3v-1h11.1c-.1.3-.1.7-.1 1 0 1.1.3 2.1.8 3m0-6H5V5c0-1.7 1.3-3 3-3h11c1.7 0 3 1.3 3 3v1h-2V5c0-.6-.4-1-1-1s-1 .4-1 1v8.1c-1.8.3-3.3 1.4-4.2 2.9M8 8h7V6H8zm0 4h6v-2H8zm9 4v6l5-3z"/></svg></span> Progress Story</h4>
+<p>Generates narrative text based on the current scene state, moving the story forward.</p>
+<p>All actions can be given directions by holding the <code>ctrl</code> key when clicking it.</p>
+<h5 id="scope-of-progress">Scope of progress</h5>
+<p>By default the progress is aimed to move the scene forward slightly. As of version <code>0.30</code> there exist three sub actions here for <code>minor</code>, <code>major</code> and <code>curveball</code> style progression. How weill this works strongly depends on the model.</p>
+<p>All they do is try to coerce the narrator to provide a story progression at a bigger scale, with the curveball one aiming for a story upset.</p>
+<p>Note that you can still hold the <code>ctrl</code> key to provide further direction for these as well.</p>
+<h4 id="narrate-environment"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 12h2v2h-2c-1.38 0-2.74-.35-4-1-2.5 1.3-5.5 1.3-8 0-1.26.65-2.63 1-4 1H2v-2h2c1.39 0 2.78-.47 4-1.33 2.44 1.71 5.56 1.71 8 0 1.22.86 2.61 1.33 4 1.33m0-6h2v2h-2c-1.38 0-2.74-.35-4-1-2.5 1.3-5.5 1.3-8 0-1.26.65-2.63 1-4 1H2V6h2c1.39 0 2.78-.47 4-1.33 2.44 1.71 5.56 1.71 8 0C17.22 5.53 18.61 6 20 6m0 12h2v2h-2c-1.38 0-2.74-.35-4-1-2.5 1.3-5.5 1.3-8 0-1.26.65-2.63 1-4 1H2v-2h2c1.39 0 2.78-.47 4-1.33 2.44 1.71 5.56 1.71 8 0 1.22.86 2.61 1.33 4 1.33"/></svg></span> Narrate Environment</h4>
+<p>A special type of narration that aims to narrate the environment, focusing on visuals, sounds and other sensory information that currently exist in the scene.</p>
+<h4 id="look-at-scene"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14 6-3.75 5 2.85 3.8-1.6 1.2C9.81 13.75 7 10 7 10l-6 8h22z"/></svg></span> Look at Scene</h4>
+<p>Provide a descriptive, visually focused narration of what is currently happening.</p>
+<h4 id="look-at-character-name"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 8c0-2.21 1.79-4 4-4s4 1.79 4 4-1.79 4-4 4-4-1.79-4-4m3.14 11.75L8.85 19l.29-.75c.7-1.75 1.94-3.11 3.47-4.03-.82-.14-1.69-.22-2.61-.22-4.42 0-8 1.79-8 4v2h7.27c-.04-.09-.09-.17-.13-.25M17 18c-.56 0-1 .44-1 1s.44 1 1 1 1-.44 1-1-.44-1-1-1m6 1c-.94 2.34-3.27 4-6 4s-5.06-1.66-6-4c.94-2.34 3.27-4 6-4s5.06 1.66 6 4m-3.5 0a2.5 2.5 0 0 0-5 0 2.5 2.5 0 0 0 5 0"/></svg></span> Look at (Character Name)</h4>
+<p>Provide a descriptive, visually focused narration of the character's appearance / current action.</p>
+<h4 id="query"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m9.38 8.38 2.12.96 2.12-.96-.96 2.12.96 2.12-2.12-.96-2.12.96.96-2.12zM16.5 2.5l1.09 2.91L20.5 6.5l-2.91 1.09-1.09 2.91-1.09-2.91L12.5 6.5l2.91-1.09zM6 19h1v-1a1 1 0 0 1 1-1h.26a7.47 7.47 0 0 1-3.76-6.5A7.5 7.5 0 0 1 12 3c1.05 0 2.05.22 2.96.61l-.37.98-1.42.53Q12.6 5 12 5a5.5 5.5 0 0 0-5.5 5.5A5.5 5.5 0 0 0 12 16c2.91 0 5.3-2.27 5.5-5.13l.91-2.46.71-.27c.25.74.38 1.54.38 2.36 0 2.78-1.5 5.2-3.76 6.5H16a1 1 0 0 1 1 1v1h1a2 2 0 0 1 2 2v1H4v-1a2 2 0 0 1 2-2"/></svg></span> Query</h4>
+<p>Will prompt you for a question and then have the narrator generate narrative text based on that question.</p>
+<h3 id="advance-time"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2m4.2 14.2L11 13V7h1.5v5.2l4.5 2.7z"/></svg></span> Advance time</h3>
+<p>Opens a context menu with options to advance time in the scene, ranging from 5 minutes to 10 years.</p>
+<p>By default the <a href="/talemate/user-guide/agents/narrator"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.8 20c-.4 1.2-1.5 2-2.8 2H5c-1.7 0-3-1.3-3-3v-1h12.2c.4 1.2 1.5 2 2.8 2zM19 2c1.7 0 3 1.3 3 3v1h-2V5c0-.6-.4-1-1-1s-1 .4-1 1v13h-1c-.6 0-1-.4-1-1v-1H5V5c0-1.7 1.3-3 3-3zM8 6v2h7V6zm0 4v2h6v-2z"/></svg></span> Narrator Agent</a> will narrate the time jump, but you can disable this in the <a href="/talemate/user-guide/agents/narrator/settings/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.8 20c-.4 1.2-1.5 2-2.8 2H5c-1.7 0-3-1.3-3-3v-1h12.2c.4 1.2 1.5 2 2.8 2zM19 2c1.7 0 3 1.3 3 3v1h-2V5c0-.6-.4-1-1-1s-1 .4-1 1v13h-1c-.6 0-1-.4-1-1v-1H5V5c0-1.7 1.3-3 3-3zM8 6v2h7V6zm0 4v2h6v-2z"/></svg></span> Narrator Agent Settings</a>.</p>
+<div class="admonition note">
+<p class="admonition-title">Summarization</p>
+<p>Whenever time is advanced, the scene state will be updated, and the next message will trigger the <a href="/talemate/user-guide/agents/summarization">Summarization Agent</a> to summarize any events before the time jump.</p>
+</div>
+<h3 id="world-state-actions"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.9 17.39c-.26-.8-1.01-1.39-1.9-1.39h-1v-3a1 1 0 0 0-1-1H8v-2h2a1 1 0 0 0 1-1V7h2a2 2 0 0 0 2-2v-.41a7.984 7.984 0 0 1 2.9 12.8M11 19.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.22.21-1.79L9 15v1a2 2 0 0 0 2 2m1-16A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2"/></svg></span> World State Actions</h3>
+<h5 id="automatic-state-updates">Automatic State Updates</h5>
+<p>Allows you to quickly set up tracked character and world states. </p>
+<div class="admonition info">
+<p class="admonition-title">What is a tracked state?</p>
+</div>
+<p>Please refer to the <a href="/talemate/user-guide/world-state">World State</a> section for more information on how set up custom states to track.
+Any favorited state will be shown in the <span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.9 17.39c-.26-.8-1.01-1.39-1.9-1.39h-1v-3a1 1 0 0 0-1-1H8v-2h2a1 1 0 0 0 1-1V7h2a2 2 0 0 0 2-2v-.41a7.984 7.984 0 0 1 2.9 12.8M11 19.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.22.21-1.79L9 15v1a2 2 0 0 0 2 2m1-16A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2"/></svg></span> world state context menu. <em>Your list may be different than the one shown here, depending on what you have favorited.</em></p>
+<p><a class="glightbox" href="/talemate/img/0.26.0/scene-tool-world-state-actions.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="World State Actions" src="/talemate/img/0.26.0/scene-tool-world-state-actions.png" /></a></p>
+<p>Clicking on any item in <code>Autoamtic State Updates</code> will generate the current state and keep it tracked until it is removed.</p>
+<p>A tracked state will have a checkmark next to it.</p>
+<p><a class="glightbox" href="/talemate/img/0.26.0/scene-tool-world-state-applied.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="World State Tracked" src="/talemate/img/0.26.0/scene-tool-world-state-applied.png" /></a></p>
+<h4 id="open-the-world-state-manager"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m19 2-5 4.5v11l5-4.5zM6.5 5C4.55 5 2.45 5.4 1 6.5v14.66c0 .25.25.5.5.5.1 0 .15-.07.25-.07 1.35-.65 3.3-1.09 4.75-1.09 1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.31 4.75 1.06.1.05.15.03.25.03.25 0 .5-.25.5-.5V6.5c-.6-.45-1.25-.75-2-1V19c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V6.5C10.55 5.4 8.45 5 6.5 5"/></svg></span> Open the world state manager</h4>
+<p>Will open the world state template editor, where you can view and edit your available world states templates.</p>
+<h4 id="update-the-world-state"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 0 0-8 8 8 8 0 0 0 8 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18a6 6 0 0 1-6-6 6 6 0 0 1 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4z"/></svg></span> Update the world state</h4>
+<p>Will cause a regeneration of the world state.</p>
+<div class="admonition info">
+<p class="admonition-title">Does not run state re-inforcement</p>
+<p>Currently, this will not re-inforce the state of the world or characters, it will only update the world state context that is displayed in the left panel under the <span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.9 17.39c-.26-.8-1.01-1.39-1.9-1.39h-1v-3a1 1 0 0 0-1-1H8v-2h2a1 1 0 0 0 1-1V7h2a2 2 0 0 0 2-2v-.41a7.984 7.984 0 0 1 2.9 12.8M11 19.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.22.21-1.79L9 15v1a2 2 0 0 0 2 2m1-16A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2"/></svg></span> <code>World</code> section.</p>
+</div>
+<h3 id="creative-tools"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21.04 12.13c-.14 0-.28.06-.39.17l-1 1 2.05 2.05 1-1c.22-.21.22-.56 0-.77l-1.28-1.28a.53.53 0 0 0-.38-.17m-1.97 1.75L13 19.94V22h2.06l6.06-6.07zM19 11.12l-7.09 7.08c-.41-.25-.91-.4-1.41-.4-1.5 0-2.7 1.2-2.7 2.7V22H4a2 2 0 0 1-2-2v-3.8h1.5c1.5 0 2.7-1.2 2.7-2.7S5 10.8 3.5 10.8H2V7c0-1.1.9-2 2-2h4V3.5a2.5 2.5 0 0 1 5 0V5h4a2 2 0 0 1 2 2z"/></svg></span> Creative Tools</h3>
+<p><a class="glightbox" href="/talemate/img/0.30.0/scene-tool-creative-actions.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="Creative Actions" src="/talemate/img/0.30.0/scene-tool-creative-actions.png" /></a></p>
+<h4 id="take-character-out-of-scene"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.34 8.17c-.93 0-1.69-.77-1.69-1.7a1.69 1.69 0 0 1 1.69-1.69c.94 0 1.7.76 1.7 1.69s-.76 1.7-1.7 1.7M10.3 19.93l-5.93-1.18.34-1.7 4.15.85 1.35-6.86-1.52.6v2.86H7v-3.96l4.4-1.87.67-.08c.6 0 1.1.34 1.43.85l.86 1.35c.68 1.21 2.03 2.03 3.64 2.03v1.68c-1.86 0-3.56-.83-4.66-2.1l-.5 2.54 1.77 1.69V23h-1.69v-5.1l-1.78-1.69zM21 23h-2V3H6v13.11l-2-.42V1h17zM6 23H4v-3.22l2 .42z"/></svg></span> Take character out of scene</h4>
+<p><a class="glightbox" href="/talemate/img/0.26.0/scene-tool-creative-deactivate-character.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="Take character out of scene" src="/talemate/img/0.26.0/scene-tool-creative-deactivate-character.png" /></a></p>
+<p>Will remove the character from the scene. This will <strong>NOT</strong> remove the character from the character list, it will only remove them from the current scene, making the actor no longer partake in the scene.</p>
+<p>If the current narration and scene progress has not yet indicated the character has left, you will be prompted for a reason, which will be used to narrate the characters exit. If you provide no reason it will be automatically narrated.</p>
+<p><a class="glightbox" href="/talemate/img/0.26.0/scene-tool-creative-deactivate-character-narration.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="Take character out of scene reason" src="/talemate/img/0.26.0/scene-tool-creative-deactivate-character-narration.png" /></a></p>
+<div class="admonition info">
+<p class="admonition-title">Keyboard modifiers</p>
+<p>You can hold the <code>ctrl</code> key when clicking this action to disable the automatic narration altogether.</p>
+</div>
+<h4 id="call-character-to-scene"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2m3.9 6.1c-.4-.4-1.1-1.1-2.4-1.1H11C8.2 7 6 4.8 6 2H4c0 3.2 2.1 5.8 5 6.7V22h2v-6h2v6h2V10.1l4 3.9 1.4-1.4z"/></svg></span> Call character to scene</h4>
+<p><a class="glightbox" href="/talemate/img/0.26.0/scene-tool-creative-activate-character.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="Call character to scene" src="/talemate/img/0.26.0/scene-tool-creative-activate-character.png" /></a></p>
+<p>Will add the character back to the scene. </p>
+<p>If the current narration and scene progress has not yet indicated the character has entered, you will be prompted for a reason, which will be used to narrate the characters entrance. If you provide no reason it will be automatically narrated.</p>
+<p><a class="glightbox" href="/talemate/img/0.26.0/scene-tool-creative-activate-character-narration.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="Call character to scene reason" src="/talemate/img/0.26.0/scene-tool-creative-activate-character-narration.png" /></a></p>
+<div class="admonition info">
+<p class="admonition-title">Keyboard modifiers</p>
+<p>You can hold the <code>ctrl</code> key when clicking this action to disable the automatic narration altogether.</p>
+</div>
+<h4 id="introduce-new-character-directed"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2m3.9 6.1c-.4-.4-1.1-1.1-2.4-1.1H11C8.2 7 6 4.8 6 2H4c0 3.2 2.1 5.8 5 6.7V22h2v-6h2v6h2V10.1l4 3.9 1.4-1.4z"/></svg></span> Introduce new character - Directed</h4>
+<p>Allows you to quickly generate a new, interactive character to add to the scene.</p>
+<p><a class="glightbox" href="/talemate/img/0.30.0/scene-tool-intro-char-1.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="Introduce new character 1" src="/talemate/img/0.30.0/scene-tool-intro-char-1.png" /></a></p>
+<h5 id="determine-name">Determine Name</h5>
+<p>If selected will try to generate a reasonable name from both your instructions AND the existing scene context. A reasonable name means "Joseph" instead of "Clumsy Cabbage Vendor".</p>
+<h5 id="active">Active</h5>
+<p>If selected this means the character will be inserted as an <strong>active</strong> character into the current scene right away.</p>
+<p>If not selected the character will get created but exist as deactivated and will need to be called into the scene manually.</p>
+<h5 id="narrate-entry">Narrate entry</h5>
+<p>If selected, the narrator will generate some flavor text for how the character enters the scene (if they arent already there). This will follow the instructions you provide in the text box below.</p>
+<h5 id="instructions-for-the-new-character">Instructions for the new character</h5>
+<p>Write any instructions that you want to pass along for the creation, this can be as little or as detailed as you want.</p>
+<h5 id="narration-direction-for-the-characters-entry">Narration direction for the character's entry</h5>
+<p>Write direction on how you want the character to enter the scene.</p>
+<div class="admonition note">
+<p class="admonition-title">A character already interacting in the scene will not have their entrance narrated</p>
+<p>If the narrator has already established the character interacting with your characters this "entry narration" will be skipped. The check for this 100% based on an AI prompt so may not always work correctly.</p>
+</div>
+<h5 id="templates">Templates</h5>
+<p>Control attribute generation using your existing <a href="/talemate/user-guide/world-editor/templates">World State Templates</a>.</p>
+<p><a class="glightbox" href="/talemate/img/0.30.0/scene-tool-intro-char-templates.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="Select templates" src="/talemate/img/0.30.0/scene-tool-intro-char-templates.png" /></a></p>
+<h5 id="augment-attributes">Augment Attributes</h5>
+<p>If you are generating <strong>any</strong> attributes via templatews the default assumption is that you want full control over the attributes, so no additional attributes will be generated. However if you <strong>do</strong> want randomly generated attributes alongside your template generated ones you can check this box.</p>
+<h4 id="introduce-new-character-from-context"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2m3.9 6.1c-.4-.4-1.1-1.1-2.4-1.1H11C8.2 7 6 4.8 6 2H4c0 3.2 2.1 5.8 5 6.7V22h2v-6h2v6h2V10.1l4 3.9 1.4-1.4z"/></svg></span> Introduce new character - From context</h4>
+<p>If narration or dialogue has been generated that references a character that has not yet been created, you can use this action to introduce them and make them real and interactable.</p>
+<p><a class="glightbox" href="/talemate/img/0.30.0/scene-tool-creative-introduce-2.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="World State Context" src="/talemate/img/0.30.0/scene-tool-creative-introduce-2.png" /></a></p>
+<p>The AI will be prompted to generate a character based on what is known about them in the context.</p>
+<div class="admonition note">
+<p class="admonition-title">Hold ctrl for advanced options</p>
+<p>You can hold <code>ctrl</code> to bring up the advanced options similar to when introducing a character from scratch.</p>
+</div>
+<p>Once it is done, the character will now be part of the scene and can be interacted with.</p>
+<p><a class="glightbox" href="/talemate/img/0.26.0/scene-tool-creative-add-character-4.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="Character added to scene" src="/talemate/img/0.26.0/scene-tool-creative-add-character-4.png" /></a></p>
+<div class="admonition info">
+<p class="admonition-title">Indicator</p>
+<p>The availability of this is directly tied to the world state on the left panel. </p>
+<p><a class="glightbox" href="/talemate/img/0.26.0/scene-tool-creative-introduce-1.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="World State Context" src="/talemate/img/0.26.0/scene-tool-creative-introduce-1.png" /></a></p>
+<p>The character needs to appear in the list of characters in the world state context. </p>
+<p><a class="glightbox" href="/talemate/img/0.26.0/scene-tool-creative-introduce-indicator.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="Indicator" src="/talemate/img/0.26.0/scene-tool-creative-introduce-indicator.png" /></a> a little human icon will appear next to the <span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21.04 12.13c-.14 0-.28.06-.39.17l-1 1 2.05 2.05 1-1c.22-.21.22-.56 0-.77l-1.28-1.28a.53.53 0 0 0-.38-.17m-1.97 1.75L13 19.94V22h2.06l6.06-6.07zM19 11.12l-7.09 7.08c-.41-.25-.91-.4-1.41-.4-1.5 0-2.7 1.2-2.7 2.7V22H4a2 2 0 0 1-2-2v-3.8h1.5c1.5 0 2.7-1.2 2.7-2.7S5 10.8 3.5 10.8H2V7c0-1.1.9-2 2-2h4V3.5a2.5 2.5 0 0 1 5 0V5h4a2 2 0 0 1 2 2z"/></svg></span> <code>Creative Actions</code> button if there is a character that can be introduced.</p>
+</div>
+<h3 id="visualizer"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 14.29 6.5 19h10.96l-2.71-3.54-1.97 2.34zM5 21V7h13.96v14zm7-18.6 2.61 2.63H9.37zM5 5.03c-.5 0-1 .19-1.39.58C3.2 6 3 6.46 3 7v14c0 .5.2 1 .61 1.39C4 22.8 4.5 23 5 23h13.96c.54 0 1-.2 1.41-.61.4-.39.63-.89.63-1.39V7c0-.54-.23-1-.63-1.39-.41-.39-.87-.58-1.41-.58H16L12 1 7.96 5.03z"/></svg></span> Visualizer</h3>
+<div class="admonition info">
+<p class="admonition-title">Availability</p>
+<p>If the visualization menu is greyed out, it means that the <a href="/talemate/user-guide/agents/visualizer">Visualizer Agent</a> is not enabled or ready.</p>
+<p>Please refer to the <a href="/talemate/user-guide/agents/visualizer">Visualizer Agent</a> section for more information on how to set it up.</p>
+</div>
+<h4 id="visualize-environment"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14 6-3.75 5 2.85 3.8-1.6 1.2C9.81 13.75 7 10 7 10l-6 8h22z"/></svg></span> Visualize Environment</h4>
+<p>Will generate a stable diffusion prompt and send it to the visualizer agent to generate an image of the current scene.</p>
+<p>The generated image can be viewed by clicking on the <span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 17H7V3h14m0-2H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2M3 5H1v16a2 2 0 0 0 2 2h16v-2H3m12.96-10.71-2.75 3.54-1.96-2.36L8.5 15h11z"/></svg></span> <strong>New images</strong> button on the top right of the screen.</p>
+<p><a class="glightbox" href="/talemate/img/0.20.0/visualze-new-images.png" data-type="image" data-width="auto" data-height="auto" data-desc-position="bottom"><img alt="Images ready" src="/talemate/img/0.20.0/visualze-new-images.png" /></a></p>
+<div class="admonition note">
+<p class="admonition-title">Early Development</p>
+<p>At this early stage of development, all you can do with this generated image is to view it. Future versions will allow you to set it as the background image for the scene.</p>
+</div>
+<h4 id="visualize-character"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m20.71 4.63-1.34-1.34c-.37-.39-1.02-.39-1.41 0L9 12.25 11.75 15l8.96-8.96c.39-.39.39-1.04 0-1.41M7 14a3 3 0 0 0-3 3c0 1.31-1.16 2-2 2 .92 1.22 2.5 2 4 2a4 4 0 0 0 4-4 3 3 0 0 0-3-3"/></svg></span> Visualize Character</h4>
+<p>Will generate a stable diffusion prompt and send it to the visualizer agent to generate an image of the selected character.</p>
+<p>The generated image can be viewed by clicking on the <span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 17H7V3h14m0-2H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2M3 5H1v16a2 2 0 0 0 2 2h16v-2H3m12.96-10.71-2.75 3.54-1.96-2.36L8.5 15h11z"/></svg></span> <strong>New images</strong> button on the top right of the screen.</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>This will take longer than the environment visualization, as it will do multiple inquisition prompts to find out more about the character and their current state.</p>
+<p>If the character does not have a cover image set the generated image will automatically be set as the cover image.</p>
+</div>
+<h3 id="saving"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15 9H5V5h10m-3 14a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3m5-16H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7z"/></svg></span> Saving</h3>
+<p>Context menu that will provide you with <code>Save</code> and <code>Save As</code> options.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.copy"], "search": "../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.56ea9cef.min.js"></script>
+      
+    
+  <script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(() => { lightbox.reload() });
+</script></body>
+</html>

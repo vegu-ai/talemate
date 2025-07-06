@@ -5,8 +5,8 @@
 Talemate is a **personal hobbyist project** that I maintain in my spare time. While I appreciate the community's interest and contributions, please understand that:
 
 - This is primarily a passion project that I enjoy working on myself
-- I have limited time for code reviews and prefer to spend that time developing new features
-- Large contributions require significant review time that takes away from my own development
+- I have limited time for code reviews and prefer to spend that time developing fixes or new features myself
+- Large contributions require significant review and testing time that takes away from my own development
 
 For these reasons, I've established contribution guidelines that balance community involvement with my desire to actively develop the project myself.
 

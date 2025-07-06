@@ -52,10 +52,6 @@ If you'd like to submit a bugfix or small feature:
 5. **Include tests** - Add or update tests that verify your fix or feature
 6. **Update documentation** - If your changes affect behavior, update relevant docs
 
-## Code Style
-
-- Run `uv run pre-commit run --all-files` before submitting
-
 ## Testing
 
 Ensure all tests pass by running:

@@ -46,7 +46,7 @@ class XTTS2Mixin:
 
         loop = asyncio.get_event_loop()
 
-        voice = self.voice(self.default_voice_id)
+        voice = self.voice(self.voice_id)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, f"tts-{uuid.uuid4()}.wav")
@@ -66,7 +66,7 @@ class XTTS2Mixin:
             with open(file_path, "rb") as f:
                 return f.read()
 
-    async def xtts2_list_voices(self) -> dict[str, str]:
+    async def xtts2_list_voices(self) -> list[Voice]:
         return [
             Voice(**voice) for voice in self.config.get("tts", {}).get("voices", [])
         ]

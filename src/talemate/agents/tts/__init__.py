@@ -2,16 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import io
-
 import time
+import re
 from typing import Union
 
-import httpx
-import nltk
 import structlog
 from nltk.tokenize import sent_tokenize
-from openai import AsyncOpenAI
 
 import talemate.config as config
 import talemate.emit.async_signals
@@ -24,7 +20,6 @@ from talemate.scene_message import CharacterMessage, NarratorMessage
 from talemate.agents.base import (
     Agent,
     AgentAction,
-    AgentActionConditional,
     AgentActionConfig,
     AgentDetail,
     set_processing,
@@ -32,6 +27,8 @@ from talemate.agents.base import (
 from talemate.agents.registry import register
 from .schema import Voice, VoiceLibrary
 
+from .elevenlabs import ElevenLabsMixin
+from .openai import OpenAIMixin
 from .xtts2 import XTTS2Mixin
 
 
@@ -46,13 +43,19 @@ def parse_chunks(text: str) -> list[str]:
     """
 
     try:
+        
+        text = text.replace("*", "")
+        
+        # ensure sentence terminators are before quotes
+        # otherwise the beginning of dialog will bleed into narration
+        text = re.sub(r'([^.?!]+) "', r'\1. "', text)
+        
         text = text.replace("...", "__ellipsis__")
         chunks = sent_tokenize(text)
         cleaned_chunks = []
 
         for chunk in chunks:
-            chunk = chunk.replace("*", "")
-            if not chunk:
+            if not chunk.strip():
                 continue
             cleaned_chunks.append(chunk)
 
@@ -96,12 +99,12 @@ def rejoin_chunks(chunks: list[str], chunk_size: int = 250):
         current_chunk += chunk
 
     if current_chunk:
-        joined_chunks.append(clean_quotes(current_chunk))
+        joined_chunks.append(clean_quotes(current_chunk))   
     return joined_chunks
 
 
 @register()
-class TTSAgent(XTTS2Mixin, Agent):
+class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
     """
     Text to speech agent
     """
@@ -124,10 +127,9 @@ class TTSAgent(XTTS2Mixin, Agent):
 
     @classmethod
     def init_voices(cls) -> dict[str, VoiceLibrary]:
-        voices = {
-            "elevenlabs": VoiceLibrary(api="elevenlabs"),
-            "openai": VoiceLibrary(api="openai"),
-        }
+        voices = {}
+        ElevenLabsMixin.add_voices(voices)
+        OpenAIMixin.add_voices(voices)
         XTTS2Mixin.add_voices(voices)
         return voices
     
@@ -141,10 +143,7 @@ class TTSAgent(XTTS2Mixin, Agent):
                 config={
                     "api": AgentActionConfig(
                         type="text",
-                        choices=[
-                            {"value": "elevenlabs", "label": "Eleven Labs"},
-                            {"value": "openai", "label": "OpenAI"},
-                        ],
+                        choices=[],
                         value_migration=lambda v: "xtts2" if v == "tts" else v,
                         value="xtts2",
                         label="API",
@@ -184,29 +183,10 @@ class TTSAgent(XTTS2Mixin, Agent):
                     ),
                 },
             ),
-            "openai": AgentAction(
-                enabled=True,
-                container=True,
-                icon="mdi-server-outline",
-                condition=AgentActionConditional(
-                    attribute="_config.config.api", value="openai"
-                ),
-                label="OpenAI",
-                config={
-                    "model": AgentActionConfig(
-                        type="text",
-                        value="tts-1",
-                        choices=[
-                            {"value": "tts-1", "label": "TTS 1"},
-                            {"value": "tts-1-hd", "label": "TTS 1 HD"},
-                        ],
-                        label="Model",
-                        description="TTS model to use",
-                    ),
-                },
-            ),
         }
         
+        ElevenLabsMixin.add_actions(actions)
+        OpenAIMixin.add_actions(actions)
         XTTS2Mixin.add_actions(actions)
         
         return actions
@@ -267,18 +247,9 @@ class TTSAgent(XTTS2Mixin, Agent):
         return self.actions["_config"].config["generate_for_narration"].value
     
     @property
-    def generate_chunks(self) -> bool:
+    def generate_chunks_enabled(self) -> bool:
         return self.actions["_config"].config["generate_chunks"].value
     
-    @property
-    def openai_model(self) -> str:
-        return self.actions["openai"].config["model"].value
-    
-    @property
-    def openai_api_key(self) -> str:
-        return self.config.get("openai", {}).get("api_key")
-    
-
     @property
     def not_ready_reason(self) -> str:
         """
@@ -349,19 +320,6 @@ class TTSAgent(XTTS2Mixin, Agent):
     @property
     def max_generation_length(self):
         return getattr(self, f"{self.api}_max_generation_length")
-    
-    @property
-    def elevenlabs_max_generation_length(self) -> int:
-        return 1024
-    
-    @property
-    def openai_max_generation_length(self) -> int:
-        # XXX: Check limits
-        return 250
-
-    @property
-    def openai_api_key(self):
-        return self.config.get("openai", {}).get("api_key")
 
     async def apply_config(self, *args, **kwargs):
         try:
@@ -536,97 +494,3 @@ class TTSAgent(XTTS2Mixin, Agent):
         )
 
         self.playback_done_event.set()  # Signal that playback is finished
-
-    # LOCAL
-
-
-
-    # ELEVENLABS
-
-    async def elevenlabs_generate(
-        self, text: str, chunk_size: int = 1024
-    ) -> Union[bytes, None]:
-        api_key = self.token
-        if not api_key:
-            return
-
-        async with httpx.AsyncClient() as client:
-            url = f"https://api.elevenlabs.io/v1/text-to-speech/{self.voice_id}"
-            headers = {
-                "Accept": "audio/mpeg",
-                "Content-Type": "application/json",
-                "xi-api-key": api_key,
-            }
-            data = {
-                "text": text,
-                "model_id": self.config.get("elevenlabs", {}).get("model"),
-                "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
-            }
-
-            response = await client.post(url, json=data, headers=headers, timeout=300)
-
-            if response.status_code == 200:
-                bytes_io = io.BytesIO()
-                for chunk in response.iter_bytes(chunk_size=chunk_size):
-                    if chunk:
-                        bytes_io.write(chunk)
-
-                # Put the audio data in the queue for playback
-                return bytes_io.getvalue()
-            else:
-                log.error(f"Error generating audio: {response.text}")
-
-    async def elevenlabs_list_voices(self) -> dict[str, str]:
-        url_voices = "https://api.elevenlabs.io/v1/voices"
-
-        voices = []
-
-        async with httpx.AsyncClient() as client:
-            headers = {
-                "Accept": "application/json",
-                "xi-api-key": self.token,
-            }
-            response = await client.get(
-                url_voices, headers=headers, params={"per_page": 1000}
-            )
-            speakers = response.json()["voices"]
-            voices.extend(
-                [
-                    Voice(value=speaker["voice_id"], label=speaker["name"])
-                    for speaker in speakers
-                ]
-            )
-
-        # sort by name
-        voices.sort(key=lambda x: x.label)
-
-        return voices
-
-    # OPENAI
-
-    async def openai_generate(self, text: str, chunk_size: int = 1024):
-        client = AsyncOpenAI(api_key=self.openai_api_key)
-
-        model = self.actions["openai"].config["model"].value
-
-        response = await client.audio.speech.create(
-            model=model, voice=self.voice_id, input=text
-        )
-
-        bytes_io = io.BytesIO()
-        for chunk in response.iter_bytes(chunk_size=chunk_size):
-            if chunk:
-                bytes_io.write(chunk)
-
-        # Put the audio data in the queue for playback
-        return bytes_io.getvalue()
-
-    async def openai_list_voices(self) -> dict[str, str]:
-        return [
-            Voice(value="alloy", label="Alloy"),
-            Voice(value="echo", label="Echo"),
-            Voice(value="fable", label="Fable"),
-            Voice(value="onyx", label="Onyx"),
-            Voice(value="nova", label="Nova"),
-            Voice(value="shimmer", label="Shimmer"),
-        ]

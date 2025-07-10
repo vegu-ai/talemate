@@ -1,5 +1,7 @@
 import re
 import structlog
+import pydantic
+from typing import Literal
 
 __all__ = [
     "handle_endofline_special_delimiter",
@@ -14,10 +16,15 @@ __all__ = [
     "ensure_dialog_line_format",
     "clean_uneven_markers",
     "split_anchor_text",
+    "separate_dialogue_from_exposition",
+    "DialogueChunk",
 ]
 
 log = structlog.get_logger("talemate.util.dialogue")
 
+class DialogueChunk(pydantic.BaseModel):
+    text: str
+    type: Literal["dialogue", "exposition"]
 
 def handle_endofline_special_delimiter(content: str) -> str:
     # END-OF-LINE is a custom delimter that can exist 0 to n times
@@ -428,3 +435,45 @@ def split_anchor_text(text: str, anchor_length: int = 10) -> tuple[str, str]:
         anchor = " ".join(words[mid_point:])
 
     return non_anchor, anchor
+
+def separate_dialogue_from_exposition(text: str) -> list[DialogueChunk]:
+    """
+    Separates dialogue from exposition in a text.
+    
+    Returns a list of DialogueChunk objects, where each chunk is either dialogue or exposition.
+    Dialogue is defined as any text between double quotes ("").
+    Everything else is exposition (regardless of asterisks or other markers).
+    """
+    if not text:
+        return []
+    
+    chunks = []
+    current_segment = ""
+    in_dialogue = False
+    
+    for i, char in enumerate(text):
+        if char == '"':
+            # Quote marks are transition points
+            if in_dialogue:
+                # We're ending a dialogue segment - include the closing quote
+                current_segment += char
+                chunks.append(DialogueChunk(text=current_segment, type="dialogue"))
+                current_segment = ""
+                in_dialogue = False
+            else:
+                # We're starting a dialogue segment
+                if current_segment:
+                    # Save any exposition before the dialogue
+                    chunks.append(DialogueChunk(text=current_segment, type="exposition"))
+                current_segment = char
+                in_dialogue = True
+        else:
+            # Regular character - add to current segment
+            current_segment += char
+    
+    # Don't forget the last segment if it exists
+    if current_segment:
+        chunk_type = "dialogue" if in_dialogue else "exposition"
+        chunks.append(DialogueChunk(text=current_segment, type=chunk_type))
+    
+    return chunks

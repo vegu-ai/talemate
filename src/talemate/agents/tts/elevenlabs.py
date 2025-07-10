@@ -11,7 +11,7 @@ from talemate.agents.base import (
     AgentActionConditional,
     AgentDetail,
 )
-from .schema import Voice, VoiceLibrary, GenerationContext
+from .schema import Voice, VoiceLibrary, GenerationContext, Chunk
 
 log = structlog.get_logger("talemate.agents.tts.elevenlabs")
 
@@ -77,19 +77,26 @@ class ElevenLabsMixin:
             ).model_dump(),
         }
 
+    @property
+    def elevenlabs_api_key(self) -> str:
+        return self.config.get("elevenlabs", {}).get("api_key")
+
     async def elevenlabs_generate(
-        self, text: str, context: GenerationContext, chunk_size: int = 1024
+        self, 
+        chunk: Chunk, 
+        context: GenerationContext, 
+        chunk_size: int = 1024
     ) -> Union[bytes, None]:
-        api_key = self.token
+        api_key = self.elevenlabs_api_key
         if not api_key:
             return
 
         client = AsyncElevenLabs(api_key=api_key)
 
         response_async_iter = client.text_to_speech.convert(
-            text=text,
-            voice_id=context.voice_id,
-            model_id=context.model or self.elevenlabs_model,
+            text=chunk.cleaned_text,
+            voice_id=chunk.voice_id,
+            model_id=chunk.model or self.elevenlabs_model,
         )
 
         bytes_io = io.BytesIO()
@@ -101,9 +108,9 @@ class ElevenLabsMixin:
         return bytes_io.getvalue()
 
     async def elevenlabs_list_voices(self) -> list[Voice]:
-        client = AsyncElevenLabs(api_key=self.token)
+        client = AsyncElevenLabs(api_key=self.elevenlabs_api_key)
 
-        log.debug("elevenlabs_list_voices", token=self.token)
+        log.debug("elevenlabs_list_voices", api_key=self.elevenlabs_api_key[:4] + "..." if self.elevenlabs_api_key else None)
 
         response: GetVoicesV2Response = await client.voices.search(page_size=100)
 

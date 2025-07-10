@@ -16,7 +16,7 @@ from talemate.agents.base import (
     AgentDetail,
 )
 
-from .schema import Voice, VoiceLibrary
+from .schema import Voice, VoiceLibrary, Chunk, GenerationContext
 
 log = structlog.get_logger("talemate.agents.tts.xtts2")
 
@@ -122,7 +122,7 @@ class XTTS2Mixin:
 
         return details
 
-    async def xtts2_generate(self, text: str) -> bytes | None:
+    async def xtts2_generate(self, chunk: Chunk, context: GenerationContext) -> bytes | None:
         log.debug("xtts2", model=self.xtts2_model, device=self.xtts2_device)
 
         xtts2_instance = getattr(self, "xtts2_instance", None)
@@ -152,7 +152,7 @@ class XTTS2Mixin:
 
         loop = asyncio.get_event_loop()
 
-        voice = self.voice(self.voice_id)
+        voice = self.voice(chunk.voice_id, api="xtts2")
 
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, f"tts-{uuid.uuid4()}.wav")
@@ -161,7 +161,7 @@ class XTTS2Mixin:
                 None,
                 functools.partial(
                     tts.tts_to_file,
-                    text=text,
+                    text=chunk.cleaned_text,
                     speaker_wav=voice.value,
                     language="en",
                     file_path=file_path,

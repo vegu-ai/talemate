@@ -5,7 +5,7 @@ import structlog
 from openai import AsyncOpenAI
 
 from talemate.agents.base import AgentAction, AgentActionConfig, AgentActionConditional
-from .schema import Voice, VoiceLibrary
+from .schema import Voice, VoiceLibrary, Chunk, GenerationContext
 
 log = structlog.get_logger("talemate.agents.tts.openai")
 
@@ -52,7 +52,7 @@ class OpenAIMixin:
     @property
     def openai_max_generation_length(self) -> int:
         # XXX: Check limits
-        return 250
+        return 1024
 
     @property
     def openai_model(self) -> str:
@@ -63,14 +63,17 @@ class OpenAIMixin:
         return self.config.get("openai", {}).get("api_key")
 
     async def openai_generate(
-        self, text: str, chunk_size: int = 1024
+        self, 
+        chunk: Chunk,
+        context: GenerationContext,
+        chunk_size: int = 1024
     ) -> Union[bytes, None]:
         client = AsyncOpenAI(api_key=self.openai_api_key)
 
-        model = self.actions["openai"].config["model"].value
+        model = chunk.model or self.openai_model
 
         response = await client.audio.speech.create(
-            model=model, voice=self.voice_id, input=text
+            model=model, voice=chunk.voice_id, input=chunk.cleaned_text
         )
 
         bytes_io = io.BytesIO()

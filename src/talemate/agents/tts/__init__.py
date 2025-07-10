@@ -9,6 +9,7 @@ from typing import Union
 import structlog
 from nltk.tokenize import sent_tokenize
 
+import talemate.util.dialogue as dialogue_utils
 import talemate.config as config
 import talemate.emit.async_signals
 import talemate.instance as instance
@@ -25,7 +26,7 @@ from talemate.agents.base import (
     set_processing,
 )
 from talemate.agents.registry import register
-from .schema import Voice, VoiceLibrary, GenerationContext
+from .schema import Voice, VoiceLibrary, GenerationContext, Chunk
 
 from .elevenlabs import ElevenLabsMixin
 from .openai import OpenAIMixin
@@ -34,6 +35,8 @@ from talemate.character import Character, CharacterVoice
 
 log = structlog.get_logger("talemate.agents.tts")
 
+
+HOT_SWAP_NOTIFICATION_TIME = 60
 
 def parse_chunks(text: str) -> list[str]:
     """
@@ -113,6 +116,9 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
     verbose_name = "Voice"
     requires_llm_client = False
     essential = False
+    
+    # timestamp of last hot swap
+    last_hot_swap: float = 0
 
     @classmethod
     def config_options(cls, agent=None):
@@ -157,6 +163,18 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
                         description="Voice ID/Name to use for TTS",
                         choices=[],
                     ),
+                    "separate_narrator_voice": AgentActionConfig(
+                        type="bool",
+                        value=True,
+                        label="Separate narrator voice",
+                        description="If a character is set up with a custom voice it will be used for narration as well. Check this to use the narrator voice for exposition regardless.",
+                    ),
+                    "allow_hot_swap": AgentActionConfig(
+                        type="bool",
+                        value=True,
+                        label="Allow hot swap",
+                        description="Allow API hot swapping - Allows characters to use voices on APIs other than the one currently selected.",
+                    ),
                     "generate_for_player": AgentActionConfig(
                         type="bool",
                         value=False,
@@ -174,12 +192,6 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
                         value=True,
                         label="Generate for narration",
                         description="Generate audio for narration messages",
-                    ),
-                    "generate_chunks": AgentActionConfig(
-                        type="bool",
-                        value=False,
-                        label="Split generation",
-                        description="Generate audio chunks for each sentence - will be much more responsive but may loose context to inform inflection",
                     ),
                 },
             ),
@@ -246,8 +258,12 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         return self.actions["_config"].config["generate_for_narration"].value
 
     @property
-    def generate_chunks_enabled(self) -> bool:
-        return self.actions["_config"].config["generate_chunks"].value
+    def separate_narrator_voice(self) -> bool:
+        return self.actions["_config"].config["separate_narrator_voice"].value
+
+    @property
+    def allow_hot_swap(self) -> bool:
+        return self.actions["_config"].config["allow_hot_swap"].value
 
     @property
     def not_ready_reason(self) -> str:
@@ -293,6 +309,14 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         if fn:
             details.update(fn)
 
+        if self.recent_hot_swap:
+            details["hot_swap"] = AgentDetail(
+                icon="mdi-swap-horizontal",
+                value="Hot swap",
+                description=f"At least one character has used a voice from a different API in the last {HOT_SWAP_NOTIFICATION_TIME} seconds",
+                color="warning",
+            ).model_dump()
+
         return details
 
     @property
@@ -323,6 +347,20 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
     @property
     def max_generation_length(self):
         return getattr(self, f"{self.api}_max_generation_length")
+
+    @property
+    def narrator_voice(self) -> CharacterVoice:
+        return CharacterVoice(
+            provider=self.api,
+            provider_id=self.voice_id,
+            provider_model=None,
+            label="Narrator",
+        )
+
+
+    @property
+    def recent_hot_swap(self) -> bool:
+        return time.time() - self.last_hot_swap < 10
 
     async def apply_config(self, *args, **kwargs):
         try:
@@ -364,7 +402,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         self.config = config
         instance.emit_agent_status(self.__class__, self)
 
-    def voice_available(self, api: str, voice_id: str) -> bool:
+    async def voice_available(self, api: str, voice_id: str) -> bool:
         """
         Check if a voice is available for a given TTS API
 
@@ -375,6 +413,17 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         Returns:
             bool: True if the voice is available, False otherwise
         """
+        
+        is_hot_swap = api != self.api
+        
+        if not self.allow_hot_swap and is_hot_swap:
+            return False
+        
+        if is_hot_swap:
+            self.last_hot_swap = time.time()
+        
+        await self.list_voices(api)
+        
         if api not in self.voices:
             log.warning("voice_available", error="Invalid TTS API", api=api)
             return False
@@ -427,8 +476,10 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
             character=character,
         )
 
-    def voice(self, voice_id: str) -> Union[Voice, None]:
-        for voice in self.voices[self.api].voices:
+    def voice(self, voice_id: str, api:str = None) -> Union[Voice, None]:
+        if not api:
+            api = self.api
+        for voice in self.voices[api].voices:
             if voice.value == voice_id:
                 return voice
         return None
@@ -443,18 +494,21 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(self.list_voices())
 
-    async def list_voices(self):
+    async def list_voices(self, api:str = None):
         if self.requires_token and not self.token:
             return []
+        
+        if not api:
+            api = self.api
 
-        library = self.voices[self.api]
+        library = self.voices[api]
 
         # TODO: allow re-syncing voices
         if library.last_synced:
             return library.voices
 
-        list_fn = getattr(self, f"{self.api}_list_voices")
-        log.info("Listing voices", api=self.api)
+        list_fn = getattr(self, f"{api}_list_voices")
+        log.info("Listing voices", api=api)
 
         library.voices = await list_fn()
         library.last_synced = time.time()
@@ -479,13 +533,13 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         self.playback_done_event.set()
 
         context = GenerationContext(voice_id=self.voice_id)
-        voice: CharacterVoice | None = None
+        character_voice: CharacterVoice = self.narrator_voice
 
         if character and character.voice:
-            if self.voice_available(
+            if await self.voice_available(
                 character.voice.provider, character.voice.provider_id
             ):
-                voice = character.voice
+                character_voice = character.voice
             else:
                 log.warning(
                     "Character voice not available",
@@ -493,26 +547,61 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
                     voice=character.voice,
                 )
 
-        log.debug("Voice routing", character=character, voice=voice)
+        log.debug("Voice routing", character=character, voice=character_voice)
 
-        # Start generating audio chunks in the background
-        if not voice:
-            generate_fn = getattr(self, f"{self.api}_generate")
+        # initial chunking by separating dialogue from exposition
+        
+        chunks:list[Chunk] = []
+        if self.separate_narrator_voice:
+            for _dlg_chunk in dialogue_utils.separate_dialogue_from_exposition(text):
+                _voice = character_voice if _dlg_chunk.type == "dialogue" else self.narrator_voice
+                _api:str = _voice.provider if _voice else self.api
+                chunk = Chunk(
+                    api=_api,
+                    voice_id=_voice.provider_id,
+                    model=_voice.provider_model,
+                    generate_fn=getattr(self, f"{_api}_generate"),
+                    character_name=character.name if character else None,
+                    text=[_dlg_chunk.text],
+                    type=_dlg_chunk.type,
+                )
+                chunks.append(chunk)
         else:
-            # TODO: RVC routing
-            generate_fn = getattr(self, f"{voice.provider}_generate")
-            context.voice_id = voice.provider_id
-            context.voice_id_overridden = True
-
-        context.generate_fn = generate_fn
-
-        if self.actions["_config"].config["generate_chunks"].value:
-            chunks = parse_chunks(text)
-            chunks = rejoin_chunks(chunks)
-        else:
-            chunks = parse_chunks(text)
-            chunks = rejoin_chunks(chunks, chunk_size=self.max_generation_length)
-
+            _voice = character_voice if character else self.narrator_voice
+            _api:str = _voice.provider if _voice else self.api
+            chunks = [
+                Chunk(
+                    api=_api,
+                    voice_id=_voice.provider_id,
+                    model=_voice.provider_model,
+                    generate_fn=getattr(self, f"{_api}_generate"),
+                    character_name=character.name if character else None,
+                    text=[text],
+                    type="dialogue" if character else "exposition",
+                )
+            ]
+            
+        max_generation_length = getattr(self, f"{self.api}_max_generation_length")
+        
+        # second chunking by splitting into chunks of max_generation_length
+        
+        for chunk in chunks:
+            _text = []
+            
+            for _chunk_text in chunk.text:
+                
+                if len(_chunk_text) <= max_generation_length:
+                    _text.append(_chunk_text)
+                    continue
+                
+                _parsed = parse_chunks(_chunk_text)
+                _joined = rejoin_chunks(_parsed, chunk_size=max_generation_length)
+                _text.extend(_joined)
+            
+            log.debug("chunked for size", before=chunk.text, after=_text)
+            
+            chunk.text = _text
+                
         context.chunks = chunks
 
         generation_task = asyncio.create_task(self.generate_chunks(context))
@@ -526,10 +615,10 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         context: GenerationContext,
     ):
         for chunk in context.chunks:
-            chunk = chunk.replace("*", "").strip()
-            log.info("Generating audio", api=self.api, chunk=chunk)
-            audio_data = await context.generate_fn(chunk, context)
-            self.play_audio(audio_data)
+            for _chunk in chunk.sub_chunks:
+                log.info("Generating audio", api=self.api, chunk=_chunk)
+                audio_data = await _chunk.generate_fn(_chunk, context)
+                self.play_audio(audio_data)
 
     def play_audio(self, audio_data):
         # play audio through the python audio player

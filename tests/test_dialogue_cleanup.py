@@ -196,3 +196,110 @@ def test_split_anchor_text(input, anchor_length, expected_non_anchor, expected_a
     non_anchor, anchor = split_anchor_text(input, anchor_length)
     assert non_anchor == expected_non_anchor
     assert anchor == expected_anchor
+
+
+@pytest.mark.parametrize(
+    "input, expected",
+    [
+        # Empty text
+        ("", []),
+        
+        # Only dialogue
+        ('"Hello world"', [{"text": '"Hello world"', "type": "dialogue"}]),
+        
+        # Only exposition
+        ("This is exposition", [{"text": "This is exposition", "type": "exposition"}]),
+        
+        # Simple mixed case
+        ('He said "Hello" to her', [
+            {"text": 'He said ', "type": "exposition"},
+            {"text": '"Hello"', "type": "dialogue"},
+            {"text": ' to her', "type": "exposition"}
+        ]),
+        
+        # Multiple dialogues
+        ('"Hi" she said "Bye"', [
+            {"text": '"Hi"', "type": "dialogue"},
+            {"text": ' she said ', "type": "exposition"},
+            {"text": '"Bye"', "type": "dialogue"}
+        ]),
+        
+        # Exposition with asterisks (should be treated as exposition)
+        ('*He walks* "Hello" *He smiles*', [
+            {"text": '*He walks* ', "type": "exposition"},
+            {"text": '"Hello"', "type": "dialogue"},
+            {"text": ' *He smiles*', "type": "exposition"}
+        ]),
+        
+        # Dialogue spanning multiple lines
+        ('He said "Hello\nHow are you?" nicely', [
+            {"text": 'He said ', "type": "exposition"},
+            {"text": '"Hello\nHow are you?"', "type": "dialogue"},
+            {"text": ' nicely', "type": "exposition"}
+        ]),
+        
+        # Complex mixed content
+        ('The man said "I am fine" and *walked away* before saying "Goodbye"', [
+            {"text": 'The man said ', "type": "exposition"},
+            {"text": '"I am fine"', "type": "dialogue"},
+            {"text": ' and *walked away* before saying ', "type": "exposition"},
+            {"text": '"Goodbye"', "type": "dialogue"}
+        ]),
+        
+        # Unmatched quotes (last quote doesn't close)
+        ('He said "Hello', [
+            {"text": 'He said ', "type": "exposition"},
+            {"text": '"Hello', "type": "dialogue"}
+        ]),
+        
+        # Empty dialogue
+        ('Before "" after', [
+            {"text": 'Before ', "type": "exposition"},
+            {"text": '""', "type": "dialogue"},
+            {"text": ' after', "type": "exposition"}
+        ]),
+        
+        # Multiple quotes in exposition (edge case)
+        ('She thought about the word "love" and "hate" often', [
+            {"text": 'She thought about the word ', "type": "exposition"},
+            {"text": '"love"', "type": "dialogue"},
+            {"text": ' and ', "type": "exposition"},
+            {"text": '"hate"', "type": "dialogue"},
+            {"text": ' often', "type": "exposition"}
+        ]),
+         
+        # Nested quotes scenario (treating inner quotes as part of dialogue)
+        ('He said "She told me \'hi\' yesterday"', [
+            {"text": 'He said ', "type": "exposition"},
+            {"text": '"She told me \'hi\' yesterday"', "type": "dialogue"}
+        ]),
+        
+        # Just quotes
+        ('""', [{"text": '""', "type": "dialogue"}]),
+        
+        # Quotes at start and end
+        ('"Start" middle "End"', [
+            {"text": '"Start"', "type": "dialogue"},
+            {"text": ' middle ', "type": "exposition"},
+            {"text": '"End"', "type": "dialogue"}
+        ]),
+        
+        # Single quote (unmatched)
+        ('"', [{"text": '"', "type": "dialogue"}]),
+        
+        # Text ending with quote start
+        ('Hello "', [
+            {"text": 'Hello ', "type": "exposition"},
+            {"text": '"', "type": "dialogue"}
+        ]),
+    ],
+)
+def test_separate_dialogue_from_exposition(input, expected):
+    from talemate.util.dialogue import separate_dialogue_from_exposition
+    
+    result = separate_dialogue_from_exposition(input)
+    
+    # Convert result to list of dicts for easier comparison
+    result_dicts = [{"text": chunk.text, "type": chunk.type} for chunk in result]
+    
+    assert result_dicts == expected

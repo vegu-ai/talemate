@@ -54,7 +54,7 @@ class Character(pydantic.BaseModel):
     example_dialogue: list[str] = pydantic.Field(default_factory=list)
 
     # attribute and detail storage
-    base_attributes: dict[str, str] = pydantic.Field(default_factory=dict)
+    base_attributes: dict[str, str | int | float | bool] = pydantic.Field(default_factory=dict)
     details: dict[str, str] = pydantic.Field(default_factory=dict)
 
     # helpful references
@@ -95,8 +95,11 @@ class Character(pydantic.BaseModel):
 
         return random.choice(self.example_dialogue)
 
-    def __repr__(self):
+    def __str__(self):
         return f"Character: {self.name}"
+
+    def __repr__(self):
+        return str(self)
 
     def set_color(self, color: str | None = None):
         # if no color provided, chose a random color

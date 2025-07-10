@@ -289,6 +289,10 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
                 description=self.not_ready_reason,
                 color="error",
             ).model_dump()
+            
+        fn = getattr(self, f"{self.api}_agent_details", None)
+        if fn:
+            details.update(fn)
 
         return details
 
@@ -333,15 +337,6 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
 
         api_changed = api != self.api
 
-        # log.debug(
-        #    "apply_config",
-        #    api=api,
-        #    api_changed=api != self.api,
-        #    current_api=self.api,
-        #    args=args,
-        #    kwargs=kwargs,
-        # )
-
         try:
             self.preselect_voice = kwargs["actions"]["_config"]["config"]["voice_id"][
                 "value"
@@ -383,19 +378,19 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
 
         if (
             isinstance(emission.message, NarratorMessage)
-            and not self.actions["_config"].config["generate_for_narration"].value
+            and not self.generate_for_narration
         ):
             return
 
         if isinstance(emission.message, CharacterMessage):
             if (
                 emission.message.source == "player"
-                and not self.actions["_config"].config["generate_for_player"].value
+                and not self.generate_for_player
             ):
                 return
             elif (
                 emission.message.source == "ai"
-                and not self.actions["_config"].config["generate_for_npc"].value
+                and not self.generate_for_npc
             ):
                 return
 

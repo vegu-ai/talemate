@@ -53,6 +53,8 @@ dependencies = [
     "torch>=2.7.1",
     "torchaudio>=2.7.1",
     "sentence_transformers>=2.7.0",
+    # TTS
+    "elevenlabs>=2.7.1",
     # Local TTS
     "llvmlite==0.44.0",
     "coqui-tts>=0.26.2",

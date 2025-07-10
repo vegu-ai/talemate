@@ -13,6 +13,7 @@ from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
     AgentActionConditional,
+    AgentDetail,
 )
 
 from .schema import Voice, VoiceLibrary
@@ -106,6 +107,19 @@ class XTTS2Mixin:
     def xtts2_device(self) -> str:
         return self.actions["xtts2"].config["device"].value
     
+    
+    @property
+    def xtts2_agent_details(self) -> dict:
+        details:dict = {}
+        
+        if self.ready:
+            details["device"] = AgentDetail(
+                icon="mdi-memory",
+                value=self.xtts2_device,
+                description="The device to use for XTTS2",
+            ).model_dump()
+        
+        return details
     
     async def xtts2_generate(self, text: str) -> bytes | None:
         log.debug("xtts2", model=self.xtts2_model, device=self.xtts2_device)

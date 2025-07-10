@@ -63,10 +63,7 @@ class OpenAIMixin:
         return self.config.get("openai", {}).get("api_key")
 
     async def openai_generate(
-        self, 
-        chunk: Chunk,
-        context: GenerationContext,
-        chunk_size: int = 1024
+        self, chunk: Chunk, context: GenerationContext, chunk_size: int = 1024
     ) -> Union[bytes, None]:
         client = AsyncOpenAI(api_key=self.openai_api_key)
 

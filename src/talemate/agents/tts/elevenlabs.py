@@ -82,10 +82,7 @@ class ElevenLabsMixin:
         return self.config.get("elevenlabs", {}).get("api_key")
 
     async def elevenlabs_generate(
-        self, 
-        chunk: Chunk, 
-        context: GenerationContext, 
-        chunk_size: int = 1024
+        self, chunk: Chunk, context: GenerationContext, chunk_size: int = 1024
     ) -> Union[bytes, None]:
         api_key = self.elevenlabs_api_key
         if not api_key:
@@ -110,7 +107,12 @@ class ElevenLabsMixin:
     async def elevenlabs_list_voices(self) -> list[Voice]:
         client = AsyncElevenLabs(api_key=self.elevenlabs_api_key)
 
-        log.debug("elevenlabs_list_voices", api_key=self.elevenlabs_api_key[:4] + "..." if self.elevenlabs_api_key else None)
+        log.debug(
+            "elevenlabs_list_voices",
+            api_key=self.elevenlabs_api_key[:4] + "..."
+            if self.elevenlabs_api_key
+            else None,
+        )
 
         response: GetVoicesV2Response = await client.voices.search(page_size=100)
 

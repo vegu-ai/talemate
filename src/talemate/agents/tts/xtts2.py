@@ -122,7 +122,9 @@ class XTTS2Mixin:
 
         return details
 
-    async def xtts2_generate(self, chunk: Chunk, context: GenerationContext) -> bytes | None:
+    async def xtts2_generate(
+        self, chunk: Chunk, context: GenerationContext
+    ) -> bytes | None:
         log.debug("xtts2", model=self.xtts2_model, device=self.xtts2_device)
 
         xtts2_instance = getattr(self, "xtts2_instance", None)

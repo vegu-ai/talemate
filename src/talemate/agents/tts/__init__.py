@@ -38,6 +38,7 @@ log = structlog.get_logger("talemate.agents.tts")
 
 HOT_SWAP_NOTIFICATION_TIME = 60
 
+
 def parse_chunks(text: str) -> list[str]:
     """
     Takes a string and splits it into chunks based on punctuation.
@@ -116,7 +117,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
     verbose_name = "Voice"
     requires_llm_client = False
     essential = False
-    
+
     # timestamp of last hot swap
     last_hot_swap: float = 0
 
@@ -357,7 +358,6 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
             label="Narrator",
         )
 
-
     @property
     def recent_hot_swap(self) -> bool:
         return time.time() - self.last_hot_swap < 10
@@ -413,17 +413,17 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         Returns:
             bool: True if the voice is available, False otherwise
         """
-        
+
         is_hot_swap = api != self.api
-        
+
         if not self.allow_hot_swap and is_hot_swap:
             return False
-        
+
         if is_hot_swap:
             self.last_hot_swap = time.time()
-        
+
         await self.list_voices(api)
-        
+
         if api not in self.voices:
             log.warning("voice_available", error="Invalid TTS API", api=api)
             return False
@@ -476,7 +476,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
             character=character,
         )
 
-    def voice(self, voice_id: str, api:str = None) -> Union[Voice, None]:
+    def voice(self, voice_id: str, api: str = None) -> Union[Voice, None]:
         if not api:
             api = self.api
         for voice in self.voices[api].voices:
@@ -494,10 +494,10 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         loop = asyncio.get_event_loop()
         return loop.run_until_complete(self.list_voices())
 
-    async def list_voices(self, api:str = None):
+    async def list_voices(self, api: str = None):
         if self.requires_token and not self.token:
             return []
-        
+
         if not api:
             api = self.api
 
@@ -550,12 +550,16 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         log.debug("Voice routing", character=character, voice=character_voice)
 
         # initial chunking by separating dialogue from exposition
-        
-        chunks:list[Chunk] = []
+
+        chunks: list[Chunk] = []
         if self.separate_narrator_voice:
             for _dlg_chunk in dialogue_utils.separate_dialogue_from_exposition(text):
-                _voice = character_voice if _dlg_chunk.type == "dialogue" else self.narrator_voice
-                _api:str = _voice.provider if _voice else self.api
+                _voice = (
+                    character_voice
+                    if _dlg_chunk.type == "dialogue"
+                    else self.narrator_voice
+                )
+                _api: str = _voice.provider if _voice else self.api
                 chunk = Chunk(
                     api=_api,
                     voice_id=_voice.provider_id,
@@ -568,7 +572,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
                 chunks.append(chunk)
         else:
             _voice = character_voice if character else self.narrator_voice
-            _api:str = _voice.provider if _voice else self.api
+            _api: str = _voice.provider if _voice else self.api
             chunks = [
                 Chunk(
                     api=_api,
@@ -580,28 +584,27 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
                     type="dialogue" if character else "exposition",
                 )
             ]
-            
+
         max_generation_length = getattr(self, f"{self.api}_max_generation_length")
-        
+
         # second chunking by splitting into chunks of max_generation_length
-        
+
         for chunk in chunks:
             _text = []
-            
+
             for _chunk_text in chunk.text:
-                
                 if len(_chunk_text) <= max_generation_length:
                     _text.append(_chunk_text)
                     continue
-                
+
                 _parsed = parse_chunks(_chunk_text)
                 _joined = rejoin_chunks(_parsed, chunk_size=max_generation_length)
                 _text.extend(_joined)
-            
+
             log.debug("chunked for size", before=chunk.text, after=_text)
-            
+
             chunk.text = _text
-                
+
         context.chunks = chunks
 
         generation_task = asyncio.create_task(self.generate_chunks(context))

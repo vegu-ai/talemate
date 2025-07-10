@@ -13,6 +13,8 @@ config.yaml
 .venv/
 templates/llm-prompt/user/*.jinja2
 templates/world-state/*.yaml
+templates/voice/piper/*.onnx
+templates/voice/piper/*.json
 scenes/
 !scenes/infinity-quest-dynamic-scenario/
 !scenes/infinity-quest-dynamic-scenario/assets/

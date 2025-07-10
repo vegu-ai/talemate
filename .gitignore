@@ -21,4 +21,11 @@ scenes/
 !scenes/infinity-quest/assets/
 !scenes/infinity-quest/infinity-quest.json
 tts_voice_samples/*.wav
-third-party-docs/
+third-party-docs/.serena/
+
+# ai
+.serena/
+.claude/
+CLAUDE.md
+.roo/
+.cline/

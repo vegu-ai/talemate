@@ -19,11 +19,14 @@ class Field(pydantic.BaseModel):
     label: str
     type: str
     value: int | float | str | bool | list | None = None
-    choices: list[dict[str, str | int | float | bool]] = pydantic.Field(default_factory=list)
+    choices: list[dict[str, str | int | float | bool]] = pydantic.Field(
+        default_factory=list
+    )
     max: int | float | None = None
     min: int | float | None = None
     step: int | float | None = None
     description: str = ""
+
 
 class Column(Field):
     pass

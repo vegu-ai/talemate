@@ -20,25 +20,27 @@ from .schema import Voice, VoiceLibrary
 
 log = structlog.get_logger("talemate.agents.tts.xtts2")
 
+
 class XTTS2Instance(pydantic.BaseModel):
     model: str
     device: str
     tts_instance: TTS | None = None
-    
+
     class Config:
         arbitrary_types_allowed = True
+
 
 class XTTS2Mixin:
     """
     XTTS2 agent mixin for local text to speech.
     """
-    
+
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
         actions["_config"].config["api"].choices.append(
             {"value": "xtts2", "label": "XTTS2 (Local)"}
         )
-        
+
         actions["xtts2"] = AgentAction(
             enabled=True,
             container=True,
@@ -90,55 +92,62 @@ class XTTS2Mixin:
             },
         )
         return actions
-    
+
     @classmethod
     def add_voices(cls, voices: dict[str, VoiceLibrary]):
         voices["xtts2"] = VoiceLibrary(api="xtts2")
-    
+
     @property
     def xtts2_max_generation_length(self) -> int:
         return 250
-    
+
     @property
     def xtts2_model(self) -> str:
         return self.actions["xtts2"].config["model"].value
-    
+
     @property
     def xtts2_device(self) -> str:
         return self.actions["xtts2"].config["device"].value
-    
-    
+
     @property
     def xtts2_agent_details(self) -> dict:
-        details:dict = {}
-        
+        details: dict = {}
+
         if self.ready:
             details["device"] = AgentDetail(
                 icon="mdi-memory",
                 value=self.xtts2_device,
                 description="The device to use for XTTS2",
             ).model_dump()
-        
+
         return details
-    
+
     async def xtts2_generate(self, text: str) -> bytes | None:
         log.debug("xtts2", model=self.xtts2_model, device=self.xtts2_device)
-        
+
         xtts2_instance = getattr(self, "xtts2_instance", None)
-        
-        reload:bool = False
-        
+
+        reload: bool = False
+
         if not xtts2_instance:
             reload = True
         elif xtts2_instance.model != self.xtts2_model:
             reload = True
         elif xtts2_instance.device != self.xtts2_device:
             reload = True
-            
+
         if reload:
-            log.debug("xtts2 - reinitializing tts instance", model=self.xtts2_model, device=self.xtts2_device)
-            self.xtts2_instance = XTTS2Instance(model=self.xtts2_model, device=self.xtts2_device, tts_instance=TTS(self.xtts2_model).to(self.xtts2_device))
-            
+            log.debug(
+                "xtts2 - reinitializing tts instance",
+                model=self.xtts2_model,
+                device=self.xtts2_device,
+            )
+            self.xtts2_instance = XTTS2Instance(
+                model=self.xtts2_model,
+                device=self.xtts2_device,
+                tts_instance=TTS(self.xtts2_model).to(self.xtts2_device),
+            )
+
         tts = self.xtts2_instance.tts_instance
 
         loop = asyncio.get_event_loop()
@@ -168,5 +177,6 @@ class XTTS2Mixin:
             Voice(
                 label=voice["label"],
                 value=voice["path"],
-            ) for voice in self.actions["xtts2"].config["voices"].value
+            )
+            for voice in self.actions["xtts2"].config["voices"].value
         ]

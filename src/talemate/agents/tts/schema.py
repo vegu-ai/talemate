@@ -5,6 +5,7 @@ __all__ = [
     "VoiceLibrary",
 ]
 
+
 class Voice(pydantic.BaseModel):
     value: str
     label: str

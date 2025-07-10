@@ -14,13 +14,13 @@ class OpenAIMixin:
     """
     OpenAI TTS agent mixin for cloud-based text to speech.
     """
-    
+
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
         actions["_config"].config["api"].choices.append(
             {"value": "openai", "label": "OpenAI"}
         )
-        
+
         actions["openai"] = AgentAction(
             enabled=True,
             container=True,
@@ -42,27 +42,29 @@ class OpenAIMixin:
                 ),
             },
         )
-        
+
         return actions
-    
+
     @classmethod
     def add_voices(cls, voices: dict[str, VoiceLibrary]):
         voices["openai"] = VoiceLibrary(api="openai")
-    
+
     @property
     def openai_max_generation_length(self) -> int:
         # XXX: Check limits
         return 250
-    
+
     @property
     def openai_model(self) -> str:
         return self.actions["openai"].config["model"].value
-    
+
     @property
     def openai_api_key(self) -> str:
         return self.config.get("openai", {}).get("api_key")
-    
-    async def openai_generate(self, text: str, chunk_size: int = 1024) -> Union[bytes, None]:
+
+    async def openai_generate(
+        self, text: str, chunk_size: int = 1024
+    ) -> Union[bytes, None]:
         client = AsyncOpenAI(api_key=self.openai_api_key)
 
         model = self.actions["openai"].config["model"].value
@@ -87,4 +89,4 @@ class OpenAIMixin:
             Voice(value="onyx", label="Onyx"),
             Voice(value="nova", label="Nova"),
             Voice(value="shimmer", label="Shimmer"),
-        ] 
+        ]

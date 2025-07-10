@@ -32,7 +32,8 @@ from .openai import OpenAIMixin
 from .xtts2 import XTTS2Mixin
 
 
-log = structlog.get_logger("talemate.agents.tts") 
+log = structlog.get_logger("talemate.agents.tts")
+
 
 def parse_chunks(text: str) -> list[str]:
     """
@@ -43,13 +44,12 @@ def parse_chunks(text: str) -> list[str]:
     """
 
     try:
-        
         text = text.replace("*", "")
-        
+
         # ensure sentence terminators are before quotes
         # otherwise the beginning of dialog will bleed into narration
         text = re.sub(r'([^.?!]+) "', r'\1. "', text)
-        
+
         text = text.replace("...", "__ellipsis__")
         chunks = sent_tokenize(text)
         cleaned_chunks = []
@@ -99,7 +99,7 @@ def rejoin_chunks(chunks: list[str], chunk_size: int = 250):
         current_chunk += chunk
 
     if current_chunk:
-        joined_chunks.append(clean_quotes(current_chunk))   
+        joined_chunks.append(clean_quotes(current_chunk))
     return joined_chunks
 
 
@@ -132,7 +132,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         OpenAIMixin.add_voices(voices)
         XTTS2Mixin.add_voices(voices)
         return voices
-    
+
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
         actions = {
@@ -184,15 +184,15 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
                 },
             ),
         }
-        
+
         ElevenLabsMixin.add_actions(actions)
         OpenAIMixin.add_actions(actions)
         XTTS2Mixin.add_actions(actions)
-        
+
         return actions
 
     def __init__(self, **kwargs):
-        self.is_enabled = False # tts agent is disabled by default
+        self.is_enabled = False  # tts agent is disabled by default
         self.actions = TTSAgent.init_actions()
         self.voices = TTSAgent.init_voices()
         self.config = config.load_config()
@@ -201,7 +201,6 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
 
         self.actions["_config"].model_dump()
         handlers["config_saved"].connect(self.on_config_saved)
-
 
     @property
     def enabled(self):
@@ -220,7 +219,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
     @property
     def api(self) -> str:
         return self.actions["_config"].config["api"].value
-    
+
     @property
     def api_label(self):
         choices = self.actions["_config"].config["api"].choices
@@ -229,27 +228,27 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
             if choice["value"] == api:
                 return choice["label"]
         return api
-    
+
     @property
     def voice_id(self) -> str:
         return self.actions["_config"].config["voice_id"].value
-    
+
     @property
     def generate_for_player(self) -> bool:
         return self.actions["_config"].config["generate_for_player"].value
-    
+
     @property
     def generate_for_npc(self) -> bool:
         return self.actions["_config"].config["generate_for_npc"].value
-    
+
     @property
     def generate_for_narration(self) -> bool:
         return self.actions["_config"].config["generate_for_narration"].value
-    
+
     @property
     def generate_chunks_enabled(self) -> bool:
         return self.actions["_config"].config["generate_chunks"].value
-    
+
     @property
     def not_ready_reason(self) -> str:
         """
@@ -289,7 +288,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
                 description=self.not_ready_reason,
                 color="error",
             ).model_dump()
-            
+
         fn = getattr(self, f"{self.api}_agent_details", None)
         if fn:
             details.update(fn)
@@ -383,15 +382,9 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
             return
 
         if isinstance(emission.message, CharacterMessage):
-            if (
-                emission.message.source == "player"
-                and not self.generate_for_player
-            ):
+            if emission.message.source == "player" and not self.generate_for_player:
                 return
-            elif (
-                emission.message.source == "ai"
-                and not self.generate_for_npc
-            ):
+            elif emission.message.source == "ai" and not self.generate_for_npc:
                 return
 
         if isinstance(emission.message, CharacterMessage):

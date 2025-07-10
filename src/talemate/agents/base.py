@@ -30,7 +30,6 @@ __all__ = [
     "AgentAction",
     "AgentActionConditional",
     "AgentActionConfig",
-    "AgentActionConfigTableColumn",
     "AgentDetail",
     "AgentEmission",
     "AgentTemplateEmission",

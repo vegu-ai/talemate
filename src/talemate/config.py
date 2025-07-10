@@ -53,7 +53,7 @@ ClientType = TypeVar("ClientType", bound=Client)
 
 
 class AgentActionConfig(BaseModel):
-    value: Union[int, float, str, bool, list[bool | str | int | float], None] = None
+    value: Union[int, float, str, bool, list, None] = None
 
 
 class AgentAction(BaseModel):
@@ -181,17 +181,6 @@ class GoogleConfig(BaseModel):
     gcloud_credentials_path: Union[str, None] = None
     gcloud_location: Union[str, None] = None
     api_key: Union[str, None] = None
-
-
-class TTSVoiceSamples(BaseModel):
-    label: str
-    value: str
-
-
-class TTSConfig(BaseModel):
-    device: str = "cuda"
-    model: str = "tts_models/multilingual/multi-dataset/xtts_v2"
-    voices: list[TTSVoiceSamples] = pydantic.Field(default_factory=list)
 
 
 class RecentScene(BaseModel):
@@ -530,8 +519,6 @@ class Config(BaseModel):
     elevenlabs: ElevenLabsConfig = ElevenLabsConfig()
 
     coqui: CoquiConfig = CoquiConfig()
-
-    tts: TTSConfig = TTSConfig()
 
     recent_scenes: RecentScenes = RecentScenes()
 

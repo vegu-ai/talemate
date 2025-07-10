@@ -155,6 +155,10 @@
 
 
                           </v-checkbox>
+
+                          <!-- table -->
+                          <ConfigWidgetTable v-else-if="action_config.type === 'table'" :columns="action_config.columns" :default_values="action.config[config_key].value" :label="action_config.label" :description="action_config.description" @save="(values) => { action.config[config_key].value = values; save(false); }" />
+
                           <v-alert v-if="action_config.note != null" variant="outlined" density="compact" color="grey-darken-1" icon="mdi-information">
                             <div class="text-caption text-mutedheader">{{ action_config.label }}</div>
                             {{ action_config.note }}
@@ -199,11 +203,15 @@
   
 <script>
 import {getProperty} from 'dot-prop';
+import ConfigWidgetTable from './ConfigWidgetTable.vue';
 
 export default {
   props: {
     dialog: Boolean,
     formTitle: String
+  },
+  components: {
+    ConfigWidgetTable
   },
   inject: ['state', 'getWebsocket'],
   data() {

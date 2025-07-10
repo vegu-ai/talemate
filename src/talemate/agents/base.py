@@ -18,6 +18,7 @@ from talemate.agents.context import ActiveAgent, active_agent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
+from talemate.ux.schema import Column
 import talemate.config as config
 from talemate.client.context import (
     ClientContext,
@@ -29,6 +30,7 @@ __all__ = [
     "AgentAction",
     "AgentActionConditional",
     "AgentActionConfig",
+    "AgentActionConfigTableColumn",
     "AgentDetail",
     "AgentEmission",
     "AgentTemplateEmission",
@@ -53,19 +55,20 @@ class AgentActionConfig(pydantic.BaseModel):
     type: str
     label: str
     description: str = ""
-    value: Union[int, float, str, bool, list, None] = None
-    default_value: Union[int, float, str, bool] = None
-    max: Union[int, float, None] = None
-    min: Union[int, float, None] = None
-    step: Union[int, float, None] = None
+    value: int | float | str | bool | list | None = None
+    default_value: int | float | str | bool | None = None
+    max: int | float | None = None
+    min: int | float | None = None
+    step: int | float | None = None
     scope: str = "global"
-    choices: Union[list[dict[str, str]], None] = None
+    choices: list[dict[str, str | int | float | bool]] | None = None
     note: Union[str, None] = None
     expensive: bool = False
     quick_toggle: bool = False
-    condition: Union[AgentActionConditional, None] = None
-    title: Union[str, None] = None
-    value_migration: Union[Callable, None] = pydantic.Field(default=None, exclude=True)
+    condition: AgentActionConditional | None = None
+    title: str | None = None
+    value_migration: Callable | None = pydantic.Field(default=None, exclude=True)
+    columns: list[Column] | None = None
 
     note_on_value: dict[str, AgentActionNote] = pydantic.Field(default_factory=dict)
 
@@ -78,19 +81,19 @@ class AgentAction(pydantic.BaseModel):
     label: str
     description: str = ""
     warning: str = ""
-    config: Union[dict[str, AgentActionConfig], None] = None
-    condition: Union[AgentActionConditional, None] = None
+    config: dict[str, AgentActionConfig] | None = None
+    condition: AgentActionConditional | None = None
     container: bool = False
-    icon: Union[str, None] = None
+    icon: str | None = None
     can_be_disabled: bool = False
     quick_toggle: bool = False
     experimental: bool = False
 
 
 class AgentDetail(pydantic.BaseModel):
-    value: Union[str, None] = None
-    description: Union[str, None] = None
-    icon: Union[str, None] = None
+    value: str | None = None
+    description: str | None = None
+    icon: str | None = None
     color: str = "grey"
 
 

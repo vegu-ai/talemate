@@ -23,7 +23,10 @@ from .schema import Voice, VoiceLibrary, Chunk, GenerationContext
 
 log = structlog.get_logger("talemate.agents.tts.piper")
 
-DEFAULT_DOWNLOAD_PATH = Path(__file__).parent.parent.parent.parent.parent / "templates" / "voice" / "piper"
+DEFAULT_DOWNLOAD_PATH = (
+    Path(__file__).parent.parent.parent.parent.parent / "templates" / "voice" / "piper"
+)
+
 
 class PiperInstance(pydantic.BaseModel):
     device: str
@@ -73,14 +76,8 @@ class PiperMixin:
                 "voices": AgentActionConfig(
                     type="table",
                     value=[
-                        {
-                            "label": "Amy",
-                            "id": "en_US-amy-medium"
-                        },
-                        {
-                            "label": "John",
-                            "id": "en_US-john-medium"
-                        },
+                        {"label": "Amy", "id": "en_US-amy-medium"},
+                        {"label": "John", "id": "en_US-john-medium"},
                     ],
                     columns=[
                         Column(
@@ -145,9 +142,9 @@ class PiperMixin:
             reload = True
         elif piper_instance.voice_id != chunk.voice_id:
             reload = True
-            
+
         voice = self.voice(chunk.voice_id, api="piper")
-        
+
         loop = asyncio.get_event_loop()
 
         if reload:
@@ -159,7 +156,7 @@ class PiperMixin:
             full_file_path = self.piper_download_path / f"{voice.value}.onnx"
             if _needs_download(full_file_path):
                 log.info("piper - downloading voice", voice=voice.value)
-                
+
                 await loop.run_in_executor(
                     None,
                     functools.partial(
@@ -168,19 +165,20 @@ class PiperMixin:
                         self.piper_download_path,
                     ),
                 )
-                
+
             self.piper_instance = PiperInstance(
                 device=self.piper_device,
-                piper_voice=PiperVoice.load(full_file_path, use_cuda=self.piper_device == "cuda"),
+                piper_voice=PiperVoice.load(
+                    full_file_path, use_cuda=self.piper_device == "cuda"
+                ),
                 voice_id=voice.value,
             )
-
 
         piper_voice = self.piper_instance.piper_voice
 
         with tempfile.TemporaryDirectory() as temp_dir:
             wav_outfile = os.path.join(temp_dir, f"piper-{uuid.uuid4()}.wav")
-            
+
             with wave.open(wav_outfile, "wb") as wav_file:
                 try:
                     await loop.run_in_executor(
@@ -193,9 +191,10 @@ class PiperMixin:
                     )
                 except Exception as e:
                     import traceback
+
                     traceback.print_exc()
                     raise e
-            
+
             with open(wav_outfile, "rb") as f:
                 return f.read()
 

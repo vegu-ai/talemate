@@ -22,20 +22,22 @@ __all__ = [
 
 log = structlog.get_logger("talemate.character")
 
+
 class CharacterVoice(pydantic.BaseModel):
     # arbitrary voice label to allow a human to easily identify the voice
     label: str
-    
+
     # voice provider, this would be the TTS api in the voice
     # if None this indicates a RVC voice
     provider: str | None = None
-    
+
     # voice id as known to the voice provider
     provider_id: str | None = None
-    
+
     # allows to also override to a specific model
     provider_model: str | None = None
-    
+
+
 class Character(pydantic.BaseModel):
     # core character information
     name: str
@@ -46,26 +48,26 @@ class Character(pydantic.BaseModel):
     memory_dirty: bool = False
     cover_image: str | None = None
     voice: CharacterVoice | None = None
-    
+
     # dialogue instructions and examples
     dialogue_instructions: str | None = None
     example_dialogue: list[str] = pydantic.Field(default_factory=list)
-    
+
     # attribute and detail storage
     base_attributes: dict[str, str] = pydantic.Field(default_factory=dict)
     details: dict[str, str] = pydantic.Field(default_factory=dict)
-    
+
     # helpful references
     agent: agent_base.Agent | None = pydantic.Field(default=None, exclude=True)
     actor: "Actor | None" = pydantic.Field(default=None, exclude=True)
-    
+
     class Config:
         arbitrary_types_allowed = True
-        
+
     @property
     def gender(self) -> str:
         return self.base_attributes.get("gender", "")
-    
+
     @property
     def sheet(self) -> str:
         sheet = self.base_attributes or {

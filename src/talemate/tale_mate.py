@@ -33,7 +33,6 @@ from talemate.exceptions import (
     GenerationCancelled,
 )
 from talemate.game.state import GameState
-from talemate.instance import get_agent
 from talemate.scene_assets import SceneAssets
 from talemate.scene_message import (
     CharacterMessage,

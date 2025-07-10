@@ -4,7 +4,7 @@ import asyncio
 import base64
 import time
 import re
-from typing import Union, Callable
+from typing import Union
 
 import structlog
 from nltk.tokenize import sent_tokenize
@@ -33,6 +33,7 @@ from .xtts2 import XTTS2Mixin
 from talemate.character import Character, CharacterVoice
 
 log = structlog.get_logger("talemate.agents.tts")
+
 
 def parse_chunks(text: str) -> list[str]:
     """
@@ -377,20 +378,19 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         if api not in self.voices:
             log.warning("voice_available", error="Invalid TTS API", api=api)
             return False
-        
+
         voices = self.voices[api].voices
         for voice in voices:
             if voice.value == voice_id:
                 return True
-        
+
         return False
-        
 
     async def on_game_loop_new_message(self, emission: GameLoopNewMessageEvent):
         """
         Called when a conversation is generated
         """
-         
+
         character: Character | None = None
 
         if not self.enabled or not self.ready:
@@ -410,7 +410,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
                 return
             elif emission.message.source == "ai" and not self.generate_for_npc:
                 return
-            
+
             character = self.scene.get_character(emission.message.character_name)
 
         if isinstance(emission.message, CharacterMessage):
@@ -421,7 +421,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         log.info(
             "reactive tts", message=emission.message, character_prefix=character_prefix
         )
-        
+
         await self.generate(
             str(emission.message).replace(character_prefix + ": ", ""),
             character=character,
@@ -477,18 +477,24 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
             return
 
         self.playback_done_event.set()
-        
+
         context = GenerationContext(voice_id=self.voice_id)
         voice: CharacterVoice | None = None
-        
+
         if character and character.voice:
-            if self.voice_available(character.voice.provider, character.voice.provider_id):
+            if self.voice_available(
+                character.voice.provider, character.voice.provider_id
+            ):
                 voice = character.voice
             else:
-                log.warning("Character voice not available", character=character.name, voice=character.voice)
-        
+                log.warning(
+                    "Character voice not available",
+                    character=character.name,
+                    voice=character.voice,
+                )
+
         log.debug("Voice routing", character=character, voice=voice)
-        
+
         # Start generating audio chunks in the background
         if not voice:
             generate_fn = getattr(self, f"{self.api}_generate")
@@ -497,7 +503,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
             generate_fn = getattr(self, f"{voice.provider}_generate")
             context.voice_id = voice.provider_id
             context.voice_id_overridden = True
-            
+
         context.generate_fn = generate_fn
 
         if self.actions["_config"].config["generate_chunks"].value:
@@ -505,10 +511,10 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
             chunks = rejoin_chunks(chunks)
         else:
             chunks = parse_chunks(text)
-            chunks = rejoin_chunks(chunks, chunk_size=self.max_generation_length)        
-        
+            chunks = rejoin_chunks(chunks, chunk_size=self.max_generation_length)
+
         context.chunks = chunks
-        
+
         generation_task = asyncio.create_task(self.generate_chunks(context))
         await self.set_background_processing(generation_task)
 
@@ -516,7 +522,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         # await asyncio.gather(generation_task)
 
     async def generate_chunks(
-        self, 
+        self,
         context: GenerationContext,
     ):
         for chunk in context.chunks:

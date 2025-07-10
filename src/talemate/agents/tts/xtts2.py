@@ -95,7 +95,7 @@ class XTTS2Mixin:
 
     @classmethod
     def add_voices(cls, voices: dict[str, VoiceLibrary]):
-        voices["xtts2"] = VoiceLibrary(api="xtts2")
+        voices["xtts2"] = VoiceLibrary(api="xtts2", local=True)
 
     @property
     def xtts2_max_generation_length(self) -> int:

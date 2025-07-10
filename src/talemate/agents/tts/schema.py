@@ -56,3 +56,4 @@ class VoiceLibrary(pydantic.BaseModel):
     api: str
     voices: list[Voice] = pydantic.Field(default_factory=list)
     last_synced: float = None
+    local: bool = False

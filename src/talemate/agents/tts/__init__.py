@@ -31,6 +31,7 @@ from .schema import Voice, VoiceLibrary, GenerationContext, Chunk
 from .elevenlabs import ElevenLabsMixin
 from .openai import OpenAIMixin
 from .xtts2 import XTTS2Mixin
+from .piper import PiperMixin
 from talemate.character import Character, CharacterVoice
 
 log = structlog.get_logger("talemate.agents.tts")
@@ -108,7 +109,7 @@ def rejoin_chunks(chunks: list[str], chunk_size: int = 250):
 
 
 @register()
-class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
+class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, PiperMixin, Agent):
     """
     Text to speech agent
     """
@@ -138,6 +139,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         ElevenLabsMixin.add_voices(voices)
         OpenAIMixin.add_voices(voices)
         XTTS2Mixin.add_voices(voices)
+        PiperMixin.add_voices(voices)
         return voices
 
     @classmethod
@@ -201,6 +203,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         ElevenLabsMixin.add_actions(actions)
         OpenAIMixin.add_actions(actions)
         XTTS2Mixin.add_actions(actions)
+        PiperMixin.add_actions(actions)
 
         return actions
 
@@ -327,7 +330,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
 
     @property
     def requires_token(self):
-        return self.api != "xtts2"
+        return self.api not in ["xtts2", "piper"]
 
     @property
     def ready(self):
@@ -504,7 +507,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         library = self.voices[api]
 
         # TODO: allow re-syncing voices
-        if library.last_synced:
+        if library.last_synced and not library.local:
             return library.voices
 
         list_fn = getattr(self, f"{api}_list_voices")

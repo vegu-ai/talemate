@@ -319,9 +319,9 @@ async def load_scene_from_data(
 
         if not character.is_player:
             agent = instance.get_agent("conversation", client=conv_client)
-            actor = Actor(character, agent)
+            actor = Actor(character=character, agent=agent)
         else:
-            actor = Player(character, None)
+            actor = Player(character=character, agent=None)
         await scene.add_actor(actor)
 
     # if there is nio player character, add the default player character

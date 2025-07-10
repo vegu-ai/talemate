@@ -11,7 +11,7 @@ from talemate.agents.base import (
     AgentActionConditional,
     AgentDetail,
 )
-from .schema import Voice, VoiceLibrary
+from .schema import Voice, VoiceLibrary, GenerationContext
 
 log = structlog.get_logger("talemate.agents.tts.elevenlabs")
 
@@ -78,7 +78,7 @@ class ElevenLabsMixin:
         }
 
     async def elevenlabs_generate(
-        self, text: str, chunk_size: int = 1024
+        self, text: str, context: GenerationContext, chunk_size: int = 1024
     ) -> Union[bytes, None]:
         api_key = self.token
         if not api_key:
@@ -88,8 +88,8 @@ class ElevenLabsMixin:
 
         response_async_iter = client.text_to_speech.convert(
             text=text,
-            voice_id=self.voice_id,
-            model_id=self.elevenlabs_model,
+            voice_id=context.voice_id,
+            model_id=context.model or self.elevenlabs_model,
         )
 
         bytes_io = io.BytesIO()

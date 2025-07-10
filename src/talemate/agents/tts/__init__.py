@@ -4,7 +4,7 @@ import asyncio
 import base64
 import time
 import re
-from typing import Union
+from typing import Union, Callable
 
 import structlog
 from nltk.tokenize import sent_tokenize
@@ -25,15 +25,14 @@ from talemate.agents.base import (
     set_processing,
 )
 from talemate.agents.registry import register
-from .schema import Voice, VoiceLibrary
+from .schema import Voice, VoiceLibrary, GenerationContext
 
 from .elevenlabs import ElevenLabsMixin
 from .openai import OpenAIMixin
 from .xtts2 import XTTS2Mixin
-
+from talemate.character import Character, CharacterVoice
 
 log = structlog.get_logger("talemate.agents.tts")
-
 
 def parse_chunks(text: str) -> list[str]:
     """
@@ -364,10 +363,35 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         self.config = config
         instance.emit_agent_status(self.__class__, self)
 
+    def voice_available(self, api: str, voice_id: str) -> bool:
+        """
+        Check if a voice is available for a given TTS API
+
+        Args:
+            api (str): TTS API to check
+            voice_id (str): Voice ID to check
+
+        Returns:
+            bool: True if the voice is available, False otherwise
+        """
+        if api not in self.voices:
+            log.warning("voice_available", error="Invalid TTS API", api=api)
+            return False
+        
+        voices = self.voices[api].voices
+        for voice in voices:
+            if voice.value == voice_id:
+                return True
+        
+        return False
+        
+
     async def on_game_loop_new_message(self, emission: GameLoopNewMessageEvent):
         """
         Called when a conversation is generated
         """
+         
+        character: Character | None = None
 
         if not self.enabled or not self.ready:
             return
@@ -386,6 +410,8 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
                 return
             elif emission.message.source == "ai" and not self.generate_for_npc:
                 return
+            
+            character = self.scene.get_character(emission.message.character_name)
 
         if isinstance(emission.message, CharacterMessage):
             character_prefix = emission.message.split(":", 1)[0]
@@ -395,8 +421,11 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         log.info(
             "reactive tts", message=emission.message, character_prefix=character_prefix
         )
-
-        await self.generate(str(emission.message).replace(character_prefix + ": ", ""))
+        
+        await self.generate(
+            str(emission.message).replace(character_prefix + ": ", ""),
+            character=character,
+        )
 
     def voice(self, voice_id: str) -> Union[Voice, None]:
         for voice in self.voices[self.api].voices:
@@ -443,33 +472,57 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, Agent):
         return library.voices
 
     @set_processing
-    async def generate(self, text: str):
+    async def generate(self, text: str, character: Character | None = None):
         if not self.enabled or not self.ready or not text:
             return
 
         self.playback_done_event.set()
-
-        generate_fn = getattr(self, f"{self.api}_generate")
+        
+        context = GenerationContext(voice_id=self.voice_id)
+        voice: CharacterVoice | None = None
+        
+        if character and character.voice:
+            if self.voice_available(character.voice.provider, character.voice.provider_id):
+                voice = character.voice
+            else:
+                log.warning("Character voice not available", character=character.name, voice=character.voice)
+        
+        log.debug("Voice routing", character=character, voice=voice)
+        
+        # Start generating audio chunks in the background
+        if not voice:
+            generate_fn = getattr(self, f"{self.api}_generate")
+        else:
+            # TODO: RVC routing
+            generate_fn = getattr(self, f"{voice.provider}_generate")
+            context.voice_id = voice.provider_id
+            context.voice_id_overridden = True
+            
+        context.generate_fn = generate_fn
 
         if self.actions["_config"].config["generate_chunks"].value:
             chunks = parse_chunks(text)
             chunks = rejoin_chunks(chunks)
         else:
             chunks = parse_chunks(text)
-            chunks = rejoin_chunks(chunks, chunk_size=self.max_generation_length)
-
-        # Start generating audio chunks in the background
-        generation_task = asyncio.create_task(self.generate_chunks(generate_fn, chunks))
+            chunks = rejoin_chunks(chunks, chunk_size=self.max_generation_length)        
+        
+        context.chunks = chunks
+        
+        generation_task = asyncio.create_task(self.generate_chunks(context))
         await self.set_background_processing(generation_task)
 
         # Wait for both tasks to complete
         # await asyncio.gather(generation_task)
 
-    async def generate_chunks(self, generate_fn, chunks):
-        for chunk in chunks:
+    async def generate_chunks(
+        self, 
+        context: GenerationContext,
+    ):
+        for chunk in context.chunks:
             chunk = chunk.replace("*", "").strip()
             log.info("Generating audio", api=self.api, chunk=chunk)
-            audio_data = await generate_fn(chunk)
+            audio_data = await context.generate_fn(chunk, context)
             self.play_audio(audio_data)
 
     def play_audio(self, audio_data):

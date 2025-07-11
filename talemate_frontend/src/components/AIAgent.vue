@@ -78,23 +78,22 @@
                                 <v-icon class="ml-1" size="small" v-if="action.enabled">mdi-check-circle-outline</v-icon>
                                 <v-icon class="ml-1" size="small" v-else>mdi-circle-outline</v-icon>
                             </v-chip>
-                            
-                            <!-- Related sub-config chips (if action is enabled) -->
-                            <template v-if="action.enabled && action.config">
-                                <v-chip 
-                                    v-for="(config, config_name) in getQuickToggleSubConfigs(action)" 
-                                    :key="`${action_name}-${config_name}`"
-                                    size="x-small" 
-                                    label
-                                    :color="config.value ? 'highlight3' : 'grey'"
-                                    variant="tonal"
-                                    @click.stop="toggleSubConfig(agent, action_name, config_name, config)"
-                                >
-                                    {{ config.label }}
-                                    <v-icon class="ml-1" size="x-small" v-if="config.value">mdi-check-circle-outline</v-icon>
-                                    <v-icon class="ml-1" size="x-small" v-else>mdi-circle-outline</v-icon>
-                                </v-chip>
-                            </template>
+                        </template>
+                        <!-- Related sub-config chips (if action is enabled) -->
+                        <template v-if="action.enabled && action.config">
+                            <v-chip 
+                                v-for="(config, config_name) in getQuickToggleSubConfigs(action)" 
+                                :key="`${action_name}-${config_name}`"
+                                size="x-small" 
+                                label
+                                :color="config.value ? 'highlight3' : 'grey'"
+                                variant="tonal"
+                                @click.stop="toggleSubConfig(agent, action_name, config_name, config)"
+                            >
+                                {{ config.label }}
+                                <v-icon class="ml-1" size="x-small" v-if="config.value">mdi-check-circle-outline</v-icon>
+                                <v-icon class="ml-1" size="x-small" v-else>mdi-circle-outline</v-icon>
+                            </v-chip>
                         </template>
                     </template>
                 </div>

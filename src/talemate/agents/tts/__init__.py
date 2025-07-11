@@ -33,6 +33,7 @@ from .openai import OpenAIMixin
 from .xtts2 import XTTS2Mixin
 from .piper import PiperMixin
 from talemate.character import Character, CharacterVoice
+from .google import GoogleMixin
 
 log = structlog.get_logger("talemate.agents.tts")
 
@@ -109,7 +110,14 @@ def rejoin_chunks(chunks: list[str], chunk_size: int = 250):
 
 
 @register()
-class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, PiperMixin, Agent):
+class TTSAgent(
+    ElevenLabsMixin,
+    OpenAIMixin,
+    XTTS2Mixin,
+    PiperMixin,
+    GoogleMixin,
+    Agent,
+):
     """
     Text to speech agent
     """
@@ -140,6 +148,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, PiperMixin, Agent):
         OpenAIMixin.add_voices(voices)
         XTTS2Mixin.add_voices(voices)
         PiperMixin.add_voices(voices)
+        GoogleMixin.add_voices(voices)
         return voices
 
     @classmethod
@@ -170,13 +179,15 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, PiperMixin, Agent):
                         type="bool",
                         value=True,
                         label="Separate narrator voice",
-                        description="If a character is set up with a custom voice it will be used for narration as well. Check this to use the narrator voice for exposition regardless.",
+                        description="Always use narrator voice for exposition, only using custom character voices for their dialogue. Since this effectively segments the content this may cause loss of context between segments.",
+                        quick_toggle=True,
                     ),
                     "allow_hot_swap": AgentActionConfig(
                         type="bool",
                         value=True,
                         label="Allow hot swap",
                         description="Allow API hot swapping - Allows characters to use voices on APIs other than the one currently selected.",
+                        quick_toggle=True,
                     ),
                     "generate_for_player": AgentActionConfig(
                         type="bool",
@@ -204,6 +215,7 @@ class TTSAgent(ElevenLabsMixin, OpenAIMixin, XTTS2Mixin, PiperMixin, Agent):
         OpenAIMixin.add_actions(actions)
         XTTS2Mixin.add_actions(actions)
         PiperMixin.add_actions(actions)
+        GoogleMixin.add_actions(actions)
 
         return actions
 

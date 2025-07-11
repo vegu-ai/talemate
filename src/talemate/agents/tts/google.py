@@ -65,7 +65,8 @@ class GoogleMixin:
             container=True,
             icon="mdi-google",
             condition=AgentActionConditional(
-                attribute="_config.config.api", value="google",
+                attribute="_config.config.api",
+                value="google",
             ),
             label="Google Gemini TTS",
             config={
@@ -164,6 +165,7 @@ class GoogleMixin:
 
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             log.error("google_generate failed", error=str(e))
             return None

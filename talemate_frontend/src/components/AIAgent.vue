@@ -65,7 +65,7 @@
                     <!-- Quick toggle action chips with their sub-config chips -->
                     <template v-for="(action, action_name) in agent.actions" :key="action_name">
                         <!-- Action chip (if it has quick_toggle) -->
-                        <template v-if="action.quick_toggle">
+                        <template v-if="action.quick_toggle && agent.enabled">
                             <v-chip 
                                 size="x-small" 
                                 label
@@ -80,7 +80,7 @@
                             </v-chip>
                         </template>
                         <!-- Related sub-config chips (if action is enabled) -->
-                        <template v-if="action.enabled && action.config">
+                        <template v-if="action.enabled && action.config && agent.enabled">
                             <v-chip 
                                 v-for="(config, config_name) in getQuickToggleSubConfigs(action)" 
                                 :key="`${action_name}-${config_name}`"

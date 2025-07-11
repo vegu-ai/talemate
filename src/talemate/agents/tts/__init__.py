@@ -207,6 +207,15 @@ class TTSAgent(
                         label="Generate for narration",
                         description="Generate audio for narration messages",
                     ),
+                    "force_chunking": AgentActionConfig(
+                        type="number",
+                        value=0,
+                        min=0,
+                        step=128,
+                        max=8192,
+                        label="Enforce chunk size",
+                        note="Force the generation of chunks of this size. This will increase responsiveness at the cost of lost context between chunks. (Stuff like appropriate inflection, etc.). 0 = no chunking.",
+                    ),
                 },
             ),
         }
@@ -280,6 +289,10 @@ class TTSAgent(
     @property
     def allow_hot_swap(self) -> bool:
         return self.actions["_config"].config["allow_hot_swap"].value
+
+    @property
+    def force_chunking(self) -> int:
+        return self.actions["_config"].config["force_chunking"].value
 
     @property
     def not_ready_reason(self) -> str:
@@ -601,6 +614,9 @@ class TTSAgent(
             ]
 
         max_generation_length = getattr(self, f"{self.api}_max_generation_length")
+
+        if self.force_chunking > 0:
+            max_generation_length = min(max_generation_length, self.force_chunking)
 
         # second chunking by splitting into chunks of max_generation_length
 

@@ -3,7 +3,6 @@ from typing import Union
 
 import structlog
 from elevenlabs.client import AsyncElevenLabs
-from elevenlabs.types.get_voices_v_2_response import GetVoicesV2Response
 
 from talemate.agents.base import (
     AgentAction,
@@ -11,6 +10,7 @@ from talemate.agents.base import (
     AgentActionConditional,
     AgentDetail,
 )
+from talemate.ux.schema import Column
 from .schema import Voice, VoiceLibrary, GenerationContext, Chunk
 
 log = structlog.get_logger("talemate.agents.tts.elevenlabs")
@@ -50,6 +50,33 @@ class ElevenLabsMixin:
                         {"value": "eleven_turbo_v2_5", "label": "Eleven Turbo V2.5"},
                     ],
                 ),
+                "voices": AgentActionConfig(
+                    type="table",
+                    value=[
+                        {
+                            "label": "Adam",
+                            "voice_id": "wBXNqKUATyqu0RtYt25i",
+                        },
+                        {
+                            "label": "Amy",
+                            "voice_id": "oGn4Ha2pe2vSJkmIJgLQ",
+                        },
+                    ],
+                    columns=[
+                        Column(
+                            name="label",
+                            label="Label",
+                            type="text",
+                        ),
+                        Column(
+                            name="voice_id",
+                            label="Voice ID",
+                            type="text",
+                        ),
+                    ],
+                    label="Voice Samples",
+                    description="Configured ElevenLabs voices. You can add more voices by finding their Voice ID from the ElevenLabs platform in the voice library: https://elevenlabs.io/app/voice-library",
+                ),
             },
         )
 
@@ -57,7 +84,7 @@ class ElevenLabsMixin:
 
     @classmethod
     def add_voices(cls, voices: dict[str, VoiceLibrary]):
-        voices["elevenlabs"] = VoiceLibrary(api="elevenlabs")
+        voices["elevenlabs"] = VoiceLibrary(api="elevenlabs", local=True)
 
     @property
     def elevenlabs_max_generation_length(self) -> int:
@@ -105,19 +132,12 @@ class ElevenLabsMixin:
         return bytes_io.getvalue()
 
     async def elevenlabs_list_voices(self) -> list[Voice]:
-        client = AsyncElevenLabs(api_key=self.elevenlabs_api_key)
-
-        log.debug(
-            "elevenlabs_list_voices",
-            api_key=self.elevenlabs_api_key[:4] + "..."
-            if self.elevenlabs_api_key
-            else None,
-        )
-
-        response: GetVoicesV2Response = await client.voices.search(page_size=100)
-
+        """
+        Return the configured voices from the voices table.
+        """
         voices = [
-            Voice(value=voice.voice_id, label=voice.name) for voice in response.voices
+            Voice(value=voice["voice_id"], label=voice["label"])
+            for voice in self.actions["elevenlabs"].config["voices"].value
         ]
 
         voices.sort(key=lambda x: x.label)

@@ -11,6 +11,7 @@ from talemate.agents.base import (
 )
 from .schema import Voice, VoiceLibrary, GenerationContext, Chunk
 from .voice_library import add_default_voices
+
 log = structlog.get_logger("talemate.agents.tts.elevenlabs")
 
 
@@ -28,6 +29,7 @@ add_default_voices(
         ),
     ]
 )
+
 
 class ElevenLabsMixin:
     """
@@ -88,7 +90,7 @@ class ElevenLabsMixin:
     @property
     def elevenlabs_agent_details(self) -> dict:
         details = {}
-        
+
         if not self.elevenlabs_ready:
             details["elevenlabs_api_key"] = AgentDetail(
                 icon="mdi-key",
@@ -102,7 +104,7 @@ class ElevenLabsMixin:
                 value=self.elevenlabs_model,
                 description="The model to use for ElevenLabs",
             ).model_dump()
-            
+
         return details
 
     @property

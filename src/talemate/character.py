@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 __all__ = [
     "Character",
-    "CharacterVoice",
     "deactivate_character",
     "activate_character",
 ]

@@ -103,11 +103,10 @@ class OpenAIMixin:
     def openai_ready(self) -> bool:
         return bool(self.openai_api_key)
 
-
     @property
     def openai_agent_details(self) -> dict:
         details = {}
-        
+
         if not self.openai_ready:
             details["openai_api_key"] = AgentDetail(
                 icon="mdi-key",
@@ -123,6 +122,7 @@ class OpenAIMixin:
             ).model_dump()
 
         return details
+
     async def openai_generate(
         self, chunk: Chunk, context: GenerationContext, chunk_size: int = 1024
     ) -> Union[bytes, None]:

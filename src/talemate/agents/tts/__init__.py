@@ -26,7 +26,13 @@ from talemate.agents.base import (
 )
 from talemate.agents.registry import register
 
-from .schema import Voice, VoiceLibrary, GenerationContext, Chunk, VoiceGenerationEmission
+from .schema import (
+    Voice,
+    VoiceLibrary,
+    GenerationContext,
+    Chunk,
+    VoiceGenerationEmission,
+)
 
 
 import talemate.agents.tts.voice_library as voice_library
@@ -48,6 +54,7 @@ async_signals.register(
     "agent.tts.generate.before",
     "agent.tts.generate.after",
 )
+
 
 def parse_chunks(text: str) -> list[str]:
     """
@@ -130,15 +137,18 @@ class TTSAgent(
 
         if not agent:
             return config_options
-        
-        narrator_voice_id = config_options["actions"]["_config"]["config"]["narrator_voice_id"]
+
+        narrator_voice_id = config_options["actions"]["_config"]["config"][
+            "narrator_voice_id"
+        ]
 
         choices = voice_library.voices_for_apis(agent.ready_apis, agent.voice_library)
         narrator_voice_id["choices"] = [
             {
                 "label": f"{voice.label} ({voice.provider})",
                 "value": voice.id,
-            } for voice in choices
+            }
+            for voice in choices
         ]
 
         return config_options
@@ -208,7 +218,7 @@ class TTSAgent(
         XTTS2Mixin.add_actions(actions)
         PiperMixin.add_actions(actions)
         GoogleMixin.add_actions(actions)
-        
+
         return actions
 
     def __init__(self, **kwargs):
@@ -218,7 +228,7 @@ class TTSAgent(
         self.playback_done_event = asyncio.Event()
         self.preselect_voice = None
         self.voice_library = voice_library.get_instance()
-        
+
         self.actions["_config"].model_dump()
         handlers["config_saved"].connect(self.on_config_saved)
 
@@ -235,7 +245,7 @@ class TTSAgent(
     @property
     def experimental(self):
         return False
-    
+
     # config helpers
 
     @property
@@ -268,37 +278,35 @@ class TTSAgent(
 
     @property
     def agent_details(self):
-        
         details = {}
-        
+
         if not self.enabled:
             return details
-        
+
         used_apis: set[str] = set()
-        
+
         used_disabled_apis: set[str] = set()
 
         if self.narrator_voice:
-            
-            # 
-            
+            #
+
             label = self.narrator_voice.label
             color = "primary"
             used_apis.add(self.narrator_voice.provider)
-            
+
             if not self.api_enabled(self.narrator_voice.provider):
                 used_disabled_apis.add(self.narrator_voice.provider)
-            
+
             if not self.api_ready(self.narrator_voice.provider):
                 color = "error"
-                
+
             details["narrator_voice"] = AgentDetail(
                 icon="mdi-script-text",
                 value=label,
                 description="Default voice",
                 color=color,
             ).model_dump()
-            
+
         scene = getattr(self, "scene", None)
         if scene:
             for character in scene.characters:
@@ -310,14 +318,13 @@ class TTSAgent(
                         used_disabled_apis.add(character.voice.provider)
                     if not self.api_ready(character.voice.provider):
                         color = "error"
-                        
+
                     details[f"{character.name}_voice"] = AgentDetail(
                         icon="mdi-account-voice",
                         value=f"{character.name}",
                         description=f"{character.name}'s voice: {label} ({character.voice.provider})",
                         color=color,
                     ).model_dump()
-
 
         for api in used_disabled_apis:
             details[f"{api}_disabled"] = AgentDetail(
@@ -360,7 +367,7 @@ class TTSAgent(
         config = event.data
         self.config = config
         instance.emit_agent_status(self.__class__, self)
-    
+
     async def on_game_loop_new_message(self, emission: GameLoopNewMessageEvent):
         """
         Called when a conversation is generated
@@ -403,37 +410,37 @@ class TTSAgent(
         )
 
     # voice helpers
-    
+
     @property
     def ready_apis(self) -> list[str]:
         """
         Returns a list of apis that are ready
         """
         return [api for api in self.apis if getattr(self, f"{api}_ready", False)]
-    
+
     @property
     def used_apis(self) -> list[str]:
         """
         Returns a list of apis that are in use
         """
         return [api for api in self.apis if self.api_in_use(api)]
-    
+
     def api_enabled(self, api: str) -> bool:
         """
         Returns whether the api is enabled
         """
         return api in self.apis
-    
+
     def api_ready(self, api: str) -> bool:
         """
         Returns whether the api is ready
         """
-        
+
         if not self.api_enabled(api):
             return False
-        
+
         return getattr(self, f"{api}_ready", True)
-    
+
     def api_in_use(self, api: str) -> bool:
         """
         Returns whether the narrator or any of the active characters in the scene
@@ -448,7 +455,7 @@ class TTSAgent(
 
         if self.narrator_voice and self.narrator_voice.provider == api:
             return True
-        
+
         if not getattr(self, "scene", None):
             return False
 
@@ -458,7 +465,7 @@ class TTSAgent(
             voice = self.voice_library.get_voice(character.voice.id)
             if voice and voice.provider == api:
                 return True
-            
+
         return False
 
     def voice_id_to_label(self, voice_id: str) -> str | None:
@@ -526,18 +533,16 @@ class TTSAgent(
                 )
             ]
 
-
-
         # second chunking by splitting into chunks of max_generation_length
 
         for chunk in chunks:
             _text = []
-            
+
             max_generation_length = getattr(self, f"{chunk.api}_max_generation_length")
 
             if self.force_chunking > 0:
                 max_generation_length = min(max_generation_length, self.force_chunking)
-                
+
             for _chunk_text in chunk.text:
                 if len(_chunk_text) <= max_generation_length:
                     _text.append(_chunk_text)
@@ -563,16 +568,16 @@ class TTSAgent(
         self,
         context: GenerationContext,
     ):
-        
         for chunk in context.chunks:
             for _chunk in chunk.sub_chunks:
-                emission: VoiceGenerationEmission = VoiceGenerationEmission(context=context)
+                emission: VoiceGenerationEmission = VoiceGenerationEmission(
+                    context=context
+                )
                 log.info("Generating audio", api=chunk.api, chunk=_chunk)
                 await async_signals.get("agent.tts.generate.before").send(emission)
                 emission.wav_bytes = await _chunk.generate_fn(_chunk, context)
                 await async_signals.get("agent.tts.generate.after").send(emission)
                 self.play_audio(emission.wav_bytes)
-
 
     def play_audio(self, audio_data):
         # play audio through the python audio player

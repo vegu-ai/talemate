@@ -7,8 +7,6 @@ import structlog
 from TTS.api import TTS
 import pydantic
 
-from talemate.ux.schema import Column
-
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
@@ -29,6 +27,7 @@ add_default_voices(
         ),
     ]
 )
+
 
 class XTTS2Instance(pydantic.BaseModel):
     model: str
@@ -75,15 +74,15 @@ class XTTS2Mixin:
                         {"value": "cuda", "label": "CUDA"},
                     ],
                     description="Device to use for TTS",
-                )
+                ),
             },
         )
         return actions
-    
+
     @property
     def xtts2_ready(self) -> bool:
         return True
-    
+
     @property
     def xtts2_max_generation_length(self) -> int:
         return 250

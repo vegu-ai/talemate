@@ -9,6 +9,7 @@ __all__ = [
     "VoiceGenerationEmission",
 ]
 
+
 class Voice(pydantic.BaseModel):
     # arbitrary voice label to allow a human to easily identify the voice
     label: str
@@ -21,18 +22,20 @@ class Voice(pydantic.BaseModel):
 
     # allows to also override to a specific model
     provider_model: str | None = None
-    
+
     @pydantic.computed_field(description="The unique identifier for the voice")
     @property
     def id(self) -> str:
         return f"{self.provider}:{self.provider_id}"
-    
+
+
 class VoiceLibrary(pydantic.BaseModel):
     version: int = 1
     voices: dict[str, Voice] = pydantic.Field(default_factory=dict)
-    
+
     def get_voice(self, voice_id: str) -> Voice | None:
         return self.voices.get(voice_id)
+
 
 class Chunk(pydantic.BaseModel):
     text: list[str] = pydantic.Field(default_factory=list)
@@ -76,4 +79,3 @@ class GenerationContext(pydantic.BaseModel):
 class VoiceGenerationEmission(pydantic.BaseModel):
     context: GenerationContext
     wav_bytes: bytes | None = None
-

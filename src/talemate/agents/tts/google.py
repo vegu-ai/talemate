@@ -1,6 +1,6 @@
 import io
 import wave
-from typing import Union, List, Optional
+from typing import Union, Optional
 
 import structlog
 from google import genai
@@ -115,7 +115,7 @@ class GoogleMixin:
     @property
     def google_agent_details(self) -> dict:
         details = {}
-        
+
         if not self.google_ready:
             details["google_api_key"] = AgentDetail(
                 icon="mdi-key",
@@ -129,7 +129,7 @@ class GoogleMixin:
                 value=self.google_model,
                 description="The model to use for Google",
             ).model_dump()
-            
+
         return details
 
     def _make_google_client(self) -> genai.Client:

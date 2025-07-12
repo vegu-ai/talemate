@@ -58,6 +58,7 @@ class XTTS2Mixin:
             container=True,
             icon="mdi-server-outline",
             label="XTTS2",
+            description="XTTS2 is a local text to speech model that uses the TTS library where new voices are provided in the form of a small .wav sample. Find out more at https://github.com/coqui-ai/TTS.",
             config={
                 "model": AgentActionConfig(
                     type="text",

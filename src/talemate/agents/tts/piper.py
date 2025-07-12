@@ -63,6 +63,7 @@ class PiperMixin:
             container=True,
             icon="mdi-server-outline",
             label="Piper",
+            description="Piper is a local text to speech engine that uses the Piper voice library.",
             config={
                 "device": AgentActionConfig(
                     type="text",

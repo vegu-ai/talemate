@@ -70,6 +70,7 @@ class GoogleMixin:
             container=True,
             icon="mdi-server-outline",
             label="Google Gemini",
+            description="Google Gemini is a cloud-based text to speech API. (API key required and must be set in the Talemate Settings -> Application -> Google)",
             config={
                 "model": AgentActionConfig(
                     type="text",

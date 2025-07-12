@@ -86,6 +86,7 @@ class OpenAIMixin:
             container=True,
             icon="mdi-server-outline",
             label="OpenAI",
+            description="OpenAI TTS is a cloud-based text to speech API. (API key required and must be set in the Talemate Settings -> Application -> OpenAI)",
             config={
                 "model": AgentActionConfig(
                     type="text",

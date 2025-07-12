@@ -50,6 +50,8 @@ log = structlog.get_logger("talemate.agents.tts")
 
 HOT_SWAP_NOTIFICATION_TIME = 60
 
+VOICE_LIBRARY_NOTE = "IMPORTANT: Voices are not managed here, but in the voice library which can be accessed through the Talemate application bar at the top."
+
 async_signals.register(
     "agent.tts.generate.before",
     "agent.tts.generate.after",
@@ -174,6 +176,7 @@ class TTSAgent(
                         label="Narrator Voice",
                         description="Voice to use for narration",
                         choices=[],
+                        note=VOICE_LIBRARY_NOTE,
                     ),
                     "separate_narrator_voice": AgentActionConfig(
                         type="bool",

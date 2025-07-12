@@ -11,7 +11,7 @@ from nltk.tokenize import sent_tokenize
 
 import talemate.util.dialogue as dialogue_utils
 import talemate.config as config
-import talemate.emit.async_signals
+import talemate.emit.async_signals as async_signals
 import talemate.instance as instance
 from talemate.emit import emit
 from talemate.emit.signals import handlers
@@ -26,13 +26,14 @@ from talemate.agents.base import (
     set_processing,
 )
 from talemate.agents.registry import register
-from .schema import Voice, VoiceLibrary, GenerationContext, Chunk
+from talemate.character import Character, CharacterVoice
+
+from .schema import Voice, VoiceLibrary, GenerationContext, Chunk, VoiceGenerationEmission
 
 from .elevenlabs import ElevenLabsMixin
 from .openai import OpenAIMixin
 from .xtts2 import XTTS2Mixin
 from .piper import PiperMixin
-from talemate.character import Character, CharacterVoice
 from .google import GoogleMixin
 
 log = structlog.get_logger("talemate.agents.tts")
@@ -40,6 +41,10 @@ log = structlog.get_logger("talemate.agents.tts")
 
 HOT_SWAP_NOTIFICATION_TIME = 60
 
+async_signals.register(
+    "agent.tts.generate.before",
+    "agent.tts.generate.after",
+)
 
 def parse_chunks(text: str) -> list[str]:
     """
@@ -225,7 +230,7 @@ class TTSAgent(
         XTTS2Mixin.add_actions(actions)
         PiperMixin.add_actions(actions)
         GoogleMixin.add_actions(actions)
-
+        
         return actions
 
     def __init__(self, **kwargs):
@@ -421,7 +426,7 @@ class TTSAgent(
 
     def connect(self, scene):
         super().connect(scene)
-        talemate.emit.async_signals.get("game_loop_new_message").connect(
+        async_signals.get("game_loop_new_message").connect(
             self.on_game_loop_new_message
         )
 
@@ -648,11 +653,16 @@ class TTSAgent(
         self,
         context: GenerationContext,
     ):
+        
         for chunk in context.chunks:
             for _chunk in chunk.sub_chunks:
+                emission: VoiceGenerationEmission = VoiceGenerationEmission(context=context)
                 log.info("Generating audio", api=self.api, chunk=_chunk)
-                audio_data = await _chunk.generate_fn(_chunk, context)
-                self.play_audio(audio_data)
+                await async_signals.get("agent.tts.generate.before").send(emission)
+                emission.wav_bytes = await _chunk.generate_fn(_chunk, context)
+                await async_signals.get("agent.tts.generate.after").send(emission)
+                self.play_audio(emission.wav_bytes)
+
 
     def play_audio(self, audio_data):
         # play audio through the python audio player

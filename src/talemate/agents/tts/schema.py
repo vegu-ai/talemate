@@ -2,9 +2,11 @@ import pydantic
 from typing import Callable, Literal
 
 __all__ = [
+    "Chunk",
     "GenerationContext",
     "Voice",
     "VoiceLibrary",
+    "VoiceGenerationEmission",
 ]
 
 
@@ -57,3 +59,8 @@ class VoiceLibrary(pydantic.BaseModel):
     voices: list[Voice] = pydantic.Field(default_factory=list)
     last_synced: float = None
     local: bool = False
+
+
+class VoiceGenerationEmission(pydantic.BaseModel):
+    context: GenerationContext
+    wav_bytes: bytes | None = None

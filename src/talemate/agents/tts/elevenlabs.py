@@ -74,7 +74,7 @@ class ElevenLabsMixin:
                             type="text",
                         ),
                     ],
-                    label="Voice Samples",
+                    label="Voices",
                     description="Configured ElevenLabs voices. You can add more voices by finding their Voice ID from the ElevenLabs platform in the voice library: https://elevenlabs.io/app/voice-library",
                 ),
             },

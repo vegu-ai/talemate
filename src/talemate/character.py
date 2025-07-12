@@ -28,7 +28,6 @@ class CharacterVoice(pydantic.BaseModel):
     label: str
 
     # voice provider, this would be the TTS api in the voice
-    # if None this indicates a RVC voice
     provider: str | None = None
 
     # voice id as known to the voice provider

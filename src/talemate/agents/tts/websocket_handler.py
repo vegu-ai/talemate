@@ -8,7 +8,10 @@ import structlog
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
 
-from .voice_library import get_instance as get_voice_library, save_instance as save_voice_library
+from .voice_library import (
+    get_instance as get_voice_library,
+    save_instance as save_voice_library,
+)
 from .schema import Voice, GenerationContext, Chunk
 
 __all__ = [
@@ -37,6 +40,7 @@ class VoiceRefPayload(pydantic.BaseModel):
 
 class AddVoicePayload(Voice):
     """Explicit payload for adding a new voice – identical fields to Voice."""
+
     pass
 
 
@@ -197,4 +201,4 @@ class VoiceLibraryWebsocketHandler(Plugin):
             finally:
                 await self.signal_operation_done(signal_only=True)
 
-        asyncio.create_task(_run_test()) 
+        asyncio.create_task(_run_test())

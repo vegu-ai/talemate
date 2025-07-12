@@ -18,6 +18,21 @@ add_default_voices(
             provider_id="alloy",
         ),
         Voice(
+            label="Ash",
+            provider="openai",
+            provider_id="ash",
+        ),
+        Voice(
+            label="Ballad",
+            provider="openai",
+            provider_id="ballad",
+        ),
+        Voice(
+            label="Coral",
+            provider="openai",
+            provider_id="coral",
+        ),
+        Voice(
             label="Echo",
             provider="openai",
             provider_id="echo",
@@ -36,6 +51,11 @@ add_default_voices(
             label="Nova",
             provider="openai",
             provider_id="nova",
+        ),
+        Voice(
+            label="Sage",
+            provider="openai",
+            provider_id="sage",
         ),
         Voice(
             label="Shimmer",
@@ -69,8 +89,9 @@ class OpenAIMixin:
             config={
                 "model": AgentActionConfig(
                     type="text",
-                    value="tts-1",
+                    value="gpt-4o-mini-tts",
                     choices=[
+                        {"value": "gpt-4o-mini-tts", "label": "GPT-4o Mini TTS"},
                         {"value": "tts-1", "label": "TTS 1"},
                         {"value": "tts-1-hd", "label": "TTS 1 HD"},
                     ],

@@ -67,6 +67,8 @@
 
       <DirectorConsoleWidget :scene-active="sceneActive" @open-director-console="toggleNavigation('directorConsole')" />
 
+      <VoiceLibrary :enabled-apis="agentStatus.tts?.actions?._config?.config?.apis?.value ?? []" />
+
       <VisualQueue ref="visualQueue" />
 
       <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
@@ -302,6 +304,7 @@ import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 import RateLimitAlert from './RateLimitAlert.vue';
 import VisualQueue from './VisualQueue.vue';
+import VoiceLibrary from './VoiceLibrary.vue';
 import WorldStateManager from './WorldStateManager.vue';
 import WorldStateManagerMenu from './WorldStateManagerMenu.vue';
 import IntroView from './IntroView.vue';
@@ -337,6 +340,7 @@ export default {
     DirectorConsoleWidget,
     PackageManager,
     PackageManagerMenu,
+    VoiceLibrary,
   },
   name: 'TalemateApp',
   data() {

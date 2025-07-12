@@ -42,6 +42,7 @@ from .openai import OpenAIMixin
 from .xtts2 import XTTS2Mixin
 from .piper import PiperMixin
 from .google import GoogleMixin
+from .websocket_handler import VoiceLibraryWebsocketHandler
 
 if TYPE_CHECKING:
     from talemate.character import Character
@@ -132,6 +133,9 @@ class TTSAgent(
     requires_llm_client = False
     essential = False
     voice_library: VoiceLibrary = None
+
+    # websocket handler for frontend voice library management
+    websocket_handler = VoiceLibraryWebsocketHandler
 
     @classmethod
     def config_options(cls, agent=None):
@@ -229,7 +233,6 @@ class TTSAgent(
         self.actions = TTSAgent.init_actions()
         self.config = config.load_config()
         self.playback_done_event = asyncio.Event()
-        self.preselect_voice = None
         self.voice_library = voice_library.get_instance()
 
         self.actions["_config"].model_dump()

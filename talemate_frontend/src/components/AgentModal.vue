@@ -91,6 +91,20 @@
                             class="mt-3"
                             ></v-textarea>
 
+
+                          <!-- autocomplete -->
+                          <v-autocomplete 
+                          v-else-if="action_config.type === 'autocomplete' && action_config.choices !== null" 
+                            v-model="action.config[config_key].value" 
+                            :items="action_config.choices" 
+                            :label="action_config.label" 
+                            :hint="action_config.description" 
+                            item-title="label" 
+                            item-value="value" 
+                            @update:modelValue="save(false)" 
+                            class="mt-3"
+                          ></v-autocomplete>
+
                           <!-- select -->
                           <v-select 
                             v-else-if="action_config.type === 'text' && action_config.choices !== null" 

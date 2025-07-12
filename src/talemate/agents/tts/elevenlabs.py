@@ -7,14 +7,27 @@ from elevenlabs.client import AsyncElevenLabs
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
-    AgentActionConditional,
     AgentDetail,
 )
-from talemate.ux.schema import Column
 from .schema import Voice, VoiceLibrary, GenerationContext, Chunk
-
+from .voice_library import add_default_voices
 log = structlog.get_logger("talemate.agents.tts.elevenlabs")
 
+
+add_default_voices(
+    [
+        Voice(
+            label="Adam",
+            provider="elevenlabs",
+            provider_id="wBXNqKUATyqu0RtYt25i",
+        ),
+        Voice(
+            label="Amy",
+            provider="elevenlabs",
+            provider_id="oGn4Ha2pe2vSJkmIJgLQ",
+        ),
+    ]
+)
 
 class ElevenLabsMixin:
     """
@@ -23,18 +36,19 @@ class ElevenLabsMixin:
 
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
-        actions["_config"].config["api"].choices.append(
-            {"value": "elevenlabs", "label": "Eleven Labs"}
+        actions["_config"].config["apis"].choices.append(
+            {
+                "value": "elevenlabs",
+                "label": "ElevenLabs",
+                "help": "ElevenLabs is a cloud-based text to speech model that uses the ElevenLabs API. (API key required)",
+            }
         )
 
         actions["elevenlabs"] = AgentAction(
             enabled=True,
             container=True,
             icon="mdi-server-outline",
-            condition=AgentActionConditional(
-                attribute="_config.config.api", value="elevenlabs"
-            ),
-            label="Eleven Labs",
+            label="ElevenLabs",
             config={
                 "model": AgentActionConfig(
                     type="text",
@@ -50,33 +64,6 @@ class ElevenLabsMixin:
                         {"value": "eleven_turbo_v2_5", "label": "Eleven Turbo V2.5"},
                     ],
                 ),
-                "voices": AgentActionConfig(
-                    type="table",
-                    value=[
-                        {
-                            "label": "Adam",
-                            "voice_id": "wBXNqKUATyqu0RtYt25i",
-                        },
-                        {
-                            "label": "Amy",
-                            "voice_id": "oGn4Ha2pe2vSJkmIJgLQ",
-                        },
-                    ],
-                    columns=[
-                        Column(
-                            name="label",
-                            label="Label",
-                            type="text",
-                        ),
-                        Column(
-                            name="voice_id",
-                            label="Voice ID",
-                            type="text",
-                        ),
-                    ],
-                    label="Voices",
-                    description="Configured ElevenLabs voices. You can add more voices by finding their Voice ID from the ElevenLabs platform in the voice library: https://elevenlabs.io/app/voice-library",
-                ),
             },
         )
 
@@ -85,6 +72,10 @@ class ElevenLabsMixin:
     @classmethod
     def add_voices(cls, voices: dict[str, VoiceLibrary]):
         voices["elevenlabs"] = VoiceLibrary(api="elevenlabs", local=True)
+
+    @property
+    def elevenlabs_ready(self) -> bool:
+        return bool(self.elevenlabs_api_key)
 
     @property
     def elevenlabs_max_generation_length(self) -> int:
@@ -96,13 +87,23 @@ class ElevenLabsMixin:
 
     @property
     def elevenlabs_agent_details(self) -> dict:
-        return {
-            "model": AgentDetail(
+        details = {}
+        
+        if not self.elevenlabs_ready:
+            details["elevenlabs_api_key"] = AgentDetail(
+                icon="mdi-key",
+                value="ElevenLabs API key not set",
+                description="ElevenLabs API key not set. You can set it in the Talemate Settings -> Application -> ElevenLabs",
+                color="error",
+            ).model_dump()
+        else:
+            details["elevenlabs_model"] = AgentDetail(
                 icon="mdi-brain",
                 value=self.elevenlabs_model,
-                description="The model to use for Eleven Labs",
-            ).model_dump(),
-        }
+                description="The model to use for ElevenLabs",
+            ).model_dump()
+            
+        return details
 
     @property
     def elevenlabs_api_key(self) -> str:
@@ -119,7 +120,7 @@ class ElevenLabsMixin:
 
         response_async_iter = client.text_to_speech.convert(
             text=chunk.cleaned_text,
-            voice_id=chunk.voice_id,
+            voice_id=chunk.voice.provider_id,
             model_id=chunk.model or self.elevenlabs_model,
         )
 
@@ -130,18 +131,3 @@ class ElevenLabsMixin:
                 bytes_io.write(chunk)
 
         return bytes_io.getvalue()
-
-    async def elevenlabs_list_voices(self) -> list[Voice]:
-        """
-        Return the configured voices from the voices table.
-        """
-        voices = [
-            Voice(value=voice["voice_id"], label=voice["label"])
-            for voice in self.actions["elevenlabs"].config["voices"].value
-        ]
-
-        voices.sort(key=lambda x: x.label)
-
-        log.debug("elevenlabs_list_voices", num_voices=len(voices))
-
-        return voices

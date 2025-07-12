@@ -9,6 +9,7 @@ import talemate.util as util
 import talemate.instance as instance
 import talemate.scene_message as scene_message
 import talemate.agents.base as agent_base
+from talemate.agents.tts.schema import Voice
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Actor
@@ -23,20 +24,6 @@ __all__ = [
 log = structlog.get_logger("talemate.character")
 
 
-class CharacterVoice(pydantic.BaseModel):
-    # arbitrary voice label to allow a human to easily identify the voice
-    label: str
-
-    # voice provider, this would be the TTS api in the voice
-    provider: str | None = None
-
-    # voice id as known to the voice provider
-    provider_id: str | None = None
-
-    # allows to also override to a specific model
-    provider_model: str | None = None
-
-
 class Character(pydantic.BaseModel):
     # core character information
     name: str
@@ -46,7 +33,7 @@ class Character(pydantic.BaseModel):
     is_player: bool = False
     memory_dirty: bool = False
     cover_image: str | None = None
-    voice: CharacterVoice | None = None
+    voice: Voice | None = None
 
     # dialogue instructions and examples
     dialogue_instructions: str | None = None

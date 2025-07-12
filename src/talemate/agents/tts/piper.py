@@ -10,21 +10,27 @@ from piper.download_voices import download_voice, _needs_download
 from pathlib import Path
 import pydantic
 
-from talemate.ux.schema import Column
-
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
-    AgentActionConditional,
     AgentDetail,
 )
 
 from .schema import Voice, VoiceLibrary, Chunk, GenerationContext
+from .voice_library import add_default_voices
 
 log = structlog.get_logger("talemate.agents.tts.piper")
 
 DEFAULT_DOWNLOAD_PATH = (
     Path(__file__).parent.parent.parent.parent.parent / "templates" / "voice" / "piper"
+)
+
+
+add_default_voices(
+    [
+        Voice(label="Amy", provider="piper", provider_id="en_US-amy-medium"),
+        Voice(label="John", provider="piper", provider_id="en_US-john-medium"),
+    ]
 )
 
 
@@ -44,17 +50,18 @@ class PiperMixin:
 
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
-        actions["_config"].config["api"].choices.append(
-            {"value": "piper", "label": "Piper (Local)"}
+        actions["_config"].config["apis"].choices.append(
+            {
+                "value": "piper",
+                "label": "Piper (Local)",
+                "help": "Piper is a local text to speech engine that uses the Piper voice library.",
+            }
         )
 
         actions["piper"] = AgentAction(
             enabled=True,
             container=True,
             icon="mdi-server-outline",
-            condition=AgentActionConditional(
-                attribute="_config.config.api", value="piper"
-            ),
             label="Piper",
             config={
                 "device": AgentActionConfig(
@@ -73,27 +80,6 @@ class PiperMixin:
                     label="Download Path",
                     description="Path to download voices to. If not provided, voices will be downloaded to the default location.",
                 ),
-                "voices": AgentActionConfig(
-                    type="table",
-                    value=[
-                        {"label": "Amy", "id": "en_US-amy-medium"},
-                        {"label": "John", "id": "en_US-john-medium"},
-                    ],
-                    columns=[
-                        Column(
-                            name="label",
-                            label="Label",
-                            type="text",
-                        ),
-                        Column(
-                            name="id",
-                            label="ID",
-                            type="text",
-                        ),
-                    ],
-                    label="Voice Samples",
-                    description="Voice models to use for Piper. IDs are always formatted as {language}-{voice_name}-{quality}. Each voice will need to be downloaded once before use. For a full list of voices see https://huggingface.co/rhasspy/piper-voices/tree/main/en",
-                ),
             },
         )
         return actions
@@ -101,6 +87,10 @@ class PiperMixin:
     @classmethod
     def add_voices(cls, voices: dict[str, VoiceLibrary]):
         voices["piper"] = VoiceLibrary(api="piper", local=True)
+
+    @property
+    def piper_ready(self) -> bool:
+        return True
 
     @property
     def piper_max_generation_length(self) -> int:
@@ -118,12 +108,11 @@ class PiperMixin:
     def piper_agent_details(self) -> dict:
         details: dict = {}
 
-        if self.ready:
-            details["device"] = AgentDetail(
-                icon="mdi-memory",
-                value=self.piper_device,
-                description="The device to use for Piper",
-            ).model_dump()
+        details["piper_device"] = AgentDetail(
+            icon="mdi-memory",
+            value=f"Piper: {self.piper_device}",
+            description="The device to use for Piper",
+        ).model_dump()
 
         return details
 
@@ -140,10 +129,10 @@ class PiperMixin:
             reload = True
         elif piper_instance.device != self.piper_device:
             reload = True
-        elif piper_instance.voice_id != chunk.voice_id:
+        elif piper_instance.voice_id != chunk.voice.provider_id:
             reload = True
 
-        voice = self.voice(chunk.voice_id, api="piper")
+        voice = chunk.voice
 
         loop = asyncio.get_event_loop()
 
@@ -153,15 +142,15 @@ class PiperMixin:
                 device=self.piper_device,
             )
 
-            full_file_path = self.piper_download_path / f"{voice.value}.onnx"
+            full_file_path = self.piper_download_path / f"{voice.provider_id}.onnx"
             if _needs_download(full_file_path):
-                log.info("piper - downloading voice", voice=voice.value)
+                log.info("piper - downloading voice", voice=voice.provider_id)
 
                 await loop.run_in_executor(
                     None,
                     functools.partial(
                         download_voice,
-                        voice.value,
+                        voice.provider_id,
                         self.piper_download_path,
                     ),
                 )
@@ -171,7 +160,7 @@ class PiperMixin:
                 piper_voice=PiperVoice.load(
                     full_file_path, use_cuda=self.piper_device == "cuda"
                 ),
-                voice_id=voice.value,
+                voice_id=voice.provider_id,
             )
 
         piper_voice = self.piper_instance.piper_voice
@@ -197,12 +186,3 @@ class PiperMixin:
 
             with open(wav_outfile, "rb") as f:
                 return f.read()
-
-    async def piper_list_voices(self) -> list[Voice]:
-        return [
-            Voice(
-                label=voice["label"],
-                value=voice["id"],
-            )
-            for voice in self.actions["piper"].config["voices"].value
-        ]

@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import time
 import re
-from typing import Union
+from typing import TYPE_CHECKING
 
 import structlog
 from nltk.tokenize import sent_tokenize
@@ -26,9 +25,11 @@ from talemate.agents.base import (
     set_processing,
 )
 from talemate.agents.registry import register
-from talemate.character import Character, CharacterVoice
 
 from .schema import Voice, VoiceLibrary, GenerationContext, Chunk, VoiceGenerationEmission
+
+
+import talemate.agents.tts.voice_library as voice_library
 
 from .elevenlabs import ElevenLabsMixin
 from .openai import OpenAIMixin
@@ -36,8 +37,10 @@ from .xtts2 import XTTS2Mixin
 from .piper import PiperMixin
 from .google import GoogleMixin
 
-log = structlog.get_logger("talemate.agents.tts")
+if TYPE_CHECKING:
+    from talemate.character import Character
 
+log = structlog.get_logger("talemate.agents.tts")
 
 HOT_SWAP_NOTIFICATION_TIME = 60
 
@@ -80,18 +83,6 @@ def parse_chunks(text: str) -> list[str]:
         return [text.replace("__ellipsis__", "...").replace("*", "")]
 
 
-def clean_quotes(chunk: str):
-    # if there is an uneven number of quotes, remove the last one if its
-    # at the end of the chunk. If its in the middle, add a quote to the end
-    if chunk.count('"') % 2 == 1:
-        if chunk.endswith('"'):
-            chunk = chunk[:-1]
-        else:
-            chunk += '"'
-
-    return chunk
-
-
 def rejoin_chunks(chunks: list[str], chunk_size: int = 250):
     """
     Will combine chunks split by punctuation into a single chunk until
@@ -104,13 +95,13 @@ def rejoin_chunks(chunks: list[str], chunk_size: int = 250):
 
     for chunk in chunks:
         if len(current_chunk) + len(chunk) > chunk_size:
-            joined_chunks.append(clean_quotes(current_chunk))
+            joined_chunks.append(current_chunk)
             current_chunk = ""
 
         current_chunk += chunk
 
     if current_chunk:
-        joined_chunks.append(clean_quotes(current_chunk))
+        joined_chunks.append(current_chunk)
     return joined_chunks
 
 
@@ -131,30 +122,26 @@ class TTSAgent(
     verbose_name = "Voice"
     requires_llm_client = False
     essential = False
-
-    # timestamp of last hot swap
-    last_hot_swap: float = 0
+    voice_library: VoiceLibrary = None
 
     @classmethod
     def config_options(cls, agent=None):
         config_options = super().config_options(agent=agent)
 
-        if agent:
-            config_options["actions"]["_config"]["config"]["voice_id"]["choices"] = [
-                voice.model_dump() for voice in agent.list_voices_sync()
-            ]
+        if not agent:
+            return config_options
+        
+        narrator_voice_id = config_options["actions"]["_config"]["config"]["narrator_voice_id"]
+
+        choices = voice_library.voices_for_apis(agent.ready_apis, agent.voice_library)
+        narrator_voice_id["choices"] = [
+            {
+                "label": f"{voice.label} ({voice.provider})",
+                "value": voice.id,
+            } for voice in choices
+        ]
 
         return config_options
-
-    @classmethod
-    def init_voices(cls) -> dict[str, VoiceLibrary]:
-        voices = {}
-        ElevenLabsMixin.add_voices(voices)
-        OpenAIMixin.add_voices(voices)
-        XTTS2Mixin.add_voices(voices)
-        PiperMixin.add_voices(voices)
-        GoogleMixin.add_voices(voices)
-        return voices
 
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
@@ -164,20 +151,18 @@ class TTSAgent(
                 label="Configure",
                 description="TTS agent configuration",
                 config={
-                    "api": AgentActionConfig(
-                        type="text",
+                    "apis": AgentActionConfig(
+                        type="flags",
+                        value=["elevenlabs", "openai", "xtts2", "piper", "google"],
+                        label="Enabled APIs",
+                        description="APIs to use for TTS",
                         choices=[],
-                        value_migration=lambda v: "xtts2" if v == "tts" else v,
-                        value="xtts2",
-                        label="API",
-                        description="Which TTS API to use",
-                        onchange="emit",
                     ),
-                    "voice_id": AgentActionConfig(
-                        type="text",
-                        value="default",
+                    "narrator_voice_id": AgentActionConfig(
+                        type="autocomplete",
+                        value="xtts2:templates/voice/xtts2/annabelle.wav",
                         label="Narrator Voice",
-                        description="Voice ID/Name to use for TTS",
+                        description="Voice to use for narration",
                         choices=[],
                     ),
                     "separate_narrator_voice": AgentActionConfig(
@@ -185,13 +170,6 @@ class TTSAgent(
                         value=True,
                         label="Separate narrator voice",
                         description="Always use narrator voice for exposition, only using custom character voices for their dialogue. Since this effectively segments the content this may cause loss of context between segments.",
-                        quick_toggle=True,
-                    ),
-                    "allow_hot_swap": AgentActionConfig(
-                        type="bool",
-                        value=True,
-                        label="Allow hot swap",
-                        description="Allow API hot swapping - Allows characters to use voices on APIs other than the one currently selected.",
                         quick_toggle=True,
                     ),
                     "generate_for_player": AgentActionConfig(
@@ -236,13 +214,15 @@ class TTSAgent(
     def __init__(self, **kwargs):
         self.is_enabled = False  # tts agent is disabled by default
         self.actions = TTSAgent.init_actions()
-        self.voices = TTSAgent.init_voices()
         self.config = config.load_config()
         self.playback_done_event = asyncio.Event()
         self.preselect_voice = None
-
+        self.voice_library = voice_library.get_instance()
+        
         self.actions["_config"].model_dump()
         handlers["config_saved"].connect(self.on_config_saved)
+
+    # general helpers
 
     @property
     def enabled(self):
@@ -255,25 +235,12 @@ class TTSAgent(
     @property
     def experimental(self):
         return False
-
+    
     # config helpers
 
     @property
-    def api(self) -> str:
-        return self.actions["_config"].config["api"].value
-
-    @property
-    def api_label(self):
-        choices = self.actions["_config"].config["api"].choices
-        api = self.api
-        for choice in choices:
-            if choice["value"] == api:
-                return choice["label"]
-        return api
-
-    @property
-    def voice_id(self) -> str:
-        return self.actions["_config"].config["voice_id"].value
+    def narrator_voice_id(self) -> str:
+        return self.actions["_config"].config["narrator_voice_id"].value
 
     @property
     def generate_for_player(self) -> bool:
@@ -292,79 +259,80 @@ class TTSAgent(
         return self.actions["_config"].config["separate_narrator_voice"].value
 
     @property
-    def allow_hot_swap(self) -> bool:
-        return self.actions["_config"].config["allow_hot_swap"].value
-
-    @property
     def force_chunking(self) -> int:
         return self.actions["_config"].config["force_chunking"].value
 
     @property
-    def not_ready_reason(self) -> str:
-        """
-        Returns a string explaining why the agent is not ready
-        """
-
-        if self.ready:
-            return ""
-
-        elif self.requires_token and not self.token:
-            return "No API token"
-
-        elif not self.voice_id:
-            return "No voice selected"
+    def apis(self) -> list[str]:
+        return self.actions["_config"].config["apis"].value
 
     @property
     def agent_details(self):
-        details = {
-            "api": AgentDetail(
-                icon="mdi-server-outline",
-                value=self.api_label,
-                description="The backend to use for TTS",
-            ).model_dump(),
-        }
+        
+        details = {}
+        
+        if not self.enabled:
+            return details
+        
+        used_apis: set[str] = set()
+        
+        used_disabled_apis: set[str] = set()
 
-        if self.ready and self.enabled:
-            details["voice"] = AgentDetail(
-                icon="mdi-account-voice",
-                value=self.voice_id_to_label(self.voice_id) or "",
-                description="The voice to use for TTS",
-                color="info",
+        if self.narrator_voice:
+            
+            # 
+            
+            label = self.narrator_voice.label
+            color = "primary"
+            used_apis.add(self.narrator_voice.provider)
+            
+            if not self.api_enabled(self.narrator_voice.provider):
+                used_disabled_apis.add(self.narrator_voice.provider)
+            
+            if not self.api_ready(self.narrator_voice.provider):
+                color = "error"
+                
+            details["narrator_voice"] = AgentDetail(
+                icon="mdi-script-text",
+                value=label,
+                description="Default voice",
+                color=color,
             ).model_dump()
-        elif self.enabled:
-            details["error"] = AgentDetail(
-                icon="mdi-alert",
-                value=self.not_ready_reason,
-                description=self.not_ready_reason,
+            
+        scene = getattr(self, "scene", None)
+        if scene:
+            for character in scene.characters:
+                if character.voice:
+                    label = character.voice.label
+                    color = "primary"
+                    used_apis.add(character.voice.provider)
+                    if not self.api_enabled(character.voice.provider):
+                        used_disabled_apis.add(character.voice.provider)
+                    if not self.api_ready(character.voice.provider):
+                        color = "error"
+                        
+                    details[f"{character.name}_voice"] = AgentDetail(
+                        icon="mdi-account-voice",
+                        value=f"{character.name}",
+                        description=f"{character.name}'s voice: {label} ({character.voice.provider})",
+                        color=color,
+                    ).model_dump()
+
+
+        for api in used_disabled_apis:
+            details[f"{api}_disabled"] = AgentDetail(
+                icon="mdi-alert-circle",
+                value=f"{api} disabled",
+                description=f"{api} disabled - at least one voice is attempting to use this api but is not enabled",
                 color="error",
             ).model_dump()
 
-        fn = getattr(self, f"{self.api}_agent_details", None)
-        if fn:
-            details.update(fn)
-
-        if self.recent_hot_swap:
-            details["hot_swap"] = AgentDetail(
-                icon="mdi-swap-horizontal",
-                value="Hot swap",
-                description=f"At least one character has used a voice from a different API in the last {HOT_SWAP_NOTIFICATION_TIME} seconds",
-                color="warning",
-            ).model_dump()
+        for api in used_apis:
+            fn = getattr(self, f"{api}_agent_details", None)
+            if fn:
+                details.update(fn)
 
         return details
-
-    @property
-    def token(self):
-        api = self.api
-        return self.config.get(api, {}).get("api_key")
-
-    @property
-    def requires_token(self):
-        return self.api not in ["xtts2", "piper"]
-
-    @property
-    def ready(self):
-        return (not self.requires_token or self.token) and self.voice_id
 
     @property
     def status(self):
@@ -374,55 +342,13 @@ class TTSAgent(
             if getattr(self, "processing_bg", 0) > 0:
                 return "busy_bg" if not getattr(self, "processing", False) else "busy"
             return "active" if not getattr(self, "processing", False) else "busy"
-        if self.requires_token and not self.token:
-            return "error"
         return "uninitialized"
 
     @property
-    def max_generation_length(self):
-        return getattr(self, f"{self.api}_max_generation_length")
+    def narrator_voice(self) -> Voice | None:
+        return self.voice_library.get_voice(self.narrator_voice_id)
 
-    @property
-    def narrator_voice(self) -> CharacterVoice:
-        return CharacterVoice(
-            provider=self.api,
-            provider_id=self.voice_id,
-            provider_model=None,
-            label="Narrator",
-        )
-
-    @property
-    def recent_hot_swap(self) -> bool:
-        return time.time() - self.last_hot_swap < 10
-
-    async def apply_config(self, *args, **kwargs):
-        try:
-            api = kwargs["actions"]["_config"]["config"]["api"]["value"]
-        except KeyError:
-            api = self.api
-
-        if api == "tts":
-            # migrate old tts value to xtts2
-            api = "xtts2"
-
-        api_changed = api != self.api
-
-        try:
-            self.preselect_voice = kwargs["actions"]["_config"]["config"]["voice_id"][
-                "value"
-            ]
-        except KeyError:
-            self.preselect_voice = self.voice_id
-
-        await super().apply_config(*args, **kwargs)
-
-        if api_changed:
-            try:
-                self.actions["_config"].config["voice_id"].value = (
-                    self.voices[api].voices[0].value
-                )
-            except IndexError:
-                self.actions["_config"].config["voice_id"].value = ""
+    # events
 
     def connect(self, scene):
         super().connect(scene)
@@ -434,40 +360,7 @@ class TTSAgent(
         config = event.data
         self.config = config
         instance.emit_agent_status(self.__class__, self)
-
-    async def voice_available(self, api: str, voice_id: str) -> bool:
-        """
-        Check if a voice is available for a given TTS API
-
-        Args:
-            api (str): TTS API to check
-            voice_id (str): Voice ID to check
-
-        Returns:
-            bool: True if the voice is available, False otherwise
-        """
-
-        is_hot_swap = api != self.api
-
-        if not self.allow_hot_swap and is_hot_swap:
-            return False
-
-        if is_hot_swap:
-            self.last_hot_swap = time.time()
-
-        await self.list_voices(api)
-
-        if api not in self.voices:
-            log.warning("voice_available", error="Invalid TTS API", api=api)
-            return False
-
-        voices = self.voices[api].voices
-        for voice in voices:
-            if voice.value == voice_id:
-                return True
-
-        return False
-
+    
     async def on_game_loop_new_message(self, emission: GameLoopNewMessageEvent):
         """
         Called when a conversation is generated
@@ -509,54 +402,70 @@ class TTSAgent(
             character=character,
         )
 
-    def voice(self, voice_id: str, api: str = None) -> Union[Voice, None]:
-        if not api:
-            api = self.api
-        for voice in self.voices[api].voices:
-            if voice.value == voice_id:
-                return voice
-        return None
+    # voice helpers
+    
+    @property
+    def ready_apis(self) -> list[str]:
+        """
+        Returns a list of apis that are ready
+        """
+        return [api for api in self.apis if getattr(self, f"{api}_ready", False)]
+    
+    @property
+    def used_apis(self) -> list[str]:
+        """
+        Returns a list of apis that are in use
+        """
+        return [api for api in self.apis if self.api_in_use(api)]
+    
+    def api_enabled(self, api: str) -> bool:
+        """
+        Returns whether the api is enabled
+        """
+        return api in self.apis
+    
+    def api_ready(self, api: str) -> bool:
+        """
+        Returns whether the api is ready
+        """
+        
+        if not self.api_enabled(api):
+            return False
+        
+        return getattr(self, f"{api}_ready", True)
+    
+    def api_in_use(self, api: str) -> bool:
+        """
+        Returns whether the narrator or any of the active characters in the scene
+        use a voice from the given api
 
-    def voice_id_to_label(self, voice_id: str):
-        for voice in self.voices[self.api].voices:
-            if voice.value == voice_id:
-                return voice.label
-        return None
+        Args:
+            api (str): The api to check
 
-    def list_voices_sync(self):
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.list_voices())
+        Returns:
+            bool: Whether the api is in use
+        """
 
-    async def list_voices(self, api: str = None):
-        if self.requires_token and not self.token:
-            return []
+        if self.narrator_voice and self.narrator_voice.provider == api:
+            return True
+        
+        if not getattr(self, "scene", None):
+            return False
 
-        if not api:
-            api = self.api
+        for character in self.scene.characters:
+            if not character.voice:
+                continue
+            voice = self.voice_library.get_voice(character.voice.id)
+            if voice and voice.provider == api:
+                return True
+            
+        return False
 
-        library = self.voices[api]
-
-        # TODO: allow re-syncing voices
-        if library.last_synced and not library.local:
-            return library.voices
-
-        list_fn = getattr(self, f"{api}_list_voices")
-        log.info("Listing voices", api=api)
-
-        library.voices = await list_fn()
-        library.last_synced = time.time()
-
-        if self.preselect_voice:
-            if self.voice(self.preselect_voice):
-                self.actions["_config"].config["voice_id"].value = self.preselect_voice
-                self.preselect_voice = None
-
-        # if the current voice cannot be found, reset it
-        if not self.voice(self.voice_id):
-            self.actions["_config"].config["voice_id"].value = ""
-
-        # set loading to false
-        return library.voices
+    def voice_id_to_label(self, voice_id: str) -> str | None:
+        try:
+            return self.voice_library.get_voice(voice_id).label
+        except AttributeError:
+            return None
 
     @set_processing
     async def generate(self, text: str, character: Character | None = None):
@@ -565,14 +474,13 @@ class TTSAgent(
 
         self.playback_done_event.set()
 
-        context = GenerationContext(voice_id=self.voice_id)
-        character_voice: CharacterVoice = self.narrator_voice
+        context = GenerationContext(voice_id=self.narrator_voice_id)
+        character_voice: Voice = self.narrator_voice
 
         if character and character.voice:
-            if await self.voice_available(
-                character.voice.provider, character.voice.provider_id
-            ):
-                character_voice = character.voice
+            voice = character.voice
+            if voice and self.api_ready(voice.provider):
+                character_voice = voice
             else:
                 log.warning(
                     "Character voice not available",
@@ -595,7 +503,7 @@ class TTSAgent(
                 _api: str = _voice.provider if _voice else self.api
                 chunk = Chunk(
                     api=_api,
-                    voice_id=_voice.provider_id,
+                    voice=_voice,
                     model=_voice.provider_model,
                     generate_fn=getattr(self, f"{_api}_generate"),
                     character_name=character.name if character else None,
@@ -609,7 +517,7 @@ class TTSAgent(
             chunks = [
                 Chunk(
                     api=_api,
-                    voice_id=_voice.provider_id,
+                    voice=_voice,
                     model=_voice.provider_model,
                     generate_fn=getattr(self, f"{_api}_generate"),
                     character_name=character.name if character else None,
@@ -618,16 +526,18 @@ class TTSAgent(
                 )
             ]
 
-        max_generation_length = getattr(self, f"{self.api}_max_generation_length")
 
-        if self.force_chunking > 0:
-            max_generation_length = min(max_generation_length, self.force_chunking)
 
         # second chunking by splitting into chunks of max_generation_length
 
         for chunk in chunks:
             _text = []
+            
+            max_generation_length = getattr(self, f"{chunk.api}_max_generation_length")
 
+            if self.force_chunking > 0:
+                max_generation_length = min(max_generation_length, self.force_chunking)
+                
             for _chunk_text in chunk.text:
                 if len(_chunk_text) <= max_generation_length:
                     _text.append(_chunk_text)
@@ -657,7 +567,7 @@ class TTSAgent(
         for chunk in context.chunks:
             for _chunk in chunk.sub_chunks:
                 emission: VoiceGenerationEmission = VoiceGenerationEmission(context=context)
-                log.info("Generating audio", api=self.api, chunk=_chunk)
+                log.info("Generating audio", api=chunk.api, chunk=_chunk)
                 await async_signals.get("agent.tts.generate.before").send(emission)
                 emission.wav_bytes = await _chunk.generate_fn(_chunk, context)
                 await async_signals.get("agent.tts.generate.after").send(emission)

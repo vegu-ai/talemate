@@ -12,14 +12,23 @@ from talemate.ux.schema import Column
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
-    AgentActionConditional,
     AgentDetail,
 )
 
-from .schema import Voice, VoiceLibrary, Chunk, GenerationContext
+from .schema import Voice, Chunk, GenerationContext
+from .voice_library import add_default_voices
 
 log = structlog.get_logger("talemate.agents.tts.xtts2")
 
+add_default_voices(
+    [
+        Voice(
+            label="Annabelle",
+            provider="xtts2",
+            provider_id="templates/voice/xtts2/annabelle.wav",
+        ),
+    ]
+)
 
 class XTTS2Instance(pydantic.BaseModel):
     model: str
@@ -37,17 +46,18 @@ class XTTS2Mixin:
 
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
-        actions["_config"].config["api"].choices.append(
-            {"value": "xtts2", "label": "XTTS2 (Local)"}
+        actions["_config"].config["apis"].choices.append(
+            {
+                "value": "xtts2",
+                "label": "XTTS2 (Local)",
+                "help": "XTTS2 is a local text to speech model that uses the TTS library.",
+            }
         )
 
         actions["xtts2"] = AgentAction(
             enabled=True,
             container=True,
             icon="mdi-server-outline",
-            condition=AgentActionConditional(
-                attribute="_config.config.api", value="xtts2"
-            ),
             label="XTTS2",
             config={
                 "model": AgentActionConfig(
@@ -65,38 +75,15 @@ class XTTS2Mixin:
                         {"value": "cuda", "label": "CUDA"},
                     ],
                     description="Device to use for TTS",
-                ),
-                "voices": AgentActionConfig(
-                    type="table",
-                    value=[
-                        {
-                            "label": "Annabelle",
-                            "path": "templates/voice/xtts2/annabelle.wav",
-                        },
-                    ],
-                    columns=[
-                        Column(
-                            name="label",
-                            label="Label",
-                            type="text",
-                        ),
-                        Column(
-                            name="path",
-                            label="Path (.wav)",
-                            type="text",
-                        ),
-                    ],
-                    label="Voice Samples",
-                    description="Voice samples to use for XTTS2. The path can be relative to the talemate base directory and should point to a .wav file. For official xtts2 samples see https://huggingface.co/coqui/XTTS-v2/tree/main/samples.",
-                ),
+                )
             },
         )
         return actions
-
-    @classmethod
-    def add_voices(cls, voices: dict[str, VoiceLibrary]):
-        voices["xtts2"] = VoiceLibrary(api="xtts2", local=True)
-
+    
+    @property
+    def xtts2_ready(self) -> bool:
+        return True
+    
     @property
     def xtts2_max_generation_length(self) -> int:
         return 250
@@ -111,14 +98,15 @@ class XTTS2Mixin:
 
     @property
     def xtts2_agent_details(self) -> dict:
-        details: dict = {}
+        if not self.ready:
+            return {}
+        details = {}
 
-        if self.ready:
-            details["device"] = AgentDetail(
-                icon="mdi-memory",
-                value=self.xtts2_device,
-                description="The device to use for XTTS2",
-            ).model_dump()
+        details["xtts2_device"] = AgentDetail(
+            icon="mdi-memory",
+            value=f"XTTS2: {self.xtts2_device}",
+            description="The device to use for XTTS2",
+        ).model_dump()
 
         return details
 
@@ -154,7 +142,7 @@ class XTTS2Mixin:
 
         loop = asyncio.get_event_loop()
 
-        voice = self.voice(chunk.voice_id, api="xtts2")
+        voice = chunk.voice
 
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = os.path.join(temp_dir, f"tts-{uuid.uuid4()}.wav")
@@ -164,7 +152,7 @@ class XTTS2Mixin:
                 functools.partial(
                     tts.tts_to_file,
                     text=chunk.cleaned_text,
-                    speaker_wav=voice.value,
+                    speaker_wav=voice.provider_id,
                     language="en",
                     file_path=file_path,
                 ),
@@ -173,12 +161,3 @@ class XTTS2Mixin:
 
             with open(file_path, "rb") as f:
                 return f.read()
-
-    async def xtts2_list_voices(self) -> list[Voice]:
-        return [
-            Voice(
-                label=voice["label"],
-                value=voice["path"],
-            )
-            for voice in self.actions["xtts2"].config["voices"].value
-        ]

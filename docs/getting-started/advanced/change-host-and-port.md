@@ -27,10 +27,10 @@ uv run src\talemate\server\run.py runserver --host 0.0.0.0 --port 1234
 
 ### Letting the frontend know about the new host and port
 
-Copy `talemate_frontend/example.env.development.local` to `talemate_frontend/.env.production.local` and edit the `VUE_APP_TALEMATE_BACKEND_WEBSOCKET_URL`.
+Copy `talemate_frontend/example.env.development.local` to `talemate_frontend/.env.production.local` and edit the `VITE_TALEMATE_BACKEND_WEBSOCKET_URL`.
 
 ```env
-VUE_APP_TALEMATE_BACKEND_WEBSOCKET_URL=ws://localhost:1234
+VITE_TALEMATE_BACKEND_WEBSOCKET_URL=ws://localhost:1234
 ```
 
 Next rebuild the frontend.

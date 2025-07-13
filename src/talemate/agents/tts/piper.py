@@ -28,8 +28,18 @@ DEFAULT_DOWNLOAD_PATH = (
 
 add_default_voices(
     [
-        Voice(label="Amy", provider="piper", provider_id="en_US-amy-medium", tags=["female"]),
-        Voice(label="John", provider="piper", provider_id="en_US-john-medium", tags=["male"]),
+        Voice(
+            label="Amy",
+            provider="piper",
+            provider_id="en_US-amy-medium",
+            tags=["female"],
+        ),
+        Voice(
+            label="John",
+            provider="piper",
+            provider_id="en_US-john-medium",
+            tags=["male"],
+        ),
     ]
 )
 

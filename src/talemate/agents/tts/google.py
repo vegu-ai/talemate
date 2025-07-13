@@ -26,28 +26,104 @@ add_default_voices(
         Voice(label="Leda", provider="google", provider_id="Leda", tags=["female"]),
         Voice(label="Orus", provider="google", provider_id="Orus", tags=["male"]),
         Voice(label="Aoede", provider="google", provider_id="Aoede", tags=["female"]),
-        Voice(label="Callirrhoe", provider="google", provider_id="Callirrhoe", tags=["female"]),
-        Voice(label="Autonoe", provider="google", provider_id="Autonoe", tags=["female"]),
-        Voice(label="Enceladus", provider="google", provider_id="Enceladus", tags=["male", "deep"]),
+        Voice(
+            label="Callirrhoe",
+            provider="google",
+            provider_id="Callirrhoe",
+            tags=["female"],
+        ),
+        Voice(
+            label="Autonoe", provider="google", provider_id="Autonoe", tags=["female"]
+        ),
+        Voice(
+            label="Enceladus",
+            provider="google",
+            provider_id="Enceladus",
+            tags=["male", "deep"],
+        ),
         Voice(label="Iapetus", provider="google", provider_id="Iapetus", tags=["male"]),
         Voice(label="Umbriel", provider="google", provider_id="Umbriel", tags=["male"]),
-        Voice(label="Algieba", provider="google", provider_id="Algieba", tags=["male", "deep"]),
-        Voice(label="Despina", provider="google", provider_id="Despina", tags=["female", "young"]),
-        Voice(label="Erinome", provider="google", provider_id="Erinome", tags=["female"]),
+        Voice(
+            label="Algieba",
+            provider="google",
+            provider_id="Algieba",
+            tags=["male", "deep"],
+        ),
+        Voice(
+            label="Despina",
+            provider="google",
+            provider_id="Despina",
+            tags=["female", "young"],
+        ),
+        Voice(
+            label="Erinome", provider="google", provider_id="Erinome", tags=["female"]
+        ),
         Voice(label="Algenib", provider="google", provider_id="Algenib", tags=["male"]),
-        Voice(label="Rasalgethi", provider="google", provider_id="Rasalgethi", tags=["male", "neutral"]),
-        Voice(label="Laomedeia", provider="google", provider_id="Laomedeia", tags=["female"]),
-        Voice(label="Achernar", provider="google", provider_id="Achernar", tags=["female", "young"]),
+        Voice(
+            label="Rasalgethi",
+            provider="google",
+            provider_id="Rasalgethi",
+            tags=["male", "neutral"],
+        ),
+        Voice(
+            label="Laomedeia",
+            provider="google",
+            provider_id="Laomedeia",
+            tags=["female"],
+        ),
+        Voice(
+            label="Achernar",
+            provider="google",
+            provider_id="Achernar",
+            tags=["female", "young"],
+        ),
         Voice(label="Alnilam", provider="google", provider_id="Alnilam", tags=["male"]),
         Voice(label="Schedar", provider="google", provider_id="Schedar", tags=["male"]),
-        Voice(label="Gacrux", provider="google", provider_id="Gacrux", tags=["female", "mature"]),
-        Voice(label="Pulcherrima", provider="google", provider_id="Pulcherrima", tags=["female", "mature"]),
-        Voice(label="Achird", provider="google", provider_id="Achird", tags=["male", "energetic"]),
-        Voice(label="Zubenelgenubi", provider="google", provider_id="Zubenelgenubi", tags=["male"]),
-        Voice(label="Vindemiatrix", provider="google", provider_id="Vindemiatrix", tags=["female", "mature"]),
-        Voice(label="Sadachbia", provider="google", provider_id="Sadachbia", tags=["male"]),
-        Voice(label="Sadaltager", provider="google", provider_id="Sadaltager", tags=["male"]),
-        Voice(label="Sulafat", provider="google", provider_id="Sulafat", tags=["female", "young"]),
+        Voice(
+            label="Gacrux",
+            provider="google",
+            provider_id="Gacrux",
+            tags=["female", "mature"],
+        ),
+        Voice(
+            label="Pulcherrima",
+            provider="google",
+            provider_id="Pulcherrima",
+            tags=["female", "mature"],
+        ),
+        Voice(
+            label="Achird",
+            provider="google",
+            provider_id="Achird",
+            tags=["male", "energetic"],
+        ),
+        Voice(
+            label="Zubenelgenubi",
+            provider="google",
+            provider_id="Zubenelgenubi",
+            tags=["male"],
+        ),
+        Voice(
+            label="Vindemiatrix",
+            provider="google",
+            provider_id="Vindemiatrix",
+            tags=["female", "mature"],
+        ),
+        Voice(
+            label="Sadachbia", provider="google", provider_id="Sadachbia", tags=["male"]
+        ),
+        Voice(
+            label="Sadaltager",
+            provider="google",
+            provider_id="Sadaltager",
+            tags=["male"],
+        ),
+        Voice(
+            label="Sulafat",
+            provider="google",
+            provider_id="Sulafat",
+            tags=["female", "young"],
+        ),
     ]
 )
 

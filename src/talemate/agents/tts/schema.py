@@ -1,10 +1,6 @@
 import pydantic
 from typing import Callable, Literal
 
-# ------------------------------------------------------------------
-# Voice tag configuration constants
-# ------------------------------------------------------------------
-
 MAX_TAG_LENGTH: int = 64  # Maximum number of characters per tag (configurable)
 MAX_TAGS_PER_VOICE: int = 10  # Maximum number of tags per voice (configurable)
 
@@ -33,10 +29,6 @@ class Voice(pydantic.BaseModel):
     # free-form tags for categorizing the voice (e.g. "male", "energetic")
     tags: list[str] = pydantic.Field(default_factory=list)
 
-    # ------------------------------------------------------------------
-    # Validators
-    # ------------------------------------------------------------------
-
     @pydantic.field_validator("tags")
     @classmethod
     def _validate_tags(cls, v: list[str]):
@@ -51,10 +43,6 @@ class Voice(pydantic.BaseModel):
                     f"Tag '{tag}' exceeds maximum length of {MAX_TAG_LENGTH} characters"
                 )
         return v
-
-    # ------------------------------------------------------------------
-    # Pydantic config
-    # ------------------------------------------------------------------
 
     model_config = pydantic.ConfigDict(validate_assignment=True)
 

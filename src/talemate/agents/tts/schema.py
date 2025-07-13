@@ -1,6 +1,13 @@
 import pydantic
 from typing import Callable, Literal
 
+# ------------------------------------------------------------------
+# Voice tag configuration constants
+# ------------------------------------------------------------------
+
+MAX_TAG_LENGTH: int = 64  # Maximum number of characters per tag (configurable)
+MAX_TAGS_PER_VOICE: int = 10  # Maximum number of tags per voice (configurable)
+
 __all__ = [
     "Chunk",
     "GenerationContext",
@@ -22,6 +29,34 @@ class Voice(pydantic.BaseModel):
 
     # allows to also override to a specific model
     provider_model: str | None = None
+
+    # free-form tags for categorizing the voice (e.g. "male", "energetic")
+    tags: list[str] = pydantic.Field(default_factory=list)
+
+    # ------------------------------------------------------------------
+    # Validators
+    # ------------------------------------------------------------------
+
+    @pydantic.field_validator("tags")
+    @classmethod
+    def _validate_tags(cls, v: list[str]):
+        """Validate tag list length and individual tag length."""
+        if len(v) > MAX_TAGS_PER_VOICE:
+            raise ValueError(
+                f"Too many tags – maximum {MAX_TAGS_PER_VOICE} tags are allowed per voice"
+            )
+        for tag in v:
+            if len(tag) > MAX_TAG_LENGTH:
+                raise ValueError(
+                    f"Tag '{tag}' exceeds maximum length of {MAX_TAG_LENGTH} characters"
+                )
+        return v
+
+    # ------------------------------------------------------------------
+    # Pydantic config
+    # ------------------------------------------------------------------
+
+    model_config = pydantic.ConfigDict(validate_assignment=True)
 
     @pydantic.computed_field(description="The unique identifier for the voice")
     @property

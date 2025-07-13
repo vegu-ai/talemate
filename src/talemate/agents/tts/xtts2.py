@@ -24,6 +24,7 @@ add_default_voices(
             label="Annabelle",
             provider="xtts2",
             provider_id="templates/voice/xtts2/annabelle.wav",
+            tags=["female"],
         ),
     ]
 )

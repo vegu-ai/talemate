@@ -30,6 +30,7 @@ class EditVoicePayload(pydantic.BaseModel):
     provider: str | None = None
     provider_id: str | None = None
     provider_model: str | None = None
+    tags: list[str] | None = None
 
 
 class VoiceRefPayload(pydantic.BaseModel):
@@ -145,6 +146,9 @@ class VoiceLibraryWebsocketHandler(Plugin):
             voice.provider_id = payload.provider_id
         if payload.provider_model is not None:
             voice.provider_model = payload.provider_model
+
+        if payload.tags is not None:
+            voice.tags = payload.tags
 
         # If provider or provider_id changed, id changes -> reinsert
         new_id = voice.id

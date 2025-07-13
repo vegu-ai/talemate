@@ -47,9 +47,28 @@
               height="750"
               class="overflow-y-auto"
               @click:row="onRowClick"
+              @update:items-per-page="limit = $event"
             >
-              <template #item.label="{ value }">
-                <span class="font-weight-medium">{{ value }}</span>
+              <template #item="{ item }">
+                <tr
+                  :class="selectedVoice && selectedVoice.id === item.id ? 'voice-selected' : ''"
+                  @click="selectVoice(item)"
+                >
+                  <td>{{ item.label }}</td>
+                  <td>{{ item.provider }}</td>
+                  <td>
+                    <v-chip
+                      v-for="tag in item.tags"
+                      :key="tag"
+                      class="ma-1"
+                      size="small"
+                      color="primary"
+                      label
+                    >
+                      {{ tag }}
+                    </v-chip>
+                  </td>
+                </tr>
               </template>
             </v-data-table>
           </v-col>
@@ -68,6 +87,16 @@
                 <v-text-field
                   v-model="editVoice.provider_model"
                   label="Provider Model"
+                />
+                <v-combobox
+                  v-model="editVoice.tags"
+                  :items="tagOptions"
+                  label="Tags"
+                  multiple
+                  chips
+                  clearable
+                  hide-selected
+                  placeholder="Add or select tags"
                 />
                 <v-row class="mt-4">
                   <v-col>
@@ -147,12 +176,13 @@ export default {
         provider: '',
         provider_id: '',
         provider_model: '',
+        tags: [],
       },
       providers: ['elevenlabs', 'openai', 'xtts2', 'piper', 'google', 'kokoro'],
       headers: [
         { title: 'Label', value: 'label' },
         { title: 'Provider', value: 'provider' },
-        { title: 'Provider ID', value: 'provider_id' },
+        { title: 'Tags', value: 'tags' },
       ],
       testing: false,
     };
@@ -165,10 +195,20 @@ export default {
         list = list.filter(
           (v) =>
             v.label.toLowerCase().includes(f) ||
-            v.provider.toLowerCase().includes(f)
+            v.provider.toLowerCase().includes(f) ||
+            (v.tags && v.tags.some((t) => t.toLowerCase().includes(f)))
         );
       }
-      return list.slice(0, this.limit);
+      return list;
+    },
+
+    // Provide unique tag options collected from existing voices for the combobox
+    tagOptions() {
+      const tagsSet = new Set();
+      this.voices.forEach((v) => {
+        (v.tags || []).forEach((t) => tagsSet.add(t));
+      });
+      return Array.from(tagsSet).sort();
     },
   },
   methods: {
@@ -192,6 +232,7 @@ export default {
         provider: '',
         provider_id: '',
         provider_model: '',
+        tags: [],
       };
     },
     addVoice() {
@@ -250,10 +291,7 @@ export default {
 </script>
 
 <style scoped>
-.overflow-content {
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 700px;
-  max-height: 850px;
+.voice-selected {
+  background-color: rgba(var(--v-theme-primary), 0.12);
 }
 </style> 

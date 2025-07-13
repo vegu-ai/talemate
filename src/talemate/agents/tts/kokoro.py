@@ -24,6 +24,7 @@ add_default_voices(
             label="AF Heart",
             provider="kokoro",
             provider_id="af_heart",
+            tags=["female"],
         ),
     ]
 )

@@ -16,51 +16,61 @@ add_default_voices(
             label="Alloy",
             provider="openai",
             provider_id="alloy",
+            tags=["neutral", "female"],
         ),
         Voice(
             label="Ash",
             provider="openai",
             provider_id="ash",
+            tags=["male"],
         ),
         Voice(
             label="Ballad",
             provider="openai",
             provider_id="ballad",
+            tags=["male", "energetic"],
         ),
         Voice(
             label="Coral",
             provider="openai",
             provider_id="coral",
+            tags=["female", "energetic"],
         ),
         Voice(
             label="Echo",
             provider="openai",
             provider_id="echo",
+            tags=["male", "neutral"],
         ),
         Voice(
             label="Fable",
             provider="openai",
             provider_id="fable",
+            tags=["neutral", "feminine"],
         ),
         Voice(
             label="Onyx",
             provider="openai",
             provider_id="onyx",
+            tags=["male"],
         ),
         Voice(
             label="Nova",
             provider="openai",
             provider_id="nova",
+            tags=["female"],
         ),
         Voice(
             label="Sage",
             provider="openai",
             provider_id="sage",
+            tags=["female"],
         ),
         Voice(
             label="Shimmer",
             provider="openai",
             provider_id="shimmer",
+            tags=["female"],
         ),
     ]
 )

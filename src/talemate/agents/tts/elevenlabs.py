@@ -21,11 +21,13 @@ add_default_voices(
             label="Adam",
             provider="elevenlabs",
             provider_id="wBXNqKUATyqu0RtYt25i",
+            tags=["male", "deep"],
         ),
         Voice(
             label="Amy",
             provider="elevenlabs",
             provider_id="oGn4Ha2pe2vSJkmIJgLQ",
+            tags=["female"],
         ),
     ]
 )

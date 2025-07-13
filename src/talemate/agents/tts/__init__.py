@@ -42,6 +42,7 @@ from .openai import OpenAIMixin
 from .xtts2 import XTTS2Mixin
 from .piper import PiperMixin
 from .google import GoogleMixin
+from .kokoro import KokoroMixin
 from .websocket_handler import VoiceLibraryWebsocketHandler
 
 if TYPE_CHECKING:
@@ -122,6 +123,7 @@ class TTSAgent(
     XTTS2Mixin,
     PiperMixin,
     GoogleMixin,
+    KokoroMixin,
     Agent,
 ):
     """
@@ -169,7 +171,14 @@ class TTSAgent(
                 config={
                     "apis": AgentActionConfig(
                         type="flags",
-                        value=["elevenlabs", "openai", "xtts2", "piper", "google"],
+                        value=[
+                            "elevenlabs",
+                            "openai",
+                            "xtts2",
+                            "piper",
+                            "google",
+                            "kokoro",
+                        ],
                         label="Enabled APIs",
                         description="APIs to use for TTS",
                         choices=[],
@@ -225,6 +234,7 @@ class TTSAgent(
         XTTS2Mixin.add_actions(actions)
         PiperMixin.add_actions(actions)
         GoogleMixin.add_actions(actions)
+        KokoroMixin.add_actions(actions)
 
         return actions
 

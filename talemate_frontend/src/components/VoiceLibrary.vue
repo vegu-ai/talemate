@@ -148,7 +148,7 @@ export default {
         provider_id: '',
         provider_model: '',
       },
-      providers: ['elevenlabs', 'openai', 'xtts2', 'piper', 'google'],
+      providers: ['elevenlabs', 'openai', 'xtts2', 'piper', 'google', 'kokoro'],
       headers: [
         { title: 'Label', value: 'label' },
         { title: 'Provider', value: 'provider' },

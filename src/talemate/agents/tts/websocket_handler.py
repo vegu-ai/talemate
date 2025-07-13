@@ -10,7 +10,7 @@ from talemate.server.websocket_plugin import Plugin
 
 from .voice_library import (
     get_instance as get_voice_library,
-    save_instance as save_voice_library,
+    save_voice_library,
 )
 from .schema import Voice, GenerationContext, Chunk
 

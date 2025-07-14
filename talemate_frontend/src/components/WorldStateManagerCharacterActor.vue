@@ -2,14 +2,14 @@
 <template>
     <v-row>
         <v-col cols="3">
-            <v-tabs density="compact" color="indigo-lighten-3" direction="vertical" v-model="tab">
-                <v-tab value="instructions" class="text-caption">
+            <v-tabs color="secondary" direction="vertical" v-model="tab">
+                <v-tab value="instructions" class="text-caption" prepend-icon="mdi-pencil">
                     Dialogue Instructions
                 </v-tab>
-                <v-tab value="examples" class="text-caption">
+                <v-tab value="examples" class="text-caption" prepend-icon="mdi-format-quote-close">
                     Dialogue Examples
                 </v-tab>
-                <v-tab value="voice" class="text-caption">
+                <v-tab value="voice" class="text-caption" prepend-icon="mdi-account-voice">
                     Voice
                 </v-tab>
             </v-tabs>

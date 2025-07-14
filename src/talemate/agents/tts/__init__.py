@@ -187,7 +187,7 @@ class TTSAgent(
                     ),
                     "narrator_voice_id": AgentActionConfig(
                         type="autocomplete",
-                        value="xtts2:tts/voice/xtts2/annabelle.wav",
+                        value="kokoro:af_heart",
                         label="Narrator Voice",
                         description="Voice to use for narration",
                         choices=[],

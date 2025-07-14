@@ -4,6 +4,14 @@
     <v-icon>mdi-account-voice</v-icon>
   </v-app-bar-nav-icon>
 
+  <!-- Voice Mixer Component -->
+  <VoiceMixer 
+    ref="voiceMixer"
+    provider="kokoro"
+    :voices="voices"
+    :tag-options="tagOptions"
+  />
+
   <!-- Dialog for voice library -->
   <v-dialog v-model="dialog" max-width="1920" max-height="1080">
     <v-card>
@@ -149,7 +157,18 @@
                     class="ml-2"
                   />
                 </v-btn>
+                <!-- Voice Mixing Button (only shown when any API supports mixing) -->
+                <v-btn
+                  v-if="apiSupportsMixing(editVoice.provider)"
+                  variant="text"
+                  color="primary"
+                  @click="openVoiceMixer"
+                  prepend-icon="mdi-tune"
+                >
+                  Voice Mixing
+                </v-btn>
                 <v-spacer></v-spacer>
+
                 <!-- Remove Voice -->
                 <v-btn
                   :disabled="!selectedVoice"
@@ -202,10 +221,14 @@
 <script>
 
 import { marked } from 'marked';
+import VoiceMixer from './VoiceMixer.vue';
 
 export default {
   name: 'VoiceLibrary',
   inject: ['getWebsocket', 'registerMessageHandler', 'openAgentSettings', 'openAppConfig'],
+  components: {
+    VoiceMixer,
+  },
   data() {
     return {
       dialog: false,
@@ -238,7 +261,6 @@ export default {
       // return apis where ready is true
       return this.apiStatus.filter((a) => a.ready).map((a) => a.api);
     },
-
     apiStatusByProvider() {
       return this.apiStatus.reduce((acc, a) => {
         acc[a.api] = a;
@@ -325,6 +347,9 @@ export default {
         );
       }
     },
+    openVoiceMixer() {
+      this.$refs.voiceMixer.open();
+    },
     apiStatusIcon(api) {
       if (api.ready) {
         return 'mdi-check-circle-outline';
@@ -342,6 +367,9 @@ export default {
         return 'muted';
       }
       return 'error';
+    },
+    apiSupportsMixing(api) {
+      return this.apiStatusByProvider[api]?.supports_mixing || false;
     },
     selectVoice(voice) {
       if (this.selectedVoice && this.selectedVoice.id === voice.id) {
@@ -420,6 +448,9 @@ export default {
       if (message.type !== 'voice_library') return;
       if (message.action === 'voices' && message.voices) {
         this.voices = message.voices;
+        if (message.select_voice_id) {
+          this.selectVoice(this.voices.find((v) => v.id === message.select_voice_id));
+        }
       }
       if (message.action === 'operation_done' || message.action === 'operation_failed') {
         this.testing = false;

@@ -16,6 +16,15 @@ __all__ = [
 ]
 
 
+class VoiceWeight(pydantic.BaseModel):
+    id: str
+    weight: float
+
+
+class VoiceMixer(pydantic.BaseModel):
+    voices: list[VoiceWeight]
+
+
 class Voice(pydantic.BaseModel):
     # arbitrary voice label to allow a human to easily identify the voice
     label: str
@@ -47,21 +56,12 @@ class Voice(pydantic.BaseModel):
                 )
         return v
 
-    model_config = pydantic.ConfigDict(validate_assignment=True)
+    model_config = pydantic.ConfigDict(validate_assignment=True, exclude_none=True)
 
     @pydantic.computed_field(description="The unique identifier for the voice")
     @property
     def id(self) -> str:
         return f"{self.provider}:{self.provider_id}"
-
-
-class VoiceWeight(pydantic.BaseModel):
-    id: str
-    weight: float
-
-
-class VoiceMixer(pydantic.BaseModel):
-    voices: list[VoiceWeight]
 
 
 class VoiceLibrary(pydantic.BaseModel):

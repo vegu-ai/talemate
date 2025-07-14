@@ -647,8 +647,7 @@ class TTSAgent(
                 self.play_audio(emission.wav_bytes)
 
     def play_audio(self, audio_data):
-        # play audio through the python audio player
-        # play(audio_data)
+        # play audio through the websocket (browser)
 
         emit(
             "audio_queue",

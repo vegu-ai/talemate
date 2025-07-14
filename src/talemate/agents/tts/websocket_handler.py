@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-
+from pathlib import Path
 import pydantic
 import structlog
+
 
 from typing import TYPE_CHECKING
 
@@ -15,7 +16,7 @@ from .voice_library import (
     get_instance as get_voice_library,
     save_voice_library,
 )
-from .schema import Voice, GenerationContext, Chunk, APIStatus
+from .schema import Voice, GenerationContext, Chunk, APIStatus, VoiceMixer, VoiceWeight
 
 if TYPE_CHECKING:
     from talemate.agents.tts import TTSAgent
@@ -25,6 +26,8 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.server.voice_library")
+
+TALEMATE_ROOT = Path(__file__).parent.parent.parent.parent.parent
 
 
 class EditVoicePayload(pydantic.BaseModel):
@@ -58,6 +61,22 @@ class AddVoicePayload(Voice):
     pass
 
 
+class TestMixedVoicePayload(pydantic.BaseModel):
+    """Payload for testing a mixed voice."""
+
+    provider: str
+    voices: list[VoiceWeight]
+
+
+class SaveMixedVoicePayload(pydantic.BaseModel):
+    """Payload for saving a mixed voice."""
+
+    provider: str
+    label: str
+    voices: list[VoiceWeight]
+    tags: list[str] = pydantic.Field(default_factory=list)
+
+
 class VoiceLibraryWebsocketHandler(Plugin):
     """Websocket plugin to manage the TTS voice library."""
 
@@ -84,7 +103,7 @@ class VoiceLibraryWebsocketHandler(Plugin):
     # Helper methods
     # ---------------------------------------------------------------------
 
-    async def _send_voice_list(self):
+    async def _send_voice_list(self, select_voice_id: str | None = None):
         voice_library = get_voice_library()
         voices = [v.model_dump() for v in voice_library.voices.values()]
 
@@ -93,15 +112,16 @@ class VoiceLibraryWebsocketHandler(Plugin):
                 "type": self.router,
                 "action": "voices",
                 "voices": voices,
+                "select_voice_id": select_voice_id,
             }
         )
 
     def _voice_exists(self, voice_id: str) -> bool:
         return voice_id in get_voice_library().voices
 
-    def _broadcast_update(self):
+    def _broadcast_update(self, select_voice_id: str | None = None):
         # After any mutation we broadcast the full list for simplicity
-        asyncio.create_task(self._send_voice_list())
+        asyncio.create_task(self._send_voice_list(select_voice_id))
 
     def _send_api_status(self):
         tts_agent: "TTSAgent" = get_agent("tts")
@@ -148,12 +168,28 @@ class VoiceLibraryWebsocketHandler(Plugin):
             await self.signal_operation_failed(str(e))
             return
 
+        tts_agent: "TTSAgent" = get_agent("tts")
+
         voice_library = get_voice_library()
+
+        try:
+            voice = voice_library.voices[payload.voice_id]
+        except KeyError:
+            await self.signal_operation_failed("Voice not found")
+            return
+
+        provider = voice.provider
+
         try:
             del voice_library.voices[payload.voice_id]
         except KeyError:
             await self.signal_operation_failed("Voice not found")
             return
+
+        # check if porivder has a delete method
+        delete_method = getattr(tts_agent, f"{provider}_delete_voice", None)
+        if delete_method:
+            delete_method(voice.provider_id)
 
         save_voice_library(voice_library)
         self._broadcast_update()
@@ -249,3 +285,108 @@ class VoiceLibraryWebsocketHandler(Plugin):
                 await self.signal_operation_done(signal_only=True)
 
         asyncio.create_task(_run_test())
+
+    async def handle_test_mixed(self, data: dict):
+        """Handle a request to test a mixed voice."""
+
+        tts_agent: "TTSAgent" = get_agent("tts")
+
+        try:
+            payload = TestMixedVoicePayload(**data)
+        except pydantic.ValidationError as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        # Validate that weights sum to 1.0
+        total_weight = sum(v.weight for v in payload.voices)
+        if abs(total_weight - 1.0) > 0.001:
+            await self.signal_operation_failed(
+                f"Weights must sum to 1.0, got {total_weight}"
+            )
+            return
+
+        if not tts_agent or not tts_agent.api_ready(payload.provider):
+            await self.signal_operation_failed(f"{payload.provider} API not ready")
+            return
+
+        # Build mixer
+        mixer = VoiceMixer(voices=payload.voices)
+
+        # Run test in background using the appropriate provider's test method
+        test_method = getattr(tts_agent, f"{payload.provider}_test_mix", None)
+        if not test_method:
+            await self.signal_operation_failed(
+                f"{payload.provider} does not implement voice mixing"
+            )
+            return
+
+        async def _run_test():
+            try:
+                await test_method(mixer)
+            finally:
+                await self.signal_operation_done(signal_only=True)
+
+        asyncio.create_task(_run_test())
+
+    async def handle_save_mixed(self, data: dict):
+        """Handle a request to save a mixed voice."""
+
+        tts_agent: "TTSAgent" = get_agent("tts")
+
+        try:
+            payload = SaveMixedVoicePayload(**data)
+        except pydantic.ValidationError as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        # Validate that weights sum to 1.0
+        total_weight = sum(v.weight for v in payload.voices)
+        if abs(total_weight - 1.0) > 0.001:
+            await self.signal_operation_failed(
+                f"Weights must sum to 1.0, got {total_weight}"
+            )
+            return
+
+        if not tts_agent or not tts_agent.api_ready(payload.provider):
+            await self.signal_operation_failed(f"{payload.provider} API not ready")
+            return
+
+        # Build mixer
+        mixer = VoiceMixer(voices=payload.voices)
+
+        # Create a unique voice id for the mixed voice
+        voice_id = f"{payload.label.lower().replace(' ', '-')}"
+
+        # Mix and save the voice using the appropriate provider's methods
+        save_method = getattr(tts_agent, f"{payload.provider}_save_mix", None)
+
+        if not save_method:
+            await self.signal_operation_failed(
+                f"{payload.provider} does not implement voice mixing"
+            )
+            return
+
+        try:
+            saved_path = await save_method(voice_id, mixer)
+
+            # voice id is Path relative to talemate root
+            voice_id = str(saved_path.relative_to(TALEMATE_ROOT))
+
+            # Add the voice to the library
+            new_voice = Voice(
+                label=payload.label,
+                provider=payload.provider,
+                provider_id=voice_id,
+                tags=payload.tags,
+                mix=mixer,
+            )
+
+            voice_library = get_voice_library()
+            voice_library.voices[new_voice.id] = new_voice
+            save_voice_library(voice_library)
+            self._broadcast_update(new_voice.id)
+            await self.signal_operation_done()
+
+        except Exception as e:
+            log.error("Failed to save mixed voice", error=e)
+            await self.signal_operation_failed(f"Failed to save mixed voice: {str(e)}")

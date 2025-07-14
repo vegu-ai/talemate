@@ -5,18 +5,24 @@ import uuid
 import asyncio
 import structlog
 import pydantic
+import torch
 import traceback
 import soundfile as sf
+from pathlib import Path
 from kokoro import KPipeline
 
 from talemate.agents.base import (
     AgentAction,
 )
 
-from .schema import Voice, Chunk, GenerationContext
+from .schema import Voice, Chunk, GenerationContext, VoiceMixer
 from .voice_library import add_default_voices
 
 log = structlog.get_logger("talemate.agents.tts.kokoro")
+
+CUSTOM_VOICE_STORAGE = (
+    Path(__file__).parent.parent.parent.parent.parent / "templates" / "voice" / "kokoro"
+)
 
 add_default_voices(
     [
@@ -88,8 +94,6 @@ add_default_voices(
 KOKORO_INFO = """
 Kokoro is a local text to speech model.
 
-A list of available voices can be found at [https://kokorotts.net/models/Kokoro/text-to-speech](https://kokorotts.net/models/Kokoro/text-to-speech).
-
 **WILL DOWNLOAD**: Voices will be downloaded on first use, so the first generation will take longer to complete.
 """
 
@@ -138,11 +142,95 @@ class KokoroMixin:
     def kokoro_info(self) -> str:
         return KOKORO_INFO
 
+    def kokoro_delete_voice(self, voice_id: str) -> None:
+        """
+        If the voice_id is a file in the CUSTOM_VOICE_STORAGE directory, delete it.
+        """
+
+        # if voice id is a deletable file it'll be a relative or absolute path
+        # to a file in the CUSTOM_VOICE_STORAGE directory
+
+        # we must verify that it is in the CUSTOM_VOICE_STORAGE directory
+        voice_path = Path(voice_id).resolve()
+        log.debug(
+            "Kokoro - Checking if voice id is deletable",
+            voice_id=voice_id,
+            exists=voice_path.exists(),
+            parent=voice_path.parent,
+            is_custom_voice_storage=voice_path.parent == CUSTOM_VOICE_STORAGE,
+        )
+        if voice_path.exists() and voice_path.parent == CUSTOM_VOICE_STORAGE:
+            log.debug("Kokoro - Deleting voice file", voice_id=voice_id)
+            try:
+                voice_path.unlink()
+            except FileNotFoundError:
+                pass
+
+    def _kokoro_mix(self, mixer: VoiceMixer) -> torch.Tensor:
+        pipeline = KPipeline(lang_code="a")
+
+        packs = [
+            {
+                "voice_tensor": pipeline.load_single_voice(voice.id),
+                "weight": voice.weight,
+            }
+            for voice in mixer.voices
+        ]
+
+        mixed_voice = None
+        for pack in packs:
+            if mixed_voice is None:
+                mixed_voice = pack["voice_tensor"] * pack["weight"]
+            else:
+                mixed_voice += pack["voice_tensor"] * pack["weight"]
+
+        # TODO: ensure weights sum to 1
+
+        return mixed_voice
+
+    async def kokoro_test_mix(self, mixer: VoiceMixer):
+        """Test a mixed voice by generating a sample."""
+        mixed_voice_tensor = self._kokoro_mix(mixer)
+
+        loop = asyncio.get_event_loop()
+
+        pipeline = KPipeline(lang_code="a")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            file_path = os.path.join(temp_dir, f"tts-{uuid.uuid4()}.wav")
+
+            await loop.run_in_executor(
+                None,
+                functools.partial(
+                    self._kokoro_generate,
+                    pipeline,
+                    "This is a test of the mixed voice.",
+                    mixed_voice_tensor,
+                    file_path,
+                ),
+            )
+
+            # Read and play the audio
+            with open(file_path, "rb") as f:
+                audio_data = f.read()
+                self.play_audio(audio_data)
+
+    async def kokoro_save_mix(self, voice_id: str, mixer: VoiceMixer) -> Path:
+        """Save a voice tensor to disk."""
+        # Ensure the directory exists
+        CUSTOM_VOICE_STORAGE.mkdir(parents=True, exist_ok=True)
+
+        save_to_path = CUSTOM_VOICE_STORAGE / f"{voice_id}.pt"
+        voice_tensor = self._kokoro_mix(mixer)
+        torch.save(voice_tensor, save_to_path)
+        return save_to_path
+
     def _kokoro_generate(
-        self, pipeline: KPipeline, chunk: Chunk, file_path: str
-    ) -> bytes:
+        self, pipeline: KPipeline, text: str, voice: str | torch.Tensor, file_path: str
+    ) -> None:
+        """Generate audio from text using the given voice."""
         try:
-            generator = pipeline(chunk.cleaned_text, voice=chunk.voice.provider_id)
+            generator = pipeline(text, voice=voice)
             for i, (gs, ps, audio) in enumerate(generator):
                 sf.write(file_path, audio, 24000)
         except Exception as e:
@@ -181,7 +269,8 @@ class KokoroMixin:
                 functools.partial(
                     self._kokoro_generate,
                     pipeline,
-                    chunk,
+                    chunk.cleaned_text,
+                    chunk.voice.provider_id,
                     file_path,
                 ),
             )

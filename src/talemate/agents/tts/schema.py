@@ -63,6 +63,7 @@ class VoiceWeight(pydantic.BaseModel):
 class VoiceMixer(pydantic.BaseModel):
     voices: list[VoiceWeight]
 
+
 class VoiceLibrary(pydantic.BaseModel):
     version: int = 1
     voices: dict[str, Voice] = pydantic.Field(default_factory=dict)

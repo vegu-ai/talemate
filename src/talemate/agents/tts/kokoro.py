@@ -129,7 +129,7 @@ class KokoroMixin:
     @property
     def kokoro_agent_details(self) -> dict:
         return {}
-    
+
     @property
     def kokoro_supports_mixing(self) -> bool:
         return True

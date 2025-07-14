@@ -32,7 +32,7 @@ add_default_voices(
 XTTS2_INFO = """
 XTTS2 is a local text to speech model that uses the TTS library.
 
-The provider_id is the path to the .wav file for the voice.
+The voice id is the path to the .wav file for the voice.
 
 The path can be relative to the talemate root directory, and you can put new *.wav samples
 in the `templates/voice/xtts2` directory. It is also ok if you want to load the files from somewhere else as long as the filepath is available to the talemate backend.

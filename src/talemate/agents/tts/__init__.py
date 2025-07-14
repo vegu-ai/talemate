@@ -410,8 +410,13 @@ class TTSAgent(
                 ready=self.api_ready(api),
                 configured=self.api_configured(api),
                 messages=messages,
+                supports_mixing=getattr(self, f"{api}_supports_mixing", False),
             )
             api_status.append(_status)
+            
+        # order by api
+        api_status.sort(key=lambda x: x.api)
+            
         return api_status
 
     # events

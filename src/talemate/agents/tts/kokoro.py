@@ -89,6 +89,8 @@ KOKORO_INFO = """
 Kokoro is a local text to speech model.
 
 A list of available voices can be found at [https://kokorotts.net/models/Kokoro/text-to-speech](https://kokorotts.net/models/Kokoro/text-to-speech).
+
+**WILL DOWNLOAD**: Voices will be downloaded on first use, so the first generation will take longer to complete.
 """
 
 
@@ -127,6 +129,14 @@ class KokoroMixin:
     @property
     def kokoro_agent_details(self) -> dict:
         return {}
+    
+    @property
+    def kokoro_supports_mixing(self) -> bool:
+        return True
+
+    @property
+    def kokoro_info(self) -> str:
+        return KOKORO_INFO
 
     def _kokoro_generate(
         self, pipeline: KPipeline, chunk: Chunk, file_path: str

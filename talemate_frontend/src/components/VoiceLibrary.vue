@@ -98,10 +98,10 @@
                   :items="providers"
                   label="Provider"
                 />
-                <v-text-field v-model="editVoice.provider_id" label="Provider ID" />
+                <v-text-field v-model="editVoice.provider_id" label="Voice ID" />
                 <v-text-field
                   v-model="editVoice.provider_model"
-                  label="Provider Model"
+                  label="Model"
                 />
                 <v-combobox
                   v-model="editVoice.tags"
@@ -113,54 +113,53 @@
                   hide-selected
                   placeholder="Add or select tags"
                 />
-                <v-row class="mt-4">
-                  <v-col>
-                    <v-btn
-                      v-if="selectedVoice"
-                      color="primary"
-                      variant="text"
-                      @click="saveVoice"
-                      prepend-icon="mdi-content-save"
-                      >Save</v-btn
-                    >
-                    <v-btn
-                      v-else
-                      color="primary"
-                      variant="text"
-                      @click="addVoice"
-                      prepend-icon="mdi-plus"
-                      >Add Voice</v-btn
-                    >
-                  </v-col>
-                  <v-col>
-                    <v-btn
-                      :disabled="!selectedVoice"
-                      color="error"
-                      variant="text"
-                      @click="deleteVoice"
-                      prepend-icon="mdi-delete"
-                      >Remove</v-btn
-                    >
-                  </v-col>
-                  <v-col>
-                    <v-btn
-                      :disabled="!canTest"
-                      variant="text"
-                      @click="testVoice"
-                      prepend-icon="mdi-play"
-                    >
-                      Test
-                      <v-progress-circular
-                        v-if="testing"
-                        indeterminate
-                        size="14"
-                        color="primary"
-                        class="ml-2"
-                      />
-                    </v-btn>
-                  </v-col>
-                </v-row>
               </v-card-text>
+              <v-card-actions>
+                <!-- Save or Add Voice -->
+                <v-btn
+                  v-if="selectedVoice"
+                  color="primary"
+                  variant="text"
+                  @click="saveVoice"
+                  prepend-icon="mdi-content-save"
+                  >Save</v-btn
+                >
+                <v-btn
+                  v-else
+                  color="primary"
+                  variant="text"
+                  @click="addVoice"
+                  prepend-icon="mdi-plus"
+                  >Add Voice</v-btn
+                >
+                <!-- Test Voice -->
+                <v-btn
+                  :disabled="!canTest"
+                  variant="text"
+                  color="secondary"
+                  @click="testVoice"
+                  prepend-icon="mdi-play"
+                >
+                  Test
+                  <v-progress-circular
+                    v-if="testing"
+                    indeterminate
+                    size="14"
+                    color="secondary"
+                    class="ml-2"
+                  />
+                </v-btn>
+                <v-spacer></v-spacer>
+                <!-- Remove Voice -->
+                <v-btn
+                  :disabled="!selectedVoice"
+                  color="delete"
+                  variant="text"
+                  @click="deleteVoice"
+                  prepend-icon="mdi-close-circle-outline"
+                  >Remove</v-btn
+                >
+              </v-card-actions>
             </v-card>
 
             <!-- API status messages -->

@@ -30,9 +30,9 @@ Piper TTS is a local text to speech engine that uses the Piper voice library.
 
 A complete list of english speaking voice models can be found at [https://huggingface.co/rhasspy/piper-voices/tree/main/en](https://huggingface.co/rhasspy/piper-voices/tree/main/en).
 
-When adding a new voice the `provider_id` is always formatted as `{language}-{voice_name}-{quality}`.
+When adding a new voice the voice id is always formatted as `{language}-{voice_name}-{quality}`.
 
-For example, the provider_id for the "Amy" voice is "en_US-amy-medium".
+For example, the voice id for the "Amy" voice is "en_US-amy-medium".
 
 **WILL DOWNLOAD**: New voice models will be downloaded to the default download path, so the first generation may take a moment to complete.
 """

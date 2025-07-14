@@ -55,6 +55,14 @@ class Voice(pydantic.BaseModel):
         return f"{self.provider}:{self.provider_id}"
 
 
+class VoiceWeight(pydantic.BaseModel):
+    id: str
+    weight: float
+
+
+class VoiceMixer(pydantic.BaseModel):
+    voices: list[VoiceWeight]
+
 class VoiceLibrary(pydantic.BaseModel):
     version: int = 1
     voices: dict[str, Voice] = pydantic.Field(default_factory=dict)
@@ -115,3 +123,4 @@ class APIStatus(pydantic.BaseModel):
     ready: bool
     configured: bool
     messages: list[Note] = pydantic.Field(default_factory=list)
+    supports_mixing: bool = False

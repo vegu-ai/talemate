@@ -84,8 +84,8 @@ class Chunk(pydantic.BaseModel):
     @property
     def cleaned_text(self) -> str:
         cleaned: str = self.text[0].replace("*", "").replace('"', "")
-        # remove em-dashes
         cleaned = cleaned.replace("—", " - ")
+        cleaned = cleaned.replace("\n", " ")
         return cleaned.strip()
 
     @property

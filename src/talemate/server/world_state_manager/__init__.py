@@ -15,6 +15,7 @@ from talemate.server.websocket_plugin import Plugin
 
 from .scene_intent import SceneIntentMixin
 from .history import HistoryMixin
+from .character import CharacterMixin
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -184,7 +185,7 @@ class SuggestionPayload(pydantic.BaseModel):
     proposal_uid: str | None = None
 
 
-class WorldStateManagerPlugin(SceneIntentMixin, HistoryMixin, Plugin):
+class WorldStateManagerPlugin(SceneIntentMixin, HistoryMixin, CharacterMixin, Plugin):
     router = "world_state_manager"
 
     @property

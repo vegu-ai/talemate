@@ -187,7 +187,7 @@ class TTSAgent(
                     ),
                     "narrator_voice_id": AgentActionConfig(
                         type="autocomplete",
-                        value="kokoro:af_heart",
+                        value="kokoro:am_adam",
                         label="Narrator Voice",
                         description="Voice to use for narration",
                         choices=[],

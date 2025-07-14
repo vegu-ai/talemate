@@ -53,6 +53,7 @@ class TestVoicePayload(pydantic.BaseModel):
 
     provider: str
     provider_id: str
+    text: str | None = None
 
 
 class AddVoicePayload(Voice):
@@ -264,10 +265,13 @@ class VoiceLibraryWebsocketHandler(Plugin):
             await self.signal_operation_failed("Provider not supported by TTS agent")
             return
 
+        # Use provided text or default
+        test_text = payload.text or "This is a test of the selected voice."
+
         # Build minimal generation context
         context = GenerationContext()
         chunk = Chunk(
-            text=["This is a test of the selected voice."],
+            text=[test_text],
             type="dialogue",
             api=voice.provider,
             voice=voice,

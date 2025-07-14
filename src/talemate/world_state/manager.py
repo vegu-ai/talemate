@@ -13,6 +13,8 @@ from talemate.world_state import (
     Reinforcement,
     Suggestion,
 )
+from talemate.agents.tts.voice_library import get_instance as get_voice_library
+from talemate.agents.tts.schema import Voice
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -52,6 +54,7 @@ class CharacterDetails(pydantic.BaseModel):
     actor: CharacterActor = pydantic.Field(default_factory=CharacterActor)
     cover_image: Union[str, None] = None
     color: Union[str, None] = None
+    voice: Union[Voice, None] = None
 
 
 class World(pydantic.BaseModel):
@@ -163,6 +166,7 @@ class WorldStateManager:
             ),
             cover_image=character.cover_image,
             color=character.color,
+            voice=character.voice,
         )
 
         # sorted base attributes
@@ -316,6 +320,29 @@ class WorldStateManager:
             return
 
         character.set_color(color)
+
+    async def update_character_voice(self, character_name: str, voice_id: str | None):
+        """Assign or clear a voice for the given character.
+
+        Args:
+            character_name: Name of the character to update.
+            voice_id: The unique id of the voice in the voice library ("provider:voice_id").
+                       If *None* or empty string, the character voice assignment is cleared.
+        """
+        character = self.scene.get_character(character_name)
+        if not character:
+            log.error("character not found", character_name=character_name)
+            return
+
+        if voice_id:
+            voice_library = get_voice_library()
+            voice = voice_library.voices.get(voice_id)
+            if not voice:
+                log.warning("voice not found in library", voice_id=voice_id)
+            character.voice = voice
+        else:
+            # Clear voice assignment
+            character.voice = None
 
     async def update_character_actor(
         self,

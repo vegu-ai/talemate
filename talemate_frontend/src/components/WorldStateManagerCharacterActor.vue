@@ -9,6 +9,9 @@
                 <v-tab value="examples" class="text-caption">
                     Dialogue Examples
                 </v-tab>
+                <v-tab value="voice" class="text-caption">
+                    Voice
+                </v-tab>
             </v-tabs>
         </v-col>
         <v-col cols="9">
@@ -79,6 +82,25 @@
                     </v-list-item>
                 </v-list>
             </div>
+            <div v-else-if="tab == 'voice'">
+                <VoiceSelect v-model="voiceId" @update:modelValue="voiceDirty = true; updateCharacterVoice();" />
+
+                <v-btn 
+                    :disabled="!voiceId || testingVoice" 
+                    :loading="testingVoice"
+                    variant="text"
+                    color="secondary"
+                    class="mt-2"
+                    prepend-icon="mdi-play"
+                    @click="testCharacterVoice"
+                >
+                    Test Voice
+                </v-btn>
+
+                <v-alert color="muted" density="compact" variant="text" class="mt-2">
+                    Select a voice for <span class="text-primary">{{ character.name }}</span>. Only voices from ready TTS APIs are listed.
+                </v-alert>
+            </div>
         </v-col>
     </v-row>
     <SpiceAppliedNotification :uids="['wsm.character_dialogue']"></SpiceAppliedNotification>
@@ -89,12 +111,14 @@
 
 import ContextualGenerate from './ContextualGenerate.vue';
 import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
+import VoiceSelect from './VoiceSelect.vue';
 
 export default {
     name: 'WorldStateManagerCharacterActor',
     components: {
         ContextualGenerate,
         SpiceAppliedNotification,
+        VoiceSelect,
     },
     data() {
         return {
@@ -103,6 +127,9 @@ export default {
             dialogueExample: "",
             dialogueInstructions: null,
             dialogueInstructionsDirty: false,
+            voiceId: null,
+            voiceDirty: false,
+            testingVoice: false,
             updateCharacterActorTimeout: null,
         }
     },
@@ -124,9 +151,11 @@ export default {
             handler() {
                 this.dialogueInstructions = this.character.actor.dialogue_instructions;
                 this.dialogueExamples = this.character.actor.dialogue_examples;
+                this.voiceId = this.character.voice ? this.character.voice.id : null;
             },
-            deep: true
-        }
+            deep: true,
+            immediate: true,
+        },
     },
     props: {
         character: Object,
@@ -172,11 +201,56 @@ export default {
             if(data.type === 'world_state_manager') {
                 if(data.action === 'character_actor_updated') {
                     this.dialogueInstructionsDirty = false;
+                } else if (data.action === 'character_voice_updated') {
+                    this.voiceDirty = false;
                 } else if (data.action === 'character_dialogue_instructions_generated') {
                     this.dialogueInstructions = data.data.instructions;
                     this.dialogueInstructionsBusy = false;
                 }
+            } else if (data.type === 'voice_library') {
+                if (data.action === 'operation_done' || data.action === 'operation_failed') {
+                    this.testingVoice = false;
+                }
             }
+        },
+
+        updateCharacterVoice() {
+            if(!this.voiceDirty) return;
+
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'update_character_voice',
+                name: this.character.name,
+                voice_id: this.voiceId,
+            }));
+        },
+
+        testCharacterVoice() {
+            if (!this.voiceId || this.testingVoice) return;
+
+            // Extract provider and provider_id from voiceId (format: "provider:provider_id")
+            const [provider, ...providerIdParts] = this.voiceId.split(':');
+            const provider_id = providerIdParts.join(':');
+
+            // Get a random dialogue example, or use default text
+            let testText = "This is a test of the selected voice.";
+            if (this.dialogueExamples && this.dialogueExamples.length > 0) {
+                const randomIndex = Math.floor(Math.random() * this.dialogueExamples.length);
+                testText = this.dialogueExamples[randomIndex];
+                // Strip character name prefix if present
+                if (testText.startsWith(this.character.name + ':')) {
+                    testText = testText.substring(this.character.name.length + 1).trim();
+                }
+            }
+
+            this.testingVoice = true;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'voice_library',
+                action: 'test',
+                provider: provider,
+                provider_id: provider_id,
+                text: testText,
+            }));
         },
     },
     created() {
@@ -185,6 +259,7 @@ export default {
     mounted() {
         this.dialogueInstructions = this.character.actor.dialogue_instructions;
         this.dialogueExamples = this.character.actor.dialogue_examples;
+        this.voiceId = this.character.voice ? this.character.voice.id : null;
     },
 }
 

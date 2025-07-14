@@ -21,7 +21,7 @@ from .voice_library import add_default_voices
 log = structlog.get_logger("talemate.agents.tts.kokoro")
 
 CUSTOM_VOICE_STORAGE = (
-    Path(__file__).parent.parent.parent.parent.parent / "templates" / "voice" / "kokoro"
+    Path(__file__).parent.parent.parent.parent.parent / "tts" / "voice" / "kokoro"
 )
 
 add_default_voices(

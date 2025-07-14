@@ -22,7 +22,7 @@ from .voice_library import add_default_voices
 log = structlog.get_logger("talemate.agents.tts.piper")
 
 DEFAULT_DOWNLOAD_PATH = (
-    Path(__file__).parent.parent.parent.parent.parent / "templates" / "voice" / "piper"
+    Path(__file__).parent.parent.parent.parent.parent / "tts" / "voice" / "piper"
 )
 
 PIPER_INFO = """

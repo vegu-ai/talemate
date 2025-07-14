@@ -17,7 +17,7 @@ log = structlog.get_logger("talemate.agents.tts.voice_library")
 
 VOICE_LIBRARY_PATH = (
     Path(__file__).parent.parent.parent.parent.parent
-    / "templates"
+    / "tts"
     / "voice"
     / "voice-library.json"
 )

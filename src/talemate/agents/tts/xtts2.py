@@ -23,7 +23,7 @@ add_default_voices(
         Voice(
             label="Annabelle",
             provider="xtts2",
-            provider_id="templates/voice/xtts2/annabelle.wav",
+            provider_id="tts/voice/xtts2/annabelle.wav",
             tags=["female"],
         ),
     ]
@@ -35,7 +35,7 @@ XTTS2 is a local text to speech model that uses the TTS library.
 The voice id is the path to the .wav file for the voice.
 
 The path can be relative to the talemate root directory, and you can put new *.wav samples
-in the `templates/voice/xtts2` directory. It is also ok if you want to load the files from somewhere else as long as the filepath is available to the talemate backend.
+in the `tts/voice/xtts2` directory. It is also ok if you want to load the files from somewhere else as long as the filepath is available to the talemate backend.
 
 Official samples are located at [https://huggingface.co/coqui/XTTS-v2/tree/main/samples](https://huggingface.co/coqui/XTTS-v2/tree/main/samples).
 """

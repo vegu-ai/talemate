@@ -16,6 +16,12 @@ from .voice_library import add_default_voices
 
 log = structlog.get_logger("talemate.agents.tts.google")
 
+GOOGLE_INFO = """
+Google Gemini TTS is a cloud-based text to speech model.
+
+A list of available voices can be found at [https://ai.google.dev/gemini-api/docs/speech-generation](https://ai.google.dev/gemini-api/docs/speech-generation).
+"""
+
 add_default_voices(
     [
         Voice(label="Zephyr", provider="google", provider_id="Zephyr", tags=["female"]),
@@ -191,13 +197,21 @@ class GoogleMixin:
             return Action(
                 action_name="openAppConfig",
                 arguments=["application", "google_api"],
+                label="Set API Key",
+                icon="mdi-key",
             )
         if not self.google_model:
             return Action(
                 action_name="openAgentSettings",
                 arguments=["tts", "google"],
+                label="Set Model",
+                icon="mdi-brain",
             )
         return None
+
+    @property
+    def google_info(self) -> str:
+        return GOOGLE_INFO
 
     def google_max_generation_length(self) -> int:
         return 1024  # safe default (≈ 4 k chars)

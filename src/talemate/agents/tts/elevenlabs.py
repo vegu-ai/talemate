@@ -34,6 +34,13 @@ add_default_voices(
 )
 
 
+ELEVENLABS_INFO = """
+ElevenLabs is a cloud-based text to speech API.
+
+To add new voices, head to their voice library at [https://elevenlabs.io/app/voice-library](https://elevenlabs.io/app/voice-library) and note the voice id of the voice you want to use. (Click 'More Actions -> Copy Voice ID')
+"""
+
+
 class ElevenLabsMixin:
     """
     ElevenLabs TTS agent mixin for cloud-based text to speech.
@@ -99,11 +106,15 @@ class ElevenLabsMixin:
             return Action(
                 action_name="openAppConfig",
                 arguments=["application", "elevenlabs_api"],
+                label="Set API Key",
+                icon="mdi-key",
             )
         if not self.elevenlabs_model:
             return Action(
                 action_name="openAgentSettings",
                 arguments=["tts", "elevenlabs"],
+                label="Set Model",
+                icon="mdi-brain",
             )
         return None
 
@@ -114,6 +125,10 @@ class ElevenLabsMixin:
     @property
     def elevenlabs_model(self) -> str:
         return self.actions["elevenlabs"].config["model"].value
+
+    @property
+    def elevenlabs_info(self) -> str:
+        return ELEVENLABS_INFO
 
     @property
     def elevenlabs_agent_details(self) -> dict:

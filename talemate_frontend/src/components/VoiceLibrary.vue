@@ -5,7 +5,7 @@
   </v-app-bar-nav-icon>
 
   <!-- Dialog for voice library -->
-  <v-dialog v-model="dialog" max-width="1920" height="910">
+  <v-dialog v-model="dialog" max-width="1920" max-height="1080">
     <v-card>
       <v-toolbar density="comfortable" color="grey-darken-4">
         <v-toolbar-title class="d-flex align-center">
@@ -50,6 +50,20 @@
               @click:row="onRowClick"
               @update:items-per-page="limit = $event"
             >
+              <template #top>
+                <v-toolbar flat color="mutedbg">
+                  <v-toolbar-title>Voices</v-toolbar-title>
+                  <v-spacer></v-spacer>
+                  <v-btn
+                    color="primary"
+                    variant="text"
+                    @click="resetEdit"
+                    prepend-icon="mdi-plus"
+                  >
+                    New
+                  </v-btn>
+                </v-toolbar>
+              </template>
               <template #item="{ item }">
                 <tr
                   :class="selectedVoice && selectedVoice.id === item.id ? 'voice-selected' : ''"
@@ -151,7 +165,7 @@
 
             <!-- API status messages -->
             <div v-if="selectedProviderMessages.length" class="mt-4">
-              <v-alert
+              <v-card
                 v-for="msg in selectedProviderMessages"
                 :key="msg.text + (msg.title || '')"
                 :color="msg.color"
@@ -160,19 +174,24 @@
                 density="compact"
                 class="mb-2"
               >
-                {{ msg.text }}
-                <v-btn
-                  v-for="action in msg.actions"
-                  :key="action.action_name"
-                  variant="plain"
-                  color="primary"
-                  size="small"
-                  class="ml-2"
-                  @click="callErrorAction(action.action_name, action.arguments)"
-                >
-                  Set API Key
-                </v-btn>
-              </v-alert>
+                <v-card-text class="provider-message">
+                  <div class="markdown-body" v-html="renderMessage(msg)"></div>
+                </v-card-text>
+                <v-card-actions v-if="msg.actions && msg.actions.length > 0">
+                  <v-btn
+                    v-for="action in msg.actions"
+                    :key="action.action_name"
+                    :prepend-icon="action.icon"
+                    variant="plain"
+                    :color="msg.color"
+                    size="small"
+                    class="ml-2"
+                    @click="callMessageAction(action.action_name, action.arguments)"
+                  >
+                    {{ action.label || action.action_name }}
+                  </v-btn>
+                </v-card-actions>
+              </v-card>
             </div>
           </v-col>
         </v-row>
@@ -182,6 +201,9 @@
 </template>
 
 <script>
+
+import { marked } from 'marked';
+
 export default {
   name: 'VoiceLibrary',
   inject: ['getWebsocket', 'registerMessageHandler', 'openAgentSettings', 'openAppConfig'],
@@ -190,7 +212,7 @@ export default {
       dialog: false,
       voices: [],
       filter: '',
-      limit: 25,
+      limit: 50,
       selectedVoice: null,
       editVoice: {
         label: '',
@@ -225,18 +247,31 @@ export default {
     },
 
     filteredVoices() {
-      let list = this.voices.filter((v) => this.readyAPIs.length === 0 || this.readyAPIs.includes(v.provider));
-      console.log({ readyAPIs: this.readyAPIs, list });
-      if (this.filter) {
-        const f = this.filter.toLowerCase();
-        list = list.filter(
-          (v) =>
-            v.label.toLowerCase().includes(f) ||
-            v.provider.toLowerCase().includes(f) ||
-            (v.tags && v.tags.some((t) => t.toLowerCase().includes(f)))
-        );
+      // Start with voices that are provided by ready APIs (or all if none are ready)
+      let list = this.voices.filter(
+        (v) => this.readyAPIs.length === 0 || this.readyAPIs.includes(v.provider)
+      );
+
+      // Split the filter string into individual search terms (whitespace separated)
+      const terms = (this.filter || '')
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean); // remove empty strings
+
+      if (terms.length === 0) {
+        return list;
       }
-      return list;
+
+      // Keep a voice only if it matches ALL search terms (logical AND)
+      return list.filter((v) =>
+        terms.every((term) => {
+          return (
+            v.label.toLowerCase().startsWith(term) ||
+            v.provider.toLowerCase().startsWith(term) ||
+            (v.tags && v.tags.some((t) => t.toLowerCase().startsWith(term)))
+          );
+        })
+      );
     },
 
     // Provide unique tag options collected from existing voices for the combobox
@@ -263,6 +298,9 @@ export default {
     },
   },
   methods: {
+    renderMessage(msg) {
+      return marked.parse(msg.text);
+    },
     open() {
       this.dialog = true;
       // Request current voices if none loaded
@@ -291,6 +329,11 @@ export default {
       return 'error';
     },
     selectVoice(voice) {
+      if (this.selectedVoice && this.selectedVoice.id === voice.id) {
+        // Clicking the same voice again clears the selection to return to the add form
+        this.resetEdit();
+        return;
+      }
       this.selectedVoice = voice;
       this.editVoice = { ...voice }; // clone
     },
@@ -345,12 +388,14 @@ export default {
         JSON.stringify({ type: 'voice_library', action: 'api_status' })
       );
     },
-    callErrorAction(action_name, args) {
+    callMessageAction(action_name, args) {
       if (action_name === 'openAppConfig') {
         this.openAppConfig(...args);
+        this.requireApiStatusRefresh = true;
       }
       if (action_name === 'openAgentSettings') {
         this.openAgentSettings(...args);
+        this.requireApiStatusRefresh = true;
       }
     },
     handleMessage(message) {
@@ -379,5 +424,9 @@ export default {
 <style scoped>
 .voice-selected {
   background-color: rgba(var(--v-theme-primary), 0.12);
+}
+
+.provider-message {
+  white-space: pre-wrap;
 }
 </style> 

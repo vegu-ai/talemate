@@ -39,7 +39,7 @@ AudioQueue = signal("audio_queue")
 MessageEdited = signal("message_edited")
 
 ConfigSaved = signal("config_saved")
-
+ConfigSavedAfter = signal("config_saved_after")
 ImageGenerated = signal("image_generated")
 ImageGenerationFailed = signal("image_generation_failed")
 
@@ -80,6 +80,7 @@ handlers = {
     "prompt_sent": PromptSent,
     "audio_queue": AudioQueue,
     "config_saved": ConfigSaved,
+    "config_saved_after": ConfigSavedAfter,
     "status": StatusMessage,
     "image_generated": ImageGenerated,
     "image_generation_failed": ImageGenerationFailed,

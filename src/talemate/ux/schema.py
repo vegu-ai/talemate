@@ -9,7 +9,9 @@ __all__ = [
 
 class Action(pydantic.BaseModel):
     action_name: str
-    arguments: list[str | int | float | bool]
+    arguments: list[str | int | float | bool] = pydantic.Field(default_factory=list)
+    label: str = None
+    icon: str = None
 
 
 class Note(pydantic.BaseModel):

@@ -29,6 +29,17 @@ add_default_voices(
     ]
 )
 
+XTTS2_INFO = """
+XTTS2 is a local text to speech model that uses the TTS library.
+
+The provider_id is the path to the .wav file for the voice.
+
+The path can be relative to the talemate root directory, and you can put new *.wav samples
+in the `templates/voice/xtts2` directory. It is also ok if you want to load the files from somewhere else as long as the filepath is available to the talemate backend.
+
+Official samples are located at [https://huggingface.co/coqui/XTTS-v2/tree/main/samples](https://huggingface.co/coqui/XTTS-v2/tree/main/samples).
+"""
+
 
 class XTTS2Instance(pydantic.BaseModel):
     model: str
@@ -96,6 +107,10 @@ class XTTS2Mixin:
     @property
     def xtts2_device(self) -> str:
         return self.actions["xtts2"].config["device"].value
+
+    @property
+    def xtts2_info(self) -> str:
+        return XTTS2_INFO
 
     @property
     def xtts2_agent_details(self) -> dict:

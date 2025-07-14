@@ -383,7 +383,7 @@ class TTSAgent(
         for api in self.all_apis:
             not_configured_reason = getattr(self, f"{api}_not_configured_reason", None)
             not_configured_action = getattr(self, f"{api}_not_configured_action", None)
-            api_info = getattr(self, f"{api}_info", None)
+            api_info: str | None = getattr(self, f"{api}_info", None)
             messages: list[Note] = []
             if not_configured_reason:
                 messages.append(
@@ -398,7 +398,11 @@ class TTSAgent(
                 )
             if api_info:
                 messages.append(
-                    Note(text=api_info, color="muted", icon="mdi-information-outline")
+                    Note(
+                        text=api_info.strip(),
+                        color="muted",
+                        icon="mdi-information-outline",
+                    )
                 )
             _status = APIStatus(
                 api=api,

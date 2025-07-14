@@ -629,6 +629,7 @@ def save_config(config, file_path: str = "./config.yaml"):
         yaml.dump(config, file)
 
     emit("config_saved", data=config)
+    emit("config_saved_after", data=config)
 
 
 def cleanup() -> Config:

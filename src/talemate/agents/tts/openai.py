@@ -10,6 +10,12 @@ from .voice_library import add_default_voices
 
 log = structlog.get_logger("talemate.agents.tts.openai")
 
+OPENAI_INFO = """
+OpenAI TTS is a cloud-based text to speech model.
+
+A list of available voices can be found at [https://platform.openai.com/docs/guides/text-to-speech#voice-options](https://platform.openai.com/docs/guides/text-to-speech#voice-options).
+"""
+
 add_default_voices(
     [
         Voice(
@@ -135,6 +141,10 @@ class OpenAIMixin:
         return bool(self.openai_api_key) and bool(self.openai_model)
 
     @property
+    def openai_info(self) -> str:
+        return OPENAI_INFO
+
+    @property
     def openai_not_configured_reason(self) -> str | None:
         if not self.openai_api_key:
             return "OpenAI API key not set"
@@ -148,11 +158,15 @@ class OpenAIMixin:
             return Action(
                 action_name="openAppConfig",
                 arguments=["application", "openai_api"],
+                label="Set API Key",
+                icon="mdi-key",
             )
         if not self.openai_model:
             return Action(
                 action_name="openAgentSettings",
                 arguments=["tts", "openai"],
+                label="Set Model",
+                icon="mdi-brain",
             )
         return None
 

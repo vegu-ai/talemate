@@ -66,7 +66,9 @@ class VoiceLibraryWebsocketHandler(Plugin):
     # ---------------------------------------------------------------------
 
     def connect(self):
-        handlers.get("config_saved").connect(self.on_app_config_saved)
+        # needs to be after config is saved so the TTS agent has already
+        # refreshed to the latest config
+        handlers.get("config_saved_after").connect(self.on_app_config_saved)
 
     def on_app_config_saved(self, event):
         self._send_api_status()

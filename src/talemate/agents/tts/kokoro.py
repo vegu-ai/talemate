@@ -21,13 +21,75 @@ log = structlog.get_logger("talemate.agents.tts.kokoro")
 add_default_voices(
     [
         Voice(
-            label="AF Heart",
+            label="Alloy", provider="kokoro", provider_id="af_alloy", tags=["female"]
+        ),
+        Voice(
+            label="Aoede", provider="kokoro", provider_id="af_aoede", tags=["female"]
+        ),
+        Voice(
+            label="Bella", provider="kokoro", provider_id="af_bella", tags=["female"]
+        ),
+        Voice(
+            label="Heart", provider="kokoro", provider_id="af_heart", tags=["female"]
+        ),
+        Voice(
+            label="Jessica",
             provider="kokoro",
-            provider_id="af_heart",
+            provider_id="af_jessica",
             tags=["female"],
         ),
+        Voice(label="Kore", provider="kokoro", provider_id="af_kore", tags=["female"]),
+        Voice(
+            label="Nicole", provider="kokoro", provider_id="af_nicole", tags=["female"]
+        ),
+        Voice(label="Nova", provider="kokoro", provider_id="af_nova", tags=["female"]),
+        Voice(
+            label="River", provider="kokoro", provider_id="af_river", tags=["female"]
+        ),
+        Voice(
+            label="Sarah", provider="kokoro", provider_id="af_sarah", tags=["female"]
+        ),
+        Voice(label="Sky", provider="kokoro", provider_id="af_sky", tags=["female"]),
+        Voice(label="Adam", provider="kokoro", provider_id="am_adam", tags=["male"]),
+        Voice(label="Echo", provider="kokoro", provider_id="am_echo", tags=["male"]),
+        Voice(label="Eric", provider="kokoro", provider_id="am_eric", tags=["male"]),
+        Voice(
+            label="Fenrir", provider="kokoro", provider_id="am_fenrir", tags=["male"]
+        ),
+        Voice(label="Liam", provider="kokoro", provider_id="am_liam", tags=["male"]),
+        Voice(
+            label="Michael", provider="kokoro", provider_id="am_michael", tags=["male"]
+        ),
+        Voice(label="Onyx", provider="kokoro", provider_id="am_onyx", tags=["male"]),
+        Voice(label="Puck", provider="kokoro", provider_id="am_puck", tags=["male"]),
+        Voice(label="Santa", provider="kokoro", provider_id="am_santa", tags=["male"]),
+        Voice(
+            label="Alice", provider="kokoro", provider_id="bf_alice", tags=["female"]
+        ),
+        Voice(label="Emma", provider="kokoro", provider_id="bf_emma", tags=["female"]),
+        Voice(
+            label="Isabella",
+            provider="kokoro",
+            provider_id="bf_isabella",
+            tags=["female"],
+        ),
+        Voice(label="Lily", provider="kokoro", provider_id="bf_lily", tags=["female"]),
+        Voice(
+            label="Daniel", provider="kokoro", provider_id="bm_daniel", tags=["male"]
+        ),
+        Voice(label="Fable", provider="kokoro", provider_id="bm_fable", tags=["male"]),
+        Voice(
+            label="George", provider="kokoro", provider_id="bm_george", tags=["male"]
+        ),
+        Voice(label="Lewis", provider="kokoro", provider_id="bm_lewis", tags=["male"]),
     ]
 )
+
+KOKORO_INFO = """
+Kokoro is a local text to speech model.
+
+A list of available voices can be found at [https://kokorotts.net/models/Kokoro/text-to-speech](https://kokorotts.net/models/Kokoro/text-to-speech).
+"""
 
 
 class KokoroInstance(pydantic.BaseModel):

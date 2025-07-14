@@ -637,6 +637,11 @@ class TTSAgent(
     ):
         for chunk in context.chunks:
             for _chunk in chunk.sub_chunks:
+
+                # skip empty chunks
+                if not _chunk.cleaned_text.strip():
+                    continue
+
                 emission: VoiceGenerationEmission = VoiceGenerationEmission(
                     context=context
                 )

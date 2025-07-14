@@ -144,7 +144,7 @@
                   </v-col>
                   <v-col>
                     <v-btn
-                      :disabled="!selectedVoice || testing"
+                      :disabled="!canTest"
                       variant="text"
                       @click="testVoice"
                       prepend-icon="mdi-play"
@@ -228,6 +228,7 @@ export default {
       ],
       testing: false,
       apiStatus: [],
+      requireApiStatusRefresh: false,
     };
   },
   computed: {
@@ -288,6 +289,21 @@ export default {
       if (!provider) return [];
       const status = this.apiStatusByProvider[provider];
       return status && status.messages ? status.messages : [];
+    },
+    canTest() {
+      if (this.testing) return false;
+      // Existing voice selected – can test immediately
+      if (this.selectedVoice) return true;
+
+      // For a new voice ensure provider & provider_id are set and provider API is ready (if any)
+      if (!this.editVoice.provider || !this.editVoice.provider_id) return false;
+
+      // If we have any ready APIs list, the provider has to be in it – otherwise allow
+      if (this.readyAPIs.length > 0 && !this.readyAPIs.includes(this.editVoice.provider)) {
+        return false;
+      }
+
+      return true;
     },
   },
   watch: {
@@ -373,15 +389,18 @@ export default {
       this.resetEdit();
     },
     testVoice() {
-      if (!this.selectedVoice) return;
+      if (this.testing || !this.canTest) return;
+
+      const payload = {
+        type: 'voice_library',
+        action: 'test',
+      };
+
+      payload.provider = this.editVoice.provider;
+      payload.provider_id = this.editVoice.provider_id;
+
       this.testing = true;
-      this.getWebsocket().send(
-        JSON.stringify({
-          type: 'voice_library',
-          action: 'test',
-          voice_id: this.selectedVoice.id,
-        })
-      );
+      this.getWebsocket().send(JSON.stringify(payload));
     },
     requestApiStatus() {
       this.getWebsocket().send(

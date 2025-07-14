@@ -45,6 +45,13 @@ class VoiceRefPayload(pydantic.BaseModel):
     voice_id: str
 
 
+class TestVoicePayload(pydantic.BaseModel):
+    """Payload for testing a voice."""
+
+    provider: str
+    provider_id: str
+
+
 class AddVoicePayload(Voice):
     """Explicit payload for adding a new voice – identical fields to Voice."""
 
@@ -190,19 +197,27 @@ class VoiceLibraryWebsocketHandler(Plugin):
         await self.signal_operation_done()
 
     async def handle_test(self, data: dict):
+        """Handle a request to test a voice.
+
+        Supports two payload formats:
+
+        1. Existing voice – identified by ``voice_id`` (legacy behaviour)
+        2. Unsaved voice – identified by at least ``provider`` and ``provider_id``.
+        """
+
+        tts_agent: "TTSAgent" = get_agent("tts")
+
         try:
-            payload = VoiceRefPayload(**data)
+            payload = TestVoicePayload(**data)
         except pydantic.ValidationError as e:
             await self.signal_operation_failed(str(e))
             return
 
-        tts_agent: "TTSAgent" = get_agent("tts")
-
-        voice_library = get_voice_library()
-        voice = voice_library.voices.get(payload.voice_id)
-        if not voice:
-            await self.signal_operation_failed("Voice not found")
-            return
+        voice = Voice(
+            label=f"{payload.provider_id} (test)",
+            provider=payload.provider,
+            provider_id=payload.provider_id,
+        )
 
         if not tts_agent or not tts_agent.api_ready(voice.provider):
             await self.signal_operation_failed(f"API '{voice.provider}' not ready")

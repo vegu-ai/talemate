@@ -37,7 +37,7 @@ The voice id is the path to the .wav file for the voice.
 The path can be relative to the talemate root directory, and you can put new *.wav samples
 in the `tts/voice/xtts2` directory. It is also ok if you want to load the files from somewhere else as long as the filepath is available to the talemate backend.
 
-**CONFIRMATION REQUIRED**: If you have never used the xtts2 model before there will be a confirmation prompt in the talemate process. You need to reply with `y` to confirm that you agree to their terms of use.
+**CONFIRMATION REQUIRED**: If you have never used the xtts2 model before there will be a confirmation prompt in the talemate process. You need to reply with `y` to confirm that you agree to their terms of use. Afterwards the model will automatically download (~2GB).
 """
 
 

@@ -7,11 +7,18 @@ __all__ = [
 ]
 
 
+class Action(pydantic.BaseModel):
+    action_name: str
+    arguments: list[str | int | float | bool]
+
+
 class Note(pydantic.BaseModel):
     text: str
     title: str = None
     color: str = "muted"
     icon: str = "mdi-information-outline"
+
+    actions: list[Action] = pydantic.Field(default_factory=list)
 
 
 class Field(pydantic.BaseModel):

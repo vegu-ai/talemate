@@ -55,7 +55,7 @@ class KokoroMixin:
         return actions
 
     @property
-    def kokoro_ready(self) -> bool:
+    def kokoro_configured(self) -> bool:
         return True
 
     @property

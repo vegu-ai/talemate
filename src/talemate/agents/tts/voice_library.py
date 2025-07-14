@@ -24,6 +24,7 @@ VOICE_LIBRARY_PATH = (
 
 DEFAULT_VOICES = {}
 
+# TODO: does this need to be made thread safe?
 VOICE_LIBRARY = None
 
 
@@ -38,6 +39,8 @@ def load_voice_library() -> VoiceLibrary:
         library = VoiceLibrary(voices=DEFAULT_VOICES)
         save_voice_library(library)
         return library
+    finally:
+        log.debug("loaded voice library", path=str(VOICE_LIBRARY_PATH))
 
 
 def save_voice_library(voice_library: VoiceLibrary):

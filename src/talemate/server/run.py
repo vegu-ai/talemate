@@ -123,6 +123,7 @@ def run_server(args):
     from talemate.prompts.overrides import get_template_overrides
     import talemate.client.system_prompts as system_prompts
     from talemate.emit.base import emit
+    from talemate.agents.tts.voice_library import load_voice_library
 
     # import node libraries
     import talemate.game.engine.nodes.load_definitions
@@ -146,6 +147,9 @@ def run_server(args):
                 template=template_override.template_name,
                 age=template_override.age_difference,
             )
+
+    # load voice library
+    load_voice_library()
 
     # Get (or create) the asyncio event loop
     loop = asyncio.get_event_loop()

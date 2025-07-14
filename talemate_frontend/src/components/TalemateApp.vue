@@ -67,7 +67,7 @@
 
       <DirectorConsoleWidget :scene-active="sceneActive" @open-director-console="toggleNavigation('directorConsole')" />
 
-      <VoiceLibrary :enabled-apis="agentStatus.tts?.actions?._config?.config?.apis?.value ?? []" />
+      <VoiceLibrary />
 
       <VisualQueue ref="visualQueue" />
 

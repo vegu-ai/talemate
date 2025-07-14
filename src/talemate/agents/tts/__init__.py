@@ -12,6 +12,7 @@ import talemate.util.dialogue as dialogue_utils
 import talemate.config as config
 import talemate.emit.async_signals as async_signals
 import talemate.instance as instance
+from talemate.ux.schema import Note
 from talemate.emit import emit
 from talemate.emit.signals import handlers
 from talemate.events import GameLoopNewMessageEvent
@@ -27,6 +28,7 @@ from talemate.agents.base import (
 from talemate.agents.registry import register
 
 from .schema import (
+    APIStatus,
     Voice,
     VoiceLibrary,
     GenerationContext,
@@ -293,6 +295,10 @@ class TTSAgent(
         return self.actions["_config"].config["apis"].value
 
     @property
+    def all_apis(self) -> list[str]:
+        return [api["value"] for api in self.actions["_config"].config["apis"].choices]
+
+    @property
     def agent_details(self):
         details = {}
 
@@ -354,7 +360,6 @@ class TTSAgent(
             fn = getattr(self, f"{api}_agent_details", None)
             if fn:
                 details.update(fn)
-
         return details
 
     @property
@@ -370,6 +375,40 @@ class TTSAgent(
     @property
     def narrator_voice(self) -> Voice | None:
         return self.voice_library.get_voice(self.narrator_voice_id)
+
+    @property
+    def api_status(self) -> list[APIStatus]:
+        api_status: list[APIStatus] = []
+
+        for api in self.all_apis:
+            not_configured_reason = getattr(self, f"{api}_not_configured_reason", None)
+            not_configured_action = getattr(self, f"{api}_not_configured_action", None)
+            api_info = getattr(self, f"{api}_info", None)
+            messages: list[Note] = []
+            if not_configured_reason:
+                messages.append(
+                    Note(
+                        text=not_configured_reason,
+                        color="error",
+                        icon="mdi-alert-circle-outline",
+                        actions=[not_configured_action]
+                        if not_configured_action
+                        else None,
+                    )
+                )
+            if api_info:
+                messages.append(
+                    Note(text=api_info, color="muted", icon="mdi-information-outline")
+                )
+            _status = APIStatus(
+                api=api,
+                enabled=self.api_enabled(api),
+                ready=self.api_ready(api),
+                configured=self.api_configured(api),
+                messages=messages,
+            )
+            api_status.append(_status)
+        return api_status
 
     # events
 
@@ -432,32 +471,39 @@ class TTSAgent(
         """
         Returns a list of apis that are ready
         """
-        return [api for api in self.apis if getattr(self, f"{api}_ready", False)]
+        return [api for api in self.apis if self.api_ready(api)]
 
     @property
     def used_apis(self) -> list[str]:
         """
         Returns a list of apis that are in use
+
+        The api is in use if it is the narrator voice or if any of the active characters in the scene use a voice from the api.
         """
-        return [api for api in self.apis if self.api_in_use(api)]
+        return [api for api in self.apis if self.api_used(api)]
 
     def api_enabled(self, api: str) -> bool:
         """
-        Returns whether the api is enabled
+        Returns whether the api is currently in the .apis list, which means it is enabled.
         """
         return api in self.apis
 
     def api_ready(self, api: str) -> bool:
         """
-        Returns whether the api is ready
+        Returns whether the api is ready.
+
+        The api must be enabled and configured.
         """
 
         if not self.api_enabled(api):
             return False
 
-        return getattr(self, f"{api}_ready", True)
+        return self.api_configured(api)
 
-    def api_in_use(self, api: str) -> bool:
+    def api_configured(self, api: str) -> bool:
+        return getattr(self, f"{api}_configured", True)
+
+    def api_used(self, api: str) -> bool:
         """
         Returns whether the narrator or any of the active characters in the scene
         use a voice from the given api
@@ -484,11 +530,7 @@ class TTSAgent(
 
         return False
 
-    def voice_id_to_label(self, voice_id: str) -> str | None:
-        try:
-            return self.voice_library.get_voice(voice_id).label
-        except AttributeError:
-            return None
+    # generation
 
     @set_processing
     async def generate(self, text: str, character: Character | None = None):

@@ -1,10 +1,13 @@
 import pydantic
 from typing import Callable, Literal
 
+from talemate.ux.schema import Note
+
 MAX_TAG_LENGTH: int = 64  # Maximum number of characters per tag (configurable)
 MAX_TAGS_PER_VOICE: int = 10  # Maximum number of tags per voice (configurable)
 
 __all__ = [
+    "APIStatus",
     "Chunk",
     "GenerationContext",
     "Voice",
@@ -102,3 +105,13 @@ class GenerationContext(pydantic.BaseModel):
 class VoiceGenerationEmission(pydantic.BaseModel):
     context: GenerationContext
     wav_bytes: bytes | None = None
+
+
+class APIStatus(pydantic.BaseModel):
+    """Status of an API."""
+
+    api: str
+    enabled: bool
+    ready: bool
+    configured: bool
+    messages: list[Note] = pydantic.Field(default_factory=list)

@@ -82,7 +82,7 @@ class XTTS2Mixin:
         return actions
 
     @property
-    def xtts2_ready(self) -> bool:
+    def xtts2_configured(self) -> bool:
         return True
 
     @property
@@ -99,7 +99,7 @@ class XTTS2Mixin:
 
     @property
     def xtts2_agent_details(self) -> dict:
-        if not self.ready:
+        if not self.xtts2_configured:
             return {}
         details = {}
 

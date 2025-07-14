@@ -5,7 +5,7 @@ from typing import Union, Optional
 import structlog
 from google import genai
 from google.genai import types
-
+from talemate.ux.schema import Action
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
@@ -174,10 +174,31 @@ class GoogleMixin:
         voices["google"] = VoiceLibrary(api="google")
 
     @property
-    def google_ready(self) -> bool:
-        return bool(self.google_api_key)
+    def google_configured(self) -> bool:
+        return bool(self.google_api_key) and bool(self.google_model)
 
     @property
+    def google_not_configured_reason(self) -> str | None:
+        if not self.google_api_key:
+            return "Google API key not set"
+        if not self.google_model:
+            return "Google model not set"
+        return None
+
+    @property
+    def google_not_configured_action(self) -> Action | None:
+        if not self.google_api_key:
+            return Action(
+                action_name="openAppConfig",
+                arguments=["application", "google_api"],
+            )
+        if not self.google_model:
+            return Action(
+                action_name="openAgentSettings",
+                arguments=["tts", "google"],
+            )
+        return None
+
     def google_max_generation_length(self) -> int:
         return 1024  # safe default (≈ 4 k chars)
 
@@ -193,7 +214,7 @@ class GoogleMixin:
     def google_agent_details(self) -> dict:
         details = {}
 
-        if not self.google_ready:
+        if not self.google_configured:
             details["google_api_key"] = AgentDetail(
                 icon="mdi-key",
                 value="Google API key not set",

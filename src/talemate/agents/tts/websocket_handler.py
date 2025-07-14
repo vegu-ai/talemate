@@ -5,6 +5,9 @@ import asyncio
 import pydantic
 import structlog
 
+from typing import TYPE_CHECKING
+
+from talemate.emit.signals import handlers
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
 
@@ -12,7 +15,10 @@ from .voice_library import (
     get_instance as get_voice_library,
     save_voice_library,
 )
-from .schema import Voice, GenerationContext, Chunk
+from .schema import Voice, GenerationContext, Chunk, APIStatus
+
+if TYPE_CHECKING:
+    from talemate.agents.tts import TTSAgent
 
 __all__ = [
     "VoiceLibraryWebsocketHandler",
@@ -56,6 +62,16 @@ class VoiceLibraryWebsocketHandler(Plugin):
         asyncio.create_task(self._send_voice_list())
 
     # ---------------------------------------------------------------------
+    # Events
+    # ---------------------------------------------------------------------
+
+    def connect(self):
+        handlers.get("config_saved").connect(self.on_app_config_saved)
+
+    def on_app_config_saved(self, event):
+        self._send_api_status()
+
+    # ---------------------------------------------------------------------
     # Helper methods
     # ---------------------------------------------------------------------
 
@@ -63,15 +79,11 @@ class VoiceLibraryWebsocketHandler(Plugin):
         voice_library = get_voice_library()
         voices = [v.model_dump() for v in voice_library.voices.values()]
 
-        tts_agent = get_agent("tts")
-        enabled_apis = tts_agent.apis if tts_agent else []
-
         self.websocket_handler.queue_put(
             {
                 "type": self.router,
                 "action": "voices",
                 "voices": voices,
-                "enabled_apis": enabled_apis,
             }
         )
 
@@ -82,12 +94,26 @@ class VoiceLibraryWebsocketHandler(Plugin):
         # After any mutation we broadcast the full list for simplicity
         asyncio.create_task(self._send_voice_list())
 
+    def _send_api_status(self):
+        tts_agent: "TTSAgent" = get_agent("tts")
+        api_status: list[APIStatus] = tts_agent.api_status
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "api_status",
+                "api_status": [s.model_dump() for s in api_status],
+            }
+        )
+
     # ---------------------------------------------------------------------
     # Handlers
     # ---------------------------------------------------------------------
 
     async def handle_list(self, data: dict):
         await self._send_voice_list()
+
+    async def handle_api_status(self, data: dict):
+        self._send_api_status()
 
     async def handle_add(self, data: dict):
         try:
@@ -168,7 +194,7 @@ class VoiceLibraryWebsocketHandler(Plugin):
             await self.signal_operation_failed(str(e))
             return
 
-        tts_agent = get_agent("tts")
+        tts_agent: "TTSAgent" = get_agent("tts")
 
         voice_library = get_voice_library()
         voice = voice_library.voices.get(payload.voice_id)

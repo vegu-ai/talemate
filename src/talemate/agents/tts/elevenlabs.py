@@ -3,6 +3,7 @@ from typing import Union
 
 import structlog
 from elevenlabs.client import AsyncElevenLabs
+from talemate.ux.schema import Action
 
 from talemate.agents.base import (
     AgentAction,
@@ -79,8 +80,32 @@ class ElevenLabsMixin:
         voices["elevenlabs"] = VoiceLibrary(api="elevenlabs", local=True)
 
     @property
-    def elevenlabs_ready(self) -> bool:
-        return bool(self.elevenlabs_api_key)
+    def elevenlabs_configured(self) -> bool:
+        api_key_set = bool(self.elevenlabs_api_key)
+        model_set = bool(self.elevenlabs_model)
+        return api_key_set and model_set
+
+    @property
+    def elevenlabs_not_configured_reason(self) -> str | None:
+        if not self.elevenlabs_api_key:
+            return "ElevenLabs API key not set"
+        if not self.elevenlabs_model:
+            return "ElevenLabs model not set"
+        return None
+
+    @property
+    def elevenlabs_not_configured_action(self) -> Action | None:
+        if not self.elevenlabs_api_key:
+            return Action(
+                action_name="openAppConfig",
+                arguments=["application", "elevenlabs_api"],
+            )
+        if not self.elevenlabs_model:
+            return Action(
+                action_name="openAgentSettings",
+                arguments=["tts", "elevenlabs"],
+            )
+        return None
 
     @property
     def elevenlabs_max_generation_length(self) -> int:
@@ -94,7 +119,7 @@ class ElevenLabsMixin:
     def elevenlabs_agent_details(self) -> dict:
         details = {}
 
-        if not self.elevenlabs_ready:
+        if not self.elevenlabs_configured:
             details["elevenlabs_api_key"] = AgentDetail(
                 icon="mdi-key",
                 value="ElevenLabs API key not set",

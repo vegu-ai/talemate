@@ -3,7 +3,7 @@ from typing import Union
 
 import structlog
 from openai import AsyncOpenAI
-
+from talemate.ux.schema import Action
 from talemate.agents.base import AgentAction, AgentActionConfig, AgentDetail
 from .schema import Voice, VoiceLibrary, Chunk, GenerationContext
 from .voice_library import add_default_voices
@@ -120,7 +120,6 @@ class OpenAIMixin:
 
     @property
     def openai_max_generation_length(self) -> int:
-        # XXX: Check limits
         return 1024
 
     @property
@@ -132,14 +131,36 @@ class OpenAIMixin:
         return self.config.get("openai", {}).get("api_key")
 
     @property
-    def openai_ready(self) -> bool:
-        return bool(self.openai_api_key)
+    def openai_configured(self) -> bool:
+        return bool(self.openai_api_key) and bool(self.openai_model)
+
+    @property
+    def openai_not_configured_reason(self) -> str | None:
+        if not self.openai_api_key:
+            return "OpenAI API key not set"
+        if not self.openai_model:
+            return "OpenAI model not set"
+        return None
+
+    @property
+    def openai_not_configured_action(self) -> Action | None:
+        if not self.openai_api_key:
+            return Action(
+                action_name="openAppConfig",
+                arguments=["application", "openai_api"],
+            )
+        if not self.openai_model:
+            return Action(
+                action_name="openAgentSettings",
+                arguments=["tts", "openai"],
+            )
+        return None
 
     @property
     def openai_agent_details(self) -> dict:
         details = {}
 
-        if not self.openai_ready:
+        if not self.openai_configured:
             details["openai_api_key"] = AgentDetail(
                 icon="mdi-key",
                 value="OpenAI API key not set",

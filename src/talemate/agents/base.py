@@ -94,6 +94,7 @@ class AgentDetail(pydantic.BaseModel):
     description: str | None = None
     icon: str | None = None
     color: str = "grey"
+    hidden: bool = False
 
 
 class DynamicInstruction(pydantic.BaseModel):

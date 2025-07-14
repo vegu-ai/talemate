@@ -12,14 +12,15 @@
           <v-icon class="mr-2" size="small" color="primary">mdi-account-voice</v-icon>
           Voice Library
         </v-toolbar-title>
-        <template v-for="p in providers" :key="p">
+        <template v-for="api in apiStatus" :key="api.api">
           <v-chip
             class="ml-2"
-            size="x-small"
+            size="small"
             label
-            :color="enabledApis.includes(p) ? 'success' : 'grey'"
+            :prepend-icon="apiStatusIcon(api)"
+            :color="apiStatusColor(api)"
           >
-            {{ p }}
+            {{ api.api }}
           </v-chip>
         </template>
         <v-spacer></v-spacer>
@@ -147,6 +148,32 @@
                 </v-row>
               </v-card-text>
             </v-card>
+
+            <!-- API status messages -->
+            <div v-if="selectedProviderMessages.length" class="mt-4">
+              <v-alert
+                v-for="msg in selectedProviderMessages"
+                :key="msg.text + (msg.title || '')"
+                :color="msg.color"
+                :icon="msg.icon"
+                variant="tonal"
+                density="compact"
+                class="mb-2"
+              >
+                {{ msg.text }}
+                <v-btn
+                  v-for="action in msg.actions"
+                  :key="action.action_name"
+                  variant="plain"
+                  color="primary"
+                  size="small"
+                  class="ml-2"
+                  @click="callErrorAction(action.action_name, action.arguments)"
+                >
+                  Set API Key
+                </v-btn>
+              </v-alert>
+            </div>
           </v-col>
         </v-row>
       </v-card-text>
@@ -157,13 +184,7 @@
 <script>
 export default {
   name: 'VoiceLibrary',
-  inject: ['getWebsocket', 'registerMessageHandler'],
-  props: {
-    enabledApis: {
-      type: Array,
-      default: () => [],
-    },
-  },
+  inject: ['getWebsocket', 'registerMessageHandler', 'openAgentSettings', 'openAppConfig'],
   data() {
     return {
       dialog: false,
@@ -178,18 +199,34 @@ export default {
         provider_model: '',
         tags: [],
       },
-      providers: ['elevenlabs', 'openai', 'xtts2', 'piper', 'google', 'kokoro'],
       headers: [
         { title: 'Label', value: 'label' },
         { title: 'Provider', value: 'provider' },
         { title: 'Tags', value: 'tags' },
       ],
       testing: false,
+      apiStatus: [],
     };
   },
   computed: {
+    providers() {
+      return this.apiStatus.filter((a) => a.enabled).map((a) => a.api);
+    },
+    readyAPIs() {
+      // return apis where ready is true
+      return this.apiStatus.filter((a) => a.ready).map((a) => a.api);
+    },
+
+    apiStatusByProvider() {
+      return this.apiStatus.reduce((acc, a) => {
+        acc[a.api] = a;
+        return acc;
+      }, {});
+    },
+
     filteredVoices() {
-      let list = this.voices.filter((v) => this.enabledApis.length === 0 || this.enabledApis.includes(v.provider));
+      let list = this.voices.filter((v) => this.readyAPIs.length === 0 || this.readyAPIs.includes(v.provider));
+      console.log({ readyAPIs: this.readyAPIs, list });
       if (this.filter) {
         const f = this.filter.toLowerCase();
         list = list.filter(
@@ -210,6 +247,20 @@ export default {
       });
       return Array.from(tagsSet).sort();
     },
+    // Messages for the currently selected provider in the form
+    selectedProviderMessages() {
+      const provider = this.editVoice.provider;
+      if (!provider) return [];
+      const status = this.apiStatusByProvider[provider];
+      return status && status.messages ? status.messages : [];
+    },
+  },
+  watch: {
+    dialog(newVal) {
+      if (newVal) {
+        this.requestApiStatus();
+      }
+    },
   },
   methods: {
     open() {
@@ -220,6 +271,24 @@ export default {
           JSON.stringify({ type: 'voice_library', action: 'list' })
         );
       }
+    },
+    apiStatusIcon(api) {
+      if (api.ready) {
+        return 'mdi-check-circle-outline';
+      }
+      if (api.configured && !api.enabled) {
+        return 'mdi-circle-outline';
+      }
+      return 'mdi-alert-circle-outline';
+    },
+    apiStatusColor(api) {
+      if (api.ready) {
+        return 'success';
+      }
+      if (api.configured && !api.enabled) {
+        return 'muted';
+      }
+      return 'error';
     },
     selectVoice(voice) {
       this.selectedVoice = voice;
@@ -271,6 +340,19 @@ export default {
         })
       );
     },
+    requestApiStatus() {
+      this.getWebsocket().send(
+        JSON.stringify({ type: 'voice_library', action: 'api_status' })
+      );
+    },
+    callErrorAction(action_name, args) {
+      if (action_name === 'openAppConfig') {
+        this.openAppConfig(...args);
+      }
+      if (action_name === 'openAgentSettings') {
+        this.openAgentSettings(...args);
+      }
+    },
     handleMessage(message) {
       if (message.type !== 'voice_library') return;
       if (message.action === 'voices' && message.voices) {
@@ -278,6 +360,10 @@ export default {
       }
       if (message.action === 'operation_done' || message.action === 'operation_failed') {
         this.testing = false;
+      }
+      if (message.action === 'api_status' && message.api_status) {
+        this.apiStatus = message.api_status;
+        console.log({ apiStatus: this.apiStatus });
       }
     },
     onRowClick(event, { item }) {

@@ -100,7 +100,7 @@ class PiperMixin:
         voices["piper"] = VoiceLibrary(api="piper", local=True)
 
     @property
-    def piper_ready(self) -> bool:
+    def piper_configured(self) -> bool:
         return True
 
     @property

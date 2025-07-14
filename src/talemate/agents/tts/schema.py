@@ -1,4 +1,5 @@
 import pydantic
+import re
 from typing import Callable, Literal
 
 from talemate.ux.schema import Note
@@ -85,7 +86,10 @@ class Chunk(pydantic.BaseModel):
     def cleaned_text(self) -> str:
         cleaned: str = self.text[0].replace("*", "").replace('"', "")
         cleaned = cleaned.replace("—", " - ")
-        cleaned = cleaned.replace("\n", " ")
+        
+        # replace any grouped up whitespace with a single space
+        cleaned = re.sub(r"\s+", " ", cleaned)
+
         return cleaned.strip()
 
     @property

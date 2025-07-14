@@ -4,14 +4,6 @@
     <v-icon>mdi-account-voice</v-icon>
   </v-app-bar-nav-icon>
 
-  <!-- Voice Mixer Component -->
-  <VoiceMixer 
-    ref="voiceMixer"
-    provider="kokoro"
-    :voices="voices"
-    :tag-options="tagOptions"
-  />
-
   <!-- Dialog for voice library -->
   <v-dialog v-model="dialog" max-width="1920" max-height="1080">
     <v-card>
@@ -98,90 +90,100 @@
 
           <!-- Edit / Add form -->
           <v-col cols="5">
-            <v-card elevation="7" density="compact">
-              <v-card-text>
-                <v-text-field v-model="editVoice.label" label="Label" />
-                <v-select
-                  v-model="editVoice.provider"
-                  :items="providers"
-                  label="Provider"
-                />
-                <v-text-field v-model="editVoice.provider_id" label="Voice ID" />
-                <v-text-field
-                  v-model="editVoice.provider_model"
-                  label="Model"
-                />
-                <v-combobox
-                  v-model="editVoice.tags"
-                  :items="tagOptions"
-                  label="Tags"
-                  multiple
-                  chips
-                  clearable
-                  hide-selected
-                  placeholder="Add or select tags"
-                />
-              </v-card-text>
-              <v-card-actions>
-                <!-- Save or Add Voice -->
-                <v-btn
-                  v-if="selectedVoice"
-                  color="primary"
-                  variant="text"
-                  @click="saveVoice"
-                  prepend-icon="mdi-content-save"
-                  >Save</v-btn
-                >
-                <v-btn
-                  v-else
-                  color="primary"
-                  variant="text"
-                  @click="addVoice"
-                  prepend-icon="mdi-plus"
-                  >Add Voice</v-btn
-                >
-                <!-- Test Voice -->
-                <v-btn
-                  :disabled="!canTest"
-                  variant="text"
-                  color="secondary"
-                  @click="testVoice"
-                  prepend-icon="mdi-play"
-                >
-                  Test
-                  <v-progress-circular
-                    v-if="testing"
-                    indeterminate
-                    size="14"
-                    color="secondary"
-                    class="ml-2"
-                  />
-                </v-btn>
-                <!-- Voice Mixing Button (only shown when any API supports mixing) -->
-                <v-btn
-                  v-if="apiSupportsMixing(editVoice.provider)"
-                  variant="text"
-                  color="primary"
-                  @click="openVoiceMixer"
-                  prepend-icon="mdi-tune"
-                >
-                  Voice Mixing
-                </v-btn>
-                <v-spacer></v-spacer>
+            <!-- Tabs controlling window -->
+            <v-tabs v-model="activeTab" density="compact" class="mb-2" color="primary">
+              <v-tab value="details">Details</v-tab>
+              <v-tab
+                v-if="apiSupportsMixing(editVoice.provider)"
+                value="mixer"
+                prepend-icon="mdi-tune"
+              >
+                Mixer
+              </v-tab>
+            </v-tabs>
+            <v-divider class="mb-2" />
 
-                <!-- Remove Voice -->
-                <v-btn
-                  :disabled="!selectedVoice"
-                  color="delete"
-                  variant="text"
-                  @click="deleteVoice"
-                  prepend-icon="mdi-close-circle-outline"
-                  >Remove</v-btn
-                >
-              </v-card-actions>
-            </v-card>
+            <v-window v-model="activeTab" class="mt-2">
+              <!-- Details Tab -->
+              <v-window-item value="details">
+                <v-card elevation="7" density="compact">
+                  <v-card-text>
+                    <v-text-field v-model="editVoice.label" label="Label" />
+                    <v-select
+                      v-model="editVoice.provider"
+                      :items="providers"
+                      label="Provider"
+                    />
+                    <v-text-field v-model="editVoice.provider_id" label="Voice ID" />
+                    <v-text-field v-model="editVoice.provider_model" label="Model" />
+                    <v-combobox
+                      v-model="editVoice.tags"
+                      :items="tagOptions"
+                      label="Tags"
+                      multiple
+                      chips
+                      clearable
+                      hide-selected
+                      placeholder="Add or select tags"
+                    />
+                  </v-card-text>
+                  <v-card-actions>
+                    <!-- Save or Add Voice -->
+                    <v-btn
+                      v-if="selectedVoice"
+                      color="primary"
+                      variant="text"
+                      @click="saveVoice"
+                      prepend-icon="mdi-content-save"
+                      >Save</v-btn
+                    >
+                    <v-btn
+                      v-else
+                      color="primary"
+                      variant="text"
+                      @click="addVoice"
+                      prepend-icon="mdi-plus"
+                      >Add Voice</v-btn
+                    >
+                    <!-- Test Voice -->
+                    <v-btn
+                      :disabled="!canTest"
+                      :loading="testing"
+                      variant="text"
+                      color="secondary"
+                      @click="testVoice"
+                      prepend-icon="mdi-play"
+                    >
+                      Test
+                    </v-btn>
+                    <!-- Remove Voice -->
+                    <v-spacer></v-spacer>
+                    <v-btn
+                      :disabled="!selectedVoice"
+                      color="delete"
+                      variant="text"
+                      @click="deleteVoice"
+                      prepend-icon="mdi-close-circle-outline"
+                      >Remove</v-btn
+                    >
+                  </v-card-actions>
+                </v-card>
+              </v-window-item>
 
-            <!-- API status messages -->
+              <!-- Mixer Tab -->
+              <v-window-item
+                v-if="apiSupportsMixing(editVoice.provider)"
+                value="mixer"
+              >
+                <VoiceMixer
+                  :provider="editVoice.provider"
+                  :voices="voices"
+                  :tag-options="tagOptions"
+                />
+              </v-window-item>
+            </v-window>
+
+            <!-- API status messages (below tabs) -->
             <div v-if="selectedProviderMessages.length" class="mt-4">
               <v-card
                 v-for="msg in selectedProviderMessages"
@@ -251,6 +253,7 @@ export default {
       testing: false,
       apiStatus: [],
       requireApiStatusRefresh: false,
+      activeTab: 'details',
     };
   },
   computed: {
@@ -347,9 +350,7 @@ export default {
         );
       }
     },
-    openVoiceMixer() {
-      this.$refs.voiceMixer.open();
-    },
+    // openVoiceMixer removed
     apiStatusIcon(api) {
       if (api.ready) {
         return 'mdi-check-circle-outline';
@@ -381,14 +382,16 @@ export default {
       this.editVoice = { ...voice }; // clone
     },
     resetEdit() {
+      const currentProvider = this.editVoice.provider;
       this.selectedVoice = null;
       this.editVoice = {
         label: '',
-        provider: '',
+        provider: currentProvider,
         provider_id: '',
         provider_model: '',
         tags: [],
       };
+      this.activeTab = 'details';
     },
     addVoice() {
       const payload = { ...this.editVoice };
@@ -450,6 +453,7 @@ export default {
         this.voices = message.voices;
         if (message.select_voice_id) {
           this.selectVoice(this.voices.find((v) => v.id === message.select_voice_id));
+          this.activeTab = 'details';
         }
       }
       if (message.action === 'operation_done' || message.action === 'operation_failed') {

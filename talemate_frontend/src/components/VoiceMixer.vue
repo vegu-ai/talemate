@@ -1,24 +1,11 @@
 <template>
-  <v-dialog v-model="dialog" max-width="800">
     <v-card>
-      <v-toolbar density="compact" color="grey-darken-4">
-        <v-toolbar-title>
-          <v-icon class="mr-2" size="small" color="primary">mdi-tune</v-icon>
-          Voice Mixer <v-chip class="ml-2" color="primary" label>{{ provider }}</v-chip>
-        </v-toolbar-title>
-        <v-spacer></v-spacer>
-        <v-btn icon @click="dialog = false">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
-      </v-toolbar>
-      
       <v-card-text class="pa-4">
         <!-- Voice Label -->
         <v-text-field
           v-model="mixedVoice.label"
-          label="Mixed Voice Name"
-          placeholder="Enter a name for your mixed voice"
-          density="compact"
+          label="Label"
+          placeholder="Enter a label for your mixed voice"
           class="mb-4"
           :error-messages="nameErrors"
           @input="validateName"
@@ -41,10 +28,11 @@
           v-for="(entry, index) in voiceEntries"
           :key="index"
           class="mb-3 pa-3"
+          elevation="0"
         >
           <v-row>
-            <v-col cols="4">
-              <v-select
+            <v-col cols="5">
+              <v-autocomplete
                 v-model="entry.id"
                 :items="availableVoices"
                 item-title="label"
@@ -61,11 +49,11 @@
                 :max="1.0"
                 :step="0.1"
                 label="Weight"
-                hide-details
                 density="compact"
+                hide-details
               />
             </v-col>
-            <v-col cols="4" class="d-flex align-center justify-end">
+            <v-col cols="3" class="d-flex align-center justify-end">
               <v-chip :color="entry.weight > 0 ? 'primary' : 'default'" class="mr-2">
                 {{ entry.weight.toFixed(1) }}
               </v-chip>
@@ -87,16 +75,16 @@
                 icon
                 size="small"
                 variant="text"
-                color="error"
+                color="delete"
                 @click="removeEntry(index)"
               >
-                <v-icon size="small">mdi-delete</v-icon>
+                <v-icon size="small">mdi-close-circle-outline</v-icon>
               </v-btn>
             </v-col>
           </v-row>
         </v-card>
         
-        <!-- Add Voice Button -->
+        <!-- Add another mix button -->
         <v-btn
           v-if="voiceEntries.length < 5"
           color="primary"
@@ -104,10 +92,11 @@
           prepend-icon="mdi-plus"
           @click="addEntry"
           :disabled="availableVoices.length === 0"
+          class="mb-2"
         >
-          Add Voice
+          Add another voice to the mix
         </v-btn>
-        
+
         <!-- Weight Validation -->
         <v-alert
           v-if="weightError"
@@ -137,36 +126,29 @@
       
       <v-card-actions>
         <v-btn
+          color="primary"
+          variant="text"
+          prepend-icon="mdi-plus"
+          @click="saveMixedVoice"
+          :disabled="!canSave || saving"
+          :loading="saving"
+        >
+          Add Voice
+        </v-btn>
+        <v-btn
           color="secondary"
           variant="text"
           prepend-icon="mdi-play"
           @click="testMixedVoice"
           :disabled="!canTest"
           :loading="testing"
+          class="ml-2"
         >
           Test
         </v-btn>
         <v-spacer></v-spacer>
-        <v-btn
-          color="cancel"
-          variant="text"
-          prepend-icon="mdi-close"
-          @click="dialog = false"
-        >
-          Cancel
-        </v-btn>
-        <v-btn
-          color="primary"
-          variant="text"
-          prepend-icon="mdi-content-save"
-          @click="saveMixedVoice"
-          :disabled="!canSave"
-        >
-          Save Mixed Voice
-        </v-btn>
       </v-card-actions>
     </v-card>
-  </v-dialog>
 </template>
 
 <script>
@@ -189,7 +171,6 @@ export default {
   },
   data() {
     return {
-      dialog: false,
       mixedVoice: {
         label: '',
         tags: [],
@@ -256,7 +237,8 @@ export default {
       return (
         !this.testing &&
         this.validEntries.length >= 2 &&
-        !this.weightError
+        !this.weightError &&
+        !this.saving
       );
     },
     canSave() {
@@ -269,10 +251,6 @@ export default {
     },
   },
   methods: {
-    open() {
-      this.dialog = true;
-      this.resetForm();
-    },
     resetForm() {
       this.mixedVoice = {
         label: '',
@@ -373,7 +351,6 @@ export default {
         this.testing = false;
         this.testingVoice = null;
         if (this.saving) {
-          this.dialog = false;
           this.saving = false;
         }
       }

@@ -128,7 +128,7 @@ class KokoroMixin:
 
     @property
     def kokoro_max_generation_length(self) -> int:
-        return 1024
+        return 256
 
     @property
     def kokoro_agent_details(self) -> dict:

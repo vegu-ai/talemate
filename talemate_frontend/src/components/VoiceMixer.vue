@@ -51,6 +51,7 @@
                 label="Weight"
                 density="compact"
                 hide-details
+                @update:modelValue="adjustWeight(index, $event)"
               />
             </v-col>
             <v-col cols="3" class="d-flex align-center justify-end">
@@ -354,6 +355,23 @@ export default {
           this.saving = false;
         }
       }
+    },
+    adjustWeight(index, newWeight) {
+      // when there are only two voices, the weights can be adjusted automatically
+      // for convenience
+
+      if (this.voiceEntries.length !== 2) return;
+
+      const clamped = Math.max(0.1, Math.min(0.9, parseFloat(newWeight.toFixed(1))));
+
+      // If clamping changed the value, reflect it back to the edited entry
+      if (clamped !== newWeight) {
+        this.voiceEntries[index].weight = clamped;
+      }
+
+      const otherIndex = index === 0 ? 1 : 0;
+      // Calculate and set complementary weight for the other entry
+      this.voiceEntries[otherIndex].weight = parseFloat((1 - clamped).toFixed(1));
     },
   },
   created() {

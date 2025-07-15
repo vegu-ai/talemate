@@ -2,6 +2,7 @@ import re
 import structlog
 import pydantic
 from typing import Literal
+from nltk.tokenize import sent_tokenize
 
 __all__ = [
     "handle_endofline_special_delimiter",
@@ -17,6 +18,7 @@ __all__ = [
     "clean_uneven_markers",
     "split_anchor_text",
     "separate_dialogue_from_exposition",
+    "separate_sentences",
     "DialogueChunk",
 ]
 
@@ -26,6 +28,7 @@ log = structlog.get_logger("talemate.util.dialogue")
 class DialogueChunk(pydantic.BaseModel):
     text: str
     type: Literal["dialogue", "exposition"]
+    speaker: str | None = None
 
 
 def handle_endofline_special_delimiter(content: str) -> str:
@@ -439,6 +442,13 @@ def split_anchor_text(text: str, anchor_length: int = 10) -> tuple[str, str]:
     return non_anchor, anchor
 
 
+def separate_sentences(text: str) -> str:
+    """
+    Separates a text into sentences and joins them with double newlines.
+    """
+    return "\n\n".join(sent_tokenize(text))
+
+
 def separate_dialogue_from_exposition(text: str) -> list[DialogueChunk]:
     """
     Separates dialogue from exposition in a text.
@@ -446,6 +456,13 @@ def separate_dialogue_from_exposition(text: str) -> list[DialogueChunk]:
     Returns a list of DialogueChunk objects, where each chunk is either dialogue or exposition.
     Dialogue is defined as any text between double quotes ("").
     Everything else is exposition (regardless of asterisks or other markers).
+
+    Speakers may be identified by curly braces, e.g. {John} - if so they are always at the beginning of a dialogue segment.
+
+    For example:
+
+    "{John}I am leaving now." - speaker is John
+    "I am leaving now." - speaker is narrator (or not identified`)
     """
     if not text:
         return []
@@ -453,6 +470,7 @@ def separate_dialogue_from_exposition(text: str) -> list[DialogueChunk]:
     chunks = []
     current_segment = ""
     in_dialogue = False
+    prev_speaker: str | None = None
 
     for i, char in enumerate(text):
         if char == '"':
@@ -460,7 +478,27 @@ def separate_dialogue_from_exposition(text: str) -> list[DialogueChunk]:
             if in_dialogue:
                 # We're ending a dialogue segment - include the closing quote
                 current_segment += char
-                chunks.append(DialogueChunk(text=current_segment, type="dialogue"))
+
+                # Detect speaker names of the form "{Name}" that immediately follow the opening quote.
+                # Example: "{John}Hello." -> speaker="John", text='"Hello."'
+
+                speaker = None
+                speaker_match = re.match(r'^"\{([^}]+)\}', current_segment)
+                if speaker_match:
+                    # speaker_match.group(1) contains the name without braces
+                    speaker = speaker_match.group(1)
+                    # Remove the curly-braced name but keep the leading quote
+                    current_segment = current_segment.replace(f"{{{speaker}}}", "", 1)
+
+                    prev_speaker = speaker
+                elif prev_speaker:
+                    speaker = prev_speaker
+
+                chunks.append(
+                    DialogueChunk(
+                        text=current_segment, type="dialogue", speaker=speaker
+                    )
+                )
                 current_segment = ""
                 in_dialogue = False
             else:

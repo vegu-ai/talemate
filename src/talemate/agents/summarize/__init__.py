@@ -34,6 +34,7 @@ from talemate.history import ArchiveEntry
 from .analyze_scene import SceneAnalyzationMixin
 from .context_investigation import ContextInvestigationMixin
 from .layered_history import LayeredHistoryMixin
+from .tts_utils import TTSUtilsMixin
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -71,6 +72,7 @@ class SummarizeAgent(
     ContextInvestigationMixin,
     # Needs to be after ContextInvestigationMixin so signals are connected in the right order
     SceneAnalyzationMixin,
+    TTSUtilsMixin,
     Agent,
 ):
     """

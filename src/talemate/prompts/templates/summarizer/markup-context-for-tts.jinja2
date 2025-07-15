@@ -1,0 +1,55 @@
+{% include "scene-context.jinja2" %}
+<|SECTION:TASK|>
+Your task is to appropriately mark sections of dialogue with the speaker name within the text.
+
+Dialogue is any text that is between double quotes. Speaker indications are formatted as curly braces with the speaker name inside, placed immediately after the opening quote. See the examples.
+
+Your response should be the entire text in a <MARKUP> tag with numbered paragraphs matching the input.
+<|CLOSE_SECTION|>
+<|SECTION:EXAMPLES|>
+<TEXT>
+[1] He stopped at the door and looked back at Jasmine. "I will be back soon."
+</TEXT>
+<MARKUP>
+[1] He stopped at the door and looked back at Jasmine. "{John}I will be back soon."
+</MARKUP>
+
+<TEXT>
+[1] "Are you coming?" Mary asked. David shook his head. "Not today."
+</TEXT>
+<MARKUP>
+[1] "{Mary}Are you coming?" Mary asked. David shook his head. "{David}Not today."
+</MARKUP>
+
+<TEXT>
+[1] Sarah rushed into the room. "You'll never believe what happened!"
+[2] Mike looked up from his book. "What now?" He set it aside. "Did you get the promotion?"
+[3] "Even better!" She pulled out her phone. "I won that contest - first place!"
+[4] "The photography one?" Mike leaned forward. "That's amazing!"
+</TEXT>
+<MARKUP>
+[1] Sarah rushed into the room. "{Sarah}You'll never believe what happened!"
+[2] Mike looked up from his book. "{Mike}What now?" He set it aside. "{Mike}Did you get the promotion?"
+[3] "{Sarah}Even better!" She pulled out her phone. "{Sarah}I won that contest - first place!"
+[4] "{Mike}The photography one?" Mike leaned forward. "{Mike}That's amazing!"
+</MARKUP>
+
+<TEXT>
+[1] "Listen," Tom said, his voice low. "I need to tell you something." He glanced around nervously. "But you can't tell anyone, okay?" His hands trembled as he continued. "I saw what happened that night."
+</TEXT>
+<MARKUP>
+[1] "{Tom}Listen," Tom said, his voice low. "{Tom}I need to tell you something." He glanced around nervously. "{Tom}But you can't tell anyone, okay?" His hands trembled as he continued. "{Tom}I saw what happened that night."
+</MARKUP>
+<|CLOSE_SECTION|>
+<|SECTION:GUIDELINES|>
+- PRESERVE ALL TEXT EXACTLY - only add speaker tags
+- Mark EVERY piece of dialogue, even multiple quotes from the same speaker
+- Use proper name casing (John, not JOHN)
+- Use {Unknown} if speaker cannot be determined
+- Maintain paragraph numbering from input
+<|CLOSE_SECTION|>
+<|SECTION:TEXT|>
+<TEXT>
+{{ text }}
+</TEXT>
+{{ set_prepared_response("<MARKUP>\n[1]") }}

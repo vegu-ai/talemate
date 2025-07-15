@@ -49,6 +49,7 @@ from .websocket_handler import TTSWebsocketHandler
 
 if TYPE_CHECKING:
     from talemate.character import Character
+    from talemate.agents.summarize import SummarizeAgent
 
 log = structlog.get_logger("talemate.agents.tts")
 
@@ -567,6 +568,8 @@ class TTSAgent(
 
         self.playback_done_event.set()
 
+        summarizer: "SummarizeAgent" = instance.get_agent("summarizer")
+
         context = GenerationContext(voice_id=self.narrator_voice_id)
         character_voice: Voice = self.narrator_voice
 
@@ -587,12 +590,35 @@ class TTSAgent(
 
         chunks: list[Chunk] = []
         if self.separate_narrator_voice:
-            for _dlg_chunk in dialogue_utils.separate_dialogue_from_exposition(text):
+            markup = await summarizer.markup_context_for_tts(text)
+
+            for _dlg_chunk in dialogue_utils.separate_dialogue_from_exposition(markup):
                 _voice = (
                     character_voice
                     if _dlg_chunk.type == "dialogue"
                     else self.narrator_voice
                 )
+
+                if _dlg_chunk.speaker is not None:
+                    # speaker name has been identified
+                    _character = self.scene.get_character(_dlg_chunk.speaker)
+                    log.debug(
+                        "Identified speaker",
+                        speaker=_dlg_chunk.speaker,
+                        character=_character,
+                    )
+                    if (
+                        _character
+                        and _character.voice
+                        and self.api_ready(_character.voice.provider)
+                    ):
+                        log.debug(
+                            "Using character voice",
+                            character=_character.name,
+                            voice=_character.voice,
+                        )
+                        _voice = _character.voice
+
                 _api: str = _voice.provider if _voice else self.api
                 chunk = Chunk(
                     api=_api,
@@ -665,9 +691,14 @@ class TTSAgent(
                 )
                 log.info("Generating audio", api=chunk.api, chunk=_chunk)
                 await async_signals.get("agent.tts.generate.before").send(emission)
-                emission.wav_bytes = await _chunk.generate_fn(_chunk, context)
+                try:
+                    emission.wav_bytes = await _chunk.generate_fn(_chunk, context)
+                except Exception as e:
+                    log.error("Error generating audio", error=e, chunk=_chunk)
+                    continue
                 await async_signals.get("agent.tts.generate.after").send(emission)
                 self.play_audio(emission.wav_bytes)
+                await asyncio.sleep(0.1)
 
     def play_audio(self, audio_data):
         # play audio through the websocket (browser)

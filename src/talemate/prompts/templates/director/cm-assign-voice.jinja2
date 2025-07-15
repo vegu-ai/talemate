@@ -1,0 +1,54 @@
+{% set extra_context_content -%}
+{% include "extra-context.jinja2" %}
+{# scene analysis exists #}{% if scene.agent_state.summarizer and scene.agent_state.summarizer.scene_analysis %}{{ scene.agent_state.summarizer.scene_analysis }} {% endif %}
+{% endset %}
+{% set character_context_content -%}
+<|SECTION:CHARACTER DETAILS - {{ character.name }}|>
+{{ character.description }}
+
+{{ character.sheet }}
+<|CLOSE_SECTION|>
+{% endset %}
+{% set voices_content -%}
+<|SECTION:VOICES|>
+{% for voice in voices %}
+{
+    "voice_id": "{{ voice.id }}",
+    "name": "{{ voice.label }}",
+    "tags": {{ voice.tags|tojson }}
+}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endset %}
+{{ extra_context_content }}
+{{ character_context_content }}
+{{ voices_content }}
+{% set context_tokens = count_tokens(extra_context_content) + count_tokens(character_context_content) + count_tokens(voices_content) %}
+{% set budget=min(max_tokens-300-context_tokens, 1024) %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
+
+<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
+{{ focal.render_instructions() }}
+
+{{
+    focal.callbacks.assign_voice.render(
+        "Assign a voice to "+character.name+". Use the tags and the character information to determine the best voice.",
+        voice_id="The voice id",
+        examples=[
+            {
+                "voice_id": "kokoro:af_heart",
+            },
+            {
+                "voice_id": "elevenlabs:wBXNqKUATyqu0RtYt25i",
+            }
+        ]
+    )
+}}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Assign a voice to {{ character.name }}. Use the tags and the character information to determine the best voice.
+
+First analyze the character and the available voices then make your choice by calling the `assign_voice` function.
+
+You MUST call the `assign_voice` function.
+<|CLOSE_SECTION|>

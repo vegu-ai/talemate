@@ -321,3 +321,71 @@ def test_separate_dialogue_from_exposition(input, expected):
     result_dicts = [{"text": chunk.text, "type": chunk.type} for chunk in result]
 
     assert result_dicts == expected
+
+
+# New tests to validate speaker identification within dialogue chunks
+
+
+@pytest.mark.parametrize(
+    "input, expected",
+    [
+        # Single dialogue with speaker
+        (
+            '"{John}I am leaving now."',
+            [
+                {"text": '"I am leaving now."', "type": "dialogue", "speaker": "John"},
+            ],
+        ),
+        # Dialogue embedded within exposition, with speaker
+        (
+            'She whispered "{Alice}Be careful" before disappearing.',
+            [
+                {"text": "She whispered ", "type": "exposition", "speaker": None},
+                {"text": '"Be careful"', "type": "dialogue", "speaker": "Alice"},
+                {
+                    "text": " before disappearing.",
+                    "type": "exposition",
+                    "speaker": None,
+                },
+            ],
+        ),
+        # Multiple dialogues with different speakers
+        (
+            '"{Bob}Hi" she replied "{Carol}Hello"',
+            [
+                {"text": '"Hi"', "type": "dialogue", "speaker": "Bob"},
+                {"text": " she replied ", "type": "exposition", "speaker": None},
+                {"text": '"Hello"', "type": "dialogue", "speaker": "Carol"},
+            ],
+        ),
+        # Prev speaker
+        (
+            '"{Bob}First dialog" some exposition "Second dialog" some more expostition "{Sarah}Third dialog"',
+            [
+                {"text": '"First dialog"', "type": "dialogue", "speaker": "Bob"},
+                {"text": " some exposition ", "type": "exposition", "speaker": None},
+                {"text": '"Second dialog"', "type": "dialogue", "speaker": "Bob"},
+                {
+                    "text": " some more expostition ",
+                    "type": "exposition",
+                    "speaker": None,
+                },
+                {"text": '"Third dialog"', "type": "dialogue", "speaker": "Sarah"},
+            ],
+        ),
+    ],
+)
+def test_separate_dialogue_from_exposition_speaker(input, expected):
+    """Ensure that speakers wrapped in curly-braces at the start of a dialogue segment
+    are correctly extracted into the `speaker` field and removed from the `text`."""
+    from talemate.util.dialogue import separate_dialogue_from_exposition
+
+    result = separate_dialogue_from_exposition(input)
+
+    # Convert result to list of dicts including the speaker field for comparison
+    result_dicts = [
+        {"text": chunk.text, "type": chunk.type, "speaker": chunk.speaker}
+        for chunk in result
+    ]
+
+    assert result_dicts == expected

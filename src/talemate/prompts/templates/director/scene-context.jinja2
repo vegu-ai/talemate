@@ -11,7 +11,6 @@
 {{ scene_context }}
 {% endfor %}
 {% endset %}
-{% endif %}
 {% with memory_prompt = history %}{% include "memory-context.jinja2" %}{% endwith %}
 <|SECTION:SCENE|>
 {{ scene_context_text }}

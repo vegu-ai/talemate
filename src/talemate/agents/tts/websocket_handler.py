@@ -12,6 +12,8 @@ from talemate.emit.signals import handlers
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
 
+import talemate.scene_message as scene_message
+
 from .voice_library import (
     get_instance as get_voice_library,
     save_voice_library,
@@ -20,6 +22,8 @@ from .schema import Voice, GenerationContext, Chunk, APIStatus, VoiceMixer, Voic
 
 if TYPE_CHECKING:
     from talemate.agents.tts import TTSAgent
+    from talemate.tale_mate import Scene
+    from talemate.character import Character
 
 __all__ = [
     "VoiceLibraryWebsocketHandler",
@@ -78,6 +82,12 @@ class SaveMixedVoicePayload(pydantic.BaseModel):
     tags: list[str] = pydantic.Field(default_factory=list)
 
 
+class GenerateForSceneMessagePayload(pydantic.BaseModel):
+    """Payload for generating a voice for a scene message."""
+
+    message_id: int
+
+
 class VoiceLibraryWebsocketHandler(Plugin):
     """Websocket plugin to manage the TTS voice library."""
 
@@ -107,6 +117,9 @@ class VoiceLibraryWebsocketHandler(Plugin):
     async def _send_voice_list(self, select_voice_id: str | None = None):
         voice_library = get_voice_library()
         voices = [v.model_dump() for v in voice_library.voices.values()]
+
+        # sort by label
+        voices.sort(key=lambda x: x["label"])
 
         self.websocket_handler.queue_put(
             {
@@ -158,7 +171,7 @@ class VoiceLibraryWebsocketHandler(Plugin):
             return
 
         voice_library.voices[voice.id] = voice
-        save_voice_library(voice_library)
+        await save_voice_library(voice_library)
         self._broadcast_update()
         await self.signal_operation_done()
 
@@ -192,7 +205,7 @@ class VoiceLibraryWebsocketHandler(Plugin):
         if delete_method:
             delete_method(voice.provider_id)
 
-        save_voice_library(voice_library)
+        await save_voice_library(voice_library)
         self._broadcast_update()
         await self.signal_operation_done()
 
@@ -229,7 +242,7 @@ class VoiceLibraryWebsocketHandler(Plugin):
             del voice_library.voices[payload.voice_id]
             voice_library.voices[new_id] = voice
 
-        save_voice_library(voice_library)
+        await save_voice_library(voice_library)
         self._broadcast_update()
         await self.signal_operation_done()
 
@@ -387,10 +400,60 @@ class VoiceLibraryWebsocketHandler(Plugin):
 
             voice_library = get_voice_library()
             voice_library.voices[new_voice.id] = new_voice
-            save_voice_library(voice_library)
+            await save_voice_library(voice_library)
             self._broadcast_update(new_voice.id)
             await self.signal_operation_done()
 
         except Exception as e:
             log.error("Failed to save mixed voice", error=e)
             await self.signal_operation_failed(f"Failed to save mixed voice: {str(e)}")
+
+    async def handle_generate_for_scene_message(self, data: dict):
+        """Handle a request to generate a voice for a scene message."""
+
+        tts_agent: "TTSAgent" = get_agent("tts")
+        scene: "Scene" = self.scene
+
+        log.debug("Generating TTS for scene message", data=data)
+
+        try:
+            payload = GenerateForSceneMessagePayload(**data)
+        except pydantic.ValidationError as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        log.debug("Payload", payload=payload)
+
+        message = scene.get_message(payload.message_id)
+
+        if not message:
+            await self.signal_operation_failed("Message not found")
+            return
+
+        log.debug("Message", message=message)
+
+        character: "Character | None" = None
+        text: str = ""
+
+        if message.typ not in ["character", "narrator"]:
+            await self.signal_operation_failed(
+                "Message is not a character or narrator message"
+            )
+            return
+
+        log.debug("Message type", message_type=message.typ)
+
+        if isinstance(message, scene_message.CharacterMessage):
+            character = scene.get_character(message.character_name)
+
+            if not character:
+                await self.signal_operation_failed("Character not found")
+                return
+
+            text = message.without_name
+        else:
+            text = message.message
+
+        await tts_agent.generate(text, character)
+
+        await self.signal_operation_done()

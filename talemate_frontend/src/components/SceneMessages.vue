@@ -10,7 +10,7 @@
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -137,7 +137,13 @@ export default {
     computed: {
         editorRevisionsEnabled() {
             return this.agentStatus && this.agentStatus.editor && this.agentStatus.editor.actions && this.agentStatus.editor.actions["revision"] && this.agentStatus.editor.actions["revision"].enabled;
-        }
+        },
+        ttsAvailable() {
+            return this.agentStatus.tts?.available;
+        },
+        ttsBusy() {
+            return this.agentStatus.tts?.busy || this.agentStatus.tts?.busy_bg;
+        },
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput'],
     provide() {
@@ -149,6 +155,7 @@ export default {
             getMessageColor: this.getMessageColor,
             getMessageStyle: this.getMessageStyle,
             reviseMessage: this.reviseMessage,
+            generateTTS: this.generateTTS,
         }
     },
     methods: {
@@ -289,6 +296,14 @@ export default {
             this.getWebsocket().send(JSON.stringify({
                 type: 'editor',
                 action: 'request_revision',
+                message_id: message_id,
+            }));
+        },
+
+        generateTTS(message_id) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'voice_library',
+                action: 'generate_for_scene_message',
                 message_id: message_id,
             }));
         },

@@ -1,19 +1,26 @@
 import structlog
 from pathlib import Path
 
+import talemate.emit.async_signals as async_signals
+
 from .schema import VoiceLibrary, Voice
 
 __all__ = [
     "load_voice_library",
     "save_voice_library",
-    "save_instance",
     "get_instance",
     "add_default_voices",
     "DEFAULT_VOICES",
     "VOICE_LIBRARY_PATH",
+    "require_instance",
 ]
 
 log = structlog.get_logger("talemate.agents.tts.voice_library")
+
+async_signals.register(
+    "voice_library.update.before",
+    "voice_library.update.after",
+)
 
 VOICE_LIBRARY_PATH = (
     Path(__file__).parent.parent.parent.parent.parent
@@ -28,7 +35,14 @@ DEFAULT_VOICES = {}
 VOICE_LIBRARY = None
 
 
-def load_voice_library() -> VoiceLibrary:
+async def require_instance():
+    global VOICE_LIBRARY
+    if not VOICE_LIBRARY:
+        VOICE_LIBRARY = await load_voice_library()
+    return VOICE_LIBRARY
+
+
+async def load_voice_library() -> VoiceLibrary:
     """
     Load the voice library from the file.
     """
@@ -37,37 +51,29 @@ def load_voice_library() -> VoiceLibrary:
             return VoiceLibrary.model_validate_json(f.read())
     except FileNotFoundError:
         library = VoiceLibrary(voices=DEFAULT_VOICES)
-        save_voice_library(library)
+        await save_voice_library(library)
         return library
     finally:
         log.debug("loaded voice library", path=str(VOICE_LIBRARY_PATH))
 
 
-def save_voice_library(voice_library: VoiceLibrary):
+async def save_voice_library(voice_library: VoiceLibrary):
     """
     Save the voice library to the file.
     """
+    await async_signals.get("voice_library.update.before").send(voice_library)
     with open(VOICE_LIBRARY_PATH, "w") as f:
         f.write(voice_library.model_dump_json(indent=2))
+    await async_signals.get("voice_library.update.after").send(voice_library)
 
 
 def get_instance() -> VoiceLibrary:
     """
     Get the shared voice library instance.
     """
-    global VOICE_LIBRARY
     if not VOICE_LIBRARY:
-        VOICE_LIBRARY = load_voice_library()
+        raise RuntimeError("Voice library not loaded yet.")
     return VOICE_LIBRARY
-
-
-def save_instance():
-    """
-    Save the shared voice library instance.
-    """
-    global VOICE_LIBRARY
-    if VOICE_LIBRARY:
-        save_voice_library(VOICE_LIBRARY)
 
 
 def add_default_voices(voices: list[Voice]):

@@ -152,16 +152,21 @@ class TTSAgent(
             "narrator_voice_id"
         ]
 
+        narrator_voice_id["choices"] = cls.narrator_voice_id_choices(agent)
+
+        return config_options
+
+    @classmethod
+    def narrator_voice_id_choices(cls, agent: "TTSAgent") -> list[dict[str, str]]:
         choices = voice_library.voices_for_apis(agent.ready_apis, agent.voice_library)
-        narrator_voice_id["choices"] = [
+        choices.sort(key=lambda x: x.label)
+        return [
             {
                 "label": f"{voice.label} ({voice.provider})",
                 "value": voice.id,
             }
             for voice in choices
         ]
-
-        return config_options
 
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
@@ -203,19 +208,19 @@ class TTSAgent(
                     "generate_for_player": AgentActionConfig(
                         type="bool",
                         value=False,
-                        label="Generate for player",
+                        label="Auto-generate for player",
                         description="Generate audio for player messages",
                     ),
                     "generate_for_npc": AgentActionConfig(
                         type="bool",
                         value=True,
-                        label="Generate for NPCs",
+                        label="Auto-generate for AI characters",
                         description="Generate audio for NPC messages",
                     ),
                     "generate_for_narration": AgentActionConfig(
                         type="bool",
                         value=True,
-                        label="Generate for narration",
+                        label="Auto-generate for narration",
                         description="Generate audio for narration messages",
                     ),
                     "force_chunking": AgentActionConfig(
@@ -302,6 +307,10 @@ class TTSAgent(
     def agent_details(self):
         details = {}
 
+        self.actions["_config"].config[
+            "narrator_voice_id"
+        ].choices = self.narrator_voice_id_choices(self)
+
         if not self.enabled:
             return details
 
@@ -369,7 +378,7 @@ class TTSAgent(
         if self.ready:
             if getattr(self, "processing_bg", 0) > 0:
                 return "busy_bg" if not getattr(self, "processing", False) else "busy"
-            return "active" if not getattr(self, "processing", False) else "busy"
+            return "idle" if not getattr(self, "processing", False) else "busy"
         return "uninitialized"
 
     @property
@@ -426,11 +435,21 @@ class TTSAgent(
         async_signals.get("game_loop_new_message").connect(
             self.on_game_loop_new_message
         )
+        async_signals.get("voice_library.update.after").connect(
+            self.on_voice_library_update
+        )
 
     def on_config_saved(self, event):
         config = event.data
         self.config = config
         instance.emit_agent_status(self.__class__, self)
+
+    async def on_voice_library_update(self, voice_library: VoiceLibrary):
+        log.debug("Voice library updated - refreshing narrator voice choices")
+        self.actions["_config"].config[
+            "narrator_voice_id"
+        ].choices = self.narrator_voice_id_choices(self)
+        await self.emit_status()
 
     async def on_game_loop_new_message(self, emission: GameLoopNewMessageEvent):
         """
@@ -637,7 +656,6 @@ class TTSAgent(
     ):
         for chunk in context.chunks:
             for _chunk in chunk.sub_chunks:
-
                 # skip empty chunks
                 if not _chunk.cleaned_text.strip():
                     continue

@@ -58,4 +58,4 @@ class CharacterMixin:
         if hasattr(self, "handle_get_character_details"):
             await self.handle_get_character_details({"name": payload.name})
 
-        await self.signal_operation_done() 
+        await self.signal_operation_done()

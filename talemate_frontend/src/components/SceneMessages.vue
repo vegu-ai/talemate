@@ -50,7 +50,7 @@
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`">
-                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" />
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">

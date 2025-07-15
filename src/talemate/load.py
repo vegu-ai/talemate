@@ -1,6 +1,7 @@
 import enum
 import json
 import os
+from typing import TYPE_CHECKING
 
 import structlog
 
@@ -27,6 +28,9 @@ from talemate.world_state import WorldState
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
 from talemate.history import validate_history
+
+if TYPE_CHECKING:
+    from talemate.agents.director import DirectorAgent
 
 __all__ = [
     "load_scene",
@@ -115,7 +119,7 @@ async def load_scene_from_character_card(scene, file_path):
     Load a character card (tavern etc.) from the given file path.
     """
 
-    director = get_agent("director")
+    director: "DirectorAgent" = get_agent("director")
     LOADING_STEPS = 5
     if director.auto_direct_enabled:
         LOADING_STEPS += 3
@@ -205,6 +209,9 @@ async def load_scene_from_character_card(scene, file_path):
     if image:
         scene.assets.set_cover_image_from_file_path(file_path)
         character.cover_image = scene.assets.cover_image
+
+    # assign tts voice to character
+    await director.assign_voice_to_character(character)
 
     # if auto direct is enabled, generate a story intent
     # and then set the scene intent
@@ -461,8 +468,12 @@ def character_from_chara_data(data: dict) -> Character:
     Generates a barebones character from a character card data dictionary.
     """
 
-    character = Character("", "", "")
-    character.color = "red"
+    character = Character(
+        name="UNKNOWN",
+        description="",
+        greeting_text="",
+    )
+
     if "name" in data:
         character.name = data["name"]
 
@@ -533,7 +544,7 @@ def default_player_character() -> Player | None:
 
     return Player(
         Character(
-            name,
+            name=name,
             description=description,
             greeting_text="",
             color=color,

@@ -56,9 +56,24 @@
           <v-icon class="mr-1">mdi-source-fork</v-icon>
           Fork Scene
         </v-chip>
+
+        <!-- generate tts -->
+        <v-chip size="x-small" class="ml-2" label color="secondary" v-if="!editing && hovered && ttsAvailable" variant="outlined" @click="generateTTS(message_id)" :disabled="uxLocked || ttsBusy">
+          <v-icon class="mr-1">mdi-account-voice</v-icon>
+          TTS
+          <v-progress-circular v-if="ttsBusy" class="ml-2" size="14" indeterminate="disable-shrink"
+        color="secondary"></v-progress-circular>
+        </v-chip>
       </div>
       <div v-else>
         <span class="text-muted text-caption">To edit the intro message open the <v-btn size="x-small" variant="text" color="primary" @click="openWorldStateManager('scene')"><v-icon>mdi-script</v-icon>Scene Editor</v-btn></span>
+        <!-- generate tts -->
+        <v-chip size="x-small" class="ml-2" label color="secondary" v-if="!editing && hovered && ttsAvailable" variant="outlined" @click="generateTTS(message_id)" :disabled="uxLocked || ttsBusy">
+          <v-icon class="mr-1">mdi-account-voice</v-icon>
+          TTS
+          <v-progress-circular v-if="ttsBusy" class="ml-2" size="14" indeterminate="disable-shrink"
+        color="secondary"></v-progress-circular>
+        </v-chip>
       </div>
     </v-sheet>
     <div v-else style="height:24px">
@@ -93,6 +108,14 @@ export default {
       type: Boolean,
       default: false,
     },
+    ttsAvailable: {
+      type: Boolean,
+      default: false,
+    },
+    ttsBusy: {
+      type: Boolean,
+      default: false,
+    },
   },
   inject: [
     'requestDeleteMessage', 
@@ -105,6 +128,7 @@ export default {
     'getMessageStyle', 
     'openWorldStateManager',
     'reviseMessage',
+    'generateTTS',
   ],
   computed: {
     parts() {

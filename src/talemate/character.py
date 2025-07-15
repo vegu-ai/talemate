@@ -88,6 +88,9 @@ class Character(pydantic.BaseModel):
     def __repr__(self):
         return str(self)
 
+    def __hash__(self):
+        return hash(self.name)
+
     def set_color(self, color: str | None = None):
         # if no color provided, chose a random color
 

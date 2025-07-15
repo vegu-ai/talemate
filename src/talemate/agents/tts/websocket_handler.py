@@ -6,7 +6,7 @@ import pydantic
 import structlog
 
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from talemate.emit.signals import handlers
 from talemate.instance import get_agent
@@ -85,7 +85,7 @@ class SaveMixedVoicePayload(pydantic.BaseModel):
 class GenerateForSceneMessagePayload(pydantic.BaseModel):
     """Payload for generating a voice for a scene message."""
 
-    message_id: int
+    message_id: int | Literal["intro"]
 
 
 class TTSWebsocketHandler(Plugin):
@@ -424,35 +424,40 @@ class TTSWebsocketHandler(Plugin):
 
         log.debug("Payload", payload=payload)
 
-        message = scene.get_message(payload.message_id)
-
-        if not message:
-            await self.signal_operation_failed("Message not found")
-            return
-
-        log.debug("Message", message=message)
-
         character: "Character | None" = None
         text: str = ""
 
-        if message.typ not in ["character", "narrator"]:
-            await self.signal_operation_failed(
-                "Message is not a character or narrator message"
-            )
-            return
+        if payload.message_id == "intro":
+            text = scene.get_intro()
+        else:
+            message = scene.get_message(payload.message_id)
 
-        log.debug("Message type", message_type=message.typ)
-
-        if isinstance(message, scene_message.CharacterMessage):
-            character = scene.get_character(message.character_name)
-
-            if not character:
-                await self.signal_operation_failed("Character not found")
+            if not message:
+                await self.signal_operation_failed("Message not found")
                 return
 
-            text = message.without_name
-        else:
-            text = message.message
+            if message.typ not in ["character", "narrator"]:
+                await self.signal_operation_failed(
+                    "Message is not a character or narrator message"
+                )
+                return
+
+            log.debug("Message type", message_type=message.typ)
+
+            if isinstance(message, scene_message.CharacterMessage):
+                character = scene.get_character(message.character_name)
+
+                if not character:
+                    await self.signal_operation_failed("Character not found")
+                    return
+
+                text = message.without_name
+            else:
+                text = message.message
+
+        if not text:
+            await self.signal_operation_failed("No text to generate speech for.")
+            return
 
         await tts_agent.generate(text, character)
 

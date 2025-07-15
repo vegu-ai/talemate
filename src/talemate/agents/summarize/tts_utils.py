@@ -22,6 +22,10 @@ class TTSUtilsMixin:
 
         log.debug("Markup context for TTS", text=text)
 
+        # if there are no quotes in the text, there is nothing to separate
+        if '"' not in text:
+            return text
+
         # here we separate dialogue from exposition because into
         # obvious segments. It seems to have a positive effect on some
         # LLMs returning the complete text.
@@ -48,6 +52,11 @@ class TTSUtilsMixin:
             response = response.split("<MARKUP>")[1].split("</MARKUP>")[0].strip()
             # strip number prefixes
             response = re.sub(r"^\[\d+\]", "", response, flags=re.MULTILINE)
+            # remove {Unknown} as those are just the LLM's way of saying "I don't know" the speaker
+            # and those will default to the narrator voice.
+            response = re.sub(
+                r"\{Unknown\}", "", response, flags=re.MULTILINE | re.IGNORECASE
+            )
             return response
         except IndexError:
             log.error("Failed to extract markup from response", response=response)

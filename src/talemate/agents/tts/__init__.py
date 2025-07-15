@@ -17,7 +17,6 @@ from talemate.emit import emit
 from talemate.emit.signals import handlers
 from talemate.events import GameLoopNewMessageEvent
 from talemate.scene_message import CharacterMessage, NarratorMessage
-
 from talemate.agents.base import (
     Agent,
     AgentAction,
@@ -51,6 +50,7 @@ from .websocket_handler import TTSWebsocketHandler
 if TYPE_CHECKING:
     from talemate.character import Character
     from talemate.agents.summarize import SummarizeAgent
+    from talemate.game.engine.nodes.scene import SceneLoopEvent
 
 log = structlog.get_logger("talemate.agents.tts")
 
@@ -194,7 +194,7 @@ class TTSAgent(
                     ),
                     "narrator_voice_id": AgentActionConfig(
                         type="autocomplete",
-                        value="kokoro:af_heart",
+                        value="kokoro:af_bella",
                         label="Narrator Voice",
                         description="Voice to use for narration",
                         choices=[],
@@ -221,7 +221,7 @@ class TTSAgent(
                             ),
                             "ai_assisted": AgentActionNote(
                                 type="primary",
-                                text="Appropriate speaker separation will be attempted based on the content of the message with help from the LLM. This sends an extra prompt to the LLM to determine the appropriate speaker(s).",
+                                text="Appropriate speaker separation will be attempted based on the content of the message with help from the Summarizer agent. This sends an extra prompt to the LLM to determine the appropriate speaker(s).",
                             ),
                         },
                     ),
@@ -458,11 +458,22 @@ class TTSAgent(
         async_signals.get("voice_library.update.after").connect(
             self.on_voice_library_update
         )
+        async_signals.get("scene_loop_init_after").connect(self.on_scene_loop_init)
 
     def on_config_saved(self, event):
         config = event.data
         self.config = config
         instance.emit_agent_status(self.__class__, self)
+
+    async def on_scene_loop_init(self, event: "SceneLoopEvent"):
+        if not self.enabled or not self.ready or not self.generate_for_narration:
+            return
+
+        if self.scene.history:
+            # we already have a history, so we don't need to generate TTS for the intro
+            return
+
+        await self.generate(self.scene.get_intro(), character=None)
 
     async def on_voice_library_update(self, voice_library: VoiceLibrary):
         log.debug("Voice library updated - refreshing narrator voice choices")

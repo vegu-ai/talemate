@@ -65,12 +65,15 @@ __all__ = [
 
 log = structlog.get_logger("talemate")
 
-async_signals.register("scene_init")
-async_signals.register("game_loop_start")
-async_signals.register("game_loop")
-async_signals.register("game_loop_actor_iter")
-async_signals.register("game_loop_new_message")
-async_signals.register("player_turn_start")
+async_signals.register(
+    "scene_init",
+    "scene_init_after",
+    "game_loop_start",
+    "game_loop",
+    "game_loop_actor_iter",
+    "game_loop_new_message",
+    "player_turn_start",
+)
 
 
 class Helper:

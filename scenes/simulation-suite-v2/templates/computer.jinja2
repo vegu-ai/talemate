@@ -19,7 +19,7 @@ You have access to the following functions you must call to fulfill the user's r
     focal.callbacks.set_simulated_environment.render(
         "Create or change the simulated environment. This means the location, time, specific conditions, or any other aspect of the simulation that is not directly related to the characters.",
         instructions="Instructions on how to change the simulated environment. These will be given to the simulation computer to setup the new environment. REQUIRED.",
-        reset="If true, the environment should be reset and all simulated characters are removed. If false, the environment should be changed but the characters should remain. REQUIRED.",
+        reset="If true, the environment should be reset and ALL simulated characters are removed. IMPORTANT: If you set reset=true, this function MUST be the FIRST call in your stack; otherwise, set reset=false to avoid deactivating characters added earlier. REQUIRED.",
         examples=[
             {"instructions": "Change the location to a lush forest, with a river running through it.", "reset":true},
             {"instructions": "The simulation suite flickers and changes to a bustling city street.", "reset":true},

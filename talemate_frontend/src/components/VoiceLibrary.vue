@@ -346,7 +346,7 @@ export default {
       // Request current voices if none loaded
       if (this.voices.length === 0) {
         this.getWebsocket().send(
-          JSON.stringify({ type: 'voice_library', action: 'list' })
+          JSON.stringify({ type: 'tts', action: 'list' })
         );
       }
     },
@@ -396,7 +396,7 @@ export default {
     addVoice() {
       const payload = { ...this.editVoice };
       this.getWebsocket().send(
-        JSON.stringify({ type: 'voice_library', action: 'add', ...payload })
+        JSON.stringify({ type: 'tts', action: 'add', ...payload })
       );
       this.resetEdit();
     },
@@ -404,14 +404,14 @@ export default {
       if (!this.selectedVoice) return;
       const payload = { voice_id: this.selectedVoice.id, ...this.editVoice };
       this.getWebsocket().send(
-        JSON.stringify({ type: 'voice_library', action: 'edit', ...payload })
+        JSON.stringify({ type: 'tts', action: 'edit', ...payload })
       );
     },
     deleteVoice() {
       if (!this.selectedVoice) return;
       this.getWebsocket().send(
         JSON.stringify({
-          type: 'voice_library',
+          type: 'tts',
           action: 'remove',
           voice_id: this.selectedVoice.id,
         })
@@ -422,7 +422,7 @@ export default {
       if (this.testing || !this.canTest) return;
 
       const payload = {
-        type: 'voice_library',
+        type: 'tts',
         action: 'test',
       };
 
@@ -434,7 +434,7 @@ export default {
     },
     requestApiStatus() {
       this.getWebsocket().send(
-        JSON.stringify({ type: 'voice_library', action: 'api_status' })
+        JSON.stringify({ type: 'tts', action: 'api_status' })
       );
     },
     callMessageAction(action_name, args) {
@@ -448,7 +448,7 @@ export default {
       }
     },
     handleMessage(message) {
-      if (message.type !== 'voice_library') return;
+      if (message.type !== 'tts') return;
       if (message.action === 'voices' && message.voices) {
         this.voices = message.voices;
         if (message.select_voice_id) {

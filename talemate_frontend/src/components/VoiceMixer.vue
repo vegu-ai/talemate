@@ -292,7 +292,7 @@ export default {
       if (!this.canTest) return;
       
       const payload = {
-        type: 'voice_library',
+        type: 'tts',
         action: 'test_mixed',
         provider: this.provider,
         voices: this.validEntries.map(entry => {
@@ -314,7 +314,7 @@ export default {
       if (!voice) return;
       
       const payload = {
-        type: 'voice_library',
+        type: 'tts',
         action: 'test',
         provider: voice.provider,
         provider_id: voice.provider_id,
@@ -328,7 +328,7 @@ export default {
       this.saving = true;
       
       const payload = {
-        type: 'voice_library',
+        type: 'tts',
         action: 'save_mixed',
         provider: this.provider,
         label: this.mixedVoice.label,
@@ -345,7 +345,7 @@ export default {
       this.getWebsocket().send(JSON.stringify(payload));
     },
     handleMessage(message) {
-      if (message.type !== 'voice_library') return;
+      if (message.type !== 'tts') return;
       
       if (message.action === 'operation_done' || message.action === 'operation_failed') {
         this.testing = false;

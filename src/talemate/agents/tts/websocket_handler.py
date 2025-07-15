@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from talemate.character import Character
 
 __all__ = [
-    "VoiceLibraryWebsocketHandler",
+    "TTSWebsocketHandler",
 ]
 
 log = structlog.get_logger("talemate.server.voice_library")
@@ -88,10 +88,10 @@ class GenerateForSceneMessagePayload(pydantic.BaseModel):
     message_id: int
 
 
-class VoiceLibraryWebsocketHandler(Plugin):
+class TTSWebsocketHandler(Plugin):
     """Websocket plugin to manage the TTS voice library."""
 
-    router = "voice_library"
+    router = "tts"
 
     def __init__(self, websocket_handler):
         super().__init__(websocket_handler)

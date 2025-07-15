@@ -45,7 +45,7 @@ from .xtts2 import XTTS2Mixin
 from .piper import PiperMixin
 from .google import GoogleMixin
 from .kokoro import KokoroMixin
-from .websocket_handler import VoiceLibraryWebsocketHandler
+from .websocket_handler import TTSWebsocketHandler
 
 if TYPE_CHECKING:
     from talemate.character import Character
@@ -139,7 +139,7 @@ class TTSAgent(
     voice_library: VoiceLibrary = None
 
     # websocket handler for frontend voice library management
-    websocket_handler = VoiceLibraryWebsocketHandler
+    websocket_handler = TTSWebsocketHandler
 
     @classmethod
     def config_options(cls, agent=None):

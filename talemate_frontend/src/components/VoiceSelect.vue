@@ -88,7 +88,7 @@ export default {
   },
   methods: {
     handleMessage(message) {
-      if (message.type !== 'voice_library') return;
+      if (message.type !== 'tts') return;
       if (message.action === 'voices' && message.voices) {
         this.voices = message.voices;
       }
@@ -99,10 +99,10 @@ export default {
     requestData() {
       this.loading = true;
       this.getWebsocket().send(
-        JSON.stringify({ type: 'voice_library', action: 'list' })
+        JSON.stringify({ type: 'tts', action: 'list' })
       );
       this.getWebsocket().send(
-        JSON.stringify({ type: 'voice_library', action: 'api_status' })
+        JSON.stringify({ type: 'tts', action: 'api_status' })
       );
       // Turn off loading after brief delay in case backend responds quickly
       setTimeout(() => {

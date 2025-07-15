@@ -302,7 +302,7 @@ export default {
 
         generateTTS(message_id) {
             this.getWebsocket().send(JSON.stringify({
-                type: 'voice_library',
+                type: 'tts',
                 action: 'generate_for_scene_message',
                 message_id: message_id,
             }));

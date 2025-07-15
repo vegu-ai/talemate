@@ -207,7 +207,7 @@ export default {
                     this.dialogueInstructions = data.data.instructions;
                     this.dialogueInstructionsBusy = false;
                 }
-            } else if (data.type === 'voice_library') {
+            } else if (data.type === 'tts') {
                 if (data.action === 'operation_done' || data.action === 'operation_failed') {
                     this.testingVoice = false;
                 }
@@ -245,7 +245,7 @@ export default {
 
             this.testingVoice = true;
             this.getWebsocket().send(JSON.stringify({
-                type: 'voice_library',
+                type: 'tts',
                 action: 'test',
                 provider: provider,
                 provider_id: provider_id,

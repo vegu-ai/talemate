@@ -23,6 +23,7 @@ from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
     AgentDetail,
+    AgentActionNote,
     set_processing,
 )
 from talemate.agents.registry import register
@@ -55,7 +56,7 @@ log = structlog.get_logger("talemate.agents.tts")
 
 HOT_SWAP_NOTIFICATION_TIME = 60
 
-VOICE_LIBRARY_NOTE = "IMPORTANT: Voices are not managed here, but in the voice library which can be accessed through the Talemate application bar at the top."
+VOICE_LIBRARY_NOTE = "Voices are not managed here, but in the voice library which can be accessed through the Talemate application bar at the top."
 
 async_signals.register(
     "agent.tts.generate.before",
@@ -199,12 +200,30 @@ class TTSAgent(
                         choices=[],
                         note=VOICE_LIBRARY_NOTE,
                     ),
-                    "separate_narrator_voice": AgentActionConfig(
-                        type="bool",
-                        value=True,
-                        label="Separate narrator voice",
-                        description="Always use narrator voice for exposition, only using custom character voices for their dialogue. Since this effectively segments the content this may cause loss of context between segments.",
-                        quick_toggle=True,
+                    "speaker_separation": AgentActionConfig(
+                        type="text",
+                        value="simple",
+                        label="Speaker separation",
+                        description="How to separate speaker dialogue from exposition",
+                        choices=[
+                            {"label": "No separation", "value": "none"},
+                            {"label": "Simple", "value": "simple"},
+                            {"label": "AI assisted", "value": "ai_assisted"},
+                        ],
+                        note_on_value={
+                            "none": AgentActionNote(
+                                type="primary",
+                                text="Character messages will be voiced entirely by the character's voice with a fallback to the narrator voice if the character has no voice selecte. Narrator messages will be voiced exclusively by the narrator voice.",
+                            ),
+                            "simple": AgentActionNote(
+                                type="primary",
+                                text="Exposition and dialogue will be separated in character messages. Narrator messages will be voiced exclusively by the narrator voice.",
+                            ),
+                            "ai_assisted": AgentActionNote(
+                                type="primary",
+                                text="Appropriate speaker separation will be attempted based on the content of the message with help from the LLM. This sends an extra prompt to the LLM to determine the appropriate speaker(s).",
+                            ),
+                        },
                     ),
                     "generate_for_player": AgentActionConfig(
                         type="bool",
@@ -289,8 +308,8 @@ class TTSAgent(
         return self.actions["_config"].config["generate_for_narration"].value
 
     @property
-    def separate_narrator_voice(self) -> bool:
-        return self.actions["_config"].config["separate_narrator_voice"].value
+    def speaker_separation(self) -> str:
+        return self.actions["_config"].config["speaker_separation"].value
 
     @property
     def force_chunking(self) -> int:
@@ -589,8 +608,11 @@ class TTSAgent(
         # initial chunking by separating dialogue from exposition
 
         chunks: list[Chunk] = []
-        if self.separate_narrator_voice:
-            markup = await summarizer.markup_context_for_tts(text)
+        if self.speaker_separation != "none":
+            if self.speaker_separation == "ai_assisted":
+                markup = await summarizer.markup_context_for_tts(text)
+            else:
+                markup = text
 
             for _dlg_chunk in dialogue_utils.separate_dialogue_from_exposition(markup):
                 _voice = (

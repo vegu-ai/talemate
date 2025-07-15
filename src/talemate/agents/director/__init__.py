@@ -19,6 +19,7 @@ import talemate.agents.director.nodes  # noqa: F401
 
 log = structlog.get_logger("talemate.agent.director")
 
+
 @register()
 class DirectorAgent(
     GuideSceneMixin,

@@ -3,6 +3,9 @@ from typing import Union
 
 import structlog
 from elevenlabs.client import AsyncElevenLabs
+
+# Added explicit ApiError import for clearer error handling
+from elevenlabs.core.api_error import ApiError
 from talemate.ux.schema import Action
 
 from talemate.agents.base import (
@@ -12,6 +15,9 @@ from talemate.agents.base import (
 )
 from .schema import Voice, VoiceLibrary, GenerationContext, Chunk
 from .voice_library import add_default_voices
+
+# emit helper to propagate status messages to the UX
+from talemate.emit import emit
 
 log = structlog.get_logger("talemate.agents.tts.elevenlabs")
 
@@ -38,6 +44,11 @@ ELEVENLABS_INFO = """
 ElevenLabs is a cloud-based text to speech API.
 
 To add new voices, head to their voice library at [https://elevenlabs.io/app/voice-library](https://elevenlabs.io/app/voice-library) and note the voice id of the voice you want to use. (Click 'More Actions -> Copy Voice ID')
+
+**About elevenlabs voices**
+Your elevenlabs subscription allows you to maintain a set number of voices (10 for cheapest plan). 
+
+Any voice that you generate audio for is automatically added to your voices at [https://elevenlabs.io/app/voice-lab](https://elevenlabs.io/app/voice-lab). This also happens when you use the "Test" button above. It is recommend testing via their voice library instead.
 """
 
 
@@ -163,16 +174,45 @@ class ElevenLabsMixin:
 
         client = AsyncElevenLabs(api_key=api_key)
 
-        response_async_iter = client.text_to_speech.convert(
-            text=chunk.cleaned_text,
-            voice_id=chunk.voice.provider_id,
-            model_id=chunk.model or self.elevenlabs_model,
-        )
+        try:
+            response_async_iter = client.text_to_speech.convert(
+                text=chunk.cleaned_text,
+                voice_id=chunk.voice.provider_id,
+                model_id=chunk.model or self.elevenlabs_model,
+            )
 
-        bytes_io = io.BytesIO()
+            bytes_io = io.BytesIO()
 
-        async for chunk in response_async_iter:
-            if chunk:
-                bytes_io.write(chunk)
+            async for _chunk_bytes in response_async_iter:
+                if _chunk_bytes:
+                    bytes_io.write(_chunk_bytes)
 
-        return bytes_io.getvalue()
+            return bytes_io.getvalue()
+
+        except ApiError as e:
+            # Emit detailed status message to the frontend UI
+            error_message = "ElevenLabs API Error"
+            try:
+                # The ElevenLabs ApiError often contains a JSON body with details
+                detail = e.body.get("detail", {}) if hasattr(e, "body") else {}
+                error_message = detail.get("message", str(e)) or str(e)
+            except Exception:
+                error_message = str(e)
+
+            log.error("ElevenLabs API error", error=str(e))
+            emit(
+                "status",
+                message=f"ElevenLabs TTS: {error_message}",
+                status="error",
+            )
+            raise e
+
+        except Exception as e:
+            # Catch-all to ensure the app does not crash on unexpected errors
+            log.error("ElevenLabs TTS generation error", error=str(e))
+            emit(
+                "status",
+                message=f"ElevenLabs TTS: Unexpected error – {str(e)}",
+                status="error",
+            )
+            raise e

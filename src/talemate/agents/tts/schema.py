@@ -85,7 +85,9 @@ class Chunk(pydantic.BaseModel):
     @property
     def cleaned_text(self) -> str:
         cleaned: str = self.text[0].replace("*", "").replace('"', "")
-        cleaned = cleaned.replace("—", " - ")
+
+        # troublemakers
+        cleaned = cleaned.replace("—", " - ").replace("…", "...")
 
         # replace any grouped up whitespace with a single space
         cleaned = re.sub(r"\s+", " ", cleaned)

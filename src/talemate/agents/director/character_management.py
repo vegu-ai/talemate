@@ -2,18 +2,14 @@ from typing import TYPE_CHECKING
 import traceback
 import structlog
 import talemate.instance as instance
+import talemate.agents.tts.voice_library as voice_library
 from talemate.util import random_color
 from talemate.character import deactivate_character
 from talemate.status import LoadingStatus
 from talemate.exceptions import GenerationCancelled
 from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
+import talemate.game.focal as focal
 
-
-from talemate.agents.base import (
-    set_processing,
-    AgentAction,
-    AgentActionConfig,
-)
 
 __all__ = [
     "CharacterManagementMixin",
@@ -23,7 +19,7 @@ log = structlog.get_logger()
 
 if TYPE_CHECKING:
     from talemate import Character, Scene
-
+    from talemate.agents.tts import TTSAgent
 
 
 class CharacterManagementMixin:
@@ -54,9 +50,23 @@ class CharacterManagementMixin:
 
     # config property helpers
 
-    def cm_assign_voice(self):
+    @property
+    def cm_assign_voice(self) -> bool:
         return self.actions["character_management"].config["assign_voice"].value
 
+    @property
+    def cm_should_assign_voice(self) -> bool:
+        if not self.cm_assign_voice:
+            return False
+
+        tts_agent: "TTSAgent" = instance.get_agent("tts")
+        if not tts_agent.enabled:
+            return False
+
+        if not tts_agent.ready_apis:
+            return False
+
+        return True
 
     # actions
 
@@ -95,6 +105,7 @@ class CharacterManagementMixin:
         augment_attributes: str = "",
         generate_attributes: bool = True,
         description: str = "",
+        assign_voice: bool = True,
     ) -> "Character":
         world_state = instance.get_agent("world_state")
         creator = instance.get_agent("creator")
@@ -209,6 +220,9 @@ class CharacterManagementMixin:
                         narrative_direction=narrate_entry_direction,
                     )
 
+            if assign_voice:
+                await self.assign_voice_to_character(character)
+
             # Deactivate the character if not active
             if not active:
                 await deactivate_character(scene, character)
@@ -229,3 +243,60 @@ class CharacterManagementMixin:
             loading_status.done(message="Character creation failed", status="error")
             await scene.remove_actor(actor)
             log.error("Error persisting character", error=traceback.format_exc())
+
+    @set_processing
+    async def assign_voice_to_character(
+        self, character: "Character"
+    ) -> list[focal.Call]:
+        tts_agent: "TTSAgent" = instance.get_agent("tts")
+        if not self.cm_should_assign_voice:
+            log.debug("assign_voice_to_character", skip=True, reason="not enabled")
+            return
+
+        vl: voice_library.VoiceLibrary = voice_library.get_instance()
+
+        ready_tts_apis = tts_agent.ready_apis
+
+        voices = voice_library.voices_for_apis(ready_tts_apis, vl)
+
+        if not voices:
+            log.debug(
+                "assign_voice_to_character", skip=True, reason="no voices available"
+            )
+            return
+
+        used_voice_ids = set()
+        for character in self.scene.all_characters:
+            if character.voice:
+                used_voice_ids.add(character.voice.id)
+
+        voice_candidates = [voice for voice in voices if voice.id not in used_voice_ids]
+
+        if not voice_candidates:
+            log.debug("assign_voice_to_character", reusing_voices=True)
+            # all voices are in use, so they are all up again.
+            voice_candidates = voices
+
+        async def assign_voice(voice_id: str):
+            character.voice = vl.get_voice(voice_id)
+
+        focal_handler = focal.Focal(
+            self.client,
+            callbacks=[
+                focal.Callback(
+                    name="assign_voice",
+                    arguments=[focal.Argument(name="voice_id", type="str")],
+                    fn=assign_voice,
+                ),
+            ],
+            max_calls=1,
+            character=character,
+            voices=voice_candidates,
+            scene=self.scene,
+        )
+
+        await focal_handler.request("director.cm-assign-voice")
+
+        log.debug("assign_voice_to_character", calls=focal_handler.state.calls)
+
+        return focal_handler.state.calls

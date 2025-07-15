@@ -230,6 +230,22 @@ class Scene(Emitter):
             yield actor.character
 
     @property
+    def all_characters(self) -> Generator[Character, None, None]:
+        """
+        Returns all characters in the scene, including inactive characters
+        """
+
+        for actor in self.actors:
+            yield actor.character
+
+        for character in self.inactive_characters.values():
+            yield character
+
+    @property
+    def all_character_names(self):
+        return [character.name for character in self.all_characters]
+
+    @property
     def npcs(self):
         for actor in self.actors:
             if not actor.character.is_player:

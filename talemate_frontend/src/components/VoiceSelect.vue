@@ -58,16 +58,24 @@ export default {
       }, {});
     },
     displayVoices() {
-      return this.voices.map((v) => {
-        const status = this.apiStatusByProvider[v.provider] || {};
-        const ready = !!status.ready;
-        return {
-          ...v,
-          title: `${v.label} (${v.provider})`,
-          value: v.id,
-          ready,
-        };
-      });
+      return this.voices
+        .map((v) => {
+          const status = this.apiStatusByProvider[v.provider] || {};
+          const ready = !!status.ready;
+          return {
+            ...v,
+            title: `${v.label} (${v.provider})`,
+            value: v.id,
+            ready,
+          };
+        })
+        .sort((a, b) => {
+          // Sort by ready status - ready voices first (true before false)
+          if (a.ready && !b.ready) return -1;
+          if (!a.ready && b.ready) return 1;
+          // If both have same ready status, maintain original order
+          return 0;
+        });
     },
   },
   watch: {

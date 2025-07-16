@@ -99,6 +99,7 @@ class ExtraField(pydantic.BaseModel):
     description: str
     group: FieldGroup | None = None
     note: ux_schema.Note | None = None
+    choices: list[str | int | float | bool] | None = None
 
 
 class ParameterReroute(pydantic.BaseModel):

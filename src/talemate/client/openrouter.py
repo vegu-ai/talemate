@@ -4,7 +4,15 @@ import httpx
 import asyncio
 import json
 
-from talemate.client.base import ClientBase, ErrorAction, CommonDefaults
+from talemate.client.base import (
+    ClientBase,
+    ErrorAction,
+    CommonDefaults,
+    ExtraField,
+    FieldGroup,
+)
+from talemate.config import Client as BaseClientConfig
+
 from talemate.client.registry import register
 from talemate.config import load_config
 from talemate.emit import emit
@@ -18,6 +26,91 @@ log = structlog.get_logger("talemate.client.openrouter")
 
 # Available models will be populated when first client with API key is initialized
 AVAILABLE_MODELS = []
+
+# Static list of providers that are supported by OpenRouter
+# https://openrouter.ai/docs/features/provider-routing#json-schema-for-provider-preferences
+
+
+AVAILABLE_PROVIDERS = [
+    "AnyScale",
+    "Cent-ML",
+    "HuggingFace",
+    "Hyperbolic 2",
+    "Lepton",
+    "Lynn 2",
+    "Lynn",
+    "Mancer",
+    "Modal",
+    "OctoAI",
+    "Recursal",
+    "Reflection",
+    "Replicate",
+    "SambaNova 2",
+    "SF Compute",
+    "Together 2",
+    "01.AI",
+    "AI21",
+    "AionLabs",
+    "Alibaba",
+    "Amazon Bedrock",
+    "Anthropic",
+    "AtlasCloud",
+    "Atoma",
+    "Avian",
+    "Azure",
+    "BaseTen",
+    "Cerebras",
+    "Chutes",
+    "Cloudflare",
+    "Cohere",
+    "CrofAI",
+    "Crusoe",
+    "DeepInfra",
+    "DeepSeek",
+    "Enfer",
+    "Featherless",
+    "Fireworks",
+    "Friendli",
+    "GMICloud",
+    "Google",
+    "Google AI Studio",
+    "Groq",
+    "Hyperbolic",
+    "Inception",
+    "InferenceNet",
+    "Infermatic",
+    "Inflection",
+    "InoCloud",
+    "Kluster",
+    "Lambda",
+    "Liquid",
+    "Mancer 2",
+    "Meta",
+    "Minimax",
+    "Mistral",
+    "Moonshot AI",
+    "Morph",
+    "NCompass",
+    "Nebius",
+    "NextBit",
+    "Nineteen",
+    "Novita",
+    "OpenAI",
+    "OpenInference",
+    "Parasail",
+    "Perplexity",
+    "Phala",
+    "SambaNova",
+    "Stealth",
+    "Switchpoint",
+    "Targon",
+    "Together",
+    "Ubicloud",
+    "Venice",
+    "xAI"
+]
+AVAILABLE_PROVIDERS.sort()
+
 DEFAULT_MODEL = ""
 MODELS_FETCHED = False
 
@@ -74,7 +167,20 @@ handlers["talemate_started"].connect(fetch_models_sync)
 class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = DEFAULT_MODEL
+    provider_only: list[str] = pydantic.Field(default_factory=list)
+    provider_ignore: list[str] = pydantic.Field(default_factory=list)
+    
+class ClientConfig(BaseClientConfig):
+    provider_only: list[str] = pydantic.Field(default_factory=list)
+    provider_ignore: list[str] = pydantic.Field(default_factory=list)
 
+
+PROVIDER_FIELD_GROUP = FieldGroup(
+    name="provider",
+    label="Provider",
+    description="Configure OpenRouter provider routing.",
+    icon="mdi-server-network",
+)
 
 @register()
 class OpenRouterClient(ClientBase):
@@ -87,6 +193,7 @@ class OpenRouterClient(ClientBase):
     auto_break_repetition_enabled = False
     # TODO: make this configurable?
     decensor_enabled = False
+    config_cls = ClientConfig
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "OpenRouter"
@@ -97,6 +204,26 @@ class OpenRouterClient(ClientBase):
         )
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
+        extra_fields: dict[str, ExtraField] = {
+            "provider_only": ExtraField(
+                name="provider_only",
+                type="flags",
+                label="Only use these providers",
+                choices=AVAILABLE_PROVIDERS,
+                description="Manually limit the providers to use for the selected model. This will override the default provider selection for this model.",
+                group=PROVIDER_FIELD_GROUP,
+                required=False,
+            ),
+            "provider_ignore": ExtraField(
+                name="provider_ignore",
+                type="flags",
+                label="Ignore these providers",
+                choices=AVAILABLE_PROVIDERS,
+                description="Ignore these providers for the selected model. This will override the default provider selection for this model.",
+                group=PROVIDER_FIELD_GROUP,
+                required=False,
+            ),
+        }
 
     def __init__(self, model=None, **kwargs):
         self.model_name = model or DEFAULT_MODEL
@@ -213,6 +340,12 @@ class OpenRouterClient(ClientBase):
         if "enabled" in kwargs:
             self.enabled = bool(kwargs["enabled"])
 
+        if "provider_only" in kwargs:
+            self.provider_only = kwargs["provider_only"]
+        
+        if "provider_ignore" in kwargs:
+            self.provider_ignore = kwargs["provider_ignore"]
+
         self._reconfigure_common_parameters(**kwargs)
 
     def on_config_saved(self, event):
@@ -254,6 +387,15 @@ class OpenRouterClient(ClientBase):
 
         if coercion_prompt:
             messages.append({"role": "assistant", "content": coercion_prompt.strip()})
+
+        provider = {}
+        if self.provider_only:
+            provider["only"] = self.provider_only
+        if self.provider_ignore:
+            provider["ignore"] = self.provider_ignore
+
+        if provider:
+            parameters["provider"] = provider
 
         # Prepare request payload
         payload = {

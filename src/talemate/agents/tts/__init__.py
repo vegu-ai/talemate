@@ -41,8 +41,6 @@ import talemate.agents.tts.voice_library as voice_library
 
 from .elevenlabs import ElevenLabsMixin
 from .openai import OpenAIMixin
-from .xtts2 import XTTS2Mixin
-from .piper import PiperMixin
 from .google import GoogleMixin
 from .kokoro import KokoroMixin
 from .chatterbox import ChatterboxMixin
@@ -125,8 +123,6 @@ def rejoin_chunks(chunks: list[str], chunk_size: int = 250):
 class TTSAgent(
     ElevenLabsMixin,
     OpenAIMixin,
-    XTTS2Mixin,
-    PiperMixin,
     GoogleMixin,
     KokoroMixin,
     ChatterboxMixin,
@@ -183,11 +179,6 @@ class TTSAgent(
                     "apis": AgentActionConfig(
                         type="flags",
                         value=[
-                            "elevenlabs",
-                            "openai",
-                            "xtts2",
-                            "piper",
-                            "google",
                             "kokoro",
                         ],
                         label="Enabled APIs",
@@ -260,8 +251,6 @@ class TTSAgent(
 
         KokoroMixin.add_actions(actions)
         ChatterboxMixin.add_actions(actions)
-        XTTS2Mixin.add_actions(actions)
-        PiperMixin.add_actions(actions)
         GoogleMixin.add_actions(actions)
         ElevenLabsMixin.add_actions(actions)
         OpenAIMixin.add_actions(actions)

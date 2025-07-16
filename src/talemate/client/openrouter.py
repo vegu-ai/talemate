@@ -107,7 +107,7 @@ AVAILABLE_PROVIDERS = [
     "Together",
     "Ubicloud",
     "Venice",
-    "xAI"
+    "xAI",
 ]
 AVAILABLE_PROVIDERS.sort()
 
@@ -169,7 +169,8 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
     model: str = DEFAULT_MODEL
     provider_only: list[str] = pydantic.Field(default_factory=list)
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
-    
+
+
 class ClientConfig(BaseClientConfig):
     provider_only: list[str] = pydantic.Field(default_factory=list)
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
@@ -181,6 +182,7 @@ PROVIDER_FIELD_GROUP = FieldGroup(
     description="Configure OpenRouter provider routing.",
     icon="mdi-server-network",
 )
+
 
 @register()
 class OpenRouterClient(ClientBase):
@@ -342,7 +344,7 @@ class OpenRouterClient(ClientBase):
 
         if "provider_only" in kwargs:
             self.provider_only = kwargs["provider_only"]
-        
+
         if "provider_ignore" in kwargs:
             self.provider_ignore = kwargs["provider_ignore"]
 

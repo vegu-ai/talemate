@@ -65,8 +65,8 @@ class ChatterboxMixin:
         actions["_config"].config["apis"].choices.append(
             {
                 "value": "chatterbox",
-                "label": "Chatterbox TTS (Local)",
-                "help": "Chatterbox is a local text to speech model that uses the TTS library.",
+                "label": "Chatterbox (Local)",
+                "help": "Chatterbox is a local text to speech model.",
             }
         )
 
@@ -75,7 +75,7 @@ class ChatterboxMixin:
             container=True,
             icon="mdi-server-outline",
             label="Chatterbox",
-            description=CHATTERBOX_INFO,
+            description="Chatterbox is a local text to speech model.",
             config={
                 "device": AgentActionConfig(
                     type="text",

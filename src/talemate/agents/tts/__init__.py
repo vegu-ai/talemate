@@ -45,6 +45,7 @@ from .xtts2 import XTTS2Mixin
 from .piper import PiperMixin
 from .google import GoogleMixin
 from .kokoro import KokoroMixin
+from .chatterbox import ChatterboxMixin
 from .websocket_handler import TTSWebsocketHandler
 
 if TYPE_CHECKING:
@@ -128,6 +129,7 @@ class TTSAgent(
     PiperMixin,
     GoogleMixin,
     KokoroMixin,
+    ChatterboxMixin,
     Agent,
 ):
     """
@@ -256,12 +258,13 @@ class TTSAgent(
             ),
         }
 
-        ElevenLabsMixin.add_actions(actions)
-        OpenAIMixin.add_actions(actions)
+        KokoroMixin.add_actions(actions)
+        ChatterboxMixin.add_actions(actions)
         XTTS2Mixin.add_actions(actions)
         PiperMixin.add_actions(actions)
         GoogleMixin.add_actions(actions)
-        KokoroMixin.add_actions(actions)
+        ElevenLabsMixin.add_actions(actions)
+        OpenAIMixin.add_actions(actions)
 
         return actions
 

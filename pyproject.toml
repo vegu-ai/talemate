@@ -57,6 +57,8 @@ dependencies = [
     # TTS
     "elevenlabs>=2.7.1",
     # Local TTS
+    # Chatterbox TTS
+    "chatterbox-tts==0.1.2",
     # XTTS2
     "llvmlite==0.44.0",
     "coqui-tts>=0.26.2",
@@ -116,6 +118,16 @@ force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
 line_length = 88
+
+[tool.uv]
+override-dependencies = [
+  # chatterbox wants torch 2.6.0, but is confirmed working with 2.7.1
+  "torchaudio>=2.7.1", 
+  "torch>=2.7.1",
+  # coquitts wants transformers transformers>=4.52.1 and chatterbox wants transformers==4.46.3
+  # everything seems working with transformers>=4.52.1
+  "transformers>=4.52.1"
+]
 
 [tool.uv.sources]
 torch = [

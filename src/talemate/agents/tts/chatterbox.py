@@ -137,7 +137,9 @@ class ChatterboxMixin:
     ) -> bytes | None:
         log.debug("chatterbox", device=self.chatterbox_device)
 
-        chatterbox_instance: ChatterboxInstance | None = getattr(self, "chatterbox_instance", None)
+        chatterbox_instance: ChatterboxInstance | None = getattr(
+            self, "chatterbox_instance", None
+        )
 
         reload: bool = False
 

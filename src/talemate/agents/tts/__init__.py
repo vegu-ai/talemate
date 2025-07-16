@@ -617,10 +617,9 @@ class TTSAgent(
         log.debug("Voice routing", character=character, voice=character_voice)
 
         # initial chunking by separating dialogue from exposition
-
         chunks: list[Chunk] = []
         if self.speaker_separation != "none":
-            if self.speaker_separation == "ai_assisted":
+            if self.speaker_separation == "ai_assisted" and not character:
                 markup = await summarizer.markup_context_for_tts(text)
             else:
                 markup = text
